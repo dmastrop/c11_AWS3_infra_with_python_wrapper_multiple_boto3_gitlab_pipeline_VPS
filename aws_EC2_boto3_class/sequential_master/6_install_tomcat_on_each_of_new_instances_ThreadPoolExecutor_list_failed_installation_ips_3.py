@@ -22,7 +22,7 @@ max_count = os.getenv("max_count")
 aws_pem_key = os.getenv("AWS_PEM_KEY")
 
 # Define the instance ID to exclude (the EC2 controller)
-exclude_instance_id = 'i-0ddbf7fda9773252b'
+exclude_instance_id = 'i-0aaaa1aa8907a9b78'
 
 # Establish a session with AWS
 session = boto3.Session(
@@ -76,6 +76,31 @@ commands = [
     'sudo systemctl start tomcat9',
     'sudo systemctl enable tomcat9'
 ]
+
+
+# Add a security group rule to allow access to port 22
+for sg_id in set(security_group_ids):
+    try:
+        my_ec2.authorize_security_group_ingress(
+            GroupId=sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 22,
+                    'ToPort': 22,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }
+            ]
+        )
+    except my_ec2.exceptions.ClientError as e:
+        if 'InvalidPermission.Duplicate' in str(e):
+            print(f"Rule already exists for security group {sg_id}")
+        else:
+            raise
+
+
+
+
 
 # Add a security group rule to allow access to port 80
 for sg_id in set(security_group_ids):
