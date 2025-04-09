@@ -23,7 +23,7 @@ deploy:
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
     - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
     - echo 'region_name=us-east-1' >> .env
-    - echo 'image_id=ami-0e1bed4f06a3b463d' >> .env
+    - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
     - echo 'instance_type=t2.micro' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
     - echo 'min_count=50' >> .env
