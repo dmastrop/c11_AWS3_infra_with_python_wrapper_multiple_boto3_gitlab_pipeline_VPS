@@ -47,7 +47,9 @@ target_group = elb_client.create_target_group(
     Name='tomcat-target-group',
     Protocol='HTTP',
     Port=8080,
-    VpcId='vpc-009db827e48cf8c7b',  # Replace with your VPC ID. Using default VPC here.
+    #VpcId='vpc-009db827e48cf8c7b',  # Replace with your VPC ID. Using default VPC here.
+    # VpcId for AWS3:
+    VpcId='vpc-0a11e68402b1fa2f3'
     HealthCheckProtocol='HTTP',
     HealthCheckPort='8080',
     HealthCheckPath='/',
@@ -76,7 +78,10 @@ logger.info("Instances registered successfully.")
 logger.info("Creating load balancer...")
 load_balancer = elb_client.create_load_balancer(
     Name='tomcat-load-balancer',
-    Subnets=['subnet-0e34b914c08ba8bd5', 'subnet-09638c6f9b996a855', 'subnet-092198dd41287da22', 'subnet-0183921fc71694caa', 'subnet-06840adffc6b5353e', 'subnet-005a6e9eec2a0087b' ],  # Replace with your subnet IDs
+    #Subnets=['subnet-0e34b914c08ba8bd5', 'subnet-09638c6f9b996a855', 'subnet-092198dd41287da22', 'subnet-0183921fc71694caa', 'subnet-06840adffc6b5353e', 'subnet-005a6e9eec2a0087b' ],  # Replace with your subnet IDs
+    
+    #Subnets for AWS3:
+    Subnets=['subnet-0ebb61382f8feffe5', 'subnet-09833d43fcdde31b5', 'subnet-038ebcbf519f5839e', 'subnet-0666c0a6f144043b9', 'subnet-036ae7f10fe716c05', 'subnet-064382e3fcb06c6cc' ],  # Replace with your subnet IDs
     SecurityGroups=security_group_ids,
     Scheme='internet-facing',
     Tags=[{'Key': 'Name', 'Value': 'tomcat-load-balancer'}],
