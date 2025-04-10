@@ -1,5 +1,16 @@
 
 import os
+from dotenv import load_dotenv
+import json
+from datetime import datetime
+import sys
+
+# Load environment variables from the .env file
+load_dotenv()
+
+
+
+
 
 # Confirm script execution
 print("Script started")  # This should print
