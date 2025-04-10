@@ -18,10 +18,32 @@ load_dotenv()
 print("Script started")
 
 
+
+# Print out all environment variables for debugging
+logger.debug("Environment Variables:")
+for key, value in os.environ.items():
+    logger.debug(f"{key}: {value}")
+
+
+
+
+
 # Set variables from environment
 aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
 aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 region_name = os.getenv("region_name")
+
+
+
+
+# Print out specific environment variables for debugging
+logger.debug(f"AWS_ACCESS_KEY_ID: {aws_access_key}")
+logger.debug(f"AWS_SECRET_ACCESS_KEY: {aws_secret_key}")
+logger.debug(f"region_name: {region_name}")
+
+
+
+
 
 # Check for missing environment variables
 if not aws_access_key or not aws_secret_key or not region_name:
@@ -32,11 +54,35 @@ if not aws_access_key or not aws_secret_key or not region_name:
 
 logger.info("Establishing a session with AWS...")
 
-session = boto3.Session(
-    aws_access_key_id=aws_access_key,
-    aws_secret_access_key=aws_secret_key,
-    region_name=region_name
-)
 
 
-logger.info("Session established successfully.")
+try:
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=region_name
+    )
+    logger.info("Session established successfully.")
+except Exception as e:
+    logger.error(f"Failed to establish session: {e}")
+    raise
+
+
+
+
+
+#session = boto3.Session(
+#    aws_access_key_id=aws_access_key,
+#    aws_secret_access_key=aws_secret_key,
+#    region_name=region_name
+#)
+
+#logger.info("Session established successfully.")
+
+
+# Confirm script completion
+print("Script completed")
+
+
+
+
