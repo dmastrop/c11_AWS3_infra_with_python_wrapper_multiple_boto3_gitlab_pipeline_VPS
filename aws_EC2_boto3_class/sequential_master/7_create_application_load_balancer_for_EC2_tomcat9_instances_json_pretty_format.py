@@ -11,6 +11,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load environment variables from the .env file
+
+# Confirm script execution
+print("Script started")
+
+
 load_dotenv()
 
 # Set variables from environment
