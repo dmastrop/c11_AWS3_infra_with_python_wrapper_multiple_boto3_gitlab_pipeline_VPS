@@ -24,22 +24,47 @@ if not aws_access_key or not aws_secret_key or not region_name:
     raise ValueError("Missing AWS credentials or region name in environment variables.")
 
 # Establish a session with AWS
+
+logger.info("Establishing a session with AWS...")
+
 session = boto3.Session(
     aws_access_key_id=aws_access_key,
     aws_secret_access_key=aws_secret_key,
     region_name=region_name
 )
 
+
+logger.info("Session established successfully.")
+
+
+
 # Create an ELB client
+
+logger.info("Creating ELB client...")
+
 elb_client = session.client('elbv2')
+
+logger.info("ELB client created successfully.")
 
 # Load instance IDs and security group IDs from the file
 # This is from the EC2 instance creation and tomcat9 installation script that executes prior to this.  The instance_id
 # and the security_group_ids are required to configure the ALB below.
+
+logger.info("Loading instance IDs and security group IDs from file...")
+
 with open('instance_ids.json', 'r') as f:
     data = json.load(f)
     instance_ids = data['instance_ids']
     security_group_ids = data['security_group_ids']
+
+logger.info(f"Instance IDs: {instance_ids}")
+logger.info(f"Security Group IDs: {security_group_ids}")
+
+
+
+
+
+
 
 # Create a target group. Note that the default port of 8080 is configured on the EC2 instances
 logger.info("Creating target group...")
@@ -60,8 +85,17 @@ target_group = elb_client.create_target_group(
     TargetType='instance'
 )
 logger.info("Target group created successfully.")
+logger.debug(f"Target group details: {target_group}")
+
+
+
 
 target_group_arn = target_group['TargetGroups'][0]['TargetGroupArn']
+logger.info(f"Target Group ARN: {target_group_arn}")
+
+
+
+
 
 # Register instances with the target group.  The instance_id from instance_ids list have been imported from the 
 # previous python script as noted above using json (import json library).
@@ -69,6 +103,11 @@ logger.info("Registering instances with the target group...")
 targets = [{'Id': instance_id} for instance_id in instance_ids]
 elb_client.register_targets(TargetGroupArn=target_group_arn, Targets=targets)
 logger.info("Instances registered successfully.")
+
+
+
+
+
 
 # Create the load balancer
 # Note this: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/elbv2/client/create_load_balancer.html
@@ -89,8 +128,17 @@ load_balancer = elb_client.create_load_balancer(
     IpAddressType='ipv4'
 )
 logger.info("Load balancer created successfully.")
+logger.debug(f"Load balancer details: {load_balancer}")
+
+
+
+
 
 load_balancer_arn = load_balancer['LoadBalancers'][0]['LoadBalancerArn']
+logger.info(f"Load Balancer ARN: {load_balancer_arn}")
+
+
+
 
 # Create a listener for the load balancer
 logger.info("Creating listener for the load balancer...")
@@ -106,6 +154,10 @@ listener = elb_client.create_listener(
     ]
 )
 logger.info("Listener created successfully.")
+logger.debug(f"Listener details: {listener}")
+
+
+
 
 print("Application Load Balancer and listener created successfully.")
 
