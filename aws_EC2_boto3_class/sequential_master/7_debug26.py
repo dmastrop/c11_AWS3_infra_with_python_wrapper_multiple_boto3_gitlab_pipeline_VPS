@@ -16,9 +16,9 @@ load_dotenv()
 print("Script started")  # This should print
 
 # Print environment variables
-print("Environment Variables:")
-for key, value in os.environ.items():
-    print(f"{key}: {value}")
+#print("Environment Variables:")
+#for key, value in os.environ.items():
+#    print(f"{key}: {value}")
 
 # Set variables from environment
 aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
