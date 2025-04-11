@@ -51,7 +51,7 @@ sys.stdout.flush()
 
 
 # Add A record for the ALB DNS name to Route53 hosted zone as a routed A record
-hosted_zone_id = 'Z03230492XBYD29ITMJTQ'  # Replace with your Route 53 hosted zone ID
+hosted_zone_id = 'Z053493128WBD2P6V1KLG'  # Replace with your Route 53 hosted zone ID
 route53_client.change_resource_record_sets(
     HostedZoneId=hosted_zone_id,
     ChangeBatch={
@@ -59,7 +59,7 @@ route53_client.change_resource_record_sets(
             {
                 'Action': 'UPSERT',
                 'ResourceRecordSet': {
-                    'Name': 'loadbalancer.holinessinloveofchrist.com',
+                    'Name': 'loadbalancer1.holinessinloveofchrist.com',
                     'Type': 'A',
                     'AliasTarget': {
                         'HostedZoneId': 'Z35SXDOTRQ7X7K',  # Hosted zone ID for the load balancer. This is not
@@ -84,7 +84,7 @@ sys.stdout.flush()
 
 # Request a new certificate using the custom DNS domain name
 response = acm_client.request_certificate(
-    DomainName='loadbalancer.holinessinloveofchrist.com',
+    DomainName='loadbalancer1.holinessinloveofchrist.com',
     ValidationMethod='DNS'
 )
 
@@ -109,7 +109,7 @@ for option in domain_validation_options:
 
 # Add CNAME records to Route 53
 #hosted_zone_id = 'YOUR_ROUTE53_HOSTED_ZONE_ID'  # Replace with Route 53 hosted zone ID
-hosted_zone_id = 'Z03230492XBYD29ITMJTQ'  # Replace with your Route 53 hosted zone ID
+hosted_zone_id = 'Z053493128WBD2P6V1KLG'  # Replace with your Route 53 hosted zone ID
 changes = []
 for option in domain_validation_options:
     if 'ResourceRecord' in option:
