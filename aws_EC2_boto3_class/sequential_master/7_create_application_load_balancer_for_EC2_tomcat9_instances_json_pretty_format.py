@@ -80,7 +80,7 @@ target_group = elb_client.create_target_group(
     Port=8080,
     #VpcId='vpc-009db827e48cf8c7b',  # Replace with your VPC ID. Using default VPC here.
     # VpcId for AWS3:
-    VpcId='vpc-0a11e68402b1fa2f3'
+    VpcId='vpc-0a11e68402b1fa2f3',
     HealthCheckProtocol='HTTP',
     HealthCheckPort='8080',
     HealthCheckPath='/',
