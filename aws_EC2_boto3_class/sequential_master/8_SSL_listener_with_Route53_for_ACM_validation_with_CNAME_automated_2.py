@@ -189,25 +189,30 @@ sys.stdout.flush()
 
 
 
+
 # Add security group rule to allow port 443 from anywhere (0.0.0.0/0)
 for sg_id in security_group_ids:
-       ec2_client.authorize_security_group_ingress(
-               GroupId=sg_id,
-               IpPermissions=[
-                       {
-                               'IpProtocol': 'tcp',
-                                'FromPort': 443,
-                                'ToPort': 443,
-                                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-                       }
-               ]
-        )
-
-print("Security group rule added to allow port 443 from anywhere")
-sys.stdout.flush()
-
-
-
+    try:
+        ec2_client.authorize_security_group_ingress(
+            GroupId=sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 443,
+                    'ToPort': 443,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }
+            ]
+        )
+        print(f"Security group rule added to allow port 443 from anywhere for security group {sg_id}")
+        sys.stdout.flush()
+    except Exception as e:
+        if "InvalidPermission.Duplicate" in str(e):
+            print(f"Security group rule already exists for port 443 in security group {sg_id}")
+            sys.stdout.flush()
+        else:
+            print(f"An error occurred: {e}")
+            sys.stdout.flush()
 
 
 
