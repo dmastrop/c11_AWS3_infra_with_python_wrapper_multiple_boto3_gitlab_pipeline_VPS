@@ -192,27 +192,27 @@ sys.stdout.flush()
 
 # Add security group rule to allow port 443 from anywhere (0.0.0.0/0)
 for sg_id in security_group_ids:
-Â Â Â  try:
-Â Â Â Â Â Â Â  ec2_client.authorize_security_group_ingress(
-Â Â Â Â Â Â Â Â Â Â Â  GroupId=sg_id,
-Â Â Â Â Â Â Â Â Â Â Â  IpPermissions=[
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  {
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpProtocol': 'tcp',
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'FromPort': 443,
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'ToPort': 443,
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  }
-Â Â Â Â Â Â Â Â Â Â Â  ]
-Â Â Â Â Â Â Â  )
-Â Â Â Â Â Â Â  print(f"Security group rule added to allow port 443 from anywhere for security group {sg_id}")
-Â Â Â Â Â Â Â  sys.stdout.flush()
-Â Â Â  except Exception as e:
-Â Â Â Â Â Â Â  if "InvalidPermission.Duplicate" in str(e):
-Â Â Â Â Â Â Â Â Â Â Â  print(f"Security group rule already exists for port 443 in security group {sg_id}")
-Â Â Â Â Â Â Â Â Â Â Â  sys.stdout.flush()
-Â Â Â Â Â Â Â  else:
-Â Â Â Â Â Â Â Â Â Â Â  print(f"An error occurred: {e}")
-Â Â Â Â Â Â Â Â Â Â Â  sys.stdout.flush()
+Â Â Â  try:
+Â Â Â Â Â Â Â  ec2_client.authorize_security_group_ingress(
+Â Â Â Â Â Â Â Â Â Â Â  GroupId=sg_id,
+Â Â Â Â Â Â Â Â Â Â Â  IpPermissions=[
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  {
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpProtocol': 'tcp',
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'FromPort': 443,
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'ToPort': 443,
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  }
+Â Â Â Â Â Â Â Â Â Â Â  ]
+Â Â Â Â Â Â Â  )
+Â Â Â Â Â Â Â  print(f"Security group rule added to allow port 443 from anywhere for security group {sg_id}")
+Â Â Â Â Â Â Â  sys.stdout.flush()
+Â Â Â  except Exception as e:
+Â Â Â Â Â Â Â  if "InvalidPermission.Duplicate" in str(e):
+Â Â Â Â Â Â Â Â Â Â Â  print(f"Security group rule already exists for port 443 in security group {sg_id}")
+Â Â Â Â Â Â Â Â Â Â Â  sys.stdout.flush()
+Â Â Â Â Â Â Â  else:
+Â Â Â Â Â Â Â Â Â Â Â  print(f"An error occurred: {e}")
+Â Â Â Â Â Â Â Â Â Â Â  sys.stdout.flush()
 
 
 
