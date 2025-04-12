@@ -187,17 +187,17 @@ sys.stdout.flush()
 
 # Add security group rule to allow port 443 from anywhere (0.0.0.0/0)
 for sg_id in security_group_ids:
-Â Â Â  ec2_client.authorize_security_group_ingress(
-Â Â Â Â Â Â Â  GroupId=sg_id,
-Â Â Â Â Â Â Â  IpPermissions=[
-Â Â Â Â Â Â Â Â Â Â Â  {
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpProtocol': 'tcp',
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'FromPort': 443,
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'ToPort': 443,
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-Â Â Â Â Â Â Â Â Â Â Â  }
-Â Â Â Â Â Â Â  ]
-Â Â Â  )
+Â Â Â  ec2_client.authorize_security_group_ingress(
+Â Â Â Â Â Â Â  GroupId=sg_id,
+Â Â Â Â Â Â Â  IpPermissions=[
+Â Â Â Â Â Â Â Â Â Â Â  {
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpProtocol': 'tcp',
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'FromPort': 443,
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'ToPort': 443,
+Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â  'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+Â Â Â Â Â Â Â Â Â Â Â  }
+Â Â Â Â Â Â Â  ]
+Â Â Â  )
 
 print("Security group rule added to allow port 443 from anywhere")
 sys.stdout.flush()
