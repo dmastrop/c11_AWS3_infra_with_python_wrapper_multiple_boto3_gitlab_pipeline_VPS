@@ -34,6 +34,10 @@ session = boto3.Session(
 elb_client = session.client('elbv2')
 acm_client = session.client('acm')
 route53_client = session.client('route53')
+# add ec2_client since we have to add port 443 to the security group.
+ec2_client = session.client('ec2')
+
+
 
 # Load instance and security group IDs from JSON file
 with open('instance_ids.json', 'r') as f:
