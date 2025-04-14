@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 import os
 import sys
 import json
+from datetime import datetime
+
+
 
 # This will load env vars from the .env file
 # They will be available to use in the rest of the code blocks below
