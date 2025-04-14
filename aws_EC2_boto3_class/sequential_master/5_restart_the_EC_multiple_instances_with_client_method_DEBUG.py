@@ -74,17 +74,18 @@ print(json.dumps(response, indent=4))
 
 
 
-
 # Print the response in a more readable format
 if 'Instances' in response:
-    for i, instance in enumerate(response['Instances']):
-        print(f"Instance {i+1}:")
-        print(f"  Instance ID: {instance['InstanceId']}")
-        print(f"  Instance Type: {instance['InstanceType']}")
-        print(f"  Image ID: {instance['ImageId']}")
-        print(f"  State: {instance['State']['Name']}")
-        print(f"  Private IP Address: {instance['PrivateIpAddress']}")
-        print(f"  Subnet ID: {instance['SubnetId']}")
+    for i, instance in enumerate(response['Instances']):
+        print(f"Instance {i+1}:")
+        print(f"  Instance ID: {instance['InstanceId']}")
+        print(f"  Instance Type: {instance['InstanceType']}")
+        print(f"  Image ID: {instance['ImageId']}")
+        print(f"  State: {instance['State']['Name']}")
+        print(f"  Private IP Address: {instance['PrivateIpAddress']}")
+        print(f"  Subnet ID: {instance['SubnetId']}")
 else:
-    print("No instances found in the response.")
+    print("No instances found in the response.")
+
+
 
