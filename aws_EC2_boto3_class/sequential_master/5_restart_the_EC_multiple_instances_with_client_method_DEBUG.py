@@ -2,6 +2,7 @@ import boto3
 from dotenv import load_dotenv
 import os
 import sys
+import json
 
 # This will load env vars from the .env file
 # They will be available to use in the rest of the code blocks below
@@ -70,7 +71,7 @@ response = start_ec2_instances(aws_access_key, aws_secret_key, region_name, imag
 
 
 # Print the response in a more readable format using json.dumps for pretty printing
-#print(json.dumps(response, indent=4))
+print(json.dumps(response, indent=4))
 
 
 
