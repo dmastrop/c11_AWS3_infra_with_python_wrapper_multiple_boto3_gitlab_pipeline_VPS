@@ -117,7 +117,7 @@ def install_wget_and_run_script(instance_address, key_path):
         #"sudo DEBIAN_FRONTEND=noninteractive apt install wget -y",
         #"sudo apt install wget -y",
         
-        "echo 'while true; do wget -q -O- https://loadbalancer.holinessinloveofchrist.com; done' > stress_test.sh",
+        "echo 'while true; do wget -q -O- https://loadbalancer1.holinessinloveofchrist.com; done' > stress_test.sh",
         
         "chmod +x stress_test.sh",
         
