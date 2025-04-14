@@ -66,5 +66,9 @@ def start_ec2_instances(aws_access_key, aws_secret_key, region_name, image_id, i
     return response
 
 response = start_ec2_instances(aws_access_key, aws_secret_key, region_name, image_id, instance_type, key_name, min_count, max_count)
-print(response)
+#print(response)
+
+
+# Print the response in a more readable format using json.dumps for pretty printing
+print(json.dumps(response, indent=4))
 
