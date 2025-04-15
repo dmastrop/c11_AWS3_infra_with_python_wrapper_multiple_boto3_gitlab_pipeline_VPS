@@ -13,4 +13,4 @@ elb_client = session.client('elbv2')
 acm_client = session.client('acm')
 route53_client = session.client('route53')
 autoscaling_client = session.client('autoscaling')
-
+eb_client = session.client('elasticbeanstalk')
