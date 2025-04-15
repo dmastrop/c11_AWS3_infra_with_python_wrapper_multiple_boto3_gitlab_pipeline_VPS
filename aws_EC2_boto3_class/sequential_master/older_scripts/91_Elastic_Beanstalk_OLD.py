@@ -27,18 +27,13 @@ session = boto3.Session(
 # Initialize the Elastic Beanstalk client using the session
 eb_client = session.client('elasticbeanstalk')
 
-# Create the Elastic Beanstalk application
-application_name = 'your-application-name'
-eb_client.create_application(
-    ApplicationName=application_name,
-    Description='Description of your application'
-)
-
 # Create a new Elastic Beanstalk environment with the existing Application Load Balancer
 response = eb_client.create_environment(
-    ApplicationName=application_name,
+    ApplicationName='your-application-name',
     EnvironmentName='your-environment-name',
-    SolutionStackName='64bit Amazon Linux 2 v3.3.14 running Python 3.8',  # Updated solution stack name
+    SolutionStackName='64bit Amazon Linux 2 v3.3.14 running Python 3.8',
+    #SolutionStackName='64bit Amazon Linux 2 v3.4.0 running Python 3.8',  # Updated solution stack name
+    #SolutionStackName='64bit Amazon Linux 2 v3.3.6 running Python 3.8',
     OptionSettings=[
         {
             'Namespace': 'aws:elasticbeanstalk:environment',
@@ -48,7 +43,7 @@ response = eb_client.create_environment(
         {
             'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
             'OptionName': 'LoadBalancerName',
-            'Value': 'tomcat-load_balancer'
+            'Value': 'tomcat-load-balancer'
         }
     ]
 )
