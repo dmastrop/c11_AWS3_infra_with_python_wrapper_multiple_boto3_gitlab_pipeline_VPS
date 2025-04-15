@@ -45,11 +45,14 @@ response = eb_client.create_environment(
             'OptionName': 'LoadBalancerType',
             'Value': 'application'
         },
+
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
+            'Namespace': 'aws:elasticbeanstalk:environment:process',
             'OptionName': 'LoadBalancerName',
             'Value': 'tomcat-load_balancer'
         }
+
+
     ]
 )
 
