@@ -31,7 +31,8 @@ eb_client = session.client('elasticbeanstalk')
 response = eb_client.create_environment(
     ApplicationName='your-application-name',
     EnvironmentName='your-environment-name',
-    SolutionStackName='64bit Amazon Linux 2 v3.3.6 running Python 3.8',
+    SolutionStackName='64bit Amazon Linux 2 v3.4.0 running Python 3.8',  # Updated solution stack name
+    #SolutionStackName='64bit Amazon Linux 2 v3.3.6 running Python 3.8',
     OptionSettings=[
         {
             'Namespace': 'aws:elasticbeanstalk:environment',
