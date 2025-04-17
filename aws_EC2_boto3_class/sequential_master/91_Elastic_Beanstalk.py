@@ -215,15 +215,33 @@ response = eb_client.create_environment(
 # The CNAME (URL) will be saved into the file beanstalk_environment.json which will be used in the 
 # beanstalk_wget script so that wget instance can send traffic to the beanstalk environment URL. This
 # wget script is a different script file
+# This script includes a loop to wait until the environment status is 'Ready' before attempting to retrieve the CNAME. Additionally, it uses the `get` method to safely access the 'CNAME' key, providing a default value of `None` if the key is not found.
+
+
+# Wait for the environment to be ready and retrieve its description
+while True:
+    environments = eb_client.describe_environments(EnvironmentNames=['tomcat-environment'])
+    environment_status = environments['Environments'][0]['Status']
+
+    if environment_status == 'Ready':
+        break
+
+    print(f"Waiting for environment to be ready... Current status: {environment_status}")
+    time.sleep(10)
+
+# Verify the environment creation and save the beanstalk URL to a JSON file. Note using the get method to get
+# the CNAME
 environment_description = eb_client.describe_environments(EnvironmentNames=['tomcat-environment'])
-beanstalk_url = environment_description['Environments'][0]['CNAME']
+beanstalk_url = environment_description['Environments'][0].get('CNAME', None)
+
+if beanstalk_url is None:
+    raise KeyError("CNAME not found in environment description")
+
 print(f"Elastic Beanstalk URL: http://{beanstalk_url}")
 
 beanstalk_data = {'CNAME': beanstalk_url}
 with open('beanstalk_environment.json', 'w') as f:
     json.dump(beanstalk_data, f)
 
-
-# Verify the environment creation
 print(response)
 
