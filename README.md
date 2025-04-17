@@ -1,3 +1,26 @@
+## UPDATES:
+
+See below as well.
+Latest changes for AWS3 account are added elastic beanstalk environment and application and added wget stress traffic to that beanstalk URL (CNAME)
+
+IAM class is required because instance_profile required to be attached to the beanstalk environment.  The instance_profile is a legacy object that holds the beanstalk role that has the folowing policies in it:
+policies = [
+    'arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier',
+    'arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier'
+
+boto3 classes:
+
+elb_client = session.client('elbv2')
+acm_client = session.client('acm')
+route53_client = session.client('route53')
+autoscaling_client = session.client('autoscaling')
+eb_client = session.client('elasticbeanstalk')
+iam_client = session.client('iam')
+
+
+
+## ORIGINAL
+
 This python project creates an ALB on AWS using a target group of 50 EC2 instances running an installed tomcat.  THe listener 
 frontend is both https/ssl and http.   There is also a stress traffic EC2 generator that is also created to generate
 stress traffic to the https listener.   The traffic can be monitored on the access logs of the ALB which are also 
