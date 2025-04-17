@@ -32,11 +32,7 @@ session = boto3.Session(
 # Initialize the IAM client
 iam_client = session.client('iam')
 
-
-
-# Create an IAM role if it doesn't already exist
-# assume_role_policy_document is the trust policy for the role not the permissions policies attached to it.
-# that will come later (see below)
+# Create an IAM role
 role_name = 'tomcat-role'
 assume_role_policy_document = {
     "Version": "2012-10-17",
@@ -58,18 +54,9 @@ try:
     )
     print(f"Role {role_name} created successfully.")
 except ClientError as e:
-    if e.response['Error']['Code'] == 'EntityAlreadyExists':
-        print(f"Role {role_name} already exists. Skipping creation.")
-    else:
-        print(f"Error creating role: {e}")
+    print(f"Error creating role: {e}")
 
-
-
-
-
-
-
-# Attach policies to the role unless they are already attached to the role
+# Attach policies to the role
 policies = [
     'arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier',
     'arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier'
@@ -78,22 +65,14 @@ policies = [
 for policy_arn in policies:
     try:
         iam_client.attach_role_policy(
-            Role_name,
+            RoleName=role_name,
             PolicyArn=policy_arn
         )
         print(f"Policy {policy_arn} attached to role {role_name}.")
     except ClientError as e:
-        if e.response['Error']['Code'] == 'EntityAlreadyExists':
-            print(f"Policy {policy_arn} already attached to role {role_name}. Skipping attachment.")
-        else:
-            print(f"Error attaching policy {policy_arn}: {e}")
+        print(f"Error attaching policy {policy_arn}: {e}")
 
-
-
-
-
-
-# Create an instance profile if it doesn't already exist
+# Create an instance profile
 instance_profile_name = 'tomcat-instance-profile'
 try:
     iam_client.create_instance_profile(
@@ -101,15 +80,9 @@ try:
     )
     print(f"Instance profile {instance_profile_name} created successfully.")
 except ClientError as e:
-    if e.response['Error']['Code'] == 'EntityAlreadyExists':
-        print(f"Instance profile {instance_profile_name} already exists. Skipping creation.")
-    else:
-        print(f"Error creating instance profile: {e}")
+    print(f"Error creating instance profile: {e}")
 
-
-
-
-# Add the role to the instance profile if it isn't already added
+# Add the role to the instance profile
 try:
     iam_client.add_role_to_instance_profile(
         InstanceProfileName=instance_profile_name,
@@ -117,10 +90,9 @@ try:
     )
     print(f"Role {role_name} added to instance profile {instance_profile_name}.")
 except ClientError as e:
-    if e.response['Error']['Code'] == 'LimitExceeded':
-        print(f"Role {role_name} already added to instance profile {instance_profile_name}. Skipping addition.")
-    else:
-        print(f"Error adding role to instance profile: {e}")
+    print(f"Error adding role to instance profile: {e}")
+
+
 
 
 
@@ -138,11 +110,16 @@ for app in existing_apps['Applications']:
 
 
 
-
-
-
 # Create the Elastic Beanstalk application
-application_name = 'tomcat-application'
+application_name = 'tomcatapplication'
+#eb_client.create_application(
+#    ApplicationName=application_name,
+#    Description='Description of your application'
+#)
+
+
+#add error handling for Create the Elastic Beanstalk application:
+
 try:
     eb_client.create_application(
         ApplicationName=application_name,
@@ -150,10 +127,7 @@ try:
     )
     print(f"Application {application_name} created successfully.")
 except ClientError as e:
-    if e.response['Error']['Code'] == 'InvalidParameterValue':
-        print(f"Application {application_name} already exists. Skipping creation.")
-    else:
-        print(f"Error creating application: {e}")
+    print(f"Error creating application: {e}")
 
 
 
@@ -166,7 +140,7 @@ except ClientError as e:
 # Create a new Elastic Beanstalk environment with the instance profile
 response = eb_client.create_environment(
     ApplicationName=application_name,
-    EnvironmentName='tomcat-environment',
+    EnvironmentName='tomcatenvironment1',
     SolutionStackName='64bit Amazon Linux 2 v4.8.0 running Tomcat 9 Corretto 8',
     OptionSettings=[
         {
