@@ -199,8 +199,14 @@ response = eb_client.create_environment(
             'Namespace': 'aws:autoscaling:asg',
             'OptionName': 'MaxSize',
             'Value': '20'
-        }
+        },
 
+       
+        {
+            'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
+            'OptionName': 'ListenerProtocol',
+            'Value': 'HTTPS'
+        }
 
 
 
