@@ -183,7 +183,7 @@ response = eb_client.create_environment(
 
 
 # Use the native elastic beanstalk loadbalancer and build that up instead of tyring to add existing loadbalancer to the setup.
-        #{
+
         #    'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
         #    'OptionName': 'LoadBalancerName',
         #    'Value': 'tomcat-load-balancer'
