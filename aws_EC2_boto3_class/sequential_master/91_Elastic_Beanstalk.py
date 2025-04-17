@@ -34,6 +34,7 @@ eb_client = session.client('elasticbeanstalk')
 # Check for existing elastic beanstalk apps
 existing_apps = eb_client.describe_applications()
 for app in existing_apps['Applications']:
+    print(f"ApplicationName: {app['ApplicationName']}")
     print(app['ApplicationName'])
 
 
@@ -84,7 +85,7 @@ response = eb_client.create_environment(
     ]
 )
 
-#Make sure to use tomcat-load-balancer which is already created
+# Make sure to use tomcat-load-balancer which is already created
 
 # Verify the environment creation
 print(response)
