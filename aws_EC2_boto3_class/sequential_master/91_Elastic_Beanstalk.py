@@ -140,7 +140,7 @@ except ClientError as e:
 # Create a new Elastic Beanstalk environment with the instance profile
 response = eb_client.create_environment(
     ApplicationName=application_name,
-    EnvironmentName='tomcatenvironment',
+    EnvironmentName='tomcatenvironment1',
     SolutionStackName='64bit Amazon Linux 2 v4.8.0 running Tomcat 9 Corretto 8',
     OptionSettings=[
         {
