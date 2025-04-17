@@ -4,6 +4,10 @@ import os
 import paramiko
 import time
 import sys
+import json
+from botocore.exceptions import ClientError
+
+
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -23,6 +27,73 @@ session = boto3.Session(
     aws_secret_access_key=aws_secret_key,
     region_name=region_name
 )
+
+
+# Initialize the IAM client
+iam_client = session.client('iam')
+
+# Create an IAM role
+role_name = 'tomcat-role'
+assume_role_policy_document = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+try:
+    iam_client.create_role(
+        RoleName=role_name,
+        AssumeRolePolicyDocument=json.dumps(assume_role_policy_document)
+    )
+    print(f"Role {role_name} created successfully.")
+except ClientError as e:
+    print(f"Error creating role: {e}")
+
+# Attach policies to the role
+policies = [
+    'arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier',
+    'arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier'
+]
+
+for policy_arn in policies:
+    try:
+        iam_client.attach_role_policy(
+            RoleName=role_name,
+            PolicyArn=policy_arn
+        )
+        print(f"Policy {policy_arn} attached to role {role_name}.")
+    except ClientError as e:
+        print(f"Error attaching policy {policy_arn}: {e}")
+
+# Create an instance profile
+instance_profile_name = 'tomcat-instance-profile'
+try:
+    iam_client.create_instance_profile(
+        InstanceProfileName=instance_profile_name
+    )
+    print(f"Instance profile {instance_profile_name} created successfully.")
+except ClientError as e:
+    print(f"Error creating instance profile: {e}")
+
+# Add the role to the instance profile
+try:
+    iam_client.add_role_to_instance_profile(
+        InstanceProfileName=instance_profile_name,
+        RoleName=role_name
+    )
+    print(f"Role {role_name} added to instance profile {instance_profile_name}.")
+except ClientError as e:
+    print(f"Error adding role to instance profile: {e}")
+
+
+
 
 
 
@@ -48,25 +119,28 @@ application_name = 'tomcatapplication'
 
 
 #add error handling for Create the Elastic Beanstalk application:
+
 try:
     eb_client.create_application(
-    ApplicationName=application_name,
-    Description='Description of your application'
-)
-except botocore.exceptions.ClientError as error:
-    print(f"An error occurred: {error}")
-
+        ApplicationName=application_name,
+        Description='Description of your application'
+    )
+    print(f"Application {application_name} created successfully.")
+except ClientError as e:
+    print(f"Error creating application: {e}")
 
 
 
 
 # Create a new Elastic Beanstalk environment with the existing Application Load Balancer
 # SolutionStackName https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html#platforms-supported.python
+# Make sure to use tomcat-load-balancer which is already created
 
+
+# Create a new Elastic Beanstalk environment with the instance profile
 response = eb_client.create_environment(
     ApplicationName=application_name,
     EnvironmentName='tomcatenvironment',
-    #SolutionStackName='64bit Amazon Linux 2 v3.3.14 running Python 3.8',  # Updated solution stack name
     SolutionStackName='64bit Amazon Linux 2 v4.8.0 running Tomcat 9 Corretto 8',
     OptionSettings=[
         {
@@ -74,18 +148,24 @@ response = eb_client.create_environment(
             'OptionName': 'LoadBalancerType',
             'Value': 'application'
         },
-
         {
             'Namespace': 'aws:elasticbeanstalk:environment:process',
             'OptionName': 'LoadBalancerName',
             'Value': 'tomcat-load-balancer'
+        },
+        {
+            'Namespace': 'aws:autoscaling:launchconfiguration',
+            'OptionName': 'IamInstanceProfile',
+            'Value': instance_profile_name
         }
-
-
     ]
 )
 
-# Make sure to use tomcat-load-balancer which is already created
+
+
+
+
+
 
 # Verify the environment creation
 print(response)
