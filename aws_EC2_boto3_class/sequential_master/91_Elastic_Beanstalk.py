@@ -202,13 +202,6 @@ response = eb_client.create_environment(
         },
 
        
-        {
-            'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
-            'OptionName': 'ListenerProtocol',
-            'Value': 'HTTPS'
-        }
-
-
 
     ]
 )
