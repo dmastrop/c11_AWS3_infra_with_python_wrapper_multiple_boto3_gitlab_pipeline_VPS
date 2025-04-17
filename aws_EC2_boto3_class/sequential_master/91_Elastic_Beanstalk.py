@@ -78,7 +78,7 @@ policies = [
 for policy_arn in policies:
     try:
         iam_client.attach_role_policy(
-            Role_name,
+            RoleName,
             PolicyArn=policy_arn
         )
         print(f"Policy {policy_arn} attached to role {role_name}.")
