@@ -67,7 +67,7 @@ response = eb_client.create_environment(
     ApplicationName=application_name,
     EnvironmentName='tomcatenvironment',
     #SolutionStackName='64bit Amazon Linux 2 v3.3.14 running Python 3.8',  # Updated solution stack name
-    SolutionStackName='64bit Amazon Linux 2 v4.8.0 running Tomcat 9 Corretto 8'
+    SolutionStackName='64bit Amazon Linux 2 v4.8.0 running Tomcat 9 Corretto 8',
     OptionSettings=[
         {
             'Namespace': 'aws:elasticbeanstalk:environment',
