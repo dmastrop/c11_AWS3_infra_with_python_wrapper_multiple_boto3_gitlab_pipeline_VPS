@@ -12,7 +12,7 @@ load_dotenv()
 # Set variables from environment
 aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
 aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-region_name = os.getenv("AWS_REGION")  # Corrected the environment variable name
+region_name = os.getenv("region_name")  # Corrected the environment variable name
 image_id = os.getenv("image_id")
 instance_type = os.getenv("instance_type")
 key_name = os.getenv("key_name")
