@@ -84,6 +84,8 @@ response = eb_client.create_environment(
     ]
 )
 
+#Make sure to use tomcat-load-balancer which is already created
+
 # Verify the environment creation
 print(response)
 
