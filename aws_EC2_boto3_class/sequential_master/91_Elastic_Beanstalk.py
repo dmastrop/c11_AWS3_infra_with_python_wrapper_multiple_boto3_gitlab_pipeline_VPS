@@ -24,15 +24,40 @@ session = boto3.Session(
     region_name=region_name
 )
 
+
+
 # Initialize the Elastic Beanstalk client using the session
 eb_client = session.client('elasticbeanstalk')
+# Check for existing elastic beanstalk apps
+
+
+# Check for existing elastic beanstalk apps
+existing_apps = eb_client.describe_applications()
+for app in existing_apps['Applications']:
+    print(app['ApplicationName'])
+
+
 
 # Create the Elastic Beanstalk application
-application_name = 'your-application-name'
-eb_client.create_application(
+application_name = 'tomcatapplication'
+#eb_client.create_application(
+#    ApplicationName=application_name,
+#    Description='Description of your application'
+#)
+
+
+#add error handling for Create the Elastic Beanstalk application:
+try:
+    eb_client.create_application(
     ApplicationName=application_name,
     Description='Description of your application'
 )
+except botocore.exceptions.ClientError as error:
+    print(f"An error occurred: {error}")
+
+
+
+
 
 # Create a new Elastic Beanstalk environment with the existing Application Load Balancer
 response = eb_client.create_environment(
