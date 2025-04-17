@@ -197,11 +197,13 @@ response = eb_client.create_environment(
         }
 
 # scale up the backend tomcat servers to 20
-
+        {
             'Namespace': 'aws:autoscaling:asg',
             'OptionName': 'MinSize',
             'Value': '20'
         },
+
+
         {
             'Namespace': 'aws:autoscaling:asg',
             'OptionName': 'MaxSize',
