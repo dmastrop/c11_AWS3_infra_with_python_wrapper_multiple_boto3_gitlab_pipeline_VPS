@@ -211,6 +211,17 @@ response = eb_client.create_environment(
 
 
 
+# Verify the environment creation and save the beanstalk URL to a JSON file
+# The CNAME (URL) will be saved into the file beanstalk_environment.json which will be used in the 
+# beanstalk_wget script so that wget instance can send traffic to the beanstalk environment URL. This
+# wget script is a different script file
+environment_description = eb_client.describe_environments(EnvironmentNames=['tomcat-environment'])
+beanstalk_url = environment_description['Environments'][0]['CNAME']
+print(f"Elastic Beanstalk URL: http://{beanstalk_url}")
+
+beanstalk_data = {'CNAME': beanstalk_url}
+with open('beanstalk_environment.json', 'w') as f:
+    json.dump(beanstalk_data, f)
 
 
 # Verify the environment creation
