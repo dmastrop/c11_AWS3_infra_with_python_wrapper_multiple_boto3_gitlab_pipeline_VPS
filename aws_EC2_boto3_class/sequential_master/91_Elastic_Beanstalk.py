@@ -187,9 +187,6 @@ response = eb_client.create_environment(
 #'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
 #'OptionName': 'LoadBalancerName',
 #'Value': 'tomcat-load-balancer'
-  
-
-       
         {
             'Namespace': 'aws:autoscaling:launchconfiguration',
             'OptionName': 'IamInstanceProfile',
