@@ -175,23 +175,17 @@ response = eb_client.create_environment(
             'Value': 'application'
         },
 
-        #{
-        #    'Namespace': 'aws:elasticbeanstalk:environment:process',
-        #    'OptionName': 'LoadBalancerName',
-        #    'Value': 'tomcat-load-balancer'
-        #},
-
-
 # Use the native elastic beanstalk loadbalancer and build that up instead of tyring to add existing loadbalancer to the setup.
 
 #'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
 #'OptionName': 'LoadBalancerName',
 #'Value': 'tomcat-load-balancer'
+
         {
             'Namespace': 'aws:autoscaling:launchconfiguration',
             'OptionName': 'IamInstanceProfile',
             'Value': instance_profile_name
-        }
+        },
 
 # scale up the backend tomcat servers to 20
         {
