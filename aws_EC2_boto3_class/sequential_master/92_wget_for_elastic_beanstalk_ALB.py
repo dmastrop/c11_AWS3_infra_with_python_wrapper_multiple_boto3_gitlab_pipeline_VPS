@@ -168,6 +168,12 @@ key_file_path = 'EC2_generic_key.pem'
 # Load the Elastic Beanstalk URL from the JSON file created by the first script
 with open('beanstalk_environment.json', 'r') as f:
     beanstalk_data = json.load(f)
+
+# Print out the contents of the JSON file
+print("Contents of beanstalk_environment.json:")
+print(json.dumps(beanstalk_data, indent=4))
+
+
 beanstalk_url = beanstalk_data['CNAME']
 
 # Install wget and run the stress test script on the instance
