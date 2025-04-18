@@ -423,5 +423,48 @@ sys.stdout.flush()
 
 
 
+## Step four add the 443 access to the listener from anywhere 0.0.0.0/ with error detection if sg rule
+## is already present. Note: adding the rule to the SG tied to the beanstalk loadbalancer
+
+# Initialize the EC2 client using the session
+ec2_client = session.client('ec2')
+
+# Describe the load balancer to get its security groups
+load_balancers = elb_client.describe_load_balancers()
+load_balancer_arn = load_balancers['LoadBalancers'][0]['LoadBalancerArn']
+load_balancer_security_groups = load_balancers['LoadBalancers'][0]['SecurityGroups']
+
+# Describe the security group to check existing rules
+security_group_id = load_balancer_security_groups[0]
+security_group = ec2_client.describe_security_groups(GroupIds=[security_group_id])
+existing_rules = security_group['SecurityGroups'][0]['IpPermissions']
+
+# Check if the rule for port 443 already exists
+rule_exists = False
+for rule in existing_rules:
+    if rule['IpProtocol'] == 'tcp' and rule['FromPort'] == 443 and rule['ToPort'] == 443:
+        for ip_range in rule['IpRanges']:
+            if ip_range['CidrIp'] == '0.0.0.0/0':
+                rule_exists = True
+                break
+
+# Add the rule if it doesn't exist
+if not rule_exists:
+    ec2_client.authorize_security_group_ingress(
+        GroupId=security_group_id,
+        IpPermissions=[
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 443,
+                'ToPort': 443,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            }
+        ]
+    )
+    print("Security group rule added to allow 443 traffic from anywhere")
+else:
+    print("Security group rule for 443 traffic from anywhere already exists")
+
+sys.stdout.flush()
 
 
