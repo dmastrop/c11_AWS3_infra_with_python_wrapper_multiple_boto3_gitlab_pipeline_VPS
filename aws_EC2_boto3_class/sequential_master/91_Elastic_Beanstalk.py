@@ -371,25 +371,33 @@ sys.stdout.flush()
 # above.
 # Try using the elbv2 method and directly add the listener to the beanstalk loadbalancer since the
 # load_balancer_arn and the target_group_arn of the beanstalk loadbalancer are both available.
+# using the elbv2 client method, not beanstalk env method.
 
-# Initialize the Elastic Beanstalk client using the session
-eb_client = session.client('elasticbeanstalk')
+# Step one get the load_balancer_arn (we already got it above earlier but get it again and print it out)
+# Initialize the ELB client using the session
+elb_client = session.client('elbv2')
 
-# Describe the environment resources to get the TargetGroupArn
-environment_resources = eb_client.describe_environment_resources(
-    EnvironmentName='tomcat-environment'
-)
+# Describe the load balancer to get its ARN
+load_balancers = elb_client.describe_load_balancers()
+load_balancer_arn = load_balancers['LoadBalancers'][0]['LoadBalancerArn']
 
-# Extract the TargetGroupArn from the environment resources
-target_group_arn = environment_resources['EnvironmentResources']['LoadBalancers'][0]['TargetGroupArn']
+print(f"Load Balancer ARN: {load_balancer_arn}")
+sys.stdout.flush()
+
+
+
+# Step two get the target_group_arn by using describe on the load_balancer_arn using elbv2 again
+# Describe the target groups associated with the load balancer
+target_groups = elb_client.describe_target_groups(LoadBalancerArn=load_balancer_arn)
+target_group_arn = target_groups['TargetGroups'][0]['TargetGroupArn']
 
 print(f"Target Group ARN: {target_group_arn}")
 sys.stdout.flush()
 
 
-# Initialize the ELB client using the session
-elb_client = session.client('elbv2')
-
+# Step three. Finally with the load_balancer_arn and the target_group_arn and the certificate_arn
+# add the HTTPS 443 listener to this beanstalk loadbalancer manually and directoy with elbv2 and not
+# beanstalk environment method
 # Create HTTPS listener for the load balancer
 response = elb_client.create_listener(
     LoadBalancerArn=load_balancer_arn,
@@ -407,6 +415,8 @@ response = elb_client.create_listener(
         }
     ]
 )
+
+
 
 print("HTTPS listener created for the existing beanstalk environment load balancer")
 sys.stdout.flush()
