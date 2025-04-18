@@ -371,12 +371,17 @@ response = eb_client.update_environment(
     EnvironmentName='tomcat-environment',
     OptionSettings=[
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
-            'OptionName': 'LoadBalancerHTTPSPort',
+            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
+            'OptionName': 'Port',
             'Value': '443'
         },
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:loadbalancer',
+            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
+            'OptionName': 'Protocol',
+            'Value': 'HTTPS'
+        },
+        {
+            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
             'OptionName': 'SSLCertificateId',
             'Value': certificate_arn
         }
