@@ -189,6 +189,14 @@ response = eb_client.create_environment(
             'Value': instance_profile_name
         },
 
+# add the keypair below to the running backend instances in the beanstalk ALB target group
+       {
+            'Namespace': 'aws:autoscaling:launchconfiguration',
+            'OptionName': 'EC2KeyName',
+            'Value': 'generic_keypair_for_python_testing'
+        },
+
+
 # scale up the backend tomcat servers to 20
         {
             'Namespace': 'aws:autoscaling:asg',
