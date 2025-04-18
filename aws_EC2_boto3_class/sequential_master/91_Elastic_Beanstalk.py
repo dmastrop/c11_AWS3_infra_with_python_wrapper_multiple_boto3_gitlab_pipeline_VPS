@@ -363,27 +363,34 @@ sys.stdout.flush()
 
 
 
+
 # Add HTTPS listener to the existing Elastic Beanstalk environment
 response = eb_client.update_environment(
     ApplicationName=application_name,
     EnvironmentName='tomcat-environment',
     OptionSettings=[
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
-            'OptionName': 'LoadBalancerHTTPSPort',
-            'Value': '443'
+            'Namespace': 'aws:elbv2:listener',
+            'OptionName': 'ListenerEnabled',
+            'Value': 'true'
         },
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
+            'Namespace': 'aws:elbv2:listener',
             'OptionName': 'SSLCertificateId',
             'Value': certificate_arn
+        },
+        {
+            'Namespace': 'aws:elbv2:listener',
+            'OptionName': 'Protocol',
+            'Value': 'HTTPS'
+        },
+        {
+            'Namespace': 'aws:elbv2:listener',
+            'OptionName': 'Port',
+            'Value': '443'
         }
     ]
 )
-
-
-
-
 
 
 print("HTTPS listener added to the Elastic Beanstalk environment")
