@@ -366,29 +366,52 @@ sys.stdout.flush()
 
 # Add HTTPS listener to the existing Elastic Beanstalk environment
 # Add HTTPS listener to the existing Elastic Beanstalk environment
-response = eb_client.update_environment(
-    ApplicationName=application_name,
-    EnvironmentName='tomcat-environment',
-    OptionSettings=[
+# None of the elasticbeanstalk approaches to this are working due to the ambiguity of the Namespace
+# and OptionName in the OptionSettings to add the 443 listener and the certificate that has been created
+# above.
+# Try using the elbv2 method and directly add the listener to the beanstalk loadbalancer since the
+# load_balancer_arn and the target_group_arn of the beanstalk loadbalancer are both available.
+
+# Initialize the Elastic Beanstalk client using the session
+eb_client = session.client('elasticbeanstalk')
+
+# Describe the environment resources to get the TargetGroupArn
+environment_resources = eb_client.describe_environment_resources(
+    EnvironmentName='tomcat-environment'
+)
+
+# Extract the TargetGroupArn from the environment resources
+target_group_arn = environment_resources['EnvironmentResources']['LoadBalancers'][0]['TargetGroupArn']
+
+print(f"Target Group ARN: {target_group_arn}")
+sys.stdout.flush()
+
+
+# Initialize the ELB client using the session
+elb_client = session.client('elbv2')
+
+# Create HTTPS listener for the load balancer
+response = elb_client.create_listener(
+    LoadBalancerArn=load_balancer_arn,
+    Protocol='HTTPS',
+    Port=443,
+    Certificates=[
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
-            'OptionName': 'Port',
-            'Value': '443'
-        },
+            'CertificateArn': certificate_arn
+        }
+    ],
+    DefaultActions=[
         {
-            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
-            'OptionName': 'Protocol',
-            'Value': 'HTTPS'
-        },
-        {
-            'Namespace': 'aws:elasticbeanstalk:environment:process:default',
-            'OptionName': 'SSLCertificateId',
-            'Value': certificate_arn
+            'Type': 'forward',
+            'TargetGroupArn': target_group_arn
         }
     ]
 )
 
-
-print("HTTPS listener added to the Elastic Beanstalk environment")
+print("HTTPS listener created for the existing beanstalk environment load balancer")
 sys.stdout.flush()
+
+
+
+
 
