@@ -182,3 +182,6 @@ install_wget_and_run_script(instance_dns if instance_dns else instance_ip, key_f
 print(f"EC2 instance {instance_id} is created and stress traffic script is running.")
 sys.stdout.flush()
 
+## NOTE: with the addition of Route53 hosted zone for this setup (for https cert), can now
+## use elasticloadbalancer.holinessinloveofchrist.com URL for both HTTP and HTTPS traffic. Will add that 
+## to this script so can test both at the same time.
