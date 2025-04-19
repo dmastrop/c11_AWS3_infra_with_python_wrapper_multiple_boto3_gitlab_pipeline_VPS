@@ -238,10 +238,19 @@ while True:
     print(f"Waiting for environment to be ready... Current status: {environment_status}")
     time.sleep(10)
 
+
+
+
+
+
 # Verify the environment creation and save the beanstalk URL to a JSON file. Note using the get method to get
 # the CNAME
+# Get the environment_id so that we can get the beanstalk loadbalancer name, arn, etc.....
+# This is required if multiple loadbalancers exist in the AWS account/region
 environment_description = eb_client.describe_environments(EnvironmentNames=['tomcat-environment'])
 beanstalk_url = environment_description['Environments'][0].get('CNAME', None)
+environment_id = environment_description['Environments'][0]['EnvironmentId']
+
 
 if beanstalk_url is None:
     raise KeyError("CNAME not found in environment description")
@@ -267,13 +276,40 @@ print(response)
 # Initialize the ELB client using the session
 elb_client = session.client('elbv2')
 
-# Retrieve the load balancer ARN and DNS name
+# Retrieve the load balancer ARN and DNS name using the environment ID for the env created above
+# This is environment-id as defined above for this environment
 load_balancers = elb_client.describe_load_balancers()
-load_balancer_arn = load_balancers['LoadBalancers'][0]['LoadBalancerArn']
-load_balancer_dns_name = load_balancers['LoadBalancers'][0]['DNSName']
+beanstalk_load_balancer = None
 
-print(f"Load Balancer DNS Name: {load_balancer_dns_name}")
+for lb in load_balancers['LoadBalancers']:
+    if environment_id in [tag['Value'] for tag in lb['Tags'] if tag['Key'] == 'elasticbeanstalk:environment-id']:
+        beanstalk_load_balancer = lb
+        break
+
+if not beanstalk_load_balancer:
+    raise ValueError("Beanstalk load balancer not found")
+
+
+
+
+
+
+# The load_balancers will have an array of one loadbalancer called beanstalk_load_balancer, the one with the environment-id above for this env
+# These variables below will allow us to reference the correct beanstalk loadbalancer
+# The array of one is defined as beanstalk_load_balancer above
+load_balancer_arn = beanstalk_load_balancer['LoadBalancerArn']
+load_balancer_dns_name = beanstalk_load_balancer['DNSName']
+load_balancer_name = beanstalk_load_balancer['LoadBalancerName']
+
+print(f"Beanstalk Load Balancer arn: {load_balancer_arn}")
+print(f"Beanstalk Load Balancer Name: {load_balancer_name}")
+print(f"Beanstalk Load Balancer DNS Name: {load_balancer_dns_name}")
 sys.stdout.flush()
+
+
+
+
+
 
 # Initialize the Route 53 client using the session
 route53_client = session.client('route53')
@@ -386,10 +422,17 @@ sys.stdout.flush()
 elb_client = session.client('elbv2')
 
 # Describe the load balancer to get its ARN
-load_balancers = elb_client.describe_load_balancers()
+# the varaibles for the name, DNS and arn for beanstalk loadbalancer were retrieved above....
+load_balancers = elb_client.describe_load_balancers(Names=[load_balancer_name])
 load_balancer_arn = load_balancers['LoadBalancers'][0]['LoadBalancerArn']
 
-print(f"Load Balancer ARN: {load_balancer_arn}")
+## OR ALTERNATIVELY:
+#load_balancer_arn = beanstalk_load_balancer['LoadBalancerArn']
+#load_balancer_dns_name = beanstalk_load_balancer['DNSName']
+#load_balancer_name = beanstalk_load_balancer['LoadBalancerName']
+# The redefining of load_balancers above will require less code rewrite for this and below.
+
+print(f"Beanstalk Load Balancer ARN: {load_balancer_arn}")
 sys.stdout.flush()
 
 
@@ -438,9 +481,11 @@ sys.stdout.flush()
 ec2_client = session.client('ec2')
 
 # Describe the load balancer to get its security groups
-load_balancers = elb_client.describe_load_balancers()
-load_balancer_arn = load_balancers['LoadBalancers'][0]['LoadBalancerArn']
+# NOTE that load_balancer_name has been defined as above and is the beanstalk loadbalancer
+load_balancers = elb_client.describe_load_balancers(Names=[load_balancer_name])
 load_balancer_security_groups = load_balancers['LoadBalancers'][0]['SecurityGroups']
+
+
 
 # Describe the security group to check existing rules
 security_group_id = load_balancer_security_groups[0]
