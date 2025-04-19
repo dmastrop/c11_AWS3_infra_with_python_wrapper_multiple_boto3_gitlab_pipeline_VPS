@@ -261,6 +261,8 @@ beanstalk_data = {'CNAME': beanstalk_url}
 with open('beanstalk_environment.json', 'w') as f:
     json.dump(beanstalk_data, f)
 
+
+print(f"Elastic Beanstalk environment_id: {environment_id}")
 print(response)
 
 
@@ -277,7 +279,13 @@ print(response)
 elb_client = session.client('elbv2')
 
 # Retrieve the load balancer ARN and DNS name using the environment ID for the env created above
-# This is environment-id as defined above for this environment
+# This is environment_id as defined above for this environment
+# This id is in the Tags of the loabalancer as elasticbeanstalk:environment-id along with the environment name
+# the for loop below:
+# This block of code is designed to find the load balancer associated with a specific Elastic Beanstalk environment by checking the tags of each load balancer. 
+#  if tag['Key'] == 'elasticbeanstalk:environment-id' and tag['Value'] == environment_id:
+# This line checks if the current tag's key is `elasticbeanstalk:environment-id` and if its value matches the `environment_id` of the Elastic Beanstalk environment we are interested in. If both conditions are true, it means this load balancer is associated with the desired environment.
+# Summary: this block of code iterates through all load balancers, retrieves their tags, and checks if any load balancer has a tag indicating it is associated with the specific Elastic Beanstalk environment. Once the correct load balancer is found, it assigns it to `beanstalk_load_balancer` and exits the loop.
 load_balancers = elb_client.describe_load_balancers()
 beanstalk_load_balancer = None
 
