@@ -139,24 +139,8 @@ logger.debug(f"Load balancer details: {load_balancer}")
 
 
 
-# indexing by [0] will not work once we introduce the beanstalk loadbalancer. Need to reference this loadbalancer
-# by name tomcat-load-balancer
-#load_balancer_arn = load_balancer['LoadBalancers'][0]['LoadBalancerArn']
 
-
-# Retrieve the load balancer ARN by name 'tomcat-load-balancer'
-load_balancers = elb_client.describe_load_balancers()
-load_balancer_arn = None
-
-for lb in load_balancers['LoadBalancers']:
-    if lb['LoadBalancerName'] == 'tomcat-load-balancer':
-        load_balancer_arn = lb['LoadBalancerArn']
-        break
-
-if load_balancer_arn is None:
-    raise ValueError("Load balancer 'tomcat-load-balancer' not found")
-
-
+load_balancer_arn = load_balancer['LoadBalancers'][0]['LoadBalancerArn']
 logger.info(f"Load Balancer ARN: {load_balancer_arn}")
 
 
@@ -215,7 +199,7 @@ def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, datetime):
         return obj.isoformat()
-    raise TypeError("Type not serializable")
+    raise TypeError ("Type not serializable")
 
 def print_json(data):
     """Print JSON data in a more presentable and easier to read way"""
