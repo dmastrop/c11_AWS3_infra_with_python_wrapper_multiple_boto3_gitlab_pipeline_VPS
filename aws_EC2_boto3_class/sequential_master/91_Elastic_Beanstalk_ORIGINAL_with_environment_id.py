@@ -282,9 +282,14 @@ load_balancers = elb_client.describe_load_balancers()
 beanstalk_load_balancer = None
 
 for lb in load_balancers['LoadBalancers']:
-    if environment_id in [tag['Value'] for tag in lb['Tags'] if tag['Key'] == 'elasticbeanstalk:environment-id']:
-        beanstalk_load_balancer = lb
+    tags = elb_client.describe_tags(ResourceArns=[lb['LoadBalancerArn']])
+    for tag in tags['TagDescriptions'][0]['Tags']:
+        if tag['Key'] == 'elasticbeanstalk:environment-id' and tag['Value'] == environment_id:
+            beanstalk_load_balancer = lb
+            break
+    if beanstalk_load_balancer:
         break
+
 
 if not beanstalk_load_balancer:
     raise ValueError("Beanstalk load balancer not found")
