@@ -69,6 +69,7 @@ if load_balancer_arn is None:
 
 
 print(f"Load Balancer DNS Name: {load_balancer_dns_name}")
+print(f"Load Balancer arn: {load_balancer_arn}")
 sys.stdout.flush()
 
 
