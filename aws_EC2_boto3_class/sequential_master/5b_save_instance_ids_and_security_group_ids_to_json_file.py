@@ -1,3 +1,5 @@
+# move this out of 6_ script and create 5b_ script
+# This information here is used in the 8_ script for the ALB creation and not necessary in 6_ script
 import boto3
 from dotenv import load_dotenv
 import os
