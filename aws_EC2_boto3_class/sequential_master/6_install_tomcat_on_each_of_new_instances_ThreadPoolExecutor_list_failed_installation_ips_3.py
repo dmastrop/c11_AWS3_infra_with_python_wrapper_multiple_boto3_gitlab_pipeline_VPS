@@ -51,15 +51,17 @@ for reservation in response['Reservations']:
             for sg in instance['SecurityGroups']:
                 security_group_ids.append(sg['GroupId'])
 
-
+# UPDATE: I can remove this code block below and put this in 5b_ script to modularize the python scripts
+# properly for debugging. Sometimes don't want to run this 6_ script as it is very time consuming to install
+# tomcat9 on all 50 target EC2 instances
 # Save instance IDs and security group IDs to a file
 # The instance_id and the security_group_ids will be needed in the AWS ALB script in a different .py file
-data = {
-    'instance_ids': instance_ids,
-    'security_group_ids': list(set(security_group_ids))
-}
-with open('instance_ids.json', 'w') as f:
-    json.dump(data, f)
+#data = {
+#    'instance_ids': instance_ids,
+#    'security_group_ids': list(set(security_group_ids))
+#}
+#with open('instance_ids.json', 'w') as f:
+#    json.dump(data, f)
 
 
 
