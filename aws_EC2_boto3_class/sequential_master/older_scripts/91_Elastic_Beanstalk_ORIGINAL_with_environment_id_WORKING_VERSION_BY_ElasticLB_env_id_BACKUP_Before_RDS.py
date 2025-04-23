@@ -22,14 +22,6 @@ key_name = os.getenv("key_name")
 aws_pem_key = 'EC2_generic_key.pem'
 hosted_zone_id = 'Z055765416LPH0LA4ZBVA'  # Your Route 53 hosted zone ID
 hosted_zone_name = 'elasticloadbalancer.holinessinloveofchrist.com'
-# add the RDS credentials. These are added to the .gitlab-ci.yml file and piped into the .env file.
-# This retrieves them from that file. The raw variables and variables are stored in the gltlab pipeline
-# CI/CD variables section
-db_master_username = os.getenv(“DB_USERNAME”)
-db_master_password = os.getenv(“DB_PASSWORD”)  # Replace with your desired root password
-
-
-
 
 # Establish a session with AWS
 session = boto3.Session(
@@ -539,75 +531,6 @@ if not rule_exists:
 else:
     print("Security group rule for 443 traffic from anywhere already exists")
 
-sys.stdout.flush()
-
-
-# Add port 3389 for MySQL protocol to the security group
-mysql_rule_exists = False
-for rule in existing_rules:
-    if rule['IpProtocol'] == 'tcp' and rule['FromPort'] == 3389 and rule['ToPort'] == 3389:
-        for ip_range in rule['IpRanges']:
-            if ip_range['CidrIp'] == '0.0.0.0/0':
-                mysql_rule_exists = True
-                break
-
-if not mysql_rule_exists:
-    ec2_client.authorize_security_group_ingress(
-        GroupId=security_group_id,
-        IpPermissions=[
-            {
-                'IpProtocol': 'tcp',
-                'FromPort': 3389,
-                'ToPort': 3389,
-                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-            }
-        ]
-    )
-    print("Security group rule added to allow 3389 traffic from anywhere")
-else:
-    print("Security group rule for 3389 traffic from anywhere already exists")
-
-sys.stdout.flush()
-
-# Initialize the RDS client using the session
-rds_client = session.client('rds')
-
-# Create the RDS instance
-try:
-    rds_client.create_db_instance(
-        DBInstanceIdentifier=db_instance_identifier,
-        DBInstanceClass=db_instance_class,
-        Engine=db_engine,
-        MasterUsername=db_master_username,
-        MasterUserPassword=db_master_password,
-        AllocatedStorage=20,  # Adjust as needed
-        BackupRetentionPeriod=7,  # Adjust as needed
-        MultiAZ=False,
-        PubliclyAccessible=True,
-        VpcSecurityGroupIds=[security_group_id],  # Use the same security group as the load balancer. Port 22 is added and 3389 as well. Use a jump host (next script in sequential_master) to connect to the RDS server
-        Tags=[
-            {
-                'Key': 'Name',
-                'Value': 'MyRDSInstance'
-            }
-        ]
-    )
-    print(f"RDS instance {db_instance_identifier} created successfully.")
-except ClientError as e:
-    print(f"Error creating RDS instance: {e}")
-
-# Wait for the RDS instance to be available
-while True:
-    db_instance = rds_client.describe_db_instances(DBInstanceIdentifier=db_instance_identifier)
-    db_instance_status = db_instance['DBInstances'][0]['DBInstanceStatus']
-
-    if db_instance_status == 'available':
-        break
-
-    print(f"Waiting for RDS instance to be available... Current status: {db_instance_status}")
-    time.sleep(30)
-
-print(f"RDS instance {db_instance_identifier} is now available.")
 sys.stdout.flush()
 
 
