@@ -508,6 +508,8 @@ ec2_client = session.client('ec2')
 
 # Describe the load balancer to get its security groups
 # NOTE that load_balancer_name has been defined as above and is the beanstalk loadbalancer
+# THis is a security group created for the beanstalk loadbalancer and not the default security group
+# that is used for the other EC2 only setup.
 load_balancers = elb_client.describe_load_balancers(Names=[load_balancer_name])
 load_balancer_security_groups = load_balancers['LoadBalancers'][0]['SecurityGroups']
 
