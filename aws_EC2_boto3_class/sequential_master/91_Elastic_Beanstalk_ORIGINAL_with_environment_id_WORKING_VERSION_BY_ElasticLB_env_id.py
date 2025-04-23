@@ -625,10 +625,12 @@ with open('security_group_config.json', 'w') as f:
 print("Security group configuration exported to security_group_config.json")
 
 
+# Load the JSON file and print its contents
+with open('security_group_config.json', 'r') as f:
+    security_group_config = json.load(f)
 
-
-
-
+print("Contents of security_group_config.json:")
+print(json.dumps(security_group_config, indent=4))
 
 
 
