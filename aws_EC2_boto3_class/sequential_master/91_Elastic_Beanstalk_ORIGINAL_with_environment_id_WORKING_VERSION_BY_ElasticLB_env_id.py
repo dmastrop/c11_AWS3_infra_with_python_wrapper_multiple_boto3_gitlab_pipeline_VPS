@@ -22,6 +22,11 @@ key_name = os.getenv("key_name")
 aws_pem_key = 'EC2_generic_key.pem'
 hosted_zone_id = 'Z055765416LPH0LA4ZBVA'  # Your Route 53 hosted zone ID
 hosted_zone_name = 'elasticloadbalancer.holinessinloveofchrist.com'
+# RDS stuff
+db_instance_identifier = 'my-rds-instance'
+db_instance_class = 'db.t2.micro'
+db_engine = 'mysql'
+
 # add the RDS credentials. These are added to the .gitlab-ci.yml file and piped into the .env file.
 # This retrieves them from that file. The raw variables and variables are stored in the gltlab pipeline
 # CI/CD variables section
