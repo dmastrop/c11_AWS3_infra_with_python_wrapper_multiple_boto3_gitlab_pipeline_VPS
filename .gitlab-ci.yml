@@ -29,6 +29,8 @@ deploy:
     - echo 'min_count=50' >> .env
     - echo 'max_count=50' >> .env
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
+    - echo 'DB_USERNAME='${DB_USERNAME} >> .env
+    - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
 
   script:
     - docker run --rm --env-file .env $CI_REGISTRY_IMAGE:latest
