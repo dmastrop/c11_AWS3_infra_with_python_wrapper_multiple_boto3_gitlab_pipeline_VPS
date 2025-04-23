@@ -549,6 +549,39 @@ else:
 sys.stdout.flush()
 
 
+
+# Add port 22 to the security group
+ssh_rule_exists = False
+for rule in existing_rules:
+    if rule['IpProtocol'] == 'tcp' and rule['FromPort'] == 22 and rule['ToPort'] == 22:
+        for ip_range in rule['IpRanges']:
+            if ip_range['CidrIp'] == '0.0.0.0/0':
+                ssh_rule_exists = True
+                break
+
+if not ssh_rule_exists:
+    ec2_client.authorize_security_group_ingress(
+        GroupId=security_group_id,
+        IpPermissions=[
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 22,
+                'ToPort': 22,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            }
+        ]
+    )
+    print("Security group rule added to allow 22 traffic from anywhere")
+else:
+    print("Security group rule for 22 traffic from anywhere already exists")
+
+
+
+
+
+
+
+
 # Add port 3389 for MySQL protocol to the security group
 mysql_rule_exists = False
 for rule in existing_rules:
@@ -575,6 +608,31 @@ else:
     print("Security group rule for 3389 traffic from anywhere already exists")
 
 sys.stdout.flush()
+
+
+
+# Export the security group configuration to a JSON file
+# Will need the security group configuration and rules for the 911_ script jump host. The port 22 SSH
+# will be required for paramiko installation of mysql client in the jumphost
+security_group_config = {
+    "GroupId": security_group_id,
+    "IpPermissions": existing_rules
+}
+
+with open('security_group_config.json', 'w') as f:
+    json.dump(security_group_config, f, indent=4)
+
+print("Security group configuration exported to security_group_config.json")
+
+
+
+
+
+
+
+
+
+
 
 # Initialize the RDS client using the session
 rds_client = session.client('rds')
