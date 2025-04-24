@@ -51,8 +51,8 @@ try:
         MaxCount=1,
         SecurityGroupIds=[security_group_id],
         #IamInstanceProfile={
-            'Name': instance_profile_name
-        },
+        #    'Name': instance_profile_name
+        #},
         TagSpecifications=[
             {
                 'ResourceType': 'instance',
