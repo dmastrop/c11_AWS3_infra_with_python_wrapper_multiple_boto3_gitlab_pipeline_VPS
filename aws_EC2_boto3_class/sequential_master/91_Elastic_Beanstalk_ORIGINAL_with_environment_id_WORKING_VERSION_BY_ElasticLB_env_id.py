@@ -24,7 +24,7 @@ hosted_zone_id = 'Z055765416LPH0LA4ZBVA'  # Your Route 53 hosted zone ID
 hosted_zone_name = 'elasticloadbalancer.holinessinloveofchrist.com'
 # RDS stuff
 db_instance_identifier = 'my-rds-instance'
-db_instance_class = 'db.t2.micro'
+db_instance_class = 'db.t3.micro'
 db_engine = 'mysql'
 
 # add the RDS credentials. These are added to the .gitlab-ci.yml file and piped into the .env file.
@@ -33,6 +33,9 @@ db_engine = 'mysql'
 db_master_username = os.getenv("DB_USERNAME")
 db_master_password = os.getenv("DB_PASSWORD")  # Replace with your desired root password
 
+#According to AWS documentation, you can only create MySQL version 8.0 DB instances with latest-generation and current-generation DB instance classes [2](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.DBInstanceClass.Support.html).
+
+#Update Instance Class: Switch to a different instance class that is compatible with MySQL 8.0. For example, `db.t3.micro` is often compatible with newer versions of MySQL [3](https://repost.aws/questions/QU1llceoaxT2Or7r4kcWKuDg/why-did-i-get-a-db-creating-error-from-terraform).
 
 
 
