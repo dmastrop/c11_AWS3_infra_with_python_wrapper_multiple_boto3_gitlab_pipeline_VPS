@@ -42,6 +42,8 @@ session = boto3.Session(
 ec2_client = session.client('ec2')
 
 # Launch an EC2 instance named RDS_jumphost with the keypair
+# Use the same instance_profile_name instance profile as in previous script. It is already created in 91_ script
+instance_profile_name = 'tomcat-instance-profile'
 try:
     ec2_response = ec2_client.run_instances(
         ImageId=image_id,
@@ -50,9 +52,9 @@ try:
         MinCount=1,
         MaxCount=1,
         SecurityGroupIds=[security_group_id],
-        #IamInstanceProfile={
-        #    'Name': instance_profile_name
-        #},
+        IamInstanceProfile={
+            'Name': instance_profile_name
+        },
         TagSpecifications=[
             {
                 'ResourceType': 'instance',
@@ -119,4 +121,4 @@ ssh.close()
 print("MySQL client installed on EC2 instance RDS_jumphost.")
 
 
-# test
+# test1

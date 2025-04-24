@@ -43,16 +43,19 @@ db_master_password = os.getenv("DB_PASSWORD")  # Replace with your desired root 
 
 
 # Establish a session with AWS
+print("Establishing session with AWS...")
 session = boto3.Session(
     aws_access_key_id=aws_access_key,
     aws_secret_access_key=aws_secret_key,
     region_name=region_name
 )
+print("Session established.")
 
 
 # Initialize the IAM client
+print("Initializing IAM client...")
 iam_client = session.client('iam')
-
+print("IAM client initialized.")
 
 
 # Create an IAM role if it doesn't already exist
@@ -72,6 +75,8 @@ assume_role_policy_document = {
     ]
 }
 
+
+print(f"Creating IAM role {role_name}...")
 try:
     iam_client.create_role(
         RoleName=role_name,
@@ -97,6 +102,7 @@ policies = [
 ]
 
 for policy_arn in policies:
+    print(f"Attaching policy {policy_arn} to role {role_name}...")
     try:
         iam_client.attach_role_policy(
             RoleName=role_name,
@@ -115,7 +121,10 @@ for policy_arn in policies:
 
 
 # Create an instance profile if it doesn't already exist
+
 instance_profile_name = 'tomcat-instance-profile'
+print(f"Creating instance profile {instance_profile_name}...")
+
 try:
     iam_client.create_instance_profile(
         InstanceProfileName=instance_profile_name
@@ -131,6 +140,7 @@ except ClientError as e:
 
 
 # Add the role to the instance profile if it isn't already added
+print(f"Adding role {role_name} to instance profile {instance_profile_name}...")
 try:
     iam_client.add_role_to_instance_profile(
         InstanceProfileName=instance_profile_name,
@@ -147,11 +157,14 @@ except ClientError as e:
 
 
 # Initialize the Elastic Beanstalk client using the session
+
+print("Initializing Elastic Beanstalk client...")
+
 eb_client = session.client('elasticbeanstalk')
-# Check for existing elastic beanstalk apps
+print("Elastic Beanstalk client initialized.")
 
-
 # Check for existing elastic beanstalk apps
+print("Checking for existing Elastic Beanstalk applications...")
 existing_apps = eb_client.describe_applications()
 for app in existing_apps['Applications']:
     print(f"ApplicationName: {app['ApplicationName']}")
@@ -164,6 +177,7 @@ for app in existing_apps['Applications']:
 
 # Create the Elastic Beanstalk application
 application_name = 'tomcat-application'
+print(f"Creating Elastic Beanstalk application {application_name}...")
 try:
     eb_client.create_application(
         ApplicationName=application_name,
@@ -185,6 +199,7 @@ except ClientError as e:
 
 
 # Create a new Elastic Beanstalk environment with the instance profile
+print(f"Creating Elastic Beanstalk environment for application {application_name}...")
 response = eb_client.create_environment(
     ApplicationName=application_name,
     EnvironmentName='tomcat-environment',
@@ -245,8 +260,9 @@ response = eb_client.create_environment(
 # wget script is a different script file
 # This script includes a loop to wait until the environment status is 'Ready' before attempting to retrieve the CNAME. Additionally, it uses the `get` method to safely access the 'CNAME' key, providing a default value of `None` if the key is not found.
 
-
+print(f"Environment for application {application_name} created successfully.")
 # Wait for the environment to be ready and retrieve its description
+print("Waiting for environment to be ready...")
 while True:
     environments = eb_client.describe_environments(EnvironmentNames=['tomcat-environment'])
     environment_status = environments['Environments'][0]['Status']
@@ -257,7 +273,7 @@ while True:
     print(f"Waiting for environment to be ready... Current status: {environment_status}")
     time.sleep(10)
 
-
+print("Environment is ready.")
 
 
 
