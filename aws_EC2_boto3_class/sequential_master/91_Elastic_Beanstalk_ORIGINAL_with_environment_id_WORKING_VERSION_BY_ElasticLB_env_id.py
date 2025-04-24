@@ -30,6 +30,7 @@ db_engine = 'mysql'
 # add the RDS credentials. These are added to the .gitlab-ci.yml file and piped into the .env file.
 # This retrieves them from that file. The raw variables and variables are stored in the gltlab pipeline
 # CI/CD variables section
+# Make sure the password stored on gitlab pipeline env varaiables is at least 8 characters long
 db_master_username = os.getenv("DB_USERNAME")
 db_master_password = os.getenv("DB_PASSWORD")  # Replace with your desired root password
 
