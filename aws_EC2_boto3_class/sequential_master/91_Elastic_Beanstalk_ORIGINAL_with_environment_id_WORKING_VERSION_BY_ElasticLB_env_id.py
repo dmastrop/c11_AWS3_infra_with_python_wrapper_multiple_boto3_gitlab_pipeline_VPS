@@ -619,6 +619,14 @@ security_group_config = {
     "IpPermissions": existing_rules
 }
 
+
+# Print existing rules to verify they include all necessary ports
+print("Existing rules:")
+print(json.dumps(existing_rules, indent=4))
+
+
+
+
 with open('security_group_config.json', 'w') as f:
     json.dump(security_group_config, f, indent=4)
 
