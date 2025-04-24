@@ -582,10 +582,10 @@ else:
 
 
 
-# Add port 3389 for MySQL protocol to the security group
+# Add port 3306 for MySQL protocol to the security group
 mysql_rule_exists = False
 for rule in existing_rules:
-    if rule['IpProtocol'] == 'tcp' and rule['FromPort'] == 3389 and rule['ToPort'] == 3389:
+    if rule['IpProtocol'] == 'tcp' and rule['FromPort'] == 3306 and rule['ToPort'] == 3306:
         for ip_range in rule['IpRanges']:
             if ip_range['CidrIp'] == '0.0.0.0/0':
                 mysql_rule_exists = True
@@ -597,15 +597,15 @@ if not mysql_rule_exists:
         IpPermissions=[
             {
                 'IpProtocol': 'tcp',
-                'FromPort': 3389,
-                'ToPort': 3389,
+                'FromPort': 3306,
+                'ToPort': 3306,
                 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
             }
         ]
     )
-    print("Security group rule added to allow 3389 traffic from anywhere")
+    print("Security group rule added to allow 3306 traffic from anywhere")
 else:
-    print("Security group rule for 3389 traffic from anywhere already exists")
+    print("Security group rule for 3306 traffic from anywhere already exists")
 
 sys.stdout.flush()
 
