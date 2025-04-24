@@ -611,6 +611,12 @@ sys.stdout.flush()
 
 
 
+# Re-fetch the security group configuration to update existing_rules
+security_group = ec2_client.describe_security_groups(GroupIds=[security_group_id])
+existing_rules = security_group['SecurityGroups'][0]['IpPermissions']
+
+
+
 # Export the security group configuration to a JSON file
 # Will need the security group configuration and rules for the 911_ script jump host. The port 22 SSH
 # will be required for paramiko installation of mysql client in the jumphost
