@@ -41,10 +41,105 @@ session = boto3.Session(
     region_name=region_name
 )
 ec2_client = session.client('ec2')
+iam_client = session.client('iam')
 print("EC2 client initialized.")
 
+
+
+
+
+
+
+# Create a new IAM role for the jumphost with the specified policies
+role_name = 'jumphost-role'
+assume_role_policy_document = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+try:
+    iam_client.create_role(
+        RoleName=role_name,
+        AssumeRolePolicyDocument=json.dumps(assume_role_policy_document)
+    )
+    print(f"IAM role {role_name} created successfully.")
+except ClientError as e:
+    print(f"Error creating IAM role {role_name}: {e}")
+    sys.exit(1)
+
+# Attach the RDS policy to the new role
+rds_policy_document = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "rds-db:connect"
+            ],
+            "Resource": [
+                "arn:aws:rds-db:us-east-1:123456789012:dbuser:db-ABCDEFGHIJKL01234/db_user"
+            ]
+        }
+    ]
+}
+
+try:
+    iam_client.put_role_policy(
+        RoleName=role_name,
+        PolicyName='RDSConnectPolicy',
+        PolicyDocument=json.dumps(rds_policy_document)
+    )
+    print(f"RDS policy attached to IAM role {role_name} successfully.")
+except ClientError as e:
+    print(f"Error attaching RDS policy to IAM role {role_name}: {e}")
+    sys.exit(1)
+
+# Attach the default EC2 policy to the new role for SSH and basic operations
+default_ec2_policy_arn = 'arn:aws:iam::aws:policy/AmazonEC2FullAccess'
+
+try:
+    iam_client.attach_role_policy(
+        RoleName=role_name,
+        PolicyArn=default_ec2_policy_arn
+    )
+    print(f"Default EC2 policy attached to IAM role {role_name} successfully.")
+except ClientError as e:
+    print(f"Error attaching default EC2 policy to IAM role {role_name}: {e}")
+    sys.exit(1)
+
+# Create an instance profile and add the new role to it
+instance_profile_name = 'jumphost-instance-profile'
+
+try:
+    iam_client.create_instance_profile(
+        InstanceProfileName=instance_profile_name
+    )
+    iam_client.add_role_to_instance_profile(
+        InstanceProfileName=instance_profile_name,
+        RoleName=role_name
+    )
+    print(f"Instance profile {instance_profile_name} created and role {role_name} added successfully.")
+except ClientError as e:
+    print(f"Error creating instance profile or adding role: {e}")
+    sys.exit(1)
+
+
+
+
+
+
+
+
 # Launch an EC2 instance named RDS_jumphost with the keypair
-instance_profile_name = 'tomcat-instance-profile'
+#instance_profile_name = 'tomcat-instance-profile'
 print("Launching EC2 instance RDS_jumphost...")
 try:
     ec2_response = ec2_client.run_instances(
@@ -57,18 +152,22 @@ try:
         IamInstanceProfile={
             'Name': instance_profile_name
         },
-        TagSpecifications=[
-            {
-                'ResourceType': 'instance',
-                'Tags': [
-                    {
-                        'Key': 'Name',
-                        'Value': 'RDS_jumphost'
-                    }
-                ]
-            }
-        ]
+        TagSpecifications=[{
+            'ResourceType': 'instance',
+            'Tags': [{
+                'Key': 'Name',
+                'Value': 'RDS_jumphost'
+            }]
+        }]
     )
+
+
+
+
+
+
+
+
     ec2_instance_id = ec2_response['Instances'][0]['InstanceId']
     print(f"EC2 instance RDS_jumphost ({ec2_instance_id}) launched successfully.")
 except ClientError as e:
