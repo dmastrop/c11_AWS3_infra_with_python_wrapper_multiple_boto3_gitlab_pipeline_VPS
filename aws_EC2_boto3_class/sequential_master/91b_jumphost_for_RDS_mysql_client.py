@@ -50,7 +50,7 @@ try:
         MinCount=1,
         MaxCount=1,
         SecurityGroupIds=[security_group_id],
-        IamInstanceProfile={
+        #IamInstanceProfile={
             'Name': instance_profile_name
         },
         TagSpecifications=[
