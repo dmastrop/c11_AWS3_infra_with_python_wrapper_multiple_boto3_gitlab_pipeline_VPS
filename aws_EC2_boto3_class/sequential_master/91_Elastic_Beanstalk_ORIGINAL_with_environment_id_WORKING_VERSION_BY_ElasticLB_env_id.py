@@ -620,11 +620,18 @@ security_group_config = {
 }
 
 
+
+
 # Print existing rules to verify they include all necessary ports
-print("Existing rules:")
+print("Existing rules before delay:")
 print(json.dumps(existing_rules, indent=4))
 
+# Introduce a delay to ensure all rules are added
+time.sleep(10)  # Delay for 10 seconds
 
+# Print existing rules after delay
+print("Existing rules after delay:")
+print(json.dumps(existing_rules, indent=4))
 
 
 with open('security_group_config.json', 'w') as f:
