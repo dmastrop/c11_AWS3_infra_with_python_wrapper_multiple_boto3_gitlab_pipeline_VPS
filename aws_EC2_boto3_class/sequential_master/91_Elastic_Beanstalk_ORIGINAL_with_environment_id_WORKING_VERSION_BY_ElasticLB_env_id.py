@@ -26,6 +26,8 @@ hosted_zone_name = 'elasticloadbalancer.holinessinloveofchrist.com'
 db_instance_identifier = 'my-rds-instance'
 db_instance_class = 'db.t3.micro'
 db_engine = 'mysql'
+db_name = 'mydatabase'
+
 
 # add the RDS credentials. These are added to the .gitlab-ci.yml file and piped into the .env file.
 # This retrieves them from that file. The raw variables and variables are stored in the gltlab pipeline
@@ -674,6 +676,7 @@ try:
         Engine=db_engine,
         MasterUsername=db_master_username,
         MasterUserPassword=db_master_password,
+        DBName=db_name,
         AllocatedStorage=20,  # Adjust as needed
         BackupRetentionPeriod=7,  # Adjust as needed
         MultiAZ=False,
