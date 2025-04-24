@@ -612,6 +612,8 @@ sys.stdout.flush()
 
 
 # Re-fetch the security group configuration to update existing_rules
+# This refresh is required due to the asyncrhonous nature of the security group rules.
+# This is required because of the newly added rules (above) to the security group
 security_group = ec2_client.describe_security_groups(GroupIds=[security_group_id])
 existing_rules = security_group['SecurityGroups'][0]['IpPermissions']
 
@@ -633,11 +635,11 @@ print("Existing rules before delay:")
 print(json.dumps(existing_rules, indent=4))
 
 # Introduce a delay to ensure all rules are added
-time.sleep(10) # Delay for 10 seconds
+#time.sleep(10) # Delay for 10 seconds
 
 # Print existing rules after delay
-print("Existing rules after delay:")
-print(json.dumps(existing_rules, indent=4))
+#print("Existing rules after delay:")
+#print(json.dumps(existing_rules, indent=4))
 
 
 with open('security_group_config.json', 'w') as f:
