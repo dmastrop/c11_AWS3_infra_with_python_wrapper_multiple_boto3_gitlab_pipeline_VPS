@@ -72,8 +72,15 @@ try:
     )
     print(f"IAM role {role_name} created successfully.")
 except ClientError as e:
-    print(f"Error creating IAM role {role_name}: {e}")
-    sys.exit(1)
+    if e.response['Error']['Code'] == 'EntityAlreadyExists':
+        print(f"IAM role {role_name} already exists.")
+    else:
+        print(f"Error creating IAM role {role_name}: {e}")
+        sys.exit(1)
+
+
+
+
 
 # Attach the RDS policy to the new role
 rds_policy_document = {
@@ -128,8 +135,24 @@ try:
     )
     print(f"Instance profile {instance_profile_name} created and role {role_name} added successfully.")
 except ClientError as e:
-    print(f"Error creating instance profile or adding role: {e}")
-    sys.exit(1)
+ if e.response['Error']['Code'] == 'EntityAlreadyExists':
+        print(f"Instance profile {instance_profile_name} already exists.")
+        try:
+            iam_client.add_role_to_instance_profile(
+                InstanceProfileName=instance_profile_name,
+                RoleName=role_name
+            )
+            print(f"Role {role_name} added to instance profile {instance_profile_name} successfully.")
+        except ClientError as e:
+            print(f"Error adding role to instance profile: {e}")
+            sys.exit(1)
+    else:
+        print(f"Error creating instance profile or adding role: {e}")
+        sys.exit(1)
+
+
+
+
 
 
 # Retrieve the ARN of the instance profile (added code to avoid using instance profile name itself when
