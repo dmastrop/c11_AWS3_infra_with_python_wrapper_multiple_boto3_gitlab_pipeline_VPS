@@ -260,6 +260,8 @@ for command in commands:
     print(stdout.read().decode())
     print(stderr.read().decode())
 
+
+
 # Close the SSH connection
 ssh.close()
 print("SSH connection closed.")
