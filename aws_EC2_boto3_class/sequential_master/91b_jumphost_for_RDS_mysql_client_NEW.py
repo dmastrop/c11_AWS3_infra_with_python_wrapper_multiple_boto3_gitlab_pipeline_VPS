@@ -132,7 +132,17 @@ except ClientError as e:
     sys.exit(1)
 
 
-
+# Retrieve the ARN of the instance profile (added code to avoid using instance profile name itself when
+# creating the EC2 instance
+try:
+    instance_profile = iam_client.get_instance_profile(
+        InstanceProfileName=instance_profile_name
+    )
+    instance_profile_arn = instance_profile['InstanceProfile']['Arn']
+    print(f"Instance profile ARN: {instance_profile_arn}")
+except ClientError as e:
+    print(f"Error retrieving instance profile ARN: {e}")
+    sys.exit(1)
 
 
 
@@ -150,7 +160,8 @@ try:
         MaxCount=1,
         SecurityGroupIds=[security_group_id],
         IamInstanceProfile={
-            'Name': instance_profile_name
+            #'Name': instance_profile_name
+            'Arn': instance_profile_arn
         },
         TagSpecifications=[{
             'ResourceType': 'instance',
