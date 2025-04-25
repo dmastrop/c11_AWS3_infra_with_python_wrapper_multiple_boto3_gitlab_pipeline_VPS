@@ -243,3 +243,5 @@ for command in commands:
 ssh.close()
 print("SSH connection closed.")
 print("MySQL client installed on EC2 instance RDS_jumphost.")
+
+# test
