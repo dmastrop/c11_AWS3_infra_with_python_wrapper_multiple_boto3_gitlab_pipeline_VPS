@@ -44,6 +44,39 @@ ec2_client = session.client('ec2')
 iam_client = session.client('iam')
 print("EC2 client initialized.")
 
+
+# Check if the outbound rule already exists
+try:
+    security_group = ec2_client.describe_security_groups(GroupIds=[security_group_id])
+    existing_permissions = security_group['SecurityGroups'][0]['IpPermissionsEgress']
+    rule_exists = any(
+        perm['IpProtocol'] == 'tcp' and perm['FromPort'] == 0 and perm['ToPort'] == 65535 and perm['IpRanges'][0]['CidrIp'] == '0.0.0.0/0'
+        for perm in existing_permissions
+    )
+
+    if not rule_exists:
+        ec2_client.authorize_security_group_egress(
+            GroupId=security_group_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 0,
+                    'ToPort': 65535,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }
+            ]
+        )
+        print(f"Outbound rule added to security group {security_group_id} successfully.")
+    else:
+        print(f"Outbound rule already exists in security group {security_group_id}.")
+except ClientError as e:
+    print(f"Error checking/adding outbound rule to security group: {e}")
+    sys.exit(1)
+
+
+
+
+
 # Create a new IAM role for the jumphost with the specified policies
 role_name = 'jumphost-role'
 assume_role_policy_document = {
