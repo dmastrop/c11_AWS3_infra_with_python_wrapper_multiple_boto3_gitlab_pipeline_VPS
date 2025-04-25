@@ -135,7 +135,7 @@ try:
     )
     print(f"Instance profile {instance_profile_name} created and role {role_name} added successfully.")
 except ClientError as e:
- if e.response['Error']['Code'] == 'EntityAlreadyExists':
+    if e.response['Error']['Code'] == 'EntityAlreadyExists':
         print(f"Instance profile {instance_profile_name} already exists.")
         try:
             iam_client.add_role_to_instance_profile(
@@ -149,9 +149,6 @@ except ClientError as e:
     else:
         print(f"Error creating instance profile or adding role: {e}")
         sys.exit(1)
-
-
-
 
 
 
