@@ -29,9 +29,11 @@ db_master_username = os.getenv("DB_USERNAME")
 db_master_password = os.getenv("DB_PASSWORD")  # Replace with your desired root password
 
 # Retrieve the security_group_id from the security_group_config.json file
-with open('security_group_config.json', 'r') as f:
-    security_group_config = json.load(f)
-    security_group_id = security_group_config['GroupId']
+# Use the security_group_id_RDS that is in the security_group_config_RDS.json file now. This is to 
+# decouple from the beanstalk environment/security group.
+with open('security_group_config_RDS.json', 'r') as f:
+    security_group_config_RDS = json.load(f)
+    security_group_id_RDS = security_group_config_RDS['GroupId']
 
 # Initialize the EC2 client using the session
 print("Initializing EC2 client...")
@@ -47,8 +49,8 @@ print("EC2 client initialized.")
 
 # Check if the outbound rule already exists
 try:
-    security_group = ec2_client.describe_security_groups(GroupIds=[security_group_id])
-    existing_permissions = security_group['SecurityGroups'][0]['IpPermissionsEgress']
+    security_group_RDS = ec2_client.describe_security_groups(GroupIds=[security_group_id_RDS])
+    existing_permissions = security_group_RDS['SecurityGroups'][0]['IpPermissionsEgress']
     rule_exists = any(
         perm['IpProtocol'] == 'tcp' and perm['FromPort'] == 0 and perm['ToPort'] == 65535 and perm['IpRanges'][0]['CidrIp'] == '0.0.0.0/0'
         for perm in existing_permissions
@@ -56,7 +58,7 @@ try:
 
     if not rule_exists:
         ec2_client.authorize_security_group_egress(
-            GroupId=security_group_id,
+            GroupId=security_group_id_RDS,
             IpPermissions=[
                 {
                     'IpProtocol': 'tcp',
@@ -66,9 +68,9 @@ try:
                 }
             ]
         )
-        print(f"Outbound rule added to security group {security_group_id} successfully.")
+        print(f"Outbound rule added to security group {security_group_id_RDS} successfully.")
     else:
-        print(f"Outbound rule already exists in security group {security_group_id}.")
+        print(f"Outbound rule already exists in security group {security_group_id_RDS}.")
 except ClientError as e:
     print(f"Error checking/adding outbound rule to security group: {e}")
     sys.exit(1)
@@ -207,7 +209,7 @@ try:
         KeyName='generic_keypair_for_python_testing',
         MinCount=1,
         MaxCount=1,
-        SecurityGroupIds=[security_group_id],
+        SecurityGroupIds=[security_group_id_RDS],
         IamInstanceProfile={
             'Arn': instance_profile_arn
         },
