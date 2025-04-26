@@ -690,7 +690,7 @@ try:
     response = ec2_client.create_security_group(
         GroupName='RDS_security_group',
         Description='Security group for RDS server and jumphost',
-        VpcId='your_vpc_id'  # Replace with your VPC ID
+        VpcId='vpc-0a11e68402b1fa2f3'  # Replace with your VPC ID. Use the default VPC
     )
     security_group_id_RDS = response['GroupId']
     print(f"Security group {security_group_id_RDS} created successfully.")
@@ -758,7 +758,7 @@ except ClientError as e:
 security_group_config_RDS = {
     "GroupName": "RDS_security_group",
     "Description": "Security group for RDS server and jumphost",
-    "VpcId": "your_vpc_id",  # Replace with your VPC ID
+    "VpcId": "vpc-0a11e68402b1fa2f3",  # Replace with your VPC ID. Use the default VPC.
     "SecurityGroupId": security_group_id_RDS,
     "InboundRules": [
         {
