@@ -33,7 +33,7 @@ db_master_password = os.getenv("DB_PASSWORD")  # Replace with your desired root 
 # decouple from the beanstalk environment/security group.
 with open('security_group_config_RDS.json', 'r') as f:
     security_group_config_RDS = json.load(f)
-    security_group_id_RDS = security_group_config_RDS['GroupId']
+    security_group_id_RDS = security_group_config_RDS['SecurityGroupId']
 
 # Initialize the EC2 client using the session
 print("Initializing EC2 client...")
