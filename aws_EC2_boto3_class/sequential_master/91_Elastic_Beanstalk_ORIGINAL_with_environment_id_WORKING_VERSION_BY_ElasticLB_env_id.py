@@ -680,8 +680,122 @@ print(json.dumps(security_group_config, indent=4))
 
 
 
+# NEW CODE BLOCK to create a new security group security_group_id_RDS for use only with the RDS and jumphost server
+# This is to decouple the RDS/jumphost setup from the beanstalk setup because of the Cloudstack dependency that
+# a common SG creates.
 
-# Initialize the RDS client using the session
+
+# Create the new security group for RDS
+try:
+    response = ec2_client.create_security_group(
+        GroupName='RDS_security_group',
+        Description='Security group for RDS server and jumphost',
+        VpcId='your_vpc_id'  # Replace with your VPC ID
+    )
+    security_group_id_RDS = response['GroupId']
+    print(f"Security group {security_group_id_RDS} created successfully.")
+except ClientError as e:
+    if 'InvalidGroup.Duplicate' in str(e):
+        print("Security group already exists. Retrieving existing security group ID.")
+        response = ec2_client.describe_security_groups(
+            Filters=[{'Name': 'group-name', 'Values': ['RDS_security_group']}]
+        )
+        security_group_id_RDS = response['SecurityGroups'][0]['GroupId']
+    else:
+        print(f"Error creating security group: {e}")
+        raise
+
+# Add inbound rules
+try:
+    ec2_client.authorize_security_group_ingress(
+        GroupId=security_group_id_RDS,
+        IpPermissions=[
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 3306,
+                'ToPort': 3306,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            },
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 22,
+                'ToPort': 22,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            }
+        ]
+    )
+    print("Inbound rules added successfully.")
+except ClientError as e:
+    if 'InvalidPermission.Duplicate' in str(e):
+        print("Inbound rules already exist.")
+    else:
+        print(f"Error adding inbound rules: {e}")
+        raise
+
+# Add outbound rules
+try:
+    ec2_client.authorize_security_group_egress(
+        GroupId=security_group_id_RDS,
+        IpPermissions=[
+            {
+               'IpProtocol': 'tcp',
+                'FromPort': 0,
+                'ToPort': 65535,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            }
+        ]
+    )
+    print("Outbound rules added successfully.")
+except ClientError as e:
+    if 'InvalidPermission.Duplicate' in str(e):
+        print("Outbound rules already exist.")
+    else:
+        print(f"Error adding outbound rules: {e}")
+        raise
+
+
+# Define the security group configuration
+security_group_config_RDS = {
+    "GroupName": "RDS_security_group",
+    "Description": "Security group for RDS server and jumphost",
+    "VpcId": "your_vpc_id",  # Replace with your VPC ID
+    "SecurityGroupId": security_group_id_RDS,
+    "InboundRules": [
+        {
+            'IpProtocol': 'tcp',
+            'FromPort': 3306,
+            'ToPort': 3306,
+            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+        },
+        {
+            'IpProtocol': 'tcp',
+            'FromPort': 22,
+            'ToPort': 22,
+            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+        }
+    ],
+    "OutboundRules": [
+        {
+            'IpProtocol': 'tcp',
+            'FromPort': 0,
+            'ToPort': 65535,
+            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+        }
+    ]
+}
+
+# Export the configuration to a JSON file
+with open('security_group_config_RDS.json', 'w') as json_file:
+    json.dump(security_group_config_RDS, json_file, indent=4)
+
+print("Security group configuration exported to security_group_config_RDS.json.")
+
+
+
+
+
+# Initialize the RDS client using the session.
+# Use security_group_id_RDS instead of security_group_id
 rds_client = session.client('rds')
 
 # Create the RDS instance
@@ -697,7 +811,7 @@ try:
         BackupRetentionPeriod=7,  # Adjust as needed
         MultiAZ=False,
         PubliclyAccessible=True,
-        VpcSecurityGroupIds=[security_group_id],  # Use the same security group as the load balancer. Port 22 is added and 3389 as well. Use a jump host (next script in sequential_master) to connect to the RDS server
+        VpcSecurityGroupIds=[security_group_id_RDS],  # Do not Use the same security group as the load balancer. Use a new security_group_id_RDS as defined above. This is to decouple the beanstalk environment from the RDS and jumphost setup so there is no Cloudformation stack dependency on the RDS/jumphost.
         Tags=[
             {
                 'Key': 'Name',
