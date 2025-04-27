@@ -298,7 +298,14 @@ for command in commands:
 
 
 # Close the SSH connection
-ssh.close()
+#ssh.close()
+
+# Make sure to close the connection properly. 
+#Ensure Proper Closure of SSH Connection: Make sure the SSH connection is properly closed after all commands are executed. This can help prevent the `NoneType` error.
+# AND Check for `None` Before Accessing Attributes**: Modify the script to check if the `Transport` object is `None` before attempting to access its attributes.
+if ssh.get_transport() is not None:
+    ssh.close()
+
 print("SSH connection closed.")
 print("MySQL client installed on EC2 instance RDS_jumphost.")
 
