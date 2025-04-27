@@ -4,5 +4,15 @@ ENV PYTHONUNBUFFERED=1
 
 COPY ./aws_EC2_boto3_class /aws_EC2
 RUN pip install --no-cache-dir -r requirements.txt
+
+# original for AWS2
 #CMD ["python", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE.py"]
-CMD ["python", "-u", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE_AWS3_ONLY_debug.py"]
+
+# use with AWS3 setup
+#CMD ["python", "-u", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE_AWS3_ONLY_debug.py"]
+
+# the new wrapper script to run tuples in parallel to optimize the thread execution of the python script files
+# Only the files that can be run together without dependencies between them should be run in parallel. Otherwise
+# the default is to run the files sequentially if not specified in the parallel_ranges array.
+CMD ["python", "-u", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE_AWS3_ONLY_debug_PARALLEL_THREAD.py"]
+
