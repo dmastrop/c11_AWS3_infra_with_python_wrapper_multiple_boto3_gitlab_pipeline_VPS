@@ -304,6 +304,7 @@ for command in commands:
 #Ensure Proper Closure of SSH Connection: Make sure the SSH connection is properly closed after all commands are executed. This can help prevent the `NoneType` error.
 # AND Check for `None` Before Accessing Attributes**: Modify the script to check if the `Transport` object is `None` before attempting to access its attributes.
 if ssh.get_transport() is not None:
+    time.sleep(2)  # Add a slight delay before closing the connection
     ssh.close()
 
 print("SSH connection closed.")
