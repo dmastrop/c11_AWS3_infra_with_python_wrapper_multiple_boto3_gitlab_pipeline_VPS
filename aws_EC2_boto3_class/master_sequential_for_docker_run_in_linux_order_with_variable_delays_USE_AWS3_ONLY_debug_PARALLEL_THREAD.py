@@ -68,6 +68,7 @@ if __name__ == "__main__":
     #parallel_ranges = [(3, 5), (7, 8)]
 
     # for intial test just run beanstalk and RDS in parallel and then run the jumphost sequentially after them
-    parallel_ranges = [(0, 1)]
+    #parallel_ranges = [(0, 1)]
+    parallel_ranges = [(0, 1), (2,4)]
     run_python_scripts(directory, delays, parallel_ranges)
 
