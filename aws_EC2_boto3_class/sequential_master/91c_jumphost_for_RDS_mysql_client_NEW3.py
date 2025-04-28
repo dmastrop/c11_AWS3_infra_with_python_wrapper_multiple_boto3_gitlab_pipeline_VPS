@@ -295,21 +295,38 @@ for command in commands:
     print(stdout.read().decode())
     print(stderr.read().decode())
 
+
+
+
+
 # Configure the RDS server with the specified commands
 rds_endpoint = 'my-rds-instance.cmfayq2u499p.us-east-1.rds.amazonaws.com'
 mysql_commands = [
+    "echo 'Creating users table:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL);\"",
+    "echo 'Inserting Alice into users table:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');\"",
+    "echo 'Inserting Bob into users table:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');\"",
+    "echo 'Creating index on email column:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"CREATE INDEX idx_email ON users(email);\"",
+    "echo 'Creating new user:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"CREATE USER 'newuser'@'%' IDENTIFIED BY 'password';\"",
+    "echo 'Granting privileges to new user:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"GRANT ALL PRIVILEGES ON mydatabase.* TO 'newuser'@'%';\"",
+    "echo 'Flushing privileges:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"FLUSH PRIVILEGES;\"",
+    "echo 'Showing mysql.user table:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.user\\G;\"",
-    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.db\\G;\""
-    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"show tables;\""
+    "echo 'Showing mysql.db table:'",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.db\\G;\"",
+    "echo 'Showing tables in database:'",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"show tables;\"",
+    "echo 'Selecting all from users table:'",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM users;\""
 ]
+
+
 
 print("Configuring RDS server with MySQL commands...")
 for command in mysql_commands:
