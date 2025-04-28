@@ -295,12 +295,31 @@ for command in commands:
     print(stdout.read().decode())
     print(stderr.read().decode())
 
+# Configure the RDS server with the specified commands
+rds_endpoint = 'my-rds-instance.cmfayq2u499p.us-east-1.rds.amazonaws.com'
+mysql_commands = [
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL);\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"CREATE INDEX idx_email ON users(email);\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"CREATE USER 'newuser'@'%' IDENTIFIED BY 'password';\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"GRANT ALL PRIVILEGES ON mydatabase.* TO 'newuser'@'%';\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"FLUSH PRIVILEGES;\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.user\\G;\"",
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.db\\G;\""
+]
 
+print("Configuring RDS server with MySQL commands...")
+for command in mysql_commands:
+    stdin, stdout, stderr = ssh.exec_command(command)
+    print(stdout.read().decode())
+    print(stderr.read().decode())
 
 # Close the SSH connection
 #ssh.close()
 
 # Make sure to close the connection properly. 
+
 #Ensure Proper Closure of SSH Connection: Make sure the SSH connection is properly closed after all commands are executed. This can help prevent the `NoneType` error.
 # AND Check for `None` Before Accessing Attributes**: Modify the script to check if the `Transport` object is `None` before attempting to access its attributes.
 if ssh.get_transport() is not None:
@@ -309,5 +328,8 @@ if ssh.get_transport() is not None:
 
 print("SSH connection closed.")
 print("MySQL client installed on EC2 instance RDS_jumphost.")
+print("RDS server configured with MySQL commands.")
+
+
 
 # test2
