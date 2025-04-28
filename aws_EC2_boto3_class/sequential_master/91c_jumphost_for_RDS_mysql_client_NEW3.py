@@ -307,6 +307,8 @@ mysql_commands = [
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"FLUSH PRIVILEGES;\"",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.user\\G;\"",
     f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM mysql.db\\G;\""
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"show tables;\""
+    f"mysql -h {rds_endpoint} -u {db_master_username} -p'{db_master_password}' {db_name} -e \"SELECT * FROM users;\""
 ]
 
 print("Configuring RDS server with MySQL commands...")
