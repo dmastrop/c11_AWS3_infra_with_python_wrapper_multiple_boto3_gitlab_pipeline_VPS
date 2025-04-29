@@ -1,5 +1,10 @@
 ## UPDATES:
 
+Added large code changes for modulatization of the project, using packcage sequential_master_modules for the standalone python scripts.  master_script.py has non-parallelized version, and multi-threaded version and a multiprocessing version to optimize the deployment to AWS3. Broke off the RDS configuration from the beanstalk environment configuration as well so that can parallelize more effectively. RDS jumphost configuration added as well and it configures the RDS server with the basics for mydatabase.
+
+
+## UPDATES:
+
 See below as well.
 Latest changes for AWS3 account are added elastic beanstalk environment and application and added wget stress traffic to that beanstalk URL (CNAME)
 
@@ -8,7 +13,7 @@ policies = [
     'arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier',
     'arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier'
 
-boto3 classes:
+### boto3 classes:
 
 elb_client = session.client('elbv2')
 acm_client = session.client('acm')

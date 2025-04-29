@@ -5,38 +5,34 @@ from sequential_master_modules import jumphost_for_RDS_mysql_client_NEW3
 from sequential_master_modules import wget_for_elastic_beanstalk_ALB
 from sequential_master_modules import HTTPS_wget_for_elastic_beanstalk_ALB
 
-
-# Note that using the exec function because all the modules are standalone and do not have just a single function
-# If the entire module code was in a function we could invoke with module() where module is the name of the function in the module.
-# the exec function below will get the entire block of code as a string
-# The `exec` function executes the string of code read from the file. This means the entire script is executed within the context of the `run_module` function.
-
-def run_module(module_script):
-    print(f"Starting module script: {module_script}")
-    exec(open(module_script).read())
-    print(f"Completed module script: {module_script}")
-
+def run_module(module):
+    # This function will run the module's executable code
+    pass
 
 def main():
-    # Create and start threads for the first two modules
+    # Create threads for the first two modules
     thread1 = threading.Thread(target=run_module, args=(Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS,))
     thread2 = threading.Thread(target=run_module, args=(RDS_and_security_group_json,))
+
+    # Start the first two threads
     thread1.start()
     thread2.start()
 
-    # Wait for the first two threads to complete. main() will be in blocking until both of the threads are complete which is why we need to have both thread1.join and thread2.join. Both have to be completed prior to moving onto the next group of threads below.
+    # Wait for the first two threads to complete
     thread1.join()
     thread2.join()
 
-    # Create and start threads for the last three modules
+    # Create threads for the last three modules
     thread3 = threading.Thread(target=run_module, args=(jumphost_for_RDS_mysql_client_NEW3,))
     thread4 = threading.Thread(target=run_module, args=(wget_for_elastic_beanstalk_ALB,))
     thread5 = threading.Thread(target=run_module, args=(HTTPS_wget_for_elastic_beanstalk_ALB,))
+
+    # Start the last three threads
     thread3.start()
     thread4.start()
     thread5.start()
 
-    # Wait for the last three threads to complete. main() will be blocking until all threads are complete. See above.
+    # Wait for the last three threads to complete
     thread3.join()
     thread4.join()
     thread5.join()
