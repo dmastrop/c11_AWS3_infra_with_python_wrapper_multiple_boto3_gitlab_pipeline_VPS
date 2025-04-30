@@ -51,10 +51,11 @@ except Exception as e:
 
 # Function to wait for instance to be in running state and pass status checks
 instance_ready_event = threading.Event() # for multi-threading
-def wait_for_instance_running(instance_id, ec2_client):
+# also add this as an argument for wait_for_instance_running for proper scope. See below
+def wait_for_instance_running(instance_id, ec2_client, instance_ready_event):
     import sys # added for multi-threading
     import botocore.exceptions # added for multi-threading
-    import time
+    import time # added for multi-threading
     while True:
         try:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
@@ -110,7 +111,7 @@ def wait_for_instance_running(instance_id, ec2_client):
             
 
 # Wait for the instance to be in running state and pass status checks
-wait_for_instance_running(instance_id, my_ec2)
+wait_for_instance_running(instance_id, my_ec2, instance_ready_event)   # add the instance_ready_event to the function call as well for multi-threading case
 
 # Wait for the instance to be ready before proceeding
 # added for multi-threading
