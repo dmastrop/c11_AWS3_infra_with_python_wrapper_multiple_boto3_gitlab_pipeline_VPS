@@ -60,17 +60,17 @@ def main():
 
 
     thread3 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/jumphost_for_RDS_mysql_client_NEW3.py",))
-    thread4 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py",))
+   # thread4 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py",))
     thread5 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py",))
     thread3.start()
-    thread4.start()
+    #thread4.start()
     thread5.start()
 
 
 
     # Wait for the last three threads to complete. main() will be blocking until all threads are complete. See above.
     thread3.join()
-    thread4.join()
+    #thread4.join()
     thread5.join()
 
 if __name__ == "__main__":
