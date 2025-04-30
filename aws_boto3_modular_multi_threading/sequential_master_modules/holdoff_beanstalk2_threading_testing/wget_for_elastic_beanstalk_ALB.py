@@ -5,6 +5,8 @@ import paramiko
 import time
 import json
 import sys
+# for multi-threading
+import botocore.exceptions
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -49,6 +51,8 @@ except Exception as e:
 def wait_for_instance_running(instance_id, ec2_client):
     # added for multi-threading
     import sys
+    import botocore.exceptions
+
     while True:
         try:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
