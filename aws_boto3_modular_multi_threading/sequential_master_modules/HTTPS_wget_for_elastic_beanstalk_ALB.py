@@ -54,28 +54,46 @@ instance_ready_event = threading.Event() # for multi-threading
 def wait_for_instance_running(instance_id, ec2_client):
     import sys # added for multi-threading
     import botocore.exceptions # added for multi-threading
-    while True:
+    import time
+while True:
         try:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
             print(f"wget2 HTTPS Instance status: {instance_status}")
             sys.stdout.flush()
-            if (instance_status['InstanceStatuses'][0]['InstanceState']['Name'] == 'running' and
-                instance_status['InstanceStatuses'][0]['SystemStatus']['Status'] == 'ok' and
-                instance_status['InstanceStatuses'][0]['InstanceStatus']['Status'] == 'ok'):
-                print(f"wget2 HTTPS Instance {instance_id} is now running and has passed status checks.")
-                sys.stdout.flush()
-                instance_ready_event.set()  # Signal that the instance is ready for multi-threading
-                break
+        
+            #if (instance_status['InstanceStatuses'][0]['InstanceState']['Name'] == 'running' and
+            #    instance_status['InstanceStatuses'][0]['SystemStatus']['Status'] == 'ok' and
+            #    instance_status['InstanceStatuses'][0]['InstanceStatus']['Status'] == 'ok'):
+            #    print(f"wget2 HTTPS Instance {instance_id} is now running and has passed status checks.")
+            #    sys.stdout.flush()
+            #    instance_ready_event.set()  # Signal that the instance is ready for multi-threading
+            #    break
+            #else:
+            #    print(f"Waiting for wget2 HTTPS instance {instance_id} to be in running state and pass status checks...")
+            #    sys.stdout.flush()
+            #    time.sleep(10)
+
+
+
+
+            if instance_status['InstanceStatuses']:
+                if (instance_status['InstanceStatuses'][0]['InstanceState']['Name'] == 'running' and
+                    instance_status['InstanceStatuses'][0]['SystemStatus']['Status'] == 'ok' and
+                    instance_status['InstanceStatuses'][0]['InstanceStatus']['Status'] == 'ok'):
+                    print(f"wget2 HTTPS Instance {instance_id} is now running and has passed status checks.")
+                    sys.stdout.flush()
+                    instance_ready_event.set()  # Signal that the instance is ready for multi-threading
+                    break
+                else:
+                    print(f"Waiting for wget2 HTTPS instance {instance_id} to be in running state and pass status checks...")
+                    sys.stdout.flush()
+                    time.sleep(10)
             else:
-                print(f"Waiting for wget2 HTTPS instance {instance_id} to be in running state and pass status checks...")
+                print(f"No status available for wget2 HTTPS instance {instance_id}. Waiting...")
                 sys.stdout.flush()
                 time.sleep(10)
-        #except Exception as e:
-        #    print(f"Error checking wget2 HTTPS instance status: {e}")
-        #    sys.stdout.flush()
-        #    time.sleep(10)
 
-# edited for multi-threading:
+        # edited for multi-threading:
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'InvalidInstanceID.NotFound':
                 print(f"Instance ID {instance_id} not found. Retrying...")
