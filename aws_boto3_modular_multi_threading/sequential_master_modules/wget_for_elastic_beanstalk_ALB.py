@@ -47,6 +47,8 @@ except Exception as e:
 
 # Function to wait for instance to be in running state and pass status checks
 def wait_for_instance_running(instance_id, ec2_client):
+    # added for multi-threading
+    import sys
     while True:
         try:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
@@ -62,10 +64,28 @@ def wait_for_instance_running(instance_id, ec2_client):
                 print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
                 sys.stdout.flush()
                 time.sleep(10)
+
+# added for mutli-threading
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'InvalidInstanceID.NotFound':
+                print(f"Instance ID {instance_id} not found. Retrying...")
+                sys.stdout.flush()
+                time.sleep(10)
+            else:
+                print(f"Error checking instance status: {e}")
+                sys.stdout.flush()
+                time.sleep(10)
+
+
         except Exception as e:
             print(f"Error checking instance status: {e}")
             sys.stdout.flush()
             time.sleep(10)
+
+
+
+
+
 
 # Wait for the instance to be in running state and pass status checks
 wait_for_instance_running(instance_id, my_ec2)
