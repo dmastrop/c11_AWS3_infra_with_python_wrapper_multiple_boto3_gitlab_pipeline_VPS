@@ -55,7 +55,7 @@ def wait_for_instance_running(instance_id, ec2_client):
     import sys # added for multi-threading
     import botocore.exceptions # added for multi-threading
     import time
-while True:
+    while True:
         try:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
             print(f"wget2 HTTPS Instance status: {instance_status}")
