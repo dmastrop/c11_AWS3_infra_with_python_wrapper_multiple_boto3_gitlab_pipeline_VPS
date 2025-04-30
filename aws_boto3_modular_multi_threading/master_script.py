@@ -1,7 +1,7 @@
 import threading
 import logging
 
-logging.basicConfig(level=logging.DEBUG, format='%(threadName)s: %(message)s')
+logging.basicConfig(level=logging.CRITICAL, format='%(threadName)s: %(message)s')
 
 from sequential_master_modules import Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS
 from sequential_master_modules import RDS_and_security_group_json
@@ -21,9 +21,9 @@ from sequential_master_modules import HTTPS_wget_for_elastic_beanstalk_ALB
 # define new variable module_script_path instead of module_script object from the imports above
 
 def run_module(module_script_path):
-    logging.debug(f"Starting module script: {module_script_path}")
+    logging.critical(f"Starting module script: {module_script_path}")
     exec(open(module_script_path).read())
-    logging.debug(f"Completed module script: {module_script_path}")
+    logging.critical(f"Completed module script: {module_script_path}")
 
 
 def main():
