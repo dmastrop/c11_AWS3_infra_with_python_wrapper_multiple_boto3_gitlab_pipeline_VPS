@@ -11,10 +11,10 @@ build:
     #- docker build -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
     
     # this one is for running Dockerfile_python_mod_NO_but_serial, the python modularization setup without parallelization
-    - docker build --file Dockerfile_python_mod_NO_but_serial -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+    #- docker build --file Dockerfile_python_mod_NO_but_serial -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
 
     # this one is for running Dockerfile_python_mod_multi_threaded, modularization with multi-threading
-    # - docker build --file Dockerfile_python_mod_multi_threaded -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+     - docker build --file Dockerfile_python_mod_multi_threaded -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
   
     # this one is for running Dockerfile_python_mod_multi_processing, modularization with mutli-processing
     #- docker build --file Dockerfile_python_mod_multi_processing -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
