@@ -3,11 +3,14 @@ import logging
 
 logging.basicConfig(level=logging.CRITICAL, format='%(threadName)s: %(message)s')
 
-from sequential_master_modules import Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS
-from sequential_master_modules import RDS_and_security_group_json
-from sequential_master_modules import jumphost_for_RDS_mysql_client_NEW3
-from sequential_master_modules import wget_for_elastic_beanstalk_ALB
-from sequential_master_modules import HTTPS_wget_for_elastic_beanstalk_ALB
+
+# Comment out the imports because exec is getting modules from string full path and NOT module object!!
+
+#from sequential_master_modules import Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS
+#from sequential_master_modules import RDS_and_security_group_json
+#from sequential_master_modules import jumphost_for_RDS_mysql_client_NEW3
+#from sequential_master_modules import wget_for_elastic_beanstalk_ALB
+#from sequential_master_modules import HTTPS_wget_for_elastic_beanstalk_ALB
 
 
 # Note that using the exec function because all the modules are standalone and do not have just a single function
@@ -19,6 +22,10 @@ from sequential_master_modules import HTTPS_wget_for_elastic_beanstalk_ALB
 # pass a module object but need full path to the module script. Since this is docker container it has to be
 # path defined by HOME DIRECTORY in the container not the pipeline source code.
 # define new variable module_script_path instead of module_script object from the imports above
+
+# NOTE: need to comment out the import modules above. If these are left in the main() below will execute them serially and then the threads will run and everything will run twice!!
+
+
 
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
