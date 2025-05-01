@@ -137,8 +137,8 @@ except Exception as e:
 # Function to install wget and run the stress test script on the instance
 def install_wget_and_run_script(instance_address, key_path, beanstalk_url):
     import paramiko  # added for multi-threading. Similar to the other function above. Scope is much different
-    import sys *added for multi-threading
-    import time
+    import sys # added for multi-threading
+    import time # added for multi-threading
     # when converting to the multi-threading for the functions in this module.
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
