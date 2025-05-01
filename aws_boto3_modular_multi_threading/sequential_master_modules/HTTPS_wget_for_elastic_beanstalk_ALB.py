@@ -135,7 +135,8 @@ except Exception as e:
     exit(1)
 
 # Function to install wget and run the stress test script on the instance
-def install_wget_and_run_script(instance_address, key_path, beanstalk_url):
+def install_wget_and_run_script(instance_address, key_path, beanstalk_url, instance_id):
+# added instance_id as argument to this function for multi-threading. This is another scope issue
     import paramiko  # added for multi-threading. Similar to the other function above. Scope is much different
     import sys # added for multi-threading
     import time # added for multi-threading
@@ -229,7 +230,7 @@ print(json.dumps(beanstalk_data, indent=4))
 beanstalk_url = beanstalk_data['CNAME']
 
 # Install wget and run the stress test script on the instance
-install_wget_and_run_script(instance_dns if instance_dns else instance_ip, key_file_path, beanstalk_url)
+install_wget_and_run_script(instance_dns if instance_dns else instance_ip, key_file_path, beanstalk_url, instance_id)  # added instance_id as arghument to this function for multi-threading
 
 print(f"wget2 HTTPS EC2 instance {instance_id} is created and stress traffic script is running.")
 sys.stdout.flush()
