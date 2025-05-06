@@ -10,10 +10,10 @@ build:
     # this one is for running Dockerfile which is python wrapper method (and it ai parallelized now). It is 
     # a manual script running of the python files natively in parallel (not using multi-threading python class)
     # using a file range(array list) function
-    #- docker build -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
     
     # this one is for running Dockerfile_python_mod_NO_but_serial, the python modularization setup without parallelization
-    - docker build --file Dockerfile_python_mod_NO_but_serial -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+    #- docker build --file Dockerfile_python_mod_NO_but_serial -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
 
     # this one is for running Dockerfile_python_mod_multi_threaded, modularization with multi-threading
     #- docker build --file Dockerfile_python_mod_multi_threaded -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
