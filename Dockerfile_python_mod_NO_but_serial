@@ -17,4 +17,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 #CMD ["python", "-u", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE_AWS3_ONLY_debug_PARALLEL_THREAD.py"]
 
 # This is for python modules case.  This is without parallelization (multi-threading or multi-processing) of the modules for now. Will get to that later.
-CMD ["python", "-u", "master_script.py"]
+#CMD ["python", "-u", "master_script.py"]
+CMD ["python", "-u", "master_script_ALL_11.py"]
