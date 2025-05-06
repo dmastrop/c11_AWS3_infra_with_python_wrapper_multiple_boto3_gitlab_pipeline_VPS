@@ -218,6 +218,17 @@ def install_tomcat(ip, private_ip, instance_id):
     print(f"Installation completed on {ip}")
     return ip, private_ip, True
 
+# added this because when running this as a module getting an error that there are no public ips on the instances
+# I did check and the instances did have public ips.
+# Ensure public_ips is not empty before creating ThreadPoolExecutor
+if not public_ips:
+    print("No public IPs found. Exiting.")
+    sys.exit(1)
+
+
+
+
+
 # Use ThreadPoolExecutor to run installations in parallel
 # In this updated script, the `install_tomcat` function returns a tuple containing the IP address and the result (`True` for success, `False` for failure). The script collects the IP addresses of both successful and failed installations in separate lists (`successful_ips` and `failed_ips`) and prints them out at the end. This way, you can easily identify which instances had successful installations and which ones failed.
 # Also: This script now correctly checks for both SSH connection failures and package installation failures, and prints out the IP addresses of both successful and failed installations.
