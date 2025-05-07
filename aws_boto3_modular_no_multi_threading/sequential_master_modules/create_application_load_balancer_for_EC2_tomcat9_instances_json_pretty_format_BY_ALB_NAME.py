@@ -113,6 +113,16 @@ time.sleep(20)
 # previous python script as noted above using json (import json library).
 logger.info("Registering instances with the target group...")
 targets = [{'Id': instance_id} for instance_id in instance_ids]
+
+# insert Debugging log to print targets
+logger.info(f"Targets: {targets}")  # Debugging statement to print targets
+if not targets:
+    logger.error("No targets found. Exiting.")
+    sys.exit(1)
+
+
+
+
 elb_client.register_targets(TargetGroupArn=target_group_arn, Targets=targets)
 logger.info("Instances registered successfully.")
 
