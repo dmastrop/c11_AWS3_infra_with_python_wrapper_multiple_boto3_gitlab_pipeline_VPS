@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # This is for python modules case.  This is without parallelization (multi-threading or multi-processing) of the modules for now. Will get to that later.
 #CMD ["python", "-u", "master_script.py"]
 #CMD ["python", "-u", "master_script_ALL_11.py"]
-CMD ["python", "-u", "master_script_ALL_11_log_message_when_module_starts_.py"]
+CMD ["python", "-u", "master_script_ALL_11_log_message_when_module_starts.py"]
 
 
 # test
