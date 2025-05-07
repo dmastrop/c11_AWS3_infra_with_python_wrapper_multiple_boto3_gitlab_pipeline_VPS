@@ -36,6 +36,12 @@ session = boto3.Session(
 # Create an EC2 client
 my_ec2 = session.client('ec2')
 
+# Add a delay to ensure instances are fully created before proceeding
+print("Adding delay to ensure instances are fully created...")
+time.sleep(40)
+
+
+
 # Describe the running instances
 response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
 
