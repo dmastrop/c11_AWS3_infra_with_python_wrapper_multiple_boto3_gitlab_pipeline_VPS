@@ -37,9 +37,11 @@ session = boto3.Session(
 my_ec2 = session.client('ec2')
 
 # Add a delay to ensure instances are fully created before proceeding
-print("Adding delay to ensure instances are fully created...")
-time.sleep(40)
-
+#print("Adding delay to ensure instances are fully created...")
+#time.sleep(40)
+# ACTUALLY better solution is to move this module after the tomcat installation module. The tomcat installation
+# module makes sure that the instances are all up and running and so if we put this module after that module
+# the instances will be up. THis module is used for the fourth module ALB setup.
 
 
 # Describe the running instances
