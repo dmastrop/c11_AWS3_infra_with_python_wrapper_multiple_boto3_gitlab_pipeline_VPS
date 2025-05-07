@@ -34,48 +34,8 @@ session = boto3.Session(
 # Create an EC2 client
 my_ec2 = session.client('ec2')
 
-# Function to wait for all instances to be in running state
-def wait_for_all_instances_running(instance_ids, ec2_client):
-    while True:
-        response = ec2_client.describe_instance_status(InstanceIds=instance_ids)
-        all_running = all(
-            instance['InstanceState']['Name'] == 'running'
-            for instance in response['InstanceStatuses']
-        )
-        if all_running:
-            break
-        print("Waiting for all instances to be in running state...")
-        time.sleep(10)
-
-
-
-
 # Describe the running instances
-response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
-
-
-
-
-# Get the instance IDs of the running instances except the excluded instance ID
-instance_ids = [
-    instance['InstanceId']
-    for reservation in response['Reservations']
-    for instance in reservation['Instances']
-    if instance['InstanceId'] != exclude_instance_id
-]
-
-
-
-# Wait for all instances to be in running state
-wait_for_all_instances_running(instance_ids, my_ec2)
-
-
-
-# Describe the running instances again to get updated information
 response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
-
-
-
 
 # Get the public IP addresses and security group IDs of the running instances except the excluded instance ID
 public_ips = []
@@ -85,18 +45,8 @@ instance_ids = []
 for reservation in response['Reservations']:
     for instance in reservation['Instances']:
         if instance['InstanceId'] != exclude_instance_id:
-            
-            # for the revised code version for this module to support sequential module execution rather than the
-            # manual serial wrapper approach, comment out the next two lines and make them conditionals since the
-            # issue is with public ips being avaiable prior to installing tomcat.
-            #public_ips.append(instance['PublicIpAddress'])
-            #private_ips.append(instance['PrivateIpAddress'])
-            if 'PublicIpAddress' in instance:
-                public_ips.append(instance['PublicIpAddress'])
-            if 'PrivateIpAddress' in instance:
-                private_ips.append(instance['PrivateIpAddress'])
-
-
+            public_ips.append(instance['PublicIpAddress'])
+            private_ips.append(instance['PrivateIpAddress'])
             instance_ids.append(instance['InstanceId'])
             for sg in instance['SecurityGroups']:
                 security_group_ids.append(sg['GroupId'])
@@ -113,14 +63,7 @@ for reservation in response['Reservations']:
 #with open('instance_ids.json', 'w') as f:
 #    json.dump(data, f)
 
-# Debugging: Print instance details to verify public IPs are being retrieved correctly
-# this is to debug the module execution of this script making sure public ips are present prior to tomcat execution in
-# the ThreadPoolExecutor
-for i, instance_id in enumerate(instance_ids):
-    print(f"Instance {i + 1}:")
-    print(f"  Instance ID: {instance_id}")
-    print(f"  Public IP Address: {public_ips[i] if i < len(public_ips) else 'N/A'}")
-    print(f"  Private IP Address: {private_ips[i] if i < len(private_ips) else 'N/A'}")
+
 
 
 # Define SSH details
