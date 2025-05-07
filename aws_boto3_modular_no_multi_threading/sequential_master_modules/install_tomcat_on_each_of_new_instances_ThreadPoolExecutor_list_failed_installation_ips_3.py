@@ -70,6 +70,12 @@ instance_ids = [
 wait_for_all_instances_running(instance_ids, my_ec2)
 
 
+# Add a delay to ensure public IPs are available before proceeding with the installation
+# This is the latest addition to the code becasue still seeing the issue. 20 seconds was sufficient in manual wrapper
+# code setup
+print("Adding delay to ensure public IPs are available...")
+time.sleep(20)
+
 
 # Describe the running instances again to get updated information
 response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
@@ -299,7 +305,7 @@ successful_private_ips = []
 with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
     futures = [executor.submit(install_tomcat, ip, private_ip, instance_id) for ip, private_ip, instance_id in zip(public_ips, private_ips, instance_ids)]
     for future in as_completed(futures):
-        ip, private_ip, result  = future.result()
+        ip, private_ip, result = future.result()
         if result:
             successful_ips.append(ip)
             successful_private_ips.append(private_ip)
