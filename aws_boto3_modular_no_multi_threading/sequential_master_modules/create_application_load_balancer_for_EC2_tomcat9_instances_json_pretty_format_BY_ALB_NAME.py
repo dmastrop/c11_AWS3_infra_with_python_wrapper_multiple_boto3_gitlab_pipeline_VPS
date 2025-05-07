@@ -5,6 +5,9 @@ import json
 import logging
 from datetime import datetime
 import sys
+import time
+
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -99,7 +102,10 @@ logger.debug(f"Target group details: {target_group}")
 target_group_arn = target_group['TargetGroups'][0]['TargetGroupArn']
 logger.info(f"Target Group ARN: {target_group_arn}")
 
-
+# Add a delay to ensure targets are available before proceeding with the registration
+# This is to address the issue with elb_client.register_targets below where targets is not ready
+print("Adding delay to ensure targets are available...")
+time.sleep(20)
 
 
 
