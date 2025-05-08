@@ -73,6 +73,15 @@ response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'V
 
 
 
+
+
+
+# Debugging: Print the value of exclude_instance_id
+print(f"exclude_instance_id: {exclude_instance_id}")
+
+
+
+
 # New code for modular case:
 # Get the instance IDs of the running instances except the excluded instance ID
 instance_ids = [
