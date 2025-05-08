@@ -6,7 +6,7 @@ modules = [
     #"save_instance_ids_and_security_group_ids_to_json_file",
     # note move the save_instance module to after the install tomcat. Install tomcat ensures that the 
     # instances are all up and running. We don't need to add a delay in save_instance if it is moved after 
-    # install_tomcat
+    # install_tomcat. save_instance is required for create ALB module.
     "install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3",
     "save_instance_ids_and_security_group_ids_to_json_file",
     "create_application_load_balancer_for_EC2_tomcat9_instances_json_pretty_format_BY_ALB_NAME",
