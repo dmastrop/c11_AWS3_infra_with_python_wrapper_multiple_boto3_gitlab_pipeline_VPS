@@ -33,6 +33,10 @@ print("Min Count:", min_count)
 print("Max Count:", max_count)
 
 def start_ec2_instances(aws_access_key, aws_secret_key, region_name, image_id, instance_type, key_name, min_count, max_count):
+    # multi-threading is encountering scope issues again. Need to import boto3 inside the function
+    import boto3
+    import sys
+
     # Establish a session with AWS
     try:
         session = boto3.Session(
