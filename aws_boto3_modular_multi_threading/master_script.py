@@ -67,9 +67,9 @@ def main():
     thread5.join()
 
 
-    thread6 = threading.Thread(target=run_module, args=("/aws_EC2/ sequential_master_modules/wget_debug4.py",))
+    thread6 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_debug4.py",))
     thread7 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py",))
-    thread8 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/ RDS_and_security_group_json.py",))
+    thread8 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/RDS_and_security_group_json.py",))
     
     thread6.start()
     thread7.start()
@@ -82,10 +82,10 @@ def main():
 
 
 
-    thread9 = threading.Thread(target=run_module, args=("/aws_EC2/ sequential_master_modules/wget_debug4.py",))
-    thread10 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py",))
-    thread11 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/ RDS_and_security_group_json.py",))
-    
+    thread9 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/jumphost_for_RDS_mysql_client_NEW3.py",))
+    thread10 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py",))
+    thread11 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py",))
+
     thread9.start()
     thread10.start()
     thread11.start()
