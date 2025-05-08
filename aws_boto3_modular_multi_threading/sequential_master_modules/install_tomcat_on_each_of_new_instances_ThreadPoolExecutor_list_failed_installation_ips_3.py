@@ -24,6 +24,19 @@ aws_pem_key = os.getenv("AWS_PEM_KEY")
 # Define the instance ID to exclude (the EC2 controller)
 exclude_instance_id = 'i-0aaaa1aa8907a9b78'
 
+# add this because getting a scope error in the multi-threaded setup with exclude_instance_id
+# if it prints out ok then it is not a scope or access issue.
+# Ensure exclude_instance_id is accessible within the threads
+def check_exclude_instance_id():
+    print(f"exclude_instance_id: {exclude_instance_id}")
+
+with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
+    futures = [executor.submit(check_exclude_instance_id) for _ in range(len(public_ips))]
+    for future in as_completed(futures):
+        future.result()
+
+
+
 # Establish a session with AWS
 session = boto3.Session(
     aws_access_key_id=aws_access_key,
