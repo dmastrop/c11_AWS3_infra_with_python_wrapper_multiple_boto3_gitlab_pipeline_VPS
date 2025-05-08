@@ -25,7 +25,9 @@ logging.basicConfig(level=logging.CRITICAL, format='%(threadName)s: %(message)s'
 
 # NOTE: need to comment out the import modules above. If these are left in the main() below will execute them serially and then the threads will run and everything will run twice!!
 
-
+# Major rewrite of the code to support all 11 modules in multi-threaded setup. Prior to this tested with 5 of the modules
+# Note that the first 6 modules have chagnes as well to support port from manual sequential execution to module execution
+# We can run 6,7,8 and 9,10,11 together in parallel. Use the join to ensure proper throttling of the thread blocks.
 
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
@@ -34,45 +36,68 @@ def run_module(module_script_path):
 
 
 def main():
-    # Create and start threads for the first two modules
-    #thread1 = threading.Thread(target=run_module, args=(Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS,))
-    #thread2 = threading.Thread(target=run_module, args=(RDS_and_security_group_json,))
-    #thread1.start()
-    #thread2.start()
 
-    thread1 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py",))
-    thread2 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/RDS_and_security_group_json.py",))
+
+    thread1 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/restart_the_EC_multiple_instances_with_client_method_DEBUG.py",))
+
     thread1.start()
-    thread2.start()
-
-
-    # Wait for the first two threads to complete. main() will be in blocking until both of the threads are complete which is why we need to have both thread1.join and thread2.join. Both have to be completed prior to moving onto the next group of threads below.
     thread1.join()
+
+    thread2 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3.py",))
+
+    thread2.start()
     thread2.join()
 
-    # Create and start threads for the last three modules
-    #thread3 = threading.Thread(target=run_module, args=(jumphost_for_RDS_mysql_client_NEW3,))
-    #thread4 = threading.Thread(target=run_module, args=(wget_for_elastic_beanstalk_ALB,))
-    #thread5 = threading.Thread(target=run_module, args=(HTTPS_wget_for_elastic_beanstalk_ALB,))
-    #thread3.start()
-    #thread4.start()
-    #thread5.start()
 
 
-    thread3 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/jumphost_for_RDS_mysql_client_NEW3.py",))
-    thread4 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py",))
-    thread5 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py",))
+    thread3 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/save_instance_ids_and_security_group_ids_to_json_file.py",))
+
     thread3.start()
-    thread4.start()
-    thread5.start()
-
-
-
-    # Wait for the last three threads to complete. main() will be blocking until all threads are complete. See above.
     thread3.join()
+
+
+    thread4 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/create_application_load_balancer_for_EC2_tomcat9_instances_json_pretty_format_BY_ALB_NAME.py",))
+
+    thread4.start()
     thread4.join()
+
+    thread5 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/SSL_listener_with_Route53_for_ACM_validation_with_CNAME_automated_3_BY_ALB_NAME.py",))
+
+    thread5.start()
     thread5.join()
+
+
+    thread6 = threading.Thread(target=run_module, args=("/aws_EC2/ sequential_master_modules/wget_debug4.py",))
+    thread7 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py",))
+    thread8 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/ RDS_and_security_group_json.py",))
+    
+    thread6.start()
+    thread7.start()
+    thread8.start()
+
+   # Wait for all three of these to complete before proceeding to next block of threads
+    thread6.join()
+    thread7.join()
+    thread8.join()
+
+
+
+    thread9 = threading.Thread(target=run_module, args=("/aws_EC2/ sequential_master_modules/wget_debug4.py",))
+    thread10 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py",))
+    thread11 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/ RDS_and_security_group_json.py",))
+    
+    thread9.start()
+    thread10.start()
+    thread11.start()
+
+   # Wait for all three of these to complete before proceeding to next block of threads
+    thread9.join()
+    thread10.join()
+    thread11.join()
+
+
+    
 
 if __name__ == "__main__":
     main()
-# test5
+
