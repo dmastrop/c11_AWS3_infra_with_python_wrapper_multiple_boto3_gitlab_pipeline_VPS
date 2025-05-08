@@ -24,17 +24,17 @@ aws_pem_key = os.getenv("AWS_PEM_KEY")
 # Define the instance ID to exclude (the EC2 controller)
 exclude_instance_id = 'i-0aaaa1aa8907a9b78'
 
-# add this because getting a scope error in the multi-threaded setup with exclude_instance_id
-# if it prints out ok then it is not a scope or access issue.
-# Ensure exclude_instance_id is accessible within the threads
-def check_exclude_instance_id():
-    print(f"exclude_instance_id: {exclude_instance_id}")
-
-with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
-    futures = [executor.submit(check_exclude_instance_id) for _ in range(len(public_ips))]
-    for future in as_completed(futures):
-        future.result()
-
+## add this because getting a scope error in the multi-threaded setup with exclude_instance_id
+## if it prints out ok then it is not a scope or access issue.
+## Ensure exclude_instance_id is accessible within the threads
+#def check_exclude_instance_id():
+#    print(f"exclude_instance_id: {exclude_instance_id}")
+#
+#with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
+#    futures = [executor.submit(check_exclude_instance_id) for _ in range(len(public_ips))]
+#    for future in as_completed(futures):
+#        future.result()
+#
 
 
 # Establish a session with AWS
@@ -141,6 +141,15 @@ for reservation in response['Reservations']:
 #    json.dump(data, f)
 
 
+
+
+
+
+#move this block for multi-threading so public_ips are present when this is run
+# Ensure public_ips is not empty before creating ThreadPoolExecutor
+if not public_ips:
+    print("No public IPs found. Exiting.")
+    sys.exit(1)
 
 # Added code for moudle execution
 # Debugging: Print instance details to verify public IPs are being retrieved correctly
@@ -308,14 +317,14 @@ def install_tomcat(ip, private_ip, instance_id):
     print(f"Installation completed on {ip}")
     return ip, private_ip, True
 
-
-# added this because when running this as a module getting an error that there are no public ips on the instances
-# I did check and the instances did have public ips.
-# Ensure public_ips is not empty before creating ThreadPoolExecutor
-if not public_ips:
-    print("No public IPs found. Exiting.")
-    sys.exit(1)
-
+# MOVED THIS BLOCK TO ABOVE
+### added this because when running this as a module getting an error that there are no public ips on the instances
+## I did check and the instances did have public ips.
+## Ensure public_ips is not empty before creating ThreadPoolExecutor
+#if not public_ips:
+#    print("No public IPs found. Exiting.")
+#    sys.exit(1)
+#
 
 
 
@@ -332,7 +341,7 @@ successful_private_ips = []
 with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
     futures = [executor.submit(install_tomcat, ip, private_ip, instance_id) for ip, private_ip, instance_id in zip(public_ips, private_ips, instance_ids)]
     for future in as_completed(futures):
-        ip, private_ip, result  = future.result()
+        ip, private_ip, result = future.result()
         if result:
             successful_ips.append(ip)
             successful_private_ips.append(private_ip)
