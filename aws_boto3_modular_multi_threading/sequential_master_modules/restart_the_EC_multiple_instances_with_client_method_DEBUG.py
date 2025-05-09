@@ -98,5 +98,5 @@ def restart_ec_multiple_instances():
 
 
 if __name__ == "__main__":
-    reatart_ec_multiple_instances()
+    restart_ec_multiple_instances()
 

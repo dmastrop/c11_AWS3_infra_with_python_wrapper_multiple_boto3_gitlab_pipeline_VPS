@@ -3,6 +3,7 @@ import logging
 
 logging.basicConfig(level=logging.CRITICAL, format='%(threadName)s: %(message)s')
 
+
 # Comment out the imports because exec is getting modules from string full path and NOT module object!!
 
 #from sequential_master_modules import Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS
@@ -10,6 +11,7 @@ logging.basicConfig(level=logging.CRITICAL, format='%(threadName)s: %(message)s'
 #from sequential_master_modules import jumphost_for_RDS_mysql_client_NEW3
 #from sequential_master_modules import wget_for_elastic_beanstalk_ALB
 #from sequential_master_modules import HTTPS_wget_for_elastic_beanstalk_ALB
+
 
 # Note that using the exec function because all the modules are standalone and do not have just a single function
 # If the entire module code was in a function we could invoke with module() where module is the name of the function in the module.
@@ -27,76 +29,47 @@ logging.basicConfig(level=logging.CRITICAL, format='%(threadName)s: %(message)s'
 # Note that the first 6 modules have chagnes as well to support port from manual sequential execution to module execution
 # We can run 6,7,8 and 9,10,11 together in parallel. Use the join to ensure proper throttling of the thread blocks.
 
-# Another major rewrite. With exec function approach it worked for the last 5 modules but with the first 6 modules getting
-# a lot of scope related issues. Need to switch over to the function approach and wrap each module in a function and
-# then call it with the run_module and module_script_path
-
-
-
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
-    with open(module_script_path) as f:
-        code = f.read()
-    exec(code, globals())
+    exec(open(module_script_path).read())
     logging.critical(f"Completed module script: {module_script_path}")
 
-def restart_ec_multiple_instances():
-    run_module("/aws_EC2/sequential_master_modules/restart_the_EC_multiple_instances_with_client_method_DEBUG.py")
-
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3.py")
-
-def save_instance_ids_and_security_group_ids():
-    run_module("/aws_EC2/sequential_master_modules/save_instance_ids_and_security_group_ids_to_json_file.py")
-
-def create_application_load_balancer():
-    run_module("/aws_EC2/sequential_master_modules/create_application_load_balancer_for_EC2_tomcat9_instances_json_pretty_format_BY_ALB_NAME.py")
-
-def ssl_listener_with_route53():
-    run_module("/aws_EC2/sequential_master_modules/SSL_listener_with_Route53_for_ACM_validation_with_CNAME_automated_3_BY_ALB_NAME.py")
-
-def wget_debug():
-    run_module("/aws_EC2/sequential_master_modules/wget_debug4.py")
-
-def elastic_beanstalk():
-    run_module("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py")
-
-def rds_and_security_group():
-    run_module("/aws_EC2/sequential_master_modules/RDS_and_security_group_json.py")
-
-def jumphost_for_rds_mysql_client():
-    run_module("/aws_EC2/sequential_master_modules/jumphost_for_RDS_mysql_client_NEW3.py")
-
-def wget_for_elastic_beanstalk_alb():
-    run_module("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py")
-
-def https_wget_for_elastic_beanstalk_alb():
-    run_module("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py")
 
 def main():
-    thread1 = threading.Thread(target=restart_ec_multiple_instances)
+
+
+    thread1 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/restart_the_EC_multiple_instances_with_client_method_DEBUG.py",))
+
     thread1.start()
     thread1.join()
 
-    thread2 = threading.Thread(target=install_tomcat_on_instances)
+    thread2 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3.py",))
+
     thread2.start()
     thread2.join()
 
-    thread3 = threading.Thread(target=save_instance_ids_and_security_group_ids)
+
+
+    thread3 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/save_instance_ids_and_security_group_ids_to_json_file.py",))
+
     thread3.start()
     thread3.join()
 
-    thread4 = threading.Thread(target=create_application_load_balancer)
+
+    thread4 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/create_application_load_balancer_for_EC2_tomcat9_instances_json_pretty_format_BY_ALB_NAME.py",))
+
     thread4.start()
     thread4.join()
 
-    thread5 = threading.Thread(target=ssl_listener_with_route53)
+    thread5 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/SSL_listener_with_Route53_for_ACM_validation_with_CNAME_automated_3_BY_ALB_NAME.py",))
+
     thread5.start()
     thread5.join()
 
-    thread6 = threading.Thread(target=wget_debug)
-    thread7 = threading.Thread(target=elastic_beanstalk)
-    thread8 = threading.Thread(target=rds_and_security_group)
+
+    thread6 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_debug4.py",))
+    thread7 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py",))
+    thread8 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/RDS_and_security_group_json.py",))
     
     thread6.start()
     thread7.start()
@@ -107,9 +80,11 @@ def main():
     thread7.join()
     thread8.join()
 
-    thread9 = threading.Thread(target=jumphost_for_rds_mysql_client)
-    thread10 = threading.Thread(target=wget_for_elastic_beanstalk_alb)
-    thread11 = threading.Thread(target=https_wget_for_elastic_beanstalk_alb)
+
+
+    thread9 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/jumphost_for_RDS_mysql_client_NEW3.py",))
+    thread10 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py",))
+    thread11 = threading.Thread(target=run_module, args=("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py",))
 
     thread9.start()
     thread10.start()
@@ -119,6 +94,9 @@ def main():
     thread9.join()
     thread10.join()
     thread11.join()
+
+
+    
 
 if __name__ == "__main__":
     main()
