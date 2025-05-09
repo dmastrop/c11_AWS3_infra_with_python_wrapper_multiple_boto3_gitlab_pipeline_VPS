@@ -6,6 +6,9 @@ commit:
     major overhaul of multithreaded set up for all 11 modules. The first 6 modules had several scope related issues and so converted the master python script use function calls to the modules rather than exec function which has scoping issues. Had to wrap all modules in their respective function call names. Referring to them by path name rather than module object name but either approach is fine
 
 
+The thread that takes the longest, the installation of tomcat on each of the 50 EC2 instances cannot be parallelized with any of the other treads because the EC2 instances are in the target group and tomcat has to be running so that the ALB passes target health checks when the ALB is created.
+
+
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
     with open(module_script_path) as f:
