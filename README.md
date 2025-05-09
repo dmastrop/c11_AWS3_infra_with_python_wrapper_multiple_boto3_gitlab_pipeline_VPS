@@ -1,5 +1,105 @@
 ## UPDATES:
 
+Now running all 11 modules in multi-threaded environment, with each of 11 modules running as a dedicated thread and grouping several of them for concurrency to speed up the infra rollout. The execu function call in the master python script ended up causing many scope related issues in the first 6 modules. I converted the entire script to a function call based multi-threading and wrapped all the python files in the package directory in dedicated function that is called from the master. The master python script is below for reference.   This runs very well all the way through without any scope related issues.
+
+commit:
+    major overhaul of multithreaded set up for all 11 modules. The first 6 modules had several scope related issues and so converted the master python script use function calls to the modules rather than exec function which has scoping issues. Had to wrap all modules in their respective function call names. Referring to them by path name rather than module object name but either approach is fine
+
+
+def run_module(module_script_path):
+    logging.critical(f"Starting module script: {module_script_path}")
+    with open(module_script_path) as f:
+        code = f.read()
+    exec(code, globals())
+    logging.critical(f"Completed module script: {module_script_path}")
+
+def restart_ec_multiple_instances():
+    run_module("/aws_EC2/sequential_master_modules/restart_the_EC_multiple_instances_with_client_method_DEBUG.py")
+
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3.py")
+
+def save_instance_ids_and_security_group_ids():
+    run_module("/aws_EC2/sequential_master_modules/save_instance_ids_and_security_group_ids_to_json_file.py")
+
+def create_application_load_balancer():
+    run_module("/aws_EC2/sequential_master_modules/create_application_load_balancer_for_EC2_tomcat9_instances_json_pretty_format_BY_ALB_NAME.py")
+
+def ssl_listener_with_route53():
+    run_module("/aws_EC2/sequential_master_modules/SSL_listener_with_Route53_for_ACM_validation_with_CNAME_automated_3_BY_ALB_NAME.py")
+
+def wget_debug():
+    run_module("/aws_EC2/sequential_master_modules/wget_debug4.py")
+
+def elastic_beanstalk():
+    run_module("/aws_EC2/sequential_master_modules/Elastic_Beanstalk_ORIGINAL_with_environment_id_WORKING_VERSION_BY_ElasticLB_env_id_without_RDS.py")
+
+def rds_and_security_group():
+    run_module("/aws_EC2/sequential_master_modules/RDS_and_security_group_json.py")
+
+def jumphost_for_rds_mysql_client():
+    run_module("/aws_EC2/sequential_master_modules/jumphost_for_RDS_mysql_client_NEW3.py")
+
+def wget_for_elastic_beanstalk_alb():
+    run_module("/aws_EC2/sequential_master_modules/wget_for_elastic_beanstalk_ALB.py")
+
+def https_wget_for_elastic_beanstalk_alb():
+    run_module("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py")
+
+def main():
+    thread1 = threading.Thread(target=restart_ec_multiple_instances)
+    thread1.start()
+    thread1.join()
+
+    thread2 = threading.Thread(target=install_tomcat_on_instances)
+    thread2.start()
+    thread2.join()
+
+    thread3 = threading.Thread(target=save_instance_ids_and_security_group_ids)
+    thread3.start()
+    thread3.join()
+
+    thread4 = threading.Thread(target=create_application_load_balancer)
+    thread4.start()
+    thread4.join()
+
+    thread5 = threading.Thread(target=ssl_listener_with_route53)
+    thread5.start()
+    thread5.join()
+
+    thread6 = threading.Thread(target=wget_debug)
+    thread7 = threading.Thread(target=elastic_beanstalk)
+    thread8 = threading.Thread(target=rds_and_security_group)
+    
+    thread6.start()
+    thread7.start()
+    thread8.start()
+
+   # Wait for all three of these to complete before proceeding to next block of threads
+    thread6.join()
+    thread7.join()
+    thread8.join()
+
+    thread9 = threading.Thread(target=jumphost_for_rds_mysql_client)
+    thread10 = threading.Thread(target=wget_for_elastic_beanstalk_alb)
+    thread11 = threading.Thread(target=https_wget_for_elastic_beanstalk_alb)
+
+    thread9.start()
+    thread10.start()
+    thread11.start()
+
+   # Wait for all three of these to complete before proceeding to next block of threads
+    thread9.join()
+    thread10.join()
+    thread11.join()
+
+if __name__ == "__main__":
+    main()
+
+
+
+## UPDATES:
+
 Added back in all the other modules for the modularized project.  There are a total of 11 modules at this time. The challenges were that there was no delay between first module (initialization of the EC2 instances) and the rest of the modules. The tomcat installation module requires that all instances be in Passed state in order to use the paramiko library to ssh into the EC2 instances and install tomcat. The public ip addreses need to be fully initialized on each instance to do this.  Adding a delay in the tomcat script got it working.
 
 Moving the export of the instance ids and security group ids module to AFTER the tomcat installation module resolved another issue.  The export arrays were empty when this was executed as second module because the EC2 instances were not in fully running state. Once this was moved to the third module (non-multi-threaded), the fourth module which needs the instance id and security group id arrays started working.  This is because the second module (that is now the tomcat installation module) ensures that all EC2 instances are runnning and status checks are passed.  The fourth module, the manual ALB setup works fine now. After these changes the rest of the 11 modules ran fine including the beanstalk and RDS setups and the RDS jumphost as well as the wget stress EC2 generators for both the manual ALB and the beanstalk ALB instances (HTTP and HTTPS listeners).
