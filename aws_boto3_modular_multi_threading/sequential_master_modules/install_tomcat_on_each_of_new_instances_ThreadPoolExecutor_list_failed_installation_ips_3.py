@@ -24,6 +24,14 @@ aws_pem_key = os.getenv("AWS_PEM_KEY")
 # Define the instance ID to exclude (the EC2 controller)
 exclude_instance_id = 'i-0aaaa1aa8907a9b78'
 
+
+
+# Debugging: Print the value of exclude_instance_id
+print(f"exclude_instance_id: {exclude_instance_id}")
+
+
+
+
 ## add this because getting a scope error in the multi-threaded setup with exclude_instance_id
 ## if it prints out ok then it is not a scope or access issue.
 ## Ensure exclude_instance_id is accessible within the threads
