@@ -73,31 +73,82 @@ def wget_for_elastic_beanstalk_alb():
 def https_wget_for_elastic_beanstalk_alb():
     run_module("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py")
 
+#def main():
+#    thread1 = threading.Thread(target=restart_ec_multiple_instances)
+#    thread1.start()
+#    thread1.join()
+#
+#    thread2 = threading.Thread(target=install_tomcat_on_instances)
+#    thread2.start()
+#    thread2.join()
+#
+#    thread3 = threading.Thread(target=save_instance_ids_and_security_group_ids)
+#    thread3.start()
+#    thread3.join()
+#
+#    thread4 = threading.Thread(target=create_application_load_balancer)
+#    thread4.start()
+#    thread4.join()
+#
+#    thread5 = threading.Thread(target=ssl_listener_with_route53)
+#    thread5.start()
+#    thread5.join()
+#
+#    thread6 = threading.Thread(target=wget_debug)
+#    thread7 = threading.Thread(target=elastic_beanstalk)
+#    thread8 = threading.Thread(target=rds_and_security_group)
+#    
+#    thread6.start()
+#    thread7.start()
+#    thread8.start()
+#
+#   # Wait for all three of these to complete before proceeding to next block of threads
+#    thread6.join()
+#    thread7.join()
+#    thread8.join()
+#
+#    thread9 = threading.Thread(target=jumphost_for_rds_mysql_client)
+#    thread10 = threading.Thread(target=wget_for_elastic_beanstalk_alb)
+#    thread11 = threading.Thread(target=https_wget_for_elastic_beanstalk_alb)
+#
+#    thread9.start()
+#    thread10.start()
+#    thread11.start()
+#
+#   # Wait for all three of these to complete before proceeding to next block of threads
+#    thread9.join()
+#    thread10.join()
+#    thread11.join()
+
+# ABOVE block works fine but thread numbers are determined by python threading algorithm in threading.Thread
+# Better to call with name argument as well so can read console logs more easily.
+# For this setup use the function names of the  modules.
+
 def main():
-    thread1 = threading.Thread(target=restart_ec_multiple_instances)
+    thread1 = threading.Thread(target=restart_ec_multiple_instances, name="restart_ec_multiple_instances")
     thread1.start()
     thread1.join()
 
-    thread2 = threading.Thread(target=install_tomcat_on_instances)
+    thread2 = threading.Thread(target=install_tomcat_on_instances, name="install_tomcat_on_instances")
     thread2.start()
     thread2.join()
 
-    thread3 = threading.Thread(target=save_instance_ids_and_security_group_ids)
+    thread3 = threading.Thread(target=save_instance_ids_and_security_group_ids, name="save_instance_ids_and_security_group_ids")
     thread3.start()
     thread3.join()
 
-    thread4 = threading.Thread(target=create_application_load_balancer)
+    thread4 = threading.Thread(target=create_application_load_balancer, name="create_application_load_balancer")
     thread4.start()
     thread4.join()
 
-    thread5 = threading.Thread(target=ssl_listener_with_route53)
+    thread5 = threading.Thread(target=ssl_listener_with_route53, name="ssl_listener_with_route53")
     thread5.start()
     thread5.join()
 
-    thread6 = threading.Thread(target=wget_debug)
-    thread7 = threading.Thread(target=elastic_beanstalk)
-    thread8 = threading.Thread(target=rds_and_security_group)
-    
+    thread6 = threading.Thread(target=wget_debug, name="wget_debug")
+    thread7 = threading.Thread(target=elastic_beanstalk, name="elastic_beanstalk")
+    thread8 = threading.Thread(target=rds_and_security_group, name="rds_and_security_group")
+
     thread6.start()
     thread7.start()
     thread8.start()
@@ -107,9 +158,9 @@ def main():
     thread7.join()
     thread8.join()
 
-    thread9 = threading.Thread(target=jumphost_for_rds_mysql_client)
-    thread10 = threading.Thread(target=wget_for_elastic_beanstalk_alb)
-    thread11 = threading.Thread(target=https_wget_for_elastic_beanstalk_alb)
+    thread9 = threading.Thread(target=jumphost_for_rds_mysql_client, name="jumphost_for_rds_mysql_client")
+    thread10 = threading.Thread(target=wget_for_elastic_beanstalk_alb, name="wget_for_elastic_beanstalk_alb")
+    thread11 = threading.Thread(target=https_wget_for_elastic_beanstalk_alb, name="https_wget_for_elastic_beanstalk_alb")
 
     thread9.start()
     thread10.start()
@@ -119,6 +170,9 @@ def main():
     thread9.join()
     thread10.join()
     thread11.join()
+
+
+
 
 if __name__ == "__main__":
     main()
