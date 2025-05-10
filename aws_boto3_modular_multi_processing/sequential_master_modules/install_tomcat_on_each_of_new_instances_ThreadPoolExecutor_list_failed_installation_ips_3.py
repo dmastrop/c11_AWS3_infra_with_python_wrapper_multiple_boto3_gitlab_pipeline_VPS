@@ -342,7 +342,7 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 # Rewrite this code with AND logic. This will ensure all instances up and running prior to attempting to SSH
 # with the ThreadPoolExecutor
 # This will loop until all are running and ok.
-def wait_for_instance_running(instance_id, ec2_client):
+    def wait_for_instance_running(instance_id, ec2_client):
         while True:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
             if (instance_status['InstanceStatuses'][0]['InstanceState']['Name'] == 'running' and

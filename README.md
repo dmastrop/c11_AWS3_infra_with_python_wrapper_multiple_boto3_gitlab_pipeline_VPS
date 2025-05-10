@@ -1,5 +1,72 @@
 ## UPDATES:
 
+Major overhaul of the second module for installation of tomcat onto each of the 50 EC2 instances that are placed in the ALB target group. This was running ok with the ThreadPoolExecutor but inefficently as there were 50 threads randomly executed across the 6 cores causing contention and a lot of context switching. New approach is running in the master script that is running multi-processing. Then the changes were made to the second module that installs tomcat on each of the 50 EC2 instances.   This involved adding a main() function to the module that wraps around the original install module.   The main() functino institutes multi-processing.   First 6 processes are started because the VPS is 6 core CPU. . Each process then invokes the original tomcat function that was modified to only run 6 threads per function call instead of 50 threads like before. So each process in main() calls the install tomcat function which runs 6 threads to consume the block of ip addresses allocated to each process.
+
+The chunk ip allocation block of ips is in the main() function below and is detailed below.  For example with 50 IP addresses and 6 processes there is an 8 block of ips assigned to each process. Because there is an extra 2 IPs there is math logic in the chunk code to assign the remaining IPs (in this case 2) to the last process an the last process will consume them.(10 ip addresses in this case).
+
+Further detail in install_tomcat_on_instances original function:
+
+### HERE IS THE MAIN CHANGE FOR THE multiprocessing optmization. First we are going to tie the thread pools
+    to the number of cores (the VPS has 6 CPU cores).  Each ThreadPoolExecutor will have max workers of 6 at a time.
+    Previously we had max_workers set to length of public_ips which is 50. This is creating a lot of contention with only
+    6 cores and a lot of context switching.    To optimize this first we will restrict this to the os.cpu_count of 6
+    This means that there will be 6 threads at the same time. To further optimize this with main() function below, we 
+    will also start 6 processes defined by num_processes=os.cpu.count (6 as well.  Each process wil invoke the 
+    install_tomcat_on_instances function running the 6 ThreadPoolExecutor threads on its dedicated core.   Thus there
+    are on average 6 threads running on a process on each of the 6 cores, for 36 concurrent SSH tomcat installations
+    at any time. This will reduce the contention of just running ThreadPoolExecutor with all 50 threads randomly assigned
+    across the cores which created a lot of context switching. NOTE that chunk size is another variable. See main() below
+    Chunk size is the chunk of ips that are grabbed by each process. So if 50 ip addresses each of the 6 processes will
+    get 8 ip addresses, and each process can use the 6 threads in the process to process the SSH connections.  In this
+    case 6 ips processed immediately and then the other 2 when some of the 6 threads are done with the initial 6 ips.
+    however need additionl logic because with 50 instances and 6 processes there are 2 "orphaned" ips that need to be
+    dealt with. This requires additional logic.
+
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+
+
+Further detail in main():
+
+### Use multi-processing to distribute SSH connections across multiple cores
+    num_processes = os.cpu_count()
+    
+      the chunk_size is determined by number of instances divided by num_processes. num_processes is 6 and 
+     number of instances is 50 so 50/6 = 8. The division is // for an integer with floor division
+     this chunk size is then used to calculate the block of ips to pass to install_tomcat_on_instances (see below)
+     for each process iteration i= 0 to num_processes-1 or 0 to 5 for processes 1 through 6
+     Each process is assigned a block of 8 with the last 2 leftovers assigned to the last chunk which is assigned 
+     to the last process #6. So the last process will get 10 ips to process. 
+     As noted above the processes utlize install_tomcat_on_instances which runs ThreadPoolExecutor of 6 threads to
+     process the assigned ip block.  So 6 ips handled immediately and the other 2 when any other thread frees up
+     This minimizes contention and context switching.
+    
+    chunk_size = len(instance_ips) // num_processes
+    processes = []
+
+    for i in range(num_processes):
+        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+        #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
+        if i == num_processes - 1:  # Add remaining instances to the last chunk
+            chunk += instance_ips[(i + 1) * chunk_size:]
+        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))    
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
+
+
+
+
+## UPDATES:
+
+Running on 11 modules in multi-processing master script. This is running fine. This is using the function approach as well from the master script. Running on 6 processes because the VPS has 6 cores.
+
+
+## UPDATES:
+
 Now running all 11 modules in multi-threaded environment, with each of 11 modules running as a dedicated thread and grouping several of them for concurrency to speed up the infra rollout. The execu function call in the master python script ended up causing many scope related issues in the first 6 modules. I converted the entire script to a function call based multi-threading and wrapped all the python files in the package directory in dedicated function that is called from the master. The master python script is below for reference.   This runs very well all the way through without any scope related issues.
 
 commit:
