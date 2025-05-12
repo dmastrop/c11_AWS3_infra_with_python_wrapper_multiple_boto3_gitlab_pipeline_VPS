@@ -50,37 +50,12 @@ def https_wget_for_elastic_beanstalk_alb():
 
 def main():
     process1 = multiprocessing.Process(target=restart_ec_multiple_instances, name="Process1: restart_ec_multiple_instances")
-    process7 = multiprocessing.Process(target=elastic_beanstalk, name="Process7: elastic_beanstalk")
-    process8 = multiprocessing.Process(target=rds_and_security_group, name="Process8: rds_and_security_group")
-
     process1.start()
-    process7.start()
-    process8.start()
-
-
     process1.join()
-    process7.join()
-    process8.join()
-
-
 
     process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
-    process9 = multiprocessing.Process(target=jumphost_for_rds_mysql_client, name="Process9: jumphost_for_rds_mysql_client")
-    process10 = multiprocessing.Process(target=wget_for_elastic_beanstalk_alb, name="Process10: wget_for_elastic_beanstalk_alb")
-    process11 = multiprocessing.Process(target=https_wget_for_elastic_beanstalk_alb, name="Process11: https_wget_for_elastic_beanstalk_alb")
-
     process2.start()
-    process9.start()
-    process10.start()
-    process11.start()
-
-
     process2.join()
-    process9.join()
-    process10.join()
-    process11.join()
-
-
 
     process3 = multiprocessing.Process(target=save_instance_ids_and_security_group_ids, name="Process3: save_instance_ids_and_security_group_ids")
     process3.start()
@@ -95,16 +70,33 @@ def main():
     process5.join()
 
     process6 = multiprocessing.Process(target=wget_debug, name="Process6: wget_debug")
+    process7 = multiprocessing.Process(target=elastic_beanstalk, name="Process7: elastic_beanstalk")
+    process8 = multiprocessing.Process(target=rds_and_security_group, name="Process8: rds_and_security_group")
 
     process6.start()
+    process7.start()
+    process8.start()
 
    # Wait for all three of these to complete before proceeding to next block of processes
     process6.join()
+    process7.join()
+    process8.join()
 
+    process9 = multiprocessing.Process(target=jumphost_for_rds_mysql_client, name="Process9: jumphost_for_rds_mysql_client")
+    process10 = multiprocessing.Process(target=wget_for_elastic_beanstalk_alb, name="Process10: wget_for_elastic_beanstalk_alb")
+    process11 = multiprocessing.Process(target=https_wget_for_elastic_beanstalk_alb, name="Process11: https_wget_for_elastic_beanstalk_alb")
 
+    process9.start()
+    process10.start()
+    process11.start()
 
    # Wait for all three of these to complete before proceeding to next block of processes
+    process9.join()
+    process10.join()
+    process11.join()
 
 if __name__ == "__main__":
     main()
 
+
+# test2
