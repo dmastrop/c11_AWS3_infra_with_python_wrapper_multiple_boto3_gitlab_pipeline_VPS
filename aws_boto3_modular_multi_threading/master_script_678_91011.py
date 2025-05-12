@@ -141,36 +141,32 @@ def main():
     thread4.start()
     thread4.join()
 
-    
-
     thread5 = threading.Thread(target=ssl_listener_with_route53, name="Thread5: ssl_listener_with_route53")
+    thread5.start()
+    thread5.join()
+
+    thread6 = threading.Thread(target=wget_debug, name="Thread6: wget_debug")
     thread7 = threading.Thread(target=elastic_beanstalk, name="Thread7: elastic_beanstalk")
     thread8 = threading.Thread(target=rds_and_security_group, name="Thread8: rds_and_security_group")
 
-    thread5.start()
+    thread6.start()
     thread7.start()
     thread8.start()
 
    # Wait for all three of these to complete before proceeding to next block of threads
-    thread5.join()
+    thread6.join()
     thread7.join()
     thread8.join()
 
-
-
-
-    thread6 = threading.Thread(target=wget_debug, name="Thread6: wget_debug")
     thread9 = threading.Thread(target=jumphost_for_rds_mysql_client, name="Thread9: jumphost_for_rds_mysql_client")
     thread10 = threading.Thread(target=wget_for_elastic_beanstalk_alb, name="Thread10: wget_for_elastic_beanstalk_alb")
     thread11 = threading.Thread(target=https_wget_for_elastic_beanstalk_alb, name="Thread11: https_wget_for_elastic_beanstalk_alb")
 
-    thread6.start()
     thread9.start()
     thread10.start()
     thread11.start()
 
    # Wait for all three of these to complete before proceeding to next block of threads
-    thread6.join()
     thread9.join()
     thread10.join()
     thread11.join()
