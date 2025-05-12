@@ -103,3 +103,7 @@ def main():
 if __name__ == "__main__":
     main()
 
+# I compared this to the 6,7,8 and 9,10,11 processing master file and the total time to complete is about the 
+# same amount of time, even though this 5,7,8 and 6,9,10,11 seems to be a bit more compact. Next, need
+# to integrate the module2 changes and the master file changes into the multi-threaded setup and compare
+# those completion times to these.
