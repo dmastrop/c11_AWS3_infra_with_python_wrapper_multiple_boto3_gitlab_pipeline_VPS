@@ -66,31 +66,36 @@ def main():
     process4.join()
 
     process5 = multiprocessing.Process(target=ssl_listener_with_route53, name="Process5: ssl_listener_with_route53")
-    process5.start()
-    process5.join()
-
-    process6 = multiprocessing.Process(target=wget_debug, name="Process6: wget_debug")
     process7 = multiprocessing.Process(target=elastic_beanstalk, name="Process7: elastic_beanstalk")
     process8 = multiprocessing.Process(target=rds_and_security_group, name="Process8: rds_and_security_group")
 
-    process6.start()
+    process5.start()
     process7.start()
     process8.start()
 
-   # Wait for all three of these to complete before proceeding to next block of processes
-    process6.join()
+    process5.join()
     process7.join()
     process8.join()
 
+
+
+
+
+    process6 = multiprocessing.Process(target=wget_debug, name="Process6: wget_debug")
     process9 = multiprocessing.Process(target=jumphost_for_rds_mysql_client, name="Process9: jumphost_for_rds_mysql_client")
     process10 = multiprocessing.Process(target=wget_for_elastic_beanstalk_alb, name="Process10: wget_for_elastic_beanstalk_alb")
     process11 = multiprocessing.Process(target=https_wget_for_elastic_beanstalk_alb, name="Process11: https_wget_for_elastic_beanstalk_alb")
 
+
+
+
+    process6.start()
     process9.start()
     process10.start()
     process11.start()
 
-   # Wait for all three of these to complete before proceeding to next block of processes
+
+    process6.join()
     process9.join()
     process10.join()
     process11.join()
@@ -98,5 +103,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-# test2
