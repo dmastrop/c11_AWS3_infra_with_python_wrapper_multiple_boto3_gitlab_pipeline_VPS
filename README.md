@@ -2,7 +2,16 @@
 
 Did extensive testing of the multi-processing vs. multi-threading environment for the master python file and also introduced the module 2 optimizations for the install tomcat module (with multi-processing and limit the multi-threading in the ThredPoolExecutor to 6, the number of VCPU cores on the VPS.
 
+For the first set of tests determined that the multi-processing for the master python execution of the 11 modules is  bit faster than the muti-threaded version.  
 
+Next testing is with the module 2 testing. First try without multi-processing within the module 2 (no main() calling function of the original function).   The original function does not use multi-processing (6 processes) to distribute the ThreadPoolExecutor SSH threading connections over all cores. This took about 10 minutes
+This just starts the 50 threads across all of the 6 VCPU cores in a random fashion and could cause context switching issues and contention.
+
+
+Next do the 6 processes and 6 threads for each process in the ThreadPoolExecutor
+
+
+Next do 8 processes and 12 threads for each process in the ThreadPoolExecutor
 
 
 
