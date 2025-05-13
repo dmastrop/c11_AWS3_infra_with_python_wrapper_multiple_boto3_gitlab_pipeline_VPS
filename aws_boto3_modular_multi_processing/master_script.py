@@ -36,7 +36,7 @@ def restart_ec_multiple_instances():
 
 # This one will run the NEW ALGORITHM, effectively 5 processes and 12 threads with chunk size of 12
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_NEW_ALGORITHM_with_multiprocessing_mainpy")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_NEW_ALGORITHM_with_multiprocessing_main.py")
 
 
 def save_instance_ids_and_security_group_ids():
