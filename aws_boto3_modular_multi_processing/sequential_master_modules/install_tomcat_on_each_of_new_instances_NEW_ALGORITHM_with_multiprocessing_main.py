@@ -647,7 +647,7 @@ def main():
 #Try this new algorithm:
 
     # Define max_workers and chunk_size in main
-    max_workers = 12  # Example: Increase the number of threads
+    max_workers = 4  # Example: Increase the number of threads
     chunk_size = max_workers  # Set chunk size to max_workers to fully utilize all threads per process
 
     num_processes = (len(instance_ips) + chunk_size - 1) // chunk_size  # Calculate number of processes and round up
