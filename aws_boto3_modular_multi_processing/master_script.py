@@ -31,12 +31,12 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_ORIGINAL_without_main.py")
 
 # this one will run wiht multi-processing chnages to the module2 with 8 processes and 12 threads per process. Note that chunk size is down to 6
-#def install_tomcat_on_instances():
-#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12.py")
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12.py")
 
 # This one will run the NEW ALGORITHM, effectively 5 processes and 12 threads with chunk size of 12
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_NEW_ALGORITHM_with_multiprocessing_main.py")
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_NEW_ALGORITHM_with_multiprocessing_main.py")
 
 
 def save_instance_ids_and_security_group_ids():
