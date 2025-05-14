@@ -603,7 +603,7 @@ def main():
 
 
     # with num_proceses = 6
-    num_processes = os.cpu_count()
+    #num_processes = os.cpu_count()
     
     # with num_procsses = 8
     num_processes = 8
