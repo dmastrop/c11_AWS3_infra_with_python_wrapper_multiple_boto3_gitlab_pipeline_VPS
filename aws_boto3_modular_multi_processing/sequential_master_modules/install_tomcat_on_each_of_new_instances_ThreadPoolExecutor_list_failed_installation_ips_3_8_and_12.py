@@ -617,6 +617,11 @@ def main():
     # As noted above the processes utlize install_tomcat_on_instances which runs ThreadPoolExecutor of 6 threads to
     # process the assigned ip block.  So 6 ips handled immediately and the other 2 when any other thread frees up
     # This minimizes contention and context switching.
+    
+
+
+# can force a chunk size based upon the number of chosen threads but may get idle processes if chunk size to increased
+# by too much
     chunk_size = len(instance_ips) // num_processes
     processes = []
 
