@@ -7,11 +7,20 @@ For the first set of tests determined that the multi-processing for the master p
 Next testing is with the module 2 testing. First try without multi-processing within the module 2 (no main() calling function of the original function).   The original function does not use multi-processing (6 processes) to distribute the ThreadPoolExecutor SSH threading connections over all cores. This took about 10 minutes
 This just starts the 50 threads across all of the 6 VCPU cores in a random fashion and could cause context switching issues and contention.
 
+The modules 1 and 2 took 10:13
+
+
+
 
 Next do the 6 processes and 6 threads for each process in the ThreadPoolExecutor
-
+Modules 1 and 2 took 11:50
 
 Next do 8 processes and 12 threads for each process in the ThreadPoolExecutor
+Modules 1 and 2 took 9:37
+
+
+
+
 
 
 
