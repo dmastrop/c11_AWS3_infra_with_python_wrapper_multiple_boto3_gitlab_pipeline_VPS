@@ -622,7 +622,7 @@ def main():
 
 # can force a chunk size based upon the number of chosen threads but may get idle processes if chunk size to increased
 # by too much
-g   chunk_size = 6
+    chunk_size = 6
     #chunk_size = len(instance_ips) // num_processes
     processes = []
 
