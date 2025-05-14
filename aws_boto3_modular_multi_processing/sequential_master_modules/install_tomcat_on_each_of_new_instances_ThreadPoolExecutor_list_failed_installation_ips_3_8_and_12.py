@@ -606,7 +606,7 @@ def main():
     #num_processes = os.cpu_count()
     
     # with num_procsses = 8
-    num_processes = 6
+    num_processes = 8
 
     # the chunk_size is determined by number of instances divided by num_processes. num_processes is 6 and 
     # number of instances is 50 so 50/6 = 8. The division is // for an integer with floor division
@@ -622,7 +622,7 @@ def main():
 
 # can force a chunk size based upon the number of chosen threads but may get idle processes if chunk size to increased
 # by too much
-    chunk_size = 8
+    chunk_size = 6
     #chunk_size = len(instance_ips) // num_processes
     processes = []
 
