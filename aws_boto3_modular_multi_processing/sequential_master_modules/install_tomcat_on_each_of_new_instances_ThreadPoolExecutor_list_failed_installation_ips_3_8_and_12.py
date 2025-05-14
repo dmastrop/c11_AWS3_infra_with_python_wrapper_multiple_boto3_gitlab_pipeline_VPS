@@ -469,7 +469,7 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
 
 
@@ -622,7 +622,7 @@ def main():
 
 # can force a chunk size based upon the number of chosen threads but may get idle processes if chunk size to increased
 # by too much
-    chunk_size = 6
+g   chunk_size = 6
     #chunk_size = len(instance_ips) // num_processes
     processes = []
 
