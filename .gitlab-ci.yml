@@ -29,6 +29,8 @@ push:
     - docker push $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA
     - docker push $CI_REGISTRY_IMAGE:latest
 
+
+      # default instance_type is t2.micro. Test out a t3.small for performance installation issues.      
 deploy:
   stage: deploy
   before_script:
@@ -36,7 +38,7 @@ deploy:
     - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
     - echo 'region_name=us-east-1' >> .env
     - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
-    - echo 'instance_type=t2.micro' >> .env
+    - echo 'instance_type=t3.small' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
     - echo 'min_count=50' >> .env
     - echo 'max_count=50' >> .env
