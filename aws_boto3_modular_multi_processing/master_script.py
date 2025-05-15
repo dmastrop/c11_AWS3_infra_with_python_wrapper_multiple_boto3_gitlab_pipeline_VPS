@@ -8,11 +8,22 @@ import logging
 
 logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
 
+#def run_module(module_script_path):
+#    logging.critical(f"Starting module script: {module_script_path}")
+#    with open(module_script_path) as f:
+#        code = f.read()
+#    exec(code, globals())
+#    logging.critical(f"Completed module script: {module_script_path}")
+
+
+
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
     with open(module_script_path) as f:
         code = f.read()
     exec(code, globals())
+    if 'main' in globals():
+        main()  # <-- This is the key fix
     logging.critical(f"Completed module script: {module_script_path}")
 
 def restart_ec_multiple_instances():
@@ -123,4 +134,4 @@ if __name__ == "__main__":
 
 
 
-# test4
+# test5
