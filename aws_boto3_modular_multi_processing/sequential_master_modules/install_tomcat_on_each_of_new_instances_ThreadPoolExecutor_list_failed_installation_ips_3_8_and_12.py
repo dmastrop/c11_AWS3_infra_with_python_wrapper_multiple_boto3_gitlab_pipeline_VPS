@@ -638,6 +638,12 @@ def main():
     chunk_size = len(instance_ips) // num_processes
     processes = []
 
+## Debugging instance_ips
+print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+
+
+
     for i in range(num_processes):
         chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
         #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
