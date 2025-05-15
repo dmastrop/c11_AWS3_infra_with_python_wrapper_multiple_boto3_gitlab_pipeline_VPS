@@ -581,6 +581,15 @@ def main():
         if instance['InstanceId'] != exclude_instance_id
     ]
 
+
+    # add this debug as well for the model2 scope issue?????
+    print("[DEBUG] instance_ips initialized with", len(instance_ips), "entries")
+
+
+
+
+
+
     # Ensure public_ips is not empty before proceeding
     if not any(ip['PublicIpAddress'] for ip in instance_ips):
         print("No public IPs found. Exiting.")
@@ -649,6 +658,13 @@ def main():
 chunk_size = 12
 processes = []
 
+
+# adding debugs for instande_ips scope issue???
+print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+
+
+
 # Calculate how many full chunks we actually need
 num_chunks = len(instance_ips) // chunk_size
 remainder = len(instance_ips) % chunk_size
@@ -696,7 +712,8 @@ for process in processes:
 #    processes.append(process)
 #    process.start()
 #
-#
+#for process in processes:
+#    process.join()#
 #
 #
 
