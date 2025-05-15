@@ -30,7 +30,7 @@ Model 1:
 
 
 
-Model 2: 
+Model 2: (REMAINDER METHOD: don't use this)
 
 chunk_size = 12
 processes = []
@@ -52,6 +52,36 @@ for i in range(num_chunks):
 
 for process in processes:
     process.join()
+
+
+
+Model 2:  (CEILING DIVISION METHOD: this is cleaner but does involve adding one additional process to deal with the
+extra overflow of ips from chunk_size)
+
+
+chunk_size = 12
+processes = []
+
+# Debugging instance_ips
+print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+
+# Calculate how many chunks we need (ceiling division)
+num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+
+for i in range(num_chunks):
+    start = i * chunk_size
+    end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
+    chunk = instance_ips[start:end]
+
+    process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+    processes.append(process)
+    process.start()
+
+for process in processes:
+    process.join()
+
+
 
 
 
