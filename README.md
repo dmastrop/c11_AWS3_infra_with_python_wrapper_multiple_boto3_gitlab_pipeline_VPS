@@ -1,5 +1,87 @@
 ## UPDATES:
 
+further testing with multi-threading and multi-processing for tomcat installation module 2.
+There are now 3 different models to test with this.   Increase EC2 to t3.small as that was a bottleneck as well.
+These models provide testing flexibility and decouple the chunk_size from mum_processes (Models 2 and 3)
+
+The max_workers for the ThreadPoolExecutor is defined separately and in an earlier code block. This is the number of threads per process
+
+num_processes value is specified separately
+
+The 3 models are below
+
+
+Model 1:
+
+    chunk_size = len(instance_ips) // num_processes
+    processes = []
+
+    for i in range(num_processes):
+        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+        #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
+        if i == num_processes - 1:  # Add remaining instances to the last chunk
+            chunk += instance_ips[(i + 1) * chunk_size:]
+        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))    
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
+
+
+Model 2: 
+
+chunk_size = 12
+processes = []
+
+>> Calculate how many full chunks we actually need
+num_chunks = len(instance_ips) // chunk_size
+remainder = len(instance_ips) % chunk_size
+
+for i in range(num_chunks):
+    chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+    
+    >> If this is the last used chunk, add the remaining IPs
+    if i == num_chunks - 1 and remainder > 0:
+        chunk += instance_ips[(i + 1) * chunk_size:]
+
+    process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+    processes.append(process)
+    process.start()
+
+for process in processes:
+    process.join()
+
+
+
+Model 3:
+
+chunk_size = 12
+processes = []
+
+>> Calculate how many full chunks we need
+num_chunks = len(instance_ips) // chunk_size
+remainder = len(instance_ips) % chunk_size
+
+
+for i in range(num_processes):
+    if i < num_chunks:
+        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+        if i == num_chunks - 1 and remainder > 0:
+            chunk += instance_ips[(i + 1) * chunk_size:]
+        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+    else:
+        # Dummy process that just logs it's unused
+        process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
+    
+    processes.append(process)
+    process.start()
+
+
+
+## UPDATES:
+
 Did extensive testing of the multi-processing vs. multi-threading environment for the master python file and also introduced the module 2 optimizations for the install tomcat module (with multi-processing and limit the multi-threading in the ThredPoolExecutor to 6, the number of VCPU cores on the VPS.
 
 For the first set of tests determined that the multi-processing for the master python execution of the 11 modules is  bit faster than the muti-threaded version.  
