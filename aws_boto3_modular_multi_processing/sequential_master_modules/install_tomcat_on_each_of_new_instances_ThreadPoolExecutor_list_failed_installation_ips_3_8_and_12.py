@@ -628,41 +628,42 @@ def main():
     # This minimizes contention and context switching.
     
 
-### CHOOSE 1 MODEL BELOW:
+### CHOOSE ONE MODEL BELOW:
 
 
-## MODEL 1:
-# chunk_size determined by num_processes and number of IPs (deterministic)
-# the remainder ips are processed by the last process and all the num_processes are used
-
-    chunk_size = len(instance_ips) // num_processes
-    processes = []
-
-    ## Debugging instance_ips
-    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
-
-
-
-    for i in range(num_processes):
-        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
-        #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
-        if i == num_processes - 1:  # Add remaining instances to the last chunk
-            chunk += instance_ips[(i + 1) * chunk_size:]
-        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))    
-        processes.append(process)
-        process.start()
-
-    for process in processes:
-        process.join()
-
-
-
-
+### MODEL 1:
+## chunk_size determined by num_processes and number of IPs (deterministic)
+## the remainder ips are processed by the last process and all the num_processes are used
+#
+#    chunk_size = len(instance_ips) // num_processes
+#    processes = []
+#
+#    ## Debugging instance_ips
+#    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+#    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+#
+#
+#
+#    for i in range(num_processes):
+#        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+#        #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
+#        if i == num_processes - 1:  # Add remaining instances to the last chunk
+#            chunk += instance_ips[(i + 1) * chunk_size:]
+#        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))    
+#        processes.append(process)
+#        process.start()
+#
+#    for process in processes:
+#        process.join()
+#
 
 
 
-### MODEL 2 REMAINDER METHOD: Decouple chunk_size from num_processes and make sure remaining ips still get processed
+
+
+
+### MODEL 2 REMAINDER METHOD: (Don't use this. Use the revised version below)
+### Decouple chunk_size from num_processes and make sure remaining ips still get processed
 ### the number of actual processes created is dynamic. For example with 50 IPs and chunk_size of 12, there will
 ### be 4 processes created even though num_processes is 8.
 ### NOTE only the required number of num_processes will be created (for production and optimized)
@@ -698,30 +699,32 @@ def main():
 
 
 
-### REVISED MODEL2: Using ceiling division and create an additional process to deal with leftover rather than adding
-### it to the last process suing remainder method as above
-#chunk_size = 12
-#processes = []
-#
-## Debugging instance_ips
-#print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-#print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
-#
-## Calculate how many chunks we need (ceiling division)
-#num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
-#
-#for i in range(num_chunks):
-#    start = i * chunk_size
-#    end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
-#    chunk = instance_ips[start:end]
-#
-#    process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-#    processes.append(process)
-#    process.start()
-#
-#for process in processes:
-#    process.join()
-#
+## REVISED MODEL2: Using ceiling division and create an additional process to deal with leftover rather than adding
+## it to the last process suing remainder method as above
+##  This code is cleaner and also we don't need to deal with remainders
+
+chunk_size = 12
+processes = []
+
+# Debugging instance_ips
+print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+
+# Calculate how many chunks we need (ceiling division)
+num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+
+for i in range(num_chunks):
+    start = i * chunk_size
+    end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
+    chunk = instance_ips[start:end]
+
+    process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+    processes.append(process)
+    process.start()
+
+for process in processes:
+    process.join()
+
 
 
 #
