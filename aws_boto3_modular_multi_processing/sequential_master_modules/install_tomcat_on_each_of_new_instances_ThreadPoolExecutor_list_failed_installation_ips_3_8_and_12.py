@@ -638,9 +638,9 @@ def main():
     chunk_size = len(instance_ips) // num_processes
     processes = []
 
-## Debugging instance_ips
-print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+    ## Debugging instance_ips
+    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
 
 
 
