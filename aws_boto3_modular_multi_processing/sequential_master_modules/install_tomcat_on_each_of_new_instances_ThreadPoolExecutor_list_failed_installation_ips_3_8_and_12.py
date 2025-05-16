@@ -718,6 +718,10 @@ def main():
         end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
         chunk = instance_ips[start:end]
 
+        # Diagnostic logging
+        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+
         process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
         processes.append(process)
         process.start()
