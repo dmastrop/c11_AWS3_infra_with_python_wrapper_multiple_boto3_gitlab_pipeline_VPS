@@ -27,14 +27,14 @@ def run_module(module_script_path):
 #    logging.critical(f"Completed module script: {module_script_path}")
 
 
-
+## module 1:
 
 def restart_ec_multiple_instances():
     run_module("/aws_EC2/sequential_master_modules/restart_the_EC_multiple_instances_with_client_method_DEBUG.py")
 
 
 
-
+## module 2 variants for testing:
 
 # this one will run with the mutli-processing chnanges to the module2 with 6 processes and 6 threads per process. Chunk size is at 8 here.
 #def install_tomcat_on_instances():
@@ -44,14 +44,22 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_ORIGINAL_without_main.py")
 
-# this one will run wiht multi-processing chnages to the module2 with 8 processes and 12 threads per process. Note that chunk size is down to 6
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12.py")
+# DEFAULT:: this one will run wiht multi-processing chnages to the module2 with 8 processes and 12 threads per process. Note that chunk size is down to 6
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12.py")
 
-# This one will run the NEW ALGORITHM, effectively 5 processes and 12 threads with chunk size of 12
+# TEST: This one will run the NEW ALGORITHM, effectively 5 processes and 12 threads with chunk size of 12
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_NEW_ALGORITHM_with_multiprocessing_main.py")
 
+#  IMPROVED public ips for instance_ips version. This is often a problem. If AWS is bogged down this code is more 
+#  resilient to handle fluctuations in service time getting the EC2 instances with public_ips
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_instances.py")
+
+
+
+## modules 3-11:
 
 def save_instance_ids_and_security_group_ids():
     run_module("/aws_EC2/sequential_master_modules/save_instance_ids_and_security_group_ids_to_json_file.py")
@@ -79,6 +87,11 @@ def wget_for_elastic_beanstalk_alb():
 
 def https_wget_for_elastic_beanstalk_alb():
     run_module("/aws_EC2/sequential_master_modules/HTTPS_wget_for_elastic_beanstalk_ALB.py")
+
+
+
+
+
 
 def main():
     process1 = multiprocessing.Process(target=restart_ec_multiple_instances, name="Process1: restart_ec_multiple_instances")
