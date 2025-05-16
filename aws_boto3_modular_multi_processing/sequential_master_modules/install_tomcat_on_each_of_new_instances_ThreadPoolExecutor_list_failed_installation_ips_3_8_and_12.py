@@ -354,6 +354,22 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 
 
+# NEW
+    def wait_for_all_public_ips(ec2_client, instance_ids, timeout=60):
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            response = ec2_client.describe_instances(InstanceIds=instance_ids)
+            all_ips = []
+            for reservation in response['Reservations']:
+                for instance in reservation['Instances']:
+                    ip = instance.get('PublicIpAddress')
+                    if ip:
+                        all_ips.append({'InstanceId': instance['InstanceId'], 'PublicIpAddress': ip})
+            if len(all_ips) == len(instance_ids):
+                return all_ips
+            time.sleep(5)
+        raise TimeoutError("Not all instances received public IPs in time.")
+
 
 
 
@@ -550,6 +566,8 @@ def main():
         if instance['InstanceId'] != exclude_instance_id
     ]
 
+
+
     # Wait for all instances to be in running state
     while True:
         response_statuses = my_ec2.describe_instance_status(InstanceIds=instance_ids)
@@ -562,9 +580,25 @@ def main():
         print("Waiting for all instances to be in running state...")
         time.sleep(10)
 
+
+    # NEW
     # Add a delay to ensure public IPs are available before proceeding with the installation
     print("Adding delay to ensure public IPs are available...")
-    time.sleep(20)
+    time.sleep(40)
+
+
+# .  # NEW
+#    # Now wait until all instances have public IPs
+#    try:
+#        instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, timeout=60)
+#    except TimeoutError as e:
+#        print(f"[ERROR] {e}")
+#        return  # or handle the error appropriately
+#
+
+
+
+
 
     # Describe the running instances again to get updated information
     response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
@@ -586,7 +620,16 @@ def main():
     print("[DEBUG] instance_ips initialized with", len(instance_ips), "entries")
 
 
+    # NEW
+    # After instance_ips is populated
+    null_ips = [ip for ip in instance_ips if 'PublicIpAddress' not in ip or not ip['PublicIpAddress']]
+    print(f"[DEBUG] Null or missing IPs: {null_ips}")
 
+    # NEW
+    expected_count = len(instance_ids)
+    actual_count = len(instance_ips)
+    if actual_count != expected_count:
+        print(f"[WARNING] Expected {expected_count} IPs but got {actual_count}")
 
 
 
