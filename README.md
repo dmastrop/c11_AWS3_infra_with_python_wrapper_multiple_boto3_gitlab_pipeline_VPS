@@ -12,7 +12,7 @@ The 3 models are below
 
 
 Model 1:
-
+```
     chunk_size = len(instance_ips) // num_processes
     processes = []
 
@@ -27,11 +27,13 @@ Model 1:
 
     for process in processes:
         process.join()
-
+```
 
 
 Model 2: (REMAINDER METHOD: don't use this)
 
+
+```
 chunk_size = 12
 processes = []
 
@@ -52,13 +54,13 @@ for i in range(num_chunks):
 
 for process in processes:
     process.join()
-
+```
 
 
 Model 2:  (CEILING DIVISION METHOD: this is cleaner but does involve adding one additional process to deal with the
 extra overflow of ips from chunk_size)
 
-
+```
 chunk_size = 12
 processes = []
 
@@ -82,11 +84,12 @@ for process in processes:
     process.join()
 
 
+```
 
 
+Model 3: REMAINDER METHOD (don't use this)
 
-Model 3:
-
+```
 chunk_size = 12
 processes = []
 
@@ -107,8 +110,35 @@ for i in range(num_processes):
     
     processes.append(process)
     process.start()
+```
+
+Model 3: CEILING DIVISION METHOD
 
 
+```
+chunk_size = 12
+processes = []
+
+# Calculate how many chunks we need (ceiling division)
+num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+
+for i in range(num_processes):
+    if i < num_chunks:
+        start = i * chunk_size
+        end = min(start + chunk_size, len(instance_ips))
+        chunk = instance_ips[start:end]
+        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+    else:
+        # Dummy process that just logs it's unused
+        process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
+
+    processes.append(process)
+    process.start()
+
+for process in processes:
+    process.join()
+
+```
 
 ## UPDATES:
 
