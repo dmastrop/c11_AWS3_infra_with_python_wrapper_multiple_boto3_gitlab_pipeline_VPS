@@ -656,7 +656,7 @@ def main():
 #    for process in processes:
 #        process.join()
 #
-
+#
 
 
 
@@ -668,97 +668,97 @@ def main():
 ### be 4 processes created even though num_processes is 8.
 ### NOTE only the required number of num_processes will be created (for production and optimized)
 #
-#chunk_size = 12
-#processes = []
+#    chunk_size = 12
+#    processes = []
 #
 #
-## adding debugs for instande_ips scope issue???
-#print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-#print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+#    # adding debugs for instande_ips scope issue???
+#    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+#    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
 #
 #
 #
-## Calculate how many full chunks we actually need
-#num_chunks = len(instance_ips) // chunk_size
-#remainder = len(instance_ips) % chunk_size
+#    # Calculate how many full chunks we actually need
+#    num_chunks = len(instance_ips) // chunk_size
+#    remainder = len(instance_ips) % chunk_size
 #
-#for i in range(num_chunks):
-#    chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
-#    
-#    # If this is the last used chunk, add the remaining IPs
-#    if i == num_chunks - 1 and remainder > 0:
-#        chunk += instance_ips[(i + 1) * chunk_size:]
+#    for i in range(num_chunks):
+#        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+#        
+#        # If this is the last used chunk, add the remaining IPs
+#        if i == num_chunks - 1 and remainder > 0:
+#            chunk += instance_ips[(i + 1) * chunk_size:]
 #
-#    process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-#    processes.append(process)
-#    process.start()
+#        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+#        processes.append(process)
+#        process.start()
 #
-#for process in processes:
-#    process.join()
+#    for process in processes:
+#        process.join()
 #
-
+#
 
 
 ## REVISED MODEL2: Using ceiling division and create an additional process to deal with leftover rather than adding
 ## it to the last process suing remainder method as above
 ##  This code is cleaner and also we don't need to deal with remainders
 
-chunk_size = 12
-processes = []
+    chunk_size = 12
+    processes = []
 
-# Debugging instance_ips
-print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+    # Debugging instance_ips
+    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
 
-# Calculate how many chunks we need (ceiling division)
-num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+    # Calculate how many chunks we need (ceiling division)
+    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
 
-for i in range(num_chunks):
-    start = i * chunk_size
-    end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
-    chunk = instance_ips[start:end]
+    for i in range(num_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
+        chunk = instance_ips[start:end]
 
-    process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-    processes.append(process)
-    process.start()
+        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+        processes.append(process)
+        process.start()
 
-for process in processes:
-    process.join()
+    for process in processes:
+        process.join()
 
 
 
-#
-#
-#
+
+
+
 ### MODEL 3: Decouple chunk_size from num_processes and make sure remaining ips get processed but spawn
 ### all num_processes for testing purposes
 #
 #
-#chunk_size = 12
-#processes = []
+#    chunk_size = 12
+#    processes = []
 #
-## Calculate how many full chunks we need
-#num_chunks = len(instance_ips) // chunk_size
-#remainder = len(instance_ips) % chunk_size
-#
-#
-#for i in range(num_processes):
-#    if i < num_chunks:
-#        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
-#        if i == num_chunks - 1 and remainder > 0:
-#            chunk += instance_ips[(i + 1) * chunk_size:]
-#        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-#    else:
-#        # Dummy process that just logs it's unused
-#        process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
-#    
-#    processes.append(process)
-#    process.start()
-#
-#for process in processes:
-#    process.join()#
+#    # Calculate how many full chunks we need
+#    num_chunks = len(instance_ips) // chunk_size
+#    remainder = len(instance_ips) % chunk_size
 #
 #
+#    for i in range(num_processes):
+#        if i < num_chunks:
+#            chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+#            if i == num_chunks - 1 and remainder > 0:
+#                chunk += instance_ips[(i + 1) * chunk_size:]
+#            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+#        else:
+#            # Dummy process that just logs it's unused
+#            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
+#        
+#        processes.append(process)
+#        process.start()
+#
+#    for process in processes:
+#        process.join()#
+#
+
 
 
 
