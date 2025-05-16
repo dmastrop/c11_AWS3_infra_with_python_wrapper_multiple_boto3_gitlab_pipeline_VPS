@@ -354,22 +354,22 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 
 
-# NEW
-    def wait_for_all_public_ips(ec2_client, instance_ids, timeout=60):
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            response = ec2_client.describe_instances(InstanceIds=instance_ids)
-            all_ips = []
-            for reservation in response['Reservations']:
-                for instance in reservation['Instances']:
-                    ip = instance.get('PublicIpAddress')
-                    if ip:
-                        all_ips.append({'InstanceId': instance['InstanceId'], 'PublicIpAddress': ip})
-            if len(all_ips) == len(instance_ids):
-                return all_ips
-            time.sleep(5)
-        raise TimeoutError("Not all instances received public IPs in time.")
-
+## NEW
+#    def wait_for_all_public_ips(ec2_client, instance_ids, timeout=60):
+#        start_time = time.time()
+#        while time.time() - start_time < timeout:
+#            response = ec2_client.describe_instances(InstanceIds=instance_ids)
+#            all_ips = []
+#            for reservation in response['Reservations']:
+#                for instance in reservation['Instances']:
+#                    ip = instance.get('PublicIpAddress')
+#                    if ip:
+#                        all_ips.append({'InstanceId': instance['InstanceId'], 'PublicIpAddress': ip})
+#            if len(all_ips) == len(instance_ids):
+#                return all_ips
+#            time.sleep(5)
+#        raise TimeoutError("Not all instances received public IPs in time.")
+#
 
 
 
