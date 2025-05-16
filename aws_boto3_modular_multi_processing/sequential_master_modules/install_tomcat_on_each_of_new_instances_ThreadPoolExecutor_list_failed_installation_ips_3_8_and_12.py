@@ -808,31 +808,31 @@ def main():
 
 
 
-## REVISED MODEL3: Using ceiling devision. This model 3 will create num_processes and whatever is unused will just run
-## unused. This is just for testing purposes.
-
-    chunk_size = 12
-    processes = []
-
-    # Calculate how many chunks we need (ceiling division)
-    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
-
-    for i in range(num_processes):
-        if i < num_chunks:
-            start = i * chunk_size
-            end = min(start + chunk_size, len(instance_ips))
-            chunk = instance_ips[start:end]
-            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-        else:
-            # Dummy process that just logs it's unused
-            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
-
-        processes.append(process)
-        process.start()
-
-    for process in processes:
-        process.join()
-
+### REVISED MODEL3: Using ceiling devision. This model 3 will create num_processes and whatever is unused will just run
+### unused. This is just for testing purposes.
+#
+#    chunk_size = 12
+#    processes = []
+#
+#    # Calculate how many chunks we need (ceiling division)
+#    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+#
+#    for i in range(num_processes):
+#        if i < num_chunks:
+#            start = i * chunk_size
+#            end = min(start + chunk_size, len(instance_ips))
+#            chunk = instance_ips[start:end]
+#            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+#        else:
+#            # Dummy process that just logs it's unused
+#            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
+#
+#        processes.append(process)
+#        process.start()
+#
+#    for process in processes:
+#        process.join()
+#
 
 
 # We need to run main first when this is invoked from the master script. Then main will call the install_tomcat_on_instances to invoke the ThreadPoolExecutor for each process started in main.
