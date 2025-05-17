@@ -353,7 +353,7 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
             time.sleep(10)
 
 
-
+## NEED TO MOVE THESE BLOCKS OUTSIDE OF the install_tomcat_on_instances as they are now called from main()
 ## NEW
 #    def wait_for_all_public_ips(ec2_client, instance_ids, timeout=60):
 #        start_time = time.time()
