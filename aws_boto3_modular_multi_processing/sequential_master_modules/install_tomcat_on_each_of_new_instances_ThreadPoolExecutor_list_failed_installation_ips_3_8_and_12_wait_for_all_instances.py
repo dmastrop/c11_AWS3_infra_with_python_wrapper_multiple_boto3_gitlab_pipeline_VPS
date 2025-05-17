@@ -407,13 +407,32 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 # Rewrite this code with AND logic. This will ensure all instances up and running prior to attempting to SSH
 # with the ThreadPoolExecutor
 # This will loop until all are running and ok.
+#    def wait_for_instance_running(instance_id, ec2_client):
+#        while True:
+#            instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
+#            if (instance_status['InstanceStatuses'][0]['InstanceState']['Name'] == 'running' and
+#                instance_status['InstanceStatuses'][0]['SystemStatus']['Status'] == 'ok' and
+#                instance_status['InstanceStatuses'][0]['InstanceStatus']['Status'] == 'ok'):
+#                break
+#            print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
+#            time.sleep(10)
+
+
     def wait_for_instance_running(instance_id, ec2_client):
         while True:
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
-            if (instance_status['InstanceStatuses'][0]['InstanceState']['Name'] == 'running' and
-                instance_status['InstanceStatuses'][0]['SystemStatus']['Status'] == 'ok' and
-                instance_status['InstanceStatuses'][0]['InstanceStatus']['Status'] == 'ok'):
-                break
+            statuses = instance_status.get('InstanceStatuses', [])
+
+            if statuses:
+                state = statuses[0]['InstanceState']['Name']
+                system_status = statuses[0]['SystemStatus']['Status']
+                instance_status_check = statuses[0]['InstanceStatus']['Status']
+
+                if state == 'running' and system_status == 'ok' and instance_status_check == 'ok':
+                    break
+            else:
+                print(f"No status yet for instance {instance_id}. Waiting...")
+
             print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
             time.sleep(10)
 
