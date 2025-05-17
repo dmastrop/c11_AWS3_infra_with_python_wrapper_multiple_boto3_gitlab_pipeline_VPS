@@ -917,9 +917,9 @@ def main():
             end = min(start + chunk_size, len(instance_ips))
             chunk = instance_ips[start:end]
  
-        # Diagnostic logging
-        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
-        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+            # Diagnostic logging
+            print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+            print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
 
 
 
