@@ -1,9 +1,28 @@
 stages:
+  - lint
   - build
   - push
   - deploy
   - cleanup
 
+# add the lint stage to verify the code structure and syntax. This will abort the pipeline if there are problems
+lint:
+  stage: lint
+  image: python:3.10
+  script:
+    - pip install black flake8
+    - echo "[INFO] Running black..."
+    - black --check .
+    - echo "[INFO] Running flake8..."
+    - flake8 .
+  only:
+    - main
+
+
+# this lint stage is non-blocking and will not abort, but just report the INFO to the gitlab console
+
+
+    
 build:
   stage: build
   script:
