@@ -42,10 +42,75 @@ def run_module(module_script_path):
 
 
 
+## THIS FUNCTION IS CALLED by main()
+## NEED TO MOVE THESE BLOCKS OUTSIDE OF the install_tomcat_on_instances as they are now called from main()
+## NEW
+#def wait_for_all_public_ips(ec2_client, instance_ids, timeout=60):
+#    start_time = time.time()
+#    while time.time() - start_time < timeout:
+#        response = ec2_client.describe_instances(InstanceIds=instance_ids)
+#        all_ips = []
+#        for reservation in response['Reservations']:
+#            for instance in reservation['Instances']:
+#                ip = instance.get('PublicIpAddress')
+#                if ip:
+#                    all_ips.append({'InstanceId': instance['InstanceId'], 'PublicIpAddress': ip})
+#        if len(all_ips) == len(instance_ids):
+#            return all_ips
+#        time.sleep(5)
+#    raise TimeoutError("Not all instances received public IPs in time.")
+#
+
+
+# NEW1 This is an improvement on wait_for_all_public_ips with exponential backoff and also include private ips and 
+# instance_ids in the array (list of dictionaries) instance_ips like with my original code.
+def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=120):
+    """
+    Waits for all EC2 instances (excluding the controller) to receive public IPs.
+    Uses exponential backoff for retries and includes private IPs in the result.
+    """
+    start_time = time.time()
+    attempt = 0
+    delay = 5  # initial delay in seconds
+
+    # Filter out the controller instance if provided
+    filtered_instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+
+    while time.time() - start_time < timeout:
+        attempt += 1
+        print(f"[DEBUG] Attempt {attempt}: Checking public IPs...")
+
+        response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
+        instance_ips = []
+
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                public_ip = instance.get('PublicIpAddress')
+                private_ip = instance.get('PrivateIpAddress')
+                instance_id = instance['InstanceId']
+
+                if public_ip:
+                    instance_ips.append({
+                        'InstanceId': instance_id,
+                        'PublicIpAddress': public_ip,
+                        'PrivateIpAddress': private_ip
+                    })
+
+        if len(instance_ips) == len(filtered_instance_ids):
+            print(f"[INFO] All {len(instance_ips)} instances have public IPs.")
+            return instance_ips
+
+        print(f"[DEBUG] {len(instance_ips)} of {len(filtered_instance_ids)} instances have public IPs. Retrying in {delay} seconds...")
+        time.sleep(delay)
+        delay = min(delay * 2, 30)  # exponential backoff with a max delay of 30 seconds
+
+    raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
 
 
 
 
+
+# THIS FUNCTION IS CALLED BY main()
 def install_tomcat_on_instances(instance_ips, security_group_ids):
 # import instance_ips and security_group_ids from newly defined main() below
 # move these imports to outside of the function as we will be adding more functions to this file (a main() wrapper around
@@ -351,70 +416,6 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
                 break
             print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
             time.sleep(10)
-
-
-## NEED TO MOVE THESE BLOCKS OUTSIDE OF the install_tomcat_on_instances as they are now called from main()
-## NEW
-#    def wait_for_all_public_ips(ec2_client, instance_ids, timeout=60):
-#        start_time = time.time()
-#        while time.time() - start_time < timeout:
-#            response = ec2_client.describe_instances(InstanceIds=instance_ids)
-#            all_ips = []
-#            for reservation in response['Reservations']:
-#                for instance in reservation['Instances']:
-#                    ip = instance.get('PublicIpAddress')
-#                    if ip:
-#                        all_ips.append({'InstanceId': instance['InstanceId'], 'PublicIpAddress': ip})
-#            if len(all_ips) == len(instance_ids):
-#                return all_ips
-#            time.sleep(5)
-#        raise TimeoutError("Not all instances received public IPs in time.")
-#
-
-
-# NEW1 This is an improvement on wait_for_all_public_ips with exponential backoff and also include private ips and 
-# instance_ids in the array (list of dictionaries) instance_ips like with my original code.
-    def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=120):
-        """
-        Waits for all EC2 instances (excluding the controller) to receive public IPs.
-        Uses exponential backoff for retries and includes private IPs in the result.
-        """
-        start_time = time.time()
-        attempt = 0
-        delay = 5  # initial delay in seconds
-
-        # Filter out the controller instance if provided
-        filtered_instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
-
-        while time.time() - start_time < timeout:
-            attempt += 1
-            print(f"[DEBUG] Attempt {attempt}: Checking public IPs...")
-
-            response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
-            instance_ips = []
-
-            for reservation in response['Reservations']:
-                for instance in reservation['Instances']:
-                    public_ip = instance.get('PublicIpAddress')
-                    private_ip = instance.get('PrivateIpAddress')
-                    instance_id = instance['InstanceId']
-
-                    if public_ip:
-                        instance_ips.append({
-                            'InstanceId': instance_id,
-                            'PublicIpAddress': public_ip,
-                            'PrivateIpAddress': private_ip
-                        })
-
-            if len(instance_ips) == len(filtered_instance_ids):
-                print(f"[INFO] All {len(instance_ips)} instances have public IPs.")
-                return instance_ips
-
-            print(f"[DEBUG] {len(instance_ips)} of {len(filtered_instance_ids)} instances have public IPs. Retrying in {delay} seconds...")
-            time.sleep(delay)
-            delay = min(delay * 2, 30)  # exponential backoff with a max delay of 30 seconds
-
-        raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
 
 
 
