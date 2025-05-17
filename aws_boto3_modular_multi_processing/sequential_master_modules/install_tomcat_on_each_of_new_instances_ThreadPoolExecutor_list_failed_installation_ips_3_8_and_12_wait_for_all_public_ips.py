@@ -752,7 +752,7 @@ def main():
     #num_processes = os.cpu_count()
     
     # with num_procsses = 8
-    num_processes = 30
+    num_processes = 8
 
     # the chunk_size is determined by number of instances divided by num_processes. num_processes is 6 and 
     # number of instances is 50 so 50/6 = 8. The division is // for an integer with floor division
@@ -836,36 +836,36 @@ def main():
 #
 
 
-### REVISED MODEL2: Using ceiling division and create an additional process to deal with leftover rather than adding
-### it to the last process suing remainder method as above
-###  This code is cleaner and also we don't need to deal with remainders
-#
-#    chunk_size = 12
-#    processes = []
-#
-#    # Debugging instance_ips
-#    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-#    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
-#
-#    # Calculate how many chunks we need (ceiling division)
-#    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
-#
-#    for i in range(num_chunks):
-#        start = i * chunk_size
-#        end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
-#        chunk = instance_ips[start:end]
-#
-#        # Diagnostic logging
-#        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
-#        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
-#
-#        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-#        processes.append(process)
-#        process.start()
-#
-#    for process in processes:
-#        process.join()
-#
+## REVISED MODEL2: Using ceiling division and create an additional process to deal with leftover rather than adding
+## it to the last process suing remainder method as above
+##  This code is cleaner and also we don't need to deal with remainders
+
+    chunk_size = 12
+    processes = []
+
+    # Debugging instance_ips
+    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+
+    # Calculate how many chunks we need (ceiling division)
+    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+
+    for i in range(num_chunks):
+        start = i * chunk_size
+        end = min(start + chunk_size, len(instance_ips))  # safely cap the end index
+        chunk = instance_ips[start:end]
+
+        # Diagnostic logging
+        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+
+        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
 
 
 
@@ -902,38 +902,38 @@ def main():
 
 
 
-## REVISED MODEL3: Using ceiling devision. This model 3 will create num_processes and whatever is unused will just run
-## unused. This is just for testing purposes.
-
-    chunk_size = 12
-    processes = []
-
-    # Calculate how many chunks we need (ceiling division)
-    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
-
-    for i in range(num_processes):
-        if i < num_chunks:
-            start = i * chunk_size
-            end = min(start + chunk_size, len(instance_ips))
-            chunk = instance_ips[start:end]
- 
-            # Diagnostic logging
-            print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
-            print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
-
-
-
-            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-        else:
-            # Dummy process that just logs it's unused
-            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
-
-        processes.append(process)
-        process.start()
-
-    for process in processes:
-        process.join()
-
+### REVISED MODEL3: Using ceiling devision. This model 3 will create num_processes and whatever is unused will just run
+### unused. This is just for testing purposes.
+#
+#    chunk_size = 12
+#    processes = []
+#
+#    # Calculate how many chunks we need (ceiling division)
+#    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+#
+#    for i in range(num_processes):
+#        if i < num_chunks:
+#            start = i * chunk_size
+#            end = min(start + chunk_size, len(instance_ips))
+#            chunk = instance_ips[start:end]
+# 
+#            # Diagnostic logging
+#            print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+#            print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+#
+#
+#
+#            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+#        else:
+#            # Dummy process that just logs it's unused
+#            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
+#
+#        processes.append(process)
+#        process.start()
+#
+#    for process in processes:
+#        process.join()
+#
 
 
 # We need to run main first when this is invoked from the master script. Then main will call the install_tomcat_on_instances to invoke the ThreadPoolExecutor for each process started in main.
