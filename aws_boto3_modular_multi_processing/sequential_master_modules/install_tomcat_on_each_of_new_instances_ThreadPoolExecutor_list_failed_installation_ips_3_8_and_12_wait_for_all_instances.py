@@ -374,47 +374,47 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 # NEW1 This is an improvement on wait_for_all_public_ips with exponential backoff and also include private ips and 
 # instance_ids in the array (list of dictionaries) instance_ips like with my original code.
-def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=120):
-    """
-    Waits for all EC2 instances (excluding the controller) to receive public IPs.
-    Uses exponential backoff for retries and includes private IPs in the result.
-    """
-    start_time = time.time()
-    attempt = 0
-    delay = 5  # initial delay in seconds
+    def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=120):
+        """
+        Waits for all EC2 instances (excluding the controller) to receive public IPs.
+        Uses exponential backoff for retries and includes private IPs in the result.
+        """
+        start_time = time.time()
+        attempt = 0
+        delay = 5  # initial delay in seconds
 
-    # Filter out the controller instance if provided
-    filtered_instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+        # Filter out the controller instance if provided
+        filtered_instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
 
-    while time.time() - start_time < timeout:
-        attempt += 1
-        print(f"[DEBUG] Attempt {attempt}: Checking public IPs...")
+        while time.time() - start_time < timeout:
+            attempt += 1
+            print(f"[DEBUG] Attempt {attempt}: Checking public IPs...")
 
-        response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
-        instance_ips = []
+            response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
+            instance_ips = []
 
-        for reservation in response['Reservations']:
-            for instance in reservation['Instances']:
-                public_ip = instance.get('PublicIpAddress')
-                private_ip = instance.get('PrivateIpAddress')
-                instance_id = instance['InstanceId']
+            for reservation in response['Reservations']:
+                for instance in reservation['Instances']:
+                    public_ip = instance.get('PublicIpAddress')
+                    private_ip = instance.get('PrivateIpAddress')
+                    instance_id = instance['InstanceId']
 
-                if public_ip:
-                    instance_ips.append({
-                        'InstanceId': instance_id,
-                        'PublicIpAddress': public_ip,
-                        'PrivateIpAddress': private_ip
-                    })
+                    if public_ip:
+                        instance_ips.append({
+                            'InstanceId': instance_id,
+                            'PublicIpAddress': public_ip,
+                            'PrivateIpAddress': private_ip
+                        })
 
-        if len(instance_ips) == len(filtered_instance_ids):
-            print(f"[INFO] All {len(instance_ips)} instances have public IPs.")
-            return instance_ips
+            if len(instance_ips) == len(filtered_instance_ids):
+                print(f"[INFO] All {len(instance_ips)} instances have public IPs.")
+                return instance_ips
 
-        print(f"[DEBUG] {len(instance_ips)} of {len(filtered_instance_ids)} instances have public IPs. Retrying in {delay} seconds...")
-        time.sleep(delay)
-        delay = min(delay * 2, 30)  # exponential backoff with a max delay of 30 seconds
+            print(f"[DEBUG] {len(instance_ips)} of {len(filtered_instance_ids)} instances have public IPs. Retrying in {delay} seconds...")
+            time.sleep(delay)
+            delay = min(delay * 2, 30)  # exponential backoff with a max delay of 30 seconds
 
-    raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
+        raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
 
 
 
