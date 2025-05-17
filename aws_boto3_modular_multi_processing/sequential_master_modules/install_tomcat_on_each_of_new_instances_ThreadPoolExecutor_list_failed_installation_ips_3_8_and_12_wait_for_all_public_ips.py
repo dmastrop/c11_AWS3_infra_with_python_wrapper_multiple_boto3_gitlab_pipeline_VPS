@@ -768,32 +768,32 @@ def main():
 ### CHOOSE ONE MODEL BELOW:
 
 
-## MODEL 1:
-# chunk_size determined by num_processes and number of IPs (deterministic)
-# the remainder ips are processed by the last process and all the num_processes are used
-
-    chunk_size = len(instance_ips) // num_processes
-    processes = []
-
-    ## Debugging instance_ips
-    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
-    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
-
-
-
-    for i in range(num_processes):
-        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
-        #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
-        if i == num_processes - 1:  # Add remaining instances to the last chunk
-            chunk += instance_ips[(i + 1) * chunk_size:]
-        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))    
-        processes.append(process)
-        process.start()
-
-    for process in processes:
-        process.join()
-
-
+### MODEL 1:
+## chunk_size determined by num_processes and number of IPs (deterministic)
+## the remainder ips are processed by the last process and all the num_processes are used
+#
+#    chunk_size = len(instance_ips) // num_processes
+#    processes = []
+#
+#    ## Debugging instance_ips
+#    print("[DEBUG] instance_ips is defined:", 'instance_ips' in locals())
+#    print("[DEBUG] instance_ips length:", len(instance_ips) if 'instance_ips' in locals() else 'N/A')
+#
+#
+#
+#    for i in range(num_processes):
+#        chunk = instance_ips[i * chunk_size:(i + 1) * chunk_size]
+#        #process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk,))
+#        if i == num_processes - 1:  # Add remaining instances to the last chunk
+#            chunk += instance_ips[(i + 1) * chunk_size:]
+#        process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))    
+#        processes.append(process)
+#        process.start()
+#
+#    for process in processes:
+#        process.join()
+#
+#
 
 
 
@@ -902,31 +902,38 @@ def main():
 
 
 
-### REVISED MODEL3: Using ceiling devision. This model 3 will create num_processes and whatever is unused will just run
-### unused. This is just for testing purposes.
-#
-#    chunk_size = 12
-#    processes = []
-#
-#    # Calculate how many chunks we need (ceiling division)
-#    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
-#
-#    for i in range(num_processes):
-#        if i < num_chunks:
-#            start = i * chunk_size
-#            end = min(start + chunk_size, len(instance_ips))
-#            chunk = instance_ips[start:end]
-#            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
-#        else:
-#            # Dummy process that just logs it's unused
-#            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
-#
-#        processes.append(process)
-#        process.start()
-#
-#    for process in processes:
-#        process.join()
-#
+## REVISED MODEL3: Using ceiling devision. This model 3 will create num_processes and whatever is unused will just run
+## unused. This is just for testing purposes.
+
+    chunk_size = 12
+    processes = []
+
+    # Calculate how many chunks we need (ceiling division)
+    num_chunks = (len(instance_ips) + chunk_size - 1) // chunk_size
+
+    for i in range(num_processes):
+        if i < num_chunks:
+            start = i * chunk_size
+            end = min(start + chunk_size, len(instance_ips))
+            chunk = instance_ips[start:end]
+ 
+        # Diagnostic logging
+        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+
+
+
+            process = multiprocessing.Process(target=install_tomcat_on_instances, args=(chunk, security_group_ids))
+        else:
+            # Dummy process that just logs it's unused
+            process = multiprocessing.Process(target=lambda: print(f"Process {i} not used"))
+
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
 
 
 # We need to run main first when this is invoked from the master script. Then main will call the install_tomcat_on_instances to invoke the ThreadPoolExecutor for each process started in main.
