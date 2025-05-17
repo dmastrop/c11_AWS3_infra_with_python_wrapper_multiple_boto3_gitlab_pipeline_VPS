@@ -11,7 +11,16 @@ num_processes value is specified separately
 The 3 models are below
 
 
+
 Model 1:
+
+Model 1: Fixed Number of Processes num_processes.  Chunk size is dynamic based upon the num_processes and number of ips. In the default case 50 Ips and 8 num_processes will use a chunk_size of 6 and remainder 2 in last process.  This has the new wait_for_public_ips code (see Mddel 2 for more detail on this), so the delay is no longer fixed but dynamic.  main() calls install_tomcat_on_instances for all three models so the multi-threading is done by ThreadPoolExecutor for all three models.  main() calls wait_for_public_ips prior to install_tomcat_on_instances so that we can be sure that public ips are present on all Ips in the the test pool.
+
+- Number of processes is fixed (`num_processes`).
+- Each process gets a chunk of IPs.
+- The last process handles any remainder.
+- Controlled parallelism, predictable resource usage.
+
 ```
     chunk_size = len(instance_ips) // num_processes
     processes = []
@@ -59,6 +68,15 @@ for process in processes:
 
 Model 2:  (CEILING DIVISION METHOD: this is cleaner but does involve adding one additional process to deal with the
 extra overflow of ips from chunk_size)
+
+Model 2 (Revised): Fixed Chunk Size, Dynamic Process Count
+
+- You define `chunk_size`, and the number of processes is calculated.
+- Uses ceiling division to avoid remainder logic.
+- Good for: Load balancing when you care more about chunk size than number of processes.
+Using ceiling division, an additional process will be added to process the remaining IPs, rather than adding them to the
+last process (model1)
+Note new code is in here wait_for_public_ips so that there are no orphan EC2 instances that are not included in the last process.  The code is no longer fixed delay wait time but dynamic based upon a loop to check the public_ips on the instances, with exponential backoff algorithm for efficiency.
 
 ```
 chunk_size = 12
@@ -114,6 +132,12 @@ for i in range(num_processes):
 
 Model 3: CEILING DIVISION METHOD
 
+Model 3 (Revised): Fixed Number of Processes, May Be Underutilized
+
+- Always spawns `num_processes`, even if some are unused.
+- Useful for testing or simulating a fixed pool of workers.
+- Good for: Benchmarking or stress testing process overhead.
+This is the same as Model2 except that the num_processes is always spawned regardless if they are required to process the number if IPs. . This uses the new wait_for_public_ips function as well.
 
 ```
 chunk_size = 12
