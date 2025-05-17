@@ -752,7 +752,7 @@ def main():
     #num_processes = os.cpu_count()
     
     # with num_procsses = 8
-    num_processes = 8
+    num_processes = 30
 
     # the chunk_size is determined by number of instances divided by num_processes. num_processes is 6 and 
     # number of instances is 50 so 50/6 = 8. The division is // for an integer with floor division
