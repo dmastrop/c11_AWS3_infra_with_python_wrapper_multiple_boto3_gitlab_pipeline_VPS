@@ -548,7 +548,7 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 
 
-    with ThreadPoolExecutor(max_workers=12) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
 
 
@@ -840,7 +840,7 @@ def main():
 ## it to the last process suing remainder method as above
 ##  This code is cleaner and also we don't need to deal with remainders
 
-    chunk_size = 4
+    chunk_size = 12
     processes = []
 
     # Debugging instance_ips
