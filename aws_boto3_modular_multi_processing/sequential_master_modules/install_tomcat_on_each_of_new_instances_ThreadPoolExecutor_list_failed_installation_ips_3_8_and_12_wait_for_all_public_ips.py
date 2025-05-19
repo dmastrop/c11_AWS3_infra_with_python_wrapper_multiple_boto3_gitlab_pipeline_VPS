@@ -840,7 +840,7 @@ def main():
 ## it to the last process suing remainder method as above
 ##  This code is cleaner and also we don't need to deal with remainders
 
-    chunk_size = 24
+    chunk_size = 6
     processes = []
 
     # Debugging instance_ips
