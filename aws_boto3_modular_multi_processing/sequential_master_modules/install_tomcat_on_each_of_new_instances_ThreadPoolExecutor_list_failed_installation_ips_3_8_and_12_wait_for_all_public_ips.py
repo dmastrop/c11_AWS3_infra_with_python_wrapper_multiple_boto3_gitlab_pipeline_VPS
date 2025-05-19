@@ -40,6 +40,15 @@ def run_module(module_script_path):
     logging.critical(f"Completed module script: {module_script_path}")
 
 
+## Add this helper function for the describe_instance_status as the DescribeInstanceStatus method can only handle
+## 100 at a time. Need this to test the 100+ use case
+def describe_instances_in_batches(ec2_client, instance_ids):
+    all_statuses = []
+    for i in range(0, len(instance_ids), 100):
+        batch = instance_ids[i:i + 100]
+        response = ec2_client.describe_instance_status(InstanceIds=batch, IncludeAllInstances=True)
+        all_statuses.extend(response['InstanceStatuses'])
+    return all_statuses
 
 
 ## THIS FUNCTION IS CALLED by main()
@@ -548,7 +557,7 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
 
 
@@ -640,7 +649,12 @@ def main():
 
     # Wait for all instances to be in running state
     while True:
-        response_statuses = my_ec2.describe_instance_status(InstanceIds=instance_ids)
+        ## this needs to use the describe_instances_in_batches helper function at the top of this file becasuse
+        ## i am hitting the llimit of 100 on the DescribeInstanceStatus method
+        ##response_statuses = my_ec2.describe_instance_status(InstanceIds=instance_ids)
+        
+        response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
+
         all_running = all(
             instance['InstanceState']['Name'] == 'running'
             for instance in response_statuses['InstanceStatuses']
@@ -840,7 +854,7 @@ def main():
 ## it to the last process suing remainder method as above
 ##  This code is cleaner and also we don't need to deal with remainders
 
-    chunk_size = 4
+    chunk_size = 12
     processes = []
 
     # Debugging instance_ips
