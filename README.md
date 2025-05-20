@@ -1,3 +1,48 @@
+## UPDATES: Scaling issues to EC2 instances > 100
+
+Had to modify the python describe_instance_status as the DescribeInstanceStatus method overloaded for > 100 instances.
+
+Create a helper function and batch process the EC2 instances so that this method can consume them properly
+
+Helper function:
+
+```
+def describe_instances_in_batches(ec2_client, instance_ids):
+    all_statuses = []
+    for i in range(0, len(instance_ids), 100):
+        batch = instance_ids[i:i + 100]
+        response = ec2_client.describe_instance_status(InstanceIds=batch, IncludeAllInstances=True)
+        all_statuses.extend(response['InstanceStatuses'])
+    return all_statuses
+```
+
+
+Next issue is the gitlab-runner logs hit max at 4MB. Since this is a self-hosted runner, edit the /etc/gitlab-runner/config.toml with the following addition. NOTE the placement must be at the line below. it will not work otherwise. Restart the gitlab-runner as well.
+
+
+```
+[[runners]]
+  name = "vps.****************.com"
+  url = "https://**************.com"
+  id = 1
+  token = "***************************"
+  token_obtained_at = 2024-10-09T21:19:49Z
+  token_expires_at = 0001-01-01T00:00:00Z
+  executor = "shell"
+  output_limit = 10240 <<<<<<<<<<<< THIS MUST BE PLACED HERE and not further down.
+  [runners.custom_build_dir]
+  [runners.cache]
+    MaxUploadedArchiveSize = 0
+    [runners.cache.s3]
+    [runners.cache.gcs]
+    [runners.cache.azure]
+```
+
+
+
+
+
+
 ## UPDATES: Summary of benchmark findings for module 2 (mutli-processing and multi-threading)
 The key variables are num_processes, chunk_size and max_workers (number of threads). Some general early findings are listed below:
 
