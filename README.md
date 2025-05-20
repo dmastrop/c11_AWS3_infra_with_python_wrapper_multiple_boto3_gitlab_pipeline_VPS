@@ -1,3 +1,26 @@
+## UPDATES:
+
+After the extensive benchmark testing we can see the benefits of multi-processing and multi-threading.
+Due to the VPS archlinux and docker effective use of multi-processing, there is no detriment when using a variety of
+different chunk_sizes and thread counts. The key is that the chunk_size must be kept equal to or below the max_workers, i.e. the nubmer of threads 
+(under provisioning the ThreadPoolExecutor has no determental cost).  As long as that is done, the number of processes can be increased up to 
+149 processes with 1 thread per process for the high scale case (149 EC2 instances) or it can be spread out amongst a much
+smaller number of processes (13) (for example chunk_size of 12 for 13 processes) or something in the middle with 
+chunk_size of 2, for example for 75 processes. All of these permutations yield approximately the same completion time.
+At this state, the bottleneck is the I/O time of the SSH connections and the installation time on each instance.
+One other bottleneck is the type of EC2 instance. Moving from t2.micro to t3.small improved the time to Status ready
+so that the SSH connections could be initiated soon. I imagine t3.large would improve the time even further.
+
+
+Without any type of parallelism, i.e. removing the ThreadPoolExecutor and setting the chunk_size to 149 for one process, will show the effects of no parallelism at all. 
+In this case, the test was going so slow I had to abort it as it would take hours.
+This is compared to the roughtly 6:30 minutes for the parallelized versions that are provisioned correctly.
+Also of note this scales well. There is no significant difference between 100 instance case and the 149 instance case as long as the chunk_size and number of threads are provisioned correctly for optimal processing (keep the chunk_size less than or equal to the number of threads).
+
+
+
+
+
 ## UPDATES: Scaling issues to EC2 instances > 100
 
 Had to modify the python describe_instance_status as the DescribeInstanceStatus method overloaded for > 100 instances.
