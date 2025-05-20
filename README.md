@@ -9,7 +9,7 @@ smaller number of processes (13) (for example chunk_size of 12 for 13 processes)
 chunk_size of 2, for example for 75 processes. All of these permutations yield approximately the same completion time.
 At this state, the bottleneck is the I/O time of the SSH connections and the installation time on each instance.
 One other bottleneck is the type of EC2 instance. Moving from t2.micro to t3.small improved the time to Status ready
-so that the SSH connections could be initiated soon. I imagine t3.large would improve the time even further.
+so that the SSH connections could be initiated sooner in the process.   imagine t3.large would improve the time even further in this respect. The installation time would also improve as well the larger the EC2 type.
 
 
 Without any type of parallelism, i.e. removing the ThreadPoolExecutor and setting the chunk_size to 149 for one process, will show the effects of no parallelism at all. 
@@ -17,6 +17,16 @@ In this case, the test was going so slow I had to abort it as it would take hour
 This is compared to the roughtly 6:30 minutes for the parallelized versions that are provisioned correctly.
 After aborting test, by the logs it looked like about 1 instance per minute, so 149 instances would have taken about 2.5 hours.
 
+The final test is keeping the chunk_size at 149 for one process but adding back the multi-threading and max_workers of
+149 for 149 threads.  Comment back in the ThreadPoolExecutor.  This will illustrate the multi-threading performance alone.This was at 6:50 minutes, closely aligned to the other optimized performances.
+
+Conclusions: 
+
+Multithreading alone is just as effective as multiprocessing for this I/O-bound workload — as long as thread provisioning is correct.
+
+The real performance gain comes from concurrency, not from the specific mechanism (threads vs. processes).
+
+The system (6 vCPU core VPS + Docker + Linux scheduler) handles both models efficiently. 
 
 Also of note this scales well. There is no significant difference between 100 instance case and the 149 instance case as long as the chunk_size and number of threads are provisioned correctly for optimal processing (keep the chunk_size less than or equal to the number of threads).
 
