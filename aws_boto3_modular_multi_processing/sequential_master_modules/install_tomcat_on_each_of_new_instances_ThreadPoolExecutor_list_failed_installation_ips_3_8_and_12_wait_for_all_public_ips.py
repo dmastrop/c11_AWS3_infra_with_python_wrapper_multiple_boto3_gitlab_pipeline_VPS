@@ -557,8 +557,19 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+#    with ThreadPoolExecutor(max_workers=1) as executor:
+#        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+#
+
+
+
+## RUN a quick test disabling the multi-threading per process completely and disable the multi-processing by
+## setting EC2 count to the chunk_size (1 process)
+## to do this and comment out the above ThreadPoolExecutor
+    for ip in instance_ips:
+        install_tomcat(ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId'])
+
+
 
 
 # with max_workers = 6
@@ -854,7 +865,7 @@ def main():
 ## it to the last process suing remainder method as above
 ##  This code is cleaner and also we don't need to deal with remainders
 
-    chunk_size = 1
+    chunk_size = 149
     processes = []
 
     # Debugging instance_ips
