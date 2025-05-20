@@ -105,49 +105,49 @@ def main():
     process2.start()
     process2.join()
 
-    process3 = multiprocessing.Process(target=save_instance_ids_and_security_group_ids, name="Process3: save_instance_ids_and_security_group_ids")
-    process3.start()
-    process3.join()
-
-    process4 = multiprocessing.Process(target=create_application_load_balancer, name="Process4: create_application_load_balancer")
-    process4.start()
-    process4.join()
-
-    process5 = multiprocessing.Process(target=ssl_listener_with_route53, name="Process5: ssl_listener_with_route53")
-    process7 = multiprocessing.Process(target=elastic_beanstalk, name="Process7: elastic_beanstalk")
-    process8 = multiprocessing.Process(target=rds_and_security_group, name="Process8: rds_and_security_group")
-
-    process5.start()
-    process7.start()
-    process8.start()
-
-    process5.join()
-    process7.join()
-    process8.join()
-
-
-
-
-
-    process6 = multiprocessing.Process(target=wget_debug, name="Process6: wget_debug")
-    process9 = multiprocessing.Process(target=jumphost_for_rds_mysql_client, name="Process9: jumphost_for_rds_mysql_client")
-    process10 = multiprocessing.Process(target=wget_for_elastic_beanstalk_alb, name="Process10: wget_for_elastic_beanstalk_alb")
-    process11 = multiprocessing.Process(target=https_wget_for_elastic_beanstalk_alb, name="Process11: https_wget_for_elastic_beanstalk_alb")
-
-
-
-
-    process6.start()
-    process9.start()
-    process10.start()
-    process11.start()
-
-
-    process6.join()
-    process9.join()
-    process10.join()
-    process11.join()
-
+#    process3 = multiprocessing.Process(target=save_instance_ids_and_security_group_ids, name="Process3: save_instance_ids_and_security_group_ids")
+#    process3.start()
+#    process3.join()
+#
+#    process4 = multiprocessing.Process(target=create_application_load_balancer, name="Process4: create_application_load_balancer")
+#    process4.start()
+#    process4.join()
+#
+#    process5 = multiprocessing.Process(target=ssl_listener_with_route53, name="Process5: ssl_listener_with_route53")
+#    process7 = multiprocessing.Process(target=elastic_beanstalk, name="Process7: elastic_beanstalk")
+#    process8 = multiprocessing.Process(target=rds_and_security_group, name="Process8: rds_and_security_group")
+#
+#    process5.start()
+#    process7.start()
+#    process8.start()
+#
+#    process5.join()
+#    process7.join()
+#    process8.join()
+#
+#
+#
+#
+#
+#    process6 = multiprocessing.Process(target=wget_debug, name="Process6: wget_debug")
+#    process9 = multiprocessing.Process(target=jumphost_for_rds_mysql_client, name="Process9: jumphost_for_rds_mysql_client")
+#    process10 = multiprocessing.Process(target=wget_for_elastic_beanstalk_alb, name="Process10: wget_for_elastic_beanstalk_alb")
+#    process11 = multiprocessing.Process(target=https_wget_for_elastic_beanstalk_alb, name="Process11: https_wget_for_elastic_beanstalk_alb")
+#
+#
+#
+#
+#    process6.start()
+#    process9.start()
+#    process10.start()
+#    process11.start()
+#
+#
+#    process6.join()
+#    process9.join()
+#    process10.join()
+#    process11.join()
+#
 if __name__ == "__main__":
     main()
 
