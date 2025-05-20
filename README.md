@@ -15,8 +15,10 @@ so that the SSH connections could be initiated soon. I imagine t3.large would im
 Without any type of parallelism, i.e. removing the ThreadPoolExecutor and setting the chunk_size to 149 for one process, will show the effects of no parallelism at all. 
 In this case, the test was going so slow I had to abort it as it would take hours.
 This is compared to the roughtly 6:30 minutes for the parallelized versions that are provisioned correctly.
-Also of note this scales well. There is no significant difference between 100 instance case and the 149 instance case as long as the chunk_size and number of threads are provisioned correctly for optimal processing (keep the chunk_size less than or equal to the number of threads).
+After aborting test, by the logs it looked like about 1 instance per minute, so 149 instances would have taken about 2.5 hours.
 
+
+Also of note this scales well. There is no significant difference between 100 instance case and the 149 instance case as long as the chunk_size and number of threads are provisioned correctly for optimal processing (keep the chunk_size less than or equal to the number of threads).
 
 
 
