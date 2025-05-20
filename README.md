@@ -42,6 +42,8 @@ The benchmarking consistes of a 12 thread 12 chunk_size for 13 process test comp
 2 thread 2 chunk_size and 75 process test to assess the effect of number of processes in the python multi-process
 master file.
 
+There does not appear to be any drag on the completion time with the 75 processes. The VPS CPU is ok during this as well.
+The processes are run in a docker container and I did not see the docker daemon remarkable stressed during the pipeline run.
 
 
 
