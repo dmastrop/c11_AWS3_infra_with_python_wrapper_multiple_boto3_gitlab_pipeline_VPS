@@ -38,6 +38,9 @@ Next issue is the gitlab-runner logs hit max at 4MB. Since this is a self-hosted
     [runners.cache.azure]
 ```
 
+The benchmarking consistes of a 12 thread 12 chunk_size for 13 process test compared to
+2 thread 2 chunk_size and 75 process test to assess the effect of number of processes in the python multi-process
+master file.
 
 
 
