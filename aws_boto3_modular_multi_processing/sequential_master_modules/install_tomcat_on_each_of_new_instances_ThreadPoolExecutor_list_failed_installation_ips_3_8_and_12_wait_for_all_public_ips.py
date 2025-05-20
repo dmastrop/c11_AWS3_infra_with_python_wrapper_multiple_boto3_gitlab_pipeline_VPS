@@ -562,8 +562,8 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 ## comment out this next block temporarily to disable multi-threading completely
 ## USE THIS
-#    with ThreadPoolExecutor(max_workers=1) as executor:
-#        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+    with ThreadPoolExecutor(max_workers=149) as executor:
+        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
 
 
 # with max_workers = 6
@@ -576,25 +576,25 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
         #futures = [executor.submit(install_tomcat, ip, private_ip, instance_id) for ip, private_ip, instance_id in zip(public_ips, private_ips, instance_ids)]
         
 
-#        for future in as_completed(futures):
-#            ip, private_ip, result = future.result()
-#            if result:
-#                successful_ips.append(ip)
-#                successful_private_ips.append(private_ip)
-#            else:
-#                failed_ips.append(ip)
-#                failed_private_ips.append(private_ip)
-#
-#
-#    if successful_ips:
-#        print(f"Installation succeeded on the following IPs: {', '.join(successful_ips)}")
-#        print(f"Installation succeeded on the following private IPs: {', '.join(successful_private_ips)}")
-#    if failed_ips:
-#        print(f"Installation failed on the following IPs: {', '.join(failed_ips)}")
-#        print(f"Installation failed on the following private IPs: {', '.join(failed_private_ips)}")
-#
-#    print("ThreadPoolExecutor script execution completed.")
-#
+        for future in as_completed(futures):
+            ip, private_ip, result = future.result()
+            if result:
+                successful_ips.append(ip)
+                successful_private_ips.append(private_ip)
+            else:
+                failed_ips.append(ip)
+                failed_private_ips.append(private_ip)
+
+
+    if successful_ips:
+        print(f"Installation succeeded on the following IPs: {', '.join(successful_ips)}")
+        print(f"Installation succeeded on the following private IPs: {', '.join(successful_private_ips)}")
+    if failed_ips:
+        print(f"Installation failed on the following IPs: {', '.join(failed_ips)}")
+        print(f"Installation failed on the following private IPs: {', '.join(failed_private_ips)}")
+
+    print("ThreadPoolExecutor script execution completed.")
+
 
 
 
@@ -606,24 +606,24 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 ## to do this and comment out the above ThreadPoolExecutor
 
 
-    for ip in instance_ips:
-        result = install_tomcat(ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId'])
-        if result:
-            successful_ips.append(ip['PublicIpAddress'])
-            successful_private_ips.append(ip['PrivateIpAddress'])
-        else:
-            failed_ips.append(ip['PublicIpAddress'])
-            failed_private_ips.append(ip['PrivateIpAddress'])
-
-
-    if successful_ips:
-        print(f"Installation succeeded on the following IPs: {', '.join(successful_ips)}")
-        print(f"Installation succeeded on the following private IPs: {', '.join(successful_private_ips)}")
-    if failed_ips:
-        print(f"Installation failed on the following IPs: {', '.join(failed_ips)}")
-        print(f"Installation failed on the following private IPs: {', '.join(failed_private_ips)}")
-
-    print("Non multi-threaded  manual option script execution completed.")
+#    for ip in instance_ips:
+#        result = install_tomcat(ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId'])
+#        if result:
+#            successful_ips.append(ip['PublicIpAddress'])
+#            successful_private_ips.append(ip['PrivateIpAddress'])
+#        else:
+#            failed_ips.append(ip['PublicIpAddress'])
+#            failed_private_ips.append(ip['PrivateIpAddress'])
+#
+#
+#    if successful_ips:
+#        print(f"Installation succeeded on the following IPs: {', '.join(successful_ips)}")
+#        print(f"Installation succeeded on the following private IPs: {', '.join(successful_private_ips)}")
+#    if failed_ips:
+#        print(f"Installation failed on the following IPs: {', '.join(failed_ips)}")
+#        print(f"Installation failed on the following private IPs: {', '.join(failed_private_ips)}")
+#
+#    print("Non multi-threaded  manual option script execution completed.")
 
 
 # COMMENT this out. The call from the master script will have to run main() instead. Main() will then call the 
