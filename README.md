@@ -36,6 +36,53 @@ This test hit a bottleneck with the VPS. CPU gets tapped out. The gitlab contain
 
 Once this occurs the gitlab container also running on the VPS locks up.   Putting the gitlab container on a separate VPS would be a solution part of this problem.
 
+### multi-processing issues:
+
+With the testing above it revealed another issue. With processes greater than 25 there appears to be an issue with all of the EC2 instances getting tomcat9 actually installed. This is most likely caused by one or several of the issues below and we need to refine the python script using a variety of techniques to accomodate such edge cases.
+
+Some of the causes might be due to:
+VPS (6 vCPUs) + Docker + GitLab runner setup likely hits a resource ceiling when too many processes are spawned simultaneously. This causes:
+
+- Process crashes or hangs
+- Silent failures
+- Incomplete logging
+
+The silent failures and process crashes would not necessarily be caught by the curent code failure detection.
+
+
+### Possible solutions that will be explored: 
+
+To resolve this will have to try some of the folowing or all of the following approaches:
+(these all effectively try to control the process concurrency since the problem cannot be resolved directly without 
+changing the hardware, docker container distribution, etc.
+
+
+1. Dynamic Process Scaling
+   → Adjusts the number of processes based on system load or available CPUs  
+   Prevents overload while still maximizing throughput
+
+2. Process Pooling
+   → Reuses a fixed number of worker processes  
+   Lets you queue up 100+ tasks but only run, say, 25 at a time
+
+3. Centralized Logging & Error Handling
+   → Ensures no failures go unnoticed  
+   Helps you detect and retry failed tasks
+
+4. Task Queue Model (e.g., `multiprocessing.Queue` or `concurrent.futures`)  
+   → Submit all 100+ tasks, but only a safe number run concurrently  
+   Scales to hundreds of tasks without overwhelming the system
+
+
+
+### production level soultions in real world would avoid this situation by properly configuring threads per process and chunk_size, etc....
+
+
+- Increase `chunk_size` to reduce the number of processes
+- Stay within the known-safe range (e.g., ≤25 processes)
+- Scale horizontally if needed (e.g., split the workload across multiple VPS containers or runners)
+
+
 
 
 
