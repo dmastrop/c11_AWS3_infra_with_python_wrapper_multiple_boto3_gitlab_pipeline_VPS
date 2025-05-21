@@ -562,7 +562,7 @@ def install_tomcat_on_instances(instance_ips, security_group_ids):
 
 ## comment out this next block temporarily to disable multi-threading completely
 ## USE THIS
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
 
 
@@ -892,7 +892,7 @@ def main():
 ## it to the last process suing remainder method as above
 ##  This code is cleaner and also we don't need to deal with remainders
 
-    chunk_size = 10
+    chunk_size = 20
     processes = []
 
     # Debugging instance_ips
