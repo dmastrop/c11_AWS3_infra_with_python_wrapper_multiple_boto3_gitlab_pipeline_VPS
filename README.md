@@ -1,4 +1,48 @@
-## UPDATES:
+## UPDATES:  BENCHMARKING part4: Hyperscaling the multi-processing
+
+
+T3.small 200 instances with 200 processes and 1 thread per process (chunk_size =1)
+At 200 the VPS got a bit stuck at around 137 but then proceeded to slowly create the rest of the processes.
+So there is a bit o bottleneck hit here. We did not see this with 149 process test.  
+I did see the VPS controller CPU go to 0 idle periodically so it was maxed out for short periods.
+
+Once the processes were up and running thing proceeded as expected.
+I did a quick spot check on AWS and all 200 instances have status up and checks are ok. And the python script did well screening for this.
+Amazingly the entire script completed in about 7 minutes, just a bit longer than usual. This slight deviation is due to the process bring up being a bit slow once getting above 150 processes. 
+
+
+
+T2.small 400 instances with 400 processes and 1 thread per process (chunk_size=1)
+
+Change to t2.small. This might affect the control of the testing as these are slower to come up and the installation could be slower with 1 vCPU, but the focus is on the 400 processes and the mutli-processing with no multi-threading in each process (1 thread per process).
+Have to switch to t2.small because AWS limit currently at 402 vCPUs and t3.small have 2 vCPU per instance.
+
+This test hit a bottleneck with the VPS. CPU gets tapped out. The gitlab container is running a docker container that is runing the python master script.  The top shows the contention and the idle CPU drops to 0
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                            
+     77 root      20   0       0      0      0 R 100.0   0.0  25:23.80 kswapd0                                            
+1998254 root      20   0 1139656  10832   2128 S  41.5   0.1   3:50.24 fail2ban-server                                    
+2005387 1001      20   0 1238948   9132   1196 S  28.9   0.1   0:47.86 go-camo    
+
+
+
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                            
+     77 root      20   0       0      0      0 R  72.1   0.0  25:32.10 kswapd0                                            
+    456 root      20   0 2241208  13612   1652 S  23.4   0.1  28:28.77 containerd                                         
+2616745 112       20   0  122344  79376   1396 D  21.4   0.5   0:01.59 amavisd-new                                        
+   1302 root      20   0 3693788  34924   1900 S  18.8   0.2 210:26.35 dockerd   
+
+
+Once this occurs the gitlab container also running on the VPS locks up.   Putting the gitlab container on a separate VPS would be a solution part of this problem.
+
+
+
+
+
+
+
+## UPDATES: BENCHMARKING part 3:
 
 After the extensive benchmark testing we can see the benefits of multi-processing and multi-threading.
 Due to the VPS archlinux and docker effective use of multi-processing, there is no detriment when using a variety of
@@ -33,7 +77,7 @@ Also of note this scales well. There is no significant difference between 100 in
 
 
 
-## UPDATES: Scaling issues to EC2 instances > 100
+## UPDATES: BENCHMARKING part 2: Scaling issues to EC2 instances > 100
 
 Had to modify the python describe_instance_status as the DescribeInstanceStatus method overloaded for > 100 instances.
 
@@ -83,7 +127,7 @@ The processes are run in a docker container and I did not see the docker daemon 
 
 
 
-## UPDATES: Summary of benchmark findings for module 2 (mutli-processing and multi-threading)
+## UPDATES: BENCHMARKING part1: Summary of benchmark findings for module 2 (mutli-processing and multi-threading)
 The key variables are num_processes, chunk_size and max_workers (number of threads). Some general early findings are listed below:
 
 I ran a lot of benchmark tests. The number of processes is always adjusted to accommodate the chunk_size so the number of processes does not come into play.  I even ran model 3 which adds dummy processes and they don't appear to slow things down in terms of strict process overhead.      The key is the chunk_size relative to the the max_workers (number of threads). If the chunk_size is greater than the  number of threads the performance gets much worse (about 6.5 mintues vs. 9.5 minutes)     If the number of threads is equal to the chunk_size the performance is better. It does not improve or get worse if chunk size is reduced less than the number of threads (in other words the idle threads don't have a determinantal effect on overall time).  
