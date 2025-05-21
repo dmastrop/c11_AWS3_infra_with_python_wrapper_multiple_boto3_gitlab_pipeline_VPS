@@ -1,3 +1,7 @@
+## UPDATES: BENCHMARKING part5: 
+
+
+
 ## UPDATES:  BENCHMARKING part4: Hyperscaling the multi-processing
 
 
@@ -46,6 +50,13 @@ VPS (6 vCPUs) + Docker + GitLab runner setup likely hits a resource ceiling when
 - Process crashes or hangs
 - Silent failures
 - Incomplete logging
+
+
+Stated more concisely:
+
+  - Process management overhead
+  - Docker or GitLab runner limits
+  - Lack of proper inter-process error handling or logging
 
 The silent failures and process crashes would not necessarily be caught by the curent code failure detection.
 
