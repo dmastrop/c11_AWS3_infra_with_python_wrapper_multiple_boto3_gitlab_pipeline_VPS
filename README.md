@@ -1,5 +1,19 @@
 ## UPDATES: BENCHMARKING part5: 
 
+Sanity testing of 200 and 400 instances
+
+200 instances with 10 chunk size and 10 threads for 20 processes ran fine. All instances have tomcat installed. So the issue is clearly with the number of processes < 25 and not number of instances, or SSH connections, etc.
+
+400 instances with 20 chunk and 20 threads also running. Had to increase gitlab runner log capacity from 10 MB to 50 MB. TThis worked as well confirming that it is the  number of processes and nothing else. 
+
+The increase in swap from 1GB to 4GB will help the VPS when scaling to 100+ processes as the python code is refactored to support this hyper-scaling corner case.
+
+
+### Code refactoring to deal with the process hyper-scaling issue > 25:
+
+
+
+
 
 
 ## UPDATES:  BENCHMARKING part4: Hyperscaling the multi-processing
