@@ -52,13 +52,30 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_NEW_ALGORITHM_with_multiprocessing_main.py")
 
+
+
+
+####### USE THIS AS STANDARD MODULE2 SCRIPT prior to REFACTOR
+#######  Models 1-3 are avaliable with model 2 preferred for testing.
+
+# this is also called install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_BACKUP_PRIOR_TO_REFACTOR.py
 #  IMPROVED public ips for instance_ips version. This is often a problem. If AWS is bogged down this code is more 
 #  resilient to handle fluctuations in service time getting the EC2 instances with public_ips
 #  The delay is no longer fixed and deterministic but is dynamic based on a loop testing for the public ips, private ips
 #  and instance id. The new function is wait_for_all_instances
 ## This is the main working module2 for the extensive benchmark testing and optimization on this module.
+
+#Def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips.py")
+#
+
+
+
+####### TTHIS IS THE REFACTORED MODULE2 SCRIPT FOR POOLING WITH THE MULTIPROCESSING TO HANDLE HYPER-SCALING
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips.py")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling.py")
+
+
 
 
 

@@ -11,7 +11,49 @@ The increase in swap from 1GB to 4GB will help the VPS when scaling to 100+ proc
 
 ### Code refactoring to deal with the process hyper-scaling issue > 25:
 
+1. Introduce a process pool or task queue model
+2. Add centralized logging and error handling
+3. Ensure failed installations are always reported. Currently the Installation succeeded on is working but the Installation failed is falling through, and it is not catching when the process overload causes failed tomcat9 installations on some of the instances
+4. Optionally add a post-run audit summary
 
+
+REFACTORED main() to support multi-processing with pooling to deal with hyperscaling case
+ note that this is still based upon Model 2 from the original main() below that does not have the pooling with
+ the multiprocessing
+
+ with model 2: each process handles chunk_size of IPs with max_workers number of threads. Any extra IPs use
+ an additional process.
+
+ This main() uses the tomcat_worker rather than the original install_tomcat_on_instances used in the main() 
+ without pooling.   The tomcat_worker permits pickling by main().   
+
+ The pooling will start the desired_count of concurrent processes (25 has been tested for error free)
+ The rest of the processes will be initiated as the original 25 finish up their tasks and exit, one by one
+ with multiprocessing.Pool(processes=desired_count) as pool:
+ from extensive testing it is recommended to keep desired_count to 25 for this pariticular setup
+
+ The chunk_size is the number of IPs (dictionary list) assigned per process
+
+ max_workers is the number of threads in the ThreadPoolExecutor to use to parallel process the SSH connections for
+ the chunk dictionary list of IPs.  
+
+ chunk_size should always be less than or equal to max_workers. If oversubscribing max_workers performance degrades
+ very raplidly.  Unused threads (undersubscrbing, with chunk_size < max_workers) does not degrade performance.
+
+ chunk is the actual dictionary list of IPs to be processed per process
+
+ chunks is the dictionary list of all of the IPs to be processed (the total len(instance_ips) of IPs)
+ chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+ chunks is required to track the entire list of all the IPs because the desired_count cannot process them all
+ in parallel initially and has to take up the extras serially as the pool of processes free up, one by one.
+
+ args_list is the List of args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]  passed to the tomcat_worker function above
+ using the pool.starmap pool.starmap(tomcat_worker, args_list) to assign the chunk blocks to each successive
+ process running in parallel (initially the desired_count of processes)
+
+ the configurable options are chunk_size, max_workers (like with model2) and desired_count
+ The total number of EC2 instances are specified in the .gitlab-ci.yml and passed and env variables to the first
+ python module in the python package for this project (11 modules so far)
 
 
 
