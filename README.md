@@ -1,3 +1,37 @@
+## UPDATES: BENCHMARKING part 6: testing the multi-processing hyper-scaling with the pooling code
+
+Initial tests look very good. The problematic process count > 25 where there were installation failures is not occuring withe process pooling. 
+
+Tested 200 instances with chunk_size of 6 for 34 processes and it went well.
+Swap was almost exhausted at nearly 4GB so increase swap to 8 GB for futher testing below.
+This test took longer than the baseline non-pooled of 6:30 minutes at about 8:50 minutes but that is expected as there are 9 processes in the queue that need to wait to be processed over the desired_count limit of 25
+
+The CPU was fairly stable at an average of 70% on the VPS controller. 
+
+Planned further testing:
+Using a chunk_size of 4 and max_workers of 4 run the following tests
+
+- 200 instances → 50 processes
+- 300 → 75
+- 400 → 100
+
+Decrease chunk_size to 2 and run the following test:
+- 250 → 125
+- 300 → 150
+- 400 → 200
+
+Note use the t2.small since the AWS limit is at 402 vCPUs
+
+
+There are a variety of things that will be monitored dudring these test on the VPS and they will be added to this README as the testing progresses.
+
+The code is all checked in at this time for this module2.
+
+
+
+
+
+
 ## UPDATES: BENCHMARKING part5: 
 
 Sanity testing of 200 and 400 instances
