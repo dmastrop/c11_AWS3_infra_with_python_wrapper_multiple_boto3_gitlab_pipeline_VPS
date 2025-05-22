@@ -576,6 +576,15 @@ def main():
     desired_count = 25     # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+
+
+
+    # [DEBUG] Show chunk details
+    for i, chunk in enumerate(chunks):
+        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+
+    
     args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
 
     # call to the multiprocessing.Pool which calls tomcat_worker function above to process the chunk data of IPs with
