@@ -422,14 +422,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+## USE instance_info instead of instance_ips within tomcat_worker for the pooling mulit-processing
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
 
 
 
 ## comment out this next block temporarily to disable multi-threading completely
-## USE THIS
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+### USE THIS for the non-pooling multi-processing case
+#    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+#
+
 
 
 # with max_workers = 6
