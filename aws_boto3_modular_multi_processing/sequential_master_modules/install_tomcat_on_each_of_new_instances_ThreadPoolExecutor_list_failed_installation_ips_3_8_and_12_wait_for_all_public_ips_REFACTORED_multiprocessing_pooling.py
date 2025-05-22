@@ -571,8 +571,8 @@ def main():
     ]
 
     ### Configurable parameters
-    chunk_size = 6      # Number of IPs per process
-    max_workers = 6       # Threads per process
+    chunk_size = 4      # Number of IPs per process
+    max_workers = 4       # Threads per process
     desired_count = 25     # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
