@@ -57,10 +57,28 @@ import os
 from contextlib import contextmanager
 
 # Setup logging
-logging.basicConfig(filename='benchmark.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+#logging.basicConfig(filename='benchmark.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# Replace the above with the filename below. The .gitlab-ci.yml deploy now runs the docker container to mount
+# aws_EC2/logs/benchmark.log to the gitlab_project_directory/logs/benchmark.log, so need to create this directory in the 
+# docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
+# can get the artifact for this pipeline as benchmark.log
+
+os.makedirs("logs", exist_ok=True)
+
+logging.basicConfig(
+    filename='logs/benchmark.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s'
+)
 
 
-# Print the absolute path to the log file
+
+# Print the absolute path to the log file. This is the full path on the container that is executing this.
+# It should be WORKDIR/benchmark.log or aws_EC2/benchmark.log originally and after the change above
+# it will be aws_EC2/log/benchmark.log which is mounted now to the gitlab working directory/logs for pipeline
+# artifact
 print("Logging to:", os.path.abspath("benchmark.log"))
 
 
