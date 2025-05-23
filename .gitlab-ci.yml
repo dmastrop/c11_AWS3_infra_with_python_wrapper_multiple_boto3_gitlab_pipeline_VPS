@@ -75,6 +75,9 @@ deploy:
   script:
     - mkdir -p logs
     - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+    - echo "Contents of logs directory:"
+    - ls -l logs
+
   artifacts:
     paths:
       - logs/benchmark.log

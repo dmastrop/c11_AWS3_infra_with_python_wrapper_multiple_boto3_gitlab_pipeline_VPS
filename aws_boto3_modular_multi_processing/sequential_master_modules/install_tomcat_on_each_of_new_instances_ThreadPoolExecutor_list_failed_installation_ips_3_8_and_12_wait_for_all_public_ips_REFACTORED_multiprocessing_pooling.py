@@ -70,10 +70,10 @@ from contextlib import contextmanager
 # docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
 # can get the artifact for this pipeline as benchmark.log
 
-os.makedirs("logs", exist_ok=True)
+os.makedirs("/aws_EC2/logs", exist_ok=True)
 
 logging.basicConfig(
-    filename='logs/benchmark.log',
+    filename='/aws_EC2/logs/benchmark.log',
     level=logging.INFO,
     format='%(asctime)s - %(message)s'
 )
