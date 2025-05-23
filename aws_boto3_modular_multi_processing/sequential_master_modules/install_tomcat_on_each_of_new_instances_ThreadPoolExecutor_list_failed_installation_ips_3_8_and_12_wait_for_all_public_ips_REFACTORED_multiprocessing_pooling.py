@@ -92,14 +92,14 @@ logging.basicConfig(
 )
 
 # Print the actual path to the log file
-print("Logging to:", os.path.realpath(log_path))
+print("Logging to actual real path:", os.path.realpath(log_path))
 
 
 # Print the absolute path to the log file. This is the full path on the container that is executing this.
 # It should be WORKDIR/benchmark.log or aws_EC2/benchmark.log originally and after the change above
 # it will be aws_EC2/log/benchmark.log which is mounted now to the gitlab working directory/logs for pipeline
 # artifact
-print("Logging to:", os.path.abspath("benchmark.log"))
+print("Logging to absolute path:", os.path.abspath("benchmark.log"))
 
 # Print the contents of `/aws_EC2/logs` at the end of your script
 print("FIRST Contents of /aws_EC2/logs:")
