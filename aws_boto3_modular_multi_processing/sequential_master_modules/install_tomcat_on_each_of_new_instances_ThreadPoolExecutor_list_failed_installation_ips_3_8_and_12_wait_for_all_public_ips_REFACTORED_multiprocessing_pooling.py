@@ -102,7 +102,7 @@ print("Logging to:", os.path.realpath(log_path))
 print("Logging to:", os.path.abspath("benchmark.log"))
 
 # Print the contents of `/aws_EC2/logs` at the end of your script
-print("Contents of /aws_EC2/logs:")
+print("FIRST Contents of /aws_EC2/logs:")
 print(os.listdir("/aws_EC2/logs"))
 
 
@@ -598,6 +598,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ### the run_test is not indented inside of tomcat_worker function!
     run_test("Tomcat Installation Threaded", threaded_install)
 
+    ### Add the verification of the location of the benchmark.log file location on the container
+    # Print the contents of `/aws_EC2/logs` at the end of your script. <<<<need to move this to below:
+    print("SECOND Contents of /aws_EC2/logs:")
+    print(os.listdir("/aws_EC2/logs"))
 
 
 
