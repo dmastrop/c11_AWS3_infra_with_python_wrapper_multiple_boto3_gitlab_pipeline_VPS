@@ -1,6 +1,7 @@
 FROM python:3.11.9
 WORKDIR /aws_EC2
 ENV PYTHONUNBUFFERED=1
+RUN whoami && ls -ld /aws_EC2/logs
 
 COPY ./aws_boto3_modular_multi_processing /aws_EC2
 RUN pip install --no-cache-dir -r requirements.txt

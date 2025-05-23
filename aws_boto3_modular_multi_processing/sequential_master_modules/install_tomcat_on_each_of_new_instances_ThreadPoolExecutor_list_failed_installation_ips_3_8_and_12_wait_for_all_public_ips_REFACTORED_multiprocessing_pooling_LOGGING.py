@@ -59,6 +59,7 @@ import time
 import psutil
 import logging
 import os
+import multiprocessing
 from contextlib import contextmanager
 
 # Setup per process logging
@@ -78,6 +79,7 @@ def setup_logging():
         filename=log_path,
         level=logging.INFO,
         format='%(asctime)s - %(process)d - %(message)s'
+        force=True  # Python 3.8+ only
     )
     logging.info("Logging initialized in process.")
 
@@ -86,8 +88,6 @@ def setup_logging():
 
     # Print the absolute path to a relative filename (for comparison/debugging)
     print("Absolute path Logging to:", os.path.abspath("benchmark.log"))
-
-
 
 
 
@@ -293,6 +293,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #### This calls the new setup_logging() global function above for per process benchmark logging of the multi-threading
     ####  done by the ThreadPoolExecutor below
     setup_logging()
+    logging.info("Test log entry to ensure file is created.")
 
 
 
