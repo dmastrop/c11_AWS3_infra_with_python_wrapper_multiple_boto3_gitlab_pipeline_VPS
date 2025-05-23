@@ -40,6 +40,59 @@ def run_module(module_script_path):
     logging.critical(f"Completed module script: {module_script_path}")
 
 
+
+
+
+
+
+#### This block of code is for the benchmarking wrapper function the the ThreadPoolExecutor in tomcat_worker() function
+#### below. This has the run_test() function that is used in it as well as the  benchmark() function that run_test
+#### requires to run specific benchmarks on the ThreadPoolExecutor
+#### These functions need to be accessible globally in this module.
+#### This is using a custom contextmanager as defined below with yield split as below.
+import time
+import psutil
+import logging
+from contextlib import contextmanager
+
+# Setup logging
+logging.basicConfig(filename='benchmark.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+@contextmanager
+def benchmark(test_name):
+    process = psutil.Process()
+    start_time = time.time()
+    start_swap = psutil.swap_memory().used / (1024 ** 3)
+    start_cpu = process.cpu_percent(interval=1)
+
+    logging.info(f"START: {test_name}")
+    logging.info(f"Initial swap usage: {start_swap:.2f} GB")
+    logging.info(f"Initial CPU usage: {start_cpu:.2f}%")
+
+    yield
+
+    end_time = time.time()
+    end_swap = psutil.swap_memory().used / (1024 ** 3)
+    end_cpu = process.cpu_percent(interval=1)
+
+    logging.info(f"END: {test_name}")
+    logging.info(f"Final swap usage: {end_swap:.2f} GB")
+    logging.info(f"Final CPU usage: {end_cpu:.2f}%")
+    logging.info(f"Total runtime: {end_time - start_time:.2f} seconds\n")
+
+def run_test(test_name, func, *args, **kwargs):
+    with benchmark(test_name):
+        func(*args, **kwargs)
+
+
+
+
+
+
+
+
+
+
 ## Add this helper function for the describe_instance_status as the DescribeInstanceStatus method can only handle
 ## 100 at a time. Need this to test the 100+ use case
 def describe_instances_in_batches(ec2_client, instance_ids):
@@ -49,6 +102,10 @@ def describe_instances_in_batches(ec2_client, instance_ids):
         response = ec2_client.describe_instance_status(InstanceIds=batch, IncludeAllInstances=True)
         all_statuses.extend(response['InstanceStatuses'])
     return all_statuses
+
+
+
+
 
 
 
@@ -95,6 +152,10 @@ def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, 
         delay = min(delay * 2, 30)  # exponential backoff with a max delay of 30 seconds
 
     raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
+
+
+
+
 
 
 
@@ -422,38 +483,75 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-## USE instance_info instead of instance_ips within tomcat_worker for the pooling mulit-processing
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
 
 
 
-## comment out this next block temporarily to disable multi-threading completely
-### USE THIS for the non-pooling multi-processing case
+
+#### COMMENT OUT THIS ENTIRE BLOCK and REPLACE with a Benchmarking wrapper below. The code below is the exact same
+#### but just wrapped in benchmarking code for the multi-threading
+#
+### USE instance_info instead of instance_ips within tomcat_worker for the pooling mulit-processing
 #    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-#        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+#        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+#
+#
+#
+### comment out this next block temporarily to disable multi-threading completely
+#### USE THIS for the non-pooling multi-processing case
+##    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+##        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+##
+#
+#
+#
+## with max_workers = 6
+##    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+##        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+#
+#
+## with max_workers=50
+#   #with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
+#        #futures = [executor.submit(install_tomcat, ip, private_ip, instance_id) for ip, private_ip, instance_id in zip(public_ips, private_ips, instance_ids)]
+#        
+#
+#        for future in as_completed(futures):
+#            ip, private_ip, result = future.result()
+#            if result:
+#                successful_ips.append(ip)
+#                successful_private_ips.append(private_ip)
+#            else:
+#                failed_ips.append(ip)
+#                failed_private_ips.append(private_ip)
 #
 
 
 
-# with max_workers = 6
-#    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-#        futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
 
 
-# with max_workers=50
-   #with ThreadPoolExecutor(max_workers=len(public_ips)) as executor:
-        #futures = [executor.submit(install_tomcat, ip, private_ip, instance_id) for ip, private_ip, instance_id in zip(public_ips, private_ips, instance_ids)]
-        
+    ### This is the wrapped multi-threading code for benchmarking statistics
+    ### Make sure to indent this within the tomcat_worker function!
+    def threaded_install():
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
 
-        for future in as_completed(futures):
-            ip, private_ip, result = future.result()
-            if result:
-                successful_ips.append(ip)
-                successful_private_ips.append(private_ip)
-            else:
-                failed_ips.append(ip)
-                failed_private_ips.append(private_ip)
+            for future in as_completed(futures):
+                ip, private_ip, result = future.result()
+                if result:
+                    successful_ips.append(ip)
+                    successful_private_ips.append(private_ip)
+                else:
+                    failed_ips.append(ip)
+                    failed_private_ips.append(private_ip)
+
+    ### The run_test is defined outside of the function at the top of this module.  The run_test will in turn call benchmark
+    ### function to run the specific benchmarks on the multi-threading ThreadPoolExecutor that the process is executing on
+    ### the chunk of chunk_size
+    ### the run_test is not indented inside of tomcat_worker function!
+    run_test("Tomcat Installation Threaded", threaded_install)
+
+
+
+
 
 
     if successful_ips:
