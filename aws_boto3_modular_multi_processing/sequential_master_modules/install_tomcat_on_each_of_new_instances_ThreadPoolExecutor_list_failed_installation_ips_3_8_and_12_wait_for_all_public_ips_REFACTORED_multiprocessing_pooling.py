@@ -70,14 +70,29 @@ from contextlib import contextmanager
 # docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
 # can get the artifact for this pipeline as benchmark.log
 
-os.makedirs("/aws_EC2/logs", exist_ok=True)
+#os.makedirs("/aws_EC2/logs", exist_ok=True)
+#
+#logging.basicConfig(
+#    filename='/aws_EC2/logs/benchmark.log',
+#    level=logging.INFO,
+#    format='%(asctime)s - %(message)s'
+#)
+#
+
+
+# try this:
+
+log_path = '/aws_EC2/logs/benchmark.log'
+os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 logging.basicConfig(
-    filename='/aws_EC2/logs/benchmark.log',
+    filename=log_path,
     level=logging.INFO,
     format='%(asctime)s - %(message)s'
 )
 
+# Print the actual path to the log file
+print("Logging to:", os.path.realpath(log_path))
 
 
 # Print the absolute path to the log file. This is the full path on the container that is executing this.
@@ -85,6 +100,10 @@ logging.basicConfig(
 # it will be aws_EC2/log/benchmark.log which is mounted now to the gitlab working directory/logs for pipeline
 # artifact
 print("Logging to:", os.path.abspath("benchmark.log"))
+
+# Print the contents of `/aws_EC2/logs` at the end of your script
+print("Contents of /aws_EC2/logs:")
+print(os.listdir("/aws_EC2/logs"))
 
 
 

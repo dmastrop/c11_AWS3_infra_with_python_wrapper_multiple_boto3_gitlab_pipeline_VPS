@@ -68,15 +68,15 @@ deploy:
 
 
 
-
       # use this one for the multiprocessing Dockerfile. This mounts to the WORKDIR on the container so that
       # the gitlab pipeline can get the artifact from the $CI_PROJECT_DIR of the gitlab repo
       # The artifact path is specified below relative to the gitlab project directory
   script:
     - mkdir -p logs
     - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
-    - echo "Contents of logs directory:"
-    - ls -l logs
+    - echo "Contents of logs directory after container run:"
+    - ls -l logs/
+    - cat logs/benchmark.log || echo "Log file not found"
 
   artifacts:
     paths:
