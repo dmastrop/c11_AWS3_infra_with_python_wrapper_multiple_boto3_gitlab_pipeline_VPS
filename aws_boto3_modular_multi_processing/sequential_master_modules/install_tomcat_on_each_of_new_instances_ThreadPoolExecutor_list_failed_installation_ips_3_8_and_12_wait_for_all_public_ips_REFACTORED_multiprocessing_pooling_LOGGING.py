@@ -61,51 +61,37 @@ import logging
 import os
 from contextlib import contextmanager
 
-# Setup logging
+# Setup per process logging
+# This needs to be run for each process, i.e. each process call to tomcat_worker below. 
+# This function will be used in tomcat_worker per process when the ThreadPoolExecutor chunk is run
 
-#logging.basicConfig(filename='benchmark.log', level=logging.INFO, format='%(asctime)s - %(message)s')
-
-# Replace the above with the filename below. The .gitlab-ci.yml deploy now runs the docker container to mount
+#The .gitlab-ci.yml deploy now runs the docker container to mount
 # aws_EC2/logs/benchmark.log to the gitlab_project_directory/logs/benchmark.log, so need to create this directory in the 
 # docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
 # can get the artifact for this pipeline as benchmark.log
+def setup_logging():
+    pid = multiprocessing.current_process().pid
+    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
-#os.makedirs("/aws_EC2/logs", exist_ok=True)
-#
-#logging.basicConfig(
-#    filename='/aws_EC2/logs/benchmark.log',
-#    level=logging.INFO,
-#    format='%(asctime)s - %(message)s'
-#)
-#
+    logging.basicConfig(
+        filename=log_path,
+        level=logging.INFO,
+        format='%(asctime)s - %(process)d - %(message)s'
+    )
+    logging.info("Logging initialized in process.")
 
+    # Print the actual path to the log file
+    print("Real path Logging to:", os.path.realpath(log_path))
 
-# try this:
-
-log_path = '/aws_EC2/logs/benchmark.log'
-os.makedirs(os.path.dirname(log_path), exist_ok=True)
-
-logging.basicConfig(
-    filename=log_path,
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s'
-)
-
-# Print the actual path to the log file
-print("Logging to actual real path:", os.path.realpath(log_path))
+    # Print the absolute path to a relative filename (for comparison/debugging)
+    print("Absolute path Logging to:", os.path.abspath("benchmark.log"))
 
 
-# Print the absolute path to the log file. This is the full path on the container that is executing this.
-# It should be WORKDIR/benchmark.log or aws_EC2/benchmark.log originally and after the change above
-# it will be aws_EC2/log/benchmark.log which is mounted now to the gitlab working directory/logs for pipeline
-# artifact
-print("Logging to absolute path:", os.path.abspath("benchmark.log"))
-
-# Print the contents of `/aws_EC2/logs` at the end of your script
-print("FIRST Contents of /aws_EC2/logs:")
-print(os.listdir("/aws_EC2/logs"))
 
 
+
+# with this multi-process logging add the pid to the print logs to make things clearer
 
 @contextmanager
 def benchmark(test_name):
@@ -114,9 +100,10 @@ def benchmark(test_name):
     start_swap = psutil.swap_memory().used / (1024 ** 3)
     start_cpu = process.cpu_percent(interval=1)
 
-    logging.info(f"START: {test_name}")
-    logging.info(f"Initial swap usage: {start_swap:.2f} GB")
-    logging.info(f"Initial CPU usage: {start_cpu:.2f}%")
+    pid = multiprocessing.current_process().pid
+    logging.info(f"[PID {pid}] START: {test_name}")
+    logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
 
     yield
 
@@ -124,10 +111,10 @@ def benchmark(test_name):
     end_swap = psutil.swap_memory().used / (1024 ** 3)
     end_cpu = process.cpu_percent(interval=1)
 
-    logging.info(f"END: {test_name}")
-    logging.info(f"Final swap usage: {end_swap:.2f} GB")
-    logging.info(f"Final CPU usage: {end_cpu:.2f}%")
-    logging.info(f"Total runtime: {end_time - start_time:.2f} seconds\n")
+    logging.info(f"[PID {pid}] END: {test_name}")
+    logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
+    logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
 
 def run_test(test_name, func, *args, **kwargs):
     with benchmark(test_name):
@@ -302,6 +289,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     from dotenv import load_dotenv
 
     load_dotenv()
+
+    #### This calls the new setup_logging() global function above for per process benchmark logging of the multi-threading
+    ####  done by the ThreadPoolExecutor below
+    setup_logging()
+
+
 
     aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -598,9 +591,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ### the run_test is not indented inside of tomcat_worker function!
     run_test("Tomcat Installation Threaded", threaded_install)
 
-    ### Add the verification of the location of the benchmark.log file location on the container
-    # Print the contents of `/aws_EC2/logs` at the end of your script. <<<<need to move this to below:
-    print("SECOND Contents of /aws_EC2/logs:")
+    ### Add the verification of the location of the benchmark file location on the container
+    # Print the contents of `/aws_EC2/logs`. The filename will be unique tagged with the pid of the process for
+    # each process
+    print("PER PROCESS Contents of /aws_EC2/logs:")
     print(os.listdir("/aws_EC2/logs"))
 
 
