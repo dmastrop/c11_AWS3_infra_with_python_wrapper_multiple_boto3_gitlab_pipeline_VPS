@@ -71,22 +71,50 @@ deploy:
       # use this one for the multiprocessing Dockerfile. This mounts to the WORKDIR on the container so that
       # the gitlab pipeline can get the artifact from the $CI_PROJECT_DIR of the gitlab repo
       # The artifact path is specified below relative to the gitlab project directory
+      # Refer to teh python module2 to see the per process logging setup to benchmark the multi-threading operations
+      # in each process
+      #
   script:
-    - mkdir -p logs
-    - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
-    - echo "Contents of logs directory after container run:"
-    - ls -l logs/
-    - cat logs/benchmark.log || echo "Log file not found"
-
-  artifacts:
-    paths:
-      - logs/benchmark.log
-    expire_in: 1 week
-  allow_failure: true
-  only:
-    - main
+  - mkdir -p logs
+  - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+  - echo "Contents of logs directory after container run:"
+  - ls -l logs/
+  - |
+    for f in logs/benchmark_*.log; do
+      echo "===== $f =====" >> logs/benchmark_combined.log
+      cat "$f" >> logs/benchmark_combined.log
+      echo "" >> logs/benchmark_combined.log
+    done
 
 
+artifacts:
+  paths:
+    - logs/
+    - logs/benchmark_combined.log
+  expire_in: 1 week
+
+allow_failure: true
+only:
+  - main
+
+
+    #script:
+    #  - mkdir -p logs
+    #  - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+    #  - echo "Contents of logs directory after container run:"
+    #  - ls -l logs/
+    #  - cat logs/benchmark_*.log > logs/benchmark_combined.log
+    #
+    #artifacts:
+    #  paths:
+    #    - logs/
+    #    - logs/benchmark_combined.log
+    #  expire_in: 1 week
+    #
+    #allow_failure: true
+    #only:
+    #  - main
+    #
 
 
 
