@@ -26,7 +26,12 @@ import sys
 
 
 
-logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
+
+
+# COMMENT this out for now so that i can test the benchmark.log artifact below
+# will do a dual logger later to accomodate this.
+
+#logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
 
 
 
