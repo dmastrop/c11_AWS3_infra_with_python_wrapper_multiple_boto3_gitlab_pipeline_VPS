@@ -78,7 +78,7 @@ def setup_logging():
     logging.basicConfig(
         filename=log_path,
         level=logging.INFO,
-        format='%(asctime)s - %(process)d - %(message)s'
+        format='%(asctime)s - %(process)d - %(message)s',
         force=True  # Python 3.8+ only
     )
     logging.info("Logging initialized in process.")
