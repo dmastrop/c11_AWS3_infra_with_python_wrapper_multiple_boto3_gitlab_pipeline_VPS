@@ -75,27 +75,27 @@ deploy:
       # in each process
       #
   script:
-  - mkdir -p logs
-  - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
-  - echo "Contents of logs directory after container run:"
-  - ls -l logs/
-  - |
-    for f in logs/benchmark_*.log; do
-      echo "===== $f =====" >> logs/benchmark_combined.log
-      cat "$f" >> logs/benchmark_combined.log
-      echo "" >> logs/benchmark_combined.log
-    done
+    - mkdir -p logs
+    - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+    - echo "Contents of logs directory after container run:"
+    - ls -l logs/
+    - |
+      for f in logs/benchmark_*.log; do
+        echo "===== $f =====" >> logs/benchmark_combined.log
+        cat "$f" >> logs/benchmark_combined.log
+        echo "" >> logs/benchmark_combined.log
+      done
 
 
-artifacts:
-  paths:
-    - logs/
-    - logs/benchmark_combined.log
-  expire_in: 1 week
+  artifacts:
+    paths:
+      - logs/
+      - logs/benchmark_combined.log
+    expire_in: 1 week
 
-allow_failure: true
-only:
-  - main
+  allow_failure: true
+  only:
+    - main
 
 
     #script:
