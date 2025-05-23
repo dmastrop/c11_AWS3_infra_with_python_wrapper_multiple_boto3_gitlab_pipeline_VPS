@@ -53,10 +53,17 @@ def run_module(module_script_path):
 import time
 import psutil
 import logging
+import os
 from contextlib import contextmanager
 
 # Setup logging
 logging.basicConfig(filename='benchmark.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+
+# Print the absolute path to the log file
+print("Logging to:", os.path.abspath("benchmark.log"))
+
+
 
 @contextmanager
 def benchmark(test_name):
