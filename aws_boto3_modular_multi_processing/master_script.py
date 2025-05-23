@@ -71,12 +71,16 @@ def restart_ec_multiple_instances():
 
 
 
-####### TTHIS IS THE REFACTORED MODULE2 SCRIPT FOR POOLING WITH THE MULTIPROCESSING TO HANDLE HYPER-SCALING
+######## THIS IS THE REFACTORED MODULE2 SCRIPT FOR POOLING WITH THE MULTIPROCESSING TO HANDLE HYPER-SCALING
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling.py")
+#
+
+
+
+####### THIS IS THE MODULE2 SCRIPT WITH BENCHMARK LOGGING PER PROCESS (multi-threading benchmarking)
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling.py")
-
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling_LOGGING.py")
 
 
 ## modules 3-11:
