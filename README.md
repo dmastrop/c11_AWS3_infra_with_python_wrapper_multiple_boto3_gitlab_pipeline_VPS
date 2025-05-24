@@ -158,6 +158,60 @@ def run_test(test_name, func, *args, sample_interval=60, **kwargs):
 ```
 
 
+Model 3 of the sampler: randomize a period of 50 to 250 seconds in which to take a single sample per process. This will minimize the probability of sample collisions that were slowing down the runtime of the tests.  The modified code is below:
+
+
+```
+import random
+def sample_metrics_once_after_random_delay(pid, delay):
+    time.sleep(delay)
+    process = psutil.Process()
+    cpu = process.cpu_percent(interval=None)
+    swap = psutil.swap_memory().used / (1024 ** 3)
+    logging.info(f"[PID {pid}] Random-sample CPU usage: {cpu:.2f}% after {delay:.1f}s")
+    logging.info(f"[PID {pid}] Random-sample swap usage: {swap:.2f} GB")
+
+@contextmanager
+def benchmark(test_name, sample_delay):
+    process = psutil.Process()
+    start_time = time.time()
+    start_swap = psutil.swap_memory().used / (1024 ** 3)
+    start_cpu = process.cpu_percent(interval=1)
+
+    pid = multiprocessing.current_process().pid
+    logging.info(f"[PID {pid}] START: {test_name}")
+    logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
+
+    sampler_thread = threading.Thread(
+        target=sample_metrics_once_after_random_delay,
+        args=(pid, sample_delay)
+    )
+    sampler_thread.start()
+
+    try:
+        yield
+   finally:
+        sampler_thread.join()
+
+        end_time = time.time()
+        end_swap = psutil.swap_memory().used / (1024 ** 3)
+        end_cpu = process.cpu_percent(interval=1)
+
+        logging.info(f"[PID {pid}] END: {test_name}")
+        logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+        logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
+        logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
+
+def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, **kwargs):
+    delay = random.uniform(min_sample_delay, max_sample_delay)
+    with benchmark(test_name, sample_delay=delay):
+        func(*args, **kwargs)
+```
+
+
+
+
 
 
 
