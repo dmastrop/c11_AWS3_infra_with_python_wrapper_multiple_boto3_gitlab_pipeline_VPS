@@ -109,7 +109,49 @@ This was enhanced with a periodic sampler for CPU and swamp memory to the output
 
 This logging will be used to access performance with the hyper-scaling cases of multi-processing when the desired_count ismehthodically increased.
 
+
+Model 1: Mult-process logging without sampling
+
+```
+@contextmanager
+def benchmark(test_name):
+    process = psutil.Process()
+    start_time = time.time()
+    start_swap = psutil.swap_memory().used / (1024 ** 3)
+    start_cpu = process.cpu_percent(interval=1)
+
+    pid = multiprocessing.current_process().pid
+    logging.info(f"[PID {pid}] START: {test_name}")
+    logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
+
+    yield
+
+    end_time = time.time()
+    end_swap = psutil.swap_memory().used / (1024 ** 3)
+    end_cpu = process.cpu_percent(interval=1)
+
+    logging.info(f"[PID {pid}] END: {test_name}")
+    logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
+    logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
+
+def run_test(test_name, func, *args, **kwargs):
+    with benchmark(test_name):
+        func(*args, **kwargs)
+```
+
+
+
+
+
+
+
+Model 2: Multi-process logging with the basic sample code determinisic with fixed interval. 
+This produced a drag on completion time for all of the processes due to sample collisions between the processes
+Writing to a shared mount (docker mount to gitlab workspace) also made the issue worse.
 The sampler code is shown below:
+
 
 ```
 def sample_metrics(stop_event, pid, interval):
@@ -158,8 +200,11 @@ def run_test(test_name, func, *args, sample_interval=60, **kwargs):
 ```
 
 
-Model 3 of the sampler: randomize a period of 50 to 250 seconds in which to take a single sample per process. This will minimize the probability of sample collisions that were slowing down the runtime of the tests.  The modified code is below:
 
+
+
+Model 3 of the sampler: randomize a period of 50 to 250 seconds in which to take a single sample per process. This will minimize the probability of sample collisions that were slowing down the runtime of the tests.  The modified code is below:
+This still had poor performance. 
 
 ```
 import random
@@ -200,6 +245,7 @@ def benchmark(test_name, sample_delay):
 
         logging.info(f"[PID {pid}] END: {test_name}")
         logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+
         logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
         logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
 
@@ -210,8 +256,61 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
 ```
 
 
+Model 4 of the sampler: Combine the randomizer with a randomizer on the processes to sample (10% sample over time)
+This appears to have resolved the sampling contention and will be used for the process hyper-scaling.
+Here is the revised code:
 
+```
+def sample_metrics_once_after_random_delay(pid, delay):
+    time.sleep(delay)
+    process = psutil.Process()
+    cpu = process.cpu_percent(interval=None)
+    swap = psutil.swap_memory().used / (1024 ** 3)
+    logging.info(f"[PID {pid}] Random-sample CPU usage: {cpu:.2f}% after {delay:.1f}s")
+    logging.info(f"[PID {pid}] Random-sample swap usage: {swap:.2f} GB")
 
+@contextmanager
+def benchmark(test_name, sample_delay=None):
+    process = psutil.Process()
+    start_time = time.time()
+    start_swap = psutil.swap_memory().used / (1024 ** 3)
+    start_cpu = process.cpu_percent(interval=1)
+
+    pid = multiprocessing.current_process().pid
+    logging.info(f"[PID {pid}] START: {test_name}")
+    logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
+
+    sampler_thread = None
+    if sample_delay is not None:
+        sampler_thread = threading.Thread(
+            target=sample_metrics_once_after_random_delay,
+            args=(pid, sample_delay)
+        )
+        sampler_thread.start()
+
+    try:
+        yield
+    finally:
+        if sampler_thread:
+            sampler_thread.join()
+
+        end_time = time.time()
+        end_swap = psutil.swap_memory().used / (1024 ** 3)
+        end_cpu = process.cpu_percent(interval=1)
+        logging.info(f"[PID {pid}] END: {test_name}")
+        logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+        logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
+        logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
+
+def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+    delay = None
+    if random.random() < sample_probability:
+        delay = random.uniform(min_sample_delay, max_sample_delay)
+
+    with benchmark(test_name, sample_delay=delay):
+        func(*args, **kwargs)
+```
 
 
 
