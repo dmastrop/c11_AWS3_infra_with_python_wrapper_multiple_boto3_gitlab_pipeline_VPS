@@ -60,11 +60,8 @@ import psutil
 import logging
 import os
 import multiprocessing
+import random
 from contextlib import contextmanager
-
-
-
-
 
 
 
@@ -97,7 +94,7 @@ def setup_logging():
 
 
 
-## with this multi-process logging add the pid to the print logs to make things clearer
+## MODEL 1: with this multi-process logging add the pid to the print logs to make things clearer
 ## This does not have periodic sampling
 #@contextmanager
 #def benchmark(test_name):
@@ -129,21 +126,71 @@ def setup_logging():
 
 
 
-## Add periodic sampling using the sample_metrics thread for CPU and memory usage during the test
-## sampler_thread invokes sample_metrics now within the benchmark function which is called from 
-## run_test through the context manager
-## run_test is invoked by tomcat_worker and calls threaded_install which does the ThreadPoolExecutor on the chunk of data
-def sample_metrics(stop_event, pid, interval):
+### MODEL 2: Add periodic sampling using the sample_metrics thread for CPU and memory usage during the test
+### sampler_thread invokes sample_metrics now within the benchmark function which is called from 
+### run_test through the context manager
+### run_test is invoked by tomcat_worker and calls threaded_install which does the ThreadPoolExecutor on the chunk of data
+#def sample_metrics(stop_event, pid, interval):
+#    process = psutil.Process()
+#    while not stop_event.is_set():
+#        cpu = process.cpu_percent(interval=None)
+#        swap = psutil.swap_memory().used / (1024 ** 3)
+#        logging.info(f"[PID {pid}] Sampled CPU usage: {cpu:.2f}%")
+#        logging.info(f"[PID {pid}] Sampled swap usage: {swap:.2f} GB")
+#        stop_event.wait(interval)
+#
+#@contextmanager
+#def benchmark(test_name, sample_interval=60):
+#    process = psutil.Process()
+#    start_time = time.time()
+#    start_swap = psutil.swap_memory().used / (1024 ** 3)
+#    start_cpu = process.cpu_percent(interval=1)
+#
+#    pid = multiprocessing.current_process().pid
+#    logging.info(f"[PID {pid}] START: {test_name}")
+#    logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
+#    logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
+#
+#    stop_event = threading.Event()
+#    sampler_thread = threading.Thread(target=sample_metrics, args=(stop_event, pid, sample_interval))
+#    sampler_thread.start()
+#
+#    try:
+#        yield
+#    finally:
+#        stop_event.set()
+#        sampler_thread.join()
+#
+#        end_time = time.time()
+#        end_swap = psutil.swap_memory().used / (1024 ** 3)
+#        end_cpu = process.cpu_percent(interval=1)
+#
+#        logging.info(f"[PID {pid}] END: {test_name}")
+#        logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+#        logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
+#        logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
+#
+## set the sample_interval here. Default is 60 seconds
+#def run_test(test_name, func, *args, sample_interval=120, **kwargs):
+#    with benchmark(test_name, sample_interval=sample_interval):
+#        func(*args, **kwargs)
+#
+
+
+## MODEL 3: RANDOMIZED log sampler. The periodic sampler above is inducing sample contention amongst the processes. Use a
+## randomizer to sample once during the process run so that the sampling between the processes will not collide.
+## this will be useful when hyper-scaling the number of processes.
+## Initially start with randomizer between 50  and 250 seconds for 200 slot seconds.  
+def sample_metrics_once_after_random_delay(pid, delay):
+    time.sleep(delay)
     process = psutil.Process()
-    while not stop_event.is_set():
-        cpu = process.cpu_percent(interval=None)
-        swap = psutil.swap_memory().used / (1024 ** 3)
-        logging.info(f"[PID {pid}] Sampled CPU usage: {cpu:.2f}%")
-        logging.info(f"[PID {pid}] Sampled swap usage: {swap:.2f} GB")
-        stop_event.wait(interval)
+    cpu = process.cpu_percent(interval=None)
+    swap = psutil.swap_memory().used / (1024 ** 3)
+    logging.info(f"[PID {pid}] Random-sample CPU usage: {cpu:.2f}% after {delay:.1f}s")
+    logging.info(f"[PID {pid}] Random-sample swap usage: {swap:.2f} GB")
 
 @contextmanager
-def benchmark(test_name, sample_interval=60):
+def benchmark(test_name, sample_delay):
     process = psutil.Process()
     start_time = time.time()
     start_swap = psutil.swap_memory().used / (1024 ** 3)
@@ -154,14 +201,15 @@ def benchmark(test_name, sample_interval=60):
     logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
     logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
 
-    stop_event = threading.Event()
-    sampler_thread = threading.Thread(target=sample_metrics, args=(stop_event, pid, sample_interval))
+    sampler_thread = threading.Thread(
+        target=sample_metrics_once_after_random_delay,
+        args=(pid, sample_delay)
+    )
     sampler_thread.start()
 
     try:
         yield
     finally:
-        stop_event.set()
         sampler_thread.join()
 
         end_time = time.time()
@@ -173,10 +221,11 @@ def benchmark(test_name, sample_interval=60):
         logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
         logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
 
-# set the sample_interval here. Default is 60 seconds
-def run_test(test_name, func, *args, sample_interval=120, **kwargs):
-    with benchmark(test_name, sample_interval=sample_interval):
+def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, **kwargs):
+    delay = random.uniform(min_sample_delay, max_sample_delay)
+    with benchmark(test_name, sample_delay=delay):
         func(*args, **kwargs)
+
 
 
 
