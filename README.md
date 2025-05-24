@@ -1,3 +1,166 @@
+## UPDATES: BENCHMARKING part 7: Advanced logging implementation to collect per process CPU, swap memory, etc during the benchmarking tests
+
+
+The 50 process and 75 process and the 100 process ran fine with the multi-processing pooling and desired_count of 25 (this will be adjusted shortly to optimize). There was no CPU contention or swap memory issues as expected due to the queuing of the test of the processes >25. As expected the time to compelte increased (not linearly).  The 34 process prior took about 8:50 minutes, the 75 process took about 13:20 minutes and the 100 process about 15 minutes.
+
+Next, logging was implemented at the per process level. This involved a lot of code additions, as the setup_logging function needs to be run inside the tomcat_worker prior to running the multi-threading TreadPoolExecutor. There are several functions that are used to accomplish this and the logging is pulled from a mount on the docker container that is running the python script to the mount on the workspace on the gitlab pipeline.   Once this is done the artifacts are pulled into the pipeline and can be easily viewed. The per file process log files are also aggregated into a consolidated file for easy viewing. An example of the per process logging is below:
+
+A key part to getting this to work in multi-processing environment is to use the force below to allow per process logging that is not natively supported in the basic logger.
+
+```
+def setup_logging():
+    pid = multiprocessing.current_process().pid
+    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    # Remove any existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    logging.basicConfig(
+        filename=log_path,
+        level=logging.INFO,
+        format='%(asctime)s - %(process)d - %(message)s',
+        force=True  # Python 3.8+ only
+    )
+```
+
+Sample log output per process is below from the consolidated file:
+
+===== logs/benchmark_10.log =====
+2025-05-23 21:44:43,694 - 10 - Logging initialized in process.
+2025-05-23 21:44:43,694 - 10 - Test log entry to ensure file is created.
+2025-05-23 21:44:46,634 - 10 - [PID 10] START: Tomcat Installation Threaded
+2025-05-23 21:44:46,635 - 10 - [PID 10] Initial swap usage: 3.51 GB
+2025-05-23 21:44:46,635 - 10 - [PID 10] Initial CPU usage: 0.00%
+2025-05-23 21:46:48,880 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:46:48,892 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:46:48,899 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:46:49,339 - 10 - Authentication (publickey) successful!
+2025-05-23 21:46:49,366 - 10 - Authentication (publickey) successful!
+2025-05-23 21:46:49,372 - 10 - Authentication (publickey) successful!
+2025-05-23 21:47:49,812 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:47:50,258 - 10 - Authentication (publickey) successful!
+2025-05-23 21:53:33,827 - 10 - [PID 10] END: Tomcat Installation Threaded
+2025-05-23 21:53:33,827 - 10 - [PID 10] Final swap usage: 3.51 GB
+2025-05-23 21:53:33,827 - 10 - [PID 10] Final CPU usage: 0.00%
+2025-05-23 21:53:33,827 - 10 - [PID 10] Total runtime: 527.19 seconds
+
+
+===== logs/benchmark_11.log =====
+2025-05-23 21:44:43,694 - 11 - Logging initialized in process.
+2025-05-23 21:44:43,694 - 11 - Test log entry to ensure file is created.
+2025-05-23 21:44:46,539 - 11 - [PID 11] START: Tomcat Installation Threaded
+2025-05-23 21:44:46,539 - 11 - [PID 11] Initial swap usage: 3.51 GB
+2025-05-23 21:44:46,539 - 11 - [PID 11] Initial CPU usage: 0.00%
+2025-05-23 21:46:48,658 - 11 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:46:48,673 - 11 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:46:49,099 - 11 - Authentication (publickey) successful!
+2025-05-23 21:46:49,136 - 11 - Authentication (publickey) successful!
+2025-05-23 21:47:49,427 - 11 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:47:49,449 - 11 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 21:47:49,872 - 11 - Authentication (publickey) successful!
+2025-05-23 21:47:49,914 - 11 - Authentication (publickey) successful!
+2025-05-23 21:53:50,175 - 11 - [PID 11] END: Tomcat Installation Threaded
+2025-05-23 21:53:50,175 - 11 - [PID 11] Final swap usage: 3.51 GB
+2025-05-23 21:53:50,175 - 11 - [PID 11] Final CPU usage: 0.00%
+2025-05-23 21:53:50,175 - 11 - [PID 11] Total runtime: 543.64 seconds
+
+This was enhanced with a periodic sampler for CPU and swamp memory to the output below (sampling rate of 60 seconds default), but as shown this had a noticable drag on the total runtime of about 50-150 seconds:
+
+===== logs/benchmark_10.log =====
+2025-05-23 23:53:07,972 - 10 - Logging initialized in process.
+2025-05-23 23:53:07,973 - 10 - Test log entry to ensure file is created.
+2025-05-23 23:53:10,665 - 10 - [PID 10] START: Tomcat Installation Threaded
+2025-05-23 23:53:10,665 - 10 - [PID 10] Initial swap usage: 3.47 GB
+2025-05-23 23:53:10,665 - 10 - [PID 10] Initial CPU usage: 0.00%
+2025-05-23 23:53:10,670 - 10 - [PID 10] Sampled CPU usage: 0.00%
+2025-05-23 23:53:10,670 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-23 23:54:10,671 - 10 - [PID 10] Sampled CPU usage: 0.40%
+2025-05-23 23:54:10,671 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-23 23:54:52,722 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 23:54:52,796 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 23:54:52,828 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 23:54:53,550 - 10 - Authentication (publickey) successful!
+2025-05-23 23:54:53,678 - 10 - Authentication (publickey) successful!
+2025-05-23 23:54:53,825 - 10 - Authentication (publickey) successful!
+2025-05-23 23:55:10,671 - 10 - [PID 10] Sampled CPU usage: 0.40%
+2025-05-23 23:55:10,671 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-23 23:55:53,264 - 10 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-05-23 23:55:53,710 - 10 - Authentication (publickey) successful!
+2025-05-23 23:56:10,678 - 10 - [PID 10] Sampled CPU usage: 0.30%
+2025-05-23 23:56:10,678 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-23 23:57:10,679 - 10 - [PID 10] Sampled CPU usage: 0.20%
+2025-05-23 23:57:10,679 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-23 23:58:10,679 - 10 - [PID 10] Sampled CPU usage: 0.30%
+2025-05-23 23:58:10,680 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-23 23:59:10,680 - 10 - [PID 10] Sampled CPU usage: 0.30%
+2025-05-23 23:59:10,680 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-24 00:00:10,681 - 10 - [PID 10] Sampled CPU usage: 0.40%
+2025-05-24 00:00:10,681 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-24 00:01:10,681 - 10 - [PID 10] Sampled CPU usage: 0.20%
+2025-05-24 00:01:10,681 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-24 00:02:10,682 - 10 - [PID 10] Sampled CPU usage: 0.20%
+2025-05-24 00:02:10,682 - 10 - [PID 10] Sampled swap usage: 3.47 GB
+2025-05-24 00:02:59,123 - 10 - [PID 10] END: Tomcat Installation Threaded
+2025-05-24 00:02:59,123 - 10 - [PID 10] Final swap usage: 3.47 GB
+2025-05-24 00:02:59,123 - 10 - [PID 10] Final CPU usage: 0.00%
+2025-05-24 00:02:59,123 - 10 - [PID 10] Total runtime: 588.46 seconds
+
+This logging will be used to access performance with the hyper-scaling cases of multi-processing when the desired_count ismehthodically increased.
+
+The sampler code is shown below:
+
+```
+def sample_metrics(stop_event, pid, interval):
+    process = psutil.Process()
+    while not stop_event.is_set():
+        cpu = process.cpu_percent(interval=None)
+        swap = psutil.swap_memory().used / (1024 ** 3)
+        logging.info(f"[PID {pid}] Sampled CPU usage: {cpu:.2f}%")
+        logging.info(f"[PID {pid}] Sampled swap usage: {swap:.2f} GB")
+        stop_event.wait(interval)
+@contextmanager
+def benchmark(test_name, sample_interval=60):
+    process = psutil.Process()
+    start_time = time.time()
+    start_swap = psutil.swap_memory().used / (1024 ** 3)
+    start_cpu = process.cpu_percent(interval=1)
+
+    pid = multiprocessing.current_process().pid
+    logging.info(f"[PID {pid}] START: {test_name}")
+    logging.info(f"[PID {pid}] Initial swap usage: {start_swap:.2f} GB")
+    logging.info(f"[PID {pid}] Initial CPU usage: {start_cpu:.2f}%")
+
+    stop_event = threading.Event()
+    sampler_thread = threading.Thread(target=sample_metrics, args=(stop_event, pid, sample_interval))
+    sampler_thread.start()
+
+    try:
+        yield
+    finally:
+       stop_event.set()
+        sampler_thread.join()
+
+        end_time = time.time()
+        end_swap = psutil.swap_memory().used / (1024 ** 3)
+        end_cpu = process.cpu_percent(interval=1)
+
+        logging.info(f"[PID {pid}] END: {test_name}")
+        logging.info(f"[PID {pid}] Final swap usage: {end_swap:.2f} GB")
+        logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
+        logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
+
+# set the sample_interval here. Default is 60 seconds
+def run_test(test_name, func, *args, sample_interval=60, **kwargs):
+    with benchmark(test_name, sample_interval=sample_interval):
+        func(*args, **kwargs)
+```
+
+
+
+
+
 ## UPDATES: BENCHMARKING part 6: testing the multi-processing hyper-scaling with the pooling code
 
 Initial tests look very good. The problematic process count > 25 where there were installation failures is not occuring withe process pooling. 
