@@ -1,3 +1,37 @@
+## UPDATES: BENCHMARKING part 8: Multi-processing logging for the pooled/queued processes as well. 
+
+The new code addtions are below and will produce logs for the pooled processes as well now:
+
+```
+## The various models for the per process logging are further down below. With model4 there is still an issue with
+## multi-processing pooling whereby the queued processes(pooled) are not getting a log file. This is because of
+## process re-use by the multiprocessing pooler. The fix involves:
+# Wrap the tomcat_worker and use the wrap function tomcat_worker from the main() call to tomcat_worker as tomcat_worker_wrapper
+# - `tomcat_worker_wrapper()` is called **for every task**, even if the process is reused.
+# - `setup_logging()` is guaranteed to run at the start of each task, ensuring a fresh log file is created for each process execution.
+# - Since using `force=True` in `basicConfig()`, it will override any previous logging config in that process.
+
+def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers):
+    setup_logging()  # Ensure logging is reconfigured for each task
+    return tomcat_worker(instance_info, security_group_ids, max_workers)
+```
+
+
+```
+## and in main()
+    # wrap the tomcat_worker in the tomcat_worker_wrapper function (defined at top of file as helper) to fix
+    # the problem with the pooled/queued processes not getting their own log file for the multi-processing logging
+    # code
+    with multiprocessing.Pool(processes=desired_count) as pool:
+        pool.starmap(tomcat_worker_wrapper, args_list)
+```
+
+
+
+
+
+
+
 ## UPDATES: BENCHMARKING part 7: Advanced logging implementation to collect per process CPU, swap memory, etc during the benchmarking tests
 
 
