@@ -910,8 +910,9 @@ def main():
     # call to the multiprocessing.Pool which calls tomcat_worker function above to process the chunk data of IPs with
     # max_workker threads. chunk_size number of IPs will be in the chunk passed to tomcat_worker
     
-    with multiprocessing.Pool(processes=desired_count) as pool:
-        pool.starmap(tomcat_worker, args_list)
+#    with multiprocessing.Pool(processes=desired_count) as pool:
+#        pool.starmap(tomcat_worker, args_list)
+#
 
 
     # wrap the tomcat_worker in the tomcat_worker_wrapper function (defined at top of file as helper) to fix
