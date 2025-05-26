@@ -63,7 +63,7 @@ import multiprocessing
 import random
 from contextlib import contextmanager
 import uuid
-
+from io import StringIO
 
 # Setup per process logging
 # This needs to be run for each process, i.e. each process call to tomcat_worker below. 
@@ -73,31 +73,66 @@ import uuid
 # aws_EC2/logs/benchmark.log to the gitlab_project_directory/logs/benchmark.log, so need to create this directory in the 
 # docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
 # can get the artifact for this pipeline as benchmark.log
-def setup_logging():
-#    pid = multiprocessing.current_process().pid
-#    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
-#    os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
+#def setup_logging():
+##    pid = multiprocessing.current_process().pid
+##    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
+##    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+#
+#    pid = multiprocessing.current_process().pid
+#    unique_id = uuid.uuid4().hex[:8]
+#    log_path = f'/aws_EC2/logs/benchmark_{pid}_{unique_id}.log'
+#    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+#    print(f"[DEBUG] Setting up logging for PID {pid} with unique ID {unique_id} at {log_path}")
+#
+#
+#    logging.basicConfig(
+#        filename=log_path,
+#        level=logging.INFO,
+#        format='%(asctime)s - %(process)d - %(message)s',
+#        force=True  # Python 3.8+ only
+#    )
+#    #logging.info("Logging initialized in process.")
+#
+#
+
+
+
+
+# ADD buffering to the setup_logging so that in tomcat_worker_wrapper (see further below) we can only create the log
+# file if there is content. This is required since adding the code for distinguishing between the start up processes
+# and the pooled processes with respect to per process logging. Otherwise setup_logging() will create an empty log file
+# for each PID/uuid file combination. make sure to add from io import StringIO to the imports
+# The stream handler has replaced the basicConfig logging and this is better for multi-process logging.
+def setup_logging():
     pid = multiprocessing.current_process().pid
     unique_id = uuid.uuid4().hex[:8]
     log_path = f'/aws_EC2/logs/benchmark_{pid}_{unique_id}.log'
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
     print(f"[DEBUG] Setting up logging for PID {pid} with unique ID {unique_id} at {log_path}")
 
+    # Create a memory buffer for logging
+    log_buffer = StringIO()
+    buffer_handler = logging.StreamHandler(log_buffer)
+    formatter = logging.Formatter('%(asctime)s - %(process)d - %(message)s')
+    buffer_handler.setFormatter(formatter)
 
-    logging.basicConfig(
-        filename=log_path,
-        level=logging.INFO,
-        format='%(asctime)s - %(process)d - %(message)s',
-        force=True  # Python 3.8+ only
-    )
-    #logging.info("Logging initialized in process.")
+    logger = logging.getLogger()
+    logger.handlers = []  # Clear any existing handlers
+    logger.setLevel(logging.INFO)
+    logger.addHandler(buffer_handler)
+
+    return logger, log_buffer, log_path
+
 
     # Print the actual path to the log file
     print("Real path Logging to:", os.path.realpath(log_path))
 
     # Print the absolute path to a relative filename (for comparison/debugging)
     print("Absolute path Logging to:", os.path.abspath("benchmark.log"))
+
+
 
 
 
@@ -114,11 +149,27 @@ def setup_logging():
 #    return tomcat_worker(instance_info, security_group_ids, max_workers)
 
 
+#def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers):
+#    pid = multiprocessing.current_process().pid
+#    print(f"[DEBUG] Wrapper called for PID {pid}")
+#    setup_logging()
+#    return tomcat_worker(instance_info, security_group_ids, max_workers)
+
+
+# UPDATE the tomcat_worker_wrapper to use the buffer appraoch with the setup_logging() function so that we no longer
+# get empty log files for the PID/uuid files for multi-processing logging with the pooled processes
 def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers):
     pid = multiprocessing.current_process().pid
     print(f"[DEBUG] Wrapper called for PID {pid}")
-    setup_logging()
-    return tomcat_worker(instance_info, security_group_ids, max_workers)
+
+    logger, log_buffer, log_path = setup_logging()
+
+    try:
+        return tomcat_worker(instance_info, security_group_ids, max_workers)
+    finally:
+        if log_buffer.tell() > 0:
+            with open(log_path, 'w') as f:
+                f.write(log_buffer.getvalue())
 
 
 
