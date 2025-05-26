@@ -78,10 +78,10 @@ def restart_ec_multiple_instances():
 
 
 
-####### THIS IS THE MODULE2 SCRIPT WITH BENCHMARK LOGGING PER PROCESS (multi-threading benchmarking)
-#def install_tomcat_on_instances():
-#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling_LOGGING.py")
-#
+####### THIS IS THE MODULE2 SCRIPT WITH BENCHMARK LOGGING PER PROCESS (multi-threading benchmarking) without the wrapper fix
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling_LOGGING.py")
+
 
 
 
@@ -93,9 +93,9 @@ def restart_ec_multiple_instances():
 
 
 ###### THIS IS THE MODLE2 SCRIPT with logging per process, pooled process fix and fix for empty log files
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling_LOGGING_wrapper_buf.py")
-
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_list_failed_installation_ips_3_8_and_12_wait_for_all_public_ips_REFACTORED_multiprocessing_pooling_LOGGING_wrapper_buf.py")
+#
 
 
 
