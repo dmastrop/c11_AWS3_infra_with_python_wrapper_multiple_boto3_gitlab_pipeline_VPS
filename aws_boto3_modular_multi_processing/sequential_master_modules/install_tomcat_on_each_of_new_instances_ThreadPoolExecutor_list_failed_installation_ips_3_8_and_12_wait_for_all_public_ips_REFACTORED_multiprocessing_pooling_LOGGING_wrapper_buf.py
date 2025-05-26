@@ -101,11 +101,22 @@ def setup_logging():
     logging.basicConfig(
         filename=log_path,
         level=logging.INFO,
-        format='%(asctime)s - %(process)d - %(message)s',
+        #format='%(asctime)s - %(process)d - %(message)s',
+        format='%(asctime)s - %(process)d - %(threadName)s - %(message)s'
+
         force=True  # Python 3.8+ only
     )
     #logging.info("Logging initialized in process.")
 
+
+
+
+
+    # Print the actual path to the log file
+    print("Real path Logging to:", os.path.realpath(log_path))
+
+    # Print the absolute path to a relative filename (for comparison/debugging)
+    print("Absolute path Logging to:", os.path.abspath("benchmark.log"))
 
 ## ADD buffering to the setup_logging so that in tomcat_worker_wrapper (see further below) we can only create the log
 ## file if there is content. This is required since adding the code for distinguishing between the start up processes
@@ -133,13 +144,13 @@ def setup_logging():
 #
 #    return logger, log_buffer, log_path
 #
-
-    # Print the actual path to the log file
-    print("Real path Logging to:", os.path.realpath(log_path))
-
-    # Print the absolute path to a relative filename (for comparison/debugging)
-    print("Absolute path Logging to:", os.path.abspath("benchmark.log"))
-
+#
+#    # Print the actual path to the log file
+#    print("Real path Logging to:", os.path.realpath(log_path))
+#
+#    # Print the absolute path to a relative filename (for comparison/debugging)
+#    print("Absolute path Logging to:", os.path.abspath("benchmark.log"))
+#
 
 
 
@@ -537,7 +548,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     #### This calls the new setup_logging() global function above for per process benchmark logging of the multi-threading
     ####  done by the ThreadPoolExecutor below
-    setup_logging()
+    #setup_logging()
+    # comment out the setup_logging() here as it is being called from the tomcat_worker_wrapper function now. 
+    # tomcat_worker_wrapper calls this tomcat_worker 
+    # Try removing setup_logging in the tomcat_worker as it is called already in tomcat_worker_wrapper. This is for the empty log file per process that is being created.
+
     logging.info("Test log entry to ensure file is created.")
 
 
