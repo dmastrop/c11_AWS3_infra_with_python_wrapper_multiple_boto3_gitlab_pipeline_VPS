@@ -74,9 +74,16 @@ from contextlib import contextmanager
 # docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
 # can get the artifact for this pipeline as benchmark.log
 def setup_logging():
+#    pid = multiprocessing.current_process().pid
+#    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
+#    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
     pid = multiprocessing.current_process().pid
-    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
+    unique_id = uuid.uuid4().hex[:8]
+    log_path = f'/aws_EC2/logs/benchmark_{pid}_{unique_id}.log'
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    print(f"[DEBUG] Setting up logging for PID {pid} with unique ID {unique_id} at {log_path}")
+
 
     logging.basicConfig(
         filename=log_path,
@@ -102,11 +109,16 @@ def setup_logging():
 # - `setup_logging()` is guaranteed to run at the start of each task, ensuring a fresh log file is created for each process execution.
 # - Since using `force=True` in `basicConfig()`, it will override any previous logging config in that process.
 
+#def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers):
+#    setup_logging()  # Ensure logging is reconfigured for each task
+#    return tomcat_worker(instance_info, security_group_ids, max_workers)
+
+
 def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers):
-    setup_logging()  # Ensure logging is reconfigured for each task
+    pid = multiprocessing.current_process().pid
+    print(f"[DEBUG] Wrapper called for PID {pid}")
+    setup_logging()
     return tomcat_worker(instance_info, security_group_ids, max_workers)
-
-
 
 
 
