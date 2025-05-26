@@ -102,7 +102,7 @@ def setup_logging():
         filename=log_path,
         level=logging.INFO,
         #format='%(asctime)s - %(process)d - %(message)s',
-        format='%(asctime)s - %(process)d - %(threadName)s - %(message)s'
+        format='%(asctime)s - %(process)d - %(threadName)s - %(message)s',
 
         force=True  # Python 3.8+ only
     )
