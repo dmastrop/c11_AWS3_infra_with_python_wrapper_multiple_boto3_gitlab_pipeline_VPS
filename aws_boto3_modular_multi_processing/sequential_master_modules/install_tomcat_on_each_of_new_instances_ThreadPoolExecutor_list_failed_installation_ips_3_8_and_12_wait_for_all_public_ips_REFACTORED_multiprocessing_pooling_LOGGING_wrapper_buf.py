@@ -74,11 +74,23 @@ from io import StringIO
 # docker container and log to logs/benchmark.org.  This is mapped to gitlab directory/logs and from there gitlab pipeline
 # can get the artifact for this pipeline as benchmark.log
 
-def setup_logging():
-    pid = multiprocessing.current_process().pid
-    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+#def setup_logging():
+#    pid = multiprocessing.current_process().pid
+#    log_path = f'/aws_EC2/logs/benchmark_{pid}.log'
+#    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+#
+#
+#    logging.basicConfig(
+#        filename=log_path,
+#        level=logging.INFO,
+#        format='%(asctime)s - %(process)d - %(message)s',
+#        force=True  # Python 3.8+ only
+#    )
+#    #logging.info("Logging initialized in process.")
 
+
+
+def setup_logging():
     pid = multiprocessing.current_process().pid
     unique_id = uuid.uuid4().hex[:8]
     log_path = f'/aws_EC2/logs/benchmark_{pid}_{unique_id}.log'
@@ -93,10 +105,6 @@ def setup_logging():
         force=True  # Python 3.8+ only
     )
     #logging.info("Logging initialized in process.")
-
-
-
-
 
 
 ## ADD buffering to the setup_logging so that in tomcat_worker_wrapper (see further below) we can only create the log
