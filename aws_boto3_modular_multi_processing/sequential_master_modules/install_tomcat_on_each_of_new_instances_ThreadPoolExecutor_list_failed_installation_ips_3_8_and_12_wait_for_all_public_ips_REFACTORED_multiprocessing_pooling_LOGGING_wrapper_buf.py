@@ -403,7 +403,9 @@ def describe_instances_in_batches(ec2_client, instance_ids):
 
 # NEW1 This is an improvement on wait_for_all_public_ips with exponential backoff and also include private ips and 
 # instance_ids in the array (list of dictionaries) instance_ips like with my original code.
-def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=120):
+
+# With t2.micro increase timeout to 180. With t2.small or t3.small use 120 second timeout
+def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=180):
     """
     Waits for all EC2 instances (excluding the controller) to receive public IPs.
     Uses exponential backoff for retries and includes private IPs in the result.
