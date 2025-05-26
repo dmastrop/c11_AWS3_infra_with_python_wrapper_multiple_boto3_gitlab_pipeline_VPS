@@ -91,7 +91,7 @@ def setup_logging():
         format='%(asctime)s - %(process)d - %(message)s',
         force=True  # Python 3.8+ only
     )
-    logging.info("Logging initialized in process.")
+    #logging.info("Logging initialized in process.")
 
     # Print the actual path to the log file
     print("Real path Logging to:", os.path.realpath(log_path))
