@@ -24,14 +24,46 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import sys
 import uuid
-
-
+import random
+import bootcore.exceptions
+import time
+import psutil
+from contextlib import contextmanager
+from io import StringIO
 
 
 # COMMENT this out for now so that i can test the benchmark.log artifact below
 # will do a dual logger later to accomodate this.
 
 #logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
+
+
+
+## This code is to address the (RequestLimitExceeded) when calling the AuthorizeSecurityGroupIngress operation 
+## Too many API calls are hitting the threshold from AWS. 
+## will need to wrap the calls to authorize_security_group_ingress in this function below that implements
+## exponential backoff as AWS recommends.
+
+def retry_with_backoff(func, max_retries=5, base_delay=1, max_delay=10, *args, **kwargs):
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            if 'RequestLimitExceeded' in str(e):
+                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+            else:
+                raise
+    raise Exception("Max retries exceeded for AWS API call.")
+
+
+
+
+
+
+
+
 
 
 
@@ -55,15 +87,15 @@ def run_module(module_script_path):
 #### requires to run specific benchmarks on the ThreadPoolExecutor
 #### These functions need to be accessible globally in this module.
 #### This is using a custom contextmanager as defined below with yield split as below.
-import time
-import psutil
-import logging
-import os
-import multiprocessing
-import random
-from contextlib import contextmanager
-import uuid
-from io import StringIO
+#import time
+#import psutil
+#import logging
+#import os
+#import multiprocessing
+#import random
+#from contextlib import contextmanager
+#import uuid
+#from io import StringIO
 
 # Setup per process logging
 # This needs to be run for each process, i.e. each process call to tomcat_worker below. 
@@ -597,19 +629,133 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #]
 
 
-    # Add a security group rule to allow access to port 22
+
+
+
+
+
+## Need to wrap these calls to authorize_security_group_ingress with the wrapper function above at top of this file
+## retry_with_backoff() .  This implements an exponential backoff on the API calls to the authorize function
+
+
+
+
+#    # Add a security group rule to allow access to port 22
+#    for sg_id in set(security_group_ids):
+#        try:
+#            my_ec2.authorize_security_group_ingress(
+#                GroupId=sg_id,
+#                IpPermissions=[
+#                    {
+#                        'IpProtocol': 'tcp',
+#                        'FromPort': 22,
+#                        'ToPort': 22,
+#                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+#                    }
+#                ]
+#            )
+#        except my_ec2.exceptions.ClientError as e:
+#            if 'InvalidPermission.Duplicate' in str(e):
+#                print(f"Rule already exists for security group {sg_id}")
+#            else:
+#                raise
+#
+#
+#
+#
+#
+#    # Add a security group rule to allow access to port 80
+#    for sg_id in set(security_group_ids):
+#        try:
+#            my_ec2.authorize_security_group_ingress(
+#                GroupId=sg_id,
+#                IpPermissions=[
+#                    {
+#                        'IpProtocol': 'tcp',
+#                        'FromPort': 80,
+#                        'ToPort': 80,
+#                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+#                    }
+#                ]
+#            )
+#        except my_ec2.exceptions.ClientError as e:
+#            if 'InvalidPermission.Duplicate' in str(e):
+#                print(f"Rule already exists for security group {sg_id}")
+#            else:
+#                raise
+#
+#
+#    # Add a security group rule to allow access to port 8080
+#    for sg_id in set(security_group_ids):
+#        try:
+#            my_ec2.authorize_security_group_ingress(
+#                GroupId=sg_id,
+#                IpPermissions=[
+#                    {
+#                        'IpProtocol': 'tcp',
+#                        'FromPort': 8080,
+#                        'ToPort': 8080,
+#                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+#                    }
+#                ]
+#            )
+#        except my_ec2.exceptions.ClientError as e:
+#            if 'InvalidPermission.Duplicate' in str(e):
+#                print(f"Rule already exists for security group {sg_id}")
+#            else:
+#                raise
+#
+
     for sg_id in set(security_group_ids):
         try:
-            my_ec2.authorize_security_group_ingress(
+            retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
                 GroupId=sg_id,
-                IpPermissions=[
-                    {
-                        'IpProtocol': 'tcp',
-                        'FromPort': 22,
-                        'ToPort': 22,
-                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-                    }
-                ]
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 22,
+                    'ToPort': 22,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+        except my_ec2.exceptions.ClientError as e:
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"Rule already exists for security group {sg_id}")
+            else:
+                raise
+
+
+    for sg_id in set(security_group_ids):
+        try:
+            retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 80,
+                    'ToPort': 80,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+        except my_ec2.exceptions.ClientError as e:
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"Rule already exists for security group {sg_id}")
+            else:
+                raise
+
+
+
+    for sg_id in set(security_group_ids):
+        try:
+            retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 8080,
+                    'ToPort': 8080,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
             )
         except my_ec2.exceptions.ClientError as e:
             if 'InvalidPermission.Duplicate' in str(e):
@@ -621,46 +767,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    # Add a security group rule to allow access to port 80
-    for sg_id in set(security_group_ids):
-        try:
-            my_ec2.authorize_security_group_ingress(
-                GroupId=sg_id,
-                IpPermissions=[
-                    {
-                        'IpProtocol': 'tcp',
-                        'FromPort': 80,
-                        'ToPort': 80,
-                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-                    }
-                ]
-            )
-        except my_ec2.exceptions.ClientError as e:
-            if 'InvalidPermission.Duplicate' in str(e):
-                print(f"Rule already exists for security group {sg_id}")
-            else:
-                raise
-
-
-    # Add a security group rule to allow access to port 8080
-    for sg_id in set(security_group_ids):
-        try:
-            my_ec2.authorize_security_group_ingress(
-                GroupId=sg_id,
-                IpPermissions=[
-                    {
-                        'IpProtocol': 'tcp',
-                        'FromPort': 8080,
-                        'ToPort': 8080,
-                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-                    }
-                ]
-            )
-        except my_ec2.exceptions.ClientError as e:
-            if 'InvalidPermission.Duplicate' in str(e):
-                print(f"Rule already exists for security group {sg_id}")
-            else:
-                raise
 
 
 
