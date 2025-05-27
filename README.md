@@ -183,6 +183,8 @@ def setup_logging():
 
 Sample log output per process is below from the consolidated file:
 
+
+```
 ===== logs/benchmark_10.log =====
 2025-05-23 21:44:43,694 - 10 - Logging initialized in process.
 2025-05-23 21:44:43,694 - 10 - Test log entry to ensure file is created.
@@ -201,8 +203,11 @@ Sample log output per process is below from the consolidated file:
 2025-05-23 21:53:33,827 - 10 - [PID 10] Final swap usage: 3.51 GB
 2025-05-23 21:53:33,827 - 10 - [PID 10] Final CPU usage: 0.00%
 2025-05-23 21:53:33,827 - 10 - [PID 10] Total runtime: 527.19 seconds
+```
 
 
+
+```
 ===== logs/benchmark_11.log =====
 2025-05-23 21:44:43,694 - 11 - Logging initialized in process.
 2025-05-23 21:44:43,694 - 11 - Test log entry to ensure file is created.
@@ -221,9 +226,14 @@ Sample log output per process is below from the consolidated file:
 2025-05-23 21:53:50,175 - 11 - [PID 11] Final swap usage: 3.51 GB
 2025-05-23 21:53:50,175 - 11 - [PID 11] Final CPU usage: 0.00%
 2025-05-23 21:53:50,175 - 11 - [PID 11] Total runtime: 543.64 seconds
+```
 
-This was enhanced with a periodic sampler for CPU and swamp memory to the output below (sampling rate of 60 seconds default), but as shown this had a noticable drag on the total runtime of about 50-150 seconds:
 
+
+
+This was enhanced with a periodic sampler for CPU and swap memory to the output below (sampling rate of 60 seconds default), but as shown this had a noticable drag on the total runtime of about 50-150 seconds:
+
+```
 ===== logs/benchmark_10.log =====
 2025-05-23 23:53:07,972 - 10 - Logging initialized in process.
 2025-05-23 23:53:07,973 - 10 - Test log entry to ensure file is created.
@@ -262,6 +272,9 @@ This was enhanced with a periodic sampler for CPU and swamp memory to the output
 2025-05-24 00:02:59,123 - 10 - [PID 10] Final swap usage: 3.47 GB
 2025-05-24 00:02:59,123 - 10 - [PID 10] Final CPU usage: 0.00%
 2025-05-24 00:02:59,123 - 10 - [PID 10] Total runtime: 588.46 seconds
+```
+
+
 
 This logging will be used to access performance with the hyper-scaling cases of multi-processing when the desired_count ismehthodically increased.
 
