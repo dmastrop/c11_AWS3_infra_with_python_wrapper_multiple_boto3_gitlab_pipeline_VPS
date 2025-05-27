@@ -25,7 +25,7 @@ import json
 import sys
 import uuid
 import random
-import bootcore.exceptions
+import botocore.exceptions
 import time
 import psutil
 from contextlib import contextmanager
