@@ -62,9 +62,22 @@ At 125 desired_count, this effectively disabled process pooling and it will try 
 In this run the RAM is starting to get high. About 12.9GB used of the 16GB. At hyper-scaling levels of 300 or 400 if this becomes a problem then the pooling will definitely help.   The process pooling entire purpose is for hyper-scaling at these levels.
 Record time is 10:24 a large improvement over the 100 desired_count.  Massive improvments over the original setup as well
 No missed installations (all 250/250)
-Logging infra is solidg
+Logging infra is solid
 1 log file per process
 swap is stable at 5 GB.
+
+Execution time summary is below:
+desired_count   execution time in minutes:seconds
+30 → 23:50
+45 → 16:08
+70 → 12:48
+100 → 12:25
+125 → 10:24
+
+So process pooling for these lower process count levels is slowing the process down and we do not need it.
+
+At the higher hyper-scaling process levels the process pooling will come in useful especially in regards to the 
+VPS RAM utilization.
 
 
 
