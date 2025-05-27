@@ -68,11 +68,15 @@ swap is stable at 5 GB.
 
 Execution time summary is below:
 desired_count   execution time in minutes:seconds
+
+```
 30 → 23:50
 45 → 16:08
 70 → 12:48
 100 → 12:25
 125 → 10:24
+```
+
 
 So process pooling for these lower process count levels is slowing the process down and we do not need it.
 
