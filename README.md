@@ -1,3 +1,70 @@
+## UPDATES: BENCHMARKING: part 9: exponential backoff on the authorize_security_group_ingresss
+
+Hitting the AWS API limit on the calls to this function with parallel desired_count of 45 on the processes.
+Wrap the authorize_security_group_ingress in a wrapper function with exponential backoff retry_with_backoff.
+This resolved the 45 desired_count issue and will move up the scaling to higher desired_count on the multi-processing.
+The installation time has decreased from 23:50 mintues with desired_count of 30 to 16 mintues with desired_count of 45. Very large improvement.
+
+This error would manifest itself as aborted scripts and failed tomcat9 installations to many of the EC2 instances. This is  no longer happening even at higher scale levels and higher desired_count levels.
+
+
+The setup consists of 250 EC instances, chunk_size of 2 for 125 processes and max_workers= 2 threads per process.
+
+Two pools are now being created, the one of 45 and then the queued pool of processes of 80
+
+The wrapper function is below:
+```
+def retry_with_backoff(func, max_retries=5, base_delay=1, max_delay=10, *args, **kwargs):
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            if 'RequestLimitExceeded' in str(e):
+                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+            else:
+                raise
+    raise Exception("Max retries exceeded for AWS API call.")
+```
+
+
+
+
+The exponential backoff is being used extensively as shown in the gitlab pipeline console logs:
+
+[Retry 1] RequestLimitExceeded. Retrying in 1.86s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.82s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.04s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.53s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.87s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.97s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.67s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.89s...
+
+
+At 70 desired_count, the CPU is getting a bit more taxed, down to 70-80% idle but the pipeline completed wihtout errors 
+and all 250 instances are installed with tomcat9
+swap is stable as well
+The logging infra solid as well as the random sampling of processes in the process group
+1 log file per process
+Execution time is improving massively:  Record time 12:48 with 70, 23:50 with 30 desired_count and 16:08 with 45 desired count
+
+At 100 desired_count, swap stable at about 5GB of usage.
+There is still improvement in exeuction time but diminishing returns:
+Record time 12:25 with 100,  12:48 with 70, 23:50 with 30 desired_count and 16:08 with 45 desired count
+No missed installations
+Loging infra is solid
+
+
+At 125 desired_count, this effectively disabled process pooling and it will try to run this without any pooling queue for the processes. The CPU will be taxed more.
+
+
+
+
+
+
+
 ## UPDATES: BENCHMARKING part 8: Multi-processing logging for the pooled/queued processes as well. 
 
 The new code additions are below and will produce logs for the pooled processes as well now:
