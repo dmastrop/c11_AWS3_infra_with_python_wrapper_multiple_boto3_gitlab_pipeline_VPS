@@ -54,12 +54,17 @@ At 100 desired_count, swap stable at about 5GB of usage.
 There is still improvement in exeuction time but diminishing returns:
 Record time 12:25 with 100,  12:48 with 70, 23:50 with 30 desired_count and 16:08 with 45 desired count
 No missed installations
-Loging infra is solid
+Logging infra is solid
+1 log file per process
 
 
 At 125 desired_count, this effectively disabled process pooling and it will try to run this without any pooling queue for the processes. The CPU will be taxed more.
-
-
+In this run the RAM is starting to get high. About 12.9GB used of the 16GB. At hyper-scaling levels of 300 or 400 if this becomes a problem then the pooling will definitely help.   The process pooling entire purpose is for hyper-scaling at these levels.
+Record time is 10:24 a large improvement over the 100 desired_count.  Massive improvments over the original setup as well
+No missed installations (all 250/250)
+Logging infra is solidg
+1 log file per process
+swap is stable at 5 GB.
 
 
 
