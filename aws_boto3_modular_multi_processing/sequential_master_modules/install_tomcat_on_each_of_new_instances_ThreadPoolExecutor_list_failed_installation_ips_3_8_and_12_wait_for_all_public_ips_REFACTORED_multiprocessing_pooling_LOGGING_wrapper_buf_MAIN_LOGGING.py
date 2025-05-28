@@ -1159,13 +1159,13 @@ def main():
     # the problem with the pooled/queued processes not getting their own log file for the multi-processing logging
     # code
 
-#    logger.info("[MAIN] Starting multiprocessing pool...")
-#    with multiprocessing.Pool(processes=desired_count) as pool:
-#        pool.starmap(tomcat_worker_wrapper, args_list)
-#
-#    logger.info("[MAIN] All chunks have been processed.")
-#    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {time.time() - start_time:.2f} seconds")
-#
+    logger.info("[MAIN] Starting multiprocessing pool...")
+    with multiprocessing.Pool(processes=desired_count) as pool:
+        pool.starmap(tomcat_worker_wrapper, args_list)
+
+    logger.info("[MAIN] All chunks have been processed.")
+    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {time.time() - start_time:.2f} seconds")
+
 
 
 #    # use a try finally block to get teh execution time to log regardless of exceptions in multiprocessin.Pool call
@@ -1187,34 +1187,34 @@ def main():
 #
 
 
-# The above still not working with execution time in the main log file. Try doing explicit flush and exit
-# on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
-    logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
-    logger.setLevel(logging.INFO)
-
-    logger.info("[MAIN] Starting multiprocessing pool...")
-    start_time = time.time()
-
-    try:
-        with multiprocessing.Pool(processes=desired_count) as pool:
-            pool.starmap(tomcat_worker_wrapper, args_list)
-    finally:
-        total_time = time.time() - start_time
-        logger.info("[MAIN] All chunks have been processed.")
-        logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
-
-        print("[INFO] All chunks have been processed.")
-
-        # **New Explicit Log Flush Approach**
-        for handler in logger.handlers:
-            if isinstance(handler, logging.FileHandler):
-                handler.flush()
-                handler.stream.flush()  # Ensure OS writes immediately
-                os.fsync(handler.stream.fileno())  # Force disk write
-
-        # Now shutdown logging AFTER flushing
-        logging.shutdown()
-
+## The above still not working with execution time in the main log file. Try doing explicit flush and exit
+## on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
+#    logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
+#    logger.setLevel(logging.INFO)
+#
+#    logger.info("[MAIN] Starting multiprocessing pool...")
+#    start_time = time.time()
+#
+#    try:
+#        with multiprocessing.Pool(processes=desired_count) as pool:
+#            pool.starmap(tomcat_worker_wrapper, args_list)
+#    finally:
+#        total_time = time.time() - start_time
+#        logger.info("[MAIN] All chunks have been processed.")
+#        logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
+#
+#        print("[INFO] All chunks have been processed.")
+#
+#        # **New Explicit Log Flush Approach**
+#        for handler in logger.handlers:
+#            if isinstance(handler, logging.FileHandler):
+#                handler.flush()
+#                handler.stream.flush()  # Ensure OS writes immediately
+#                os.fsync(handler.stream.fileno())  # Force disk write
+#
+#        # Now shutdown logging AFTER flushing
+#        logging.shutdown()
+#
 
 
 if __name__ == "__main__":
