@@ -79,6 +79,9 @@ deploy:
     - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
     - echo "Contents of logs directory after container run:"
     - ls -l logs/
+    - echo "Last 10 lines of MAIN logs:"
+    - cat logs/main_*.log | tail -10
+
     - |
       for f in logs/benchmark_*.log; do
         echo "===== $f =====" >> logs/benchmark_combined.log
