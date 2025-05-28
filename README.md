@@ -1,4 +1,12 @@
-## UPDATES: BENCHMARKING: part 9: exponential backoff on the authorize_security_group_ingresss
+## UPDATES: BENCHMARKING: part 10: main() process and process pooling orchestration level logging infra
+
+This has the main() level logging infra for process level and process pooling orchestration level data.  This is not per process and thread logging. See part 8 below for that.
+
+
+
+
+
+## UPDATES: BENCHMARKING: part 9: exponential backoff on the authorize_security_group_ingress
 
 Hitting the AWS API limit on the calls to this function with parallel desired_count of 45 on the processes.
 Wrap the authorize_security_group_ingress in a wrapper function with exponential backoff retry_with_backoff.
@@ -427,6 +435,24 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
 
 Model 4 of the sampler: Combine the randomizer with a randomizer on the processes to sample (10% sample over time)
 This appears to have resolved the sampling contention and will be used for the process hyper-scaling.
+
+Randomize the process in which to sample and also randomize when that random sample is taken during the execution time. This minimizes logging contention when processes are massivvely scaled and has been tested for such.
+
+The benefits are:
+
+Selective sampling: Only a random 10% of processes log detailed metrics, which avoids overwhelming the disk and CPU.
+
+The 10% probability is configurable
+
+Randomized delay: Prevents log spikes and contention by staggering when metrics are collected.
+
+The randomized delay interval is also configurable. It is based upon typical large scale process execution times for this particular python module
+
+Thread-safe sampling: The sampler runs in a separate thread and joins cleanly, ensuring no orphaned threads.
+
+Context-managed benchmarking: Clean start/end logging with CPU and swap usage, wrapped around any function.
+
+
 Here is the revised code:
 
 ```
