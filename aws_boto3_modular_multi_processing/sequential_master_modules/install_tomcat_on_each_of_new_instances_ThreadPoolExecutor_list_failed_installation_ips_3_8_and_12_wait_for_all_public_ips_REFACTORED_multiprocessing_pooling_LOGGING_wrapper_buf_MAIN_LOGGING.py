@@ -1055,6 +1055,7 @@ def setup_main_logging():
 
 def main():
     load_dotenv()
+# The helper function setup_main_logging for the logging at the process orchestration level, see below
     logger = setup_main_logging()
 
     aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
@@ -1118,7 +1119,7 @@ def main():
     ### Configurable parameters
     chunk_size = 2     # Number of IPs per process
     max_workers = 2       # Threads per process
-    desired_count = 75     # Max concurrent processes
+    desired_count = 15     # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
@@ -1188,31 +1189,31 @@ def main():
 
 # The above still not working with execution time in the main log file. Try doing explicit flush and exit
 # on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
-logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
-logger.setLevel(logging.INFO)
+    logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
+    logger.setLevel(logging.INFO)
 
-logger.info("[MAIN] Starting multiprocessing pool...")
-start_time = time.time()
+    logger.info("[MAIN] Starting multiprocessing pool...")
+    start_time = time.time()
 
-try:
-    with multiprocessing.Pool(processes=desired_count) as pool:
-        pool.starmap(tomcat_worker_wrapper, args_list)
-finally:
-    total_time = time.time() - start_time
-    logger.info("[MAIN] All chunks have been processed.")
-    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+    finally:
+        total_time = time.time() - start_time
+        logger.info("[MAIN] All chunks have been processed.")
+        logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
-    print("[INFO] All chunks have been processed.")
+        print("[INFO] All chunks have been processed.")
 
-    # **New Explicit Log Flush Approach**
-    for handler in logger.handlers:
-        if isinstance(handler, logging.FileHandler):
-            handler.flush()
-            handler.stream.flush()  # Ensure OS writes immediately
-            os.fsync(handler.stream.fileno())  # Force disk write
+        # **New Explicit Log Flush Approach**
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.flush()
+                handler.stream.flush()  # Ensure OS writes immediately
+                os.fsync(handler.stream.fileno())  # Force disk write
 
-    # Now shutdown logging AFTER flushing
-    logging.shutdown()
+        # Now shutdown logging AFTER flushing
+        logging.shutdown()
 
 
 
