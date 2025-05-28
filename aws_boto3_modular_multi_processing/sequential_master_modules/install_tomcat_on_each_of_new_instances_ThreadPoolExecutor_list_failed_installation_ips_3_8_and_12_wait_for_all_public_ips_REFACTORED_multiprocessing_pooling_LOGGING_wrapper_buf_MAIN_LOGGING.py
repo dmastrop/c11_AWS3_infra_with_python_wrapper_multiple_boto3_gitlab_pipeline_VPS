@@ -1181,8 +1181,10 @@ def main():
 
         print("[INFO] All chunks have been processed.")
 
-
-
+        for handler in logger.handlers:
+            handler.flush()
+            handler.close()
+        logging.shutdown()
 
 if __name__ == "__main__":
     main()
