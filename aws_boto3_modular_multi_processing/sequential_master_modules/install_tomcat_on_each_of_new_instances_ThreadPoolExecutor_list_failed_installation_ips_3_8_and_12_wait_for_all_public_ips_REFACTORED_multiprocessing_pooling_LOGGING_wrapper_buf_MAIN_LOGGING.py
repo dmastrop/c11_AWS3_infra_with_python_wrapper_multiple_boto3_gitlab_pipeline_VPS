@@ -1202,23 +1202,22 @@ def main():
         pass  # or cleanup code here
 
     # Now do logging *after* the pool and finally block
+
     total_time = time.time() - start_time
     logger.info("[MAIN] All chunks have been processed.")
     logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
-    # Explicit flush before shutdown
+
+    # Force a write-to-disk before shutdown
     for handler in logger.handlers:
         handler.flush()
-
+        if isinstance(handler, logging.FileHandler):
+            handler.stream.flush()
+            handler.stream.close()
 
     print("[INFO] All chunks have been processed.")
 
-
-    # Clean up logging
-    for handler in logger.handlers:
-        handler.close()
+    # Ensure logging shutdown after flushing
     logging.shutdown()
-
-
 
 
 
