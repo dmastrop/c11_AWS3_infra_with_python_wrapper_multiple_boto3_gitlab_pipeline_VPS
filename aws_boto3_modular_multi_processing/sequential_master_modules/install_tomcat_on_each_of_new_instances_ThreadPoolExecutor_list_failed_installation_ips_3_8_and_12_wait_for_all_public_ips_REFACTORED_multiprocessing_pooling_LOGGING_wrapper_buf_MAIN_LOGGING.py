@@ -1158,8 +1158,6 @@ def main():
     # the problem with the pooled/queued processes not getting their own log file for the multi-processing logging
     # code
 
-
-
 #    logger.info("[MAIN] Starting multiprocessing pool...")
 #    with multiprocessing.Pool(processes=desired_count) as pool:
 #        pool.starmap(tomcat_worker_wrapper, args_list)
@@ -1169,22 +1167,60 @@ def main():
 #
 
 
-    # use a try finally block to get teh execution time to log regardless of exceptions in multiprocessin.Pool call
+#    # use a try finally block to get teh execution time to log regardless of exceptions in multiprocessin.Pool call
+#    logger.info("[MAIN] Starting multiprocessing pool...")
+#    try:
+#        with multiprocessing.Pool(processes=desired_count) as pool:
+#            pool.starmap(tomcat_worker_wrapper, args_list)
+#    finally:
+#        total_time = time.time() - start_time
+#        logger.info("[MAIN] All chunks have been processed.")
+#        logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
+#
+#        print("[INFO] All chunks have been processed.")
+#
+#        for handler in logger.handlers:
+#            handler.flush()
+#            handler.close()
+#        logging.shutdown()
+#
+
+
+# The above still not working with execution time in the main log file. Try doing explicit flush and exit
+# on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
+    logger = logging.getLogger(__name__)
+    # Assume logger is configured properly above this block
+
     logger.info("[MAIN] Starting multiprocessing pool...")
+    start_time = time.time()
+
     try:
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
     finally:
-        total_time = time.time() - start_time
-        logger.info("[MAIN] All chunks have been processed.")
-        logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
+        # Optional: any cleanup that must happen even if there's an error
+        pass  # or cleanup code here
 
-        print("[INFO] All chunks have been processed.")
+    # Now do logging *after* the pool and finally block
+    total_time = time.time() - start_time
+    logger.info("[MAIN] All chunks have been processed.")
+    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
+    # Explicit flush before shutdown
+    for handler in logger.handlers:
+        handler.flush()
 
-        for handler in logger.handlers:
-            handler.flush()
-            handler.close()
-        logging.shutdown()
+
+    print("[INFO] All chunks have been processed."]
+
+
+    # Clean up logging
+    for handler in logger.handlers:
+        handler.close()
+    logging.shutdown()
+
+
+
+
 
 if __name__ == "__main__":
     main()
