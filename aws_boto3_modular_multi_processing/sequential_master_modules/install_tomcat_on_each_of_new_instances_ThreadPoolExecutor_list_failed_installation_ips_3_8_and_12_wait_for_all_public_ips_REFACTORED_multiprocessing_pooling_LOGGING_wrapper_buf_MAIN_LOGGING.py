@@ -1127,11 +1127,13 @@ def main():
     total_processes = len(chunks)
     remaining = total_processes - desired_count
     pooled_batches = (remaining + desired_count - 1) // desired_count if remaining > 0 else 0
+    # this uses ceiling division. for example 200 processes with desired_count 75 is (125+75-1)//75 =
+    # 199/75 = round down(2.65)= 2 additional batches of the 75 max will cover the remaining 125 pooled processes
 
     logger.info(f"[MAIN] Total processes: {total_processes}")
     logger.info(f"[MAIN] Initial batch (desired_count): {desired_count}")
     logger.info(f"[MAIN] Remaining processes to pool: {remaining}")
-    logger.info(f"[MAIN] Number of pooled batches: {pooled_batches}")
+    logger.info(f"[MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: {pooled_batches}")
 
 
 
@@ -1158,17 +1160,26 @@ def main():
 
 
 
+#    logger.info("[MAIN] Starting multiprocessing pool...")
+#    with multiprocessing.Pool(processes=desired_count) as pool:
+#        pool.starmap(tomcat_worker_wrapper, args_list)
+#
+#    logger.info("[MAIN] All chunks have been processed.")
+#    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {time.time() - start_time:.2f} seconds")
+#
+
+
+    # use a try finally block to get teh execution time to log regardless of exceptions in multiprocessin.Pool call
     logger.info("[MAIN] Starting multiprocessing pool...")
-    with multiprocessing.Pool(processes=desired_count) as pool:
-        pool.starmap(tomcat_worker_wrapper, args_list)
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+    finally:
+        total_time = time.time() - start_time
+        logger.info("[MAIN] All chunks have been processed.")
+        logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
-    logger.info("[MAIN] All chunks have been processed.")
-    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {time.time() - start_time:.2f} seconds")
-
-    print("[INFO] All chunks have been processed.")
-
-
-
+        print("[INFO] All chunks have been processed.")
 
 
 
