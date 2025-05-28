@@ -1188,35 +1188,30 @@ def main():
 
 # The above still not working with execution time in the main log file. Try doing explicit flush and exit
 # on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
-    logger = logging.getLogger(__name__)
-    # Assume logger is configured properly above this block
+logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
+logger.setLevel(logging.INFO)
 
-    logger.info("[MAIN] Starting multiprocessing pool...")
-    start_time = time.time()
+logger.info("[MAIN] Starting multiprocessing pool...")
+start_time = time.time()
 
-    try:
-        with multiprocessing.Pool(processes=desired_count) as pool:
-            pool.starmap(tomcat_worker_wrapper, args_list)
-    finally:
-        # Optional: any cleanup that must happen even if there's an error
-        pass  # or cleanup code here
-
-    # Now do logging *after* the pool and finally block
-
+try:
+    with multiprocessing.Pool(processes=desired_count) as pool:
+        pool.starmap(tomcat_worker_wrapper, args_list)
+finally:
     total_time = time.time() - start_time
     logger.info("[MAIN] All chunks have been processed.")
     logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
-    # Force a write-to-disk before shutdown
-    for handler in logger.handlers:
-        handler.flush()
-        if isinstance(handler, logging.FileHandler):
-            handler.stream.flush()
-            handler.stream.close()
-
     print("[INFO] All chunks have been processed.")
 
-    # Ensure logging shutdown after flushing
+    # **New Explicit Log Flush Approach**
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.flush()
+            handler.stream.flush()  # Ensure OS writes immediately
+            os.fsync(handler.stream.fileno())  # Force disk write
+
+    # Now shutdown logging AFTER flushing
     logging.shutdown()
 
 
