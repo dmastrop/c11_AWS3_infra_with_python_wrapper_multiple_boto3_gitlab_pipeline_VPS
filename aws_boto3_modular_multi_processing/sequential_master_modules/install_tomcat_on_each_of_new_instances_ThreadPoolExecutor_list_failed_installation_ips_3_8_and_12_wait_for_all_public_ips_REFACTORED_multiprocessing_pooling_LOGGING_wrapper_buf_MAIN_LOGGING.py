@@ -1210,7 +1210,7 @@ def main():
         handler.flush()
 
 
-    print("[INFO] All chunks have been processed."]
+    print("[INFO] All chunks have been processed.")
 
 
     # Clean up logging
