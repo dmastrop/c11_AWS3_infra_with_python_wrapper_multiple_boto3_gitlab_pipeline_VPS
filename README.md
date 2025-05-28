@@ -2,6 +2,84 @@
 
 This has the main() level logging infra for process level and process pooling orchestration level data.  This is not per process and thread logging. See part 8 below for that.
 
+This is the main() logging helper function:
+```
+#### ADD the main() level process and process pooling orchestration logging level code. The setup helper function is beow
+#### The function is incorporated in the main() function
+#### This is using the same log_path as used in the per process and threading log level code. /aws_EC2/logs is a mapped
+#### volume in the docker container to the project archive directory on the gitlab pipeline repo.  This is the line
+#### from .gitlab-ci.yml file:
+####     - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+#### The logging in main() using this helper function will be logged to the gitlab pipeline console as well as a log file
+#### in the archive directory for the pipeline
+#### The file will be named /aws_EC2/logs/main_{pid}.log, in the same archive but separate from the process level logs.
+
+def setup_main_logging():
+    pid = multiprocessing.current_process().pid
+    log_path = f'/aws_EC2/logs/main_{pid}.log'
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+    logger = logging.getLogger("main_logger")
+    logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(process)d - %(levelname)s - %(message)s')
+
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+    return logger
+```
+
+
+These are the added logging portions to the main() function using the helper function. This will help at a higher level when we optimize the desired_count relative to RAM VPS usage for hyper-scaling the process number count:
+
+```
+def main():
+    load_dotenv()
+    logger = setup_main_logging()
+......
+
+### Configurable parameters
+    chunk_size = 2     # Number of IPs per process
+    max_workers = 2       # Threads per process
+    desired_count = 75     # Max concurrent processes
+
+    chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+
+
+    # ADD this for the pooling level logging in main() that uses setup_main_logging() helper function
+    total_processes = len(chunks)
+    remaining = total_processes - desired_count
+    pooled_batches = (remaining + desired_count - 1) // desired_count if remaining > 0 else 0
+
+    logger.info(f"[MAIN] Total processes: {total_processes}")
+    logger.info(f"[MAIN] Initial batch (desired_count): {desired_count}")
+    logger.info(f"[MAIN] Remaining processes to pool: {remaining}")
+    logger.info(f"[MAIN] Number of pooled batches: {pooled_batches}")
+
+......
+  args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
+  logger.info("[MAIN] Starting multiprocessing pool...")
+    with multiprocessing.Pool(processes=desired_count) as pool:
+        pool.starmap(tomcat_worker_wrapper, args_list)
+
+    logger.info("[MAIN] All chunks have been processed.")
+    logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {time.time() - start_time:.2f} seconds")
+
+    print("[INFO] All chunks have been processed.")
+```
+
+
+The stream handler will forward the logging info to both the gilab pipeline console and the archive directory on the
+gitlab pipeline. The main() function will log to its own log file in the artifacts separate from process level log
+files by design.
+
 
 
 
