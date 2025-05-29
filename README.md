@@ -123,8 +123,33 @@ Example of content save to the main log file:
 2025-05-29 00:15:53,310 - 8 - INFO - [MAIN] Starting multiprocessing pool...
 2025-05-29 00:29:31,175 - 8 - INFO - [MAIN] All chunks have been processed.
 2025-05-29 00:29:31,175 - 8 - INFO - [MAIN] Total execution time for all chunks of chunk_size: 817.87 seconds
-```
 
+```
+Added in Swap, Free RAM memory and RAM usage statistics. These will be the main bottlenecks moving forward with
+the process hyperscaling of 200, 300 and 400 processes.  Desired_count adjustments for the number of pooled 
+processes will be the main way to deal with the memory issues that will be encountered.  The trade off is that
+process queue pooling is inherently slower in terms of concurrency and parallelization, but it will be necessary
+if RAM is a constant on the VPS controller.
+
+
+```
+2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Total processes: 150
+2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Initial batch (desired_count): 150
+2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Remaining processes to pool: 0
+2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: 0
+2025-05-29 02:13:59,742 - 8 - INFO - [MAIN] Initial RAM Usage: 9992.61 MB
+2025-05-29 02:13:59,742 - 8 - INFO - [MAIN] Initial Free Memory: 5476.70 MB
+2025-05-29 02:13:59,742 - 8 - INFO - [MAIN] Initial Swap Usage: 2310.59 MB
+2025-05-29 02:13:59,743 - 8 - INFO - [MAIN] Starting multiprocessing pool...
+2025-05-29 02:27:27,289 - 8 - INFO - [MAIN] All chunks have been processed.
+2025-05-29 02:27:27,301 - 8 - INFO - [MAIN] Total execution time for all chunks of chunk_size: 807.54 seconds
+2025-05-29 02:27:27,305 - 8 - INFO - [MAIN] Final RAM Usage: 6057.23 MB
+2025-05-29 02:27:27,306 - 8 - INFO - [MAIN] Final Free Memory: 9459.91 MB
+2025-05-29 02:27:27,307 - 8 - INFO - [MAIN] Final Swap Usage: 6984.04 MB
+
+
+
+```
 
 
 
