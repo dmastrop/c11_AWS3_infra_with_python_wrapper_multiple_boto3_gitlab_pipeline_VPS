@@ -31,6 +31,8 @@ import psutil
 from contextlib import contextmanager
 from io import StringIO
 from datetime import datetime
+import psutil
+
 
 # COMMENT this out for now so that i can test the benchmark.log artifact below
 # will do a dual logger later to accomodate this.
@@ -1119,7 +1121,7 @@ def main():
     ### Configurable parameters
     chunk_size = 2     # Number of IPs per process
     max_workers = 2       # Threads per process
-    desired_count = 125     # Max concurrent processes
+    desired_count = 150     # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
@@ -1190,8 +1192,15 @@ def main():
 # The above still not working with execution time in the main log file. Try doing explicit flush and exit
 # on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
 # This fixed the issue. 
+# Capture memory stats at the start of execution
     logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
     logger.setLevel(logging.INFO)
+    
+    initial_mem = psutil.virtual_memory()
+    logger.info(f"[MAIN] Initial RAM Usage: {initial_mem.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Free Memory: {initial_mem.available / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Swap Usage: {psutil.swap_memory().used / (1024**2):.2f} MB")
+
 
     logger.info("[MAIN] Starting multiprocessing pool...")
     start_time = time.time()
@@ -1205,6 +1214,12 @@ def main():
         logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
         print("[INFO] All chunks have been processed.")
+
+        # Capture memory stats after execution
+        final_mem = psutil.virtual_memory()
+        logger.info(f"[MAIN] Final RAM Usage: {final_mem.used / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final Free Memory: {final_mem.available / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final Swap Usage: {psutil.swap_memory().used / (1024**2):.2f} MB")
 
         # **New Explicit Log Flush Approach**
         for handler in logger.handlers:
