@@ -37,7 +37,12 @@ def setup_main_logging():
 ```
 
 
-These are the added logging portions to the main() function using the helper function. This will help at a higher level when we optimize the desired_count relative to RAM VPS usage for hyper-scaling the process number count:
+These are the added logging portions to the main() function using the helper function. This will help at a higher level when we optimize the desired_count relative to RAM VPS usage for hyper-scaling the process number count.
+This took several iterations to get to work. The problem was that the execution time portion was not getting written
+to disk and was missing in the main() level log.
+
+
+
 
 ```
 def main():
@@ -68,9 +73,17 @@ def main():
 
 ......
 
+
 ```
-    args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
+# Try doing explicit flush and exit
+# on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
+# This fixed the issue. The os.fsync is used to force the disk write and it worked. 
+    logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
+    logger.setLevel(logging.INFO)
+
     logger.info("[MAIN] Starting multiprocessing pool...")
+    start_time = time.time()
+
     try:
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
@@ -80,12 +93,37 @@ def main():
         logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
         print("[INFO] All chunks have been processed.")
+
+        # **New Explicit Log Flush Approach**
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.flush()
+                handler.stream.flush()  # Ensure OS writes immediately
+                os.fsync(handler.stream.fileno())  # Force disk write
+
+        # Now shutdown logging AFTER flushing
+        logging.shutdown()
+
+
 ```
 
 
 The stream handler will forward the logging info to both the gilab pipeline console and the archive directory on the
 gitlab pipeline. The main() function will log to its own log file in the artifacts separate from process level log
 files by design.
+
+
+Example of content save to the main log file:
+
+```
+2025-05-29 00:15:53,308 - 8 - INFO - [MAIN] Total processes: 125
+2025-05-29 00:15:53,308 - 8 - INFO - [MAIN] Initial batch (desired_count): 125
+2025-05-29 00:15:53,309 - 8 - INFO - [MAIN] Remaining processes to pool: 0
+2025-05-29 00:15:53,309 - 8 - INFO - [MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: 0
+2025-05-29 00:15:53,310 - 8 - INFO - [MAIN] Starting multiprocessing pool...
+2025-05-29 00:29:31,175 - 8 - INFO - [MAIN] All chunks have been processed.
+2025-05-29 00:29:31,175 - 8 - INFO - [MAIN] Total execution time for all chunks of chunk_size: 817.87 seconds
+```
 
 
 
