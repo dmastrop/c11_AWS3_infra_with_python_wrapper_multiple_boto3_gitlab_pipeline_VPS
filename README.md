@@ -74,7 +74,6 @@ def main():
 ......
 
 
-```
 # Try doing explicit flush and exit
 # on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
 # This fixed the issue. The os.fsync is used to force the disk write and it worked. 
@@ -113,7 +112,7 @@ gitlab pipeline. The main() function will log to its own log file in the artifac
 files by design.
 
 
-Example of content save to the main log file:
+Example of content saved to the main log file:
 
 ```
 2025-05-29 00:15:53,308 - 8 - INFO - [MAIN] Total processes: 125
