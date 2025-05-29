@@ -982,6 +982,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     print("ThreadPoolExecutor script execution completed.")
 
 
+
+
+
+
+
+#### main() level code and helper functions::
+###########################################################################################################
+
 #### ADD the main() level process and process pooling orchestration logging level code. The setup helper function is beow
 #### The function is incorporated in the main() function
 #### This is using the same log_path as used in the per process and threading log level code. /aws_EC2/logs is a mapped
@@ -1013,7 +1021,23 @@ def setup_main_logging():
 
     return logger
 
+## this is for inter-test process orchestration level memory stats.
+## call this function in the middle of the logging in main() using inter_test_thread to take a random sample
+## of memory stats during the actual load testing.
 
+def sample_inter_test_metrics(logger):
+    """Randomly samples memory and CPU metrics during execution."""
+    delay = random.uniform(0.3, 0.7) * total_estimated_runtime  # Random between 30-70% of runtime
+    time.sleep(delay)
+
+    mem = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    cpu_usage = psutil.cpu_percent(interval=None, percpu=True)  # Get per-core CPU usage
+
+    logger.info(f"[MAIN] Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Inter-test CPU Usage (per-core): {cpu_usage}")
 
 
 #### REFACTORED main() to support multi-processing with pooling to deal with hyperscaling case
@@ -1057,8 +1081,23 @@ def setup_main_logging():
 
 def main():
     load_dotenv()
+
+
 # The helper function setup_main_logging for the logging at the process orchestration level, see below
+# Pass this logger into the inter-test helper function call below sample_inter_test_metrics 
     logger = setup_main_logging()
+
+
+# Define the total_estimated_runtime as global so that it can be used in the call to sample_inter_test_metrics threaded
+# call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer on this total_estimated_value in which
+# to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
+    global total_estimated_runtime
+    total_estimated_runtime = 600  # Adjust based on previous test execution times
+
+
+
+
+
 
     aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -1197,14 +1236,32 @@ def main():
     logger.setLevel(logging.INFO)
     
     initial_mem = psutil.virtual_memory()
+    initial_swap = psutil.swap_memory()
+    initial_cpu_usage = psutil.cpu_percent(interval=1, percpu=True)  # Capture per-core CPU usage
+
+
     logger.info(f"[MAIN] Initial RAM Usage: {initial_mem.used / (1024**2):.2f} MB")
     logger.info(f"[MAIN] Initial Free Memory: {initial_mem.available / (1024**2):.2f} MB")
-    logger.info(f"[MAIN] Initial Swap Usage: {psutil.swap_memory().used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Swap Usage: {initial_swap.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial CPU Usage (per-core): {initial_cpu_usage}")
 
 
     logger.info("[MAIN] Starting multiprocessing pool...")
+
+
+    # Start background logging thread
+    # A background worker thread is ideal for this. This is so that the main() program flow is not interupted in any way.
+    # This is an asynchronous design:
+    # By starting the inter-test sampling asynchronously, the main multiprocessing workload proceeds uninterrupted, and the 
+    # logging thread quietly waits until the randomized interval is reached(see above). Then, in the `finally` block, 
+    # `inter_test_thread.join()` ensures it completes before exiting, making sure all log collections are are properly written 
+    # without impeding execution.
+    inter_test_thread = threading.Thread(target=sample_inter_test_metrics, args=(logger,))
+    inter_test_thread.start()
+
     start_time = time.time()
 
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
     try:
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
@@ -1213,13 +1270,23 @@ def main():
         logger.info("[MAIN] All chunks have been processed.")
         logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
+        # Ensure the inter-test metrics thread that was started above completes before exiting
+        # At this point we have the inter-test log information captured!!!
+        inter_test_thread.join()
+
         print("[INFO] All chunks have been processed.")
 
         # Capture memory stats after execution
         final_mem = psutil.virtual_memory()
+        final_swap = psutil.swap_memory()
+        final_cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+
         logger.info(f"[MAIN] Final RAM Usage: {final_mem.used / (1024**2):.2f} MB")
         logger.info(f"[MAIN] Final Free Memory: {final_mem.available / (1024**2):.2f} MB")
-        logger.info(f"[MAIN] Final Swap Usage: {psutil.swap_memory().used / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final Swap Usage: {final_swap.used / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final CPU Usage (per-core): {final_cpu_usage}")
+
+
 
         # **New Explicit Log Flush Approach**
         for handler in logger.handlers:
