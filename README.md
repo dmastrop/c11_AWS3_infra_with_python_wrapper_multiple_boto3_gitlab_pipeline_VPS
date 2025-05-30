@@ -955,6 +955,8 @@ Have to switch to t2.small because AWS limit currently at 402 vCPUs and t3.small
 
 This test hit a bottleneck with the VPS. CPU gets tapped out. The gitlab container is running a docker container that is runing the python master script.  The top shows the contention and the idle CPU drops to 0
 
+
+```
     PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                            
      77 root      20   0       0      0      0 R 100.0   0.0  25:23.80 kswapd0                                            
 1998254 root      20   0 1139656  10832   2128 S  41.5   0.1   3:50.24 fail2ban-server                                    
@@ -968,7 +970,7 @@ This test hit a bottleneck with the VPS. CPU gets tapped out. The gitlab contain
     456 root      20   0 2241208  13612   1652 S  23.4   0.1  28:28.77 containerd                                         
 2616745 112       20   0  122344  79376   1396 D  21.4   0.5   0:01.59 amavisd-new                                        
    1302 root      20   0 3693788  34924   1900 S  18.8   0.2 210:26.35 dockerd   
-
+```
 
 Once this occurs the gitlab container also running on the VPS locks up.   Putting the gitlab container on a separate VPS would be a solution part of this problem.
 
