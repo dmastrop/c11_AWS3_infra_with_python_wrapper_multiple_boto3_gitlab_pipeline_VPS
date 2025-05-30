@@ -1,3 +1,25 @@
+## Current and latest development work
+
+The parent directory has the Docker files and the gitlab-ci.yml file
+
+Latest development work is in the aws_boto3_modular_multi_processing sub-directory
+The master_script.py is in this directory
+
+This has all the latest multi-threading and multi-processing code in the sequential_master_modules package
+
+The current 11 modules in the package sequential_master_modules are multi-processed in the master_script.py
+
+The key module is the "install tomcat"  module (module2 in the master_script.py) in the following directory
+aws_boto3_modular_multi_processing/sequential_master_modules
+Use the latest timestamp python file.
+
+This has all the latest optimizations for the multi-processing and multi-threading and the latest benchmark upates below
+pertain to the optmizations to this module.
+
+
+
+
+
 ## UPDATES: BENCHMARKING: part 10: main() process and process pooling orchestration level logging infra
 
 This has the main() level logging infra for process level and process pooling orchestration level data.  This is not per process and thread logging. See part 8 below for that.
