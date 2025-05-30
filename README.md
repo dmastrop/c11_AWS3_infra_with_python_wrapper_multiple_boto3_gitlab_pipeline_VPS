@@ -1118,6 +1118,9 @@ The processes are run in a docker container and I did not see the docker daemon 
 
 
 ## UPDATES: BENCHMARKING part1: Summary of benchmark findings for module 2 (mutli-processing and multi-threading)
+
+
+
 The key variables are num_processes, chunk_size and max_workers (number of threads). Some general early findings are listed below:
 
 I ran a lot of benchmark tests. The number of processes is always adjusted to accommodate the chunk_size so the number of processes does not come into play.  I even ran model 3 which adds dummy processes and they don't appear to slow things down in terms of strict process overhead.      The key is the chunk_size relative to the the max_workers (number of threads). If the chunk_size is greater than the  number of threads the performance gets much worse (about 6.5 mintues vs. 9.5 minutes)     If the number of threads is equal to the chunk_size the performance is better. It does not improve or get worse if chunk size is reduced less than the number of threads (in other words the idle threads don't have a determinantal effect on overall time).  
@@ -1302,7 +1305,12 @@ for i in range(num_processes):
     
     processes.append(process)
     process.start()
+
+
 ```
+
+
+
 
 Model 3: CEILING DIVISION METHOD
 
@@ -1312,6 +1320,8 @@ Model 3 (Revised): Fixed Number of Processes, May Be Underutilized
 - Useful for testing or simulating a fixed pool of workers.
 - Good for: Benchmarking or stress testing process overhead.
 This is the same as Model2 except that the num_processes is always spawned regardless if they are required to process the number if IPs. . This uses the new wait_for_public_ips function as well.
+
+
 
 ```
 chunk_size = 12
@@ -1373,6 +1383,8 @@ The chunk ip allocation block of ips is in the main() function below and is deta
 
 Further detail in install_tomcat_on_instances original function:
 
+
+```
 ### HERE IS THE MAIN CHANGE FOR THE multiprocessing optmization. First we are going to tie the thread pools
     to the number of cores (the VPS has 6 CPU cores).  Each ThreadPoolExecutor will have max workers of 6 at a time.
     Previously we had max_workers set to length of public_ips which is 50. This is creating a lot of contention with only
@@ -1391,10 +1403,14 @@ Further detail in install_tomcat_on_instances original function:
 
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_ips]
+```
+
+
 
 
 Further detail in main():
 
+```
 ### Use multi-processing to distribute SSH connections across multiple cores
     num_processes = os.cpu_count()
     
@@ -1422,7 +1438,7 @@ Further detail in main():
 
     for process in processes:
         process.join()
-
+```
 
 
 
@@ -1442,7 +1458,7 @@ commit:
 
 The thread that takes the longest, the installation of tomcat on each of the 50 EC2 instances cannot be parallelized with any of the other treads because the EC2 instances are in the target group and tomcat has to be running so that the ALB passes target health checks when the ALB is created.
 
-
+```
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
     with open(module_script_path) as f:
@@ -1532,7 +1548,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+```
 
 
 ## UPDATES:
@@ -1561,6 +1577,9 @@ policies = [
     'arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier',
     'arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier'
 
+
+
+```
 ### boto3 classes:
 
 elb_client = session.client('elbv2')
@@ -1569,6 +1588,9 @@ route53_client = session.client('route53')
 autoscaling_client = session.client('autoscaling')
 eb_client = session.client('elasticbeanstalk')
 iam_client = session.client('iam')
+```
+
+
 
 Also added HTTPS 443 listener to the elastic beanstalk ALB loadbalancer.  This requires a lot of code for the certificate. To get the SSL cert issues have to create a hosted domain in Route53 and add the A record of the DNS URL (CNAME) of the elastic beanstalk ALB loadbalancer, then once the CNAME is ready for the cert request add the CNAME to the Route53 hosted zone as a CNAME Record for DNS Validation of the cert so that it transitions into issued state. Once have the cert had to manually get the load_balancer_arn and target_group_arn of the existing ALB in the beanstalk environment and also use this newly issued certificate_arn to create the HTTPS 443 listener manually using the elbv2 boto3 class/method. The elasticbeanstalk method did not work for me.   
 Finally add HTTPS traffic to the wget traffic generator EC2 instance so that HTTP and HTTPS are simultaneously sent to the the beanstalk ALB.
@@ -1588,7 +1610,7 @@ The SSL/TLS uses the acm class to create the cert. The CNAME has to be tested an
 The following boto3 client classes are used so far:
 
 
-
+```
 class EC2.Client
 class ElasticLoadBalancingv2.Client
 class acm.Client
@@ -1598,6 +1620,9 @@ elb_client = session.client('elbv2')
 acm_client = session.client('acm')
 route53_client = session.client('route53')
 autoscaling_client = session.client('autoscaling')
+```
+
+
 
 Note: the autoscaling is not used for now as I need to create an effective destroy script as well for that. 
 
@@ -1605,7 +1630,7 @@ Note: the autoscaling is not used for now as I need to create an effective destr
 
 The wget EC2 instance stress generator:
 
-
+```
 Last login: Tue Apr  8 00:38:28 2025 from 172.31.21.52
 ubuntu@ip-172-31-86-66:~$ ls
 stress_test.sh
@@ -1627,13 +1652,15 @@ listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 00:44:22.534762 IP ip-172-31-86-66.ec2.internal.43882 > ec2-34-204-127-255.compute-1.amazonaws.com.https: Flags [R], seq 3372935856, win 0, length 0
 00:44:22.534804 IP ip-172-31-86-66.ec2.internal.43882 > ec2-34-204-127-255.compute-1.amazonaws.com.https: Flags [R], seq 3372935856, win 0, length 0
 00:44:22.541068 IP ip-172-31-86-66.ec2.internal.43884 > ec2-34-204-127-255.compute-1.amazonaws.com.https: Flags [S], seq 3906347289, win 62727, options [mss 8961,sackOK,TS val 2
-
+```
 
 ALB Access logs show the loadbalancing to the backend:
 
 
 The client and socket and the target EC2 instance (there are 50 of them) and the socket (8080)
 
+
+```
 https 2025-04-08T00:42:18.719308Z app/tomcat-load-balancer/d12d886025a14d3f 52.91.163.121:45808 172.31.87.99:8080 0.001 0.002 0.000 200 200 154 2118 "GET https://loadbalancer.holinessinloveofchrist.com:443/ HTTP/1.1" "Wget/1.21.2" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 arn:aws:elasticloadbalancing:us-east-1:590183769797:targetgroup/tomcat-target-group/21175dd5b85e97d7 "Root=1-67f470ea-440e2a275a742e0034a8b8c7" "loadbalancer.holinessinloveofchrist.com" "arn:aws:acm:us-east-1:590183769797:certificate/6ab5d190-7f04-42a9-ba11-1e103388e7e3" 0 2025-04-08T00:42:18.715000Z "forward" "-" "-" "172.31.87.99:8080" "200" "-" "-" TID_c058d0218cb28142a303b654f4f7c035
 https 2025-04-08T00:42:18.906898Z app/tomcat-load-balancer/d12d886025a14d3f 52.91.163.121:45852 172.31.93.134:8080 0.001 0.002 0.000 200 200 154 2118 "GET https://loadbalancer.holinessinloveofchrist.com:443/ HTTP/1.1" "Wget/1.21.2" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 arn:aws:elasticloadbalancing:us-east-1:590183769797:targetgroup/tomcat-target-group/21175dd5b85e97d7 "Root=1-67f470ea-69b79ad0408104c00b50d2ef" "loadbalancer.holinessinloveofchrist.com" "arn:aws:acm:us-east-1:590183769797:certificate/6ab5d190-7f04-42a9-ba11-1e103388e7e3" 0 2025-04-08T00:42:18.903000Z "forward" "-" "-" "172.31.93.134:8080" "200" "-" "-" TID_d26d051d522b804498afa60e8922f3f5
 https 2025-04-08T00:42:19.054746Z app/tomcat-load-balancer/d12d886025a14d3f 52.91.163.121:45890 172.31.84.229:8080 0.001 0.002 0.000 200 200 154 2118 "GET https://loadbalancer.holinessinloveofchrist.com:443/ HTTP/1.1" "Wget/1.21.2" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 arn:aws:elasticloadbalancing:us-east-1:590183769797:targetgroup/tomcat-target-group/21175dd5b85e97d7 "Root=1-67f470eb-054849b625c3282066db139e" "loadbalancer.holinessinloveofchrist.com" "arn:aws:acm:us-east-1:590183769797:certificate/6ab5d190-7f04-42a9-ba11-1e103388e7e3" 0 2025-04-08T00:42:19.052000Z "forward" "-" "-" "172.31.84.229:8080" "200" "-" "-" TID_3ba0637db38e844ebde8a74f9887f966
@@ -1658,7 +1685,7 @@ https 2025-04-08T00:42:20.120100Z app/tomcat-load-balancer/d12d886025a14d3f 52.9
 https 2025-04-08T00:42:20.219465Z app/tomcat-load-balancer/d12d886025a14d3f 52.91.163.121:46146 172.31.83.105:8080 0.001 0.001 0.000 200 200 154 2118 "GET https://loadbalancer.holinessinloveofchrist.com:443/ HTTP/1.1" "Wget/1.21.2" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 arn:aws:elasticloadbalancing:us-east-1:590183769797:targetgroup/tomcat-target-group/21175dd5b85e97d7 "Root=1-67f470ec-088c40af730a61d80044f8d2" "loadbalancer.holinessinloveofchrist.com" "arn:aws:acm:us-east-1:590183769797:certificate/6ab5d190-7f04-42a9-ba11-1e103388e7e3" 0 2025-04-08T00:42:20.217000Z "forward" "-" "-" "172.31.83.105:8080" "200" "-" "-" TID_97e7b25a5aa8604f9e843fb20c255eee
 https 2025-04-08T00:42:20.445742Z app/tomcat-load-balancer/d12d886025a14d3f 52.91.163.121:46204 172.31.88.90:8080 0.001 0.002 0.000 200 200 154 2118 "GET https://loadbalancer.holinessinloveofchrist.com:443/ HTTP/1.1" "Wget/1.21.2" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 arn:aws:elasticloadbalancing:us-east-1:590183769797:targetgroup/tomcat-target-group/21175dd5b85e97d7 "Root=1-67f470ec-762531377c53150428c829d1" "loadbalancer.holinessinloveofchrist.com" "arn:aws:acm:us-east-1:590183769797:certificate/6ab5d190-7f04-42a9-ba11-1e103388e7e3" 0 2025-04-08T00:42:20.443000Z "forward" "-" "-" "172.31.88.90:8080" "200" "-" "-" TID_0c5934f18f4d81489860565f1b94e0a1
 
-
+```
 
 
 
