@@ -1021,23 +1021,53 @@ def setup_main_logging():
 
     return logger
 
-## this is for inter-test process orchestration level memory stats.
-## call this function in the middle of the logging in main() using inter_test_thread to take a random sample
-## of memory stats during the actual load testing.
-
-def sample_inter_test_metrics(logger):
-    """Randomly samples memory and CPU metrics during execution."""
-    delay = random.uniform(0.3, 0.7) * total_estimated_runtime  # Random between 30-70% of runtime
-    time.sleep(delay)
+## (helper logging function) this is for inter-test process orchestration level memory stats.
+## What i have done is modularize the threading of these operations into a second function that follows(see below
+## this function).
+## This function is for the actual logging semantics and output structure
+def sample_inter_test_metrics(logger, delay, label):
+    """Samples memory and CPU metrics at specific points during execution."""
+    time.sleep(delay)  # Wait for the specified timing
 
     mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
-    cpu_usage = psutil.cpu_percent(interval=None, percpu=True)  # Get per-core CPU usage
+    cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
 
-    logger.info(f"[MAIN] Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
-    logger.info(f"[MAIN] Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
-    logger.info(f"[MAIN] Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
-    logger.info(f"[MAIN] Inter-test CPU Usage (per-core): {cpu_usage}")
+    logger.info(f"[MAIN] {label} Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test CPU Usage (per-core): {cpu_usage}")
+
+
+## (helper logging function) call this function in the middle of the logging in main() multiple times, each one to create a new and independent 
+## thread in the background for each thread metric variant
+## The objective is to collect load bearing memory and CPU stats for the hyper-scaling tests
+## moving the threading.Thread method outside of main() makes this much more extensible in case I need to add more
+## static or dynamic sampling points!!
+## NOTE: i forgot to add the thread storage so that we can wait for them to complete in main with .join!
+
+
+def start_inter_test_logging(logger, total_estimated_runtime):
+    """Launch separate logging threads and return them for later joining."""
+    threads = []  # Store threads for later synchronization
+
+    random_delay = random.uniform(0.3, 0.7) * total_estimated_runtime  # Random 30-70%
+    fixed_50_delay = 0.5 * total_estimated_runtime  # Fixed 50%
+    fixed_75_delay = 0.75 * total_estimated_runtime  # Fixed 75%
+
+    # Start each thread and store it
+    threads.append(threading.Thread(target=sample_inter_test_metrics, args=(logger, random_delay, "Random 30/70")))
+    threads.append(threading.Thread(target=sample_inter_test_metrics, args=(logger, fixed_50_delay, "50%")))
+    threads.append(threading.Thread(target=sample_inter_test_metrics, args=(logger, fixed_75_delay, "75%")))
+
+    # Get this list of threads aboe and start them. Grouping them into a list makes this easy to do the .join in
+    # main() assuring logging is all complete prior to flush and closing things out in main()
+    for thread in threads:
+        thread.start()
+
+    return threads  # Return the list of threads to be joined in main()
+
+
 
 
 #### REFACTORED main() to support multi-processing with pooling to deal with hyperscaling case
@@ -1088,9 +1118,9 @@ def main():
     logger = setup_main_logging()
 
 
-# Define the total_estimated_runtime as global so that it can be used in the call to sample_inter_test_metrics threaded
-# call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer on this total_estimated_value in which
-# to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
+# Define the total_estimated_runtime as global so that it can be used in the call to start_inter_test_logging
+# call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer and static points on this total_estimated_value 
+# in which to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
     global total_estimated_runtime
     total_estimated_runtime = 600  # Adjust based on previous test execution times
 
@@ -1249,15 +1279,20 @@ def main():
     logger.info("[MAIN] Starting multiprocessing pool...")
 
 
-    # Start background logging thread
-    # A background worker thread is ideal for this. This is so that the main() program flow is not interupted in any way.
+    # Start background logging threads by calling the start_inter_test_logging helper function()
+    # I have moved the threading logic outside of main() to make this more extensible and flexible if we need to
+    # add more variations in the samples, namely the CPU which is tricky to track and varies quite a bit during 
+    # execution. All of these threads are background threads in the main() process
+    # This is so that the main() program flow is not interupted in any way.
     # This is an asynchronous design:
     # By starting the inter-test sampling asynchronously, the main multiprocessing workload proceeds uninterrupted, and the 
-    # logging thread quietly waits until the randomized interval is reached(see above). Then, in the `finally` block, 
-    # `inter_test_thread.join()` ensures it completes before exiting, making sure all log collections are are properly written 
-    # without impeding execution.
-    inter_test_thread = threading.Thread(target=sample_inter_test_metrics, args=(logger,))
-    inter_test_thread.start()
+    # logging thread quietly waits until that thread's retirement interval is reached.
+    # Then, in the `finally` block, use a join on the returned list from start_inter_test_logging to make sure all the
+    # threaded data has been collected before flush and closing thing out in main()
+
+    inter_test_threads = start_inter_test_logging(logger, total_estimated_runtime)
+    
+
 
     start_time = time.time()
 
@@ -1270,9 +1305,13 @@ def main():
         logger.info("[MAIN] All chunks have been processed.")
         logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
-        # Ensure the inter-test metrics thread that was started above completes before exiting
+        # Ensure the inter-test metrics thread that were started in start_inter_test_logging completes before exiting
         # At this point we have the inter-test log information captured!!!
-        inter_test_thread.join()
+        # Ensure ALL inter-test logging threads assinged to "inter_test_threads" (the list of threads returned from
+        # the function, finish before cleanup
+        for thread in inter_test_threads:
+            thread.join()
+
 
         print("[INFO] All chunks have been processed.")
 
