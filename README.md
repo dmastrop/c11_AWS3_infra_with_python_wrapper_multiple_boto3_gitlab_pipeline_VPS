@@ -1,11 +1,17 @@
 ## Current and latest development work
 
 The parent directory has the Docker files and the gitlab-ci.yml file
+Dockerfile_python_multi_processing is for the latest development gitlab pipeline.
+
+All python (mastser_script.py) run in self contained Docker container on the VPS
+
+The VPS also hosts a self-managed gitlab container from which the pipelines are run. This expedites the repetitive testing, 
+especially for benchmarking the module2 (below).
 
 Latest development work is in the aws_boto3_modular_multi_processing sub-directory
 The master_script.py is in this directory
 
-This has all the latest multi-threading and multi-processing code in the sequential_master_modules package
+This has all the latest multi-threading and multi-processing code in the sequential_master_modules package(directory)
 
 The current 11 modules in the package sequential_master_modules are multi-processed in the master_script.py
 
