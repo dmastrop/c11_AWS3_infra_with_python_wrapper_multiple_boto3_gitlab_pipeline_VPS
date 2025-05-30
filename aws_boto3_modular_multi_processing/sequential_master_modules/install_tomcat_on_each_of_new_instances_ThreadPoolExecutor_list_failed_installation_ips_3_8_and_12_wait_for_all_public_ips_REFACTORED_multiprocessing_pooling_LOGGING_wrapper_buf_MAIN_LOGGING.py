@@ -1031,8 +1031,10 @@ def sample_inter_test_metrics(logger, delay, label):
 
     mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
-    cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+    #cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
 
+    cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
+    
     logger.info(f"[MAIN] {label} Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
     logger.info(f"[MAIN] {label} Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
     logger.info(f"[MAIN] {label} Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
