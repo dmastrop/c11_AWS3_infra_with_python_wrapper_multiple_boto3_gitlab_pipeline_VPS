@@ -2,9 +2,33 @@
 
 This has the main() level logging infra for process level and process pooling orchestration level data.  This is not per process and thread logging. See part 8 below for that.
 
-This is the main() logging helper function:
+There are now two main() logging helper functions as shown below.   This was to make the main() process orchestration loggin
+more adaptable and extensible in terms of adding new metrics
+Per core CPU measurements will need to be added at higher process concurrency levels
+All of the other memory based metrics are listed below: RAM, free RAM, and swap usage.  The system has a fixed 16 GB of RAM
+The swap has been methodically increased and is now at 16GB in prep for the hyper-scaling
+Other enhancements are a radomized inter-test sampling and also some static samplings during test stress (for now at 50% and
+75% of a baseline execution time of 10 minutes.
+Another enhancement is that the inter-test samples are done with independent but concurrent background threads. The 
+multi-threading logic has been pulled out of main() and put into the second helper function below that returns a list
+of all the threads to main() . That way the threads can be .join'ed in main() to make sure that the inter-test data is 
+completely fetched prior to main(0 flush and cleanup.
+Helper function 2 calls helper function 1 for the specific logging semantics that can be used across all of the various 
+timing threads. The logging is fully asynchronous so the performance of main() execution code (multi-processing and pooling)
+is not affected. This makes the code more performance resilient with the logging overhead.
+
+Helper function 0 is very similar to the process level logging setup_logging() function, except this creates a dedicates
+main() log file in the archive directory of the gitlab pipeline as describe below. It is important to call this function early
+on in main()
+
+
+
+### main() logging helper functions: 
+
+helper function 0:
+
 ```
-#### ADD the main() level process and process pooling orchestration logging level code. The setup helper function is beow
+#### ADD the main() level process and process pooling orchestration logging level code. The setup helper function is below
 #### The function is incorporated in the main() function
 #### This is using the same log_path as used in the per process and threading log level code. /aws_EC2/logs is a mapped
 #### volume in the docker container to the project archive directory on the gitlab pipeline repo.  This is the line
@@ -37,23 +61,102 @@ def setup_main_logging():
 ```
 
 
-These are the added logging portions to the main() function using the helper function. This will help at a higher level when we optimize the desired_count relative to RAM VPS usage for hyper-scaling the process number count.
-This took several iterations to get to work. The problem was that the execution time portion was not getting written
-to disk and was missing in the main() level log.
+
+helper function 1:
+
+```
+## (helper logging function) this is for inter-test process orchestration level memory stats.
+## What i have done is modularize the threading of these operations into a second function that follows(see below
+## this function).
+## This function is for the actual logging semantics and output structure
+def sample_inter_test_metrics(logger, delay, label):
+    """Samples memory and CPU metrics at specific points during execution."""
+    time.sleep(delay)  # Wait for the specified timing
+
+    mem = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    #cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+
+    cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
+
+    logger.info(f"[MAIN] {label} Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test CPU Usage (per-core): {cpu_usage}")
+
+```
+
+helper function 2:
 
 
+```
+## (helper logging function) call this function in the middle of the logging in main() to create the list of independent 
+## threads in the background for each thread log timing variant
+## The objective is to collect load bearing memory and CPU stats for the hyper-scaling tests
+## moving the threading.Thread method outside of main() makes this much more extensible in case I need to add more
+## static or dynamic sampling points!!
+## NOTE: i forgot to add the thread storage so that we can wait for them to complete in main with .join! It is working now.
+
+
+def start_inter_test_logging(logger, total_estimated_runtime):
+    """Launch separate logging threads and return them for later joining."""
+    threads = []  # Store threads for later synchronization
+
+    random_delay = random.uniform(0.3, 0.7) * total_estimated_runtime  # Random 30-70%
+    fixed_50_delay = 0.5 * total_estimated_runtime  # Fixed 50%
+    fixed_75_delay = 0.75 * total_estimated_runtime  # Fixed 75%
+
+    # Start each thread and store it
+    threads.append(threading.Thread(target=sample_inter_test_metrics, args=(logger, random_delay, "Random 30/70")))
+    threads.append(threading.Thread(target=sample_inter_test_metrics, args=(logger, fixed_50_delay, "50%")))
+    threads.append(threading.Thread(target=sample_inter_test_metrics, args=(logger, fixed_75_delay, "75%")))
+
+    # Get this list of threads aboe and start them. Grouping them into a list makes this easy to do the .join in
+    # main() assuring logging is all complete prior to flush and closing things out in main()
+    for thread in threads:
+        thread.start()
+
+    return threads  # Return the list of threads to be joined in main()
+```
+
+
+
+### main() logging changes:
+
+These are the added logging portions to the main() function using the helper functions above. 
+This will help at a higher level when we optimize the desired_count relative to RAM VPS usage for hyper-scaling the process number
+count. This took several iterations to get to work. The main initial problem was that the execution time portion was not getting 
+written to disk and was missing in the main() level log. The fsync stream handler resolved this issue. Other issues were resolved
+with the helper functions 1 and 2 above.
+
+The edited out areas of the main() are noted below to save space.
 
 
 ```
 def main():
     load_dotenv()
+
+
+# The helper function setup_main_logging for the logging at the process orchestration level, see below
+# Pass this logger into the inter-test helper function call below sample_inter_test_metrics 
     logger = setup_main_logging()
-......
+
+
+# Define the total_estimated_runtime as global so that it can be used in the call to start_inter_test_logging
+# call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer and static points on this total_estimated_value 
+# in which to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
+    global total_estimated_runtime
+    total_estimated_runtime = 600  # Adjust based on previous test execution times
+
+
+<<EDITED OUT>>
+
+
 
 ### Configurable parameters
     chunk_size = 2     # Number of IPs per process
     max_workers = 2       # Threads per process
-    desired_count = 75     # Max concurrent processes
+    desired_count = 150     # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
@@ -71,18 +174,48 @@ def main():
     logger.info(f"[MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: {pooled_batches}")
 
 
-......
+
+<<EDITED OUT. The block below ends with the call to the helper function 2 above start_inter_test_logging>>
 
 
-# Try doing explicit flush and exit
+
+# The above still not working with execution time in the main log file. Try doing explicit flush and exit
 # on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
-# This fixed the issue. The os.fsync is used to force the disk write and it worked. 
+# This fixed the issue. 
+# Capture memory stats at the start of execution
     logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
     logger.setLevel(logging.INFO)
+    
+    initial_mem = psutil.virtual_memory()
+    initial_swap = psutil.swap_memory()
+    initial_cpu_usage = psutil.cpu_percent(interval=1, percpu=True)  # Capture per-core CPU usage
+
+
+    logger.info(f"[MAIN] Initial RAM Usage: {initial_mem.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Free Memory: {initial_mem.available / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Swap Usage: {initial_swap.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial CPU Usage (per-core): {initial_cpu_usage}")
+
 
     logger.info("[MAIN] Starting multiprocessing pool...")
+
+
+    # Start background logging threads by calling the start_inter_test_logging helper function()
+    # I have moved the threading logic outside of main() to make this more extensible and flexible if we need to
+    # add more variations in the samples, namely the CPU which is tricky to track and varies quite a bit during 
+    # execution. All of these threads are background threads in the main() process
+    # This is so that the main() program flow is not interupted in any way.
+    # This is an asynchronous design:
+    # By starting the inter-test sampling asynchronously, the main multiprocessing workload proceeds uninterrupted, and the 
+    # logging thread quietly waits until that thread's retirement interval is reached.
+    # Then, in the `finally` block, use a join on the returned list from start_inter_test_logging to make sure all the
+    # threaded data has been collected before flush and closing thing out in main()
+
+    inter_test_threads = start_inter_test_logging(logger, total_estimated_runtime)
+
     start_time = time.time()
 
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
     try:
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
@@ -91,7 +224,27 @@ def main():
         logger.info("[MAIN] All chunks have been processed.")
         logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
 
+        # Ensure the inter-test metrics thread that were started in start_inter_test_logging completes before exiting
+        # At this point we have the inter-test log information captured!!!
+        # Ensure ALL inter-test logging threads assinged to "inter_test_threads" (the list of threads returned from
+        # the function, finish before cleanup)
+        for thread in inter_test_threads:
+            thread.join()
+
+
         print("[INFO] All chunks have been processed.")
+
+        # Capture memory stats after execution
+        final_mem = psutil.virtual_memory()
+        final_swap = psutil.swap_memory()
+        final_cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+
+        logger.info(f"[MAIN] Final RAM Usage: {final_mem.used / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final Free Memory: {final_mem.available / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final Swap Usage: {final_swap.used / (1024**2):.2f} MB")
+        logger.info(f"[MAIN] Final CPU Usage (per-core): {final_cpu_usage}")
+
+
 
         # **New Explicit Log Flush Approach**
         for handler in logger.handlers:
@@ -103,52 +256,83 @@ def main():
         # Now shutdown logging AFTER flushing
         logging.shutdown()
 
-
 ```
 
 
 The stream handler will forward the logging info to both the gilab pipeline console and the archive directory on the
 gitlab pipeline. The main() function will log to its own log file in the artifacts separate from process level log
 files by design.
+With moderate level number of processes (100-150) this logging is performing welll and I did not notice any added
+total execution time for this module.
 
 
 Example of content saved to the main log file:
 
-```
-2025-05-29 00:15:53,308 - 8 - INFO - [MAIN] Total processes: 125
-2025-05-29 00:15:53,308 - 8 - INFO - [MAIN] Initial batch (desired_count): 125
-2025-05-29 00:15:53,309 - 8 - INFO - [MAIN] Remaining processes to pool: 0
-2025-05-29 00:15:53,309 - 8 - INFO - [MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: 0
-2025-05-29 00:15:53,310 - 8 - INFO - [MAIN] Starting multiprocessing pool...
-2025-05-29 00:29:31,175 - 8 - INFO - [MAIN] All chunks have been processed.
-2025-05-29 00:29:31,175 - 8 - INFO - [MAIN] Total execution time for all chunks of chunk_size: 817.87 seconds
-
-```
 Added in Swap, Free RAM memory and RAM usage statistics. These will be the main bottlenecks moving forward with
-the process hyperscaling of 200, 300 and 400 processes.  Desired_count adjustments for the number of pooled 
+the process hyperscaling of 200, 300 and 400 processes.  Desired_count adjustments for the number of pooled
 processes will be the main way to deal with the memory issues that will be encountered.  The trade off is that
 process queue pooling is inherently slower in terms of concurrency and parallelization, but it will be necessary
 if RAM is a constant on the VPS controller.
 
+Added inter-test sampling as well as shown below. This has been very helpful in assessing relative performance when 
+changing the desired_count.
 
 ```
-2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Total processes: 150
-2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Initial batch (desired_count): 150
-2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Remaining processes to pool: 0
-2025-05-29 02:13:59,741 - 8 - INFO - [MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: 0
-2025-05-29 02:13:59,742 - 8 - INFO - [MAIN] Initial RAM Usage: 9992.61 MB
-2025-05-29 02:13:59,742 - 8 - INFO - [MAIN] Initial Free Memory: 5476.70 MB
-2025-05-29 02:13:59,742 - 8 - INFO - [MAIN] Initial Swap Usage: 2310.59 MB
-2025-05-29 02:13:59,743 - 8 - INFO - [MAIN] Starting multiprocessing pool...
-2025-05-29 02:27:27,289 - 8 - INFO - [MAIN] All chunks have been processed.
-2025-05-29 02:27:27,301 - 8 - INFO - [MAIN] Total execution time for all chunks of chunk_size: 807.54 seconds
-2025-05-29 02:27:27,305 - 8 - INFO - [MAIN] Final RAM Usage: 6057.23 MB
-2025-05-29 02:27:27,306 - 8 - INFO - [MAIN] Final Free Memory: 9459.91 MB
-2025-05-29 02:27:27,307 - 8 - INFO - [MAIN] Final Swap Usage: 6984.04 MB
-
+2025-05-30 04:18:47,641 - 8 - INFO - [MAIN] Total processes: 150
+2025-05-30 04:18:47,641 - 8 - INFO - [MAIN] Initial batch (desired_count): 150
+2025-05-30 04:18:47,641 - 8 - INFO - [MAIN] Remaining processes to pool: 0
+2025-05-30 04:18:47,641 - 8 - INFO - [MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: 0
+2025-05-30 04:18:48,643 - 8 - INFO - [MAIN] Initial RAM Usage: 11854.68 MB
+2025-05-30 04:18:48,643 - 8 - INFO - [MAIN] Initial Free Memory: 3380.49 MB
+2025-05-30 04:18:48,644 - 8 - INFO - [MAIN] Initial Swap Usage: 0.00 MB
+2025-05-30 04:18:48,644 - 8 - INFO - [MAIN] Initial CPU Usage (per-core): [1.0, 0.0, 1.0, 1.0, 0.0, 0.0]
+2025-05-30 04:18:48,644 - 8 - INFO - [MAIN] Starting multiprocessing pool...
+2025-05-30 04:22:05,149 - 8 - INFO - [MAIN] Random 30/70 Inter-test RAM Usage: 14277.98 MB
+2025-05-30 04:22:05,151 - 8 - INFO - [MAIN] Random 30/70 Inter-test Free Memory: 1227.14 MB
+2025-05-30 04:22:05,151 - 8 - INFO - [MAIN] Random 30/70 Inter-test Swap Usage: 5022.49 MB
+2025-05-30 04:22:05,151 - 8 - INFO - [MAIN] Random 30/70 Inter-test CPU Usage (per-core): [8.1, 6.9, 6.1, 5.1, 7.1, 8.0]
+2025-05-30 04:23:49,645 - 8 - INFO - [MAIN] 50% Inter-test RAM Usage: 14216.60 MB
+2025-05-30 04:23:49,645 - 8 - INFO - [MAIN] 50% Inter-test Free Memory: 1287.11 MB
+2025-05-30 04:23:49,645 - 8 - INFO - [MAIN] 50% Inter-test Swap Usage: 5009.99 MB
+2025-05-30 04:23:49,645 - 8 - INFO - [MAIN] 50% Inter-test CPU Usage (per-core): [9.3, 9.1, 10.8, 7.1, 8.1, 12.1]
+2025-05-30 04:26:19,645 - 8 - INFO - [MAIN] 75% Inter-test RAM Usage: 14165.88 MB
+2025-05-30 04:26:19,645 - 8 - INFO - [MAIN] 75% Inter-test Free Memory: 1332.91 MB
+2025-05-30 04:26:19,645 - 8 - INFO - [MAIN] 75% Inter-test Swap Usage: 5223.87 MB
+2025-05-30 04:26:19,645 - 8 - INFO - [MAIN] 75% Inter-test CPU Usage (per-core): [5.9, 6.1, 4.0, 6.1, 5.9, 4.0]
+2025-05-30 04:28:45,264 - 8 - INFO - [MAIN] All chunks have been processed.
+2025-05-30 04:28:45,264 - 8 - INFO - [MAIN] Total execution time for all chunks of chunk_size: 596.62 seconds
+2025-05-30 04:28:45,265 - 8 - INFO - [MAIN] Final RAM Usage: 8217.49 MB
+2025-05-30 04:28:45,265 - 8 - INFO - [MAIN] Final Free Memory: 7279.59 MB
+2025-05-30 04:28:45,265 - 8 - INFO - [MAIN] Final Swap Usage: 5256.36 MB
+2025-05-30 04:28:45,265 - 8 - INFO - [MAIN] Final CPU Usage (per-core): [13.2, 13.0, 14.2, 13.7, 13.0, 13.0]
 
 
 ```
+Early tests are revealing an interesting tradeoff with the increased parallelization of processes when desired_count is
+raised up higher and eventually set at max (pooling is turned off). 
+
+With process pooling the swap usage is in general lower due to less concurrency. 
+
+With process pooling turned off (desired_count = total number of processes), the swap usage is 
+higher.   
+
+Thus the VPS is under more stress with pooling turned off. 
+
+The downside of running with pooling is that the total execution time is notably slower. 
+
+So moving forward with higher process counts there will have to be a trade off in this fashion and because RAM is affected as
+well, at some point the process pooling will be mandatory.
+
+There have been several instances where the VPS freezes up and this is because of VPS contentions issues.
+
+NOTE: it is really important to clear the swap between tests because cleanup is not always complete prior to starting the 
+next test. The swap can be cleared on the VPS with: sudo swapoff -a && sudo swapon -a
+
+There was also an interesting issue with CPU core3 on the VPS with process pooling test but not with the test without 
+pooling. This will required more testing and investigation. The CPU cores may be differentially affected with pooling vs.
+no pooling scenarios.
+
+
 
 
 
