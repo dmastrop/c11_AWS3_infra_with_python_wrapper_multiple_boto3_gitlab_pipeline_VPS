@@ -24,6 +24,14 @@ pertain to the optmizations to this module.
 
 
 
+## UPDATES: part 11: Hyper-scaling of processes, benchmark testing and VPS swap tuning
+
+
+
+
+
+
+
 
 
 ## UPDATES: BENCHMARKING: part 10: main() process and process pooling orchestration level logging infra
