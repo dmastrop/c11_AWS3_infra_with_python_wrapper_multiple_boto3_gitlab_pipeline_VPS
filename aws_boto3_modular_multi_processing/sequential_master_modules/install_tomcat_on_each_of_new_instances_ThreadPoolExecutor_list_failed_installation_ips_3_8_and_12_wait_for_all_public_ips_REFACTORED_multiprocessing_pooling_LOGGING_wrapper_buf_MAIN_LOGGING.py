@@ -45,8 +45,12 @@ import psutil
 ## Too many API calls are hitting the threshold from AWS. 
 ## will need to wrap the calls to authorize_security_group_ingress in this function below that implements
 ## exponential backoff as AWS recommends.
+## This issue resurfacing at 200 concurrent processes. Try increasing the max_retires from 5 to 10 to see if it resolves the
+## issue. If it does may need to introduce a more dynamic form of the exponential backoff.
+## NOTE: do not increase delay because that will affect the hybrid pooled/nonpooled scenarios (desired_count < total processes)
+## and that would be slowing them down even though they do not need API backoff increased. Only use max_retries increase.
 
-def retry_with_backoff(func, max_retries=5, base_delay=1, max_delay=10, *args, **kwargs):
+def retry_with_backoff(func, max_retries=10, base_delay=1, max_delay=10, *args, **kwargs):
     for attempt in range(max_retries):
         try:
             return func(*args, **kwargs)
