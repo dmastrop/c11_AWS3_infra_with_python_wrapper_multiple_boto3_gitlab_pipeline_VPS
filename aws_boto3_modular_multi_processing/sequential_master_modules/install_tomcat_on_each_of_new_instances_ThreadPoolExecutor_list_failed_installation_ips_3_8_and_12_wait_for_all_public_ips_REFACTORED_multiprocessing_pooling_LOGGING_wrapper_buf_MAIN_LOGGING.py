@@ -1023,26 +1023,68 @@ def setup_main_logging():
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
 
+    # **Add Initial Swap Logging**
+    swap_info = psutil.swap_memory()
+    logger.info(f"[MAIN] Initial Swap Total: {swap_info.total / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Swap Used: {swap_info.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] Initial Swap Free: {swap_info.free / (1024**2):.2f} MB")
+
     return logger
 
 ## (helper logging function) this is for inter-test process orchestration level memory stats.
 ## What i have done is modularize the threading of these operations into a second function that follows(see below
 ## this function).
 ## This function is for the actual logging semantics and output structure
-def sample_inter_test_metrics(logger, delay, label):
-    """Samples memory and CPU metrics at specific points during execution."""
-    time.sleep(delay)  # Wait for the specified timing
 
+#def sample_inter_test_metrics(logger, delay, label):
+#    """Samples memory and CPU metrics at specific points during execution."""
+#    time.sleep(delay)  # Wait for the specified timing
+#
+#    mem = psutil.virtual_memory()
+#    swap = psutil.swap_memory()
+#    #cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+#
+#    cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
+#    
+#    logger.info(f"[MAIN] {label} Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
+#    logger.info(f"[MAIN] {label} Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
+#    logger.info(f"[MAIN] {label} Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
+#    logger.info(f"[MAIN] {label} Inter-test CPU Usage (per-core): {cpu_usage}")
+
+## Update the sample_inter_test_metrics helper function with swap stats
+def sample_inter_test_metrics(logger, delay, label):
+    """Samples memory, CPU, and swap metrics at specific points during execution."""
+    time.sleep(delay)
+
+    # Capture memory, swap, and CPU usage
+    # NOTE for cpu need interval set to 1 to get reliable core stats inter-test. Interval 0 was not working.
     mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
-    #cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
-
     cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
-    
+
+    # NEW: Capture swap percentage usage
+    swap_percent = (swap.used / swap.total) * 100 if swap.total > 0 else 0
+
+    # Log RAM, CPU, and enhanced swap stats
     logger.info(f"[MAIN] {label} Inter-test RAM Usage: {mem.used / (1024**2):.2f} MB")
     logger.info(f"[MAIN] {label} Inter-test Free Memory: {mem.available / (1024**2):.2f} MB")
+
     logger.info(f"[MAIN] {label} Inter-test Swap Usage: {swap.used / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test Swap Free: {swap.free / (1024**2):.2f} MB")
+    logger.info(f"[MAIN] {label} Inter-test Swap Percentage Used: {swap_percent:.2f}%")
+
     logger.info(f"[MAIN] {label} Inter-test CPU Usage (per-core): {cpu_usage}")
+
+    # NEW: Capture swap file details from `swapon -s` (Linux only)
+    try:
+        with open('/proc/swaps', 'r') as f:
+            swap_details = f.readlines()[1:]  # Skip header line
+            logger.info(f"[MAIN] {label} Swap File Details: {''.join(swap_details).strip()}")
+    except FileNotFoundError:
+        logger.warning(f"[MAIN] {label} Swap file details unavailable (not a Linux system).")
+
+
+
 
 
 ## (helper logging function) call this function in the middle of the logging in main() multiple times, each one to create a new and independent 
@@ -1196,7 +1238,7 @@ def main():
     ### Configurable parameters
     chunk_size = 1     # Number of IPs per process
     max_workers = 1       # Threads per process
-    desired_count = 200     # Max concurrent processes
+    desired_count = 175    # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
