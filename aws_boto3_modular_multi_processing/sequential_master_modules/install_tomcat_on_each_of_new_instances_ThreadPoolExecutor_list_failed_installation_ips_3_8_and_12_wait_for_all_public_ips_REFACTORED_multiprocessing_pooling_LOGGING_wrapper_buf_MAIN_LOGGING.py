@@ -1031,6 +1031,10 @@ def setup_main_logging():
 
     return logger
 
+
+
+
+
 ## (helper logging function) this is for inter-test process orchestration level memory stats.
 ## What i have done is modularize the threading of these operations into a second function that follows(see below
 ## this function).
@@ -1087,13 +1091,14 @@ def sample_inter_test_metrics(logger, delay, label):
 
 
 
-## (helper logging function) call this function in the middle of the logging in main() multiple times, each one to create a new and independent 
+## (helper logging function) call this function in the middle of the logging in main() to create a new and independent 
 ## thread in the background for each thread metric variant
 ## The objective is to collect load bearing memory and CPU stats for the hyper-scaling tests
 ## moving the threading.Thread method outside of main() makes this much more extensible in case I need to add more
 ## static or dynamic sampling points!!
 ## NOTE: i forgot to add the thread storage so that we can wait for them to complete in main with .join!
-
+## The start_inter_test_logging returns a list of threads so that main() can ensure that they are all joined prior to closing and
+## flushing. This ensures all logging stats have been collected.
 
 def start_inter_test_logging(logger, total_estimated_runtime):
     """Launch separate logging threads and return them for later joining."""
@@ -1114,6 +1119,26 @@ def start_inter_test_logging(logger, total_estimated_runtime):
         thread.start()
 
     return threads  # Return the list of threads to be joined in main()
+
+
+
+
+
+
+## (helper logging function)  call this function in the middle of the logging in main() right after the call to start_inter_test_logging
+## This is very similar in approach, but start the thread for this from main() rather than from the helper function below
+## We don't need the extensibility of the start_inter_test_logging just to monitor the kswapd0
+
+def sample_kswapd_cpu_main(stop_event, logger, interval=60):
+    while not stop_event.is_set():
+        kswapd_cpu = next((p.cpu_percent(interval=None) for p in psutil.process_iter(attrs=['name']) if 'kswapd0' in p.info['name']), None)
+        if kswapd_cpu is not None:
+            logger.info(f"[MAIN] kswapd0 CPU usage: {kswapd_cpu:.2f}%")
+        stop_event.wait(interval)
+
+
+
+
 
 
 
@@ -1238,7 +1263,7 @@ def main():
     ### Configurable parameters
     chunk_size = 1     # Number of IPs per process
     max_workers = 1       # Threads per process
-    desired_count = 200    # Max concurrent processes
+    desired_count = 225    # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
@@ -1342,6 +1367,18 @@ def main():
     
 
 
+    # Start the background logging thread for the kswapd0 monitoring as well. This is also asyncrhonous and will run in the 
+    # background as we proceed in main() to start the processes below to run the worker threads for each chunk of chunk_size
+    # with multipprocessing.Pool 
+    # This will run in parallel with the inter_test_threads for the other logging stats
+    # The call is to sample_kswapd_cpu_main helper function defined above
+
+    stop_event = threading.Event()
+    kswapd_thread = threading.Thread(target=sample_kswapd_cpu_main, args=(stop_event, logger, 60))
+    kswapd_thread.start()
+
+
+
     start_time = time.time()
 
     ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
@@ -1359,6 +1396,13 @@ def main():
         # the function, finish before cleanup
         for thread in inter_test_threads:
             thread.join()
+
+
+
+        # Likewise, ensure that the kswapd_thread that was started with kswapd_thread above completes before exiting
+        # There is only one thread here to join.
+        stop_event.set()
+        kswapd_thread.join()
 
 
         print("[INFO] All chunks have been processed.")
