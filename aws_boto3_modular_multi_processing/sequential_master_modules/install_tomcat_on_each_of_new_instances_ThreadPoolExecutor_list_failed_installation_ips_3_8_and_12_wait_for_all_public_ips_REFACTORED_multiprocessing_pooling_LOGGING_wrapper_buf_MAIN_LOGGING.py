@@ -1130,6 +1130,8 @@ def start_inter_test_logging(logger, total_estimated_runtime):
 ## We don't need the extensibility of the start_inter_test_logging just to monitor the kswapd0
 
 def sample_kswapd_cpu_main(stop_event, logger, interval=60):
+    logger.info("[DEBUG] kswapd monitoring thread loop is running...")
+
     while not stop_event.is_set():
         kswapd_cpu = next((p.cpu_percent(interval=None) for p in psutil.process_iter(attrs=['name']) if 'kswapd0' in p.info['name']), None)
         if kswapd_cpu is not None:
@@ -1376,6 +1378,9 @@ def main():
     stop_event = threading.Event()
     kswapd_thread = threading.Thread(target=sample_kswapd_cpu_main, args=(stop_event, logger, 60))
     kswapd_thread.start()
+    ## Add debug
+    logger.info("[DEBUG] kswapd0 monitoring thread started!")
+
 
 
 
