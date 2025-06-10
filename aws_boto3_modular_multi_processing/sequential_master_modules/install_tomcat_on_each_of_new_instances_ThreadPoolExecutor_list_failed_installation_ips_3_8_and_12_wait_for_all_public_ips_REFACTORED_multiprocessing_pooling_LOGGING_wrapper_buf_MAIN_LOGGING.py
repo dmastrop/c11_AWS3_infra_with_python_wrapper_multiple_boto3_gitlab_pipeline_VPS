@@ -1129,15 +1129,16 @@ def start_inter_test_logging(logger, total_estimated_runtime):
 ## This is very similar in approach, but start the thread for this from main() rather than from the helper function below
 ## We don't need the extensibility of the start_inter_test_logging just to monitor the kswapd0
 
-def sample_kswapd_cpu_main(stop_event, logger, interval=60):
-    logger.info("[DEBUG] kswapd monitoring thread loop is running...")
-
-    while not stop_event.is_set():
-        kswapd_cpu = next((p.cpu_percent(interval=None) for p in psutil.process_iter(attrs=['name']) if 'kswapd0' in p.info['name']), None)
-        if kswapd_cpu is not None:
-            logger.info(f"[MAIN] kswapd0 CPU usage: {kswapd_cpu:.2f}%")
-        stop_event.wait(interval)
-
+#def sample_kswapd_cpu_main(stop_event, logger, interval=60):
+#    logger.info("[DEBUG] kswapd monitoring thread loop is running...")
+#
+#    while not stop_event.is_set():
+#        kswapd_cpu = next((p.cpu_percent(interval=None) for p in psutil.process_iter(attrs=['name']) if 'kswapd0' in p.info['name']), None)
+#        if kswapd_cpu is not None:
+#            logger.info(f"[MAIN] kswapd0 CPU usage: {kswapd_cpu:.2f}%")
+#        stop_event.wait(interval)
+## Comment out the kswapd logging stuff. psutil has no access to process level stuff on the host VPS (sytem stuff like CPU, RAM, swap
+## is ok, but no process level stuff works. Have to run that in separate python script venv on the VPS host itself.
 
 
 
@@ -1375,11 +1376,11 @@ def main():
     # This will run in parallel with the inter_test_threads for the other logging stats
     # The call is to sample_kswapd_cpu_main helper function defined above
 
-    stop_event = threading.Event()
-    kswapd_thread = threading.Thread(target=sample_kswapd_cpu_main, args=(stop_event, logger, 60))
-    kswapd_thread.start()
-    ## Add debug
-    logger.info("[DEBUG] kswapd0 monitoring thread started!")
+#    stop_event = threading.Event()
+#    kswapd_thread = threading.Thread(target=sample_kswapd_cpu_main, args=(stop_event, logger, 60))
+#    kswapd_thread.start()
+#    ## Add debug
+#    logger.info("[DEBUG] kswapd0 monitoring thread started!")
 
 
 
@@ -1406,8 +1407,8 @@ def main():
 
         # Likewise, ensure that the kswapd_thread that was started with kswapd_thread above completes before exiting
         # There is only one thread here to join.
-        stop_event.set()
-        kswapd_thread.join()
+#        stop_event.set()
+#        kswapd_thread.join()
 
 
         print("[INFO] All chunks have been processed.")
