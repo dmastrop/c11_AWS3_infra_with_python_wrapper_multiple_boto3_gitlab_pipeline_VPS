@@ -79,7 +79,7 @@ Simply tail the logs during each pipeline run. We can correlate the python modul
 Correlating the kswapd0 with the other python intrinsic logs is key.
 
 
-#### Review of releavant variables and Notation and examples:
+### Review of releavant variables and Notation and examples:
 
 desired_count is the intial batch of processes that will be handled by the multi-processing aspect of module 2 of the package where the core of the multi-theading and multi-processing optimizations were made
 
@@ -115,8 +115,7 @@ Thus there are many permutations available for testing given that the number of 
 
 
 
-
-AWS API contention and exponential backoff:
+### AWS API contention and exponential backoff:
 
 For API contention with the security group assignments to the EC2 instances the max_retries is a siginficant variable
 This needs to be set to 10 for the higher process level tests because the number of retries often exceeds 5.  It can be increased to
