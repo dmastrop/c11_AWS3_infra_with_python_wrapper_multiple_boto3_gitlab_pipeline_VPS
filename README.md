@@ -147,7 +147,9 @@ def retry_with_backoff(func, max_retries=10, base_delay=1, max_delay=10, *args, 
 As will be shown some of the major factors and metrics to monitor are the RAM, swap, CPU, kswapd0, the API contention through the Retry counts in the gitlab pipeline logs. Always ensure that all the instances have successful installations of tomcat9 using a search of "Instalation completed" in the gitlab pipeline console logs.
 
 
-### gitlab optimizations
+### gitlab optimizations:
+
+All of the python testing is done in a pipeline for ease of managment, and quick turnaround and isolation from the main VPS OS.
 
 There have been several things that needed to be optimized with the gitlab docker container that is running the pipeline for the docker container that runs the python code.
 
