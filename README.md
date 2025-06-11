@@ -24,12 +24,128 @@ pertain to the optmizations to this module.
 
 
 
-## UPDATES: part 11: Hyper-scaling of processes, benchmark testing and VPS swap tuning
 
 
 
 
 
+## UPDATES: part 12: Hyper-scaling of processes (250, 400+ processes), benchmark testing and VPS swap tuning
+
+
+
+
+
+## UPDATES: part 11: Initial Key insights into process hyperscaling (150, 200, 250, 300, 400 concurrent processes) (more to follow)
+
+The 250 concurrent process point for the current setup (16GB RAM and 16GB of swap) seems to be where the inflection point in the process scaling dynamics changes. At 200 process the pooling was a detriment to total execution time whereas the increased AWS API contention and swap dynamics at the 250 process level become poor enough were the 250 without pooling becomes the slower of the execution times, and pooling helps alleviate API contention and improve swap dynamics. 
+
+At this point we introduce monitoring kswapd0 on the VPS (can’t do this from the python container as psutil does not allow direct access to process level host metrics, only global metrics on the VPS like CPU, RAM and swap).   The script below is run concurrently with the python pipeline to provide additiona metrics so that we can understand why the dynamics above begin to develop at the 250 inflection point. Here is the simple python script that is run directly on the VPS host. NOTE that the script is run in a python venv. I did not want to risk corrupting the native python installation on the VPS because the VPS requires that for configuration from the ansible controller (the VPS can be dynamically configured via ansible from the controller and the ansible on the controller requires a specific python version and python environment to continue to work)
+
+
+
+```
+
+(venv_kswapd) [root@vps ~]# cat kswapd_monitor.py 
+import time
+import psutil
+import logging
+
+# Set up logging
+logging.basicConfig(filename="/root/kswapd_monitor.log",
+                    level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+
+def monitor_kswapd(interval=60):
+    """Monitor kswapd0 every 'interval' seconds"""
+    logging.info("Starting kswapd0 monitoring script...")
+    
+    while True:
+        found = False
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'cpu_percent']):
+            if proc.info['name'] == "kswapd0":
+                found = True
+                logging.info(f"kswapd0 detected - PID: {proc.info['pid']}, CPU Usage: {proc.info['cpu_percent']}%")
+
+        if not found:
+            logging.warning("kswapd0 not found - it may not be actively swapping.")
+
+        time.sleep(interval)
+
+# Adjust the interval based on your testing needs
+monitor_kswapd(interval=15)
+```
+
+Simply tail the logs during each pipeline run. We can correlate the python modules stats (CPU, swap and RAM, etc). with the kswapd0 tail logs via the timestamps very effectively. This permits us to ascertain the swap dynamics of each different test scenario run in the pipeline so that we can understand why pooling becomes effective at lowering execution time at the 250 process level and not at the 200 level.
+Correlating the kswapd0 with the other python intrinsic logs is key.
+
+
+#### Review of releavant variables and Notation and examples:
+
+desired_count is the intial batch of processes that will be handled by the multi-processing aspect of module 2 of the package where the core of the multi-theading and multi-processing optimizations were made
+
+chunk_size it the chunk of IPs of EC2 instances which make up a chunk on which the multi-threading worker will process
+
+max_workers is the thread count for the ThreadPoolExecutor which will work on the chunk of EC2 instance IPs of chunk_size
+This thead count always pertains to a single process
+
+From extensive testing it is best to set the max_workers to be equal to or greater than chunk_size (oversubsribing the thread worker does not increase execution time).  If max_workers is less than chunk_size performance and execution time degrades accordingly.
+
+Examples: 
+
+Example 1:
+With a chunk of chunk_size 1 and 250 EC2 instances there will be 250 processes of 1 thread each to work on the 250 chunks of chunk_size=1
+
+Note that for short hand moving forward with updates the following will be used, for example:
+250/0 represents a test with 250 concurrent processes in the intial batch with 0 processes pooled
+250/25 represents a test with 250 processes and in this case 250  EC2 instances, but inital batch is 225 processes and 25 are pooled and queued
+250/50 represents a test with 250 processes and in this case 250 EC2 instances, but initial batch is 200 processes and 50 are pooled and queued
+
+
+Example 2:
+With a chunk_size of 2 and 400 EC2 instances there will be 200 processes of 2 threads each to work on the 200 chunks of chunk_size=2
+
+200/0 represents a test with 200 concurrent processes in the intial batch with 0 processes pooled
+200/25 represents a test with 200 processes and in this case 400 EC2 instances, but inital batch is 175 processes and 25 are pooled and queued
+200/50 represents a test with 200 processes and in this case 400 EC2 instances, but initial batch is 150 processes and 50 are pooled and queued
+
+
+NOTE:
+The number of actual EC2 instances does not impact performance significantly as long as max_workers is set to equal or greater than the chunk_size, because the ThreadPoolExecutor is very efficient and is not the primary bottleneck in the process hyperscaling testing.
+Thus there are many permutations available for testing given that the number of EC2 instances can always be changed to support a particular process concurrency test.  This can offer cost savings (for example to get 200 processes use a chunk_size of 1 and run it with 200 EC2 instances rather than 200 processes with a chunk_size of 2 with 400 EC2 instances.
+
+
+
+
+AWS API contention and exponential backoff:
+
+For API contention with the security group assignments to the EC2 instances the max_retries is a siginficant variable
+This needs to be set to 10 for the higher process level tests because the number of retries often exceeds 5.  It can be increased to
+whatever number is necessary to support the number of  processes and in general higher process concurrency requires a higer 
+max_retries number. This is ok for the exponential backoff python code because the delay parameter is not changed at all and only
+the retries is changed for these higher process level tests. This ensures that the higher pooling test (less concurrent processes)
+are not unecessarily penalized (wth an increased delay parameter) when comparted to a non-pooling test in regards to API contention.
+If a higher concurrency is required it is intrinsically penalized because it will initiate and require more retries, whereas
+the lower pooled tests will not require additional retries to the degree that fully concurrent tests do. This controls the 
+tests when comparing pooled vs. non-pooled testing.
+
+
+```
+def retry_with_backoff(func, max_retries=10, base_delay=1, max_delay=10, *args, **kwargs):
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            if 'RequestLimitExceeded' in str(e):
+                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+            else:
+                raise
+    raise Exception("Max retries exceeded for AWS API call.")
+
+```
+
+As will be shown some of the major factors and metrics to monitor are the RAM, swap, CPU, kswapd0, the API contention through the Retry counts in the gitlab pipeline logs. Always ensure that all the instances have successful installations of tomcat9 using a search of "Instalation completed" in the gitlab pipeline console logs.
 
 
 
