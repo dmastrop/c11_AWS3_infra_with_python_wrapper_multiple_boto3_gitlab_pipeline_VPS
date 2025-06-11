@@ -155,7 +155,7 @@ There have been several things that needed to be optimized with the gitlab docke
 
 The first was that the log capacity had to be increased several times. The per process logging and the console messages for each EC2 instance consumes large amounts of gitlab console logs. This can be increased on a self-hosted gitlab instance like this but not on the public instances. 
 
-The second item was the clearing of the gitlab docker container registry artifacts.  Left unchecked these build up rapidly when there is a lot of testing. One container registry image per test.  Using gitlab web console to cleanup the registry only removes the TAGS for the images and not the images.  If the images are left unchecked the gitlab docker instance periodically tries to tar them and this consume a lot of CPU especially during testing and the test results can get skewed. Best think is to use the registry garbage collector available with gitlab-ctl. Since my gitlab instance is running on a docker container on the VPS use the script below to identify the container id and then docker exec into the container and run the gitlab-ctl registry-garbage-collect periodically. I will incorporate this as a cronjob on the VPS at a later date. The simple shell script is below:
+The second item was the clearing of the gitlab docker container registry artifacts. Since my gitlab instance is running on a docker container on the VPS use the script below to identify the container id and then docker exec into the container and run the gitlab-ctl registry-garbage-collect periodically. I will incorporate this as a cronjob on the VPS at a later date. The simple shell script is below:
 
 ```
 [root@vps ~]# cat gitlab_cleanup.sh 
