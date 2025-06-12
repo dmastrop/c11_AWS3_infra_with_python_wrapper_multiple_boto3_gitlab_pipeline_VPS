@@ -64,6 +64,9 @@ def restart_ec_multiple_instances():
                 ImageId=image_id,
                 InstanceType=instance_type,
                 KeyName=key_name,
+                SecurityGroupIds=['sg-0a1f89717193f7896'],  
+                # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
+                # will be applied to the default security group.
                 MinCount=int(min_count),
                 MaxCount=int(max_count)
             )

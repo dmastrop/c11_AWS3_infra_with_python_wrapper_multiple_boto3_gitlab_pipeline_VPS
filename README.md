@@ -117,9 +117,11 @@ Thus there are many permutations available for testing given that the number of 
 
 
 
-### AWS API contention and exponential backoff:
+### AWS API contention and exponential backoff with jitter for retrying API calls:
 
-For API contention with the security group assignments to the EC2 instances the max_retries is a siginficant variable
+For API contention with the security group rule assignments (call to AuthorizeSecurityGroupIngress by authorize_security_group_ingress method)
+ the max_retries is a siginficant variable
+
 This needs to be set to 10 for the higher process level tests because the number of retries often exceeds 5.  It can be increased to
 whatever number is necessary to support the number of  processes and in general higher process concurrency requires a higer 
 max_retries number. This is ok for the exponential backoff python code because the delay parameter is not changed at all and only
@@ -128,6 +130,19 @@ are not unecessarily penalized (wth an increased delay parameter) when comparted
 If a higher concurrency is required it is intrinsically penalized because it will initiate and require more retries, whereas
 the lower pooled tests will not require additional retries to the degree that fully concurrent tests do. This controls the 
 tests when comparing pooled vs. non-pooled testing.
+
+AWS recommends this exponential backoff, but a batch approach can also be considered as well. The max_retries simple solution below seems to be accomodating the higher process scaling well, and a batch approach will be considered if the number of retries becomes unruly for the hyper-scaling testing (400 and 800 processes).  With a batch approach we can essentially throttle and stagger the API requests (security group rule updates to each of the EC2 instances) into batches, batching the updates outside of the thread woker processing.
+
+Note that for now the SG is the default SG and that can be chnaged in module1 of this python package.
+
+random.uniform(0, 1) adds randomness (a jitter)  to prevent synchronized retries among multiple instances.
+
+Randomness factors have been added throughout the python module, most notably for the process level logging so that we don't get storms of logging data fetches across all the parallel processes, or in this case a retry storm on the EC2 instance security group configuratino.  The random.uniform is the jitter addtion to the base exponential backoff.
+((The logging was interesting. Prior to using randomness the logging was causing a deteriorition in the execution time (more on the process level logging is in the UPDATE main() logging  section below))
+
+Without this, all retries could occur at the same exact intervals, causing a potential "retry storm.
+
+
 
 
 ```
@@ -146,7 +161,119 @@ def retry_with_backoff(func, max_retries=10, base_delay=1, max_delay=10, *args, 
 
 ```
 
-As will be shown some of the major factors and metrics to monitor are the RAM, swap, CPU, kswapd0, the API contention through the Retry counts in the gitlab pipeline logs. Always ensure that all the instances have successful installations of tomcat9 using a search of "Instalation completed" in the gitlab pipeline console logs.
+This function above is used to wrap all the python calls to the authorize_security_group_ingress boto3 method that applies the SG 
+rule to the SG (default for now) that is attached to each of the EC2 instances. The multi-processing and multi-threading
+of this, makes this a requiremennt. Otherwise I see failed tomcat9 installatinons when the API is overwhelmed.
+
+ Here is an example of the wrap for port 22 SSH rule applied to the default SG that is used on all the EC2 instances:
+
+
+```
+    for sg_id in set(security_group_ids):
+        try:
+            retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 22,
+                    'ToPort': 22,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+        except my_ec2.exceptions.ClientError as e:
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"Rule already exists for security group {sg_id}")
+            else:
+                raise
+```
+This is working really well especially at the higher scale levels and the gitlab console logs can easily be searched for 
+"Retry <seconds>" to ascertain the degree of API contention that is encountered by the script.
+
+
+
+### Batch processing to deal with the API contention issue above:
+
+I am going to leave in the current implementation with the exponential backoff and jitter becasue it is introducing an AWS delay 
+factor that makes testing the tradeoffs between pooling the processes and not pooling the processes easy to demonstrate. The retries will penalize the non-pooled tests accordingly and this can be used as a general indicator of too much process contention causing a delay with AWS roll out.
+
+
+The AWS limits are per account and not per request, so batching them together will distribute the load more evenly rather than massive API spikes encountered without the batch processing.
+
+At a later stage the API contention issue will be approched using the batch processing with a worker thread as indicated below:
+There are a lot of variants to this approach:
+
+
+#### Method 1: Standard batch processing with a queue + a single background worker thread:
+
+This appraoch uses a batch based upon a standard interval (2 seconds in this case), but can be optimized as shown further below, in case a static 2 second approach will not hold up with very high parallel process scenarios.
+
+
+
+```
+import threading
+import time
+
+# Create the queue
+update_queue = []
+lock = threading.Lock()
+
+def batch_security_group_updates():
+    while True:
+        time.sleep(2)  # Flush interval
+        with lock:
+            if update_queue:
+                print(f"Processing {len(update_queue)} security group updates...")
+                for sg_update in update_queue:
+                    try:
+                        my_ec2.authorize_security_group_ingress(**sg_update)
+                    except my_ec2.exceptions.ClientError as e:
+                        if 'InvalidPermission.Duplicate' in str(e):
+                            print(f"Rule already exists for {sg_update['GroupId']}")
+                        else:
+                            raise
+                update_queue.clear()  # Reset after processing
+
+
+
+
+# Start worker thread
+threading.Thread(target=batch_security_group_updates, daemon=True).start()
+
+
+# Update the queue with the latest/current security group request
+def queue_security_group_update(GroupId, IpPermissions):
+    with lock:
+        update_queue.append({'GroupId': GroupId, 'IpPermissions': IpPermissions})
+
+
+
+
+# Example usage:
+for sg_id in set(security_group_ids):
+    queue_security_group_update(sg_id, [{
+        'IpProtocol': 'tcp',
+        'FromPort': 22,
+        'ToPort': 22,
+        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+    }])
+```
+
+
+
+
+
+
+### General test metrics and test setup for hyper-scaling of processes:
+
+As will be shown, some of the major factors and metrics to monitor are the RAM, swap, CPU, kswapd0, the API contention through the Retry counts in the gitlab pipeline logs. Always ensure that all the instances have successful installations of tomcat9 using a search of "Instalation completed" in the gitlab pipeline console logs.
+Also alway make sure to clear the swap on the VPS prior to each test, although testing revealed that this did not impact successive tests when the swap was NOT cleared. Swap can easily be cleared by using this command below in the VPS SSH session:
+
+sudo swapoff -a && sudo swapon -a
+
+
+
+
 
 
 ### gitlab optimizations:
