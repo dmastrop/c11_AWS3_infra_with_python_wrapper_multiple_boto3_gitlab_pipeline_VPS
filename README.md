@@ -297,7 +297,7 @@ non-uniformly
 
 
 
-##### Method 2: Adaptive solution for batch processing: Dynamic batch intervals to prevent request pile-up AND Batch size limits to ensure AWS requests don’t spike all at once.
+#### Method 2: Adaptive solution for batch processing: Dynamic batch intervals to prevent request pile-up AND Batch size limits to ensure AWS requests don’t spike all at once.
 
 This resolves any of the shortcomings of method 1 above which is still prone to API congestion.
 
