@@ -208,6 +208,21 @@ There are a lot of variants to this approach:
 
 This appraoch uses a batch based upon a standard interval (2 seconds in this case), but can be optimized as shown further below, in case a static 2 second approach will not hold up with very high parallel process scenarios.
 
+Each process in the current configuration creates 3 API requests with the authorize_seucrity_group_ingress method, one for port 22
+one for port 80 and one for port 8080. This is designed this way so that it is extensible in the future for per process security
+group rule customization (each process handles the chunk of chunk_size IPs and they will have similar rules in the security group)
+
+Example of the batch processing: with 250 processes, and 3 rules to be configured in the security group, that is 750 API calls.
+The worker thread will check the update_queue every 2 seconds, IF it is not working on anything. If it is
+working on a batch it will have to complete the current batch, and then it will check and rab whatever is in the update_queue
+since it last checked.  The for loop in the function causes this problem. It won't exit until all of the current batch is complete
+and that leads to non-deterministic behavior.
+
+This simple batch processing is prone to congestion because the batch sizes are not deterministic and the process timing for each
+batch can get to be very high if a large accumulation occurs in the update_queue between worker thread processing.
+In this way it is still prone to API congestion.
+
+A solution is Method 2 below:  limiting batch size & adjusting the batch interval dynamically can help smooth out execution time and prevent request backlogs.  
 
 
 ```
@@ -241,7 +256,7 @@ def batch_security_group_updates():
 threading.Thread(target=batch_security_group_updates, daemon=True).start()
 
 
-# Update the queue with the latest/current security group request
+# Update the queue with the latest/current security group requests when the processes add rules to the SG(see example below)
 def queue_security_group_update(GroupId, IpPermissions):
     with lock:
         update_queue.append({'GroupId': GroupId, 'IpPermissions': IpPermissions})
@@ -258,6 +273,98 @@ for sg_id in set(security_group_ids):
         'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
     }])
 ```
+
+update_queue(Global List)  
+   - Stores pending security group rule update requests form the parallel process rule configurations. This is a list of requests
+that have  not actually been called using authorize_security_group_ingress
+   - Updates accumulate here before they are processed in batches by the worker thread
+   - Need the mutex (`lock`): ensures thread safety when worker thread is accessing the queue.
+
+batch_security_group_updates() This is the Worker Thread  
+   - This background thread constantly runs and checks for queued security group rule API request updates in update_queue  
+   - If it is "stuck" processing a large batch of requests, it will be longer than 2 seconds before it grabs the next items from
+the update_queue. This is the main drawback of this method. Batches can be highly variable and grow to large sizes.
+   - Updates are applied via `my_ec2.authorize_security_group_ingress(**sg_update)`.  This actually updates the security group with the rules (in this case 22, 80 and 8080). This is done per process, hence the API congestion of accumulated API requests.
+   - After processing, the queue is cleared, making room for new updates.  The queue has to completely clear prior to getting the new batch from the current update_queue.
+
+queue_security_group_update() This actually Adds  Requests to Queue that will need worker thread to process
+   - This function adds new requests to the queue.  This is done at the per process level. So the queue could grow very quickly and
+non-uniformly 
+   - The lock ensures multiple processes don’t corrupt the queue while adding updates.  
+   - Allows different security groups to be queued dynamically.
+
+
+
+
+
+##### Method 2: Adaptive solution for batch processing: Dynamic batch intervals to prevent request pile-up AND Batch size limits to ensure AWS requests don’t spike all at once.
+
+This resolves any of the shortcomings of method 1 above which is still prone to API congestion.
+
+The functions basically still work as described in method1 but there are several enhancements to reduce batch API congestion:
+
+MAX_BATCH_SIZE and NUM_WORKERS can be adjusted to accomodate process scaling needs. 
+
+```
+import threading
+import time
+
+update_queue = []
+lock = threading.Lock()
+MAX_BATCH_SIZE = 50  # Limits number of requests processed in a single batch
+base_interval = 2  # Initial interval, dynamically adjusted
+
+def batch_security_group_updates():
+    global base_interval
+
+    while True:
+        time.sleep(base_interval)  # Wait before checking the queue
+
+        with lock:
+            batch = update_queue[:MAX_BATCH_SIZE]  # Grab at most 50 requests
+            update_queue[:] = update_queue[MAX_BATCH_SIZE:]  # Remove processed requests
+
+        start_time = time.time()
+        for sg_update in batch:
+            try:
+                my_ec2.authorize_security_group_ingress(**sg_update)
+            except my_ec2.exceptions.ClientError as e:
+                if 'InvalidPermission.Duplicate' in str(e):
+                    print(f"Rule already exists for {sg_update['GroupId']}")
+                else:
+                    raise
+
+        elapsed_time = time.time() - start_time
+        base_interval = min(5, max(2, elapsed_time * 1.5))  # Dynamically adjust interval
+
+        print(f"Next batch interval set to {base_interval:.2f} seconds")
+
+
+
+# Start multiple worker threads
+NUM_WORKERS = 4  # Adjust based on expected load
+for _ in range(NUM_WORKERS):
+    threading.Thread(target=batch_security_group_updates, daemon=True).start()
+
+
+
+def queue_security_group_update(GroupId, IpPermissions):
+    with lock:
+        update_queue.append({'GroupId': GroupId, 'IpPermissions': IpPermissions})
+
+
+# Example usage:
+for sg_id in set(security_group_ids):
+    queue_security_group_update(sg_id, [{
+        'IpProtocol': 'tcp',
+        'FromPort': 22,
+        'ToPort': 22,
+        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+    }])
+```
+
+
+
 
 
 
