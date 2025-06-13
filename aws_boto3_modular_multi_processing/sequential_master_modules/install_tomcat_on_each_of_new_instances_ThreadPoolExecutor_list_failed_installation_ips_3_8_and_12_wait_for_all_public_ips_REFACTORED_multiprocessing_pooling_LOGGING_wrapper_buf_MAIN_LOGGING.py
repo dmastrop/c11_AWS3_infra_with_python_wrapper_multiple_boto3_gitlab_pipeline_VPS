@@ -1227,13 +1227,39 @@ def main():
         if instance['InstanceId'] != exclude_instance_id
     ]
 
-    while True:
-        response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
-        all_running = all(instance['InstanceState']['Name'] == 'running' for instance in response_statuses['InstanceStatuses'])
-        if all_running:
-            break
-        print("Waiting for all instances to be in running state...")
-        time.sleep(10)
+#    while True:
+#        response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
+#        all_running = all(instance['InstanceState']['Name'] == 'running' for instance in response_statuses['InstanceStatuses'])
+#        if all_running:
+#            break
+#        print("Waiting for all instances to be in running state...")
+#        time.sleep(10)
+
+## Okay seeing a very very strange AWS API issue with this describe_instances_in_batches method whereby the instances in AWS console
+## are indicating running but the state may still be in pending on the API. Not quite sure what is going on, but python code in 
+## original while True loop above getting stuck in Waiting for all instances to be in running state.
+
+while True:
+    response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
+
+    for instance in response_statuses['InstanceStatuses']:
+        instance_id = instance['InstanceId']
+        state = instance['InstanceState']['Name']
+        system_status = instance['SystemStatus']['Status']
+        instance_status_check = instance['InstanceStatus']['Status']
+
+        print(f"[DEBUG] Instance {instance_id} -> State: {state}, SystemStatus: {system_status}, InstanceStatus: {instance_status_check}")
+
+    all_running = all(instance['InstanceState']['Name'] == 'running' for instance in response_statuses['InstanceStatuses'])
+
+    if all_running:
+        break
+
+    print("Waiting for all instances to be in running state...")
+    time.sleep(10)
+
+
+
 
     try:
         instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=120)
