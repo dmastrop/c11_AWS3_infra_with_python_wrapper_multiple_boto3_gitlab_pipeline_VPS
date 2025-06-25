@@ -50,7 +50,7 @@ import psutil
 ## NOTE: do not increase delay because that will affect the hybrid pooled/nonpooled scenarios (desired_count < total processes)
 ## and that would be slowing them down even though they do not need API backoff increased. Only use max_retries increase.
 
-def retry_with_backoff(func, max_retries=10, base_delay=1, max_delay=10, *args, **kwargs):
+def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
     for attempt in range(max_retries):
         try:
             return func(*args, **kwargs)
