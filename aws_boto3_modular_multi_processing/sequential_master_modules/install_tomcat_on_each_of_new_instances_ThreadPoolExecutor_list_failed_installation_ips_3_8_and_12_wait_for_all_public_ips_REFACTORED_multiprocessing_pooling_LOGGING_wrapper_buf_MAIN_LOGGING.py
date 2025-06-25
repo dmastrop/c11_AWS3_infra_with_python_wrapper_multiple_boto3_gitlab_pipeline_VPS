@@ -849,7 +849,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     return ip, private_ip, False
                 
                 print(f"Retrying command: {command} (Attempt {attempt + 1})")
-                time.sleep(10)
+                ### increase this delay for the 400/0 hyper-processing case from 10 to 20 seconds
+                #time.sleep(10)
+                time.sleep(20)
+            
             stdin.close()
             stdout.close()
             stderr.close()
