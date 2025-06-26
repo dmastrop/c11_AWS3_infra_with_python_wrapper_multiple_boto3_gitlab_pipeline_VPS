@@ -883,7 +883,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"Warning on {ip}: {stderr_output}")
                         stderr_output = ""
 
-                    if stderr_output.strip()   # If there are any other errors left after ignoring warnings:
+                    if stderr_output.strip():   # If there are any other errors left after ignoring warnings:
                         print(f"Error executing command on {ip}: {stderr_output}")
                         ssh.close()
                         return ip, private_ip, False
