@@ -861,43 +861,108 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 ## UPDATED CODE FOR ABOVE BLOCK:
 
+#        for command in commands:
+#            for attempt in range(3):
+#                try:
+#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+#                    stdout_output = stdout.read().decode()
+#                    stderr_output = stderr.read().decode()
+#
+#                    print(f"Executing command: {command}")
+#                    print(f"STDOUT: {stdout_output}")
+#                    print(f"STDERR: {stderr_output}")
+#
+#                    # Check for real errors and ignore warnings 
+#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+#                        print(f"Installation failed for {ip} due to package issue.")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#                    
+#                    # Ignore specific warnings that are not critical errors
+#                    if "WARNING:" in stderr_output:
+#                        print(f"Warning on {ip}: {stderr_output}")
+#                        stderr_output = ""
+#
+#                    if stderr_output.strip():   # If there are any other errors left after ignoring warnings:
+#                        print(f"Error executing command on {ip}: {stderr_output}")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    print(f"Retrying command: {command} (Attempt {attempt + 1})")
+#                    time.sleep(20) #Increase this from 10 to 20 seconds
+#                except Exception as e:
+#                    print(f"[Error] exec_command timeout or failure on {ip}: {e}")
+#                    ssh.close()
+#                    return ip, private_ip, False
+#                finally:
+#                    stdin.close()
+#                    stdout.close()
+#                    stderr.close()
+
+## REFACTOR SSH 1:
+
         for command in commands:
             for attempt in range(3):
                 try:
+                    print(f"[DEBUG] Starting SSH command attempt {attempt + 1} on {ip}: {command}")
+
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+                    print(f"[DEBUG] Command sent: {command}")
+                    print(f"[DEBUG] Waiting to read stdout...")
                     stdout_output = stdout.read().decode()
+                    print(f"[DEBUG] Waiting to read stderr...")
                     stderr_output = stderr.read().decode()
 
-                    print(f"Executing command: {command}")
+                    print(f"[DEBUG] Read complete for {ip}")
+                    print(f"[INFO] Executing command: {command}")
+                    print(f"[INFO] STDOUT length: {len(stdout_output)} chars")
+                    print(f"[INFO] STDERR length: {len(stderr_output)} chars")
                     print(f"STDOUT: {stdout_output}")
                     print(f"STDERR: {stderr_output}")
 
-                    # Check for real errors and ignore warnings 
+                    # Detect specific fatal Tomcat errors early
                     if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-                        print(f"Installation failed for {ip} due to package issue.")
+                        print(f"[ERROR] Fatal: No install candidate on {ip}")
                         ssh.close()
                         return ip, private_ip, False
-                    
-                    # Ignore specific warnings that are not critical errors
+
+                    # Warning softener
                     if "WARNING:" in stderr_output:
-                        print(f"Warning on {ip}: {stderr_output}")
+                        print(f"[WARN] Non-fatal warning on {ip}: {stderr_output}")
                         stderr_output = ""
 
-                    if stderr_output.strip():   # If there are any other errors left after ignoring warnings:
-                        print(f"Error executing command on {ip}: {stderr_output}")
+                    # Catch any remaining stderr (actual failures)
+                    if stderr_output.strip():
+                        print(f"[ERROR] Command error output on {ip}: {stderr_output}")
                         ssh.close()
                         return ip, private_ip, False
 
-                    print(f"Retrying command: {command} (Attempt {attempt + 1})")
-                    time.sleep(20) #Increase this from 10 to 20 seconds
+                    print(f"[DEBUG] Retrying command: {command} (Attempt {attempt + 1})")
+                    time.sleep(20)
+
                 except Exception as e:
-                    print(f"[Error] exec_command timeout or failure on {ip}: {e}")
+                    print(f"[EXCEPTION] exec_command failed on {ip}: {e}")
+
+                    # Log partial output if available
+                    try:
+                        if stdout:
+                            stdout_output = stdout.read().decode()
+                            print(f"[EXCEPTION DEBUG] Partial STDOUT ({len(stdout_output)}): {stdout_output}")
+                        if stderr:
+                            stderr_output = stderr.read().decode()
+                            print(f"[EXCEPTION DEBUG] Partial STDERR ({len(stderr_output)}): {stderr_output}")
+                    except Exception as inner:
+                        print(f"[EXCEPTION] Error reading from stdout/stderr after failure: {inner}")
+
                     ssh.close()
                     return ip, private_ip, False
+
                 finally:
-                    stdin.close()
-                    stdout.close()
-                    stderr.close()
+                    if stdin: stdin.close()
+                    if stdout: stdout.close()
+                    if stderr: stderr.close()
+
 
 
         ssh.close()
