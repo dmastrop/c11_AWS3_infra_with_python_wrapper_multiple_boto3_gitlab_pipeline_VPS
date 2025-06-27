@@ -25,12 +25,149 @@ pertain to the optmizations to this module.
 
 
 
+## UPDATES: part 13: Hyper-scaling of processes (400+), SSH connect issues and troubleshooting and log forenscis and correlation
+
+After doing foresensic correlation between the process level logs, the main() process orchestration logs and the gitlab
+console logs, there are some areas that have been indentified that are causing the tomcat9 failure installations at 
+process counts of 400 and above. These are mainly due to swap and RAM contention and memory thrashing.
+The logs consisted of a 450/0 (450 processes with no pooling) and a 450/25 (450 processes with 25 of them pooled). Both of 
+these tests revealed the weakness in the area of code below.
+
+The main area of code that needs to be refactored is below.  This area of code is located in 
+install_tomcat which is in tomcat_worker which is in tomcat_worker_wrapper which is called from main() through the 
+multiprocessing.Pool method below:
+
+```
+   try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+```
+
+
+The code block that needs work is this part:
+
+```
+        for command in commands:
+            for attempt in range(3):
+                try:
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+                    stdout_output = stdout.read().decode()
+                    stderr_output = stderr.read().decode()
+
+                    print(f"Executing command: {command}")
+                    print(f"STDOUT: {stdout_output}")
+                    print(f"STDERR: {stderr_output}")
+
+                    # Check for real errors and ignore warnings 
+                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+                        print(f"Installation failed for {ip} due to package issue.")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    # Ignore specific warnings that are not critical errors
+                    if "WARNING:" in stderr_output:
+                        print(f"Warning on {ip}: {stderr_output}")
+                        stderr_output = ""
+
+                    if stderr_output.strip():   # If there are any other errors left after ignoring warnings:
+                        print(f"Error executing command on {ip}: {stderr_output}")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    print(f"Retrying command: {command} (Attempt {attempt + 1})")
+                    time.sleep(20) #Increase this from 10 to 20 seconds
+                except Exception as e:
+                    print(f"[Error] exec_command timeout or failure on {ip}: {e}")
+                    ssh.close()
+                    return ip, private_ip, False
+                finally:
+                    stdin.close()
+                    stdout.close()
+                    stderr.close()
+
+
+```
+
+
+The susceptible areas of this code to severe system wide stress are in these particular areas:
+
+
+- Silent exits when memory or I/O collapses mid-execution
+- Retry logic short-circuited when `.read()` never returns
+- Pooled threads possibly reusing unstable state or I/O handles under duress
+
+
+The refactoring will include:
+stdout watchdogs, verbose pre/post command markers, forced SSH reinit between tasks that wil be integrated into this code block.
+
+In more detai:
+
+
+1.Instrument stdout.read() with a watchdog or timeout guard
+   - Example: spawn a timer thread or use select.select with socket timeout.
+   - If `.read()` exceeds 20–30s, forcibly close the SSH client and reattempt.
+
+2.Add log breadcrumbs before/after each SSH phase
+   - A simple `logger.debug("Reached exec_command")`, `logger.debug("Reading stdout")`, etc., will help confirm exact failure locus.
+
+3.Consider per-thread low-memory detection or early fallback
+   - If memory dips below 5%, skip SSH attempt and queue for retry (log a memory-aware failure instead of silent one).
+
+4.For pooled workers: forcibly recreate SSH client between tasks
+   - Even if `ssh.close()` is called, recycled threads may retain unexpected state (thread-local buffers, dead sockets, etc.)
+
+5.Track stdout/stderr output lengths
+   - Flag if stdout is empty after command but no exception was raised—this often correlates with “ghost” executions.
+
+
+
+Once these code changes are integrated into the aforementioned code block, the code will be far more resilient to host wide
+system level severe stress.
+
+Of course RAM and swap can always be increased to remediate the issues above, but the code needs to be have this resilience 
+built into it as part of the design if memory on the host is constrained and if multi-processing is to be highly scaled.
+
 
 
 
 
 ## UPDATES: part 12: Hyper-scaling of processes (250, 400+ processes), benchmark testing and VPS swap tuning
 
+The tests in part 11 below were preemptive. There are too many AWS idosyncratic issues that are clouding the comparisons.
+When these issues are controlled the non-pooling seems to be better (higher concurrency) but the memory contention and thrashing
+is much worse.
+
+At 400-450 processes there is a clear pattern emerging.  Pooling does prevent the host 
+VPS from locking up (especially the gitlab docker container) and relieves some of the memory (RAM and swap) contention
+and memory thrashing, but there are consistently 
+instances with missing installation of tomcat at this level. 
+This is  not related to the AWS API contention as noted by the Retry in the gitlab
+logs. These tests are still  well within the max retries of 15 (peak is 12). So even though this can cause a similar issue 
+(failed tomcat9 instances) this is not the root cause at these higher levels of scaling
+
+Correlating the process level logs and the gitlab console logs and the main() process orchestration logs there is a pattern of
+the following with the failed EC2 tomcat instances (there is only one process per thread/tomcat SSH connection so this can
+be cleanly correlated by the PID of the processes):
+
+- SSH sessions stall post-authentication, failing to reach the command stage (these are missing `"Installing tomcat9"` or `"Command executed"`).
+- Retry logic starts but never finishes, as thread workers get throttled or blocked waiting on stdout reads.
+- Paramiko channels silently close, especially under socket buffer pressure or kernel-side TCP backlog overflows.
+- Log writing fails to flush, especially if the container’s I/O thread queue is flooded (as GitLab metrics suggest).
+
+The main area of failure is somewhere on the SSH connects in this heavily mutli-processed multi-threaded setup.
+
+In short: SSH-related operations appear to be failing silently or stalling under heavy memory and swap pressure, particularly during the peak kswapd0 churn. Pooling may be exacerbating this by prolonging thread contention when swap is full and the container is I/O constrained.
+
+This is a work in progress.
+
+The RAM cannot be increased at this time, and the swap can be increased but will not be increased until I get to the root 
+cause of these failures and implement the safeguards in the python module. This will result is a very resilient multi-processing
+mult-threading code that can deal with severe host memory stress.
+
+In addtion, holding off on the batch processing for the AWS API contention. The retry with exponential backoff os working ok 
+for now, but at some point need to go to batch processing so that the Retries no longer have such a differential impact on 
+pooling vs. nonpooling. That way we can compare the two scenarios in a more controlled setup. This is a work in progress, but
+the premliminary code for API batch processing was introduced in part 10 below.
 
 
 
