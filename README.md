@@ -25,11 +25,13 @@ pertain to the optmizations to this module.
 
 
 
-## UPDATES: part 13: Hyper-scaling of processes (400+), SSH connect issues and troubleshooting and log forenscis and correlation
+## UPDATES: part 13: Hyper-scaling of processes (400+), SSH connect issues and troubleshooting and log forensics and correlation
 
 After doing foresensic correlation between the process level logs, the main() process orchestration logs and the gitlab
 console logs, there are some areas that have been indentified that are causing the tomcat9 failure installations at 
-process counts of 400 and above. These are mainly due to swap and RAM contention and memory thrashing.
+process counts of 400 and above. These are mainly due to swap and RAM contention and memory thrashing and the effect
+that this has in a susceptible area of the code below.
+
 The logs consisted of a 450/0 (450 processes with no pooling) and a 450/25 (450 processes with 25 of them pooled). Both of 
 these tests revealed the weakness in the area of code below.
 
@@ -87,9 +89,37 @@ The code block that needs work is this part:
 
 
 ```
+The logs revealed that this is where the breakage is happening
+
+the 450/0 and 450/25 logs had these in common:
+
+1. SSH sessions silently closed mid-flight under swap pressure
+   - Logs show `"Connecting to..."` but never reach `"Installing tomcat9"` or `"Command executed"` markers.
+   - No stderr or stdout data captured; retry logic often abandoned after attempt 1.
+
+2. Stdout `.read()` likely hanging under high memory contention
+   - Some logs reach `exec_command()` but never print output.
+   - Suspect stdout.read() blocks forever during swap thrash or socket timeout.
+
+3. Thread starvation or eviction
+   - Benchmarked logs indicate some processes never re-enter SSH logic after initial dispatch, likely OOM or preempted.
+
+the 450/25 logs:(pooling)
+
+- 40 install failures
+- Failures clustered disproportionately in pooled phase (post-425), which coincides with kswapd0 peaking at >94% CPU.
+- Several pooled tasks do not retry at all; thread reuse may be interfering with clean SSH state reinitialization.
+- Average stdout/stderr logs shorter and less verbose than non-pooled set—likely preempted before reaching command execution.
+
+the 450/0 logs: (no pooling)
+
+- 32 install failures—slightly better despite higher total concurrency.
+- Failures are more evenly distributed through the run.
+- Swap usage sustained longer, but GitLab output more complete and retries appear to make deeper progress.
 
 
-The susceptible areas of this code to severe system wide stress are in these particular areas:
+
+In summary based on forensics above: The susceptible areas of this code to severe system wide stress are in these particular areas:
 
 
 - Silent exits when memory or I/O collapses mid-execution
