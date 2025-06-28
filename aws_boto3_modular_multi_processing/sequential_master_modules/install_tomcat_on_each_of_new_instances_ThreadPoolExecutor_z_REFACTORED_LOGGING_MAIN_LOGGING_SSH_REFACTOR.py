@@ -901,68 +901,114 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 ## REFACTOR SSH 1:
 
-        for command in commands:
+#        for command in commands:
+#            for attempt in range(3):
+#                try:
+#                    print(f"[DEBUG] Starting SSH command attempt {attempt + 1} on {ip}: {command}")
+#
+#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+#
+#                    print(f"[DEBUG] Command sent: {command}")
+#                    print(f"[DEBUG] Waiting to read stdout...")
+#                    stdout_output = stdout.read().decode()
+#                    print(f"[DEBUG] Waiting to read stderr...")
+#                    stderr_output = stderr.read().decode()
+#
+#                    print(f"[DEBUG] Read complete for {ip}")
+#                    print(f"[INFO] Executing command: {command}")
+#                    print(f"[INFO] STDOUT length: {len(stdout_output)} chars")
+#                    print(f"[INFO] STDERR length: {len(stderr_output)} chars")
+#                    print(f"STDOUT: {stdout_output}")
+#                    print(f"STDERR: {stderr_output}")
+#
+#                    # Detect specific fatal Tomcat errors early
+#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+#                        print(f"[ERROR] Fatal: No install candidate on {ip}")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    # Warning softener
+#                    if "WARNING:" in stderr_output:
+#                        print(f"[WARN] Non-fatal warning on {ip}: {stderr_output}")
+#                        stderr_output = ""
+#
+#                    # Catch any remaining stderr (actual failures)
+#                    if stderr_output.strip():
+#                        print(f"[ERROR] Command error output on {ip}: {stderr_output}")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    print(f"[DEBUG] Retrying command: {command} (Attempt {attempt + 1})")
+#                    time.sleep(20)
+#
+#                except Exception as e:
+#                    print(f"[EXCEPTION] exec_command failed on {ip}: {e}")
+#
+#                    # Log partial output if available
+#                    try:
+#                        if stdout:
+#                            stdout_output = stdout.read().decode()
+#                            print(f"[EXCEPTION DEBUG] Partial STDOUT ({len(stdout_output)}): {stdout_output}")
+#                        if stderr:
+#                            stderr_output = stderr.read().decode()
+#                            print(f"[EXCEPTION DEBUG] Partial STDERR ({len(stderr_output)}): {stderr_output}")
+#                    except Exception as inner:
+#                        print(f"[EXCEPTION] Error reading from stdout/stderr after failure: {inner}")
+#
+#                    ssh.close()
+#                    return ip, private_ip, False
+#
+#                finally:
+#                    if stdin: stdin.close()
+#                    if stdout: stdout.close()
+#                    if stderr: stderr.close()
+#
+#
+
+
+## REFACTOR SSH 2:
+
+
+        from datetime import datetime
+
+        for idx, command in enumerate(commands):
             for attempt in range(3):
                 try:
-                    print(f"[DEBUG] Starting SSH command attempt {attempt + 1} on {ip}: {command}")
-
+                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
 
-                    print(f"[DEBUG] Command sent: {command}")
-                    print(f"[DEBUG] Waiting to read stdout...")
                     stdout_output = stdout.read().decode()
-                    print(f"[DEBUG] Waiting to read stderr...")
                     stderr_output = stderr.read().decode()
 
-                    print(f"[DEBUG] Read complete for {ip}")
-                    print(f"[INFO] Executing command: {command}")
-                    print(f"[INFO] STDOUT length: {len(stdout_output)} chars")
-                    print(f"[INFO] STDERR length: {len(stderr_output)} chars")
-                    print(f"STDOUT: {stdout_output}")
-                    print(f"STDERR: {stderr_output}")
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
-                    # Detect specific fatal Tomcat errors early
                     if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-                        print(f"[ERROR] Fatal: No install candidate on {ip}")
+                        print(f"[{ip}] [{datetime.now()}] ❌ Package install failure. Exiting early.")
                         ssh.close()
                         return ip, private_ip, False
 
-                    # Warning softener
                     if "WARNING:" in stderr_output:
-                        print(f"[WARN] Non-fatal warning on {ip}: {stderr_output}")
+                        print(f"[{ip}] [{datetime.now()}] ⚠️ Warning ignored: {stderr_output.strip()}")
                         stderr_output = ""
 
-                    # Catch any remaining stderr (actual failures)
                     if stderr_output.strip():
-                        print(f"[ERROR] Command error output on {ip}: {stderr_output}")
+                        print(f"[{ip}] [{datetime.now()}] ❌ Non-warning error output. Command failed.")
                         ssh.close()
                         return ip, private_ip, False
 
-                    print(f"[DEBUG] Retrying command: {command} (Attempt {attempt + 1})")
+                    print(f"[{ip}] [{datetime.now()}] ✅ Command succeeded.")
                     time.sleep(20)
 
                 except Exception as e:
-                    print(f"[EXCEPTION] exec_command failed on {ip}: {e}")
-
-                    # Log partial output if available
-                    try:
-                        if stdout:
-                            stdout_output = stdout.read().decode()
-                            print(f"[EXCEPTION DEBUG] Partial STDOUT ({len(stdout_output)}): {stdout_output}")
-                        if stderr:
-                            stderr_output = stderr.read().decode()
-                            print(f"[EXCEPTION DEBUG] Partial STDERR ({len(stderr_output)}): {stderr_output}")
-                    except Exception as inner:
-                        print(f"[EXCEPTION] Error reading from stdout/stderr after failure: {inner}")
-
+                    print(f"[{ip}] [{datetime.now()}] 💥 Exception during exec_command: {e}")
                     ssh.close()
                     return ip, private_ip, False
 
                 finally:
-                    if stdin: stdin.close()
-                    if stdout: stdout.close()
-                    if stderr: stderr.close()
-
+                    stdin.close()
+                    stdout.close()
+                    stderr.close()
 
 
         ssh.close()
