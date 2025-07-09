@@ -977,6 +977,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
 
+
+                    ## Add this timout code to detect why some instances are silently failing without hitting my except block below
+                    ## this will force it out of the try loop to execept bloc.
+
+                    # 🔒 Ensure the VPS doesn’t hang forever waiting on output
+                    stdout.channel.settimeout(90)
+                    stderr.channel.settimeout(90)
+
                     stdout_output = stdout.read().decode()
                     stderr_output = stderr.read().decode()
 
