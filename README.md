@@ -25,6 +25,334 @@ pertain to the optmizations to this module.
 
 
 
+## UPDATES: part 15 Hyper-scaling of processes 450/25: REFACTOR SSH3 phase1 to deal with the ghosts.
+
+This is the first phase of refactoring to deal with the ghost issue of UPDATE part 14 below.
+
+
+Refactor for Retry + Watchdog Logic  
+This version:
+-Adds a retry loop for `exec_command` execution
+-Wraps `stdout.read()` and `stderr.read()` with a watchdog timer using `recv_ready()`
+-Monitors for stalls and retries intelligently
+
+Initially run this with a 450/25 test and then ramp it up to 480/25
+
+
+The refactored code is below:
+
+```
+
+## REFACTOR SSH 3 – Phase 1: Retry + Watchdog Protection:
+
+from datetime import datetime
+import time
+
+WATCHDOG_TIMEOUT = 90
+RETRY_LIMIT = 3
+SLEEP_BETWEEN_ATTEMPTS = 5
+
+def read_output_with_watchdog(stream, label, ip):
+    start = time.time()
+    collected = b''
+    while True:
+        if stream.channel.recv_ready():
+            try:
+                collected += stream.read()
+                break
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+                break
+        if time.time() - start > WATCHDOG_TIMEOUT:
+            print(f"[{ip}] ⏱️ Watchdog timeout on {label} read.")
+            break
+        time.sleep(1)
+    return collected.decode()
+
+for idx, command in enumerate(commands):
+    for attempt in range(RETRY_LIMIT):
+        try:
+            print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+            stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+            stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+            stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+            stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip)
+            stderr_output = read_output_with_watchdog(stderr, "STDERR", ip)
+
+            print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+            print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+            if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+                print(f"[{ip}] ❌ Tomcat install failure.")
+                ssh.close()
+                return ip, private_ip, False
+
+            if "WARNING:" in stderr_output:
+                print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                stderr_output = ""
+
+            if stderr_output.strip():
+                print(f"[{ip}] ❌ Non-warning stderr received.")
+                ssh.close()
+                return ip, private_ip, False
+
+            print(f"[{ip}] ✅ Command succeeded.")
+            time.sleep(20)
+            break  # Command succeeded, no need to retry
+
+        except Exception as e:
+            print(f"[{ip}] 💥 Exception during exec_command: {e}")
+            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+
+        finally:
+            stdin.close()
+            stdout.close()
+            stderr.close()
+
+ssh.close()
+transport = ssh.get_transport()
+if transport:
+    transport.close()
+print(f"Installation completed on {ip}")
+return ip, private_ip, True
+```
+
+
+
+
+
+
+## UPDATES: part 14 Hyper-scalling of processes 450/25, SSH connect issues, log forencsics and initial code refactoring
+
+
+After using REFACTOR SSH 1 code block, used this block to dig deeper in to the issue.
+
+
+```
+## REFACTOR SSH 2:
+
+
+        from datetime import datetime
+
+        for idx, command in enumerate(commands):
+            for attempt in range(3):
+                try:
+                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+
+                    ## Add this timout code to detect why some instances are silently failing without hitting my except block below
+                    ## this will force it out of the try loop to execept bloc.
+
+                    # 🔒 Ensure the VPS doesn’t hang forever waiting on output
+                    stdout.channel.settimeout(90)
+                    stderr.channel.settimeout(90)
+
+                    stdout_output = stdout.read().decode()
+                    stderr_output = stderr.read().decode()
+
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+                        print(f"[{ip}] [{datetime.now()}] ❌ Package install failure. Exiting early.")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    if "WARNING:" in stderr_output:
+                        print(f"[{ip}] [{datetime.now()}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                        stderr_output = ""
+
+                    if stderr_output.strip():
+                        print(f"[{ip}] [{datetime.now()}] ❌ Non-warning error output. Command failed.")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    print(f"[{ip}] [{datetime.now()}] ✅ Command succeeded.")
+                    time.sleep(20)
+
+                except Exception as e:
+                    print(f"[{ip}] [{datetime.now()}] 💥 Exception during exec_command: {e}")
+                    ssh.close()
+                    return ip, private_ip, False
+
+                finally:
+                    stdin.close()
+                    stdout.close()
+                    stderr.close()
+
+
+        ssh.close()
+        transport = ssh.get_transport()
+        if transport is not None:
+            transport.close()
+        print(f"Installation completed on {ip}")
+        return ip, private_ip, True
+
+```
+
+
+
+In the latest test run had to increase the swap to 20GB to prevent the VPS fron hanging. Once did that the 450/25 test used about 17GB of the 20GB swap and I was able to see 7 failures with the code above.
+Correlating the gitlab console logs with the debug above with the process level and  main pooling level orchestration logs revealed the following:
+
+ 7 Failures Isolated
+-All occurred between timestamps [T+14min to T+16min], deep into the 450/25 cycle
+-5 match the ghost profile: no `Installation completed` marker, no exit status, hung `recv()` with no output
+-2 exited prematurely but did execute `exec_command()`, indicating a socket or fork failure downstream
+
+Ghost Indicators:
+-Threads hung at `channel.recv(1024)` without exception
+-No log entry after `exec_command()` for those cases
+-Swap was above 16.8GB—suggesting buffer delay or scheduler stalls, not memory depletion
+
+Process-Level Logs:
+-Missing heartbeat timestamps on 5 processes → confirms they stalled post-connection
+-The others show clean command dispatch but dead ends in channel echo collection
+
+Main Log Trace:
+-Dispatcher launched all 25 in that burst correctly
+-5 stuck at recv with no retries
+-No thread timeout logic triggered → perfect test case for inserting watchdogs later
+
+
+These are the 7 failed threads:
+
+| Thread ID | Timestamp     | Type         | Symptom                                | Suggest Fix         |
+|-----------|---------------|--------------|----------------------------------------|----------------------|
+| #112      | T+14:02       | Ghost        | No output, stuck at `recv()`           | Watchdog + retries   |
+| #127      | T+14:45       | Early Exit   | `exec_command` done, no completion log | Exit code check      |
+| #135      | T+15:04       | Ghost        | Silent thread, no further output       | Force termination    |
+| #142      | T+15:17       | Ghost        | Stalled post-command                   | Retry + backoff      |
+| #158      | T+15:39       | Ghost        | Socket hung, swap rising               | Launch stagger       |
+| #163      | T+15:52       | Early Exit   | Command dropped early                  | Retry w/ delay       |
+| #170      | T+16:02       | Ghost        | No output captured                     | Watchdog             |
+
+
+
+Based uon this: The code solution to this involves implementing code changes in the three folowing areas below:
+The Ghost and Early Exit would have resolved the 7 thread failures in the last run.
+
+
+Three types of general failures:
+
+| Failure Type     | What Happens                           | Python Symptom                     | Fix Strategy                          |
+|------------------|----------------------------------------|-------------------------------------|----------------------------------------|
+| Timeout          | Channel blocks too long                | `socket.timeout` raised             | Retry with exponential backoff        |
+| Stall (Ghost)    | Output never received, no error        | `None` from `recv()` or hangs       | Watchdog timer + force exit           |
+| Early Exit       | Channel closes before command completes| `exit_status_ready()` too soon      | Check exit code + validate output     |
+
+
+
+
+
+### Failure type one: Timeout
+
+
+```
+channel.settimeout(90)
+channel.exec_command(cmd)
+stdout = channel.recv(1024)  # <--- blocks too long, then raises socket.timeout
+```
+
+-A `socket.timeout` exception
+-No output received within the expected window
+-Easily caught with `try/except`
+
+
+
+Possible fix to introdcue into the code
+
+```
+for attempt in range(3):
+      try:
+          stdout = channel.recv(1024)
+          break
+      except socket.timeout:
+          time.sleep(5)
+```
+
+
+Also consider tightening or relaxing `settimeout()` depending on system load
+
+
+
+
+
+### Failure type two: Stall failures(Ghost)
+
+The channel call doesn’t raise an error—it just sits indefinitely or returns `None`.
+
+
+```
+stdout = channel.recv(1024)  # returns None, never throws
+```
+
+-No exception is raised
+-The thread appears "alive" but makes no progress
+-Worker pool gets clogged silently
+
+
+
+For these we need to first detect them
+
+-Use forensic timestamps (your specialty!) to show that:
+  -The `exec_command()` was sent
+  -No output was received after reasonable delay
+-Inject manual inactivity watchdogs:
+
+```
+  start = time.time()
+  while True:
+      if channel.recv_ready():
+          stdout = channel.recv(1024)
+          break
+      if time.time() - start > 90:
+          raise RuntimeError("SSH stall detected")
+      time.sleep(1)
+```
+
+
+
+
+
+### Failure type three: Early exit
+
+Here, the process exits before completing SSH output collection. 
+
+These are caused by the following:
+
+-Fork pressure
+-Swap delays
+-Broken pipe in the SSH stream
+
+
+
+Detection involves the following:
+
+-`"Installation completed"` never logged
+-Unexpected thread exit without traceback
+-`channel.exit_status_ready()` == True but with `None` output
+
+
+Intercept these with the following code:
+
+```
+status = channel.recv_exit_status()
+if status != 0:
+    logger.warn("Command exited early or failed silently")
+```
+
+
+
+
+
+
+
+
+
 ## UPDATES: part 13: Hyper-scaling of processes (400+), SSH connect issues and troubleshooting and log forensics and correlation
 
 After doing foresensic correlation between the process level logs, the main() process orchestration logs and the gitlab
@@ -35,8 +363,7 @@ that this has in a susceptible area of the code below.
 The logs consisted of a 450/0 (450 processes with no pooling) and a 450/25 (450 processes with 25 of them pooled). Both of 
 these tests revealed the weakness in the area of code below.
 
-The main area of code that needs to be refactored is below.  This area of code is located in 
-install_tomcat which is in tomcat_worker which is in tomcat_worker_wrapper which is called from main() through the 
+The main area of code that needs to be refactored is below.  This area of code is located in install_tomcat which is in tomcat_worker which is in tomcat_worker_wrapper which is called from main() through the 
 multiprocessing.Pool method below:
 
 ```

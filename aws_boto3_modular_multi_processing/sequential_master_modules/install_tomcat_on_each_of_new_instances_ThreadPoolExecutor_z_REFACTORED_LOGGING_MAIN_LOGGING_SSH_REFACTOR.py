@@ -968,63 +968,148 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 ## REFACTOR SSH 2:
 
+#
+#        from datetime import datetime
+#
+#        for idx, command in enumerate(commands):
+#            for attempt in range(3):
+#                try:
+#                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+#
+#
+#                    ## Add this timout code to detect why some instances are silently failing without hitting my except block below
+#                    ## this will force it out of the try loop to execept bloc.
+#
+#                    # 🔒 Ensure the VPS doesn’t hang forever waiting on output
+#                    stdout.channel.settimeout(90)
+#                    stderr.channel.settimeout(90)
+#
+#                    stdout_output = stdout.read().decode()
+#                    stderr_output = stderr.read().decode()
+#
+#                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+#                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+#
+#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+#                        print(f"[{ip}] [{datetime.now()}] ❌ Package install failure. Exiting early.")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    if "WARNING:" in stderr_output:
+#                        print(f"[{ip}] [{datetime.now()}] ⚠️ Warning ignored: {stderr_output.strip()}")
+#                        stderr_output = ""
+#
+#                    if stderr_output.strip():
+#                        print(f"[{ip}] [{datetime.now()}] ❌ Non-warning error output. Command failed.")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    print(f"[{ip}] [{datetime.now()}] ✅ Command succeeded.")
+#                    time.sleep(20)
+#
+#                except Exception as e:
+#                    print(f"[{ip}] [{datetime.now()}] 💥 Exception during exec_command: {e}")
+#                    ssh.close()
+#                    return ip, private_ip, False
+#
+#                finally:
+#                    stdin.close()
+#                    stdout.close()
+#                    stderr.close()
+#
+#
+#        ssh.close()
+#        transport = ssh.get_transport()
+#        if transport is not None:
+#            transport.close()
+#        print(f"Installation completed on {ip}")
+#        return ip, private_ip, True
+#
+#
+
+
+
+## REFACTOR SSH 3 – Phase 1: Retry + Watchdog Protection
+## The stdout and stderr are now wrapped in the watchdog function read_output_with_watchdog
 
         from datetime import datetime
+        import time
+
+        WATCHDOG_TIMEOUT = 90
+        RETRY_LIMIT = 3
+        SLEEP_BETWEEN_ATTEMPTS = 5
+
+        def read_output_with_watchdog(stream, label, ip):
+            start = time.time()
+            collected = b''
+            while True:
+                if stream.channel.recv_ready():
+                    try:
+                        collected += stream.read()
+                        break
+                    except Exception as e:
+                        print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+                        break
+                if time.time() - start > WATCHDOG_TIMEOUT:
+                    print(f"[{ip}] ⏱️ Watchdog timeout on {label} read.")
+                    break
+                time.sleep(1)
+            return collected.decode()
 
         for idx, command in enumerate(commands):
-            for attempt in range(3):
+            for attempt in range(RETRY_LIMIT):
                 try:
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
 
+                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
 
-                    ## Add this timout code to detect why some instances are silently failing without hitting my except block below
-                    ## this will force it out of the try loop to execept bloc.
-
-                    # 🔒 Ensure the VPS doesn’t hang forever waiting on output
-                    stdout.channel.settimeout(90)
-                    stderr.channel.settimeout(90)
-
-                    stdout_output = stdout.read().decode()
-                    stderr_output = stderr.read().decode()
+                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip)
+                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip)
 
                     print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
                     if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-                        print(f"[{ip}] [{datetime.now()}] ❌ Package install failure. Exiting early.")
+                        print(f"[{ip}] ❌ Tomcat install failure.")
                         ssh.close()
                         return ip, private_ip, False
 
                     if "WARNING:" in stderr_output:
-                        print(f"[{ip}] [{datetime.now()}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
                         stderr_output = ""
 
                     if stderr_output.strip():
-                        print(f"[{ip}] [{datetime.now()}] ❌ Non-warning error output. Command failed.")
+                        print(f"[{ip}] ❌ Non-warning stderr received.")
                         ssh.close()
                         return ip, private_ip, False
 
-                    print(f"[{ip}] [{datetime.now()}] ✅ Command succeeded.")
+                    print(f"[{ip}] ✅ Command succeeded.")
                     time.sleep(20)
+                    break  # Command succeeded, no need to retry
 
                 except Exception as e:
-                    print(f"[{ip}] [{datetime.now()}] 💥 Exception during exec_command: {e}")
-                    ssh.close()
-                    return ip, private_ip, False
+                    print(f"[{ip}] 💥 Exception during exec_command: {e}")
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
 
                 finally:
                     stdin.close()
                     stdout.close()
                     stderr.close()
 
-
         ssh.close()
         transport = ssh.get_transport()
-        if transport is not None:
+        if transport:
             transport.close()
         print(f"Installation completed on {ip}")
         return ip, private_ip, True
+
+
+
+
+
 
     # MOVED THIS BLOCK TO ABOVE
     ### added this because when running this as a module getting an error that there are no public ips on the instances
