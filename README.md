@@ -298,7 +298,7 @@ stdout = channel.recv(1024)  # returns None, never throws
 
 For these we need to first detect them
 
--Use forensic timestamps (your specialty!) to show that:
+-Use forensic timestamps to show that:
   -The `exec_command()` was sent
   -No output was received after reasonable delay
 -Inject manual inactivity watchdogs:
