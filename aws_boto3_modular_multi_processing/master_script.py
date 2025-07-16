@@ -108,11 +108,15 @@ def restart_ec_multiple_instances():
 
 
 ###### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactoring in install_tomcat
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR.py")
+#
+
+
+
+##### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2) in install_tomcat
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR.py")
-
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res.py")
 
 ## modules 3-11:
 
