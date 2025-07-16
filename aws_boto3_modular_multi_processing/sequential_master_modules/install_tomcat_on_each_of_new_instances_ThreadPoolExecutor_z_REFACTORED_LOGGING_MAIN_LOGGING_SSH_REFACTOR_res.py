@@ -1085,32 +1085,86 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-## REFACTOR SSH 3 – Phase 1: Retry + Watchdog Protection
-## The stdout and stderr are now wrapped in the watchdog function read_output_with_watchdog
+### REFACTOR SSH 3 – Phase 1: Retry + Watchdog Protection
+### The stdout and stderr are now wrapped in the watchdog function read_output_with_watchdog
+#
+#        from datetime import datetime
+#        import time
+#
+#        WATCHDOG_TIMEOUT = 90
+#        RETRY_LIMIT = 3
+#        SLEEP_BETWEEN_ATTEMPTS = 5
+#
+#        def read_output_with_watchdog(stream, label, ip):
+#            start = time.time()
+#            collected = b''
+#            while True:
+#                if stream.channel.recv_ready():
+#                    try:
+#                        collected += stream.read()
+#                        break
+#                    except Exception as e:
+#                        print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+#                        break
+#                if time.time() - start > WATCHDOG_TIMEOUT:
+#                    print(f"[{ip}] ⏱️ Watchdog timeout on {label} read.")
+#                    break
+#                time.sleep(1)
+#            return collected.decode()
+#
+#        for idx, command in enumerate(commands):
+#            for attempt in range(RETRY_LIMIT):
+#                try:
+#                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+#
+#                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+#                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+#
+#                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip)
+#                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip)
+#
+#                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+#                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+#
+#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+#                        print(f"[{ip}] ❌ Tomcat install failure.")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    if "WARNING:" in stderr_output:
+#                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+#                        stderr_output = ""
+#
+#                    if stderr_output.strip():
+#                        print(f"[{ip}] ❌ Non-warning stderr received.")
+#                        ssh.close()
+#                        return ip, private_ip, False
+#
+#                    print(f"[{ip}] ✅ Command succeeded.")
+#                    time.sleep(20)
+#                    break  # Command succeeded, no need to retry
+#
+#                except Exception as e:
+#                    print(f"[{ip}] 💥 Exception during exec_command: {e}")
+#                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+#
+#                finally:
+#                    stdin.close()
+#                    stdout.close()
+#                    stderr.close()
+#
+#
 
-        from datetime import datetime
-        import time
+## REFACTOR SSH 4 - Phase 2 The new resurrection policy to flag connecitons that have failed 2 watchdog timeouts
+## and update resurrection registry.  Multiple stalls detected. Flagging for resurrection
+## Note the read_output_with_watchdog function and an new function update_resurrection_registry have been added/moved to just
+## above the main tomcat_worker function above. This makes them global so that we can utilize the resurrection monitor
+## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
+## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
+## The read_output_with_watchdog calls the update_resurrection_registry function
 
-        WATCHDOG_TIMEOUT = 90
-        RETRY_LIMIT = 3
-        SLEEP_BETWEEN_ATTEMPTS = 5
 
-        def read_output_with_watchdog(stream, label, ip):
-            start = time.time()
-            collected = b''
-            while True:
-                if stream.channel.recv_ready():
-                    try:
-                        collected += stream.read()
-                        break
-                    except Exception as e:
-                        print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
-                        break
-                if time.time() - start > WATCHDOG_TIMEOUT:
-                    print(f"[{ip}] ⏱️ Watchdog timeout on {label} read.")
-                    break
-                time.sleep(1)
-            return collected.decode()
 
         for idx, command in enumerate(commands):
             for attempt in range(RETRY_LIMIT):
@@ -1121,13 +1175,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdout.channel.settimeout(WATCHDOG_TIMEOUT)
                     stderr.channel.settimeout(WATCHDOG_TIMEOUT)
 
-                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip)
-                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip)
+                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
 
                     print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
-                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+                    if "E: Package 'tomcat9'" in stderr_output:
                         print(f"[{ip}] ❌ Tomcat install failure.")
                         ssh.close()
                         return ip, private_ip, False
@@ -1143,16 +1197,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     print(f"[{ip}] ✅ Command succeeded.")
                     time.sleep(20)
-                    break  # Command succeeded, no need to retry
+                    break  # Success
 
                 except Exception as e:
-                    print(f"[{ip}] 💥 Exception during exec_command: {e}")
+                    print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
 
                 finally:
                     stdin.close()
                     stdout.close()
                     stderr.close()
+
+
+
 
         ssh.close()
         transport = ssh.get_transport()
