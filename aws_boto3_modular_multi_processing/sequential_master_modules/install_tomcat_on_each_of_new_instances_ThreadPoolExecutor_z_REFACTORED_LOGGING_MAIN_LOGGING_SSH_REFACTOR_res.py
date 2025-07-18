@@ -568,7 +568,54 @@ def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, 
 #
 
 
+# ------------------ RESURRECTION MONITOR (POST-HOOK LOGGER) ------------------
+# Purpose: After all tomcat installations finish inside tomcat_worker(),
+#          this scans the resurrection registry for timeout patterns or stalled attempts.
+# Scope:   Evaluates centralized registry state across all threads in the process
+# Output:  Writes flagged thread data to /aws_EC2/logs/resurrection_registry_log.json
+#          for GitLab artifact tracking, postmortems, or ML introspection in Phase 4
+# ---------------------------------------------------------------------------
 
+import os
+import json
+import multiprocessing
+
+# add pid to differentiate the logs. One resurrecction log file per process for all the threads in that process.
+
+def resurrection_monitor(log_dir="/aws_EC2/logs"):
+    pid = multiprocessing.current_process().pid
+    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+
+    flagged = {}
+    with resurrection_registry_lock:
+        for ip, record in resurrection_registry.items():
+            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+                flagged[ip] = record
+
+    if flagged:
+        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged.")
+        os.makedirs(log_dir, exist_ok=True)
+        with open(log_path, "w") as f:
+            json.dump(flagged, f, indent=4)
+    else:
+        print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
+
+
+#def resurrection_monitor(log_path="/aws_EC2/logs/resurrection_registry_log.json"):
+#    flagged = {}
+#    with resurrection_registry_lock:
+#        for ip, record in resurrection_registry.items():
+#            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+#                flagged[ip] = record
+#
+#    if flagged:
+#        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged.")
+#        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+#        with open(log_path, "w") as f:
+#            json.dump(flagged, f, indent=4)
+#    else:
+#        print("✅ Resurrection Monitor: No thread failures requiring intervention.")
+#
 
 
 
@@ -1347,6 +1394,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         print(f"Installation failed on the following private IPs: {', '.join(failed_private_ips)}")
 
     print("ThreadPoolExecutor script execution completed.")
+
+###### Call the resurrection monitor function. This is run per process. So if 5 threads in a process it the resurrection registry
+###### will have scanned for 5 EC2 instance installs and logged any that have failed 2 watchdog attempts. These are resurrection
+###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
+###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
+      
+    resurrection_monitor()
+
+
+
+
 
 
 
