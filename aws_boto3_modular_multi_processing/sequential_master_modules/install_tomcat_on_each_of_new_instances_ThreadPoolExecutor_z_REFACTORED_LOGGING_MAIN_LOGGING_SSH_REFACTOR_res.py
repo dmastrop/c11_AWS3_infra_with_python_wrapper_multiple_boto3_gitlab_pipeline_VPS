@@ -580,7 +580,18 @@ import os
 import json
 import multiprocessing
 
-# add pid to differentiate the logs. One resurrecction log file per process for all the threads in that process.
+
+
+
+## REVISION 3: we need to catch failures before the SSH outer retry loop. We are seeing these types of silent failures now.
+# Just log them in the resurrection monitor json file  so that we can see them now.
+# Note that printf logs to gitlab console are for all three: slient failures outside of SSH loop, failures with stall>2 watchdog
+# and for threads that are healthy
+# The json will only log for the first 2: the problematic early exit before SSH loop and the failures wiht stall>2
+#- Early exits → `"early_exit"` key inside `flagged`  
+#- Real Phase 2 flags → populated from the registry  
+#- Empty `flagged` → no file unless you opt to force minimal metadata (which you're skipping for now)
+# The key is that they must be flagged to get into the resurrection monitor json log that will be sent to gitlab artifact
 
 def resurrection_monitor(log_dir="/aws_EC2/logs"):
     pid = multiprocessing.current_process().pid
@@ -592,15 +603,53 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
                 flagged[ip] = record
 
-    if flagged:
-        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged.")
-        os.makedirs(log_dir, exist_ok=True)
-        with open(log_path, "w") as f:
-            json.dump(flagged, f, indent=4)
+    # 🧠 NEW: Catch silent failures
+    if not flagged:
+        flagged["early_exit"] = {
+            "status": "early_abort",
+            "reason": "No registry entries matched. Possible thread exit before retry loop.",
+            "pid": pid,
+            "timestamp": time.time()
+        }
+
+    os.makedirs(log_dir, exist_ok=True)
+    with open(log_path, "w") as f:
+        json.dump(flagged, f, indent=4)
+
+    # ✅ Print final status
+    if len(flagged) == 1 and "early_exit" in flagged:
+        print(f"⚠️ Resurrection Monitor: Early thread exit detected in process {pid}.")
+    elif flagged:
+        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged in process {pid}.")
     else:
         print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
 
 
+
+
+### REVISION 2
+## add pid to differentiate the logs. One resurrecction log file per process for all the threads in that process.
+#
+#def resurrection_monitor(log_dir="/aws_EC2/logs"):
+#    pid = multiprocessing.current_process().pid
+#    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+#
+#    flagged = {}
+#    with resurrection_registry_lock:
+#        for ip, record in resurrection_registry.items():
+#            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+#                flagged[ip] = record
+#
+#    if flagged:
+#        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged.")
+#        os.makedirs(log_dir, exist_ok=True)
+#        with open(log_path, "w") as f:
+#            json.dump(flagged, f, indent=4)
+#    else:
+#        print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
+
+
+## REVISION 1
 #def resurrection_monitor(log_path="/aws_EC2/logs/resurrection_registry_log.json"):
 #    flagged = {}
 #    with resurrection_registry_lock:
