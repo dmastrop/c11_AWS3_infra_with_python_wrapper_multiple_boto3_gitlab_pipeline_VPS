@@ -1327,6 +1327,28 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
+
+                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
+                    ## arguments for this function call
+
+                    should_resurrect = resurrection_gatekeeper(
+                        stderr_output=stderr_output,
+                        stdout_output=stdout_output,
+                        command_status="Command succeeded",
+                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
+                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
+                        pid=multiprocessing.current_process().pid,
+                        ip_address=ip,
+                        resurrection_registry=resurrection_registry
+                    )
+
+                    if should_resurrect:
+                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect")
+                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
+                    else:
+                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
+
+
                     if "E: Package 'tomcat9'" in stderr_output:
                         print(f"[{ip}] ❌ Tomcat install failure.")
                         ssh.close()
