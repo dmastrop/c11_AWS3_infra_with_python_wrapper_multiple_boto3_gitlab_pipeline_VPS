@@ -1,10 +1,11 @@
 ## Current and latest development work
 
-Note that the pem key in the commit logs is a generic EC2 pem key for the ephemeral EC2 instances and poses no security risk.
-
 
 The parent directory has the Docker files and the gitlab-ci.yml file
 Dockerfile_python_multi_processing is for the latest development gitlab pipeline.
+
+The .env file on the docker container is dynamically created at pipeline runtime during the deploy stage
+It only exists on the ephemeral docker python container instance that is running the master python script
 
 All python (mastser_script.py) run in self contained Docker container on the VPS
 
@@ -25,7 +26,7 @@ Use the latest timestamp python file.
 This has all the latest optimizations for the multi-processing and multi-threading and the latest benchmark upates below
 pertain to the optmizations to this module.
 
-
+The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
 
 
 
