@@ -26,6 +26,29 @@ pertain to the optmizations to this module.
 
 
 
+## UPDATES: part 16 Hyper-scaling of processes 450/25 and 480/25: REFACTOR SSH4 Phase2 resurrection_registry (Phase2a), resurrection_monitor (Phase2a) and resurrection_gatekeeper (Phase2b)
+
+
+This is currently undergoing testing.  May have to increase the sample_probability to catch swap statistics for more than the current 10% of the processes.  This is expensive in terms of CPU and execution time and will only be increased temporarily to troubleshoot ghost failures, if required.
+
+
+The core code block added here is the resurrection_gatekeeper Phase2b code
+This has the resurrection_gatekeeper which will use the data from the read_output_with_watchdog function above to determine if the thread actually is a resurrection candidate and prevent false postives for resurrection candidates.   We only want to resurrect truly dead threads
+Later on in Phase3 will reinstall tomcat on these threads.
+Phase 4 will adapatively do this based upon current heuristics and system stress indicators (ML)
+The saturation defense(see code block below) is required because there may be other corner cases whereby the thread is not successfully being resurrected  (Phase3). For these threads we  need to flag them for further investigation. This could be for example with a flapping node or 
+misclassified IP address, etc....
+
+### resurrection_montior code
+
+
+### resurrection_registry code
+
+
+### resurrection_gateway code
+
+
+### Integration with REFACTOR SSH 4 code block
 
 
 
