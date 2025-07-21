@@ -1,5 +1,8 @@
 ## Current and latest development work
 
+Note that the pem key in the commit logs is a generic EC2 pem key for the ephemeral EC2 instances and poses no security risk.
+
+
 The parent directory has the Docker files and the gitlab-ci.yml file
 Dockerfile_python_multi_processing is for the latest development gitlab pipeline.
 
