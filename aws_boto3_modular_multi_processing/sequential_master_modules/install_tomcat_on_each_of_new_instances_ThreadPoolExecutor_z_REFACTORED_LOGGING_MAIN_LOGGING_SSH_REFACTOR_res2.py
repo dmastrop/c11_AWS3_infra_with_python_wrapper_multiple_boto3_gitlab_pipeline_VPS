@@ -600,6 +600,15 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
     flagged = {}
     with resurrection_registry_lock:
         for ip, record in resurrection_registry.items():
+    
+
+            # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
+            # seeing successful installations having resurrection logs created. Patch1, creating a registry
+            # fingerprint for successful installs at the end of install_tomcat() did not address this problem
+            if record.get("status") == "install_success":
+                continue
+
+
             if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
                 flagged[ip] = record
 
