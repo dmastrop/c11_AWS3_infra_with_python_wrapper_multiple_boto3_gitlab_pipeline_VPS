@@ -30,6 +30,8 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 
 
+
+
 ## UPDATES: part 16 Hyper-scaling of processes 450/25 and 480/25: REFACTOR SSH4 Phase2 resurrection_registry (Phase2a), resurrection_monitor (Phase2a) and resurrection_gatekeeper (Phase2b)
 
 
@@ -53,6 +55,12 @@ misclassified IP address, etc....
 
 
 ### Integration with REFACTOR SSH 4 code block
+
+
+### patch to the install_tomcat() for successful threads to create a registry fingerprint and avoid empty registry values for these threads
+
+
+
 
 
 
