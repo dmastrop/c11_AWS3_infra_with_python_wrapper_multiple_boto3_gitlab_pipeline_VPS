@@ -1383,6 +1383,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         transport = ssh.get_transport()
         if transport:
             transport.close()
+
+        # ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
+        # from creating a resurrection log. This will ensure that all installation threads leave some sort
+        # of registry fingerprint unless they are legitimate early thread failures.
+        update_resurrection_registry(ip, attempt=0, status="install_success")
+
+
         print(f"Installation completed on {ip}")
         return ip, private_ip, True
 
