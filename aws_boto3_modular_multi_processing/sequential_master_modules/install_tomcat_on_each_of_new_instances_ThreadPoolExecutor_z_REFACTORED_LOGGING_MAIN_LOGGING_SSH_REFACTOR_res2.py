@@ -1482,14 +1482,30 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
 
+#            for future in as_completed(futures):
+#                ip, private_ip, result = future.result()
+#                if result:
+#                    successful_ips.append(ip)
+#                    successful_private_ips.append(private_ip)
+#                else:
+#                    failed_ips.append(ip)
+#                    failed_private_ips.append(private_ip)
+
+## Add ip visiblity for troubleshooting the EC2 instances to pid in logs for resurrection code:
             for future in as_completed(futures):
                 ip, private_ip, result = future.result()
+                pid = multiprocessing.current_process().pid
+
                 if result:
+                    logging.info(f"[PID {pid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
                     successful_ips.append(ip)
                     successful_private_ips.append(private_ip)
                 else:
+                    logging.info(f"[PID {pid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
                     failed_ips.append(ip)
                     failed_private_ips.append(private_ip)
+
+
 
     ### The run_test is defined outside of the function at the top of this module.  The run_test will in turn call benchmark
     ### function to run the specific benchmarks on the multi-threading ThreadPoolExecutor that the process is executing on
