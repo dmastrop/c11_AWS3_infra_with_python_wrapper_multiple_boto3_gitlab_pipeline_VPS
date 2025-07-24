@@ -49,6 +49,51 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+## UPDATES: part 17: Phase2c: Add uuid to the benchmark process level logs and ramp up the testing to 480/25 with the updated Phase2 code
+
+Added uuid to the process level benchmark logs in threaded_install() function
+
+```
+### This is the wrapped multi-threading code for benchmarking statistics
+    ### Make sure to indent this within the tomcat_worker function!
+    def threaded_install():
+        import uuid # This is for adding uuid to the logs. See below
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+
+
+## Add uuid since the pids are reused in hyper-scaling. This is not absolutely required as my log files do use
+## uuid to differentiation same pid benchmark logs but adding to content of the logs will help in the future
+## for logging forenscis
+
+
+            for future in as_completed(futures):
+                ip, private_ip, result = future.result()
+                pid = multiprocessing.current_process().pid
+                thread_uuid = uuid.uuid4().hex[:8]
+
+                if result:
+                    logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+                    successful_ips.append(ip)
+                    successful_private_ips.append(private_ip)
+                else:
+                    logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+                    failed_ips.append(ip)
+                    failed_private_ips.append(private_ip)
+
+
+```
+
+### 480/25
+
+To test the resurrection monitor logging need to ramp up the stress and thread contention to see if we can instigate the SSH
+thread failures again so that we can implement the Phase3 code to resurrect the faulty threads.
+
+
+
+
+
 
 
 
