@@ -605,6 +605,7 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
             # seeing successful installations having resurrection logs created. Patch1, creating a registry
             # fingerprint for successful installs at the end of install_tomcat() did not address this problem
+            # Patch1 is at the end of install_tomcat() with install_success fingerprint stamping.
             if record.get("status") == "install_success":
                 continue
 
@@ -612,14 +613,36 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
                 flagged[ip] = record
 
-    # 🧠 NEW: Catch silent failures
+    # 🧠 EARLY EXIT LOGIC: only fire if no legitimate registry entries exist. This is patch3 for the issue
+    # If somehow the good installation fingerprint is still not detected due to timing issues, then screen again
+    # and make sure to set success_found and makes sure this No registry entries match message does not get thrown
+    # so that no resurrection log file is created for these "install success" good threads.
     if not flagged:
-        flagged["early_exit"] = {
-            "status": "early_abort",
-            "reason": "No registry entries matched. Possible thread exit before retry loop.",
-            "pid": pid,
-            "timestamp": time.time()
-        }
+        success_found = any(
+            record.get("status") == "install_success"
+            for record in resurrection_registry.values()
+        )
+        if not success_found:
+            flagged["early_exit"] = {
+                "status": "early_abort",
+                "reason": "No registry entries matched. Possible thread exit before retry loop.",
+                "pid": pid,
+                "timestamp": time.time()
+            }
+
+
+
+#
+#    # 🧠 NEW: Catch silent failures
+#    if not flagged:
+#        flagged["early_exit"] = {
+#            "status": "early_abort",
+#            "reason": "No registry entries matched. Possible thread exit before retry loop.",
+#            "pid": pid,
+#            "timestamp": time.time()
+#        }
+
+
 
     os.makedirs(log_dir, exist_ok=True)
     with open(log_path, "w") as f:
@@ -1393,7 +1416,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         if transport:
             transport.close()
 
-        # ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
+        # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
         # from creating a resurrection log. This will ensure that all installation threads leave some sort
         # of registry fingerprint unless they are legitimate early thread failures.
         update_resurrection_registry(ip, attempt=0, status="install_success")
