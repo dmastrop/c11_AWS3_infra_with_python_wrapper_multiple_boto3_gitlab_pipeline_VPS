@@ -613,23 +613,55 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
                 flagged[ip] = record
 
-    # 🧠 EARLY EXIT LOGIC: only fire if no legitimate registry entries exist. This is patch3 for the issue
-    # If somehow the good installation fingerprint is still not detected due to timing issues, then screen again
-    # and make sure to set success_found and makes sure this No registry entries match message does not get thrown
-    # so that no resurrection log file is created for these "install success" good threads.
-    if not flagged:
-        success_found = any(
-            record.get("status") == "install_success"
-            for record in resurrection_registry.values()
-        )
-        if not success_found:
-            flagged["early_exit"] = {
-                "status": "early_abort",
-                "reason": "No registry entries matched. Possible thread exit before retry loop.",
-                "pid": pid,
-                "timestamp": time.time()
-            }
 
+# Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
+# no logs are created for these
+
+    # 🔍 Global success check — avoids false early_exit logs
+    success_found = any(
+        record.get("status") == "install_success"
+        for record in resurrection_registry.values()
+    )
+    if not flagged and not success_found:
+        flagged["early_exit"] = {
+            "status": "early_abort",
+            "reason": "No registry entries matched. Possible thread exit before retry loop.",
+            "pid": pid,
+            "timestamp": time.time()
+        }
+
+    # ✅ Only log if flagged exists
+    if flagged:
+        os.makedirs(log_dir, exist_ok=True)
+        with open(log_path, "w") as f:
+            json.dump(flagged, f, indent=4)
+
+
+
+
+
+
+
+
+
+
+#    # 🧠 EARLY EXIT LOGIC: only fire if no legitimate registry entries exist. This is patch3 for the issue
+#    # If somehow the good installation fingerprint is still not detected due to timing issues, then screen again
+#    # and make sure to set success_found and makes sure this No registry entries match message does not get thrown
+#    # so that no resurrection log file is created for these "install success" good threads.
+#    if not flagged:
+#        success_found = any(
+#            record.get("status") == "install_success"
+#            for record in resurrection_registry.values()
+#        )
+#        if not success_found:
+#            flagged["early_exit"] = {
+#                "status": "early_abort",
+#                "reason": "No registry entries matched. Possible thread exit before retry loop.",
+#                "pid": pid,
+#                "timestamp": time.time()
+#            }
+#
 
 
 #
@@ -643,12 +675,17 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #        }
 
 
+# Comment this out and see patch4 above
+#
+#    os.makedirs(log_dir, exist_ok=True)
+#    with open(log_path, "w") as f:
+#        json.dump(flagged, f, indent=4)
+#
+#
 
-    os.makedirs(log_dir, exist_ok=True)
-    with open(log_path, "w") as f:
-        json.dump(flagged, f, indent=4)
 
-    # ✅ Print final status
+
+    # ✅ Print final status and resurrection monitor final verdict
     if len(flagged) == 1 and "early_exit" in flagged:
         print(f"⚠️ Resurrection Monitor: Early thread exit detected in process {pid}.")
     elif flagged:
