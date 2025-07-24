@@ -1550,6 +1550,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ### This is the wrapped multi-threading code for benchmarking statistics
     ### Make sure to indent this within the tomcat_worker function!
     def threaded_install():
+        import uuid # This is for adding uuid to the logs. See below
+
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
 
@@ -1562,20 +1564,41 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #                    failed_ips.append(ip)
 #                    failed_private_ips.append(private_ip)
 
-## Add ip visiblity for troubleshooting the EC2 instances to pid in logs for resurrection code:
+### Add ip visiblity for troubleshooting the EC2 instances to pid in logs for resurrection code:
+#            for future in as_completed(futures):
+#                ip, private_ip, result = future.result()
+#                pid = multiprocessing.current_process().pid
+#
+#                if result:
+#                    logging.info(f"[PID {pid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+#                    successful_ips.append(ip)
+#                    successful_private_ips.append(private_ip)
+#                else:
+#                    logging.info(f"[PID {pid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+#                    failed_ips.append(ip)
+#                    failed_private_ips.append(private_ip)
+
+
+
+
+## Add uuid since the pids are reused in hyper-scaling. This is not absolutely required as my log files do use
+## uuid to differentiation same pid benchmark logs but adding to content of the logs will help in the future
+## for logging forenscis
+
+
             for future in as_completed(futures):
                 ip, private_ip, result = future.result()
                 pid = multiprocessing.current_process().pid
+                thread_uuid = uuid.uuid4().hex[:8]
 
                 if result:
-                    logging.info(f"[PID {pid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+                    logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
                     successful_ips.append(ip)
                     successful_private_ips.append(private_ip)
                 else:
-                    logging.info(f"[PID {pid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+                    logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
                     failed_ips.append(ip)
                     failed_private_ips.append(private_ip)
-
 
 
     ### The run_test is defined outside of the function at the top of this module.  The run_test will in turn call benchmark
