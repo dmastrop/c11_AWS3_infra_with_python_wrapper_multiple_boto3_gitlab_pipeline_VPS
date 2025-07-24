@@ -32,7 +32,29 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 
 
-## UPDATES: part 16 Hyper-scaling of processes 450/25 and 480/25: REFACTOR SSH4 Phase2 resurrection_registry (Phase2a), resurrection_monitor (Phase2a) and resurrection_gatekeeper (Phase2b)
+
+## High level project summary:
+
+
+System Resilience Engineering | High-Concurrency Diagnostic Design in Python
+
+Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 450 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across hundreds of AWS instances as part of a broader infrastructure automation suite.
+Testing is performed in a self-hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency. 
+
+•Phase 2 – Resurrection Logic : Integrated watchdog and retry-aware monitoring to detect silent thread stalls. Resurrection registry captures failure candidates for postmortem logging and sets the foundation for adaptive thread recovery.
+
+•Phase 3 – Thread Healing & Adaptive Retry: Threads flagged in Phase 2 will be dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and potential thread override logic tuned to system state and swap conditions.
+
+•Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns.
+
+
+
+
+
+
+
+
+## UPDATES: part 16 Hyper-scaling of processes 450/25 and 480/25: REFACTOR SSH 4 -- Phase2: resurrection_registry (Phase2a), resurrection_monitor (Phase2a), and resurrection_gatekeeper (Phase2b) and patches 1-4
 
 
 This is currently undergoing testing.  May have to increase the sample_probability to catch swap statistics for more than the current 10% of the processes.  This is expensive in terms of CPU and execution time and will only be increased temporarily to troubleshoot ghost failures, if required.
@@ -45,28 +67,311 @@ Phase 4 will adapatively do this based upon current heuristics and system stress
 The saturation defense(see code block below) is required because there may be other corner cases whereby the thread is not successfully being resurrected  (Phase3). For these threads we  need to flag them for further investigation. This could be for example with a flapping node or 
 misclassified IP address, etc....
 
-### resurrection_montior code
+
 
 
 ### resurrection_registry code
 
+```
+
+# ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------
+# Purpose: Detect stalled STDOUT/STDERR reads during SSH execution inside install_tomcat()
+#          and flag repeated failures for postmortem analysis or thread resurrection.
+# Scope:   Shared across all threads and processes launched from tomcat_worker()
+# Output:  Structured JSON log via resurrection_monitor() at end of each process lifecycle
+# ---------------------------------------------------------------------------
+
+
+from datetime import datetime
+import threading
+
+WATCHDOG_TIMEOUT = 90
+RETRY_LIMIT = 3
+SLEEP_BETWEEN_ATTEMPTS = 5
+STALL_RETRY_THRESHOLD = 2
+
+resurrection_registry = {}
+resurrection_registry_lock = threading.Lock()
+
+def update_resurrection_registry(ip, attempt, status):
+    with resurrection_registry_lock:
+        resurrection_registry[ip] = {
+            "status": status,
+            "attempt": attempt,
+            "timestamp": datetime.now().isoformat()
+        }
+
+def read_output_with_watchdog(stream, label, ip, attempt):
+    start = time.time()
+    collected = b''
+    while True:
+        if stream.channel.recv_ready():
+            try:
+                collected += stream.read()
+                break
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Failed reading {label} (Attempt {attempt}): {e}")
+                break
+        elapsed = time.time() - start
+        if elapsed > WATCHDOG_TIMEOUT:
+            print(f"[{ip}] ⏱️  Watchdog timeout on {label} read (Attempt {attempt}).")
+            if attempt >= STALL_RETRY_THRESHOLD:
+                print(f"[{ip}] 🔄 Multiple stalls detected. Flagging for resurrection.")
+                update_resurrection_registry(ip, attempt, f"watchdog_timeout_on_{label}")
+            break
+        time.sleep(1)
+    return collected.decode()
+
+
+```
+
+
+
+
+
 
 ### resurrection_gateway code
 
+```
+# ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS GATEKEEPER ------------------
+## This has the resurrection_gatekeeper which will use the data from the read_output_with_watchdog function above to determine if the thread actually is
+## a resurrection candidate and prevent false postives for resurrection candidates.   We only want to resurrect truly dead threads
+## Later on in Phase3 will reinstall tomcat on these threads.
+## The saturation defense is required because there may be other corner cases whereby the thread is not successfully being resurrected 
+## (Phase3). For these threads we  need to flag them for further investigation. This could be for example with a flapping node or 
+## misclassified IP address, etc....
 
-### Integration with REFACTOR SSH 4 code block
+def resurrection_gatekeeper(stderr_output, stdout_output, command_status, exit_code, runtime_seconds, pid=None, ip_address=None, resurrection_registry=None, logger=None):
 
 
-### patch to the install_tomcat() for successful threads to create a registry fingerprint and avoid empty registry values for these threads
+    """
+    Determines whether resurrection should occur based on watchdog output, stderr/stdout content, command status,
+    runtime heuristics, and optional registry tracking.
+
+    Returns: Boolean → True if resurrection should occur, False otherwise.
+    """
+
+
+    def log_decision(message):
+        if logger:
+            logger.info(f"[Gatekeeper] {message}")
+        else:
+            print(f"[Gatekeeper] {message}")
+
+    # 🧠 PRIMARY HEURISTIC
+    if command_status == "Command succeeded" and stderr_output.strip() == "":
+        log_decision("Healthy node: Command succeeded with empty STDERR. Block resurrection.")
+        return False
+
+    # 🔍 SECONDARY SIGNALS
+    if exit_code == 0 and stdout_output.strip() and stderr_output.strip() == "":
+        log_decision("Clean exit with STDOUT content. Block resurrection.")
+        return False
+
+    if runtime_seconds > 5 and stdout_output.strip():
+        log_decision(f"Runtime {runtime_seconds}s with STDOUT. Block resurrection.")
+        return False
+
+    # 🧯 Registry saturation defense
+    if resurrection_registry and ip_address:
+        count = resurrection_registry.get(ip_address, {}).get("resurrect_count", 0)
+        if count >= 3:
+            log_decision(f"IP {ip_address} hit resurrection limit. Quarantining further attempts.")
+            return False
+
+    if resurrection_registry and pid in resurrection_registry:
+        log_decision(f"PID {pid} already resurrected. Block repeated action.")
+        return False
+
+    # 🔁 Default: allow resurrection
+    log_decision("Resurrection allowed: no success heuristics matched.")
+    return True
+```
 
 
 
 
 
+### Integration with REFACTOR SSH 4 code block (resurrection_registry and resurrection_gateway function calls) and patch1 to install_tomcat():
+
+
+This code is in the large install_tomcat() function. Patch 1 is placed at the end of this install_tomcat() function to fingerprint
+successful thread tomcat installs so that the resurrection_monitor can separate them out and not create a resurrection_registry_log 
+file for them. See below for patch1
 
 
 
-## UPDATES: part 15 Hyper-scaling of processes 450/25: REFACTOR SSH3 Phase1 to deal with the ghosts.
+```
+# REFACTOR SSH 4 - Phase 2 The new resurrection policy to flag connecitons that have failed 2 watchdog timeouts
+## and update resurrection registry.  Multiple stalls detected. Flagging for resurrection
+## Note the read_output_with_watchdog function and an new function update_resurrection_registry have been added/moved to just
+## above the main tomcat_worker function above. This makes them global so that we can utilize the resurrection monitor
+## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
+## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
+## The read_output_with_watchdog calls the update_resurrection_registry function
+
+
+
+        for idx, command in enumerate(commands):
+            for attempt in range(RETRY_LIMIT):
+                try:
+                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
+
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+
+                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
+                    ## arguments for this function call
+
+                    should_resurrect = resurrection_gatekeeper(
+                        stderr_output=stderr_output,
+                        stdout_output=stdout_output,
+                        command_status="Command succeeded",
+                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
+                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
+                        pid=multiprocessing.current_process().pid,
+                        ip_address=ip,
+                        resurrection_registry=resurrection_registry
+                    )
+
+                    if should_resurrect:
+                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect")
+                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
+                    else:
+                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
+
+
+                    if "E: Package 'tomcat9'" in stderr_output:
+                        print(f"[{ip}] ❌ Tomcat install failure.")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    if "WARNING:" in stderr_output:
+                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                        stderr_output = ""
+
+                    if stderr_output.strip():
+                        print(f"[{ip}] ❌ Non-warning stderr received.")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    print(f"[{ip}] ✅ Command succeeded.")
+                    time.sleep(20)
+                    break  # Success
+   
+                except Exception as e:
+                    print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+
+                finally:
+                    stdin.close()
+                    stdout.close()
+                    stderr.close()
+
+
+        ssh.close()
+        transport = ssh.get_transport()
+        if transport:
+            transport.close()
+
+        # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
+        # from creating a resurrection log. This will ensure that all installation threads leave some sort
+        # of registry fingerprint unless they are legitimate early thread failures.
+        update_resurrection_registry(ip, attempt=0, status="install_success")
+
+
+        print(f"Installation completed on {ip}")
+        return ip, private_ip, True
+```
+
+
+
+
+### resurrection_monitor code: patches 2-4 to resurrection_monitor() for successful threads still creating resurrection_registry_logs
+
+```
+def resurrection_monitor(log_dir="/aws_EC2/logs"):
+    pid = multiprocessing.current_process().pid
+    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+
+    flagged = {}
+    with resurrection_registry_lock:
+        for ip, record in resurrection_registry.items():
+
+
+            # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
+            # seeing successful installations having resurrection logs created. Patch1, creating a registry
+            # fingerprint for successful installs at the end of install_tomcat() did not address this problem
+            # Patch1 is at the end of install_tomcat() with install_success fingerprint stamping.
+            if record.get("status") == "install_success":
+                continue
+
+
+            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+                flagged[ip] = record
+
+
+# Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
+# no logs are created for these. This resolved the issue.
+
+    # 🔍 Global success check — avoids false early_exit logs
+    success_found = any(
+        record.get("status") == "install_success"
+        for record in resurrection_registry.values()
+    )
+    if not flagged and not success_found:
+        flagged["early_exit"] = {
+            "status": "early_abort",
+            "reason": "No registry entries matched. Possible thread exit before retry loop.",
+            "pid": pid,
+            "timestamp": time.time()
+        }
+
+    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
+    # successful installation threads
+    if flagged:
+        os.makedirs(log_dir, exist_ok=True)
+        with open(log_path, "w") as f:
+            json.dump(flagged, f, indent=4)
+```
+
+
+### The resurrection_monitor call is at the end of the tomcat_worker() function that is called by tomcat_worker_wrapper()
+### The wrapper is required for process level logging
+
+```
+###### Call the resurrection monitor function. This is run per process. So if 5 threads in a process it the resurrection registry
+###### will have scanned for 5 EC2 instance installs and logged any that have met the resurrection_gateway criteria. 
+###### These are resurrection
+###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
+###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
+
+    resurrection_monitor()
+
+```
+
+tomcat_worker() is a very large main function in module2 and preceeds the main() function at the end of this module
+main() has high level logging orchestration and multi-processing of the chunk_size blocks that the ThreadPoolExecutor works on
+with multi-threading in tomcat_worker()
+tomcat_worker_wrapper() supports the process level logging orchestration at the individual process and thread level.
+The resurrection_monitor needs to be called for each process that is processing the chunk_size blocks through the multi-threading
+ThreadPoolExecutor as described above.
+
+
+ 
+
+
+
+
+## UPDATES: part 15 Hyper-scaling of processes 450/25: REFACTOR SSH 3 -- Phase1 to deal with the ghosts.
 
 This is the first phase of refactoring to deal with the ghost issue of UPDATE part 14 below.
 
@@ -163,7 +468,7 @@ return ip, private_ip, True
 
 
 
-### Code architecture (REFACTOR SSH3 Phase1 code)
+### Code architecture (REFACTOR SSH 3 Phase1 code)
 
 
 1. Retry Logic: Layered Around `exec_command`
@@ -317,7 +622,7 @@ SUCCESS CASE:
 
 
 
-### Forensic analysis of the 450/25 run with the  REFACTOR SSH3 code above
+### Forensic analysis of the 450/25 run with the  REFACTOR SSH 3 code above
 
 
 The testing with the 450/25 processes using the REFATOR SSH3 code above resulted in 4 total failures of the 450 instances. The good thing 
@@ -448,7 +753,7 @@ The fact that all 4 followed the same retry exhaustion pathway is good  news—i
 
 
 
-## UPDATES: part 14 Hyper-scalling of processes 450/25, SSH connect issues, log forencsics and initial code refactoring
+## UPDATES: part 14 Hyper-scalling of processes 450/25: REFACTOR SSH 2, SSH connect issues, log forencsics and initial code refactoring
 
 
 After using REFACTOR SSH 1 code block, used this block to dig deeper in to the issue.
@@ -677,7 +982,7 @@ if status != 0:
 
 
 
-## UPDATES: part 13: Hyper-scaling of processes (400+), SSH connect issues and troubleshooting and log forensics and correlation
+## UPDATES: part 13: Hyper-scaling of processes (400+): SSH connect issues, REFACTOR SSH 1,  and troubleshooting and log forensics and correlation
 
 After doing foresensic correlation between the process level logs, the main() process orchestration logs and the gitlab
 console logs, there are some areas that have been indentified that are causing the tomcat9 failure installations at 
@@ -808,6 +1113,75 @@ system level severe stress.
 Of course RAM and swap can always be increased to remediate the issues above, but the code needs to be have this resilience 
 built into it as part of the design if memory on the host is constrained and if multi-processing is to be highly scaled.
 
+The initial refactored code, SSH REFACTOR 1, is below:
+
+```
+# REFACTOR SSH 1:
+
+        for command in commands:
+            for attempt in range(3):
+                try:
+                    print(f"[DEBUG] Starting SSH command attempt {attempt + 1} on {ip}: {command}")
+
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+                    print(f"[DEBUG] Command sent: {command}")
+                    print(f"[DEBUG] Waiting to read stdout...")
+                    stdout_output = stdout.read().decode()
+                    print(f"[DEBUG] Waiting to read stderr...")
+                    stderr_output = stderr.read().decode()
+
+                    print(f"[DEBUG] Read complete for {ip}")
+                    print(f"[INFO] Executing command: {command}")
+                    print(f"[INFO] STDOUT length: {len(stdout_output)} chars")
+                    print(f"[INFO] STDERR length: {len(stderr_output)} chars")
+                    print(f"STDOUT: {stdout_output}")
+                    print(f"STDERR: {stderr_output}")
+
+                    # Detect specific fatal Tomcat errors early
+                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+                        print(f"[ERROR] Fatal: No install candidate on {ip}")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    # Warning softener
+                    if "WARNING:" in stderr_output:
+                        print(f"[WARN] Non-fatal warning on {ip}: {stderr_output}")
+                        stderr_output = ""
+
+                    # Catch any remaining stderr (actual failures)
+                    if stderr_output.strip():
+                        print(f"[ERROR] Command error output on {ip}: {stderr_output}")
+                        ssh.close()
+                        return ip, private_ip, False
+
+                    print(f"[DEBUG] Retrying command: {command} (Attempt {attempt + 1})")
+                    time.sleep(20)
+
+                except Exception as e:
+                    print(f"[EXCEPTION] exec_command failed on {ip}: {e}")
+
+                    # Log partial output if available
+                    try:
+                        if stdout:
+                            stdout_output = stdout.read().decode()
+                            print(f"[EXCEPTION DEBUG] Partial STDOUT ({len(stdout_output)}): {stdout_output}")
+                        if stderr:
+                            stderr_output = stderr.read().decode()
+                            print(f"[EXCEPTION DEBUG] Partial STDERR ({len(stderr_output)}): {stderr_output}")
+                    except Exception as inner:
+                        print(f"[EXCEPTION] Error reading from stdout/stderr after failure: {inner}")
+
+                    ssh.close()
+                    return ip, private_ip, False
+
+                finally:
+                    if stdin: stdin.close()
+                    if stdout: stdout.close()
+                    if stderr: stderr.close()
+
+
+```
 
 
 
