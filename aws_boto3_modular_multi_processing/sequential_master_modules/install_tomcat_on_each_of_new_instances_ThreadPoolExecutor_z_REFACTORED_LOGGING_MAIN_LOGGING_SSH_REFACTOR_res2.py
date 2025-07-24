@@ -630,17 +630,12 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             "timestamp": time.time()
         }
 
-    # ✅ Only log if flagged exists
+    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
+    # successful installation threads
     if flagged:
         os.makedirs(log_dir, exist_ok=True)
         with open(log_path, "w") as f:
             json.dump(flagged, f, indent=4)
-
-
-
-
-
-
 
 
 
