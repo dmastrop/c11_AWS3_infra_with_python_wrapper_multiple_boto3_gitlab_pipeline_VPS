@@ -38,7 +38,8 @@ push:
     - docker push $CI_REGISTRY_IMAGE:latest
 
 
-      # default instance_type is t2.micro. Test out a t3.small for performance installation issues.      
+      # default instance_type is t2.micro. Test out a t3.small for performance installation issues.   
+      # 30 processes(desired_count)  x chunk_size=2 → 60 EC2 instances total so set max and min count to 60 (example)   
 deploy:
   stage: deploy
   before_script:
@@ -48,8 +49,8 @@ deploy:
     - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
     - echo 'instance_type=t2.micro' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
-    - echo 'min_count=512' >> .env
-    - echo 'max_count=512' >> .env
+    - echo 'min_count=60' >> .env
+    - echo 'max_count=60' >> .env
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
