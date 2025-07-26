@@ -621,7 +621,7 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
 
 
-        # ---------------- Begin Resurrection Registry Scan ----------------
+        # ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
         
         for ip, record in resurrection_registry.items():
     
@@ -649,6 +649,34 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #                flagged[ip] = record
 #                log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
 #                
+
+##### INSERT PATCH 6 HERE WITHIN THE resurrection_regisry_lock
+        # ---------------- Begin Patch 6: Ghosts with NO registry footprint ----------------
+        try:
+            benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
+            with open(benchmark_path, "r") as f:
+                benchmark_ips = {
+                    match.group(1)
+                    for line in f
+                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
+                }
+
+            # Identify IPs seen in benchmark log but completely missing from resurrection registry
+            missing_registry_ips = benchmark_ips - total_registry_ips
+
+            for ip in missing_registry_ips:
+                flagged[ip] = {
+                    "status": "ghost_missing_registry",
+                    "ghost_reason": "no resurrection registry entry",
+                    "pid": pid,
+                    "timestamp": time.time()
+                }
+                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
+
+        except Exception as e:
+            log_debug(f"[{timestamp()}] Patch 6 failure: {e}")
+        # ---------------- End Patch 6 ----------------
+
 
 
 
