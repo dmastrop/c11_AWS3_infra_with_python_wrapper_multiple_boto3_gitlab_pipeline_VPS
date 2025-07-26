@@ -595,7 +595,11 @@ import multiprocessing
 
 def resurrection_monitor(log_dir="/aws_EC2/logs"):
     pid = multiprocessing.current_process().pid
+## These are the resurrection_registry patch 1-5 logs
     log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+## These are teh resurrection ghost patch 6 logs
+    ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+
 
     flagged = {}
     with resurrection_registry_lock:
@@ -696,12 +700,38 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             "timestamp": time.time()
         }
 
+#    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
+#    # successful installation threads
+#    if flagged:
+#        os.makedirs(log_dir, exist_ok=True)
+#        with open(log_path, "w") as f:
+#            json.dump(flagged, f, indent=4)
+#
+
+
     # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
     # successful installation threads
     if flagged:
         os.makedirs(log_dir, exist_ok=True)
+
+        # Write registry resurrection log
         with open(log_path, "w") as f:
             json.dump(flagged, f, indent=4)
+
+        # Patch 6: Write ghost resurrection log if applicable
+        if missing_registry_ips:
+            ghost_data = {
+                ip: {
+                    "status": "ghost_missing_registry",
+                    "ghost_reason": "no registry entry",
+                    "pid": pid,
+                    "timestamp": time.time()
+                }
+                for ip in missing_registry_ips
+            }
+            with open(ghost_log_path, "w") as f:
+                json.dump(ghost_data, f, indent=4)
+            log_debug(f"[{timestamp()}] Ghost resurrection log created: {ghost_log_path}")
 
 
 
