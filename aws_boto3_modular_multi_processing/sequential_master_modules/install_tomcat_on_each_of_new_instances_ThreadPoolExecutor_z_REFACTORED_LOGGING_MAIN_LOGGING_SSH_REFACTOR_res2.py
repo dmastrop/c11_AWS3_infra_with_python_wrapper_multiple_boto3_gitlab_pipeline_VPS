@@ -634,8 +634,22 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 continue
 
 
-            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
-                flagged[ip] = record
+            reason = "watchdog stall retry threshold" if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD else "not in successful_registry_ips"
+            record["ghost_reason"] = reason
+            flagged[ip] = record
+            log_debug(f"[{timestamp()}] Ghost candidate flagged ({reason}): {ip}")
+
+
+#            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+#                flagged[ip] = record
+#                log_debug(f"[{timestamp()}] Ghost candidate flagged (watchdog stall retry threshold): {ip}")  
+#
+#            if ip not in successful_registry_ips:
+#                # 👻 Potential ghost thread detected
+#                flagged[ip] = record
+#                log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
+#                
+
 
 
 # Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
