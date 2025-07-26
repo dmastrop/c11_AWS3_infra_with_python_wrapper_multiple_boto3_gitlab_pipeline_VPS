@@ -599,6 +599,30 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
     flagged = {}
     with resurrection_registry_lock:
+
+        # Patch5: This sets the stage for patches 5 and 6.  We are creating total_registry_ips for all ips in registry
+        # (i.e. watchdogs that exceeded threshold, our unknown signature ghost, successful fingerprinted ones in install_tomcat,
+        # i.e., patch1)
+        # and also creating successful_registry_ips (the fingerprinted ones in install_tomcat, i.e. patch1)
+        # The objective is with patch 6 and 7 to identify the unknown ghosts in total_registry_ips and then
+        # total_registry_ips -(successful_registry_ips) = our elusive ghost threads
+        # These ghost threads are threads that have bypassed all conditions so far in the resurrection_gatekeeper and the
+        # read_output_with_watchdog functions:
+        # - They exited before hitting the stall threshold (`read_output_with_watchdog`)
+        #- They bypassed resurrection gatekeeper entirely
+        #- No fingerprint means no resurrection log
+
+
+        total_registry_ips = set(resurrection_registry.keys())
+        successful_registry_ips = {
+            ip for ip, record in resurrection_registry.items()
+            if record.get("status") == "install_success"
+        }
+
+
+
+        # ---------------- Begin Resurrection Registry Scan ----------------
+        
         for ip, record in resurrection_registry.items():
     
 
