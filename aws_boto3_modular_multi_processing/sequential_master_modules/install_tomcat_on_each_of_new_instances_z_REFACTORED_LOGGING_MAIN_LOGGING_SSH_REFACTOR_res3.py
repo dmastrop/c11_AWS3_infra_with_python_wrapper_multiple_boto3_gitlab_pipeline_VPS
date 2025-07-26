@@ -797,7 +797,7 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
         resurrection_registry[ip] = {
             "status": status,
             "attempt": attempt,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
             "pid": pid
         }
 
