@@ -51,7 +51,86 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES: part 18: Phase2d: Patches 5,6,and 7 in resurrection_monitor for improved ghost tracking heuristics (Failed tomcat installs)
+## UPDATES: part 18: Phase2d: Patches 5,6,and 7 in resurrection_monitor for improved ghost tracking heuristics (Failed tomcat installs) AND 512/25 (487 concurrent; 25 pooled) process testing
+
+The 512/25 testing is required to create the ghost thread SSH failures, so that we can test the patch 6 and 7 code in the resurrection_monitor. The resurrection_ghost_log will now be created to track ghost threads that do not hit any of the conditions in patches 1-4 (watchdog STALL_RETRY_THRESHOLD, etc...)  Once we can track these elusive ghost threads we can then proceed to Phase3 of the project and resurrect the threads to complete the installation to the EC2 node.
+
+The patches will be reviewed in detail below.
+
+
+### Introduction: 
+
+In short, there are now 2 types of resurrection logs that will be generated:
+
+```
+### Resurrection Registry Ghosts (Patches 1–5)
+- These are threads that **touched the registry**
+- But were flagged for watchdog timeouts, bad heuristics, early exits, etc.
+- Stored in `resurrection_registry_log_<pid>.json`
+
+###  Resurrection Ghosts (Patch 6)
+- Threads that **never made it into the registry at all**
+- Yet showed up in benchmark logs → meaning they ran but silently died
+- Stored in `resurrection_ghost_log_<pid>.json`
+```
+
+
+So far, there have been no resurrection registry ghosts, so the ghosts have to be "resurrection ghosts (patch6)" type, i.e. ghost
+threads that do not even make it into the registry.
+The logic for tracking these down will be described below. In short, we will use the process level benchmark logs as a control list of
+the IP addresses that were spawned and match that against the resurrection registry.
+
+The benchmark logs have to be used instead of the module 1 raw AWS list of ips (which is really easy to get) because we need to 
+ensure that these IP addresses have a process and thread(s) attached to them as part of the python system infrasture.
+Sometimes (very rarely) an AWS instance can get stuck in initialization tests (which are checked in the python code), and these
+instances never get attached to a process because they are essentially "dead" . The process benchmark logs do not catch these 
+These are not designed to be SSH resurrected (install tomcat9) because the node itself is dead. These fall into an entirely separate category.
+
+The resurrection registry is the  actual list of IPs that have been added to the registry after a successful SSH connection, or 
+explicit fail of the 5 SSH retry loops, or passing the install tomcat loop, or failing the 3 retry install loop, or passing the 
+watchdog timer, or failing the watchdog STALL_RETRY_THRESHOD (currently at 2). These are all the known types of thread and thread 
+failure types that we can identify.
+
+The resurrection registry ghosts would be a thread that does not have an install_success, so several of the failure items just listed 
+above would qualify and it would catch these ghosts
+
+The resurrection ghosts (Patch 6) type have no registry entry and that is why they are so hard to find.
+This is the purpose of the patch 6 to the resurrection_monitor function.
+
+Example: Thread exceeds the watchdog STALL_RETRY_THRESHOLD of 2:
+If a thread exceeds the  defined `STALL_RETRY_THRESHOLD`, it will trigger this block inside `read_output_with_watchdog()`:
+
+```
+if attempt >= STALL_RETRY_THRESHOLD:
+    update_resurrection_registry(ip, attempt, f"watchdog_timeout_on_{label}", pid=...)
+```
+
+This results in the following:
+
+- ✅ It creates a resurrection registry entry for the IP (resurrection_monitor and update_resurrection_registry)
+- ✅ `status` gets set to `"watchdog_timeout_on_STDOUT"` or `"watchdog_timeout_on_STDERR"` (depending on where it stalls)
+- ✅ That IP shows up inside `total_registry_ips` (resurrection_nonitor)
+- ✅ Patch 5 flags it as a ghost if it's not marked `"install_success"`(resurrection_monitor)
+- ✅ It’s logged in `resurrection_registry_log_<pid>.json`(resurrection_monitor)
+
+These watchdog-stalled threads are textbook registry ghost in that they tried, failed repeatedly, and got captured by the forensic 
+logic in the python code.  Patch 6 doesn’t catch them because they exist in the registry. But they’re prime candidates for 
+resurrection in  Phase 3
+The purpose of patch 6 is to catch the ghost threads that are not caught by the logic in the python code.(not the example above) 
+
+If this is successful in the testing we can proceed to Phase3. Once Phase3 is implemented the system will continue to be scaled up.
+The maximum process count target is tentatively 800.
+
+
+### Patch 5
+
+
+
+### Patch 6
+
+
+### Patch 7
+
 
 
 
