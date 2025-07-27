@@ -49,6 +49,15 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+
+
+## UPDATES: part 18: Phase2d: Patches 5,6,and 7 in resurrection_monitor for improved ghost tracking heuristics (Failed tomcat installs)
+
+
+
+
+
+
 ## UPDATES: part 17: Phase2c: Add uuid to the benchmark process level logs and ramp up the testing to 480/25 with the updated Phase2 code
 
 Added uuid to the process level benchmark logs in threaded_install() function
@@ -99,7 +108,7 @@ thread failures again so that we can implement the Phase3 code to resurrect the 
 
 
 
-## UPDATES: part 16 Hyper-scaling of processes 450/25 and 480/25: REFACTOR SSH 4 -- Phase2: resurrection_registry (Phase2a), resurrection_monitor (Phase2a), and resurrection_gatekeeper (Phase2b) and patches 1-4
+## UPDATES: part 16 Hyper-scaling of processes 450/25 and 480/25: REFACTOR SSH 4 -- Phase2: resurrection_registry (Phase2a), resurrection_monitor (Phase2a), and resurrection_gatekeeper (Phase2b) AND patch 1 for registry success fingerprint AND patches 2-4 for improved ghost heuristics in resurrection_monitor
 
 
 This is currently undergoing testing.  May have to increase the sample_probability to catch swap statistics for more than the current 10% of the processes.  This is expensive in terms of CPU and execution time and will only be increased temporarily to troubleshoot ghost failures, if required.
