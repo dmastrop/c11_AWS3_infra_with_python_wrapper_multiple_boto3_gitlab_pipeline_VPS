@@ -881,6 +881,9 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
         print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
 
 
+## Add flush at the end of the resurrection_monitor to help facilitate the logging to gitlab console configured above in patch7.
+    sys.stdout.flush()
+
 
 
 ### REVISION 2
