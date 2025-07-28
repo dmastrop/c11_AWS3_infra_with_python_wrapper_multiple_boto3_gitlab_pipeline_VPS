@@ -664,7 +664,8 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
         patch7_logger.setLevel(logging.INFO)
 
         if not patch7_logger.hasHandlers():  # Avoid duplicate handlers
-            handler = logging.StreamHandler()
+            #handler = logging.StreamHandler()
+            handler = logging.StreamHandler(stream=sys.stdout)  # Ensure we hit stdout
             formatter = logging.Formatter('[Patch7] %(message)s')
             handler.setFormatter(formatter)
             patch7_logger.addHandler(handler)
@@ -721,13 +722,25 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 }
                 log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
 
-            # ------- Patch7 Summary -------
-            logger.info(f"[Patch7 Summary] Total registry IPs: {len(total_registry_ips)}")
-            logger.info(f"[Patch7 Summary] Benchmark IPs: {len(benchmark_ips)}")
-            logger.info(f"[Patch7 Summary] Missing registry IPs: {len(missing_registry_ips)}")
-            logger.info(f"[Patch7 Summary] Successful installs: {len(successful_registry_ips)}")
-            logger.info(f"[Patch7 Summary] Failed installs: {len(failed_registry_ips)}")
-            logger.info(f"[Patch7 Check] Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+#            # ------- Patch7 Summary -------
+#            logger.info(f"[Patch7 Summary] Total registry IPs: {len(total_registry_ips)}")
+#            logger.info(f"[Patch7 Summary] Benchmark IPs: {len(benchmark_ips)}")
+#            logger.info(f"[Patch7 Summary] Missing registry IPs: {len(missing_registry_ips)}")
+#            logger.info(f"[Patch7 Summary] Successful installs: {len(successful_registry_ips)}")
+#            logger.info(f"[Patch7 Summary] Failed installs: {len(failed_registry_ips)}")
+#            logger.info(f"[Patch7 Check] Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+
+            # ------- Patch7 Summary using patch7_logger -------
+            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+
+            sys.stdout.flush()  # Ensure console output visibility
+
+
 
         except Exception as e:
             log_debug(f"[{timestamp()}] Patch7 failure: {e}")
