@@ -657,6 +657,22 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
 
 
+
+        # Inside resurrection_monitor, just before Patch7 block
+        # Initialize the logger for the patch7 below
+        patch7_logger = logging.getLogger("patch7")
+        patch7_logger.setLevel(logging.INFO)
+
+        if not patch7_logger.hasHandlers():  # Avoid duplicate handlers
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('[Patch7] %(message)s')
+            handler.setFormatter(formatter)
+            patch7_logger.addHandler(handler)
+
+        # Replace logger.info(...) with patch7_logger.info(...)
+        patch7_logger.info("Patch7 Summary — etc.")
+
+
         # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
         benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
 
