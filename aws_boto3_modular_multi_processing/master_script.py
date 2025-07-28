@@ -124,11 +124,14 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res2.py")
 #
 
-##### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2d with modified resurrection code detection patches 5,6, and 7) 
+###### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2d with modified resurrection code detection patches 5,6) 
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res3.py")
+#
+
+##### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2d with modified resurrection code detection patch 7))
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res3.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res3_patch7.py")
 
 
 ## modules 3-11:
