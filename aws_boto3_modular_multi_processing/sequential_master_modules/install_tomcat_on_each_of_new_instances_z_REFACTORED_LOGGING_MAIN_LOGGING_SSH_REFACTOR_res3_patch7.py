@@ -730,6 +730,12 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #            logger.info(f"[Patch7 Summary] Failed installs: {len(failed_registry_ips)}")
 #            logger.info(f"[Patch7 Check] Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
 
+
+
+
+            patch7_logger.info("🧪 Patch7 reached summary block execution.")
+            sys.stdout.flush()
+ 
             # ------- Patch7 Summary using patch7_logger -------
             patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
             patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
