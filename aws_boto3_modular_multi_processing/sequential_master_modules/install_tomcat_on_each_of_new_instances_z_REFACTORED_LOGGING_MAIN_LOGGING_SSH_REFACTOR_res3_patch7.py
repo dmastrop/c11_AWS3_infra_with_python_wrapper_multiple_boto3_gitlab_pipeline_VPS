@@ -654,10 +654,13 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #                log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
 #                
 
-##### INSERT PATCH 6 HERE WITHIN THE resurrection_regisry_lock
-        # ---------------- Begin Patch 6: Ghosts with NO registry footprint ----------------
+
+
+
+        # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
+        benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
+
         try:
-            benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
             with open(benchmark_path, "r") as f:
                 benchmark_ips = {
                     match.group(1)
@@ -665,9 +668,34 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                     if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
                 }
 
-            # Identify IPs seen in benchmark log but completely missing from resurrection registry
+            total_registry_ips = set(resurrection_registry.keys())
+
+            successful_registry_ips = {
+                ip for ip, entry in resurrection_registry.items()
+                if (
+                    entry.get("install_log") and "Installation completed" in entry["install_log"]
+                    and entry.get("watchdog_retries", 0) <= 2
+                )
+            }
+
+            failed_registry_ips = total_registry_ips - successful_registry_ips
             missing_registry_ips = benchmark_ips - total_registry_ips
 
+            # ------- Dump All Sets to Artifact Log Files -------
+            def dump_set_to_artifact(name, ip_set):
+                path = os.path.join(log_dir, f"{name}_artifact.log")
+                with open(path, "w") as f:
+                    for ip in sorted(ip_set):
+                        f.write(ip + "\n")
+                print(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
+
+            dump_set_to_artifact("total_registry_ips", total_registry_ips)
+            dump_set_to_artifact("benchmark_ips", benchmark_ips)
+            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
+            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
+            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+
+            # ------- Patch6 Ghost Flagging -------
             for ip in missing_registry_ips:
                 flagged[ip] = {
                     "status": "ghost_missing_registry",
@@ -677,13 +705,52 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 }
                 log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
 
+            # ------- Patch7 Summary -------
+            logger.info(f"[Patch7 Summary] Total registry IPs: {len(total_registry_ips)}")
+            logger.info(f"[Patch7 Summary] Benchmark IPs: {len(benchmark_ips)}")
+            logger.info(f"[Patch7 Summary] Missing registry IPs: {len(missing_registry_ips)}")
+            logger.info(f"[Patch7 Summary] Successful installs: {len(successful_registry_ips)}")
+            logger.info(f"[Patch7 Summary] Failed installs: {len(failed_registry_ips)}")
+            logger.info(f"[Patch7 Check] Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+
         except Exception as e:
-            log_debug(f"[{timestamp()}] Patch 6 failure: {e}")
-        # ---------------- End Patch 6 ----------------
+            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
+        
 
 
 
 
+
+###### INSERT PATCH 6 HERE WITHIN THE resurrection_regisry_lock
+#        # ---------------- Begin Patch 6: Ghosts with NO registry footprint ----------------
+#        try:
+#            benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
+#            with open(benchmark_path, "r") as f:
+#                benchmark_ips = {
+#                    match.group(1)
+#                    for line in f
+#                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
+#                }
+#
+#            # Identify IPs seen in benchmark log but completely missing from resurrection registry
+#            missing_registry_ips = benchmark_ips - total_registry_ips
+#
+#            for ip in missing_registry_ips:
+#                flagged[ip] = {
+#                    "status": "ghost_missing_registry",
+#                    "ghost_reason": "no resurrection registry entry",
+#                    "pid": pid,
+#                    "timestamp": time.time()
+#                }
+#                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
+#
+#        except Exception as e:
+#            log_debug(f"[{timestamp()}] Patch 6 failure: {e}")
+#        # ---------------- End Patch 6 ----------------
+#
+
+
+# ---- PATCH 4 ----------
 # Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
 # no logs are created for these
 
