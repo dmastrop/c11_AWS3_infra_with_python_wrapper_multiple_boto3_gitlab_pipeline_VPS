@@ -1,20 +1,20 @@
-## test stdout gitlab logger
-import logging
-import sys
-
-logger = logging.getLogger("test_stdout_logger")
-logger.setLevel(logging.INFO)
-logger.propagate = False
-
-if not logger.hasHandlers():
-    handler = logging.StreamHandler(stream=sys.stdout)
-    formatter = logging.Formatter('[TEST] %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-logger.info("🧪 GitLab logger stdout test — visibility check.")
-sys.stdout.flush()
-
+### test stdout gitlab logger
+#import logging
+#import sys
+#
+#logger = logging.getLogger("test_stdout_logger")
+#logger.setLevel(logging.INFO)
+#logger.propagate = False
+#
+#if not logger.hasHandlers():
+#    handler = logging.StreamHandler(stream=sys.stdout)
+#    formatter = logging.Formatter('[TEST] %(message)s')
+#    handler.setFormatter(formatter)
+#    logger.addHandler(handler)
+#
+#logger.info("🧪 GitLab logger stdout test — visibility check.")
+#sys.stdout.flush()
+#
 
 
 
@@ -677,112 +677,112 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #                
 
 
-
-
-
-        # Inside resurrection_monitor, just before Patch7 block
-        # Initialize the logger for the patch7 below
-        patch7_logger = logging.getLogger("patch7")
-        patch7_logger.setLevel(logging.INFO)
-
-        if not patch7_logger.hasHandlers():  # Avoid duplicate handlers
-            #handler = logging.StreamHandler()
-            handler = logging.StreamHandler(stream=sys.stdout)  # Ensure we hit stdout
-            formatter = logging.Formatter('[Patch7] %(message)s')
-            handler.setFormatter(formatter)
-            patch7_logger.addHandler(handler)
-
-        # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
-
-        # Replace logger.info(...) with patch7_logger.info(...)
-        patch7_logger.info("Patch7 Summary — etc.")
-
-        # Step 1: Combine runtime benchmark logs
-        def combine_benchmark_logs_runtime(log_dir):
-            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
-            with open(combined_path, "w") as outfile:
-                for fname in sorted(os.listdir(log_dir)):
-                    if fname.startswith("benchmark_") and fname.endswith(".log"):
-                        path = os.path.join(log_dir, fname)
-                        try:
-                            with open(path, "r") as infile:
-                                outfile.write(f"===== {fname} =====\n")
-                                outfile.write(infile.read() + "\n")
-                        except Exception as e:
-                            print(f"[Patch7] Skipped {fname}: {e}")
-            print(f"[Patch7] Combined runtime log written to: {combined_path}")
-            return combined_path
-
-        # Step 2: Create benchmark_path variable using runtime combiner
-        benchmark_path = combine_benchmark_logs_runtime(log_dir)
-
-        # Step 3: Begin Patch7 logic
-        try:
-            with open(benchmark_path, "r") as f:
-                benchmark_ips = {
-                    match.group(1)
-                    for line in f
-                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
-                }
-
-
-        # Step 4: Continue with the Patch7 logic
-
-            total_registry_ips = set(resurrection_registry.keys())
-
-            successful_registry_ips = {
-                ip for ip, entry in resurrection_registry.items()
-                if (
-                    entry.get("install_log") and "Installation completed" in entry["install_log"]
-                    and entry.get("watchdog_retries", 0) <= 2
-                )
-            }
-
-            failed_registry_ips = total_registry_ips - successful_registry_ips
-            missing_registry_ips = benchmark_ips - total_registry_ips
-
-            # ------- Dump All Sets to Artifact Log Files -------
-            def dump_set_to_artifact(name, ip_set):
-                path = os.path.join(log_dir, f"{name}_artifact.log")
-                with open(path, "w") as f:
-                    for ip in sorted(ip_set):
-                        f.write(ip + "\n")
-                print(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
-
-            dump_set_to_artifact("total_registry_ips", total_registry_ips)
-            dump_set_to_artifact("benchmark_ips", benchmark_ips)
-            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
-            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
-            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
-
-            # ------- Patch6 Ghost Flagging -------
-            for ip in missing_registry_ips:
-                flagged[ip] = {
-                    "status": "ghost_missing_registry",
-                    "ghost_reason": "no resurrection registry entry",
-                    "pid": pid,
-                    "timestamp": time.time()
-                }
-                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
-
-
-            patch7_logger.info("🧪 Patch7 reached summary block execution.")
- 
-            # ------- Patch7 Summary using patch7_logger -------
-            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
-            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
-            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
-            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
-            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
-            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
-
-
-
-        except Exception as e:
-            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
-        
-
-
+#
+#
+#
+#        # Inside resurrection_monitor, just before Patch7 block
+#        # Initialize the logger for the patch7 below
+#        patch7_logger = logging.getLogger("patch7")
+#        patch7_logger.setLevel(logging.INFO)
+#
+#        if not patch7_logger.hasHandlers():  # Avoid duplicate handlers
+#            #handler = logging.StreamHandler()
+#            handler = logging.StreamHandler(stream=sys.stdout)  # Ensure we hit stdout
+#            formatter = logging.Formatter('[Patch7] %(message)s')
+#            handler.setFormatter(formatter)
+#            patch7_logger.addHandler(handler)
+#
+#        # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
+#
+#        # Replace logger.info(...) with patch7_logger.info(...)
+#        patch7_logger.info("Patch7 Summary — etc.")
+#
+#        # Step 1: Combine runtime benchmark logs
+#        def combine_benchmark_logs_runtime(log_dir):
+#            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+#            with open(combined_path, "w") as outfile:
+#                for fname in sorted(os.listdir(log_dir)):
+#                    if fname.startswith("benchmark_") and fname.endswith(".log"):
+#                        path = os.path.join(log_dir, fname)
+#                        try:
+#                            with open(path, "r") as infile:
+#                                outfile.write(f"===== {fname} =====\n")
+#                                outfile.write(infile.read() + "\n")
+#                        except Exception as e:
+#                            print(f"[Patch7] Skipped {fname}: {e}")
+#            print(f"[Patch7] Combined runtime log written to: {combined_path}")
+#            return combined_path
+#
+#        # Step 2: Create benchmark_path variable using runtime combiner
+#        benchmark_path = combine_benchmark_logs_runtime(log_dir)
+#
+#        # Step 3: Begin Patch7 logic
+#        try:
+#            with open(benchmark_path, "r") as f:
+#                benchmark_ips = {
+#                    match.group(1)
+#                    for line in f
+#                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
+#                }
+#
+#
+#        # Step 4: Continue with the Patch7 logic
+#
+#            total_registry_ips = set(resurrection_registry.keys())
+#
+#            successful_registry_ips = {
+#                ip for ip, entry in resurrection_registry.items()
+#                if (
+#                    entry.get("install_log") and "Installation completed" in entry["install_log"]
+#                    and entry.get("watchdog_retries", 0) <= 2
+#                )
+#            }
+#
+#            failed_registry_ips = total_registry_ips - successful_registry_ips
+#            missing_registry_ips = benchmark_ips - total_registry_ips
+#
+#            # ------- Dump All Sets to Artifact Log Files -------
+#            def dump_set_to_artifact(name, ip_set):
+#                path = os.path.join(log_dir, f"{name}_artifact.log")
+#                with open(path, "w") as f:
+#                    for ip in sorted(ip_set):
+#                        f.write(ip + "\n")
+#                print(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
+#
+#            dump_set_to_artifact("total_registry_ips", total_registry_ips)
+#            dump_set_to_artifact("benchmark_ips", benchmark_ips)
+#            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
+#            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
+#            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+#
+#            # ------- Patch6 Ghost Flagging -------
+#            for ip in missing_registry_ips:
+#                flagged[ip] = {
+#                    "status": "ghost_missing_registry",
+#                    "ghost_reason": "no resurrection registry entry",
+#                    "pid": pid,
+#                    "timestamp": time.time()
+#                }
+#                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
+#
+#
+#            patch7_logger.info("🧪 Patch7 reached summary block execution.")
+# 
+#            # ------- Patch7 Summary using patch7_logger -------
+#            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+#            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+#            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+#            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+#            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+#            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+#
+#
+#
+#        except Exception as e:
+#            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
+#        
+#
+#
 
 
 
