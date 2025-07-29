@@ -1,3 +1,26 @@
+## test stdout gitlab logger
+import logging
+import sys
+
+logger = logging.getLogger("test_stdout_logger")
+logger.setLevel(logging.INFO)
+logger.propagate = False
+
+if not logger.hasHandlers():
+    handler = logging.StreamHandler(stream=sys.stdout)
+    formatter = logging.Formatter('[TEST] %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+logger.info("🧪 GitLab logger stdout test — visibility check.")
+sys.stdout.flush()
+
+
+
+
+
+
+
 # This version has further optimizations to the install tomcat code. Since there are so many instances, this
 # needs to utilize not only the current ThreadPoolExecutor but also wrap the current install_tomcat_on_instances
 # function with main that does the following:
