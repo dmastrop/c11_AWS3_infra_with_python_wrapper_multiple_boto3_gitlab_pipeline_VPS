@@ -172,7 +172,6 @@ def setup_logging():
 
 
 
-
     # Print the actual path to the log file
     print("Real path Logging to:", os.path.realpath(log_path))
 
@@ -693,27 +692,41 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             handler.setFormatter(formatter)
             patch7_logger.addHandler(handler)
 
+        # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
+
         # Replace logger.info(...) with patch7_logger.info(...)
         patch7_logger.info("Patch7 Summary — etc.")
 
+        # Step 1: Combine runtime benchmark logs
+        def combine_benchmark_logs_runtime(log_dir):
+            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+            with open(combined_path, "w") as outfile:
+                for fname in sorted(os.listdir(log_dir)):
+                    if fname.startswith("benchmark_") and fname.endswith(".log"):
+                        path = os.path.join(log_dir, fname)
+                        try:
+                            with open(path, "r") as infile:
+                                outfile.write(f"===== {fname} =====\n")
+                                outfile.write(infile.read() + "\n")
+                        except Exception as e:
+                            print(f"[Patch7] Skipped {fname}: {e}")
+            print(f"[Patch7] Combined runtime log written to: {combined_path}")
+            return combined_path
 
-        # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
-        benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
+        # Step 2: Create benchmark_path variable using runtime combiner
+        benchmark_path = combine_benchmark_logs_runtime(log_dir)
 
+        # Step 3: Begin Patch7 logic
         try:
-           
-            patch7_logger.info("🧪 Patch7 TRY block entered — logger active.")
-            sys.stdout.flush()
-
-            patch7_logger.info(f"📂 Attempting to open file: {benchmark_path}")
-            sys.stdout.flush()
-
             with open(benchmark_path, "r") as f:
                 benchmark_ips = {
                     match.group(1)
                     for line in f
                     if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
                 }
+
+
+        # Step 4: Continue with the Patch7 logic
 
             total_registry_ips = set(resurrection_registry.keys())
 
@@ -752,19 +765,8 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 }
                 log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
 
-#            # ------- Patch7 Summary -------
-#            logger.info(f"[Patch7 Summary] Total registry IPs: {len(total_registry_ips)}")
-#            logger.info(f"[Patch7 Summary] Benchmark IPs: {len(benchmark_ips)}")
-#            logger.info(f"[Patch7 Summary] Missing registry IPs: {len(missing_registry_ips)}")
-#            logger.info(f"[Patch7 Summary] Successful installs: {len(successful_registry_ips)}")
-#            logger.info(f"[Patch7 Summary] Failed installs: {len(failed_registry_ips)}")
-#            logger.info(f"[Patch7 Check] Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
-
-
-
 
             patch7_logger.info("🧪 Patch7 reached summary block execution.")
-            sys.stdout.flush()
  
             # ------- Patch7 Summary using patch7_logger -------
             patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
@@ -773,8 +775,6 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
             patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
             patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
-
-            sys.stdout.flush()  # Ensure console output visibility
 
 
 
