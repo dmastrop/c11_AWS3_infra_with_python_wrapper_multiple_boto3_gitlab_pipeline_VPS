@@ -678,6 +678,13 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
         benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
 
         try:
+           
+            patch7_logger.info("🧪 Patch7 TRY block entered — logger active.")
+            sys.stdout.flush()
+
+            patch7_logger.info(f"📂 Attempting to open file: {benchmark_path}")
+            sys.stdout.flush()
+
             with open(benchmark_path, "r") as f:
                 benchmark_ips = {
                     match.group(1)
