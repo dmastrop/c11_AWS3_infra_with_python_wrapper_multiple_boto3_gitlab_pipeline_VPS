@@ -677,7 +677,150 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #                
 
 
+
+####### UPDATED PATCH 7b to address cross log corruption  ################
+
+#- Prevents `Patch7 Summary` lines from leaking into:
+#- `benchmark_*.log` (PID logs)
+#- `benchmark_combined.log` (CI-generated artifact log)
+#-  Still generates `benchmark_combined_runtime.log` inside the container
+#-  Writes artifact logs for registry analysis (`*_artifact.log`)
+#-  Logs Patch7 summary to a **dedicated file**, not `stdout`
+#-  Fully isolates `patch7_logger` so it never touches shared streams
 #
+
+### Updated Patch7 Block 
+
+
+        # ------- Patch7 Logger Isolation -------
+        #This creates a **dedicated logger instance** for Patch7 inside the resurrection monitor, uniquely scoped to the process that’s
+        #running it.
+        #- The `f"patch7_summary_{pid}"` string makes sure each logger has a unique name per process (e.g., `"patch7_summary_12"`)
+        #- This ensures multiple processes don’t reuse or interfere with each other’s loggers — no cross-stream contamination
+        #- It allows each resurrection monitor instance to write its own Patch7 summary without touching any shared file or the global
+        #logger
+
+        patch7_logger = logging.getLogger(f"patch7_summary_{pid}")
+        patch7_logger.setLevel(logging.INFO)
+        patch7_logger.propagate = False  # ✋ Prevent root logger inheritance
+
+        # 🗂️ File-based log to avoid stdout interference
+
+        #- `log_dir` is mount target from `.gitlab-ci.yml`,  `/aws_EC2/logs` inside the docker container
+        #- `f"patch7_summary_{pid}.log"` gives files like `patch7_summary_12.log`, `patch7_summary_48.log`, etc.
+        #- All Patch7 messages will be written **only** to this file — no stdout, no collision with benchmark PID logs
+        #This is what enables the safe write
+
+        # summary_handler:
+        # Attaches a file-based handler to the logger — meaning all `patch7_logger.info(...)` calls write directly to the file at
+        #`summary_log_path`.
+        #- This avoids `StreamHandler(sys.stdout)`, which is the usual culprit for GitLab log bleed
+        #- It ensures everything written is scoped to one file — line-by-line controlled output
+
+        summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
+        summary_handler = logging.FileHandler(summary_log_path)
+        summary_formatter = logging.Formatter('[Patch7] %(message)s')
+        summary_handler.setFormatter(summary_formatter)
+        patch7_logger.addHandler(summary_handler)
+
+        patch7_logger.info("Patch7 Summary — initialized")
+
+        # ------- Step 1: Combine runtime benchmark logs -------
+        #merged contents from all `benchmark_*.log` PID logs that were created at runtime
+        def combine_benchmark_logs_runtime(log_dir):
+            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+            with open(combined_path, "w") as outfile:
+                for fname in sorted(os.listdir(log_dir)):
+                    if fname.startswith("benchmark_") and fname.endswith(".log"):
+                        path = os.path.join(log_dir, fname)
+                        try:
+                            with open(path, "r") as infile:
+                                outfile.write(f"===== {fname} =====\n")
+                                outfile.write(infile.read() + "\n")
+                        except Exception as e:
+                            patch7_logger.info(f"Skipped {fname}: {e}")
+            patch7_logger.info(f"Combined runtime log written to: {combined_path}")
+            return combined_path
+
+
+
+        # ------- Step 2:Create benchmark_path variable using runtime combiner -------
+        # The benchmark_path for example: /aws_EC2/logs/benchmark_combined_runtime.log
+        benchmark_path = combine_benchmark_logs_runtime(log_dir)
+
+
+
+        # ------- Step 3 + Step 4 -------
+        # The IP extractor uses this combined file in benchmark_patch to build the `benchmark_ips` set.
+        # Define the registry ip values: total, successful, failed and missing
+        # Total has Failed (explicit failures like watchdog retry threshold exceeded, etc) + successful
+        # Missing registry is the delta between benchmark_ips and total registry, i.e. those threads that are not caught by explicit
+        # failure detection logic.   Currently SSH failures, either in initializaton or failed 5 SSH retries need to be tagged as 
+        #failures OR untagged registry values NOT included in total registry so that they show up in missing registry
+        # Failed + Successful + Missing = total + missing = benchmark_ips
+
+        try:
+            with open(benchmark_path, "r") as f:
+                benchmark_ips = {
+                    match.group(1)
+                    for line in f
+                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
+                }
+
+            total_registry_ips = set(resurrection_registry.keys())
+
+            successful_registry_ips = {
+                ip for ip, entry in resurrection_registry.items()
+                if (
+                    entry.get("install_log") and "Installation completed" in entry["install_log"]
+                    and entry.get("watchdog_retries", 0) <= 2
+                )
+            }
+
+            failed_registry_ips = total_registry_ips - successful_registry_ips
+            missing_registry_ips = benchmark_ips - total_registry_ips
+
+            # Dump artifacts
+            def dump_set_to_artifact(name, ip_set):
+                path = os.path.join(log_dir, f"{name}_artifact.log")
+                with open(path, "w") as f:
+                    for ip in sorted(ip_set):
+                        f.write(ip + "\n")
+                patch7_logger.info(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
+
+            dump_set_to_artifact("total_registry_ips", total_registry_ips)
+            dump_set_to_artifact("benchmark_ips", benchmark_ips)
+            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
+            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
+            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+
+            # Flag ghosts
+            for ip in missing_registry_ips:
+                flagged[ip] = {
+                    "status": "ghost_missing_registry",
+                    "ghost_reason": "no resurrection registry entry",
+                    "pid": pid,
+                    "timestamp": time.time()
+                }
+                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
+
+            patch7_logger.info("🧪 Patch7 reached summary block execution.")
+            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+
+        except Exception as e:
+            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
+
+
+
+
+
+
+######### ORIGINAL PATCH 7a ########################
 #
 #
 #        # Inside resurrection_monitor, just before Patch7 block
@@ -782,7 +925,7 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
 #        
 #
-#
+
 
 
 
