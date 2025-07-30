@@ -84,7 +84,9 @@ deploy:
     - cat logs/main_*.log | tail -10
 
     - |
-      for f in logs/benchmark_*.log; do
+      for f in logs/benchmark_[0-9]*.log; do
+      # bad bug creating duplicated entires from benchmark_combined_runtime.log in patch7 in benchmark_combined.log
+      #for f in logs/benchmark_*.log; do
         echo "===== $f =====" >> logs/benchmark_combined.log
         cat "$f" >> logs/benchmark_combined.log
         echo "" >> logs/benchmark_combined.log

@@ -732,8 +732,8 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             with open(combined_path, "w") as outfile:
                 for fname in sorted(os.listdir(log_dir)):
                     #if fname.startswith("benchmark_") and fname.endswith(".log"):
-                        
-
+                    # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
+                     
                     if (
                         fname.startswith("benchmark_") 
                         and fname.endswith(".log") 
