@@ -731,7 +731,15 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
             with open(combined_path, "w") as outfile:
                 for fname in sorted(os.listdir(log_dir)):
-                    if fname.startswith("benchmark_") and fname.endswith(".log"):
+                    #if fname.startswith("benchmark_") and fname.endswith(".log"):
+                        
+
+                    if (
+                        fname.startswith("benchmark_") 
+                        and fname.endswith(".log") 
+                        and "combined" not in fname
+                    ):
+
                         path = os.path.join(log_dir, fname)
                         try:
                             with open(path, "r") as infile:
