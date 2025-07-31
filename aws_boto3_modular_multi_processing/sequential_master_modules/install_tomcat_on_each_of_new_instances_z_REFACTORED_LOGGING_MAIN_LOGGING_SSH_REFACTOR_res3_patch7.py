@@ -773,17 +773,23 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 patch7_logger.info(f"[Patch7] Runtime log line count: {len(lines)}")
                 patch7_logger.info(f"[Patch7] Sample lines: {lines[:5]}")
 
-                # 🔍 Add this diagnostic block right here:
-                for line in lines:
-                    match = re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line)
-                    if match:
-                        patch7_logger.info(f"[Patch7] Matched IP: {match.group(1)}")
+                # 🔍 Block 1: Diagnostic check for presence of 'Public IP:'
+                if any("Public IP:" in line for line in lines):
+                    patch7_logger.info("[Patch7] ✅ Found at least one line with Public IP")
+                else:
+                    patch7_logger.warning("[Patch7] ❌ No Public IP lines found in runtime log")
 
+                # 🔍 Block 2: Regex fallback tester BEFORE comprehension
+                for line in lines:
+                    match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+                    if match:
+                        patch7_logger.info(f"[Patch7] 🔥 Regex matched IP: {match.group(1)}")
+
+                # ⚙️ Comprehension that hydrates benchmark_ips
                 benchmark_ips = {
                     match.group(1)
-                    #for line in f
                     for line in lines
-                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
+                    if (match := re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line))
                 }
 
             total_registry_ips = set(resurrection_registry.keys())
