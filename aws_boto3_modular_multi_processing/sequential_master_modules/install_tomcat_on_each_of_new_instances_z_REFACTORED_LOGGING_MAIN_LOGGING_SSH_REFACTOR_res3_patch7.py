@@ -784,19 +784,30 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 patch7_logger.info(f"[Patch7] 🔎 Lines with 'Public IP:': {public_ip_lines[:3]}")
 
                 # 🔍 Block 2: Regex fallback tester BEFORE comprehension
+#                for i, line in enumerate(lines):
+#                    match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+#                    if match:
+#                        patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
+#                    else:
+#                        if "Public IP:" in line:
+#                            patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
+
                 for i, line in enumerate(lines):
-                    match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
-                    if match:
-                        patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
-                    else:
-                        if "Public IP:" in line:
+                    if "Public IP:" in line:
+                        patch7_logger.info(f"[Patch7] 🧪 Raw candidate line {i}: {repr(line)}")
+                        match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+                        if match:
+                            patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
+                        else:
                             patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
+
 
                 # ⚙️ Comprehension that hydrates benchmark_ips
                 benchmark_ips = {
                     match.group(1)
                     for line in lines
-                    if (match := re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line))
+                    #if (match := re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line))
+                    if (match := re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line))
                 }
                 patch7_logger.info(f"[Patch7] 💧 Hydrated IPs: {benchmark_ips}")
 
