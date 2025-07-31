@@ -49,9 +49,84 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+## UPDATES: part 19: Phase2e: Patches 7 and 8 in resurrection_monitor and SSH connect code for improved ghost tracking heuristics (Failed tomcat installs) AND 512/25 (487 concurrent; 25 pooled) process testing
 
 
-## UPDATES: part 18: Phase2d: Patches 5,6,and 7 in resurrection_monitor for improved ghost tracking heuristics (Failed tomcat installs) AND 512/25 (487 concurrent; 25 pooled) process testing
+### Introduction:
+
+Now that the elusive ghosts have been identified (early SSH connect aborted silent failures), we can create patch7 to report and track
+these threads in the registry and also patch8 to add to the SSH connect code tagging (ssh_initialized_failed and ssh_retry_failed)
+for silient SSH early connect fails (current ghost threads) and for SSH connections that fail all 5 retries of the outer loop.
+Just as a review: there is an outer SSH connect loop (5 retries) and a loop inside that for 3 install tomcat9 retries and then inside
+each of those a max of 2 watchdog timeout retries.  We are working with the outer loop here.  With these changes the SSH connect
+fails will show up in total_registry_ips as well as failed_registry_ips where total_registry_ips = successful_registry_ips +
+failed_registry_ips.
+
+The objective here is to populate these two json log files
+
+
+
+```
+def resurrection_monitor(log_dir="/aws_EC2/logs"):
+    pid = multiprocessing.current_process().pid
+## These are the resurrection_registry patch 1-5 logs
+    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+## These are teh resurrection ghost patch 6 logs
+    ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+
+
+### ✅ `resurrection_registry_log_{pid}.json`
+- Final tagged state of every IP thread, post-Patch1 through Patch8
+- Should reflect **one definitive tag per IP**, such as:
+  - `install_success`
+  - `ssh_retry_failure`
+  - `watchdog_threshold_exceeded`
+  - `ssh_initiated_timeout`
+- **Phase 3 logic:**
+  - Filter out entries with `install_success`
+  - Queue up everything else for resurrection attempts
+  - Resurrection scope now covers all failure modes — even the `Patch8`-tagged SSH ghosts
+
+---
+
+### 👻 `resurrection_ghost_log_{pid}.json`
+- Reserved for threads that *never* made it into the registry log
+  - e.g. `missing_registry_ips ≠ 0`
+  - Or benchmark activity exists, but registry is blank (rare edge case post-Patch8)
+- It functions like a **fallback net** — the "phantoms" that bypassed the tagging engine entirely
+- Should be nearly empty now, and you can toggle it off unless you're chasing anomalies
+
+So to summarize: Patch8 plugs SSH ghost leaks by tagging them into the registry; Phase 3 then does the actual resurrection sweep — rebooting, retrying, or reassigning any IP whose final registry state is marked as anything *but* success. Ghost log becomes the anomaly detector and noting more for extreme edge cases.
+
+
+```
+
+
+
+
+
+
+
+
+
+### Patch 7a
+
+
+
+
+### Patch 7b
+
+
+### Patch 8
+
+
+
+
+
+
+
+
+## UPDATES: part 18: Phase2d: Patches 5 and 6 in resurrection_monitor for improved ghost tracking heuristics (Failed tomcat installs) AND 512/25 (487 concurrent; 25 pooled) process testing
 
 The 512/25 testing is required to create the ghost thread SSH failures, so that we can test the patch 6 and 7 code in the resurrection_monitor. The resurrection_ghost_log will now be created to track ghost threads that do not hit any of the conditions in patches 1-4 (watchdog STALL_RETRY_THRESHOLD, etc...)  Once we can track these elusive ghost threads we can then proceed to Phase3 of the project and resurrect the threads to complete the installation to the EC2 node.
 
@@ -121,17 +196,197 @@ The purpose of patch 6 is to catch the ghost threads that are not caught by the 
 If this is successful in the testing we can proceed to Phase3. Once Phase3 is implemented the system will continue to be scaled up.
 The maximum process count target is tentatively 800.
 
-
 ### Patch 5
+```
+        # ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
+
+        for ip, record in resurrection_registry.items():
+
+
+            # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
+            # seeing successful installations having resurrection logs created. Patch1, creating a registry
+            # fingerprint for successful installs at the end of install_tomcat() did not address this problem
+            # Patch1 is at the end of install_tomcat() with install_success fingerprint stamping.
+            if record.get("status") == "install_success":
+                continue
+
+
+            reason = "watchdog stall retry threshold" if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD else "not in successful_registry_ips"
+            record["ghost_reason"] = reason
+            flagged[ip] = record
+            log_debug(f"[{timestamp()}] Ghost candidate flagged ({reason}): {ip}")
+
+```
 
 
 
 ### Patch 6
 
+```
 
-### Patch 7
+###### INSERT PATCH 6 HERE WITHIN THE resurrection_regisry_lock
+#        # ---------------- Begin Patch 6: Ghosts with NO registry footprint ----------------
+#        try:
+#            benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
+#            with open(benchmark_path, "r") as f:
+#                benchmark_ips = {
+#                    match.group(1)
+#                    for line in f
+#                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
+#                }
+#
+#            # Identify IPs seen in benchmark log but completely missing from resurrection registry
+#            missing_registry_ips = benchmark_ips - total_registry_ips
+#
+#            for ip in missing_registry_ips:
+#                flagged[ip] = {
+#                    "status": "ghost_missing_registry",
+#                    "ghost_reason": "no resurrection registry entry",
+#                    "pid": pid,
+#                    "timestamp": time.time()
+#                }
+#                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
+#
+#        except Exception as e:
+#            log_debug(f"[{timestamp()}] Patch 6 failure: {e}")
+#        # ---------------- End Patch 6 ----------------
+#
+```
 
 
+
+### Results of extensive testing
+
+This code above (patches 5 and 6) is still missing the ghost failures because the failures were isolated to early SSH connect issues.  
+The logs were methodically reviewed and it was found that of 512 nodes, 3 were unsuccessful.  But the patch6 code for 
+missing_registry_ips was still zero becasue the total_registry_ips was still 512 when it should have been 509.
+
+Steps to isolate the ghost ip threads
+
+:
+```
+
+Step 1
+First step count the actual tomcat successful in benchmark
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads/logs_86$ grep "Install succeeded" benchmark_combined.log | wc -l
+509
+
+
+Step 2
+Second step get a list of the actual successful tomcat install ips  from benchmark combined log
+grep "Install succeeded" benchmark_combined.log \
+  | grep -oE 'Public IP: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
+  | awk '{print $3}' \
+  | grep -Ev '^172\.(1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+' \
+  | sort | uniq > expected_gitlab_ips.txt
+
+Step 3
+Third step get a list of all ips (successful and unsuccessful) in the gitlab console logs
+Remove 172 addresses from the list:
+
+grep "
+
+\[DEBUG\]
+
+ Process" gitlab_logs_7_27_25.txt \
+  | grep -oE "'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'" \
+  | tr -d "'" \
+  | grep -Ev '^172\.(1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+' \
+  | sort | uniq > all_gitlab_ips_clean.txt
+
+
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads$ cat all_gitlab_ips_clean.txt | wc -l
+512
+
+Step 4
+Fourth step verify  between clean (512) and expected/successful (509)
+all_gitlab_ips_clean.txt 512
+expected_gitlab_ips.txt 509
+
+
+Step 5
+Fifth step sort the 2 logs of 512 and 509
+sort all_gitlab_ips_clean.txt > sorted_gitlab_ips.txt
+sort expected_gitlab_ips.txt > sorted_expected_ips.txt
+
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads/logs_86$ ls | grep sorted
+sorted_expected_ips.txt
+sorted_gitlab_ips.txt
+
+
+Step 6
+Sixth step do a diff between the two sorted files
+comm -13 sorted_expected_ips.txt sorted_gitlab_ips.txt > ghost_gitlab_ips.txt
+
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads/logs_86$ comm -13 sorted_expected_ips.txt sorted_gitlab_ips.txt > ghost_gitlab_ips.txt
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads/logs_86$ cat ghost_gitlab_ips.txt
+18.212.250.15
+3.95.60.23
+52.91.226.33
+
+These are finally the elusive ghosts of the 512 test.
+note: comm -13: hides lines only in the benchmark (file1) and lines common to both—leaving just the GitLab IPs that didn't make it to the "Install succeeded" club.
+
+
+Step 7
+Seventh step grep for these ips in the gitlab console logs and see what the conversation consists of and compare to A good ip (see next topic, below)
+bash
+while read ip; do
+  grep "$ip" gitlab_logs_7_27_25.txt >> suspect_ip_logs.txt
+done < ghost_gitlab_ips.txt
+
+This will give us the lines in gitlab console logs that have these ip addreses. This won't cover all conversation as all the lines are
+not tagged with the IP but it will give us an idea of what happened.
+
+
+
+Examples:
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads/logs_86$ cat suspect_ip_logs.txt [DEBUG] Process 287: IPs = ['18.212.250.15'] Attempting to connect to 18.212.250.15 (Attempt 1) [DEBUG] Process 193: IPs = ['3.95.60.23'] Attempting to connect to 3.95.60.23 (Attempt 1) [DEBUG] Process 250: IPs = ['52.91.226.33'] Attempting to connect to 52.91.226.33 (Attempt 1)
+
+
+**There is no more occurrence of these ips in the entire log other than this:
+
+[DEBUG] Process 287: IPs = ['18.212.250.15'] Attempting to connect to 18.212.250.15 (Attempt 1) [DEBUG] Process 193: IPs = ['3.95.60.23'] Attempting to connect to 3.95.60.23 (Attempt 1) [DEBUG] Process 250: IPs = ['52.91.226.33'] Attempting to connect to 52.91.226.33 (Attempt 1)
+
+These clearly indicate a slient SSH connect abort with no failure response code. Patch8 will have to catch these kinds of failures and
+tag them accordingly in the registry
+```
+
+
+The reason for this is that the registry is allowing thread entires without any tag whatsoever (the case of early SSH
+connect failures currently falls into this condition. This will be fixed shortly).  That has to be prevented and the
+total_registry_ips must only contain tagged registry values with explicit python code failure tags (For example exceeding
+watchdog retries) or install_succeeded tag. Thus total_registry_ips = failed_registry_ips + successful_registry_ips
+and missing_registry_ips = benchmark_ips - total_registry_ips. In this way missing_registry_ips will catch only cases
+where some sort of issue prevents a tag on the registry (very rare, for example a node not passing AWS status checks and
+getting stuck in that condition). 
+
+benchmark_ips will continue to be the standard by which runtime registry threads are measured.
+
+Now to catch the SSH connect early failures we will need patch8, but before that patch7 to create log artifacts for the following:
+
+```
+            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+```
+
+
+Patch7 will be in the next update section and will have the statistics generated above so that we can see these different types
+of registry tagged thread ips. Once we have this in place phase8 will tag the SSH connect ghosts (they will be included in
+total_registry_ips and failed_registry_ips and can be selectively identified for resurrection in Phase3 of this project.
+
+Patch 7 will replace patch 6 completely.
+
+Now that the elusive ghosts have been identified (early SSH connect aborted silent failures), we can create patch7 to report and track
+these threads in the registry and also patch8 to add to the SSH connect code tagging (ssh_initialized_failed and ssh_retry_failed)
+for silient SSH early connect fails (current ghost threads) and for SSH connections that fail all 5 retries of the outer loop.
+Just as a review: there is an outer SSH connect loop (5 retries) and a loop inside that for 3 install tomcat9 retries and then inside
+each of those a max of 2 watchdog timeout retries.  We are working with the outer loop here.  With these changes the SSH connect
+fails will show up in total_registry_ips as well as failed_registry_ips where total_registry_ips = successful_registry_ips +
+failed_registry_ips.
 
 
 
