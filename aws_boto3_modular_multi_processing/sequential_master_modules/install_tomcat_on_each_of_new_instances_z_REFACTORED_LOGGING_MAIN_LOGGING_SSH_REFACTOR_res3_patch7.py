@@ -769,9 +769,20 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
         try:
             with open(benchmark_path, "r") as f:
+                lines = f.readlines()
+                patch7_logger.info(f"[Patch7] Runtime log line count: {len(lines)}")
+                patch7_logger.info(f"[Patch7] Sample lines: {lines[:5]}")
+
+                # 🔍 Add this diagnostic block right here:
+                for line in lines:
+                    match = re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line)
+                    if match:
+                        patch7_logger.info(f"[Patch7] Matched IP: {match.group(1)}")
+
                 benchmark_ips = {
                     match.group(1)
-                    for line in f
+                    #for line in f
+                    for line in lines
                     if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
                 }
 
