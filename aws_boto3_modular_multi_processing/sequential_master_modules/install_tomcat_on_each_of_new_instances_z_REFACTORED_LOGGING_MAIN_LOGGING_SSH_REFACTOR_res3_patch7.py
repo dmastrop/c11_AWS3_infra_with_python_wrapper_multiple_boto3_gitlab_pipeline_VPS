@@ -792,17 +792,26 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #                        if "Public IP:" in line:
 #                            patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
 
+#                for i, line in enumerate(lines):
+#                    if "Public IP:" in line:
+#                        patch7_logger.info(f"[Patch7] 🧪 Raw candidate line {i}: {repr(line)}")
+#                        #match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+#                        match = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+#
+#                        if match:
+#                            patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
+#                        else:
+#                            patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
+
                 for i, line in enumerate(lines):
                     if "Public IP:" in line:
                         patch7_logger.info(f"[Patch7] 🧪 Raw candidate line {i}: {repr(line)}")
-                        #match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
-                        match = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
-
-                        if match:
-                            patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
+                        
+                        ip_matches = re.findall(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+                        if ip_matches:
+                            patch7_logger.info(f"[Patch7] 🔥 Line {i}: Matched IPs: {ip_matches}")
                         else:
                             patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
-
 
                 # ⚙️ Comprehension that hydrates benchmark_ips
                 benchmark_ips = {
