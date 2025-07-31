@@ -905,6 +905,13 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 }
                 log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
 
+            # Flush the logger handlers to ensure all logs are written right before thread exit and summary conclusion
+            for handler in patch7_logger.handlers:
+                handler.flush()
+            patch7_logger.info("🔄 Patch7 logger flushed successfully.")
+
+
+            # Summary conclusion:
             patch7_logger.info("🧪 Patch7 reached summary block execution.")
             patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
             patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
