@@ -777,6 +777,17 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
             total_registry_ips = set(resurrection_registry.keys())
 
+            ## Add these to troublehsoot artifact loggin issues. These go to the patch summary logs in the artifacts of gitlab piepline
+
+            patch7_logger.info(f"[Patch7] Extracted benchmark_ips: {len(benchmark_ips)}")
+            patch7_logger.info(f"[Patch7] Extracted total_registry_ips: {len(total_registry_ips)}")
+            patch7_logger.info(f"[Patch7] Sample benchmark IPs: {sorted(list(benchmark_ips))[:3]}")
+            patch7_logger.info(f"[Patch7] Sample registry IPs: {sorted(list(total_registry_ips))[:3]}")
+            # add these for gitlab console
+            print(f"[Patch7] Extracted benchmark_ips: {len(benchmark_ips)}")
+            print(f"[Patch7] Extracted total_registry_ips: {len(total_registry_ips)}")
+
+
             successful_registry_ips = {
                 ip for ip, entry in resurrection_registry.items()
                 if (
