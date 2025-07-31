@@ -796,12 +796,46 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                         f.write(ip + "\n")
                 patch7_logger.info(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
 
-            dump_set_to_artifact("total_registry_ips", total_registry_ips)
-            dump_set_to_artifact("benchmark_ips", benchmark_ips)
-            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
-            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
-            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+            def safe_artifact_dump(tag, ip_set):
+                try:
+                    dump_set_to_artifact(tag, ip_set)
+                    patch7_logger.info(f"[Patch7] Artifact '{tag}' written with {len(ip_set)} entries.")
+                except Exception as e:
+                    patch7_logger.info(f"[Patch7] Failed to write '{tag}': {e}")
+            
 
+
+            if not total_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
+            else:
+                 safe_artifact_dump("total_registry_ips", total_registry_ips)
+          
+            if not benchmark_ips:
+                patch7_logger.info("[Patch7] WARNING: benchmark_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("benchmark_ips", benchmark_ips)
+          
+            if not missing_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("missing_registry_ips", missing_registry_ips)
+          
+            if not successful_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("successful_registry_ips", successful_registry_ips)
+          
+            if not failed_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+
+#            dump_set_to_artifact("total_registry_ips", total_registry_ips)
+#            dump_set_to_artifact("benchmark_ips", benchmark_ips)
+#            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
+#            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
+#            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+#
             # Flag ghosts
             for ip in missing_registry_ips:
                 flagged[ip] = {
