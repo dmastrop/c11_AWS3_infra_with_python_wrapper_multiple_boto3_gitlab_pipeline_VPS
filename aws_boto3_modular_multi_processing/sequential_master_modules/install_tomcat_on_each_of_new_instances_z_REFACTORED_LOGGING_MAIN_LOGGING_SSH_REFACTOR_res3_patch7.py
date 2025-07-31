@@ -795,7 +795,9 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
                 for i, line in enumerate(lines):
                     if "Public IP:" in line:
                         patch7_logger.info(f"[Patch7] 🧪 Raw candidate line {i}: {repr(line)}")
-                        match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+                        #match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+                        match = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+
                         if match:
                             patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
                         else:
