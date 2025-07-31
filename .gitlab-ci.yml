@@ -97,6 +97,16 @@ deploy:
     paths:
       - logs/
       - logs/benchmark_combined.log
+      - logs/benchmark_combined_runtime.log
+      - logs/total_registry_ips_artifact.log
+      - logs/benchmark_ips_artifact.log
+      - logs/missing_registry_ips_artifact.log
+      - logs/successful_registry_ips_artifact.log
+      - logs/failed_registry_ips_artifact.log
+      - logs/patch7_summary_*.log
+      - logs/resurrection_registry_log_*.json
+      - logs/resurrection_ghost_log_*.json
+          
     expire_in: 1 week
 
   allow_failure: true
