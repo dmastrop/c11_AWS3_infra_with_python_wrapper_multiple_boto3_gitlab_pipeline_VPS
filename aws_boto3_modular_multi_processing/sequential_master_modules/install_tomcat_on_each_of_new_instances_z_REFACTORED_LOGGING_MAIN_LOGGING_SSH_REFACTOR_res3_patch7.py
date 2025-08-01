@@ -846,7 +846,7 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 #                if entry.get("status") == "install_success"
 #                and entry.get("watchdog_retries", 0) <= 2
 #            }
-           successful_registry_ips = {
+            successful_registry_ips = {
                 ip for ip, entry in resurrection_registry.items()
                 if entry.get("status") == "install_success"
                 
