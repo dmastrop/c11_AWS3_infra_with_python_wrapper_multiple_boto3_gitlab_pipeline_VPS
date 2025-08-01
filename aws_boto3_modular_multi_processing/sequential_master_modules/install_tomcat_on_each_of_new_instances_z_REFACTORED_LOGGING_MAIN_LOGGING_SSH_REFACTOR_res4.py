@@ -841,19 +841,28 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
 
 
+            # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
+            print(f"[RESMON DEBUG] Resurrection registry snapshot:")
+            for ip, entry in resurrection_registry.items():
+                print(f"    {ip}: {entry}")
+
             successful_registry_ips = {
                 ip for ip, entry in resurrection_registry.items()
                 if entry.get("status") == "install_success"
                 and entry.get("watchdog_retries", 0) <= 2
             }
-#            successful_registry_ips = {
-#                ip for ip, entry in resurrection_registry.items()
-#                if entry.get("status") == "install_success"
-#                
-#            }
+
+            # Debugs to tell  how many IPs the above filter pulled through — and what the filter did to the full registry snapshot.
+            print(f"[RESMON DEBUG] Registry IPs classified as successful: {successful_registry_ips}")
+
+
 
             failed_registry_ips = total_registry_ips - successful_registry_ips
+
             missing_registry_ips = benchmark_ips - total_registry_ips
+
+
+
 
             # Dump artifacts
             def dump_set_to_artifact(name, ip_set):
