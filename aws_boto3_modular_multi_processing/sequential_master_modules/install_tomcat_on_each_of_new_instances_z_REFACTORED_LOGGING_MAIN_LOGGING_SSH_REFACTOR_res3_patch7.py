@@ -919,12 +919,14 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
             patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
             patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+        
+
+        # try block indentation level is here.
 
         except Exception as e:
+            patch7_logger.error(f"Patch7 exception encountered: {e}")
+            patch7_logger.error("Patch7 thread likely aborted before reaching summary block.")
             log_debug(f"[{timestamp()}] Patch7 failure: {e}")
-
-
-
 
 
 
