@@ -840,13 +840,13 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
             print(f"[Patch7] Extracted total_registry_ips: {len(total_registry_ips)}")
 
 
+
             successful_registry_ips = {
                 ip for ip, entry in resurrection_registry.items()
-                if (
-                    entry.get("install_log") and "Installation completed" in entry["install_log"]
-                    and entry.get("watchdog_retries", 0) <= 2
-                )
+                if entry.get("status") == "install_success"
+                and entry.get("watchdog_retries", 0) <= 2
             }
+
 
             failed_registry_ips = total_registry_ips - successful_registry_ips
             missing_registry_ips = benchmark_ips - total_registry_ips
