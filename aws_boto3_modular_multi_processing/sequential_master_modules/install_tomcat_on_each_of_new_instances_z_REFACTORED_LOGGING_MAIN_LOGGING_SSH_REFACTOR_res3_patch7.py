@@ -55,6 +55,10 @@ from contextlib import contextmanager
 from io import StringIO
 from datetime import datetime
 import psutil
+import re # this is absolutely required for all the stuff we are doing in the resurrection_monitor functino below!!!!!!
+
+
+
 
 
 # COMMENT this out for now so that i can test the benchmark.log artifact below
