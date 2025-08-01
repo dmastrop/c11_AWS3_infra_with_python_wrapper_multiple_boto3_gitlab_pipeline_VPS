@@ -115,11 +115,11 @@ def run_module(module_script_path):
 
 
 
-#### This block of code is for the benchmarking wrapper function the the ThreadPoolExecutor in tomcat_worker() function
-#### below. This has the run_test() function that is used in it as well as the  benchmark() function that run_test
-#### requires to run specific benchmarks on the ThreadPoolExecutor
-#### These functions need to be accessible globally in this module.
-#### This is using a custom contextmanager as defined below with yield split as below.
+#### This block of code is for the benchmarking wrapper function the the ThreadPoolExecutor in t#omcat_worker() function
+#### below. This has the run_test() function that is used in it as well as the  benchmark() func#tion that run_test
+#### requires to run specific benchmarks on the ThreadPoolExecutor                              #
+#### These functions need to be accessible globally in this module.                             #
+#### This is using a custom contextmanager as defined below with yield split as below.          #
 #import time
 #import psutil
 #import logging
@@ -1949,8 +1949,29 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
 
+
+
+        ## Debugging code to track down the successful_registry_ips tagging issue
+        # 🔍 Trace log to confirm registry tagging per thread
+        try:
+            registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
+            pid = multiprocessing.current_process().pid
+
+            print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
+            print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
+
+        except Exception as e:
+            print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
+
+
+
+
         print(f"Installation completed on {ip}")
         return ip, private_ip, True
+
+    ##### install_tomcat() function ends here
+
+
 
 
 
