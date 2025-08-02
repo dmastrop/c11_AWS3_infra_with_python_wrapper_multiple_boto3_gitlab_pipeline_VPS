@@ -50,7 +50,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES: part 20: Phase 2f: Patches 7c and Patch 8
+## UPDATES: part 20: Phase 2f: Patches 7c 
 
 
 ### Introduction:
@@ -67,9 +67,53 @@ that is executing the script (similar to the process and main level logging infr
 
  
 
-### Detail on patch 7b to 7c migration requirements:
+### Detail on patch 7b to 7c migration requirements (from the last update):
+
+Resurrection registry snapshots are being overwritten per process, rather than accumulated across threads.
+That explains why `successful_registry_ips` only shows one IP per run — the last IP of the last process to complete. (In this
+simple test there was only 1 thread per process hence 1 IP being processed per process)
+
+#### Root Cause  
+
+- install_tomcat correctly tags each thread-level IP.
+- But resurrection_monitor, called per process (By tomcat_worker), rebuilds the `resurrection_registry` from scratch, clobbering prior thread outputs.
+- Even though each thread logs its IP, the final snapshot only contains one — the last thread executed in the last process to complete
 
 
+#### Patch7c Objective  
+
+- Implement **thread-level mini registries** (`thread_registry[ip] = {...}`).
+- Let **resurrection_monitor** sweep and aggregate those into the **process-level registry log**.
+- Perform full aggregation **post-run** across all processes via a registry collator (likely in the Python module, not CI).
+- Ghost net remains unchanged unless anomalies surface.
+
+
+Minimal Impact Strategy
+
+- ✅ Keeps resurrection_monitor mostly intact.
+- ✅ Preserve thread tagging logic and Patch7b’s forensic traces.
+- ✅ Defer performance cost until post-mortem aggregation.
+- ✅ Work seamlessly with the  Docker artifact export pipeline.
+
+
+#### High level summary of patch 7c
+
+- Per-thread registries to capture granular tagging inside `install_tomcat()`.
+- Per-process roll-up (within `tomcat_worker`) that avoids overwriting earlier thread data.
+- Resurrection monitor writes clean, aggregated `resurrection_registry_log_{pid}.json`.
+- No runtime penalty, since the big merge of all process level registries happens post-run.(will do in python and not gitlab CI)
+
+
+Function summary of the changes:
+
+- `benchmark_ips`: untouched — sets the universe of IPs for resurrection attempts.
+- `install_tomcat`: tags each IP at the thread level into mini registries.
+- `resurrection_monitor`: aggregates those thread registries into `resurrection_registry_log_{pid}.json` per process.
+- *Next phase* (post-run): external Python module will:
+  - Sweep all `resurrection_registry_log_{pid}.json` files.
+  - Merge into a comprehensive runtime resurrection log.
+  - Classify into artifact buckets: success, missed, failed, total.
+  - Use clean export logic to feed downstream Docker pipeline.
 
 
 
