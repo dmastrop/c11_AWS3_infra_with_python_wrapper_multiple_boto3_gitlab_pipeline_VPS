@@ -2579,11 +2579,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
 ###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
       
-    resurrection_monitor()
+    
+     
+
+    # resurrection_monitor()
+    # replace resurrection_monitor() with resurrection_monitor_patch7c() for migration to patch7c
+    resurrection_monitor_patch7c()
 
 
-
-
+##### END OF install_tomcat() function ######
 
 
 
