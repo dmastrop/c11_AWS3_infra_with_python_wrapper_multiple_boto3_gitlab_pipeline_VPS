@@ -67,6 +67,13 @@ that is executing the script (similar to the process and main level logging infr
 
  
 
+### Detail on patch 7b to 7c migration requirements:
+
+
+
+
+
+
 ### Patch 7c
 
 
@@ -550,9 +557,36 @@ patch 7a code below and using patch7_logger per pid.   The patch 7b code uses a 
 
 
 
+## Key Changes in Patch7b — Resurrection Monitor Focus
+
+#### 1. **PID-Specific Registry Logs**
+- Introduced `resurrection_registry_log_{pid}.json` and `resurrection_ghost_log_{pid}.json` for thread isolation.
+- Logging is now thread-local to avoid race conditions and improve forensic traceability across concurrent workers.
+
+#### 2. **Registry Finalization Logic**
+- Each IP thread is assigned a single final tag, ensuring deterministic resurrection logic later.
+- Tags like `install_success`, `ssh_retry_failure`, and watchdog-related outcomes now live in the registry.
+- This tagging logic was extended from Patch6 but formally finalized in Patch7b to support Phase3 resurrection planning.
+
+#### 3. **Ghost Net Implementation**
+- The ghost log captures threads that failed to register entirely — either due to early aborts, swap contention, or silent failures.
+- Designed as a fallback safety net and diagnostic tool, especially helpful when registry entries are unexpectedly missing.
+
+#### 4. **Debug Trace Cleanup**
+- Intermediate debug prints were trimmed or modularized.
+- Artifact hydration logs (e.g. timing, IP state transitions) were reshaped to reduce noise and improve forensic clarity.
+
+#### 5. **Registry Entry Normalization**
+- Registry entries were auto-formatted for consistency — timestamped, tagged, and hydrated with auxiliary signals like retry counters, error traces, etc.
+- This sets the stage for Patch7c’s threading collator or state summarizer.
+
+
+
+
 ### Troubleshooting
 
-After extensive testing with this there is a problem with the registry being corrupted. The debugs in patch 7b helped sort out 
+After extensive testing with this there is a problem with the registry being overwritten by each success process call of the
+resurrection_monitor. The debugs in patch 7b helped sort out 
 and locate this issue.   As a review: main() calls tomcat_worker_wrapper and tomcat_worker_wrapper calls tomcat_worker. tomcat_worker
 then calls threaded_install which invokes multi-threading call to install_tomcat where the tomcat9 is installed per EC2 instance
 (thread). At the end of tomcat_worker the resurrection_monitor is called (i.e., per process not per thread).
@@ -732,6 +766,37 @@ Successful
 35.173.177.34
 
 ```
+
+#### Root problem analysis wiht patch 7b
+
+
+
+Resurrection registry snapshots are being overwritten per process, rather than accumulated across threads. 
+That explains why `successful_registry_ips` only shows one IP per run — the last IP of the last process to complete. (In this 
+simple test there was only 1 thread per process hence 1 IP being processed per process)
+
+Root Cause  
+- install_tomcat correctly tags each thread-level IP.
+- But resurrection_monitor, called per process (By tomcat_worker), rebuilds the `resurrection_registry` from scratch, clobbering prior thread outputs.
+- Even though each thread logs its IP, the final snapshot only contains one — the last thread executed in the last process to complete
+
+
+Patch7c Objective  
+- Implement **thread-level mini registries** (`thread_registry[ip] = {...}`).
+- Let **resurrection_monitor** sweep and aggregate those into the **process-level registry log**.
+- Perform full aggregation **post-run** across all processes via a registry collator (likely in the Python module, not CI).
+- Ghost net remains unchanged unless anomalies surface.
+
+
+Minimal Impact Strategy
+
+- ✅ Keeps resurrection_monitor mostly intact.
+- ✅ Preserve thread tagging logic and Patch7b’s forensic traces.
+- ✅ Defer performance cost until post-mortem aggregation.
+- ✅ Work seamlessly with the  Docker artifact export pipeline.
+
+
+
 
 
 
