@@ -585,7 +585,7 @@ patch 7a code below and using patch7_logger per pid.   The patch 7b code uses a 
 
 
 
-### Troublshooting
+### Troubleshooting
 
 
 After extensive testing with this there is a problem with the registry being overwritten by each success process call of the
