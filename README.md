@@ -255,195 +255,117 @@ patch7 level thread/resurrection logging. This resulted in patch 7b. Patch 7b ha
 needed to be done to resolve this issue, namely file based logging to avoid the stdout interference that was inherent in the
 patch 7a code below and using patch7_logger per pid.   The patch 7b code uses a dedicated patch7_logger per pid and is working very well now.
 
+
+
 ```
-####### UPDATED PATCH 7b to address cross log corruption  ################
 
-#- Prevents `Patch7 Summary` lines from leaking into:
-#- `benchmark_*.log` (PID logs)
-#- `benchmark_combined.log` (CI-generated artifact log)
-#-  Still generates `benchmark_combined_runtime.log` inside the container
-#-  Writes artifact logs for registry analysis (`*_artifact.log`)
-#-  Logs Patch7 summary to a **dedicated file**, not `stdout`
-#-  Fully isolates `patch7_logger` so it never touches shared streams
-#
+### Troubleshooting
 
-### Updated Patch7 Block 
+After extensive testing with this there is a problem with the registry being corrupted. The debugs in patch 7b helped sort out 
+and locate this issue.   As a review: main() calls tomcat_worker_wrapper and tomcat_worker_wrapper calls tomcat_worker. tomcat_worker
+then calls threaded_install which invokes multi-threading call to install_tomcat where the tomcat9 is installed per EC2 instance
+(thread). At the end of tomcat_worker the resurrection_monitor is called (i.e., per process not per thread).
 
+First debug is to check the resurrection registry at the end of the install_tomcat. 
+resurrection_monitor is called per process at teh end of tomcat_worker and threaded_install inside tomcat_worker eventually calls
+install_tomcat per thread (EC2 instance install)
 
-        # ------- Patch7 Logger Isolation -------
-        #This creates a **dedicated logger instance** for Patch7 inside the resurrection monitor, uniquely scoped to the process that’s
-        #running it.
-        #- The `f"patch7_summary_{pid}"` string makes sure each logger has a unique name per process (e.g., `"patch7_summary_12"`)
-        #- This ensures multiple processes don’t reuse or interfere with each other’s loggers — no cross-stream contamination
-        #- It allows each resurrection monitor instance to write its own Patch7 summary without touching any shared file or the global
-        #logger
+The first debug places this towards the end of install_tomcat right after the registry is updated:
+```
+        update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
-        patch7_logger = logging.getLogger(f"patch7_summary_{pid}")
-        patch7_logger.setLevel(logging.INFO)
-        patch7_logger.propagate = False  # ✋ Prevent root logger inheritance
-
-        # 🗂️  File-based log to avoid stdout interference
-
-        #- `log_dir` is mount target from `.gitlab-ci.yml`,  `/aws_EC2/logs` inside the docker container
-        #- `f"patch7_summary_{pid}.log"` gives files like `patch7_summary_12.log`, `patch7_summary_48.log`, etc.
-        #- All Patch7 messages will be written **only** to this file — no stdout, no collision with benchmark PID logs
-        #This is what enables the safe write
-
-        # summary_handler:
-        # Attaches a file-based handler to the logger — meaning all `patch7_logger.info(...)` calls write directly to the file at
-        #`summary_log_path`.
-        #- This avoids `StreamHandler(sys.stdout)`, which is the usual culprit for GitLab log bleed
-        #- It ensures everything written is scoped to one file — line-by-line controlled output
-
-        summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
-        summary_handler = logging.FileHandler(summary_log_path)
-        summary_formatter = logging.Formatter('[Patch7] %(message)s')
-        summary_handler.setFormatter(summary_formatter)
-        patch7_logger.addHandler(summary_handler)
-
-        patch7_logger.info("Patch7 Summary — initialized")
-
-        # ------- Step 1: Combine runtime benchmark logs -------
-        #merged contents from all `benchmark_*.log` PID logs that were created at runtime
-        def combine_benchmark_logs_runtime(log_dir):
-            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
-            with open(combined_path, "w") as outfile:
-                for fname in sorted(os.listdir(log_dir)):
-                    #if fname.startswith("benchmark_") and fname.endswith(".log"):
-                    # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
-
-                    if (
-                        fname.startswith("benchmark_")
-                        and fname.endswith(".log")
-                        and "combined" not in fname
-                    ):
-
-                        path = os.path.join(log_dir, fname)
-                        try:
-                            with open(path, "r") as infile:
-                                outfile.write(f"===== {fname} =====\n")
-                                outfile.write(infile.read() + "\n")
-                        except Exception as e:
-                            patch7_logger.info(f"Skipped {fname}: {e}")
-            patch7_logger.info(f"Combined runtime log written to: {combined_path}")
-            return combined_path
-       
-
-        # ------- Step 2:Create benchmark_path variable using runtime combiner -------
-        # The benchmark_path for example: /aws_EC2/logs/benchmark_combined_runtime.log
-        benchmark_path = combine_benchmark_logs_runtime(log_dir)
-
-
-
-        # ------- Step 3 + Step 4 -------
-        # The IP extractor uses this combined file in benchmark_patch to build the `benchmark_ips` set.
-        # Define the registry ip values: total, successful, failed and missing
-        # Total has Failed (explicit failures like watchdog retry threshold exceeded, etc) + successful
-        # Missing registry is the delta between benchmark_ips and total registry, i.e. those threads that are not caught by explicit
-        # failure detection logic.   Currently SSH failures, either in initializaton or failed 5 SSH retries need to be tagged as 
-        #failures OR untagged registry values NOT included in total registry so that they show up in missing registry
-        # Failed + Successful + Missing = total + missing = benchmark_ips
-
+        ## Debugging code to track down the successful_registry_ips tagging issue
+        # 🔍 Trace log to confirm registry tagging per thread
         try:
-            with open(benchmark_path, "r") as f:
-                benchmark_ips = {
-                    match.group(1)
-                    for line in f
-                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
-                }
+            registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
+            pid = multiprocessing.current_process().pid
 
-            total_registry_ips = set(resurrection_registry.keys())
+            print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
+            print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
+
+        except Exception as e:
+            print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
+```
+
+
+For this test we are running 1 thread per process, so we expect to see a registry value created for each pid.
+This shows that the tagging is working fine.
+The status has "install_success"
+
+```
+
+[TRACE] ✅ Tagging success for IP 3.86.110.71 | PID 16
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:57:54.220675', 'pid': 16}
+[TRACE] ✅ Tagging success for IP 18.233.155.224 | PID 12
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:57:54.945752', 'pid': 12}
+[TRACE] ✅ Tagging success for IP 44.211.140.236 | PID 18
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:57:56.949735', 'pid': 18}
+[TRACE] ✅ Tagging success for IP 34.226.124.59 | PID 20
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:06.978816', 'pid': 20}
+[TRACE] ✅ Tagging success for IP 35.171.158.84 | PID 17
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:07.030721', 'pid': 17}
+[TRACE] ✅ Tagging success for IP 52.90.192.187 | PID 23
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:08.226420', 'pid': 23}
+Installation completed on 52.90.192.187
+[TRACE] ✅ Tagging success for IP 3.83.156.71 | PID 19
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:08.231899', 'pid': 19}
+Installation completed on 3.83.156.71
+[TRACE] ✅ Tagging success for IP 52.71.66.76 | PID 22
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:08.775509', 'pid': 22}
+Installation completed on 52.71.66.76
+[TRACE] ✅ Tagging success for IP 34.226.121.19 | PID 13
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:08.933181', 'pid': 13}
+Installation completed on 34.226.121.19
+[TRACE] ✅ Tagging success for IP 13.221.209.195 | PID 21
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:08.933393', 'pid': 21}
+Installation completed on 13.221.209.195
+[TRACE] ✅ Tagging success for IP 3.83.16.32 | PID 15
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:14.626423', 'pid': 15}
+Installation completed on 3.83.16.32
+[TRACE] ✅ Tagging success for IP 3.91.145.193 | PID 14
+[TRACE] Registry BEFORE update: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-01T22:58:18.958270', 'pid': 14}
+Installation completed on 3.91.145.193
+
+```
+
+The next debug is for ensuring that the registry remains intact once the resurrection_monitor is called after all the 
+threads are executed in the process by the threaded_install.   The resurrection_monitor is called at the very end of tomcat_worker
+per process.   We expect the registry to be intact. These debugs are in the resurrection_monitor
+
+
+```
+
+            # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
+            print(f"[RESMON DEBUG] Resurrection registry snapshot:")
+            for ip, entry in resurrection_registry.items():
+                print(f"    {ip}: {entry}")
 
             successful_registry_ips = {
                 ip for ip, entry in resurrection_registry.items()
-                if (
-                    entry.get("install_log") and "Installation completed" in entry["install_log"]
-                    and entry.get("watchdog_retries", 0) <= 2
-                )
+                if entry.get("status") == "install_success"
+                and entry.get("watchdog_retries", 0) <= 2
             }
 
+            # Debugs to tell  how many IPs the above filter pulled through — and what the filter did to the full registry snapshot.
+            print(f"[RESMON DEBUG] Registry IPs classified as successful: {successful_registry_ips}")
+
+
+
             failed_registry_ips = total_registry_ips - successful_registry_ips
+
             missing_registry_ips = benchmark_ips - total_registry_ips
 
-            # Dump artifacts
-            def dump_set_to_artifact(name, ip_set):
-                path = os.path.join(log_dir, f"{name}_artifact.log")
-                with open(path, "w") as f:
-                    for ip in sorted(ip_set):
-                        f.write(ip + "\n")
-                patch7_logger.info(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
-
-            def safe_artifact_dump(tag, ip_set):
-                try:
-                    dump_set_to_artifact(tag, ip_set)
-                    patch7_logger.info(f"[Patch7] Artifact '{tag}' written with {len(ip_set)} entries.")
-                except Exception as e:
-                    patch7_logger.info(f"[Patch7] Failed to write '{tag}': {e}")
 
 
-
-            if not total_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")
-            else:
-                 safe_artifact_dump("total_registry_ips", total_registry_ips)
-
-            if not benchmark_ips:
-                patch7_logger.info("[Patch7] WARNING: benchmark_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("benchmark_ips", benchmark_ips)
-
-            if not missing_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("missing_registry_ips", missing_registry_ips)
-
-            if not successful_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("successful_registry_ips", successful_registry_ips)
-
-            if not failed_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("failed_registry_ips", failed_registry_ips)
-
-#            dump_set_to_artifact("total_registry_ips", total_registry_ips)
-#            dump_set_to_artifact("benchmark_ips", benchmark_ips)
-#            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
-#            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
-#            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
-#
-            # Flag ghosts
-            for ip in missing_registry_ips:
-                flagged[ip] = {
-                    "status": "ghost_missing_registry",
-                    "ghost_reason": "no resurrection registry entry",
-                    "pid": pid,
-                    "timestamp": time.time()
-                }
-                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
-
-            patch7_logger.info("🧪 Patch7 reached summary block execution.")
-            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
-            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
-            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
-            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
-            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
-            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
-
-        except Exception as e:
-            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
 ```
 
 
+The first debugs prior to teh successful_registry_ips comprehension look ok, but the aggregate following the successful_registry_ips
+shows that each process call is overwriting the previous registry value with its thread(s) ip(s). In this case below there is 
+only 1 thread per process, but the overwrite is apparent. The "Registry IPs classified as successful" should be building up
+(in this case to 12 IPs), but instead is being overwritten by the latest ip.
 
-
-### Patch 8
-
-
-
-
-
+```
 
 
 
