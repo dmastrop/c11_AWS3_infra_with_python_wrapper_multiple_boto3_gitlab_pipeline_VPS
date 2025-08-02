@@ -49,7 +49,31 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES: part 19: Phase2e: Patches 7 and 8 in resurrection_monitor and SSH connect code for improved ghost tracking heuristics (Failed tomcat installs) AND 512/25 (487 concurrent; 25 pooled) process testing
+
+## UPDATES: part 20: Phase 2f: Patches 7c and Patch 8
+
+
+### Introduction:
+
+See the troubleshooting in the last update below. The registry is being overwritten by each successive process that calls the
+resurrection_montor. This requires a rewrite of patch 7c in the resurrection_monitor
+
+This overwritting issue will require a new patch 7c where a thread level registry is created,
+and then at the process level the thread level registry is aggregated and then after the test runs the process level registry logs
+will be aggregrated (post run). This ensures that performance will not erode even though the logging is done in these three stagees,
+because the buil of the aggregatino is done post run (either in the python module or in the gitlab CI/CD pipeline). I prefer to
+do all of this in the python and then publish the files as artifacts through the mounted volume in the python docker container
+that is executing the script (similar to the process and main level logging infra)
+
+ 
+
+### Patch 7c
+
+
+
+
+
+## UPDATES: part 19: Phase2e: Patches 7a and 7b in resurrection_monitor
 
 
 ### Introduction:
@@ -258,6 +282,273 @@ patch 7a code below and using patch7_logger per pid.   The patch 7b code uses a 
 
 
 ```
+####### UPDATED PATCH 7b to address cross log corruption  ################
+
+#- Prevents `Patch7 Summary` lines from leaking into:
+#- `benchmark_*.log` (PID logs)
+#- `benchmark_combined.log` (CI-generated artifact log)
+#-  Still generates `benchmark_combined_runtime.log` inside the container
+#-  Writes artifact logs for registry analysis (`*_artifact.log`)
+#-  Logs Patch7 summary to a **dedicated file**, not `stdout`
+#-  Fully isolates `patch7_logger` so it never touches shared streams
+#
+
+### Updated Patch7 Block 
+
+
+        # ------- Patch7 Logger Isolation -------
+        #This creates a **dedicated logger instance** for Patch7 inside the resurrection monitor, uniquely scoped to the process that’s
+        #running it.
+        #- The `f"patch7_summary_{pid}"` string makes sure each logger has a unique name per process (e.g., `"patch7_summary_12"`)
+        #- This ensures multiple processes don’t reuse or interfere with each other’s loggers — no cross-stream contamination
+        #- It allows each resurrection monitor instance to write its own Patch7 summary without touching any shared file or the global
+        #logger
+
+        patch7_logger = logging.getLogger(f"patch7_summary_{pid}")
+        patch7_logger.setLevel(logging.INFO)
+        patch7_logger.propagate = False  # ✋ Prevent root logger inheritance
+
+        # 🗂️ File-based log to avoid stdout interference
+
+        #- `log_dir` is mount target from `.gitlab-ci.yml`,  `/aws_EC2/logs` inside the docker container
+        #- `f"patch7_summary_{pid}.log"` gives files like `patch7_summary_12.log`, `patch7_summary_48.log`, etc.
+        #- All Patch7 messages will be written **only** to this file — no stdout, no collision with benchmark PID logs
+        #This is what enables the safe write
+
+        # summary_handler:
+        # Attaches a file-based handler to the logger — meaning all `patch7_logger.info(...)` calls write directly to the file at
+        #`summary_log_path`.
+        #- This avoids `StreamHandler(sys.stdout)`, which is the usual culprit for GitLab log bleed
+        #- It ensures everything written is scoped to one file — line-by-line controlled output
+
+        summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
+        summary_handler = logging.FileHandler(summary_log_path)
+        summary_formatter = logging.Formatter('[Patch7] %(message)s')
+        summary_handler.setFormatter(summary_formatter)
+        patch7_logger.addHandler(summary_handler)
+
+        patch7_logger.info("Patch7 Summary — initialized")
+
+        # ------- Step 1: Combine runtime benchmark logs -------
+        #merged contents from all `benchmark_*.log` PID logs that were created at runtime
+        def combine_benchmark_logs_runtime(log_dir):
+            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+            with open(combined_path, "w") as outfile:
+                for fname in sorted(os.listdir(log_dir)):
+                    #if fname.startswith("benchmark_") and fname.endswith(".log"):
+                    # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
+                     
+                    if (
+                        fname.startswith("benchmark_") 
+                        and fname.endswith(".log") 
+                        and "combined" not in fname
+                    ):
+
+                        path = os.path.join(log_dir, fname)
+                        try:
+                            with open(path, "r") as infile:
+                                outfile.write(f"===== {fname} =====\n")
+                                outfile.write(infile.read() + "\n")
+                        except Exception as e:
+                            patch7_logger.info(f"Skipped {fname}: {e}")
+            patch7_logger.info(f"Combined runtime log written to: {combined_path}")
+            return combined_path
+
+
+
+        # ------- Step 2:Create benchmark_path variable using runtime combiner -------
+        # The benchmark_path for example: /aws_EC2/logs/benchmark_combined_runtime.log
+        benchmark_path = combine_benchmark_logs_runtime(log_dir)
+
+
+
+        # ------- Step 3 + Step 4 -------
+        # The IP extractor uses this combined file in benchmark_patch to build the `benchmark_ips` set.
+        # Define the registry ip values: total, successful, failed and missing
+        # Total has Failed (explicit failures like watchdog retry threshold exceeded, etc) + successful
+        # Missing registry is the delta between benchmark_ips and total registry, i.e. those threads that are not caught by explicit
+        # failure detection logic.   Currently SSH failures, either in initializaton or failed 5 SSH retries need to be tagged as 
+        #failures OR untagged registry values NOT included in total registry so that they show up in missing registry
+        # Failed + Successful + Missing = total + missing = benchmark_ips
+
+        try:
+            with open(benchmark_path, "r") as f:
+                lines = f.readlines()
+                patch7_logger.info(f"[Patch7] Runtime log line count: {len(lines)}")
+                patch7_logger.info(f"[Patch7] Sample lines: {lines[:5]}")
+
+                # 🔍 Block 1: Diagnostic check for presence of 'Public IP:'
+                if any("Public IP:" in line for line in lines):
+                    patch7_logger.info("[Patch7] ✅ Found at least one line with Public IP")
+                else:
+                    patch7_logger.warning("[Patch7] ❌ No Public IP lines found in runtime log")
+
+                # 🔍 NEW Block: dump all candidate lines that contain "Public IP:"
+                public_ip_lines = [line for line in lines if "Public IP:" in line]
+                patch7_logger.info(f"[Patch7] 🔎 Lines with 'Public IP:': {public_ip_lines[:3]}")
+
+                # 🔍 Block 2: Regex fallback tester BEFORE comprehension
+#                for i, line in enumerate(lines):
+#                    match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+#                    if match:
+#                        patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
+#                    else:
+#                        if "Public IP:" in line:
+#                            patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
+
+#                for i, line in enumerate(lines):
+#                    if "Public IP:" in line:
+#                        patch7_logger.info(f"[Patch7] 🧪 Raw candidate line {i}: {repr(line)}")
+#                        #match = re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line)
+#                        match = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+#
+#                        if match:
+#                            patch7_logger.info(f"[Patch7] 🔥 Line {i}: Regex matched IP: {match.group(1)}")
+#                        else:
+#                            patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
+
+                for i, line in enumerate(lines):
+                    if "Public IP:" in line:
+                        patch7_logger.info(f"[Patch7] 🧪 Raw candidate line {i}: {repr(line)}")
+                        
+                        ip_matches = re.findall(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+                        if ip_matches:
+                            patch7_logger.info(f"[Patch7] 🔥 Line {i}: Matched IPs: {ip_matches}")
+                        else:
+                            patch7_logger.warning(f"[Patch7] ⚠️ Line {i} has 'Public IP:' but no regex match: {line.strip()}")
+
+                # ⚙️ Comprehension that hydrates benchmark_ips
+                benchmark_ips = {
+                    match.group(1)
+                    for line in lines
+                    #if (match := re.search(r"Public IP:\s*(\d{1,3}(?:\.\d{1,3}){3})", line))
+                    if (match := re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line))
+                }
+                patch7_logger.info(f"[Patch7] 💧 Hydrated IPs: {benchmark_ips}")
+
+
+            total_registry_ips = set(resurrection_registry.keys())
+
+            ## Add these to troublehsoot artifact loggin issues. These go to the patch summary logs in the artifacts of gitlab piepline
+
+            patch7_logger.info(f"[Patch7] Extracted benchmark_ips: {len(benchmark_ips)}")
+            patch7_logger.info(f"[Patch7] Extracted total_registry_ips: {len(total_registry_ips)}")
+            patch7_logger.info(f"[Patch7] Sample benchmark IPs: {sorted(list(benchmark_ips))[:3]}")
+            patch7_logger.info(f"[Patch7] Sample registry IPs: {sorted(list(total_registry_ips))[:3]}")
+            # add these for gitlab console
+            print(f"[Patch7] Extracted benchmark_ips: {len(benchmark_ips)}")
+            print(f"[Patch7] Extracted total_registry_ips: {len(total_registry_ips)}")
+
+
+
+            # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
+            print(f"[RESMON DEBUG] Resurrection registry snapshot:")
+            for ip, entry in resurrection_registry.items():
+                print(f"    {ip}: {entry}")
+
+            successful_registry_ips = {
+                ip for ip, entry in resurrection_registry.items()
+                if entry.get("status") == "install_success"
+                and entry.get("watchdog_retries", 0) <= 2
+            }
+
+            # Debugs to tell  how many IPs the above filter pulled through — and what the filter did to the full registry snapshot.
+            print(f"[RESMON DEBUG] Registry IPs classified as successful: {successful_registry_ips}")
+
+
+
+            failed_registry_ips = total_registry_ips - successful_registry_ips
+
+            missing_registry_ips = benchmark_ips - total_registry_ips
+
+
+
+
+            # Dump artifacts
+            def dump_set_to_artifact(name, ip_set):
+                path = os.path.join(log_dir, f"{name}_artifact.log")
+                with open(path, "w") as f:
+                    for ip in sorted(ip_set):
+                        f.write(ip + "\n")
+                patch7_logger.info(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
+
+            def safe_artifact_dump(tag, ip_set):
+                try:
+                    dump_set_to_artifact(tag, ip_set)
+                    patch7_logger.info(f"[Patch7] Artifact '{tag}' written with {len(ip_set)} entries.")
+                except Exception as e:
+                    patch7_logger.info(f"[Patch7] Failed to write '{tag}': {e}")
+            
+
+
+            if not total_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
+            else:
+                 safe_artifact_dump("total_registry_ips", total_registry_ips)
+          
+            if not benchmark_ips:
+                patch7_logger.info("[Patch7] WARNING: benchmark_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("benchmark_ips", benchmark_ips)
+          
+            if not missing_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("missing_registry_ips", missing_registry_ips)
+          
+            if not successful_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("successful_registry_ips", successful_registry_ips)
+          
+            if not failed_registry_ips:
+                patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+
+#            dump_set_to_artifact("total_registry_ips", total_registry_ips)
+#            dump_set_to_artifact("benchmark_ips", benchmark_ips)
+#            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
+#            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
+#            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+#
+            # Flag ghosts
+            for ip in missing_registry_ips:
+                flagged[ip] = {
+                    "status": "ghost_missing_registry",
+                    "ghost_reason": "no resurrection registry entry",
+                    "pid": pid,
+                    "timestamp": time.time()
+                }
+                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
+
+            # Flush the logger handlers to ensure all logs are written right before thread exit and summary conclusion
+            for handler in patch7_logger.handlers:
+                handler.flush()
+            patch7_logger.info("🔄 Patch7 logger flushed successfully.")
+
+
+            # Summary conclusion:
+            patch7_logger.info("🧪 Patch7 reached summary block execution.")
+            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+        
+
+        # try block indentation level is here.
+
+        except Exception as e:
+            patch7_logger.error(f"Patch7 exception encountered: {e}")
+            patch7_logger.error("Patch7 thread likely aborted before reaching summary block.")
+            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
+
+```
+
+
+
 
 ### Troubleshooting
 
@@ -266,11 +557,17 @@ and locate this issue.   As a review: main() calls tomcat_worker_wrapper and tom
 then calls threaded_install which invokes multi-threading call to install_tomcat where the tomcat9 is installed per EC2 instance
 (thread). At the end of tomcat_worker the resurrection_monitor is called (i.e., per process not per thread).
 
+
+#### Debug 1:
+
 First debug is to check the resurrection registry at the end of the install_tomcat. 
 resurrection_monitor is called per process at teh end of tomcat_worker and threaded_install inside tomcat_worker eventually calls
 install_tomcat per thread (EC2 instance install)
 
 The first debug places this towards the end of install_tomcat right after the registry is updated:
+(this is done per thread for each IP). The IP is tagged install_success
+
+
 ```
         update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
@@ -328,6 +625,10 @@ Installation completed on 3.91.145.193
 
 ```
 
+
+
+#### Debug 2:
+
 The next debug is for ensuring that the registry remains intact once the resurrection_monitor is called after all the 
 threads are executed in the process by the threaded_install.   The resurrection_monitor is called at the very end of tomcat_worker
 per process.   We expect the registry to be intact. These debugs are in the resurrection_monitor
@@ -355,15 +656,80 @@ per process.   We expect the registry to be intact. These debugs are in the resu
 
             missing_registry_ips = benchmark_ips - total_registry_ips
 
+```
+
+
+The first part of the debug2 code  prior to the successful_registry_ips comprehension look ok, but the aggregate following the successful_registry_ips
+shows that each process call is overwriting the previous registry value with its thread(s) ip(s). In this case below there is 
+only 1 thread per process, but the overwrite is apparent. The "Registry IPs classified as successful" should be building up
+(in this case to 12 IPs), but instead is being overwritten by the latest ip. And it ends with the IP of the last process to 
+finish (the .34 address below) as shown by the timestamp. In this case the successful_registry_ips only has the .34 address
+which is the source of the problem.  This overwritting issue will require a new patch 7c where a thread level registry is created,
+and then at the process level the thread level registry is aggregated and then after the test runs the process level registry logs
+will be aggregrated (post run). This ensures that performance will not erode even though the logging is done in these three stagees,
+because the buil of the aggregatino is done post run (either in the python module or in the gitlab CI/CD pipeline). I prefer to
+do all of this in the python and then publish the files as artifacts through the mounted volume in the python docker container
+that is executing the script (similar to the process and main level logging infra)
 
 
 ```
 
+[RESMON DEBUG] Resurrection registry snapshot:
+    54.146.165.2: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:11:50.033634', 'pid': 21}
+[RESMON DEBUG] Registry IPs classified as successful: {'54.146.165.2'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    54.165.79.46: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:11:50.468689', 'pid': 22}
+[RESMON DEBUG] Registry IPs classified as successful: {'54.165.79.46'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    3.92.133.149: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:11:50.705374', 'pid': 12}
+[RESMON DEBUG] Registry IPs classified as successful: {'3.92.133.149'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    44.211.164.146: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:11:50.745291', 'pid': 13}
+[RESMON DEBUG] Registry IPs classified as successful: {'44.211.164.146'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    13.218.175.13: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:11:50.756491', 'pid': 20}
+[RESMON DEBUG] Registry IPs classified as successful: {'13.218.175.13'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    54.145.134.132: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:12:00.936152', 'pid': 16}
+[RESMON DEBUG] Registry IPs classified as successful: {'54.145.134.132'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    54.173.82.6: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:12:01.208261', 'pid': 23}
+[RESMON DEBUG] Registry IPs classified as successful: {'54.173.82.6'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    54.86.2.164: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:12:02.601312', 'pid': 19}
+[RESMON DEBUG] Registry IPs classified as successful: {'54.86.2.164'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    13.221.99.193: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:12:02.791359', 'pid': 17}
+[RESMON DEBUG] Registry IPs classified as successful: {'13.221.99.193'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    54.89.141.129: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:12:02.993985', 'pid': 15}
+[RESMON DEBUG] Registry IPs classified as successful: {'54.89.141.129'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    18.205.117.91: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:12:12.770124', 'pid': 14}
+[RESMON DEBUG] Registry IPs classified as successful: {'18.205.117.91'}
+[RESMON DEBUG] Resurrection registry snapshot:
+    35.173.177.34: {'status': 'install_success', 'attempt': 0, 'timestamp': '2025-08-02T00:13:01.413235', 'pid': 18}
+[RESMON DEBUG] Registry IPs classified as successful: {'35.173.177.34'}
 
-The first debugs prior to teh successful_registry_ips comprehension look ok, but the aggregate following the successful_registry_ips
-shows that each process call is overwriting the previous registry value with its thread(s) ip(s). In this case below there is 
-only 1 thread per process, but the overwrite is apparent. The "Registry IPs classified as successful" should be building up
-(in this case to 12 IPs), but instead is being overwritten by the latest ip.
+
+Benchmark_ips
+13.218.175.13
+13.221.99.193
+18.205.117.91
+3.92.133.149
+35.173.177.34
+44.211.164.146
+54.145.134.132
+54.146.165.2
+54.165.79.46
+54.173.82.6
+54.86.2.164
+54.89.141.129
+
+
+
+Successful
+35.173.177.34
 
 ```
 
