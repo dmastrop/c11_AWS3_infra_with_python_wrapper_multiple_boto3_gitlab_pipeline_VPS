@@ -2381,6 +2381,22 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
 
+        # ⬇️ Thread-local tagging block (add this right after update_resurrection_registry)
+        # This is part of the code  necesary for the patch7c in resurrection_monitor_patch7c() function. 
+        # This creates a thread_registry for the current ip and since this part of the code is"install_success" the thread
+        # entry is configured as such for status.  To make the thread registry persist through multiple calls of the install_tomcat
+        # which threaded_install() will do per process if multiple threads in the process, we need additional code as well
+
+        ## NOTES: This snippet only handles a single IP **per thread**. To persist across all IPs (i.e. multiple calls to `install_tomcat()`), the `thread_registry` needs to live outside the function — ideally as a **shared mutable dict** owned by `threaded_install()` or injected into each thread via a wrapper. If keeping `thread_registry` local to this function, it will be recreated for every call.
+
+        thread_registry[ip] = {
+            "status": "install_success",
+            "attempt": 0,
+            "timestamp": str(datetime.utcnow()),
+            "pid": multiprocessing.current_process().pid,
+            "thread_id": threading.get_ident(),
+        }
+
 
 
         ## Debugging code to track down the successful_registry_ips tagging issue
