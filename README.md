@@ -557,7 +557,7 @@ patch 7a code below and using patch7_logger per pid.   The patch 7b code uses a 
 
 
 
-## Key Changes in Patch7b — Resurrection Monitor Focus
+### Key Changes in Patch7b — Resurrection Monitor Focus
 
 #### 1. **PID-Specific Registry Logs**
 - Introduced `resurrection_registry_log_{pid}.json` and `resurrection_ghost_log_{pid}.json` for thread isolation.
