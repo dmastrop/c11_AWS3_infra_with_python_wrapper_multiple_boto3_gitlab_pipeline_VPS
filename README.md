@@ -770,7 +770,7 @@ Successful
 
 ```
 
-### Root problem analysis wiht patch 7b
+### Root problem analysis with patch 7b
 
 
 
@@ -779,12 +779,14 @@ That explains why `successful_registry_ips` only shows one IP per run — the la
 simple test there was only 1 thread per process hence 1 IP being processed per process)
 
 #### Root Cause  
+
 - install_tomcat correctly tags each thread-level IP.
 - But resurrection_monitor, called per process (By tomcat_worker), rebuilds the `resurrection_registry` from scratch, clobbering prior thread outputs.
 - Even though each thread logs its IP, the final snapshot only contains one — the last thread executed in the last process to complete
 
 
 #### Patch7c Objective  
+
 - Implement **thread-level mini registries** (`thread_registry[ip] = {...}`).
 - Let **resurrection_monitor** sweep and aggregate those into the **process-level registry log**.
 - Perform full aggregation **post-run** across all processes via a registry collator (likely in the Python module, not CI).
