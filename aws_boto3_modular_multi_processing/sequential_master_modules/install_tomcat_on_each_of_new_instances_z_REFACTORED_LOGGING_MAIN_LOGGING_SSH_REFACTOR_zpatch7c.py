@@ -595,7 +595,7 @@ import time
 import uuid
 import copy
 import traceback
-
+from datetime import datetime
 
 ## REVISION 4:
 # ------------------ PATCH7C: THREAD-LOCAL RESURRECTION MONITOR ------------------
@@ -606,9 +606,16 @@ import traceback
 # Design note: Built atop Patch7b with scoped overrides to preserve thread-local logging clarity.
 
 # === PATCH7C === Resurrection Monitor: Thread-Local Aggregation
-def resurrection_monitor_patch7c(log_dir="/aws_EC2/logs"):
+#def resurrection_monitor_patch7c(log_dir="/aws_EC2/logs"):
+# resurrection_monitor_patch7c needs to accept process_registry from tomcat_worker() now for patch7c
+# process_registry has all IPs for multi-threaded process
 
+
+def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
     pid = multiprocessing.current_process().pid
+
+    thread_id = threading.get_ident()
+
 ## These are the resurrection_registry patch 1-5 logs
     log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
 ## These are teh resurrection ghost patch 6 logs
