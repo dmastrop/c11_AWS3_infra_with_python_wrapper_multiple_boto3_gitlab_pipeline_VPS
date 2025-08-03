@@ -2381,7 +2381,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
 
-        # ⬇️ Thread-local tagging block (add this right after update_resurrection_registry)
+        # For patch7c: Thread-local tagging block (add this right after update_resurrection_registry)
         # This is part of the code  necesary for the patch7c in resurrection_monitor_patch7c() function. 
         # This creates a thread_registry for the current ip and since this part of the code is"install_success" the thread
         # entry is configured as such for status.  To make the thread registry persist through multiple calls of the install_tomcat
@@ -2417,14 +2417,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         print(f"Installation completed on {ip}")
         return ip, private_ip, True
 
-    ##### install_tomcat() function ends here
+    ##### END OF install_tomcat() function ends here ######
 
 
 
 
 
 
-
+    
 
     # MOVED THIS BLOCK TO ABOVE
     ### added this because when running this as a module getting an error that there are no public ips on the instances
@@ -2516,6 +2516,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     def threaded_install():
         import uuid # This is for adding uuid to the logs. See below
 
+        thread_registry = {}  # Shared across threads in this process. This is required to collect all ips in the thread
+        # We will use this for patch 7c to the resurrection_monitor_patch7c function.  The tags will be collated in that function
+        # at the thread level.
+
+
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
 
@@ -2555,6 +2560,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 pid = multiprocessing.current_process().pid
                 thread_uuid = uuid.uuid4().hex[:8]
 
+                # Build registry entry. This is a single thread/ip entry that is used to build up the process thread_registry
+                # which will end up with all the ips in the process once all threads have been executed in the process
+                registry_entry = {
+                    "pid": pid,
+                    "uuid": thread_uuid,
+                    "result": result,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                }
+
+                # Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
+                thread_registry[thread_uuid] = registry_entry
+
+
+                # Keep the logging as before
                 if result:
                     logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
                     successful_ips.append(ip)
@@ -2563,6 +2583,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
                     failed_ips.append(ip)
                     failed_private_ips.append(private_ip)
+
+        return thread_registry  # Add this return line. This is very important. This is so that the run_test, which calls
+        # threaded_install gets back the thread_registry which is the list of IPs processed by the thread, in a registry
+        # This will be defined as process_registry which will then be passed to the patch7c resurrection_monitor_patch7c()
+        # function so that the registry IP values and tags (treads) can be collated for artfact publishing (failled, successful, etc)
+
+
+    ### END OF threaded_install() #####
+
+
+
 
 
     ### The run_test is defined outside of the function at the top of this module.  The run_test will in turn call benchmark
@@ -2603,7 +2634,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     resurrection_monitor_patch7c()
 
 
-##### END OF install_tomcat() function ######
+##### END OF tomcat_worker() function ######
+# tomcat_worker() calls threaded_install() which calls install_tomcat. Both threaded_install and install_tomcat are defined in
+# tomcat_worker
 
 
 
