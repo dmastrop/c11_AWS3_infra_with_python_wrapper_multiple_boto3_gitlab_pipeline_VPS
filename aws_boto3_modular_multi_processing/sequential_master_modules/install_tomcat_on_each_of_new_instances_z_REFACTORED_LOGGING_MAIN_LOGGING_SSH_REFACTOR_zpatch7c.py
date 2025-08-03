@@ -415,13 +415,20 @@ def benchmark(test_name, sample_delay=None):
         logging.info(f"[PID {pid}] Final CPU usage: {end_cpu:.2f}%")
         logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
 
+
+## This needs to be slightly modified for the patch7c to return the thread_registry from threaded_install
+## run test is invoked with func threaded_install and this now returns the thread_registry which will later 
+## be assigned proces_registry to be consumed by resurrection_monitor_patch7c
 def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
     delay = None
     if random.random() < sample_probability:
         delay = random.uniform(min_sample_delay, max_sample_delay)
 
     with benchmark(test_name, sample_delay=delay):
-        func(*args, **kwargs)
+        result = func(*args, **kwargs)
+        #func(*args, **kwargs)
+
+    return result
 
 
 
@@ -2560,6 +2567,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 pid = multiprocessing.current_process().pid
                 thread_uuid = uuid.uuid4().hex[:8]
 
+                # Updated for patch7c
                 # Build registry entry. This is a single thread/ip entry that is used to build up the process thread_registry
                 # which will end up with all the ips in the process once all threads have been executed in the process
                 registry_entry = {
@@ -2600,7 +2608,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ### function to run the specific benchmarks on the multi-threading ThreadPoolExecutor that the process is executing on
     ### the chunk of chunk_size
     ### the run_test is not indented inside of tomcat_worker function!
-    run_test("Tomcat Installation Threaded", threaded_install)
+    
+    #run_test("Tomcat Installation Threaded", threaded_install)
+    
+    ## THIS NEEDS to be modifed for the patch7c multi-threading registry 
+    ## threaded_install now returns the thread_registry (list of all IPs in the process as a process registry)
+    ## Assign this thread_registry the name process_registry. This will later be passed to the new resurrection_monitor_patch7c
+    ## for collating and tag processing
+    ## NOTE that run_test needs to be slightly modified to return the thread_registry from threaded_install so that it can be
+    ## assigned to the process_registry
+    process_registry = run_test("Tomcat Installation Threaded", threaded_install)
+
+
+
 
     ### Add the verification of the location of the benchmark file location on the container
     # Print the contents of `/aws_EC2/logs`. The filename will be unique tagged with the pid of the process for
@@ -2630,8 +2650,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
      
 
     # resurrection_monitor()
+    
     # replace resurrection_monitor() with resurrection_monitor_patch7c() for migration to patch7c
-    resurrection_monitor_patch7c()
+    #resurrection_monitor_patch7c()
+
+    # add the process_registry (see above) which is the registry of the multi-threading process IPs. This is from threaded_install
+    # which now returns the thread_registry which is the process_registry. Will have to update the resurrection monitor to
+    # accept the process_registry
+    resurrection_monitor_patch7c(process_registry)
+
 
 
 ##### END OF tomcat_worker() function ######
