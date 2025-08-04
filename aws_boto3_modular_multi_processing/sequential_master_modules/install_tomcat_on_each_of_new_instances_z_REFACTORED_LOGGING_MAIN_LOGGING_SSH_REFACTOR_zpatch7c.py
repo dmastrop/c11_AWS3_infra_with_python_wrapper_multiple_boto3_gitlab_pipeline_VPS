@@ -614,12 +614,34 @@ from datetime import datetime
 def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
     pid = multiprocessing.current_process().pid
 
+    # This is the thread_id of the calling thread, and not the thread_ids of the worker threads (That are processing the ip addreses
+    # in the chunk_size
+    # Since resurrection_monitor_patch7c() is called at the end of tomcat_worker(), which runs in the main thread of the process, this line will return that main thread’s ID
+    # This will give us traceability if the thread diagnostics are expanded later on.
+
     thread_id = threading.get_ident()
 
-## These are the resurrection_registry patch 1-5 logs
-    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
-## These are teh resurrection ghost patch 6 logs
-    ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+
+
+    ## These are the resurrection_registry patch 1-5 logs. These are tagged resurrection candidates for Phase3 implementation
+    #log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+
+    log_path = os.path.join(log_dir, f"resurrection_candidates_registry_{pid}.json")
+
+
+
+
+    ## These are teh resurrection ghost patch 7 logs. These are missing registry entires that are in benchmark_ips but are not in the
+    ## the registry (missing = benchmark - total registry)
+    #ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+
+    ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
+
+
+    # This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
+    # This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
+    # for max_workers threads
+    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
 
     flagged = {}
@@ -971,11 +993,11 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
     if flagged:
         os.makedirs(log_dir, exist_ok=True)
 
-        # Write registry resurrection log
+        # Write registry resurrection candidates log
         with open(log_path, "w") as f:
             json.dump(flagged, f, indent=4)
 
-        # Patch 6: Write ghost resurrection log if applicable
+        # Patch 7: Write missing ghost resurrection log if applicable
         if missing_registry_ips:
             ghost_data = {
                 ip: {
@@ -989,6 +1011,12 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
             with open(ghost_log_path, "w") as f:
                 json.dump(ghost_data, f, indent=4)
             log_debug(f"[{timestamp()}] Ghost resurrection log created: {ghost_log_path}")
+
+    # Patch 7c: Write process registry snapshot log (this is the complete registry (successful and failed) for a given process
+    # and can catch  multiple threads per process. Make sure this is outside of teh if flagged block. We want to always print this
+    # out for every process
+    with open(full_process_snapshot_path, "w") as f:
+        json.dump(process_registry, f, indent=4)
 
 
 
@@ -2669,7 +2697,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 ##### END OF tomcat_worker() function ######
-# tomcat_worker() calls threaded_install() which calls install_tomcat. Both threaded_install and install_tomcat are defined in
+# tomcat_worker() calls threaded_install() which calls install_tomcat(). Both threaded_install and install_tomcat are defined in
 # tomcat_worker
 
 
