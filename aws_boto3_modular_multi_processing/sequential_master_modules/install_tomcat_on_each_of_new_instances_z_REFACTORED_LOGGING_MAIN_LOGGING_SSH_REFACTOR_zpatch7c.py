@@ -2739,8 +2739,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ## debug prints for run_test call to threaded_install which returns thread_registry which is assigned to process_registry
     ## This is for patch7c testing
     print(f"[TRACE][tomcat_worker] Process registry returned with {len(process_registry)} entries")
-for ip, data in process_registry.items():
-    print(f"[TRACE][tomcat_worker] Registry entry [{ip}]: {data}")
+    for ip, data in process_registry.items():
+        print(f"[TRACE][tomcat_worker] Registry entry [{ip}]: {data}")
 
 
 
