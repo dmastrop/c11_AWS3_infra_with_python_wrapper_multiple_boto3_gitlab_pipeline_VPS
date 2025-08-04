@@ -51,13 +51,24 @@ import re # this is absolutely required for all the stuff we are doing in the re
 def run_resurrection_monitor_diag(process_registry):
     import os
     import multiprocessing
+    import traceback
 
     pid = multiprocessing.current_process().pid
     log_dir = "/aws_EC2/logs"
-    print(f"[RES_MONITOR] 🔍 Starting resurrection monitor for PID {pid}")
 
-    # Verify contents of the log directory before execution
+    # === Execution Proof ===
+    print(f"[WRAPPER_HEARTBEAT] 🔧 Wrapper function triggered for PID {pid}")
+    heartbeat_probe = os.path.join(log_dir, f"wrapper_probe_{pid}.txt")
+    try:
+        with open(heartbeat_probe, "w") as f:
+            f.write(f"Wrapper executed for PID {pid}\n")
+    except Exception as e:
+        print(f"[ERROR] 🧨 Failed to write wrapper heartbeat file: {e}")
+
+    # === Console Logs ===
+    print(f"[RES_MONITOR] 🔍 Starting resurrection monitor for PID {pid}")
     print(f"[FILE_SCAN] 📂 Pre-monitor contents of {log_dir}:")
+
     try:
         files = os.listdir(log_dir)
         for fname in files:
@@ -67,23 +78,20 @@ def run_resurrection_monitor_diag(process_registry):
     except Exception as e:
         print(f"[ERROR] 🚨 Failed to read log directory {log_dir}: {e}")
 
+    # === Resurrection Monitor Execution ===
     try:
         resurrection_monitor_patch7c(process_registry)
         print(f"[PATCH7C] ✅ resurrection_monitor_patch7c executed successfully for PID {pid}")
     except Exception as e:
         print(f"[ERROR] 💥 resurrection_monitor_patch7c failed for PID {pid}: {e}")
-        import traceback
         traceback.print_exc()
 
-    # Check for output artifact existence
+    # === Artifact Summary Check ===
     expected_log_file = os.path.join(log_dir, f"patch7_summary_{pid}.log")
     if os.path.exists(expected_log_file):
         print(f"[SUM_CHECK] 📁 Patch7 summary log exists: {expected_log_file}")
     else:
         print(f"[SUM_CHECK] ⚠️ Patch7 summary log MISSING for PID {pid}")
-
-
-
 
 
 
