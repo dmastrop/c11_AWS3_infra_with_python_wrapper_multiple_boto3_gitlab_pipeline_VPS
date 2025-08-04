@@ -872,7 +872,7 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
             # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
             # Replace resurrection_registry with process_registry in for loop for patch7c
             print(f"[RESMON DEBUG] Resurrection registry snapshot:")
-            for ip, entry in policy_registry.items():
+            for ip, entry in process_registry.items():
                 print(f"    {ip}: {entry}")
             
             # replace resurrection_registry with process_registry below
