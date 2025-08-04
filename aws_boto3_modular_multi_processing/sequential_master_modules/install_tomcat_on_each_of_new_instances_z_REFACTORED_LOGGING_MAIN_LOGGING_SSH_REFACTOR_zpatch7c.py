@@ -2699,6 +2699,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     failed_ips.append(ip)
                     failed_private_ips.append(private_ip)
 
+
+
+
+        # debugs for the patch7c issue with process_registry
+        print(f"[TRACE][threaded_install] Final thread_registry contains {len(thread_registry)} entries")
+        for uuid_key, registry_entry in thread_registry.items():
+            print(f"[TRACE][threaded_install] UUID {uuid_key}: {registry_entry}")
+
+
         return thread_registry  # Add this return line. This is very important. This is so that the run_test, which calls
         # threaded_install gets back the thread_registry which is the list of IPs processed by the thread, in a registry
         # This will be defined as process_registry which will then be passed to the patch7c resurrection_monitor_patch7c()
