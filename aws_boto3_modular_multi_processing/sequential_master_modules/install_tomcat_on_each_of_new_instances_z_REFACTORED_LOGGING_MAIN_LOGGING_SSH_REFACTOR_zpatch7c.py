@@ -46,28 +46,30 @@ import re # this is absolutely required for all the stuff we are doing in the re
 ## Make sure to change the call to resurrection_monitor_patch7c() inside tomcat_worker() to 
 ## run_resurrection_monitor_diag(process_registry)
 
+
+
 def run_resurrection_monitor_diag(process_registry):
     import os
     import multiprocessing
 
     pid = multiprocessing.current_process().pid
     log_dir = "/aws_EC2/logs"
-    print(f"[DEBUG] �� Starting resurrection monitor for PID {pid}")
+    print(f"[RES_MONITOR] 🔍 Starting resurrection monitor for PID {pid}")
 
     # Verify contents of the log directory before execution
-    print(f"[DEBUG] 📂 Pre-monitor contents of {log_dir}:")
+    print(f"[FILE_SCAN] 📂 Pre-monitor contents of {log_dir}:")
     try:
         files = os.listdir(log_dir)
         for fname in files:
-            print(f"[DEBUG] └─ {fname}")
+            print(f"[FILE_SCAN] └─ {fname}")
         if not files:
-            print("[DEBUG] ⚠️ No files found in log directory prior to monitor execution")
+            print(f"[FILE_SCAN] ⚠️ No files found in log directory prior to monitor execution")
     except Exception as e:
         print(f"[ERROR] 🚨 Failed to read log directory {log_dir}: {e}")
 
     try:
         resurrection_monitor_patch7c(process_registry)
-        print(f"[DEBUG] ✅ resurrection_monitor_patch7c executed successfully for PID {pid}")
+        print(f"[PATCH7C] ✅ resurrection_monitor_patch7c executed successfully for PID {pid}")
     except Exception as e:
         print(f"[ERROR] 💥 resurrection_monitor_patch7c failed for PID {pid}: {e}")
         import traceback
@@ -76,13 +78,9 @@ def run_resurrection_monitor_diag(process_registry):
     # Check for output artifact existence
     expected_log_file = os.path.join(log_dir, f"patch7_summary_{pid}.log")
     if os.path.exists(expected_log_file):
-        print(f"[DEBUG] 📁 Patch7 summary log exists: {expected_log_file}")
+        print(f"[SUM_CHECK] 📁 Patch7 summary log exists: {expected_log_file}")
     else:
-        print(f"[DEBUG] ⚠️ Patch7 summary log MISSING for PID {pid}")
-
-
-
-
+        print(f"[SUM_CHECK] ⚠️ Patch7 summary log MISSING for PID {pid}")
 
 
 
