@@ -2764,10 +2764,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     # add the process_registry (see above) which is the registry of the multi-threading process IPs. This is from threaded_install
     # which now returns the thread_registry which is the process_registry. Will have to update the resurrection monitor to
     # accept the process_registry
-    #resurrection_monitor_patch7c(process_registry)
+    resurrection_monitor_patch7c(process_registry)
 
     # use the run_resurrection_monitor_diag() function to troublshoot the issues in resurrection_monitor_patch7c
-    run_resurrection_monitor_diag(process_registry)
+    #run_resurrection_monitor_diag(process_registry)
 
 
 
