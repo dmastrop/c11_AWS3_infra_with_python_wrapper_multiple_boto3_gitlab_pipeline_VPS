@@ -609,7 +609,9 @@ from datetime import datetime
 #def resurrection_monitor_patch7c(log_dir="/aws_EC2/logs"):
 # resurrection_monitor_patch7c needs to accept process_registry from tomcat_worker() now for patch7c
 # process_registry has all IPs for multi-threaded process
-
+# replace all resurrection_registry calls with process_registry BUT only in resurrection_monitor_patch7c function that gets
+# the process_registry from the run_test call to threaded_install. The other resurrection_montior are global and are not
+# to be changed.
 
 def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
     pid = multiprocessing.current_process().pid
@@ -660,17 +662,24 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
         #- No fingerprint means no resurrection log
 
 
-        total_registry_ips = set(resurrection_registry.keys())
+#        total_registry_ips = set(resurrection_registry.keys())
+#        successful_registry_ips = {
+#            ip for ip, record in resurrection_registry.items()
+#            if record.get("status") == "install_success"
+#        }
+#
+## Replace resurrection_registry with the process_registry for only def resurrection_monitor_patch7c, from threaded_install()
+        total_registry_ips = set(process_registry.keys())
         successful_registry_ips = {
-            ip for ip, record in resurrection_registry.items()
+            ip for ip, record in process_registry.items()
             if record.get("status") == "install_success"
         }
 
-
-
         # ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
         
-        for ip, record in resurrection_registry.items():
+        for ip, record in process_registry.items():
+        # replace process_registry for resurrection_registry for patch7c    
+        #for ip, record in resurrection_registry.items():
     
 
             # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
@@ -844,7 +853,9 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
                 patch7_logger.info(f"[Patch7] 💧 Hydrated IPs: {benchmark_ips}")
 
 
-            total_registry_ips = set(resurrection_registry.keys())
+            total_registry_ips = set(process_registry.keys())
+            # replace resurrection_registry with process_registry for patch7c
+            #total_registry_ips = set(resurrection_registry.keys())
 
             ## Add these to troublehsoot artifact loggin issues. These go to the patch summary logs in the artifacts of gitlab piepline
 
@@ -859,12 +870,14 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 
 
             # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
+            # Replace resurrection_registry with process_registry in for loop for patch7c
             print(f"[RESMON DEBUG] Resurrection registry snapshot:")
-            for ip, entry in resurrection_registry.items():
+            for ip, entry in policy_registry.items():
                 print(f"    {ip}: {entry}")
-
+            
+            # replace resurrection_registry with process_registry below
             successful_registry_ips = {
-                ip for ip, entry in resurrection_registry.items()
+                ip for ip, entry in process_registry.items()
                 if entry.get("status") == "install_success"
                 and entry.get("watchdog_retries", 0) <= 2
             }
@@ -967,9 +980,10 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 # no logs are created for these
 
     # 🔍 Global success check — avoids false early_exit logs
+    # Replace resurrection_registry with process_registry for phase7a
     success_found = any(
         record.get("status") == "install_success"
-        for record in resurrection_registry.values()
+        for record in process_registry.values()
     )
     if not flagged and not success_found:
         flagged["early_exit"] = {
@@ -1676,7 +1690,7 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #        print("✅ Resurrection Monitor: No thread failures requiring intervention.")
 #
 
-
+########## THIS IS THE END OF THE resurrection_monitor() function REVISION 1 and 2 (replaced with REVISION 3) ######################
 
 
 
