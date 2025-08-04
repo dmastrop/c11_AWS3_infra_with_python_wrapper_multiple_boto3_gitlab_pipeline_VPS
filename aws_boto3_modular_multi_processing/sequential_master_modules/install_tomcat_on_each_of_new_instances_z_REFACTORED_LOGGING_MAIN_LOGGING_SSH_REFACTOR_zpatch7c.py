@@ -2717,7 +2717,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ### the run_test is not indented inside of tomcat_worker function!
     
     #run_test("Tomcat Installation Threaded", threaded_install)
-    
+   
+
+
+    ## debug prints for run_test call to threaded_install for patch7c
+    print(f"[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test")
+    print(f"[TRACE][tomcat_worker] Instance count for this chunk: {len(instance_info)}")
+
+
+
     ## THIS NEEDS to be modifed for the patch7c multi-threading registry 
     ## threaded_install now returns the thread_registry (list of all IPs in the process as a process registry)
     ## Assign this thread_registry the name process_registry. This will later be passed to the new resurrection_monitor_patch7c
@@ -2726,6 +2734,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ## assigned to the process_registry
     process_registry = run_test("Tomcat Installation Threaded", threaded_install)
 
+
+
+    ## debug prints for run_test call to threaded_install which returns thread_registry which is assigned to process_registry
+    ## This is for patch7c testing
+    print(f"[TRACE][tomcat_worker] Process registry returned with {len(process_registry)} entries")
+for ip, data in process_registry.items():
+    print(f"[TRACE][tomcat_worker] Registry entry [{ip}]: {data}")
 
 
 
@@ -2760,6 +2775,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     
     # replace resurrection_monitor() with resurrection_monitor_patch7c() for migration to patch7c
     #resurrection_monitor_patch7c()
+
+
+    ## debugs for process_registry above for patch7c testing
+    print(f"[TRACE][tomcat_worker] Passing process_registry to resurrection_monitor with {len(process_registry)} entries")
+
 
     # add the process_registry (see above) which is the registry of the multi-threading process IPs. This is from threaded_install
     # which now returns the thread_registry which is the process_registry. Will have to update the resurrection monitor to
