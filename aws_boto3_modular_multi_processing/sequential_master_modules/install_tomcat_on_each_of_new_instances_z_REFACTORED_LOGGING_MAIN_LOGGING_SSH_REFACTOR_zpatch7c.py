@@ -39,6 +39,58 @@ import re # this is absolutely required for all the stuff we are doing in the re
 
 
 
+
+## This is the wrapper function for resurrection_monitor_patch7c() to debug the issues that this is having
+## There are a few issues: the log and .json files are not being sent out to the gitlab pipeline archive /logs
+## The artifacts outside of this function (benchmark_combined.log) are working fine so this problem is inside the function
+## Make sure to change the call to resurrection_monitor_patch7c() inside tomcat_worker() to 
+## run_resurrection_monitor_diag(process_registry)
+
+def run_resurrection_monitor_diag(process_registry):
+    import os
+    import multiprocessing
+
+    pid = multiprocessing.current_process().pid
+    log_dir = "/aws_EC2/logs"
+    print(f"[DEBUG] �� Starting resurrection monitor for PID {pid}")
+
+    # Verify contents of the log directory before execution
+    print(f"[DEBUG] 📂 Pre-monitor contents of {log_dir}:")
+    try:
+        files = os.listdir(log_dir)
+        for fname in files:
+            print(f"[DEBUG] └─ {fname}")
+        if not files:
+            print("[DEBUG] ⚠️ No files found in log directory prior to monitor execution")
+    except Exception as e:
+        print(f"[ERROR] 🚨 Failed to read log directory {log_dir}: {e}")
+
+    try:
+        resurrection_monitor_patch7c(process_registry)
+        print(f"[DEBUG] ✅ resurrection_monitor_patch7c executed successfully for PID {pid}")
+    except Exception as e:
+        print(f"[ERROR] 💥 resurrection_monitor_patch7c failed for PID {pid}: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # Check for output artifact existence
+    expected_log_file = os.path.join(log_dir, f"patch7_summary_{pid}.log")
+    if os.path.exists(expected_log_file):
+        print(f"[DEBUG] 📁 Patch7 summary log exists: {expected_log_file}")
+    else:
+        print(f"[DEBUG] ⚠️ Patch7 summary log MISSING for PID {pid}")
+
+
+
+
+
+
+
+
+
+
+
+
 # COMMENT this out for now so that i can test the benchmark.log artifact below
 # will do a dual logger later to accomodate this.
 
@@ -2706,7 +2758,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     # add the process_registry (see above) which is the registry of the multi-threading process IPs. This is from threaded_install
     # which now returns the thread_registry which is the process_registry. Will have to update the resurrection monitor to
     # accept the process_registry
-    resurrection_monitor_patch7c(process_registry)
+    #resurrection_monitor_patch7c(process_registry)
+
+    # use the run_resurrection_monitor_diag() function to troublshoot the issues in resurrection_monitor_patch7c
+    run_resurrection_monitor_diag(process_registry)
 
 
 
