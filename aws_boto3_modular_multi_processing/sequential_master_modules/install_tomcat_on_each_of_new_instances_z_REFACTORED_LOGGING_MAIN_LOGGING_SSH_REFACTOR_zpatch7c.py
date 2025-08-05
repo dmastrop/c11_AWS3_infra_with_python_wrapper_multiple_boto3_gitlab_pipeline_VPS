@@ -2471,8 +2471,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     if stderr_output.strip():
                         print(f"[{ip}] ❌ Non-warning stderr received.")
                         ssh.close()
-                        retu
-                        rn ip, private_ip, False
+                        return ip, private_ip, False
 
                     print(f"[{ip}] ✅ Command succeeded.")
                     time.sleep(20)
