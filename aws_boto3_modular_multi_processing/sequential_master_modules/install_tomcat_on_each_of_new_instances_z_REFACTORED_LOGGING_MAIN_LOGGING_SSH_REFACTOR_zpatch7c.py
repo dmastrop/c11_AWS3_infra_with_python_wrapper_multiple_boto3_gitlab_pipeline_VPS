@@ -2730,9 +2730,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # this should print all the thread ip registry entries for this pid by uuid (which will be unique across all processes)
         print(f"[TRACE][threaded_install] Final thread_registry contains {len(thread_registry)} entries")
         
-$#        for uuid_key, registry_entry in thread_registry.items():
-$#            print(f"[TRACE][threaded_install] UUID {uuid_key}: {registry_entry}")
-$#
+#        for uuid_key, registry_entry in thread_registry.items():
+#            print(f"[TRACE][threaded_install] UUID {uuid_key}: {registry_entry}")
+
         for uuid_key, registry_entry in thread_registry.items():
             pid = registry_entry.get("pid", "N/A")
             print(f"[TRACE][threaded_install] UUID {uuid_key} | PID {pid}: {registry_entry}")
