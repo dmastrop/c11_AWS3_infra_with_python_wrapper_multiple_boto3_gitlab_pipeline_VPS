@@ -2706,10 +2706,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # current registry_entry and this is added to it for each thread executed by the ThreadPoolExecutor called by
                 # the current process running threaded_install
 
+                # add thread_uuid to the registry_entry and keeping IPs inside the entry helps make logs easier to parse later — 
+                #especially if UUIDs are opaque.
+                registry_entry["thread_uuid"] = thread_uuid
+                registry_entry["public_ip"] = ip
+                registry_entry["private_ip"] = private_ip
 
                 # Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
+                # For multi-threaded multi-processed registry entries keying by thread_uuid is best.
                 # thre thread_registry will be built up with all thread registry entries for per process and returned to the
                 # calling function of threaded_install which is tomcat worker. Tomcat_worker will assign this to process_registry
+                # retgistry_entry is returned from install_tomcat to this function, threaded_install
                 thread_registry[thread_uuid] = registry_entry
 
 
@@ -2740,7 +2747,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         return thread_registry  # Add this return line. This is very important. This is so that the run_test, which calls
-        # threaded_install gets back the thread_registry which is the list of IPs processed by the thread, in a registry
+        # threaded_install gets back the thread_registry which is the list of IPs processed by the current process, in a registry
         # This will be defined as process_registry which will then be passed to the patch7c resurrection_monitor_patch7c()
         # function so that the registry IP values and tags (treads) can be collated for artfact publishing (failled, successful, etc)
 
