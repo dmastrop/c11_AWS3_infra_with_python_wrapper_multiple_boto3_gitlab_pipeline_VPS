@@ -1780,6 +1780,7 @@ resurrection_registry_lock = threading.Lock()
 # As part of phase2, add pid to the update_resurrection_registry for patch 6 fix and make sure to add pid=multiprocessing.current_process().pid to all the function call arguments using this function
 
 def update_resurrection_registry(ip, attempt, status, pid=None):
+    print(f"[TRACE][res_registry] Updating registry for {ip} with PID {pid}")
     with resurrection_registry_lock:
         resurrection_registry[ip] = {
             "status": status,
@@ -1787,6 +1788,7 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
             "timestamp": datetime.now().isoformat(),
             "pid": pid
         }
+    print(f"[TRACE][res_registry] Finished registry update for {ip}")    
 
 def read_output_with_watchdog(stream, label, ip, attempt):
     start = time.time()
@@ -2495,6 +2497,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         transport = ssh.get_transport()
         if transport:
             transport.close()
+
+
+
+
+        #debug for patch7c
+        print(f"[TRACE][install_tomcat] Reached registry update step for {ip}")
+
 
         # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
         # from creating a resurrection log. This will ensure that all installation threads leave some sort
