@@ -2689,25 +2689,27 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ## Add uuid since the pids are reused in hyper-scaling. This is not absolutely required as my log files do use
 ## uuid to differentiation same pid benchmark logs but adding to content of the logs will help in the future
 ## for logging forenscis
-
+## install_tomcat invoked by the ThreadPoolExecutor will return registry_entry as the result
+## So assign future.result() from install_tomcat to registry_entry, the current thread's registry entry
 
             for future in as_completed(futures):
-                ip, private_ip, result = future.result()
+                #ip, private_ip, result = future.result()
+                ip, private_ip, registry_entry = future.result()
                 pid = multiprocessing.current_process().pid
                 thread_uuid = uuid.uuid4().hex[:8]
 
                 # Updated for patch7c
-                # Build registry entry. This is a single thread/ip entry that is used to build up the process thread_registry
+                # registry_entry. This is built in the install_tomcat() 
+                # This is a single thread/ip entry that is used to build up the process thread_registry
                 # which will end up with all the ips in the process once all threads have been executed in the process
-                registry_entry = {
-                    "pid": pid,
-                    "uuid": thread_uuid,
-                    "result": result,
-                    "public_ip": ip,
-                    "private_ip": private_ip,
-                }
+                # thread_registry is built up with index thread_uuid to ensure it is totally unique. This will be the 
+                # current registry_entry and this is added to it for each thread executed by the ThreadPoolExecutor called by
+                # the current process running threaded_install
+
 
                 # Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
+                # thre thread_registry will be built up with all thread registry entries for per process and returned to the
+                # calling function of threaded_install which is tomcat worker. Tomcat_worker will assign this to process_registry
                 thread_registry[thread_uuid] = registry_entry
 
 
@@ -2725,9 +2727,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # debugs for the patch7c issue with process_registry
+        # this should print all the thread ip registry entries for this pid by uuid (which will be unique across all processes)
         print(f"[TRACE][threaded_install] Final thread_registry contains {len(thread_registry)} entries")
+        
+$#        for uuid_key, registry_entry in thread_registry.items():
+$#            print(f"[TRACE][threaded_install] UUID {uuid_key}: {registry_entry}")
+$#
         for uuid_key, registry_entry in thread_registry.items():
-            print(f"[TRACE][threaded_install] UUID {uuid_key}: {registry_entry}")
+            pid = registry_entry.get("pid", "N/A")
+            print(f"[TRACE][threaded_install] UUID {uuid_key} | PID {pid}: {registry_entry}")
+
 
 
         return thread_registry  # Add this return line. This is very important. This is so that the run_test, which calls
