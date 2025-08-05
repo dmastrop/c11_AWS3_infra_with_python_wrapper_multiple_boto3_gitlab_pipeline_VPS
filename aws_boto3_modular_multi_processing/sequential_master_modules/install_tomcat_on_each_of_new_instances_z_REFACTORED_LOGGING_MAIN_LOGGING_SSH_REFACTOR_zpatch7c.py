@@ -2517,9 +2517,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # entry is configured as such for status.  To make the thread registry persist through multiple calls of the install_tomcat
         # which threaded_install() will do per process if multiple threads in the process, we need additional code as well
 
-        ## NOTES: This snippet only handles a single IP **per thread**. To persist across all IPs (i.e. multiple calls to `install_tomcat()`), the `thread_registry` needs to live outside the function — ideally as a **shared mutable dict** owned by `threaded_install()` or injected into each thread via a wrapper. If keeping `thread_registry` local to this function, it will be recreated for every call.
+        ## NOTES: This snippet only handles a single IP **per thread**. To persist across all IPs (i.e. multiple calls to `install_tomcat()`), the `registry_entry` needs to live outside the function — ideally as a **shared mutable dict** owned by `threaded_install()`
+        ## so we need to return this registry_entry to the calling function threaded_install.
+        ## If keeping `registry_entry` local to this function, it will be recreated for every call. Which is what we need.
+        ## Create it fresh for each new thread/IP and then return it to threaded_install for adding to the thread_registry which
+        ## will eventuall be called the process_registry in the tomcat_worker that calls threaded_install
 
-        thread_registry[ip] = {
+        registry_entry = {
             "status": "install_success",
             "attempt": 0,
             "timestamp": str(datetime.utcnow()),
@@ -2545,7 +2549,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         print(f"[TRACE][install_tomcat] Returning install result for {ip}")
 
         print(f"Installation completed on {ip}")
-        return ip, private_ip, True
+
+        # make sure to return this registry_entry for this thread instance to threaded_install
+        return ip, private_ip, registry_entry
 
     ##### END OF install_tomcat() function ends here ######
 
