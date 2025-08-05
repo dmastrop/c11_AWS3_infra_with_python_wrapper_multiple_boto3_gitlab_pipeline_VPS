@@ -2109,6 +2109,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         wait_for_instance_running(instance_id, my_ec2)
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # debug for patch7c issues. We have isolated it to install_tomcat and the thread_registry in threaded_install
+        print(f"[TRACE][install_tomcat] Beginning installation on {ip}")
+
+
 
         for attempt in range(5):
             try:
@@ -2466,7 +2471,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     if stderr_output.strip():
                         print(f"[{ip}] ❌ Non-warning stderr received.")
                         ssh.close()
-                        return ip, private_ip, False
+                        retu
+                        rn ip, private_ip, False
 
                     print(f"[{ip}] ✅ Command succeeded.")
                     time.sleep(20)
@@ -2481,6 +2487,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdout.close()
                     stderr.close()
 
+            # insert patch7b debug here for the inner for loop
+            print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
 
 
 
@@ -2525,8 +2533,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         except Exception as e:
             print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
 
-
-
+        # debug for patch7c 
+        print(f"[TRACE][install_tomcat] Returning install result for {ip}")
 
         print(f"Installation completed on {ip}")
         return ip, private_ip, True
