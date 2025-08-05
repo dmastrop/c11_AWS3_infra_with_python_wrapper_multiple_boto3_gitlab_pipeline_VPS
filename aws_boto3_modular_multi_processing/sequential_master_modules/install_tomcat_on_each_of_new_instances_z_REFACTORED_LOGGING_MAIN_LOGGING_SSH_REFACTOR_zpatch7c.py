@@ -2721,7 +2721,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
                 # Keep the logging as before
-                if result:
+                # we need to catch if registry has corruption 
+                # Try to retrieve the value for `'status'` from `registry_entry`. If it’s missing (not set, or the whole entry 
+                # is malformed), then default to the string `'undefined'`.”  That way it will fall into the else and we can see  it
+                # logged as Install failed for further forensic thread investigation.
+                status = registry_entry.get("status", "undefined")
+
+                if registry_entry.get("status") == "install_success":
+                #if registry_entry:
                     logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
                     successful_ips.append(ip)
                     successful_private_ips.append(private_ip)
