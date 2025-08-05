@@ -65,6 +65,16 @@ because the buil of the aggregatino is done post run (either in the python modul
 do all of this in the python and then publish the files as artifacts through the mounted volume in the python docker container
 that is executing the script (similar to the process and main level logging infra)
 
+This is a major rewrite of the code. The execution is multi-processed and mult-threaded (installations, and python modules, etc), but
+the registry tracking of the threads along with their "status" or tag needs to be completely overhauled to support the multiple threadsper process where each thread is a dedicated SSH connection to an EC2 node.  Once this is in place the resurrection logging will work
+and the artifact logging that is piped into the gitlab pipeline (/logs) will work for in-depth forensics on the thread status.
+
+Once this is in place the Phase 3 can be rolled out (whereby threads are resurrected) and after that Phase 4 ML (machine learning) to
+adpatively modulate orchestration to minimize the use of the Phase 3 resurrection thread healing and optimize the orchestation of
+the process handling and thread handling. 
+
+Each step along the way the process level will continue to be scaled up. (currently at 512 processes with 1 thread per process, and
+the failures have been root cause defined).
  
 
 ### Detail on patch 7b to 7c migration requirements (from the last update):
