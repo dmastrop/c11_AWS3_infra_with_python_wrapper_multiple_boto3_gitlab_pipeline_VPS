@@ -1,3 +1,11 @@
+#  System Resilience Engineering | High-Concurrency Diagnostic Design in Python:
+## Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in Distributed Debugging Systems
+
+
+
+
+
+
 ## Current and latest development work
 
 
@@ -36,7 +44,10 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 ## High level project summary:
 
 
-System Resilience Engineering | High-Concurrency Diagnostic Design in Python
+System Resilience Engineering | High-Concurrency Diagnostic Design in Python:
+Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in Distributed Debugging Systems
+
+
 
 Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 450 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across hundreds of AWS instances as part of a broader infrastructure automation suite.
 Testing is performed in a self-hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency. 
