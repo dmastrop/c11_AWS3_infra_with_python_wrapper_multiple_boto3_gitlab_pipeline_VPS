@@ -930,9 +930,20 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
                 patch7_logger.info(f"[Patch7] 💧 Hydrated IPs: {benchmark_ips}")
 
 
-            total_registry_ips = set(process_registry.keys())
-            # replace resurrection_registry with process_registry for patch7c
             #total_registry_ips = set(resurrection_registry.keys())
+            
+            #replace resurrection_registry with process_registry for patch7c
+            #total_registry_ips = set(process_registry.keys())
+            
+            # the above is using uuid as key. Need ips. Use this:
+            total_registry_ips = {
+                entry.get("public_ip")
+                for entry in process_registry.values()
+                if entry.get("public_ip") is not None
+            }
+
+
+
 
             ## Add these to troublehsoot artifact loggin issues. These go to the patch summary logs in the artifacts of gitlab piepline
 
