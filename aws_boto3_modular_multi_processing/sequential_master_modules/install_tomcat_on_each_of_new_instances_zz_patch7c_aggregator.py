@@ -486,13 +486,18 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         result = func(*args, **kwargs)
         #func(*args, **kwargs)
 
-    return result
-    
+    #return result
+
+
     # Aggregation logic (only if result is a list of thread_registry dicts)
     aggregate_registry = {}
     if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
+        print("[TRACE][run_test] Entered run_test()")
         for thread_registry in result:
+            print(f"[TRACE][run_test] thread_registry keys: {list(thread_registry.keys())}")
+            print(f"[TRACE][run_test] aggregate_registry BEFORE update: {len(aggregate_registry)}")
             aggregate_registry.update(thread_registry)
+            print(f"[TRACE][run_test] aggregate_registry AFTER update: {len(aggregate_registry)}")
 
         # ✅ Aggregation trace
         print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
@@ -522,6 +527,10 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
 
     return result
+
+
+
+
 
 
 
