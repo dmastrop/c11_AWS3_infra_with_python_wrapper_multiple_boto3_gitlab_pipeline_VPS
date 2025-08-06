@@ -255,6 +255,10 @@ full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_regist
 ```
 
 
+The registry  ip (thread) status/tag classifications from aggregate_registry will  be used in phase 3 for resurrection.
+
+
+
 
 
 ### Patch 7c (changes to resurrection_monitor() which is now resurrection_monitor_patch7c()
