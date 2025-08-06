@@ -137,11 +137,13 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res4.py")
 
-#### THIS IS THE MODULE2 SCRIPT with debugging for the artifact logging in the patch7c code
+##### THIS IS THE MODULE2 SCRIPT with debugging for the artifact logging in the patch7c code
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_zpatch7c.py")
+
+#### THIS IS THE MODULE2 SCRIPT with patch7c and the aggregator
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_zpatch7c.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_aggregator.py")
 
 
 
