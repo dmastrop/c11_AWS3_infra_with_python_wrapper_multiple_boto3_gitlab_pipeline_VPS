@@ -162,9 +162,13 @@ Function summary of the changes:
 
 
 
-### Patch 7c
+### Patch 7c (changes to resurrection_monitor() which is now resurrection_monitor_patch7c()
 
+### changes to tomcat_worker()
 
+### changes to threaded_install()
+
+### changes to install_tomat
 
 
 
