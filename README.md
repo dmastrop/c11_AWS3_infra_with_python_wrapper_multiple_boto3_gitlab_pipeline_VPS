@@ -78,7 +78,11 @@ that is executing the script (similar to the process and main level logging infr
 
 This is a major rewrite of the code. The execution is multi-processed and mult-threaded (installations, and python modules, etc), but
 the registry tracking of the threads along with their "status" or tag needs to be completely overhauled to support the multiple threadsper process where each thread is a dedicated SSH connection to an EC2 node.  Once this is in place the resurrection logging will work
-and the artifact logging that is piped into the gitlab pipeline (/logs) will work for in-depth forensics on the thread status.
+and the artifact logging that is piped into the gitlab pipeline (/logs) will work for in-depth forensics on the thread status. 
+The process_registry will continue to be used at the per process level (multi-threading supported), and a new 
+aggregator_registry will aggregate all the process_registry ips into one registry so that it can be consumed by the global
+artifact logging in the gitlab pipeline. succesful_registry_ips, missing_registry_ips, failed_registry_ips, total_registry_ips
+and other logs will be created from this.
 
 Once this is in place the Phase 3 can be rolled out (whereby threads are resurrected) and after that Phase 4 ML (machine learning) to
 adpatively modulate orchestration to minimize the use of the Phase 3 resurrection thread healing and optimize the orchestation of
