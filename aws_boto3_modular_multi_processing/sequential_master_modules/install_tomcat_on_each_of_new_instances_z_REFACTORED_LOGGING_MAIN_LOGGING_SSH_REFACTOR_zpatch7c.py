@@ -727,11 +727,30 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #        }
 #
 ## Replace resurrection_registry with the process_registry for only def resurrection_monitor_patch7c, from threaded_install()
-        total_registry_ips = set(process_registry.keys())
-        successful_registry_ips = {
-            ip for ip, record in process_registry.items()
-            if record.get("status") == "install_success"
+        
+
+       
+
+       # total_registry_ips = set(process_registry.keys()) # process_registry.keys returns uuid and not ip!!
+       # successful_registry_ips = {
+       #     ip for ip, record in process_registry.items()
+       #     if record.get("status") == "install_success"
+       # }
+
+        # this syntax returns ips and not uuids. This is what we want.
+        total_registry_ips = {
+            entry.get("public_ip")
+            for entry in process_registry.values()
+            if entry.get("public_ip") is not None
         }
+
+        successful_registry_ips = {
+            entry.get("public_ip")
+            for entry in process_registry.values()
+            if entry.get("status") == "install_success"
+        }
+
+
 
         # ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
         
@@ -934,11 +953,22 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
                 print(f"    {ip}: {entry}")
             
             # replace resurrection_registry with process_registry below
+            #successful_registry_ips = {   #this returns uuids and not ips!!
+            #    ip for ip, entry in process_registry.items()
+            #    if entry.get("status") == "install_success"
+            #    and entry.get("watchdog_retries", 0) <= 2
+            #}
+
+
+            # this will get the public ips and not uuids which is what we want
             successful_registry_ips = {
-                ip for ip, entry in process_registry.items()
+                entry.get("public_ip")
+                for entry in process_registry.values()
                 if entry.get("status") == "install_success"
                 and entry.get("watchdog_retries", 0) <= 2
+                and entry.get("public_ip") is not None
             }
+
 
             # Debugs to tell  how many IPs the above filter pulled through — and what the filter did to the full registry snapshot.
             print(f"[RESMON DEBUG] Registry IPs classified as successful: {successful_registry_ips}")
