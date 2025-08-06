@@ -2774,6 +2774,111 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ## uuid to differentiation same pid benchmark logs but adding to content of the logs will help in the future
 ## for logging forenscis
 ## install_tomcat invoked by the ThreadPoolExecutor will return registry_entry as the result
+    # Aggregation logic (only if result is a list of thread_registry dicts)
+    # Aggregation logic (only if result is a list of thread_registry dicts)
+    # Aggregation logic (only if result is a list of thread_registry dicts)
+    aggregate_registry = {}
+    if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
+        for thread_registry in result:
+            aggregate_registry.update(thread_registry)
+
+        # ✅ Aggregation trace
+        print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
+        for uuid, entry in aggregate_registry.items():
+            if entry.get("status") == "install_success":
+                print(f"[TRACE] UUID {uuid} | IP: {entry.get('public_ip')} ✅")
+
+        # 🧪 Forensic validator: compare aggregate_registry IPs to benchmark_ips_artifact.log
+        try:
+            with open("logs/benchmark_ips_artifact.log") as f:
+                benchmark_ips = set(line.strip() for line in f if line.strip())
+        except FileNotFoundError:
+            benchmark_ips = set()
+            print("[WARN] benchmark_ips_artifact.log not found")
+
+        aggregated_ips = {
+            entry.get("public_ip")
+            for entry in aggregate_registry.values()
+            if entry.get("public_ip") is not None
+        }
+
+        missing_ips = benchmark_ips - aggregated_ips
+        extra_ips = aggregated_ips - benchmark_ips
+
+        print(f"[TRACE] Benchmark IPs: {len(benchmark_ips)} | Aggregated IPs: {len(aggregated_ips)}")
+        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
+        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
+
+    return result
+
+    aggregate_registry = {}
+    if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
+        for thread_registry in result:
+            aggregate_registry.update(thread_registry)
+
+        # ✅ Aggregation trace
+        print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
+        for uuid, entry in aggregate_registry.items():
+            if entry.get("status") == "install_success":
+                print(f"[TRACE] UUID {uuid} | IP: {entry.get('public_ip')} ✅")
+
+        # 🧪 Forensic validator: compare aggregate_registry IPs to benchmark_ips_artifact.log
+        try:
+            with open("logs/benchmark_ips_artifact.log") as f:
+                benchmark_ips = set(line.strip() for line in f if line.strip())
+        except FileNotFoundError:
+            benchmark_ips = set()
+            print("[WARN] benchmark_ips_artifact.log not found")
+
+        aggregated_ips = {
+            entry.get("public_ip")
+            for entry in aggregate_registry.values()
+            if entry.get("public_ip") is not None
+        }
+
+        missing_ips = benchmark_ips - aggregated_ips
+        extra_ips = aggregated_ips - benchmark_ips
+
+        print(f"[TRACE] Benchmark IPs: {len(benchmark_ips)} | Aggregated IPs: {len(aggregated_ips)}")
+        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
+        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
+
+    return result
+
+    aggregate_registry = {}
+    if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
+        for thread_registry in result:
+            aggregate_registry.update(thread_registry)
+
+        # ✅ Aggregation trace
+        print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
+        for uuid, entry in aggregate_registry.items():
+            if entry.get("status") == "install_success":
+                print(f"[TRACE] UUID {uuid} | IP: {entry.get('public_ip')} ✅")
+
+        # 🧪 Forensic validator: compare aggregate_registry IPs to benchmark_ips_artifact.log
+        try:
+            with open("logs/benchmark_ips_artifact.log") as f:
+                benchmark_ips = set(line.strip() for line in f if line.strip())
+        except FileNotFoundError:
+            benchmark_ips = set()
+            print("[WARN] benchmark_ips_artifact.log not found")
+
+        aggregated_ips = {
+            entry.get("public_ip")
+            for entry in aggregate_registry.values()
+            if entry.get("public_ip") is not None
+        }
+
+        missing_ips = benchmark_ips - aggregated_ips
+        extra_ips = aggregated_ips - benchmark_ips
+
+        print(f"[TRACE] Benchmark IPs: {len(benchmark_ips)} | Aggregated IPs: {len(aggregated_ips)}")
+        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
+        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
+
+    return result
+
 ## So assign future.result() from install_tomcat to registry_entry, the current thread's registry entry
 
             for future in as_completed(futures):

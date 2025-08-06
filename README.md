@@ -61,7 +61,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES: part 20: Phase 2f: Patches 7c 
+## UPDATES: part 20: Phase 2f: resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry 
 
 
 ### Introduction:
@@ -70,19 +70,18 @@ See the troubleshooting in the last update below. The registry is being overwrit
 resurrection_montor. This requires a rewrite of patch 7c in the resurrection_monitor
 
 This overwritting issue will require a new patch 7c where a thread level registry is created,
-and then at the process level the thread level registry is aggregated and then after the test runs the process level registry logs
-will be aggregrated (post run). This ensures that performance will not erode even though the logging is done in these three stagees,
-because the buil of the aggregatino is done post run (either in the python module or in the gitlab CI/CD pipeline). I prefer to
-do all of this in the python and then publish the files as artifacts through the mounted volume in the python docker container
-that is executing the script (similar to the process and main level logging infra)
+and then at the process level the thread level registry is collected,  and then the process level registry is aggregated into a final
+aggreagated_registry that has all the thread-level registry entries for all processes in the execution run.
 
 This is a major rewrite of the code. The execution is multi-processed and mult-threaded (installations, and python modules, etc), but
 the registry tracking of the threads along with their "status" or tag needs to be completely overhauled to support the multiple threadsper process where each thread is a dedicated SSH connection to an EC2 node.  Once this is in place the resurrection logging will work
 and the artifact logging that is piped into the gitlab pipeline (/logs) will work for in-depth forensics on the thread status. 
-The process_registry will continue to be used at the per process level (multi-threading supported), and a new 
+The process_registry will continue to be used at the per process level (multi-threading supported) internally,  and a new 
 aggregator_registry will aggregate all the process_registry ips into one registry so that it can be consumed by the global
 artifact logging in the gitlab pipeline. succesful_registry_ips, missing_registry_ips, failed_registry_ips, total_registry_ips
-and other logs will be created from this.
+and other logs will be created from this by the resurrection_monitor.
+The aggregate_registry will be consumed by resurrection_monitor_patch7c which will create
+the successful, failed,  missing and total log files in accordance with the status(tag) of each registry entry.
 
 
 ### Real-Time Aggregation Behavior
@@ -91,7 +90,7 @@ and other logs will be created from this.
 - Each process builds its own **`thread_registry`**, capturing install results for its threads.
 - Once the process completes, `run_test()` receives that `thread_registry` as part of the result.
 
-- As **each process completes**, its `thread_registry` is returned to the parent orchestrator.
+- As **each process completes**, its `thread_registry` is returned to the parent orchestrator.(run_test)
 - The orchestrator immediately calls `aggregate_registry.update(...)` for that process.
 - This means `aggregate_registry` is **built up progressively**, one process at a time — not waiting for all processes to finish.
 
@@ -113,62 +112,238 @@ the failures have been root cause defined).
 
 ### Detail on patch 7b to 7c migration requirements (from the last update):
 
-Resurrection registry snapshots are being overwritten per process, rather than accumulated across threads.
+Resurrection registry snapshots are being overwritten per process, rather than accumulated across processes
 That explains why `successful_registry_ips` only shows one IP per run — the last IP of the last process to complete. (In this
 simple test there was only 1 thread per process hence 1 IP being processed per process)
 
 #### Root Cause  
 
-- install_tomcat correctly tags each thread-level IP.
-- But resurrection_monitor, called per process (By tomcat_worker), rebuilds the `resurrection_registry` from scratch, clobbering prior thread outputs.
-- Even though each thread logs its IP, the final snapshot only contains one — the last thread executed in the last process to complete
+- install_tomcat correctly tags each thread-level IP called registry_entry
+- threaded_install correctly collects the thread-level registry into a process-level registry called thread_registry
+- run_test is called by tomcat_worker and run_test calls threaded_install. The problem is that for each process, the process_registry
+is being overwritten by the last process to run.
+- the resurrection_monitor only has the process_registry which does not contain the full list of threads in the execution run and thus 
+the files and logs that it creates are not correct
+- Even though each thread logs its IP, the final snapshot only contains only the thread IPs of the last process to run
+- an aggregator needs to be created in the run_test so that each call to threaded_install (thread_registry) at the process level is 
+aggregated into an aggregate_registry that has all the IPs (threads) for the entire execution run across all processes
+- the process_registry has to be deprecated for the aggregate_registry (even though the registries are still collected at the process
+level internally)
+- once the aggregate_registry is created by run_test the return of aggregate_registry to tomcat_worker() is then used as input into 
+the resurrection_monitor
+- At this point the resurrection_monitor has the full set of IPs for all threads in the execution run (across all proceses) and the logs
+and artifacts will be created correctly from this registry
 
-
-#### Patch7c Objective  
-
-- Implement **thread-level mini registries** (`thread_registry[ip] = {...}`).
-- Let **resurrection_monitor** sweep and aggregate those into the **process-level registry log**.
-- Perform full aggregation **post-run** across all processes via a registry collator (likely in the Python module, not CI).
-- Ghost net remains unchanged unless anomalies surface.
-
-
-Minimal Impact Strategy
-
-- ✅ Keeps resurrection_monitor mostly intact.
-- ✅ Preserve thread tagging logic and Patch7b’s forensic traces.
-- ✅ Defer performance cost until post-mortem aggregation.
-- ✅ Work seamlessly with the  Docker artifact export pipeline.
 
 
 #### High level summary of patch 7c
 
 - Per-thread registries to capture granular tagging inside `install_tomcat()`.
-- Per-process roll-up (within `tomcat_worker`) that avoids overwriting earlier thread data.
-- Resurrection monitor writes clean, aggregated `resurrection_registry_log_{pid}.json`.
-- No runtime penalty, since the big merge of all process level registries happens post-run.(will do in python and not gitlab CI)
+- Per-process collection of the threads in a process for a process level registry in threaded_install()
+- Aggregation of the process level registries in run_test (which calls threaded_install() per process)
+- Per-process roll-up (within `run_test`) using an aggregator that avoids overwriting earlier thread and process registry data.
+- From the aggregate_registry, resurrection monitor then writes clean, aggregated logs, json files and artifacts (to gitlab
+pipeline)
 
 
-Function summary of the changes:
 
-- `benchmark_ips`: untouched — sets the universe of IPs for resurrection attempts.
-- `install_tomcat`: tags each IP at the thread level into mini registries.
-- `resurrection_monitor`: aggregates those thread registries into `resurrection_registry_log_{pid}.json` per process.
-- *Next phase* (post-run): external Python module will:
-  - Sweep all `resurrection_registry_log_{pid}.json` files.
-  - Merge into a comprehensive runtime resurrection log.
-  - Classify into artifact buckets: success, missed, failed, total.
-  - Use clean export logic to feed downstream Docker pipeline.
+### Review of function flow
+
+The function flow is instrumental in understanding the design changes in the functions listed below.
+
+
+
+main() calls tomcat_worker_wrapper in the multi-processing context.  
+
+```
+##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+```
+
+
+tomcat_worker_wrapper() calls tomcat_worker()
+
+tomcat_worker_wrapper() is required for the main and process orchestration level logging
+
+
+
+
+tomcat_worker() calls threaded_install() at the process level through the run_test() function
+
+```
+process_registry = run_test("Tomcat Installation Threaded", threaded_install)
+```
+
+run_test calls threaded_install and threaded_install aggregates the registry_entry for each thread in the process
+and returns this as thread_registry for each process that calls it. 
+run_test is the ideal place to put the aggregate_registry which aggregates all the process_registry for each process
+
+
+the return in threaded_install is assigned to the process_registry which is the process level registry for all the threads in the
+process
+
+
+
+The threaded_install() at the process level, calls the install_tomcat() function through the ThreadPoolExecutor
+The ThreadPoolExecutor works on all the threads in the process using multi-threading by calling the install_tomcat per thread
+
+```
+with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+```
+
+
+
+install_tomcat() works at the individual thread level (per EC2 instance) using the registry_entry 
+
+
+
+
+
+### thread level, process level and the aggregator level registries:
+
+
+The registry_entry from install_tomcat() is returned to threaded_install() and threaded_install collects the registry_entry for
+each thread (multiple threads per process) into thread_registry
+
+
+
+threaded_install() returns the thread_registry (has all the threads in a process) to the calling function run_test() in tomcat_worker()
+This is the "result" used in the run_test function 
+
+```
+result = func(*args, **kwargs)
+```
+
+
+run_test then  aggregates the thread_registry for each process into aggregate_registry using: 
+
+```
+aggregate_registry.update(thread_registry)
+```
+
+The return at the end of run_test returns the aggregate_registry to the calling function tomcat_worker
+with the final "return aggregate_registry" at the end of run_test
+
+
+
+The tomcat_worker assigns aggregate_registry to the return of run_test. This is the registry for all the processes in the execution run
+
+```
+aggregate_registry = run_test("Tomcat Installation Threaded", threaded_install)
+```
+
+
+The aggregate_registry is used in the function call to resurrection_monitor_patch7c to classify registry_entries as
+successesful, missing, failed or total based on the tag (status) in the registry entry (thread level)
+It is also used to construct the artifact log files that will be published to the gitlab pipeline for download.
+It is also used to construct three types of .json files for ghost thread tracking
+
+These ip (thread) classifications from aggregate_registry will  be used in phase 3 for resurrection.
+
+```
+# registry threads with some sort of failure tag/status
+log_path = os.path.join(log_dir, f"resurrection_candidates_registry_{pid}.json")
+
+# registry threads that are missing from the list of total ips in the exeuction run (very rare because these are unclassified falures)
+ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
+
+# all of the registry IP entries in the execution run
+full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
+```
 
 
 
 
 ### Patch 7c (changes to resurrection_monitor() which is now resurrection_monitor_patch7c()
 
+
+
+
+
+
 ### changes to tomcat_worker()
+
+
+
+
+
 
 ### changes to threaded_install()
 
-### changes to install_tomat
+
+
+
+
+
+### changes to install_tomcat()
+
+
+
+
+### chnages to run_test()
+
+The aggregator is added to run_test(). This is the ideal place given the software design function flow above.
+
+```
+## This needs to be slightly modified for the patch7c to return the thread_registry from threaded_install
+## run test is invoked with func threaded_install and this now returns the thread_registry which will later 
+## be assigned proces_registry to be consumed by resurrection_monitor_patch7c
+
+def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+    delay = None
+    if random.random() < sample_probability:
+        delay = random.uniform(min_sample_delay, max_sample_delay)
+
+    with benchmark(test_name, sample_delay=delay):
+        result = func(*args, **kwargs)
+        #func(*args, **kwargs)
+
+    #return result
+
+
+    # Aggregation logic (only if result is a list of thread_registry dicts)
+    aggregate_registry = {}
+    if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
+        print("[TRACE][run_test] Entered run_test()")
+        for thread_registry in result:
+            print(f"[TRACE][run_test] thread_registry keys: {list(thread_registry.keys())}")
+            print(f"[TRACE][run_test] aggregate_registry BEFORE update: {len(aggregate_registry)}")
+            aggregate_registry.update(thread_registry)
+            print(f"[TRACE][run_test] aggregate_registry AFTER update: {len(aggregate_registry)}")
+
+        # ✅ Aggregation trace
+        print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
+        for uuid, entry in aggregate_registry.items():
+            if entry.get("status") == "install_success":
+                print(f"[TRACE] UUID {uuid} | IP: {entry.get('public_ip')} ✅")
+
+        # 🧪 Forensic validator: compare aggregate_registry IPs to benchmark_ips_artifact.log
+        try:
+            with open("logs/benchmark_ips_artifact.log") as f:
+                benchmark_ips = set(line.strip() for line in f if line.strip())
+        except FileNotFoundError:
+            benchmark_ips = set()
+            print("[WARN] benchmark_ips_artifact.log not found")
+        aggregated_ips = {
+            entry.get("public_ip")
+            for entry in aggregate_registry.values()
+            if entry.get("public_ip") is not None
+        }
+
+        missing_ips = benchmark_ips - aggregated_ips
+        extra_ips = aggregated_ips - benchmark_ips
+
+        print(f"[TRACE] Benchmark IPs: {len(benchmark_ips)} | Aggregated IPs: {len(aggregated_ips)}")
+        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
+        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
+
+    return result
+```
+
+
 
 
 
