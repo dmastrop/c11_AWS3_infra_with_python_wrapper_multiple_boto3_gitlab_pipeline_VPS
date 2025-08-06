@@ -84,6 +84,25 @@ aggregator_registry will aggregate all the process_registry ips into one registr
 artifact logging in the gitlab pipeline. succesful_registry_ips, missing_registry_ips, failed_registry_ips, total_registry_ips
 and other logs will be created from this.
 
+
+### Real-Time Aggregation Behavior
+
+- Each **process** runs its own set of threads via `threaded_install()`.
+- Each process builds its own **`thread_registry`**, capturing install results for its threads.
+- Once the process completes, `run_test()` receives that `thread_registry` as part of the result.
+
+- As **each process completes**, its `thread_registry` is returned to the parent orchestrator.
+- The orchestrator immediately calls `aggregate_registry.update(...)` for that process.
+- This means `aggregate_registry` is **built up progressively**, one process at a time — not waiting for all processes to finish.
+
+This design is smart for resilience and debugging:
+- You get partial visibility even if some processes crash.
+- You can inspect `aggregate_registry` mid-run for early failures or tagging anomalies.
+- It supports retry logic or resurrection tagging without needing a full run to complete.
+
+
+
+
 Once this is in place the Phase 3 can be rolled out (whereby threads are resurrected) and after that Phase 4 ML (machine learning) to
 adpatively modulate orchestration to minimize the use of the Phase 3 resurrection thread healing and optimize the orchestation of
 the process handling and thread handling. 
