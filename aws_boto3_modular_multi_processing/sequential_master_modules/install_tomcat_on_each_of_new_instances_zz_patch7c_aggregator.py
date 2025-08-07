@@ -496,7 +496,21 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
 
     # Aggregation logic (only if result is a list of thread_registry dicts)
     aggregate_registry = {}
-    if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
+
+
+
+    # So the threaded_isntall is returning a dict, i.e. a single dict so the logic needs to handle a single dict
+    # IF it is a list of dicts (dict) then the logic below will also integrate these registry entries as weill into aggregate_registry
+    if isinstance(result, dict):
+        print("[TRACE][run_test] Detected single dict result")
+        aggregate_registry.update(result)
+
+    elif isinstance(result, list):
+        print("[TRACE][run_test] Detected list of dicts result")
+        for thread_registry in result:
+            aggregate_registry.update(thread_registry)
+
+    #if isinstance(result, list):  # assuming threaded_install returns a list of thread_registry dicts
         print("[TRACE][run_test] Entered run_test()")
         for thread_registry in result:
             print(f"[TRACE][run_test] thread_registry keys: {list(thread_registry.keys())}")
