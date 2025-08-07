@@ -141,10 +141,15 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_zpatch7c.py")
 
-#### THIS IS THE MODULE2 SCRIPT with patch7c and the aggregator
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_aggregator.py")
+#### THIS IS THE MODULE2 SCRIPT with patch7c and the aggregator in run_test (inline). This does not work as the processes do NOT
+#### share memory
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_aggregator.py")
 
+
+#### THIS IS THE MODULE2 SCRIPT with patc7c and post execution process level aggregator
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_USE.py")
 
 
 ## modules 3-11:
