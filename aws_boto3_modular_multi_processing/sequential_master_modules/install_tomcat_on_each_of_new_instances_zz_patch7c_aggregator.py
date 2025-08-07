@@ -485,8 +485,13 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
     with benchmark(test_name, sample_delay=delay):
         result = func(*args, **kwargs)
         #func(*args, **kwargs)
+        result = func(*args, **kwargs)
+        print(f"[TRACE][run_test] func returned type: {type(result)}")
+        # need to determine what is being returned by func which is threaded_install in this case so that 
+        # if isinstance(result, list): loop below is executed.
+   
 
-    #return result
+    print("[TRACE][run_test] Starting aggregator logic")
 
 
     # Aggregation logic (only if result is a list of thread_registry dicts)
