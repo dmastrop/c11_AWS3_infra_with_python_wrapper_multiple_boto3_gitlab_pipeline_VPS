@@ -494,10 +494,6 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
     print("[TRACE][run_test] Starting aggregator logic")
 
 
-    # Aggregation logic (only if result is a list of thread_registry dicts)
-    aggregate_registry = {}
-
-
 
     # So the threaded_isntall is returning a dict, i.e. a single dict so the logic needs to handle a single dict
     # IF it is a list of dicts (dict) then the logic below will also integrate these registry entries as weill into aggregate_registry
