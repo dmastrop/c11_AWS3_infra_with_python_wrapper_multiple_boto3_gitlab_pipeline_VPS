@@ -483,7 +483,7 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         delay = random.uniform(min_sample_delay, max_sample_delay)
 
     with benchmark(test_name, sample_delay=delay):
-        result = func(*args, **kwargs)
+    
         #func(*args, **kwargs)
         result = func(*args, **kwargs)
         print(f"[TRACE][run_test] func returned type: {type(result)}")
