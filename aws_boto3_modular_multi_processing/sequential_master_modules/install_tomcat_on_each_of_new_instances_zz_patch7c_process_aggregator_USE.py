@@ -489,67 +489,78 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         print(f"[TRACE][run_test] func returned type: {type(result)}")
         # need to determine what is being returned by func which is threaded_install in this case so that 
         # if isinstance(result, list): loop below is executed.
-   
-
-    print("[TRACE][run_test] Starting aggregator logic")
-
+        # result is the return from threaded_install which is thread_registry the process level registry. If multi-threaded there
+        # should be an entry for each thread/IP/EC2 instance in the registry.
 
 
-    # So the threaded_isntall is returning a dict, i.e. a single dict so the logic needs to handle a single dict
-    # IF it is a list of dicts (dict) then the logic below will also integrate these registry entries as weill into aggregate_registry
+## comment out the inline run_test aggregator. This won't work. The processes have their own memory space. Not shared. So even this
+## aggregate_registry is overwritten with each sucessive process that runs the run_test. So it never holds more than the last process
+## to execute in the end of the execution run. Alternatives are a post execution aggregator (will do this) or using a Manager().dict()`
+## But Manager dict uses IPC between processes and that creates a lot of overhead. It is also hard to debug and can get mutations in 
+## the dictionary if a lot of processes access it at the same time.   
+## Note that there is still a return result at the very bottom that returns the thread_registy for each process that runs this run_test
+## These process level registries will be aggregated post execution with the function aggregate_process_registries() a global functino
+## defined at the top of this module ^^^^^^.
 
-
-    aggregate_registry = {}
-
-    print("[TRACE][run_test] Entered run_test()")
-
-    if isinstance(result, dict):
-        print("[TRACE][run_test] Detected single dict result")
-        print(f"[TRACE][run_test] aggregate_registry BEFORE update: {len(aggregate_registry)}")
-        aggregate_registry.update(result)
-        print(f"[TRACE][run_test] aggregate_registry AFTER update: {len(aggregate_registry)}")
-        print(f"[TRACE][run_test] Keys: {list(aggregate_registry.keys())}")
-        for uuid, entry in aggregate_registry.items():
-            print(f"[TRACE][run_test] UUID {uuid} | IP: {entry.get('public_ip')} | Status: {entry.get('status')}")
-
-    elif isinstance(result, list):
-        print("[TRACE][run_test] Detected list of dicts result")
-        for thread_registry in result:
-            print(f"[TRACE][run_test] thread_registry keys: {list(thread_registry.keys())}")
-            print(f"[TRACE][run_test] aggregate_registry BEFORE update: {len(aggregate_registry)}")
-            aggregate_registry.update(thread_registry)
-            print(f"[TRACE][run_test] aggregate_registry AFTER update: {len(aggregate_registry)}")
-            print(f"[TRACE][run_test] Keys: {list(aggregate_registry.keys())}")
-
-
-
-        # ✅ Aggregation trace
-        print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
-        for uuid, entry in aggregate_registry.items():
-            if entry.get("status") == "install_success":
-                print(f"[TRACE] UUID {uuid} | IP: {entry.get('public_ip')} ✅")
-
-        # 🧪 Forensic validator: compare aggregate_registry IPs to benchmark_ips_artifact.log
-        try:
-            with open("logs/benchmark_ips_artifact.log") as f:
-                benchmark_ips = set(line.strip() for line in f if line.strip())
-        except FileNotFoundError:
-            benchmark_ips = set()
-            print("[WARN] benchmark_ips_artifact.log not found")
-
-        aggregated_ips = {
-            entry.get("public_ip")
-            for entry in aggregate_registry.values()
-            if entry.get("public_ip") is not None
-        }
-
-        missing_ips = benchmark_ips - aggregated_ips
-        extra_ips = aggregated_ips - benchmark_ips
-
-        print(f"[TRACE] Benchmark IPs: {len(benchmark_ips)} | Aggregated IPs: {len(aggregated_ips)}")
-        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
-        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
-
+#    print("[TRACE][run_test] Starting aggregator logic")
+#
+#
+#
+#    # So the threaded_isntall is returning a dict, i.e. a single dict so the logic needs to handle a single dict
+#    # IF it is a list of dicts (dict) then the logic below will also integrate these registry entries as weill into aggregate_registry
+#
+#
+#    aggregate_registry = {}
+#
+#    print("[TRACE][run_test] Entered run_test()")
+#
+#    if isinstance(result, dict):
+#        print("[TRACE][run_test] Detected single dict result")
+#        print(f"[TRACE][run_test] aggregate_registry BEFORE update: {len(aggregate_registry)}")
+#        aggregate_registry.update(result)
+#        print(f"[TRACE][run_test] aggregate_registry AFTER update: {len(aggregate_registry)}")
+#        print(f"[TRACE][run_test] Keys: {list(aggregate_registry.keys())}")
+#        for uuid, entry in aggregate_registry.items():
+#            print(f"[TRACE][run_test] UUID {uuid} | IP: {entry.get('public_ip')} | Status: {entry.get('status')}")
+#
+#    elif isinstance(result, list):
+#        print("[TRACE][run_test] Detected list of dicts result")
+#        for thread_registry in result:
+#            print(f"[TRACE][run_test] thread_registry keys: {list(thread_registry.keys())}")
+#            print(f"[TRACE][run_test] aggregate_registry BEFORE update: {len(aggregate_registry)}")
+#            aggregate_registry.update(thread_registry)
+#            print(f"[TRACE][run_test] aggregate_registry AFTER update: {len(aggregate_registry)}")
+#            print(f"[TRACE][run_test] Keys: {list(aggregate_registry.keys())}")
+#
+#
+#
+#        # ✅ Aggregation trace
+#        print(f"[TRACE][run_test] Aggregate registry has {len(aggregate_registry)} entries")
+#        for uuid, entry in aggregate_registry.items():
+#            if entry.get("status") == "install_success":
+#                print(f"[TRACE] UUID {uuid} | IP: {entry.get('public_ip')} ✅")
+#
+#        # 🧪 Forensic validator: compare aggregate_registry IPs to benchmark_ips_artifact.log
+#        try:
+#            with open("logs/benchmark_ips_artifact.log") as f:
+#                benchmark_ips = set(line.strip() for line in f if line.strip())
+#        except FileNotFoundError:
+#            benchmark_ips = set()
+#            print("[WARN] benchmark_ips_artifact.log not found")
+#
+#        aggregated_ips = {
+#            entry.get("public_ip")
+#            for entry in aggregate_registry.values()
+#            if entry.get("public_ip") is not None
+#        }
+#
+#        missing_ips = benchmark_ips - aggregated_ips
+#        extra_ips = aggregated_ips - benchmark_ips
+#
+#        print(f"[TRACE] Benchmark IPs: {len(benchmark_ips)} | Aggregated IPs: {len(aggregated_ips)}")
+#        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
+#        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
+#
     return result
 
 
