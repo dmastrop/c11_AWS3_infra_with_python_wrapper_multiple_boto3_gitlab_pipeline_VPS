@@ -35,7 +35,7 @@ from datetime import datetime
 import psutil
 import re # this is absolutely required for all the stuff we are doing in the resurrection_monitor functino below!!!!!!
 
-## --- COMMENTED OUT FOR DISK-HANDOFF WORKFLOW ---
+## --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
 ## all_process_registries is NOT shared between processes and this approach does not work 
 
 ### This is the global all_process_registries to collect all the process_registries in the tomcat_worker into one dict 
@@ -72,7 +72,25 @@ import re # this is absolutely required for all the stuff we are doing in the re
 #
 #    return final_registry # this is final_aggregate_execution_run_registry.json in the artifact logs.
 #
-#
+
+
+## New aggregate_process_registries for write-to-disk
+## Aggregates a list of process-level registries into a single unified registry.
+#  Each entry in all_process_registries is a dict mapping thread_id -> registry_data from the calling function main()
+#  
+def aggregate_process_registries(all_process_registries):
+    final_registry = {}
+    for process_registry in all_process_registries:
+        for thread_uuid, entry in process_registry.items():
+            if thread_uuid in final_registry:
+                raise ValueError(f"Duplicate thread_id: {thread_uuid}")
+            final_registry[thread_uuid] = entry
+    return final_registry
+
+
+
+
+
 ### this is the summarize_registry(final_registry) function.
 ### this creates stats of the status/tag of each registry entry (thread/IP instance) 
 ### this will be modified as more tags are added during patch8 to the resurrection_monitor_patch7c() function that does a lot of
@@ -100,6 +118,43 @@ import re # this is absolutely required for all the stuff we are doing in the re
 #
 #    return summary
 #
+
+
+
+
+
+## New summarize_registry for write-to-disk
+## final_registry is from the call below in main
+## final_registry = aggregate_process_registries(registries)
+## summary = summarize_registry(final_registry)
+## aggregate_process_registries above flattens out process dict to a dict of thread id registry entries
+
+def summarize_registry(final_registry):
+    summary = {
+        "total": len(final_registry),
+        "install_success": 0,
+        "gatekeeper_resurrect": 0,
+        "watchdog_timeout": 0,
+        "no_tags": 0,
+    }
+    for entry in final_registry.values():
+        if entry.get("install_success"):
+            summary["install_success"] += 1
+        if entry.get("gatekeeper_resurrect"):
+            summary["gatekeeper_resurrect"] += 1
+        if entry.get("watchdog_timeout"):
+            summary["watchdog_timeout"] += 1
+        # count entries that lack all outcome tags
+        if not any(tag in entry for tag in [
+            "install_success",
+            "gatekeeper_resurrect",
+            "watchdog_timeout"
+        ]):
+            summary["no_tags"] += 1
+    return summary
+
+
+
 
 
 
@@ -2980,7 +3035,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-#    ## --- COMMENTED OUT FOR DISK-HANDOFF WORKFLOW ---
+#    ## --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
 #    ## There is a problem with all_process_registries. It is NOT shared between isolated process memory and need to do a 
 #    ## write-to-disk approach.
 #    ##
@@ -2999,6 +3054,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #
 
 
+## write-to-disk aggregator code in tomcat_worker
+## This writes the current process call on tomcat_worker process_registry to disk and saves it as
+## "/aws_EC2/logs/process_registry_{pid}_{tag}.json". This will later be aggregated with the other process process_registry in main()
+## as "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
+## make sure to import multiprocessing, json, os at top of this module.
+
+    os.makedirs("/aws_EC2/logs", exist_ok=True)                # ensure directory exists 
+    pid = multiprocessing.current_process().pid
+    tag = uuid.uuid4().hex[:8]
+    out = f"/aws_EC2/logs/process_registry_{pid}_{tag}.json"
+    with open(out, "w") as f:
+        json.dump(process_registry, f, indent=2)
+    print(f"[TRACE] Wrote process registry to {out}")
 
 
 
@@ -3504,21 +3572,49 @@ def main():
 
 
 
-       # ##  --- COMMENTED OUT FOR DISK-HANDOFF WORKFLOW ---
-       # ## The main() based aggregator does not work because the global all_process_registries is not shared across process
-       # ## memory so this does not work for m mulit-processing. Need to use write-to-disk implementation
+        # ##  --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
+        # ## The main() based aggregator does not work because the global all_process_registries is not shared across process
+        # ## memory so this does not work for m mulit-processing. Need to use write-to-disk implementation
 
-       # # ✅ Place aggregation block here
-       # final_registry = aggregate_process_registries(all_process_registries)
-       # summary = summarize_registry(final_registry)
+        # # ✅ Place aggregation block here
+        # final_registry = aggregate_process_registries(all_process_registries)
+        # summary = summarize_registry(final_registry)
 
-       # with open("/aws_EC2/logs/final_aggregate_execution_run_registry.json", "w") as f:
-       #     json.dump(final_registry, f, indent=2)
+        # with open("/aws_EC2/logs/final_aggregate_execution_run_registry.json", "w") as f:
+        #     json.dump(final_registry, f, indent=2)
 
-       # print("[TRACE][aggregator] Final registry summary:")
-       # for tag, count in summary.items():
-       #     print(f"  {tag}: {count}")
+        # print("[TRACE][aggregator] Final registry summary:")
+        # for tag, count in summary.items():
+        #     print(f"  {tag}: {count}")
 
+
+
+
+       # write-to-disk code in main() to aggregate the per process JSON in tomcat_worker into registries
+       # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
+       # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
+
+       # 1. Load every per-process JSON that was created in tomcat_worker into registries
+        registries = []
+        for fname in os.listdir("/aws_EC2/logs"):
+            if fname.startswith("process_registry_") and fname.endswith(".json"):
+                path = os.path.join("/aws_EC2/logs", fname)
+                with open(path) as f:
+                    registries.append(json.load(f))
+
+        # 2. Flatten & summarize registries using the call to aggregate_process_registries
+        final_registry = aggregate_process_registries(registries)
+        summary = summarize_registry(final_registry)
+
+        # 3. Persist final_registry to final_aggregate_execution_run_registry.json and print the summary
+        # to gitlab console.
+        agg_path = "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
+        with open(agg_path, "w") as f:
+            json.dump(final_registry, f, indent=2)
+
+        print("[TRACE][aggregator] Final registry summary:")
+        for tag, count in summary.items():
+            print(f"  {tag}: {count}")
 
 
 
