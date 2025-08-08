@@ -35,69 +35,71 @@ from datetime import datetime
 import psutil
 import re # this is absolutely required for all the stuff we are doing in the resurrection_monitor functino below!!!!!!
 
+## --- COMMENTED OUT FOR DISK-HANDOFF WORKFLOW ---
+## all_process_registries is NOT shared between processes and this approach does not work 
 
-## This is the global all_process_registries to collect all the process_registries in the tomcat_worker into one dict 
-## this dict will be further processed by aggregate_process_registries (flatten it out to thread registry entries in the dict)
-## this final_registry will then be fed into summarize_registry below (in tomcat_worker as well) to collect stats on the tags
-## (status) in each of the thread registry entries. We can also export the final_registry to create the 
-## final_aggregate_execution_run_registry.json file. This is the file that will be compared to the benchmark_ips_artifact.log
-## (the gold standard) to determine if there are any missing ghost threads. All the other threads will be tagged with a 
-## failure status or success status (failed + success = total)
-
-all_process_registries = []
-
-
-## This is the registry aggregator function. This is required since the setup is multi-processed and the processes do not share 
-## memory space. So the process_registry is created in run_test as thread_registry returned from threaded_install, and this is
-## called process_registry in tomcat_worker.  We need to save each process process_registry as each process calls run_test in
-## the tomcat_worker function, because subsequent processes will overwrite the previous process process_registry(memory not shared)
-## tomcat_worker will save them to all_process_registries dict 
-## then tomcat_worker will call this function below to flatten out the dict of x proceseses to a list of all the thread registries
-## this final_registry wll become the final_aggregate_exection_run_registry.json file for phase3 resurrection
-
-def aggregate_process_registries(all_process_registries):
-    """
-    Aggregates a list of process-level registries into a single unified registry.
-    Each entry in all_process_registries is a dict mapping thread_id -> registry_data.
-    """
-    final_registry = {}
-
-    for process_registry in all_process_registries:
-        for thread_id, registry_data in process_registry.items():
-            if thread_id in final_registry:
-                raise ValueError(f"Duplicate thread_id detected: {thread_id}")
-            final_registry[thread_id] = registry_data
-
-    return final_registry # this is final_aggregate_execution_run_registry.json in the artifact logs.
-
-
-## this is the summarize_registry(final_registry) function.
-## this creates stats of the status/tag of each registry entry (thread/IP instance) 
-## this will be modified as more tags are added during patch8 to the resurrection_monitor_patch7c() function that does a lot of
-## the tagging along with the gatekeeper function
-def summarize_registry(final_registry):
-    summary = {
-        "total": len(final_registry),
-        "install_success": 0,
-        "gatekeeper_resurrect": 0,
-        "watchdog_timeout": 0,
-        "missing_tags": 0,
-    }
-
-    for entry in final_registry.values():
-        if entry.get("install_success"):
-            summary["install_success"] += 1
-        if entry.get("gatekeeper_resurrect"):
-            summary["gatekeeper_resurrect"] += 1
-        if entry.get("watchdog_timeout"):
-            summary["watchdog_timeout"] += 1
-
-        # Count entries missing any of the key tags
-        if not any(tag in entry for tag in ["install_success", "gatekeeper_resurrect", "watchdog_timeout"]):
-            summary["missing_tags"] += 1
-
-    return summary
-
+### This is the global all_process_registries to collect all the process_registries in the tomcat_worker into one dict 
+### this dict will be further processed by aggregate_process_registries (flatten it out to thread registry entries in the dict)
+### this final_registry will then be fed into summarize_registry below (in tomcat_worker as well) to collect stats on the tags
+### (status) in each of the thread registry entries. We can also export the final_registry to create the 
+### final_aggregate_execution_run_registry.json file. This is the file that will be compared to the benchmark_ips_artifact.log
+### (the gold standard) to determine if there are any missing ghost threads. All the other threads will be tagged with a 
+### failure status or success status (failed + success = total)
+#
+#all_process_registries = []
+#
+#
+### This is the registry aggregator function. This is required since the setup is multi-processed and the processes do not share 
+### memory space. So the process_registry is created in run_test as thread_registry returned from threaded_install, and this is
+### called process_registry in tomcat_worker.  We need to save each process process_registry as each process calls run_test in
+### the tomcat_worker function, because subsequent processes will overwrite the previous process process_registry(memory not shared)
+### tomcat_worker will save them to all_process_registries dict 
+### then tomcat_worker will call this function below to flatten out the dict of x proceseses to a list of all the thread registries
+### this final_registry wll become the final_aggregate_exection_run_registry.json file for phase3 resurrection
+#
+#def aggregate_process_registries(all_process_registries):
+#    """
+#    Aggregates a list of process-level registries into a single unified registry.
+#    Each entry in all_process_registries is a dict mapping thread_id -> registry_data.
+#    """
+#    final_registry = {}
+#
+#    for process_registry in all_process_registries:
+#        for thread_id, registry_data in process_registry.items():
+#            if thread_id in final_registry:
+#                raise ValueError(f"Duplicate thread_id detected: {thread_id}")
+#            final_registry[thread_id] = registry_data
+#
+#    return final_registry # this is final_aggregate_execution_run_registry.json in the artifact logs.
+#
+#
+### this is the summarize_registry(final_registry) function.
+### this creates stats of the status/tag of each registry entry (thread/IP instance) 
+### this will be modified as more tags are added during patch8 to the resurrection_monitor_patch7c() function that does a lot of
+### the tagging along with the gatekeeper function
+#def summarize_registry(final_registry):
+#    summary = {
+#        "total": len(final_registry),
+#        "install_success": 0,
+#        "gatekeeper_resurrect": 0,
+#        "watchdog_timeout": 0,
+#        "missing_tags": 0,
+#    }
+#
+#    for entry in final_registry.values():
+#        if entry.get("install_success"):
+#            summary["install_success"] += 1
+#        if entry.get("gatekeeper_resurrect"):
+#            summary["gatekeeper_resurrect"] += 1
+#        if entry.get("watchdog_timeout"):
+#            summary["watchdog_timeout"] += 1
+#
+#        # Count entries missing any of the key tags
+#        if not any(tag in entry for tag in ["install_success", "gatekeeper_resurrect", "watchdog_timeout"]):
+#            summary["missing_tags"] += 1
+#
+#    return summary
+#
 
 
 
@@ -2978,19 +2980,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
-    ## This is the aggregator code. This will aggregate the process level registry(process_registry) to all_process_registries
-    ## all_process_registries will then be fed into aggregate_process_registries global function to flatten it out to a dict
-    ## of thread registry entires (abstracted from processes). This will result in final_registry which is used to create the
-    ## final_aggregate_execution_run_registry.json for the complete runtime registry status(tags) of all the threads that were
-    ## run in the execution run. final_registry will also be fed into summarize_registry global function to create stats and classify
-    ## the thread registry values as successful, failed, total = successful + failed and missing (delta between benchmark_ips_artifact.log
-    ## and total.  benchmark_ips_artifact.log is the golden standard from the main and process orchestration layer and will have 
-    ## every single IP (thread) that was created (except for very rare circumstances with AWS EC2 instances; these will be dealt
-    ## with later.
-    import copy
-    all_process_registries.append(copy.deepcopy(process_registry))
-
+#    ## --- COMMENTED OUT FOR DISK-HANDOFF WORKFLOW ---
+#    ## There is a problem with all_process_registries. It is NOT shared between isolated process memory and need to do a 
+#    ## write-to-disk approach.
+#    ##
+#    ## This is the aggregator code. This will aggregate the process level registry(process_registry) to all_process_registries
+#    ## all_process_registries will then be fed into aggregate_process_registries global function to flatten it out to a dict
+#    ## of thread registry entires (abstracted from processes). This will result in final_registry which is used to create the
+#    ## final_aggregate_execution_run_registry.json for the complete runtime registry status(tags) of all the threads that were
+#    ## run in the execution run. final_registry will also be fed into summarize_registry global function to create stats and classify
+#    ## the thread registry values as successful, failed, total = successful + failed and missing (delta between benchmark_ips_artifact.log
+#    ## and total.  benchmark_ips_artifact.log is the golden standard from the main and process orchestration layer and will have 
+#    ## every single IP (thread) that was created (except for very rare circumstances with AWS EC2 instances; these will be dealt
+#    ## with later.
+#
+#    import copy
+#    all_process_registries.append(copy.deepcopy(process_registry))
+#
 
 
 
@@ -3211,7 +3217,7 @@ def start_inter_test_logging(logger, total_estimated_runtime):
 
 
 
-
+########################################################################################################################
 #### REFACTORED main() to support multi-processing with pooling to deal with hyperscaling case
 #### note that this is still based upon Model 2 from the original main() below that does not have the pooling with
 #### the multiprocessing
@@ -3498,17 +3504,23 @@ def main():
 
 
 
+       # ##  --- COMMENTED OUT FOR DISK-HANDOFF WORKFLOW ---
+       # ## The main() based aggregator does not work because the global all_process_registries is not shared across process
+       # ## memory so this does not work for m mulit-processing. Need to use write-to-disk implementation
 
-        # ✅ Place aggregation block here
-        final_registry = aggregate_process_registries(all_process_registries)
-        summary = summarize_registry(final_registry)
+       # # ✅ Place aggregation block here
+       # final_registry = aggregate_process_registries(all_process_registries)
+       # summary = summarize_registry(final_registry)
 
-        with open("/aws_EC2/logs/final_aggregate_execution_run_registry.json", "w") as f:
-            json.dump(final_registry, f, indent=2)
+       # with open("/aws_EC2/logs/final_aggregate_execution_run_registry.json", "w") as f:
+       #     json.dump(final_registry, f, indent=2)
 
-        print("[TRACE][aggregator] Final registry summary:")
-        for tag, count in summary.items():
-            print(f"  {tag}: {count}")
+       # print("[TRACE][aggregator] Final registry summary:")
+       # for tag, count in summary.items():
+       #     print(f"  {tag}: {count}")
+
+
+
 
 
         # timing and cleanup
