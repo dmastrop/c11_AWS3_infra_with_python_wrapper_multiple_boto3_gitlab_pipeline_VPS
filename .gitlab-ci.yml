@@ -111,8 +111,12 @@ deploy:
       - logs/resurrection_ghost_missing_*.json
       
         #- logs/resurrection_process_registry_snapshot_*.json
-        # the next log is the first log with the new aggregator (post execution)
+        # write-to-disk aggregator json files. The log files above are derived from these
       - logs/final_aggregate_execution_run_registry.json
+      - logs/process_registry_*.json  
+        
+        
+        
         #- logs/resurrection_registry_log_*.json
         #- logs/resurrection_ghost_log_*.json
           
