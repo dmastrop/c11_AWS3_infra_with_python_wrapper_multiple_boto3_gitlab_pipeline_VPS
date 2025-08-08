@@ -3484,6 +3484,25 @@ def main():
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
     finally:
+        ### Insert the aggregator code here for the final aggregation in main() after the multiprocessing.Pool
+        ### This ensures that the final aggregation file is completed only when all the processes have completed using 
+        ### tomcat worker to process the threads. This includes the pooled processes done after the initial desired_Count pools are
+        ### done
+
+        # ✅ Place aggregation block here
+        final_registry = aggregate_process_registries(all_process_registries)
+        summary = summarize_registry(final_registry)
+
+        with open("/aws_EC2/logs/final_aggregate_execution_run_registry.json", "w") as f:
+            json.dump(final_registry, f, indent=2)
+
+        print("[TRACE][aggregator] Final registry summary:")
+        for tag, count in summary.items():
+            print(f"  {tag}: {count}")
+
+
+        # timing and cleanup
+
         total_time = time.time() - start_time
         logger.info("[MAIN] All chunks have been processed.")
         logger.info(f"[MAIN] Total execution time for all chunks of chunk_size: {total_time:.2f} seconds")
