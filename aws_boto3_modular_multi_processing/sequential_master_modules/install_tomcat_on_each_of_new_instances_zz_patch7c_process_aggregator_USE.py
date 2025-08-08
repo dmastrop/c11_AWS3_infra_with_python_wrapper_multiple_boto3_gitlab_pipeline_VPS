@@ -36,6 +36,15 @@ import psutil
 import re # this is absolutely required for all the stuff we are doing in the resurrection_monitor functino below!!!!!!
 
 
+## This is the global all_process_registries to collect all the process_registries in the tomcat_worker into one dict 
+## this dict will be further processed by aggregate_process_registries (flatten it out to thread registry entries in the dict)
+## this final_registry will then be fed into summarize_registry below (in tomcat_worker as well) to collect stats on the tags
+## (status) in each of the thread registry entries. We can also export the final_registry to create the 
+## final_aggregate_execution_run_registry.json file. This is the file that will be compared to the benchmark_ips_artifact.log
+## (the gold standard) to determine if there are any missing ghost threads. All the other threads will be tagged with a 
+## failure status or success status (failed + success = total)
+
+all_process_registries = []
 
 
 ## This is the registry aggregator function. This is required since the setup is multi-processed and the processes do not share 
@@ -2966,6 +2975,28 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     print(f"[TRACE][tomcat_worker] Process registry returned with {len(process_registry)} entries")
     for ip, data in process_registry.items():
         print(f"[TRACE][tomcat_worker] Registry entry [{ip}]: {data}")
+
+
+
+
+    ## This is the aggregator code. This will aggregate the process level registry(process_registry) to all_process_registries
+    ## all_process_registries will then be fed into aggregate_process_registries global function to flatten it out to a dict
+    ## of thread registry entires (abstracted from processes). This will result in final_registry which is used to create the
+    ## final_aggregate_execution_run_registry.json for the complete runtime registry status(tags) of all the threads that were
+    ## run in the execution run. final_registry will also be fed into summarize_registry global function to create stats and classify
+    ## the thread registry values as successful, failed, total = successful + failed and missing (delta between benchmark_ips_artifact.log
+    ## and total.  benchmark_ips_artifact.log is the golden standard from the main and process orchestration layer and will have 
+    ## every single IP (thread) that was created (except for very rare circumstances with AWS EC2 instances; these will be dealt
+    ## with later.
+    import copy
+    all_process_registries.append(copy.deepcopy(process_registry))
+
+
+
+
+
+
+
 
 
 

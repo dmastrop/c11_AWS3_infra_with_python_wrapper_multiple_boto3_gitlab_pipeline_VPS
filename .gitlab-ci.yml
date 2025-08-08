@@ -96,6 +96,7 @@ deploy:
   artifacts:
     paths:
       - logs/
+      
       - logs/benchmark_combined.log
       - logs/benchmark_combined_runtime.log
       - logs/total_registry_ips_artifact.log
@@ -103,10 +104,15 @@ deploy:
       - logs/missing_registry_ips_artifact.log
       - logs/successful_registry_ips_artifact.log
       - logs/failed_registry_ips_artifact.log
+      
       - logs/patch7_summary_*.log
+      
       - logs/resurrection_candidates_registry_*.json
       - logs/resurrection_ghost_missing_*.json
-      - logs/resurrection_process_registry_snapshot_*.json
+      
+        #- logs/resurrection_process_registry_snapshot_*.json
+        # the next log is the first log with the new aggregator (post execution)
+      - logs/final_aggregate_execution_run_registry.json
         #- logs/resurrection_registry_log_*.json
         #- logs/resurrection_ghost_log_*.json
           
