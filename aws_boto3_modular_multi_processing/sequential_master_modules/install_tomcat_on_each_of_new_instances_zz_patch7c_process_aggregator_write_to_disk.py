@@ -3489,6 +3489,16 @@ def main():
         ### tomcat worker to process the threads. This includes the pooled processes done after the initial desired_Count pools are
         ### done
 
+
+        # TRACE on all_process_registries
+        if not all_process_registries:
+            print("[TRACE] all_process_registries is empty in main()")
+        else:
+            print(f"[TRACE] all_process_registries contents: {all_process_registries}")
+
+
+
+
         # ✅ Place aggregation block here
         final_registry = aggregate_process_registries(all_process_registries)
         summary = summarize_registry(final_registry)
