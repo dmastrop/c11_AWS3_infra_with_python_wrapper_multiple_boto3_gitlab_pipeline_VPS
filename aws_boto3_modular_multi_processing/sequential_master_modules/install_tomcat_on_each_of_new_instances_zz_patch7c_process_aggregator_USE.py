@@ -38,6 +38,58 @@ import re # this is absolutely required for all the stuff we are doing in the re
 
 
 
+## This is the registry aggregator function. This is required since the setup is multi-processed and the processes do not share 
+## memory space. So the process_registry is created in run_test as thread_registry returned from threaded_install, and this is
+## called process_registry in tomcat_worker.  We need to save each process process_registry as each process calls run_test in
+## the tomcat_worker function, because subsequent processes will overwrite the previous process process_registry(memory not shared)
+## tomcat_worker will save them to all_process_registries dict 
+## then tomcat_worker will call this function below to flatten out the dict of x proceseses to a list of all the thread registries
+## this final_registry wll become the final_aggregate_exection_run_registry.json file for phase3 resurrection
+
+def aggregate_process_registries(all_process_registries):
+    """
+    Aggregates a list of process-level registries into a single unified registry.
+    Each entry in all_process_registries is a dict mapping thread_id -> registry_data.
+    """
+    final_registry = {}
+
+    for process_registry in all_process_registries:
+        for thread_id, registry_data in process_registry.items():
+            if thread_id in final_registry:
+                raise ValueError(f"Duplicate thread_id detected: {thread_id}")
+            final_registry[thread_id] = registry_data
+
+    return final_registry # this is final_aggregate_execution_run_registry.json in the artifact logs.
+
+
+## this is the summarize_registry(final_registry) function.
+## this creates stats of the status/tag of each registry entry (thread/IP instance) 
+## this will be modified as more tags are added during patch8 to the resurrection_monitor_patch7c() function that does a lot of
+## the tagging along with the gatekeeper function
+def summarize_registry(final_registry):
+    summary = {
+        "total": len(final_registry),
+        "install_success": 0,
+        "gatekeeper_resurrect": 0,
+        "watchdog_timeout": 0,
+        "missing_tags": 0,
+    }
+
+    for entry in final_registry.values():
+        if entry.get("install_success"):
+            summary["install_success"] += 1
+        if entry.get("gatekeeper_resurrect"):
+            summary["gatekeeper_resurrect"] += 1
+        if entry.get("watchdog_timeout"):
+            summary["watchdog_timeout"] += 1
+
+        # Count entries missing any of the key tags
+        if not any(tag in entry for tag in ["install_success", "gatekeeper_resurrect", "watchdog_timeout"]):
+            summary["missing_tags"] += 1
+
+    return summary
+
+
 
 
 ## This is the wrapper function for resurrection_monitor_patch7c() to debug the issues that this is having
