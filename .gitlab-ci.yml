@@ -96,26 +96,34 @@ deploy:
   artifacts:
     paths:
       - logs/
+      - logs/main_*.log  # top elve orchestration level stats for entire execution
+      - logs/benchmark_*.log  # process level orchestration level stats logs 
+      - logs/benchmark_combined.log  # this is the orchestration level logging of all the benchmark_*.logs (process level stats). This is created post execution in gitlab-ci.yml (seea above)
+
+      - logs/benchmark_combined_runtime.log  # this is the python run time created benchmark_combined stats log created from the benchmark_*.log pid logs that are created during run time.  
       
-      - logs/benchmark_combined.log
-      - logs/benchmark_combined_runtime.log
-      - logs/total_registry_ips_artifact.log
-      - logs/benchmark_ips_artifact.log
+      - logs/benchmark_ips_artifact.log  # this is the GOLD standard by which to compare the runtime registires to for missing, failed, successful and total (in addtion to scanning the tags/status)
+
+      - logs/total_registry_ips_artifact.log  # stats created from the final_aggregate_execution_run_registry.json registry. THese are the actual registry entries, not stats. Same for the next 3 logs as well.
       - logs/missing_registry_ips_artifact.log
       - logs/successful_registry_ips_artifact.log
       - logs/failed_registry_ips_artifact.log
       
-      - logs/patch7_summary_*.log
+      - logs/patch7_summary_*.log # this is for the per process logging in resurrection_monitor_patch7c. This is completely separate from the orchestration level logging and this is used for forensics and debugging.
       
+        # these are process level logs from the resurrection_montior_patch7c(). These are actual registry entries for resurrection candidates for phase3 implementation. Ghosts are missing when compared to GOLD standard and do not have standard failure tags  
       - logs/resurrection_candidates_registry_*.json
       - logs/resurrection_ghost_missing_*.json
      
-      # resurrection_monitor pid based snapshot for all registry values  
-      - logs/resurrection_process_registry_snapshot_*.json
-        # write-to-disk aggregator json files. The log files above are derived from these. This has all registry values for the
-        # entire execution run
+      # resurrection_monitor pid based snapshot for all registry values. This has been replaced with final_aggregate_execution_run_registry.json
+      #- logs/resurrection_process_registry_snapshot_*.json
+      
+      # write-to-disk aggregator json files. The log files above are derived from these. This has all registry values for the
+      # entire execution run. This replaces the snapshot json log above that was formerly done in resurrection_monitor
+      # This log below is done in main()
       - logs/final_aggregate_execution_run_registry.json
-      # per process registry logs from tomcat_worker()
+      
+        # per process registry logs from tomcat_worker(). These are used to create the final_registry and summary and these are then used to create the aggregate registry for the execution run : logs/final_aggregate_execution_run_registry.json
       - logs/process_registry_*.json  
         
         
