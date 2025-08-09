@@ -144,22 +144,47 @@ def summarize_registry(final_registry):
         "install_success": 0,
         "gatekeeper_resurrect": 0,
         "watchdog_timeout": 0,
+        "ssh_initiated_failed": 0,   # placeholder for Patch 8 later
+        "ssh_retry_failed": 0,       # placeholder for patch 8 later
         "no_tags": 0,
     }
+    
+
+    #for entry in final_registry.values():
+    #    if entry.get("install_success"):
+    #        summary["install_success"] += 1
+    #    if entry.get("gatekeeper_resurrect"):
+    #        summary["gatekeeper_resurrect"] += 1
+    #    if entry.get("watchdog_timeout"):
+    #        summary["watchdog_timeout"] += 1
+    #    # count entries that lack all outcome tags
+    #    if not any(tag in entry for tag in [
+    #        "install_success",
+    #        "gatekeeper_resurrect",
+    #        "watchdog_timeout"
+    #    ]):
+    #        summary["no_tags"] += 1
+    #
+
+
+## summary code was checking `entry.get("install_success")` (a Boolean) instead of `entry["status"] == "install_success"
+## this now alligns with status inside registry entries of final_registry
     for entry in final_registry.values():
-        if entry.get("install_success"):
+        s = entry.get("status")
+        if s == "install_success":
             summary["install_success"] += 1
-        if entry.get("gatekeeper_resurrect"):
+        elif s == "gatekeeper_resurrect":
             summary["gatekeeper_resurrect"] += 1
-        if entry.get("watchdog_timeout"):
+        elif s == "watchdog_timeout":
             summary["watchdog_timeout"] += 1
-        # count entries that lack all outcome tags
-        if not any(tag in entry for tag in [
-            "install_success",
-            "gatekeeper_resurrect",
-            "watchdog_timeout"
-        ]):
+        elif s == "ssh_initiated_failed":
+            summary["ssh_initiated_failed"] += 1
+        elif s == "ssh_retry_failed":
+            summary["ssh_retry_failed"] += 1
+        else:
             summary["no_tags"] += 1
+
+
     return summary
 
 
