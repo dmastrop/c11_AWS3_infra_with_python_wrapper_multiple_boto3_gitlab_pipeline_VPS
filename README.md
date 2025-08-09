@@ -378,16 +378,20 @@ resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_in
 
 
 
-## UPDATES: part 20: Phase2f: Patche 7c in resurrection_monitor, aggregator in run_test() and global (did not resolve the issue)
+## UPDATES: part 20: Phase2f: Patche 7c in resurrection_monitor, aggregator in run_test() and global with tomcat_worker() (neither one resolved the issue)
 
 The problem is detailed below. This involved changes to the run_test, threaded_install, install_tomcat, and 
 resurrection_monitor_patch7c as well as tomcat_worker.
 Two helper functions were also created aggregate_process_registries and summarize_registry. These helper functions along with the 
 chaanges to threaded_install and install_tomcat can still be used.
 
-The fix did not resolve the issue (see UPDATES part 21 above for the proper fix (write-to-disk)
+There were two fixes that were tried, one, an aggregator in run_test() and the other using a global list at the top of the module and
+then using this in tomcat_worker() to save each process registry, and then use the 2 helper functions in main()  to flatten and collect stats on
+the global registry.
+
+The fixes did not resolve the issue (see UPDATES part 21 above for the proper fix (write-to-disk)
 The aggregator in run_test did not resolve the issue
-There was also an attempt to use a globla all_process_registries but this did not work either
+The attempt to use a globla all_process_registries did not work either
 These parts of the code have been commented out.
 
 tomcat_worker and main() will have to be edited to support write-to-disk (see above)
@@ -493,7 +497,50 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
     return result
 ```
 
+### changes to tomcat_worker() to aggregate the process level registries to global all_process_registries,  and then main() to use 2 helper functions (this did not work)
 
+
+
+The helper functions can still be used with the write-to-disk solution
+
+tomcat_worker() code:
+
+```
+#
+#    import copy
+#    all_process_registries.append(copy.deepcopy(process_registry))
+#
+```
+
+
+
+main() code is below:
+
+```
+ ## ##  --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
+        ## TRACE on all_process_registries
+        #if not all_process_registries:
+        #    print("[TRACE] all_process_registries is empty in main()")
+        #else:
+        #    print(f"[TRACE] all_process_registries contents: {all_process_registries}")
+
+
+
+        # ##  --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
+        # ## The main() based aggregator does not work because the global all_process_registries is not shared across process
+        # ## memory so this does not work for m mulit-processing. Need to use write-to-disk implementation
+
+        # # ✅ Place aggregation block here
+        # final_registry = aggregate_process_registries(all_process_registries)
+        # summary = summarize_registry(final_registry)
+
+        # with open("/aws_EC2/logs/final_aggregate_execution_run_registry.json", "w") as f:
+        #     json.dump(final_registry, f, indent=2)
+
+        # print("[TRACE][aggregator] Final registry summary:")
+        # for tag, count in summary.items():
+        #     print(f"  {tag}: {count}")
+```
 
 
 
