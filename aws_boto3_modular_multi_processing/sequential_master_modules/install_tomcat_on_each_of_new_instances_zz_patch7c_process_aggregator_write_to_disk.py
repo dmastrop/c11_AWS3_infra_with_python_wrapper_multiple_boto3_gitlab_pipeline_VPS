@@ -902,11 +902,11 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 
     ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
 
-
-    # This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
-    # This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
-    # for max_workers threads
-    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
+### This log is now created in main() as part of the aggregation in main()
+#    # This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
+#    # This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
+#    # for max_workers threads
+#    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
 
     flagged = {}
