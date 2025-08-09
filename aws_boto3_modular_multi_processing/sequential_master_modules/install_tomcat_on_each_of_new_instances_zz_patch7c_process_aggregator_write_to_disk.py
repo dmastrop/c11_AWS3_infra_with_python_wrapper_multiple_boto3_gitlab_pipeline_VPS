@@ -3594,7 +3594,9 @@ def main():
        # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
        # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
 
-       # 1. Load every per-process JSON that was created in tomcat_worker into registries
+        os.makedirs("/aws_EC2/logs", exist_ok=True)
+
+        # 1. Load every per-process JSON that was created in tomcat_worker into registries
         registries = []
         for fname in os.listdir("/aws_EC2/logs"):
             if fname.startswith("process_registry_") and fname.endswith(".json"):
