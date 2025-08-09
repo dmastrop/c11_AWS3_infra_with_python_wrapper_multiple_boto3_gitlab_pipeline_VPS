@@ -3604,10 +3604,10 @@ def main():
 
 
 
-       # write-to-disk code in main() to aggregate the per process JSON in tomcat_worker into registries
-       # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
-       # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
-       print("[TRACE][aggregator] Starting disk-based aggregation…")
+        # write-to-disk code in main() to aggregate the per process JSON in tomcat_worker into registries
+        # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
+        # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
+        print("[TRACE][aggregator] Starting disk-based aggregation…")
 
         os.makedirs("/aws_EC2/logs", exist_ok=True)
 
