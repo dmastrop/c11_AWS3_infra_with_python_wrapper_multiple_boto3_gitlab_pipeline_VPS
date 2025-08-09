@@ -2,8 +2,8 @@
 ## Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in Distributed Debugging Systems
 
 
-
-
+```
+```
 
 
 ## Current and latest development work
@@ -95,13 +95,13 @@ Some of the early changes involved the following to resolved this overwritting i
 A new patch 7c for the resurrection_monitor,  where a thread level registry is created,
 and then at the process level the thread level registry is collected,  and then the process level registry is aggregated into a final
 aggreagated_registry that has all the thread-level registry entries for all processes in the execution run.
-This was a major rewrite of the code but failed even with the aggregation layer in the main() block.
+This was a major rewrite of the code but failed even with the aggregation layer in the run_test and tomcat_worker and main().
 
 However all the code at the process level can continued to be used. The only issue is switching over to write-to-disk for the final
 aggregation of all the process level registries into on final aggregated registry (which will be used to compile status(tag) 
 statistics on each thread (successful, failed, missing, total, etc). The main() will be used for all of this, but the 
 resurrection_monitor will continue to be used to actually tag the threads with a status at the process level. It now fully supports
-multi-threaded processes.
+multi-threaded processes. Two helper functions were also created aggregate_process_registries and summarize_registry. These helper functions along with the changes to threaded_install and install_tomcat can still be used.
 
 A further background on the resurrection_monitor_patch7c
 This is a major rewrite of the code. The execution is multi-processed and mult-threaded (installations, and python modules, etc), but
@@ -127,6 +127,8 @@ The artifact logs are listed below. Each run of the gitlab pipeline will produce
 main() now, with the process level registry logs being produced in resurrection_monitor_patch7c, and the main orchestration logging
 produced throughout the python module.
 
+
+```
 artifacts:
     paths:
       - logs/
@@ -160,7 +162,7 @@ artifacts:
         # per process registry logs from tomcat_worker(). These are used to create the final_registry and summary and these are then used to create the aggregate registry for the execution run : logs/final_aggregate_execution_run_registry.json
       - logs/process_registry_*.json  
 
-
+```
 
 
 Once this is in place the Phase 3 can be rolled out (whereby threads are resurrected) and after that Phase 4 ML (machine learning) to
