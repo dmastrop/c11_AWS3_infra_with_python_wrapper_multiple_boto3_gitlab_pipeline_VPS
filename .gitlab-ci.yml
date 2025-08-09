@@ -49,8 +49,8 @@ deploy:
     - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
     - echo 'instance_type=t2.micro' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
-    - echo 'min_count=12' >> .env
-    - echo 'max_count=12' >> .env
+    - echo 'min_count=16' >> .env
+    - echo 'max_count=16' >> .env
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
