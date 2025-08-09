@@ -67,17 +67,49 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 ### Introduction:
 
 See the troubleshooting in the last update below. The registry is being overwritten by each successive process that calls the
-resurrection_montor. This requires a rewrite of patch 7c in the resurrection_monitor
+resurrection_montor. This requires a rewrit (patch 7c) in the resurrection_monitor as well as modifications to main(), tomcat_worker(), threaded_install(), install_tomcat(), run_test().
 
-This overwritting issue will require a new patch 7c where a thread level registry is created,
+The initial interataion involved a few different approaches attempting to create an aggregate registry wihtout using write-to-disk. 
+These all failed with the aggregate registry being reinitialized by each process. Process memory is not shared in multi-processing
+environments.  A few other options were considered at this point like the following:
+
+Multiprocessing.Manager dict:
+  Use a shared manager dictionary to collect per-process results in memory, then dump once in `main()`.
+
+But the IPC overhead and the debugging in cases where things go wrong would be too much in hyper-scaled processing.
+
+The write-to-disk solution was the eventual solution.
+
+Some of the early changes involved the following to resolved this overwritting issue:
+
+A new patch 7c for the resurrection_monitor,  where a thread level registry is created,
 and then at the process level the thread level registry is collected,  and then the process level registry is aggregated into a final
 aggreagated_registry that has all the thread-level registry entries for all processes in the execution run.
+This was a major rewrite of the code but failed even with the aggregation layer in the main() block.
 
+However all the code at the process level can continued to be used. The only issue is switching over to write-to-disk for the final
+aggregation of all the process level registries into on final aggregated registry (which will be used to compile status(tag) 
+statistics on each thread (successful, failed, missing, total, etc). The main() will be used for all of this, but the 
+resurrection_monitor will continue to be used to actually tag the threads with a status at the process level. It now fully supports
+multi-threaded processes.
+
+A further background on the resurrection_monitor_patch7c
 This is a major rewrite of the code. The execution is multi-processed and mult-threaded (installations, and python modules, etc), but
-the registry tracking of the threads along with their "status" or tag needs to be completely overhauled to support the multiple threadsper process where each thread is a dedicated SSH connection to an EC2 node.  Once this is in place the resurrection logging will work
+the registry tracking of the threads along with their "status" or tag needs to be completely overhauled to support the multiple threadsper process where each thread is a dedicated SSH connection to an EC2 node. 
+So even though the execution upper level main and process orchestration logging has always been multi-processed and multi-threaded, the
+tagging and the logging and stats for it  had to be completely overhauled to support multi-threaded processes
+
+Once this is in place the resurrection logging at the process level will work as well as the tagging and this can all be aggregated 
+using write-to-disk at the main() level.
+Most of the artifact logging will be moved to the main() and out of the resurrection_monitor (Except for a few process level logs
+that will be json files of the resurrectino candidates per process and ghost threads per process), but the aggregate for the 
+resurrection candidates and ghosts will be in main(). These aggregates will be used for phase3 of the project to resurrect the 
+threads.
+
+All arficat logs will be piped into the gitlab pipeline (/logs) from the mounted volume in the python container (/aws_EC2/
 and the artifact logging that is piped into the gitlab pipeline (/logs) will work for in-depth forensics on the thread status. 
-The process_registry will continue to be used at the per process level (multi-threading supported) internally,  and a new 
-aggregator_registry will aggregate all the process_registry ips into one registry so that it can be consumed by the global
+The process_registry will continue to be used at the per process level (multi-threading supported) internally, and these will
+be written to disk (/aws_EC2 will aggregate all the process_registry ips into one registry so that it can be consumed by the global
 artifact logging in the gitlab pipeline. succesful_registry_ips, missing_registry_ips, failed_registry_ips, total_registry_ips
 and other logs will be created from this by the resurrection_monitor.
 The aggregate_registry will be consumed by resurrection_monitor_patch7c which will create
