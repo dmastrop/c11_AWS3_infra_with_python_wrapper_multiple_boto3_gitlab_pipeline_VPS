@@ -1213,32 +1213,37 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
                 except Exception as e:
                     patch7_logger.info(f"[Patch7] Failed to write '{tag}': {e}")
             
+## coment out the total, missing and the successful and the failed as these are done in main() now at the aggregated and not 
+## the process level. benchmark_ips_artifact.log is the GOLD standard used by main(). So keep this one. Remove the other ones 
+## from here.
 
-
-            if not total_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
-            else:
-                 safe_artifact_dump("total_registry_ips", total_registry_ips)
+            #if not total_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
+            #else:
+            #     safe_artifact_dump("total_registry_ips", total_registry_ips)
           
             if not benchmark_ips:
                 patch7_logger.info("[Patch7] WARNING: benchmark_ips is empty — skipping artifact.")
             else:
                 safe_artifact_dump("benchmark_ips", benchmark_ips)
           
-            if not missing_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("missing_registry_ips", missing_registry_ips)
+            #if not missing_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
+            #else:
+            #    safe_artifact_dump("missing_registry_ips", missing_registry_ips)
           
-            if not successful_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("successful_registry_ips", successful_registry_ips)
+            #if not successful_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
+            #else:
+            #    safe_artifact_dump("successful_registry_ips", successful_registry_ips)
           
-            if not failed_registry_ips:
-                patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
-            else:
-                safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+            #if not failed_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
+            #else:
+            #    safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+
+
+
 
 #            dump_set_to_artifact("total_registry_ips", total_registry_ips)
 #            dump_set_to_artifact("benchmark_ips", benchmark_ips)
