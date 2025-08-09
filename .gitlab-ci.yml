@@ -109,10 +109,13 @@ deploy:
       
       - logs/resurrection_candidates_registry_*.json
       - logs/resurrection_ghost_missing_*.json
-      
-        #- logs/resurrection_process_registry_snapshot_*.json
-        # write-to-disk aggregator json files. The log files above are derived from these
+     
+      # resurrection_monitor pid based snapshot for all registry values  
+      - logs/resurrection_process_registry_snapshot_*.json
+        # write-to-disk aggregator json files. The log files above are derived from these. This has all registry values for the
+        # entire execution run
       - logs/final_aggregate_execution_run_registry.json
+      # per process registry logs from tomcat_worker()
       - logs/process_registry_*.json  
         
         
