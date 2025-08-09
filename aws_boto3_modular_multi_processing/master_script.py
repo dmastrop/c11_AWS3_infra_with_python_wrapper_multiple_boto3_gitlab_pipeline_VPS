@@ -147,9 +147,9 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_aggregator.py")
 
 
-#### THIS IS THE MODULE2 SCRIPT with patc7c and post execution process level aggregator in tomcat_worker and main()
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_USE.py")
+##### THIS IS THE MODULE2 SCRIPT with patc7c and post execution process level aggregator in tomcat_worker and main()
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_USE.py")
 
 
 #### THIS IS THE MODULE2 SCRIPT with patc7c and post execution process level aggregator using write to disk (docker container disk)
