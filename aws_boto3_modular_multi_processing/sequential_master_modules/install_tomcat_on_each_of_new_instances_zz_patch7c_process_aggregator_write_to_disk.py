@@ -76,19 +76,28 @@ import re # this is absolutely required for all the stuff we are doing in the re
 
 ## New aggregate_process_registries for write-to-disk
 ## Aggregates a list of process-level registries into a single unified registry.
-#  Each entry in all_process_registries is a dict mapping thread_id -> registry_data from the calling function main()
+#  Each entry in complete_process_registries is a dict mapping thread_id -> registry_data from the calling function main()
 #  
-def aggregate_process_registries(all_process_registries):
+
+
+def aggregate_process_registries(complete_process_registries):
+    """
+    Flatten a list of per-process registry dicts into one unified registry.
+
+    Args:
+      complete_process_registries (List[Dict[str, Any]]):
+        Each dict maps a thread_uuid → registry_entry for one process.
+
+    Returns:
+      Dict[str, Any]: A single dict mapping every unique thread_uuid → its registry_entry.
+    """
     final_registry = {}
-    for process_registry in all_process_registries:
+    for process_registry in complete_process_registries:
         for thread_uuid, entry in process_registry.items():
             if thread_uuid in final_registry:
                 raise ValueError(f"Duplicate thread_id: {thread_uuid}")
             final_registry[thread_uuid] = entry
     return final_registry
-
-
-
 
 
 ### this is the summarize_registry(final_registry) function.
@@ -3564,11 +3573,16 @@ def main():
         ### done
 
 
-        # TRACE on all_process_registries
-        if not all_process_registries:
-            print("[TRACE] all_process_registries is empty in main()")
-        else:
-            print(f"[TRACE] all_process_registries contents: {all_process_registries}")
+
+
+
+
+        ## ##  --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
+        ## TRACE on all_process_registries
+        #if not all_process_registries:
+        #    print("[TRACE] all_process_registries is empty in main()")
+        #else:
+        #    print(f"[TRACE] all_process_registries contents: {all_process_registries}")
 
 
 
@@ -3593,6 +3607,7 @@ def main():
        # write-to-disk code in main() to aggregate the per process JSON in tomcat_worker into registries
        # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
        # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
+       print("[TRACE][aggregator] Starting disk-based aggregation…")
 
         os.makedirs("/aws_EC2/logs", exist_ok=True)
 
