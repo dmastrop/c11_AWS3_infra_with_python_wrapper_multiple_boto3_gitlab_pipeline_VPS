@@ -66,13 +66,6 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 This involves another major overhaul. 
 
 
-### code commented out in several functions to revert the run_test and global aggregator code:
-
-
-
-
-resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry 
-
 
 ### Introduction:
 
@@ -208,11 +201,10 @@ process_registry = run_test("Tomcat Installation Threaded", threaded_install)
 
 run_test calls threaded_install and threaded_install aggregates the registry_entry for each thread in the process
 and returns this as thread_registry for each process that calls it. 
-run_test is the ideal place to put the aggregate_registry which aggregates all the process_registry for each process
 
 
-the return in threaded_install is assigned to the process_registry which is the process level registry for all the threads in the
-process
+the return in threaded_install (thread_registry) is assigned to the process_registry which is the process level registry for all the 
+threads in the process (as noted the process registry is exported as an artifact in the gitlab artifact logs)
 
 
 
@@ -226,7 +218,14 @@ with ThreadPoolExecutor(max_workers=max_workers) as executor:
 
 
 
-install_tomcat() works at the individual thread level (per EC2 instance) using the registry_entry 
+install_tomcat() works at the individual thread level (per EC2 instance) and each thread is represented by registry_entry
+This is a single registry entry that the calling functino (threaded_install) aggregates at the process level when there are
+multiple threads per process.
+
+The challenge here is to simulatenously do main() and process orchestration logging
+Also process based logging (done in resurrection_monitor_patch7c)
+And also thread level registry maintenance, logging and tracking for statistics and phase3 thread resurrection.
+The logging is the most difficult aspect of the project. 
 
 
 
@@ -247,31 +246,27 @@ This is the "result" used in the run_test function
 result = func(*args, **kwargs)
 ```
 
-
-run_test then  aggregates the thread_registry for each process into aggregate_registry using: 
-
-```
-aggregate_registry.update(thread_registry)
-```
-
-The return at the end of run_test returns the aggregate_registry to the calling function tomcat_worker
-with the final "return aggregate_registry" at the end of run_test
+run_test and tomcat_worker would seem like an ideal place to aggregate the process level registries, but because python multi-processes do not share
+memory, this cannot work.  By the time an "aggregate" registry is passed up to main() it has been rewritten by each successsive 
+process. There are a few solutions to this and I am using write-to-disk.
+If the process level registry is written to disk (a docker container /aws_EC2/logs mounted volume), this can later be combined
+in main() as an aggregate repository which is ideal for stats, and resurrection based upon the registry thread status(tag) (Phase 3)
 
 
-
-The tomcat_worker assigns aggregate_registry to the return of run_test. This is the registry for all the processes in the execution run
+What still can be done is the function call to resurrection_monitor_patch7c in tomcat_worker for each process_registry 
 
 ```
-aggregate_registry = run_test("Tomcat Installation Threaded", threaded_install)
+process_registry = run_test("Tomcat Installation Threaded", threaded_install)
 ```
+This process_registry is assigned as above in tomcat_worker, and tomcat_worker can then call resurrection_monitor_patch7c
+for each process registry for tagging (status) classification, etc.  resurrection monitor no longer exports artifacts
+(that is done in main()), except for one log file benchmark_ips_artifact.log which is the GOLD standard that the 
+runtime aggregate registry will be compared to when collating and creating stats.
+
+In addition, resurrection_monitor will still be used to create the following 2 process level json registry files for 
+process level resurrection registry candidates and ghost threads.  But an aggregate will also be created in main() as well.
 
 
-The aggregate_registry is used in the function call to resurrection_monitor_patch7c to classify registry_entries as
-successesful, missing, failed or total based on the tag (status) in the registry entry (thread level)
-It is also used to construct the artifact log files that will be published to the gitlab pipeline for download.
-It is also used to construct three types of .json files for ghost thread tracking
-
-These ip (thread) classifications from aggregate_registry will  be used in phase 3 for resurrection.
 
 ```
 # registry threads with some sort of failure tag/status
@@ -280,21 +275,14 @@ log_path = os.path.join(log_dir, f"resurrection_candidates_registry_{pid}.json")
 # registry threads that are missing from the list of total ips in the exeuction run (very rare because these are unclassified falures)
 ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
 
-# all of the registry IP entries in the execution run
-full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 ```
 
 
-The registry  ip (thread) status/tag classifications from aggregate_registry will  be used in phase 3 for resurrection.
+The aggregated registry will be created in main() along with the successful, failed, missing and total registry log files 
 
-
-
-
-### code commented out in several functions to revert the run_test and global aggregator code:
-
---- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
-
-resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry
+So there are 3 levesl of registries, registry_entry at thread level, process_registry at the process level and then the 
+final aggregated registry for all processes and threads in the execution run 
+This final registry is logs/final_aggregate_execution_run_registry.json referred to above in the section on artifacts and logs.
 
 
 
@@ -338,8 +326,25 @@ resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_in
 
 
 
+### code commented out in several functions to revert the run_test and global aggregator code:
+
+--- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
+
+resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry
+
+### code commented out in several functions to revert the run_test and global aggregator code:
 
 
+
+
+resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry
+
+
+
+
+
+
+The final code for write-to-disk is below:
 
 ### resurrection_monitor_patch7c()
 
