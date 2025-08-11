@@ -936,22 +936,33 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 
     ## These are the resurrection_registry patch 1-5 logs. These are tagged resurrection candidates for Phase3 implementation
     #log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+    # These logs will only be created if there are not successful registry entries in the process (to reduce artifact logging 
+    # overhead of blank json files. Note at global level we will create the json/log file regardless as it is only 1 file each for
+    # the entire execution.
 
-    log_path = os.path.join(log_dir, f"resurrection_candidates_registry_{pid}.json")
-
+    #log_path = os.path.join(log_dir, f"resurrection_candidates_registry_{pid}.json")
+    # that new path for this  is defined in the new code block at the bottom of this function 
 
 
 
     ## These are teh resurrection ghost patch 7 logs. These are missing registry entires that are in benchmark_ips but are not in the
     ## the registry (missing = benchmark - total registry)
     #ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+    # This json will only be created if there are ghosts in the process
 
-    ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
+    #ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
+    # the new path for this is defined in the new code block at the bottom of this function 
+
+
+
 
 ### This log is now created in main() as part of the aggregation in main()
 #    # This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
 #    # This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
 #    # for max_workers threads
+#    These is no need to create a process level registry json file for all the processes. It will create a large amount of overhead
+#    in terms of artifact files.
+
 #    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
 
@@ -1340,63 +1351,112 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
             patch7_logger.error("Patch7 thread likely aborted before reaching summary block.")
             log_debug(f"[{timestamp()}] Patch7 failure: {e}")
 
-# ---- PATCH 4 ----------
-# Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
-# no logs are created for these
 
-    # 🔍 Global success check — avoids false early_exit logs
-    # Replace resurrection_registry with process_registry for phase7a
-    success_found = any(
-        record.get("status") == "install_success"
-        for record in process_registry.values()
-    )
-    if not flagged and not success_found:
-        flagged["early_exit"] = {
-            "status": "early_abort",
-            "reason": "No registry entries matched. Possible thread exit before retry loop.",
-            "pid": pid,
-            "timestamp": time.time()
-        }
 
+
+#  COMMENT OUT PATCH4 for new code right below this that creates the resurrection candidate and ghost json files more
+# efficiently in line with patch8 code
+
+## ---- PATCH 4 ----------
+## Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
+## no logs are created for these
+#
+#    # 🔍 Global success check — avoids false early_exit logs
+#    # Replace resurrection_registry with process_registry for phase7a
+#    success_found = any(
+#        record.get("status") == "install_success"
+#        for record in process_registry.values()
+#    )
+#    if not flagged and not success_found:
+#        flagged["early_exit"] = {
+#            "status": "early_abort",
+#            "reason": "No registry entries matched. Possible thread exit before retry loop.",
+#            "pid": pid,
+#            "timestamp": time.time()
+#        }
+#
+##    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
+##    # successful installation threads
+##    if flagged:
+##        os.makedirs(log_dir, exist_ok=True)
+##        with open(log_path, "w") as f:
+##            json.dump(flagged, f, indent=4)
+##
+#
+#
 #    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
 #    # successful installation threads
 #    if flagged:
 #        os.makedirs(log_dir, exist_ok=True)
+#
+#        # Write registry resurrection candidates log
 #        with open(log_path, "w") as f:
 #            json.dump(flagged, f, indent=4)
 #
+#        # Patch 7: Write missing ghost resurrection log if applicable
+#        if missing_registry_ips:
+#            ghost_data = {
+#                ip: {
+#                    "status": "ghost_missing_registry",
+#                    "ghost_reason": "no registry entry",
+#                    "pid": pid,
+#                    "timestamp": time.time()
+#                }
+#                for ip in missing_registry_ips
+#            }
+#            with open(ghost_log_path, "w") as f:
+#                json.dump(ghost_data, f, indent=4)
+#            log_debug(f"[{timestamp()}] Ghost resurrection log created: {ghost_log_path}")
+#
+##    Remove this. We are doing total registry only at aggregated level. The snapshots below would create too much overhead
+##    See main() for aggregated total registry
+##    # Patch 7c: Write process registry snapshot log (this is the complete registry (successful and failed) for a given process
+##    # and can catch  multiple threads per process. Make sure this is outside of teh if flagged block. We want to always print this
+##    # out for every process
+##    with open(full_process_snapshot_path, "w") as f:
+##        json.dump(process_registry, f, indent=4)
+##
 
 
-    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
-    # successful installation threads
-    if flagged:
-        os.makedirs(log_dir, exist_ok=True)
+# --- UPDATED RESURRECTION CANDIDATE JSON AND GHOST JSON PER PROCESS CODE. THIS REPLACED THE PATCH4 BLOCK ABOVE ---
+# PID_JSON_DUMPS is an env variable used by gitlab .gitlab-ci.yml file to turn this on and off if it creates too much
+# overhead during debugging hyper-scaling cases (where there can be a large number of registry threads in a failed, not successful
+# state, and/or ghost threads
 
-        # Write registry resurrection candidates log
-        with open(log_path, "w") as f:
-            json.dump(flagged, f, indent=4)
+    from datetime import datetime
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
 
-        # Patch 7: Write missing ghost resurrection log if applicable
-        if missing_registry_ips:
-            ghost_data = {
-                ip: {
-                    "status": "ghost_missing_registry",
-                    "ghost_reason": "no registry entry",
-                    "pid": pid,
-                    "timestamp": time.time()
-                }
-                for ip in missing_registry_ips
-            }
-            with open(ghost_log_path, "w") as f:
-                json.dump(ghost_data, f, indent=4)
-            log_debug(f"[{timestamp()}] Ghost resurrection log created: {ghost_log_path}")
+    # only dump non-empty lists to avoid churn
+    if os.getenv("PID_JSON_DUMPS", "true").lower() in ("1","true"):
+        # 1. Build your two lists
+        candidates = [
+            entry for entry in process_registry.values()
+            if entry.get("status") != "install_success"
+        ]
+        seen_ips   = {e["public_ip"] for e in process_registry.values()}
+        # benchmark_ips is already hydrated above by Patch7 logic
+        ghosts     = sorted(benchmark_ips - seen_ips)
 
-    # Patch 7c: Write process registry snapshot log (this is the complete registry (successful and failed) for a given process
-    # and can catch  multiple threads per process. Make sure this is outside of teh if flagged block. We want to always print this
-    # out for every process
-    with open(full_process_snapshot_path, "w") as f:
-        json.dump(process_registry, f, indent=4)
+        # 2. Define file paths. These have replaced the legacy paths defined earlier.
+        cand_file  = os.path.join(
+            log_dir,
+            f"resurrection_candidates_registry_{pid}_{ts}.json"
+        )
+        ghost_file = os.path.join(
+            log_dir,
+            f"resurrection_ghost_missing_{pid}_{ts}.json"
+        )
 
+        # 3. Write only if there’s something to write
+        if candidates:
+            with open(cand_file, "w") as f:
+                json.dump(candidates, f, indent=2)
+            patch7_logger.info(f"[Patch7] Wrote {len(candidates)} candidates to {cand_file}")
+
+        if ghosts:
+            with open(ghost_file, "w") as f:
+                json.dump(ghosts, f, indent=2)
+            patch7_logger.info(f"[Patch7] Wrote {len(ghosts)} ghosts to {ghost_file}")
 
 
     # ✅ Print final status and resurrection monitor final verdict
