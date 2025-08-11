@@ -38,10 +38,14 @@ import re # this is absolutely required for all the stuff we are doing in the re
 
 
 ## These variables are used throughout for the resurrection based code. Put at top of module for easy reference
-WATCHDOG_TIMEOUT = 90
-RETRY_LIMIT = 3
-SLEEP_BETWEEN_ATTEMPTS = 5
-STALL_RETRY_THRESHOLD = 2
+# :=:= Module-level constants for resurrection/watchdog logic
+WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled
+RETRY_LIMIT               = 3    # number of re-executes per SSH command (for example install tomcat9)
+SLEEP_BETWEEN_ATTEMPTS    = 5    # seconds to wait between retries
+STALL_RETRY_THRESHOLD     = 2    # attempts before tagging as “stall” ghost (watchdog)
+
+
+
 
 
 
