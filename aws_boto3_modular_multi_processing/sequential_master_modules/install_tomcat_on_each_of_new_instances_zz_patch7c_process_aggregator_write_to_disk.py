@@ -35,6 +35,16 @@ from datetime import datetime
 import psutil
 import re # this is absolutely required for all the stuff we are doing in the resurrection_monitor functino below!!!!!!
 
+
+
+## These variables are used throughout for the resurrection based code. Put at top of module for easy reference
+WATCHDOG_TIMEOUT = 90
+RETRY_LIMIT = 3
+SLEEP_BETWEEN_ATTEMPTS = 5
+STALL_RETRY_THRESHOLD = 2
+
+
+
 ## --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
 ## all_process_registries is NOT shared between processes and this approach does not work 
 
@@ -2059,13 +2069,18 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 # ---------------------------------------------------------------------------
 
 
-from datetime import datetime
-import threading
+# move this stuff to top of module
+#from datetime import datetime
+#import threading
+#
+#WATCHDOG_TIMEOUT = 90
+#RETRY_LIMIT = 3
+#SLEEP_BETWEEN_ATTEMPTS = 5
+#STALL_RETRY_THRESHOLD = 2
 
-WATCHDOG_TIMEOUT = 90
-RETRY_LIMIT = 3
-SLEEP_BETWEEN_ATTEMPTS = 5
-STALL_RETRY_THRESHOLD = 2
+
+
+
 
 resurrection_registry = {}
 resurrection_registry_lock = threading.Lock()
