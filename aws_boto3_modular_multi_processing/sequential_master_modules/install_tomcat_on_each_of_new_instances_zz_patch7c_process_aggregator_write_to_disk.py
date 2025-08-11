@@ -904,6 +904,13 @@ from datetime import datetime
 def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
     pid = multiprocessing.current_process().pid
 
+    # add timestamp so that if pid is reused (as with hyper-scaling or pooling) the log files can be differentiated for 
+    # same pid with timestamp in the log file name.
+    # stamp each run so PIDs don’t collide
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+
+
+
     # This is the thread_id of the calling thread, and not the thread_ids of the worker threads (That are processing the ip addreses
     # in the chunk_size
     # Since resurrection_monitor_patch7c() is called at the end of tomcat_worker(), which runs in the main thread of the process, this line will return that main thread’s ID
@@ -1054,8 +1061,18 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
         #- This avoids `StreamHandler(sys.stdout)`, which is the usual culprit for GitLab log bleed
         #- It ensures everything written is scoped to one file — line-by-line controlled output
 
-        summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
-        summary_handler = logging.FileHandler(summary_log_path)
+        #summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
+        # use ts (timestamp) to avoid issues with pid reuse that occurs with hyper-scaling and pooling
+        summary_log_path = os.path.join(
+          log_dir, f"patch7_summary_{pid}_{ts}.log"
+         )
+
+
+        # Use write mode use mode="w" to overwrite any existing file of the same name (this is for pid reuse case if files are 
+        # named the same. This should not happen any longer because timestamp is now added to log filename along with pid)
+        #summary_handler = logging.FileHandler(summary_log_path)
+        summary_handler = logging.FileHandler(summary_log_path, mode="w")
+
         summary_formatter = logging.Formatter('[Patch7] %(message)s')
         summary_handler.setFormatter(summary_formatter)
         patch7_logger.addHandler(summary_handler)
