@@ -42,6 +42,11 @@ push:
       # 30 processes(desired_count)  x chunk_size=2 → 60 EC2 instances total so set max and min count to 60 (example)   
 deploy:
   stage: deploy
+  variables:
+    PID_JSON_DUMPS: "true"  
+    # this is a gating env VAR for module2 if I need to disable the process level resurrection candidate
+    # or ghost json artifact files during hyper-scalling
+  
   before_script:
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
     - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
@@ -54,6 +59,13 @@ deploy:
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
+    - echo 'PID_JSON_DUMPS='${PID_JSON_DUMPS} >> .env  # see above. Gating for the json ghost and res candidate files.  
+
+
+
+      ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
+      ## Define `PID_JSON_DUMPS` with value `false` (masked/protected as needed).
+      ## This value will override the one above in this file. 
 
 
       #      # use this for most of the Dockerfiles. The multiprocessing Dockerfile is collecting logs from the container for
