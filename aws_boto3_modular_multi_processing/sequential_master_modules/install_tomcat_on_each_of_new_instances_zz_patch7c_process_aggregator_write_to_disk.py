@@ -3655,13 +3655,13 @@ def main():
         summary = summarize_registry(final_registry)
 
         # 3. Persist final_registry to final_aggregate_execution_run_registry.json (exported as artifact to gitlab pipeline) 
-        # to gitlab console.(this is the merged master registry)
+        # This is the merged master registry
         agg_path = "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
         with open(agg_path, "w") as f:
             json.dump(final_registry, f, indent=2)
         print("[TRACE][aggregator] Wrote final JSON to", agg_path)
 
-        # 4. Print summary counts by status/tag
+        # 4. Print summary counts by status/tag to the gitlab console
         print("[TRACE][aggregator] Final registry summary:")
         for tag, count in summary.items():
             print(f"  {tag}: {count}")
@@ -3685,7 +3685,7 @@ def main():
         failed_ips  = total_ips - success_ips
         missing_ips = benchmark_ips - total_ips
 
-        # 7. Dump per-category artifact logs
+        # 7. Dump per-category artifact logs to gitlab console
         for name, ip_set in [
             ("total_registry_ips", total_ips),
             ("successful_registry_ips", success_ips),
