@@ -109,12 +109,15 @@ that will be json files of the resurrectino candidates per process and ghost thr
 resurrection candidates and ghosts will be in main(). These aggregates will be used for phase3 of the project to resurrect the 
 threads.
 
-All arficat logs will be piped into the gitlab pipeline (/logs) from the mounted volume in the python container (/aws_EC2/logs)
+All arficact logs will be piped into the gitlab pipeline (/logs) from the mounted volume in the python container (/aws_EC2/logs)
 and the artifact logging that is piped into the gitlab pipeline (/logs) will work for in-depth forensics on the thread status. 
 The process_registry will continue to be used at the per process level (multi-threading supported) internally, and these will
 be written to disk (/aws_EC2/logs) at the process level.
 main()  will now aggregate all the process_registry that are on disk as json into one registry so that it can be processed for
 statistics (success, failed, mssing, total) and also piped to the gitlab pipeline artifact logs.
+
+
+### artifact logs published to gitlab pipeline
 
 The artifact logs are listed below. Each run of the gitlab pipeline will produce these logs. Most of these logs are produced in
 main() now, with the process level registry logs being produced in resurrection_monitor_patch7c, and the main orchestration logging
@@ -158,7 +161,24 @@ artifacts:
 ```
 
 
-Once this is in place the Phase 3 can be rolled out (whereby threads are resurrected) and after that Phase 4 ML (machine learning) to
+By design:
+
+- Per-PID dumps only when there’s real content (failures or ghosts).  
+- A single aggregate logs always written—showing blanks to signal “all clear.”  
+
+This blend gives just the right visibility at scale: lightweight per-process alerts when things go sideways plus a reliable high-level summary every run. 
+
+Advantages:
+- No wasted I/O on all-success flows.
+- Immediate forensic breadcrumbs on the rare failures.
+- Consistent aggregate artifacts for your Phase 3 pipeline.
+- Frugal publishing of the process logs: if they are blank then they will not be published. With hyper-scaling this will help a lot.
+
+
+
+
+
+Once this artifact logging is  in place the Phase 3 can be rolled out (whereby threads are resurrected) and after that Phase 4 ML (machine learning) to
 adpatively modulate orchestration to minimize the use of the Phase 3 resurrection thread healing and optimize the orchestation of
 the process handling and thread handling. 
 
