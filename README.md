@@ -292,12 +292,19 @@ This final registry is logs/final_aggregate_execution_run_registry.json referred
 
 
 1. **main()**  
-   - Splits your 16 EC2 tasks into `chunks` (size 2 each).  
-   - Builds `args_list` of `(chunk, security_group_ids, max_workers)`.  
+   - Splits your EC2 tasks into `chunks` (size chunk_size)
+   - Builds `args_list` of `(chunk, security_group_ids, max_workers)`
+   - max_workers is the number of threads (eventually used by ThreadPoolExecutor_ 
    - Calls `multiprocessing.Pool(processes=desired_count)` and `pool.starmap(tomcat_worker_wrapper, args_list)`.
+   - desired_count is the initial processes used to process the chunks. For example,if 525 EC2 instances and max_workers = 1,
+     and desired_count = 500, there will be an inital wave of 500 processes of 1 thread each to process the first 500 EC2 instances,
+     and then as these processes are freed, another 25 pooled processes of 1 thread each to process the last 25 EC instances in a 
+     second wave
+   - Note that for performance reasons max_workers should always be greater than or equal chunk_size. If max_workers is less than
+     chunk_size the performance will degrade.
 
 2. **tomcat_worker_wrapper()**  
-   - Runs `setup_logging()` so each pooled task gets its own fresh log.  
+   - Runs `setup_logging()` so each pooled task gets its own fresh log.  (this is orchestration layer logging)
    - Delegates to `tomcat_worker(instance_info, security_group_ids, max_workers)`.
 
 3. **tomcat_worker()**  
@@ -306,7 +313,7 @@ This final registry is logs/final_aggregate_execution_run_registry.json referred
      - Executes `threaded_install()`.
 
 4. **threaded_install()**  
-   - Uses `ThreadPoolExecutor(max_workers)` to spin up threads.  
+   - Uses `ThreadPoolExecutor(max_workers)` to spin up threads.  (each process is multi-threaded if requrired)
    - Each thread runs `install_tomcat(ip, private_ip, instance_id)`.  
    - Collects per-thread results into `thread_registry` keyed by `thread_uuid`.  
    - Returns that `thread_registry` back to `tomcat_worker` as `process_registry`.
@@ -316,12 +323,101 @@ This final registry is logs/final_aggregate_execution_run_registry.json referred
      ```
      /aws_EC2/logs/process_registry_<pid>_<uuid>.json
      ```
-   - Calls `resurrection_monitor_patch7c(process_registry)` and snapshots.
+   - Calls `resurrection_monitor_patch7c(process_registry)` and snapshots and tags the threads with status, etc.
+     The resurrection_monitor_patch7c also creates a process level resurrection candidate json registry listing file as well
+     as a ghost json registry listing file of threads that are missing when compared to the GOLD standard of what should be 
+     present (benchmark_ips_artifact.log)
 
 6. **Final Aggregation in main()**  
    - In `finally:` of the Pool block, loads every `/aws_EC2/logs/process_registry_*.json` into `registries`.  
    - Flattens with `aggregate_process_registries(registries)` and summarizes with `summarize_registry(final_registry)`.  
-   - Writes the merged `/aws_EC2/logs/final_aggregate_execution_run_registry.json` and prints the tag counts.
+   - Writes the merged `/aws_EC2/logs/final_aggregate_execution_run_registry.json` and prints the tag counts based on 
+     summarize_registry.   
+
+     - Note that the actual tagging (the status) of each thread is done by resurrection_monitor_patch7c at
+     the process level as well as throughout the module for various failure scenarios. The full code changes in this function are in
+     the next sections below
+
+     - Note also that the actual ips that are successful, failed, missed and total will be in separate logs also created in main(). The
+     full code changes in main() are give in the the sections further below.
+
+The helper functions and a paritial of main() are below in the context of the function descriptions above.
+ 
+The FULL changes to the larger functions mentioned above are given in the next few sections below.
+
+Note that the summary status tags below may change and there may be additonal ones added as scaling is increased and new failure
+consitions surface
+
+
+#### parital of main() in the context of the description above
+
+```
+        # 1. Load every per-process JSON that was created in tomcat_worker into registries
+        registries = []
+        for fname in os.listdir("/aws_EC2/logs"):
+            if fname.startswith("process_registry_") and fname.endswith(".json"):
+                path = os.path.join("/aws_EC2/logs", fname)
+                with open(path) as f:
+                    registries.append(json.load(f))
+
+        # 2. Flatten & summarize registries using the call to aggregate_process_registries
+        final_registry = aggregate_process_registries(registries)
+        summary = summarize_registry(final_registry)
+
+        # 3. Persist final_registry to final_aggregate_execution_run_registry.json and print the summary
+        # to gitlab console.
+        agg_path = "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
+        with open(agg_path, "w") as f:
+            json.dump(final_registry, f, indent=2)
+
+        print("[TRACE][aggregator] Final registry summary:")
+        for tag, count in summary.items():
+            print(f"  {tag}: {count}")
+```
+
+
+
+
+#### aggreagate_process_registries()
+
+```
+def aggregate_process_registries(complete_process_registries):
+    """
+    Flatten a list of per-process registry dicts into one unified registry.
+
+    Args:
+      complete_process_registries (List[Dict[str, Any]]):
+        Each dict maps a thread_uuid → registry_entry for one process.
+
+    Returns:
+      Dict[str, Any]: A single dict mapping every unique thread_uuid → its registry_entry.
+    """
+    final_registry = {}
+    for process_registry in complete_process_registries:
+        for thread_uuid, entry in process_registry.items():
+            if thread_uuid in final_registry:
+                raise ValueError(f"Duplicate thread_id: {thread_uuid}")
+            final_registry[thread_uuid] = entry
+    return final_registry
+```
+
+
+
+#### summarize_registry()
+
+```
+def summarize_registry(final_registry):
+    summary = {
+        "total": len(final_registry),
+        "install_success": 0,
+        "gatekeeper_resurrect": 0,
+        "watchdog_timeout": 0,
+        "ssh_initiated_failed": 0,   # placeholder for Patch 8 later
+        "ssh_retry_failed": 0,       # placeholder for patch 8 later
+        "no_tags": 0,
+    }
+```
+
 
 
 
@@ -332,19 +428,15 @@ This final registry is logs/final_aggregate_execution_run_registry.json referred
 
 resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry
 
-### code commented out in several functions to revert the run_test and global aggregator code:
-
-
-
-
-resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry
-
-
-
 
 
 
 The final code for write-to-disk is below:
+
+
+
+
+
 
 ### resurrection_monitor_patch7c()
 
@@ -378,6 +470,12 @@ The final code for write-to-disk is below:
 
 
 ### changes to run_test()
+
+
+
+
+
+
 
 
 
