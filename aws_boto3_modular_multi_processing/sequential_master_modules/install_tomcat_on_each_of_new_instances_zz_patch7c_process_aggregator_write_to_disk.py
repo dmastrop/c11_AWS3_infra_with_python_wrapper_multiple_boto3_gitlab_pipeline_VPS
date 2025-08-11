@@ -211,7 +211,7 @@ def summarize_registry(final_registry):
 ## The artifacts outside of this function (benchmark_combined.log) are working fine so this problem is inside the function
 ## Make sure to change the call to resurrection_monitor_patch7c() inside tomcat_worker() to 
 ## run_resurrection_monitor_diag(process_registry)
-
+## This function was used for debugging and is currently not in use.
 
 
 def run_resurrection_monitor_diag(process_registry):
