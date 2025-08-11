@@ -3649,21 +3649,76 @@ def main():
                 with open(path) as f:
                     registries.append(json.load(f))
 
-        # 2. Flatten & summarize registries using the call to aggregate_process_registries
+        # 2. Flatten (merge process registries into flat thread registries) & summarize registries using the call to 
+        # aggregate_process_registries
         final_registry = aggregate_process_registries(registries)
         summary = summarize_registry(final_registry)
 
-        # 3. Persist final_registry to final_aggregate_execution_run_registry.json and print the summary
-        # to gitlab console.
+        # 3. Persist final_registry to final_aggregate_execution_run_registry.json (exported as artifact to gitlab pipeline) 
+        # to gitlab console.(this is the merged master registry)
         agg_path = "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
         with open(agg_path, "w") as f:
             json.dump(final_registry, f, indent=2)
+        print("[TRACE][aggregator] Wrote final JSON to", agg_path)
 
+        # 4. Print summary counts by status/tag
         print("[TRACE][aggregator] Final registry summary:")
         for tag, count in summary.items():
             print(f"  {tag}: {count}")
 
+        # 5. Load the benchmark IP list (gold standard to compare to). This is created in resurrection_monitor_patch7c() function
+        benchmark_ips = set()
+        with open("/aws_EC2/logs/benchmark_ips_artifact.log") as f:
+            for line in f:
+                ip = line.strip()
+                if ip:
+                    benchmark_ips.add(ip)
 
+        # 6. Build IP sets from final_registry statuses (final registry is the aggregate runtime list of all the threads with ip addresses)
+        # Get the success_ips from the tag(status), get failed as total - success and get missing as benchmark_ips(gold) - total_ips
+        total_ips   = {e["public_ip"] for e in final_registry.values()}
+        success_ips = {
+            e["public_ip"]
+            for e in final_registry.values()
+            if e.get("status") == "install_success"
+        }
+        failed_ips  = total_ips - success_ips
+        missing_ips = benchmark_ips - total_ips
+
+        # 7. Dump per-category artifact logs
+        for name, ip_set in [
+            ("total_registry_ips", total_ips),
+            ("successful_registry_ips", success_ips),
+            ("failed_registry_ips", failed_ips),
+            ("missing_registry_ips", missing_ips),
+        ]:
+            path = f"/aws_EC2/logs/{name}_artifact.log"
+            with open(path, "w") as f:
+                for ip in sorted(ip_set):
+                    f.write(ip + "\n")
+            print(f"[TRACE][aggregator] Wrote {len(ip_set)} IPs to {path}")
+
+        # 8. Dump resurrection candidates JSON (all non-success entries; i.e. failed = total - successful or !successful)
+        # This is also done in resurrection_monitor_patch7c at the process level.
+        ts = int(time.time())
+        candidates = [
+            entry
+            for entry in final_registry.values()
+            if entry.get("status") != "install_success"
+        ]
+        cand_path = f"/aws_EC2/logs/resurrection_candidates_registry_{ts}.json"
+        with open(cand_path, "w") as f:
+            json.dump(candidates, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(candidates)} candidates to {cand_path}")
+
+        # 9. Dump ghost/missing JSON (benchmark IPs never touched). By definition these are simply ips and not registry entries
+        # since they have never been processed as threads (true ghosts). This is done in the resurrection_monitor_patch7c at
+        # the process level
+        ghosts = sorted(missing_ips)
+        ghost_path = f"/aws_EC2/logs/resurrection_ghost_missing_{ts}.json"
+        with open(ghost_path, "w") as f:
+            json.dump(ghosts, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
 
 
         # timing and cleanup

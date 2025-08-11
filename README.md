@@ -349,9 +349,17 @@ Note that the summary status tags below may change and there may be additonal on
 consitions surface
 
 
-#### parital of main() in the context of the description above
+#### parital of main() in the context of the description above (FULL code changes are in the next main section below)
+
 
 ```
+        # write-to-disk code in main() to aggregate the per process JSON in tomcat_worker into registries
+        # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
+        # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
+        print("[TRACE][aggregator] Starting disk-based aggregation…")
+
+        os.makedirs("/aws_EC2/logs", exist_ok=True)
+
         # 1. Load every per-process JSON that was created in tomcat_worker into registries
         registries = []
         for fname in os.listdir("/aws_EC2/logs"):
@@ -360,19 +368,24 @@ consitions surface
                 with open(path) as f:
                     registries.append(json.load(f))
 
-        # 2. Flatten & summarize registries using the call to aggregate_process_registries
+        # 2. Flatten (merge process registries into flat thread registries) & summarize registries using the call to         
+        # aggregate_process_registries
         final_registry = aggregate_process_registries(registries)
         summary = summarize_registry(final_registry)
-
-        # 3. Persist final_registry to final_aggregate_execution_run_registry.json and print the summary
-        # to gitlab console.
+        
+        # 3. Persist final_registry to final_aggregate_execution_run_registry.json (exported as artifact to gitlab pipeline) 
+        # to gitlab console.(this is the merged master registry)
         agg_path = "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
         with open(agg_path, "w") as f:
             json.dump(final_registry, f, indent=2)
+        print("[TRACE][aggregator] Wrote final JSON to", agg_path)
 
+        # 4. Print summary counts by status/tag
         print("[TRACE][aggregator] Final registry summary:")
         for tag, count in summary.items():
             print(f"  {tag}: {count}")
+
+
 ```
 
 
@@ -420,56 +433,49 @@ def summarize_registry(final_registry):
 
 
 
+### Full code changes to the major functions involved in migation to write-to-disk using the existing process level infra:
 
-
-### code commented out in several functions to revert the run_test and global aggregator code:
+NOTE: The code commented out in several functions to revert the run_test and global aggregator code is marked in the module as:
 
 --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
 
-resurrection_monitor_patch7c,  and modifications to tomcat_worker(), threaded_install(), run_test() and install_tomcat() to support all the threads and all the processes being aggregated into one registry
-
-
-
-
-The final code for write-to-disk is below:
 
 
 
 
 
-
-### resurrection_monitor_patch7c()
+##### resurrection_monitor_patch7c()
 
 
 
 
 
 
-### changes to tomcat_worker()
+##### tomcat_worker()
 
 
 
 
 
 
-### changes to threaded_install()
+##### threaded_install()
 
 
 
 
 
 
-### changes to install_tomcat()
+##### install_tomcat()
 
 
 
 
 
 
-### changes to main()
+##### main()
 
 
-### changes to run_test()
+###### run_test()
 
 
 
