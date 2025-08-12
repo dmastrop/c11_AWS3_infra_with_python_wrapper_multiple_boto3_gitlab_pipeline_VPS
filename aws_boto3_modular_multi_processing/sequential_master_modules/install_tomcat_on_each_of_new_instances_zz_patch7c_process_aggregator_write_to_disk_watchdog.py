@@ -288,21 +288,55 @@ def run_resurrection_monitor_diag(process_registry):
 ## NOTE: do not increase delay because that will affect the hybrid pooled/nonpooled scenarios (desired_count < total processes)
 ## and that would be slowing them down even though they do not need API backoff increased. Only use max_retries increase.
 
+#def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
+#    for attempt in range(max_retries):
+#        try:
+#            return func(*args, **kwargs)
+#        except botocore.exceptions.ClientError as e:
+#            if 'RequestLimitExceeded' in str(e):
+#                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+#                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+#                time.sleep(delay)
+#            else:
+#                raise
+#    raise Exception("Max retries exceeded for AWS API call.")
+
+
+## REVISED retry_with_backoff to support adaptive WATCHDOG_TIMEOUT (Code block 1 of 3)
 def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
+    """
+    Wraps an AWS API call with exponential backoff on RequestLimitExceeded,
+    and updates `max_retry_observed` to the highest retry index seen in this process.
+    This max_retry_observed is set per process for all the threads in that process based upon the code below which is called
+    from 3 blocks of code in tomcat_worker()
+    """
+    global max_retry_observed
+
     for attempt in range(max_retries):
         try:
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
+
+            # record the highest attempt index (0-based) that succeeded
+            with retry_lock:
+                max_retry_observed = max(max_retry_observed, attempt)
+
+            return result
+
         except botocore.exceptions.ClientError as e:
-            if 'RequestLimitExceeded' in str(e):
+            if "RequestLimitExceeded" in str(e):
+                # exponential backoff + jitter
                 delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
                 print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
                 time.sleep(delay)
             else:
+                # re-raise any other client errors
                 raise
+
+    # We exhausted all attempts—capture that too
+    with retry_lock:
+        max_retry_observed = max(max_retry_observed, max_retries)
+
     raise Exception("Max retries exceeded for AWS API call.")
-
-
-
 
 
 
