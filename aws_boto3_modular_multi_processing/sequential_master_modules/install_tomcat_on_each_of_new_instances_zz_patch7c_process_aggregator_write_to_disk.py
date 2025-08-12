@@ -1104,21 +1104,44 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 
         patch7_logger.info("Patch7 Summary — initialized")
 
-        # ------- Step 1: Combine runtime benchmark logs -------
+        ## ------- Step 1: Combine runtime benchmark logs -------
+        ##merged contents from all `benchmark_*.log` PID logs that were created at runtime
+        #def combine_benchmark_logs_runtime(log_dir):
+        #    combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+        #    with open(combined_path, "w") as outfile:
+        #        for fname in sorted(os.listdir(log_dir)):
+        #            #if fname.startswith("benchmark_") and fname.endswith(".log"):
+        #            # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
+        #             
+        #            if (
+        #                fname.startswith("benchmark_") 
+        #                and fname.endswith(".log") 
+        #                and "combined" not in fname
+        #            ):
+
+        #                path = os.path.join(log_dir, fname)
+        #                try:
+        #                    with open(path, "r") as infile:
+        #                        outfile.write(f"===== {fname} =====\n")
+        #                        outfile.write(infile.read() + "\n")
+        #                except Exception as e:
+        #                    patch7_logger.info(f"Skipped {fname}: {e}")
+        #    patch7_logger.info(f"Combined runtime log written to: {combined_path}")
+        #    return combined_path
+
+        # ------- Step 1: Combine runtime benchmark logs: filtered -------
         #merged contents from all `benchmark_*.log` PID logs that were created at runtime
         def combine_benchmark_logs_runtime(log_dir):
             combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
             with open(combined_path, "w") as outfile:
                 for fname in sorted(os.listdir(log_dir)):
-                    #if fname.startswith("benchmark_") and fname.endswith(".log"):
-                    # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
-                     
+                    # Only combine true benchmark logs — exclude artifact and combined logs
                     if (
-                        fname.startswith("benchmark_") 
-                        and fname.endswith(".log") 
+                        fname.startswith("benchmark_")
+                        and fname.endswith(".log")
                         and "combined" not in fname
+                        and not fname.startswith("benchmark_ips_artifact")
                     ):
-
                         path = os.path.join(log_dir, fname)
                         try:
                             with open(path, "r") as infile:
@@ -1128,7 +1151,6 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
                             patch7_logger.info(f"Skipped {fname}: {e}")
             patch7_logger.info(f"Combined runtime log written to: {combined_path}")
             return combined_path
-
 
 
         # ------- Step 2:Create benchmark_path variable using runtime combiner -------
