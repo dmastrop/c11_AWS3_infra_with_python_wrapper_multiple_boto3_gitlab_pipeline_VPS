@@ -74,16 +74,27 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 The static WATCHDOG_TIMEOUT of 90 seconds is quite useful with high number of concurrent processes, because as the number of EC2
 instances scale (assume for simplicity 1 thread per process case; but this supports full multi-threading) the probability of
-API contention on the requests increases.  For 512 concurrent processes there can be over 10 retry requests (in the gitlab
-logs these show up as RequestLimitExceeded counts).  The current code for the API exponential backoff is below. This code
-has been working well. However the watchdog timer on the install tomcat commands at 90 seconds can be overkill on smaller 
-EC2 deployments (like 16 EC2 nodes).  As such to save on overal execution time of the deployment stage of the gitlab pipeline, it
-is best to make the watchdog timeout adpative relative to number of nodes, EC2 instance type (t2.micros take much longer to 
-deploy tomcat than do t3.small, for example), and current API contention on AWS (this can vary greatly from day to day and 
-from hour of day and relative to how many instances are being deployed).   With respect to the API contention, assessing
-the real time current number of RequestLimitExceeded during the current thread is the best way to incorporate this metric
-into the overal adpative watchdog timeout.  The current thread installation in done in the instalL_tomcat()) function at the thread 
-level. install_tomcat() is called by threaded_install() at the process level.
+API contention on the requests increases.  For 512 concurrent processes there can be over 10 retry requests. In the gitlab console
+logs these show up as RequestLimitExceeded counts with the current retry attempt number listed as well.
+
+For example:
+
+```
+[Retry 2] RequestLimitExceeded. Retrying in 2.97s...
+
+```
+
+This is the second retry attempt due to the API request limit being reached during the EC2 node setup phase.
+So this information is avaiable for each thread in the process and the peak Retry can be assessed real time during process/thread
+execution, and this can be used to assess the degree of API contention that the process is experiencing in setting up its EC2 nodes
+(chunk_size number of nodes).
+
+
+
+Thus with respect to the API contention, assessing the real time max  number of RequestLimitExceeded retries for all the threads that
+the process is working on is the best way to incorporate this metric into the overal adpative watchdog timeout at the per process
+level.  
+
 
 
 These are some of the timeouts and ENV vars for this area of the code:
@@ -95,8 +106,8 @@ SLEEP_BETWEEN_ATTEMPTS = 5
 STALL_RETRY_THRESHOLD = 2
 ```
 
-
-This is the current API exponential backoff code:
+This is the current API exponential backoff code. This is a global level functon but as noted below it is called in the 
+tomcat_worker() function(.
 
 
 ```
@@ -115,48 +126,234 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
 ```
 
 
-This is the current watchdog code:
+The current thread installation in done in the instalL_tomcat()) function at the thread level. 
 
+install_tomcat() is called by threaded_install() at the process level. threaded_install runs at the per process level.
 
+threaded_install is called by run_test in the tomcat_worker function and is the ideal place to put much of the new code blocks below.
 
+The EC2 node setup phase is done prior to the install_tomcat phase for obvious reasons.  The EC2 node setup code is mostly in
+tomcat_worker() function.  The call to run_test() in tomcat_worker() is done after all of the EC2 node setup code. So at this
+point the max  number of RequestLimitExceeded retries can be assessed and incorporated into the function that calculates the
+adaptive watchdog timer value (the function below named get_watchdog_timeout).
 
+This is the current watchdog code which invokes the retry_with_backoff function above (there are several of these code blocks in
+tomcat_worker() ):
 
-
-This is the new adative watchdog timer code that can be used to adaptively set the WATCHDOG_TIMEOUT in the current watchdog code:
 
 ```
-def get_watchdog_timeout(node_count, instance_type, avg_retry_attempts):
+for sg_id in set(security_group_ids):
+        try:
+            retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 22,
+                    'ToPort': 22,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+        except my_ec2.exceptions.ClientError as e:
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"Rule already exists for security group {sg_id}")
+            else:
+                raise
+
+```
+
+
+
+
+This is the new adative watchdog timer code that can be used to adaptively set the WATCHDOG_TIMEOUT in the current watchdog code
+This is done at the per process level and applies to all the threads that the process will be working on.
+This will be explained in more detail below in regards to the API contention max retry attempts
+
+```
+def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     base = 15
     scale = 0.15 if instance_type == "micro" else 0.1
-    contention_penalty = min(30, avg_retry_attempts * 2)  # up to +30s
+    contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
     return int(base + scale * node_count + contention_penalty)
 ```
 
 
 The node_count is the total number of nodes deployed during the execution run
+
 The instance_type is the instance type of the EC2 nodes (for example t2.micro)
-The avg_rety_attempts will be calcualted per process based upon API contention with AWS
+
+The peak_rety_attempts will be calcualted per process based upon API contention with AWS (this will be done by a modified 
+retry_with_backoff function)
+
+The scale is a multiplier that is based upon the instance type (higher value for smaller vCPU instance type)
+For initial testing with 512 nodes this will be set to 0.11 so that the watchdog timeout will remain at the original 90 second baseline
 
 
 ### The WATCHDOG_TIMEOUT calculation will be done per process
 
 
 The WATCHDOG_TIMEOUT will remain global but will be overwritten per process. Per process memory is not shared and this is ideal
-for what is required here. Based upon the API contention, the instance_type and the node_count, the WATCHDOG_TIMEOUT will be 
+for what is required here. 
+
+An alternate solution is to produce a process level local variable for each watchdog timer and tag it with pid and perhaps a
+timestamp or uuid, but unless deep forensic logging anaysis is required, this is not necessary.
+
+With the global WATCHDOG_TIMEOUT being overwritten per process, there will be print gitlab console logs that will indicate the 
+pid of the process and its unique value for the WATCHDOG_TIMEOUT and this is sufficent for what is required.
+
+Based upon the API contention, the instance_type and the node_count, the WATCHDOG_TIMEOUT will be 
 calculated per process. The only variable between processes will be the API contention metric as discussed below. This requires
 the proper placement of the new code blocks relative to process vs. thread execution. This will be discussed further below.
 
-### avg_retry_attempts (API contention metric calculation):
+
+
+### Code changes:
+
+There are 3 main code blocks reqiured for this:
+
+
+1. a modified retry_with_backoff function that tracks the max number of retries for all the EC2 nodes (that will be threads) that
+the process is working on
+
+```
+import threading
+import random
+import time
+import botocore.exceptions
+
+# Per-process tracker for the highest retry attempt seen
+max_retry_observed = 0
+retry_lock       = threading.Lock()
+
+def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
+    """
+    Wraps an AWS API call with exponential backoff on RequestLimitExceeded,
+    and updates `max_retry_observed` to the highest retry index seen in this process.
+    """
+    global max_retry_observed
+
+    for attempt in range(max_retries):
+        try:
+            result = func(*args, **kwargs)
+
+            # record the highest attempt index (0-based) that succeeded
+            with retry_lock:
+                max_retry_observed = max(max_retry_observed, attempt)
+
+            return result
+
+        except botocore.exceptions.ClientError as e:
+            if "RequestLimitExceeded" in str(e):
+                # exponential backoff + jitter
+                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+            else:
+                # re-raise any other client errors
+                raise
+
+    # We exhausted all attempts—capture that too
+    with retry_lock:
+        max_retry_observed = max(max_retry_observed, max_retries)
+
+    raise Exception("Max retries exceeded for AWS API call.")
+
+```
+The function sets max_retry_observed for each process.
+
+Key points:
+
+- **`max_retry_observed`** is a global in each worker process—multiprocessing isolation means each process has its own counter.
+- **`retry_lock`** ensures two threads in the same process don’t stomp on each other when updating the counter.
+- After the  EC2 setup calls complete, once can  read `max_retry_observed` and feed it into the  watchdog calculator function
+get_watchdog_timeout
+- this function as noted earlier, is called in tomcat_worker() as part of the EC2 node setup and this is prior to when 
+tomcat_worker calls run_test. run_test will first call get_watchdog_timeout to set the WATCHDOG_TIMEOUT and then the 
+threaded_install will be called to install tomcat using this adative watchdog timeout during the installation process.
 
 
 
 
 
-### Placement of the new code blocks for multi-processing environment:
+2. The global get_watchdog_timeout function that will be used to calcuate the adative WATCHDOG_TIMEOUT value for that process
+
+
+# top of module
+WATCHDOG_TIMEOUT = 90  # this will be overriden by each successive process
+import threading
+
+max_retry_observed = 0        # updated by modified retry_with_backoff (see above)
+retry_lock = threading.Lock()
+
+def get_watchdog_timeout(node_count, instance_type, avg_retry_attempts):
+    base = 15
+    scale = 0.15 if instance_type == "micro" else 0.1
+    contention_penalty = min(30, avg_retry_attempts * 2)  # up to +30s
+    return int(base + scale * node_count + contention_penalty)
 
 
 
 
+
+
+3. A modified run_test which is called by the tomcat_worker(). As noted above this is the ideal place to make the call to the
+get_watchdog_timeout to calcuate the WATCHDOG_TIMEOUT value for that process. The process will then go on to call threaded_install
+with this line at the end of run_test:        
+```
+result = func(*args, **kwargs) 
+```
+
+
+The threaded_install will install tomcat on the EC2 nodes using this specific WATCHDOG_TIMEOUT value. 
+The WATCHDOG_TIMEOUT will continue to be global but will be rewritten for each process. The process memory is segregated and 
+each process will have its own WATCHDOG_TIMEOUT value that is unique for the API contention that it is experiencing
+
+Modified run_test:
+
+```
+def run_test(test_name, func, *args,
+             min_sample_delay=50, max_sample_delay=250,
+             sample_probability=0.1, **kwargs):
+
+    # 1) decide whether to sample metrics
+    delay = None
+    if random.random() < sample_probability:
+        delay = random.uniform(min_sample_delay, max_sample_delay)
+
+    # 2) wrap in benchmark context
+    with benchmark(test_name, sample_delay=delay):
+
+        # ─── NEW BLOCK ───
+        # By the time this function is called in tomcat_worker all the  retry_with_backoff calls have happened already in tomcat_worker
+        # so max_retry_observed is now set for this process.(modified retry_with_backoff calculates this as max_retry_observed
+        # We can compute the dynamic WATCHDOG_TIMEOUT from here with call to get_watchdog_timeout
+
+        global WATCHDOG_TIMEOUT
+        
+        # extract node_count from the first arg to func (threaded_install)
+        # node_count = len(args[0]) if args and isinstance(args[0], (list, tuple)) else 0
+        # instance_type = os.getenv("INSTANCE_TYPE", "micro")
+       
+
+        # Pull node count and instance type from environment
+        node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+        instance_type = os.getenv("instance_type", "micro")
+
+
+        WATCHDOG_TIMEOUT = get_watchdog_timeout(
+            node_count=node_count,
+            instance_type=instance_type,
+            avg_retry_attempts=max_retry_observed
+        )
+ 
+        print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
+              f"node_count={node_count}, max_retry={max_retry_observed} → "
+              f"WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+
+        # ─── actual call to threaded_install which returns thread_registry which is process_registry ───
+        result = func(*args, **kwargs)
+        return result
+```
 
 
 

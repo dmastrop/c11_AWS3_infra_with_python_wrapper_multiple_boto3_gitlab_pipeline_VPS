@@ -642,7 +642,7 @@ def benchmark(test_name, sample_delay=None):
 
 ## This needs to be slightly modified for the patch7c to return the thread_registry from threaded_install
 ## run test is invoked with func threaded_install and this now returns the thread_registry which will later 
-## be assigned proces_registry to be consumed by resurrection_monitor_patch7c
+## be assigned process_registry to be consumed by resurrection_monitor_patch7c
 def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
     delay = None
     if random.random() < sample_probability:
