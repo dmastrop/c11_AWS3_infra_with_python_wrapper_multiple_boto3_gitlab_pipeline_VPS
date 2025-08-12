@@ -267,17 +267,18 @@ Key points:
 - **`retry_lock`** ensures two threads in the same process don’t stomp on each other when updating the counter.
 - After the  EC2 setup calls complete, once can  read `max_retry_observed` and feed it into the  watchdog calculator function
 get_watchdog_timeout
-- this function as noted earlier, is called in tomcat_worker() as part of the EC2 node setup and this is prior to when 
-tomcat_worker calls run_test. run_test will first call get_watchdog_timeout to set the WATCHDOG_TIMEOUT and then the 
-threaded_install will be called to install tomcat using this adative watchdog timeout during the installation process.
-
+- This function as noted earlier, is called in tomcat_worker() as part of the EC2 node setup and this is PRIOR to when 
+tomcat_worker calls run_test. Thus max_retry_observed will be set at this point
+- Next, tomcat_worker will call run_test (see below). run_test  will first call get_watchdog_timeout to set the WATCHDOG_TIMEOUT 
+and then the threaded_install will be called to install tomcat using this adative watchdog timeout during the installation process.
+The code must be executed in this fashion.
 
 
 
 
 2. The global get_watchdog_timeout function that will be used to calcuate the adative WATCHDOG_TIMEOUT value for that process
 
-
+```
 # top of module
 WATCHDOG_TIMEOUT = 90  # this will be overriden by each successive process
 import threading
@@ -291,14 +292,16 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
     return int(base + scale * node_count + contention_penalty)
 
-
+```
 
 
 
 
 3. A modified run_test which is called by the tomcat_worker(). As noted above this is the ideal place to make the call to the
 get_watchdog_timeout to calcuate the WATCHDOG_TIMEOUT value for that process. The process will then go on to call threaded_install
-with this line at the end of run_test:        
+with this line at the end of run_test:    
+
+    
 ```
 result = func(*args, **kwargs) 
 ```
