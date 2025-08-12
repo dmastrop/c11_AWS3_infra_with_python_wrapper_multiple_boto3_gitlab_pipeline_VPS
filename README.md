@@ -40,6 +40,8 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 ### Major milestone updates to refer to below:
 
 - Update part 21: write-to-disk aggregator reviews the architecture of phase2 at a high level
+- Update part 22: watchdog adpative mechansims to improve execution time
+
 
 
 
@@ -59,6 +61,85 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 •Phase 3 – Thread Healing & Adaptive Retry: Threads flagged in Phase 2 will be dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and potential thread override logic tuned to system state and swap conditions.
 
 •Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns.
+
+
+
+
+
+## UPDATES: part 22: Watchdog adaptive mechanisms to improve execution time: 16, 32, 64, 128, 256, 512 hyper-scaling process benchmark testing.
+
+
+
+### Introduction:
+
+The static WATCHDOG_TIMEOUT of 90 seconds is quite useful with high number of concurrent processes, because as the number of EC2
+instances scale (assume for simplicity 1 thread per process case; but this supports full multi-threading) the probability of
+API contention on the requests increases.  For 512 concurrent processes there can be over 10 retry requests (in the gitlab
+logs these show up as RequestLimitExceeded counts).  The current code for the API exponential backoff is below. This code
+has been working well. However the watchdog timer on the install tomcat commands at 90 seconds can be overkill on smaller 
+EC2 deployments (like 16 EC2 nodes).  As such to save on overal execution time of the deployment stage of the gitlab pipeline, it
+is best to make the watchdog timeout adpative relative to number of nodes, EC2 instance type (t2.micros take much longer to 
+deploy tomcat than do t3.small, for example), and current API contention on AWS (this can vary greatly from day to day and 
+from hour of day and relative to how many instances are being deployed).   With respect to the API contention, assessing
+the real time current number of RequestLimitExceeded during the current thread is the best way to incorporate this metric
+into the overal adpative watchdog timeout.  The current thread installation in done in the instalL_tomcat()) function at the thread 
+level. install_tomcat() is called by threaded_install() at the process level.
+
+
+These are some of the timeouts and ENV vars for this area of the code:
+
+```
+WATCHDOG_TIMEOUT = 90
+RETRY_LIMIT = 3
+SLEEP_BETWEEN_ATTEMPTS = 5
+STALL_RETRY_THRESHOLD = 2
+```
+
+
+This is the current API exponential backoff code:
+
+
+```
+def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except botocore.exceptions.ClientError as e:
+            if 'RequestLimitExceeded' in str(e):
+                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+            else:
+                raise
+    raise Exception("Max retries exceeded for AWS API call.")
+```
+
+
+This is the current watchdog code:
+
+
+
+
+
+
+This is the new adative watchdog timer code that can be used to adaptively set the WATCHDOG_TIMEOUT in the current watchdog code:
+
+```
+def get_watchdog_timeout(node_count, instance_type, avg_retry_attempts):
+    base = 15
+    scale = 0.15 if instance_type == "micro" else 0.1
+    contention_penalty = min(30, avg_retry_attempts * 2)  # up to +30s
+    return int(base + scale * node_count + contention_penalty)
+```
+
+
+The node_count is the total number of nodes deployed during the execution run
+The instance_type is the instance type of the EC2 nodes (for example t2.micro)
+The avg_rety_attempts <<<<<<<<<
+
+
+
+
 
 
 
