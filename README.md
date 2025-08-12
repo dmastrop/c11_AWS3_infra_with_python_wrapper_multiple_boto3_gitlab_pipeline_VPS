@@ -212,8 +212,7 @@ the proper placement of the new code blocks relative to process vs. thread execu
 There are 3 main code blocks reqiured for this:
 
 
-1. a modified retry_with_backoff function that tracks the max number of retries for all the EC2 nodes (that will be threads) that
-the process is working on
+##### 1. A modified retry_with_backoff function that tracks the max number of retries for all the EC2 nodes (that will be threads) that the process is working on
 
 ```
 import threading
@@ -276,7 +275,7 @@ The code must be executed in this fashion.
 
 
 
-2. The global get_watchdog_timeout function that will be used to calcuate the adative WATCHDOG_TIMEOUT value for that process
+#### 2. The global get_watchdog_timeout function that will be used to calcuate the adative WATCHDOG_TIMEOUT value for that process
 
 ```
 # top of module
@@ -297,9 +296,10 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
 
 
 
-3. A modified run_test which is called by the tomcat_worker(). As noted above this is the ideal place to make the call to the
-get_watchdog_timeout to calcuate the WATCHDOG_TIMEOUT value for that process. The process will then go on to call threaded_install
-with this line at the end of run_test:    
+#### 3. A modified run_test which is called by the tomcat_worker(). 
+
+As noted above this is the ideal place to make the call to the get_watchdog_timeout to calcuate the WATCHDOG_TIMEOUT value for 
+that process. The process will then go on to call threaded_install with this line at the end of run_test:    
 
     
 ```
@@ -308,6 +308,7 @@ result = func(*args, **kwargs)
 
 
 The threaded_install will install tomcat on the EC2 nodes using this specific WATCHDOG_TIMEOUT value. 
+
 The WATCHDOG_TIMEOUT will continue to be global but will be rewritten for each process. The process memory is segregated and 
 each process will have its own WATCHDOG_TIMEOUT value that is unique for the API contention that it is experiencing
 
