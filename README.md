@@ -135,7 +135,25 @@ def get_watchdog_timeout(node_count, instance_type, avg_retry_attempts):
 
 The node_count is the total number of nodes deployed during the execution run
 The instance_type is the instance type of the EC2 nodes (for example t2.micro)
-The avg_rety_attempts <<<<<<<<<
+The avg_rety_attempts will be calcualted per process based upon API contention with AWS
+
+
+### The WATCHDOG_TIMEOUT calculation will be done per process
+
+
+The WATCHDOG_TIMEOUT will remain global but will be overwritten per process. Per process memory is not shared and this is ideal
+for what is required here. Based upon the API contention, the instance_type and the node_count, the WATCHDOG_TIMEOUT will be 
+calculated per process. The only variable between processes will be the API contention metric as discussed below. This requires
+the proper placement of the new code blocks relative to process vs. thread execution. This will be discussed further below.
+
+### avg_retry_attempts (API contention metric calculation):
+
+
+
+
+
+### Placement of the new code blocks for multi-processing environment:
+
 
 
 
