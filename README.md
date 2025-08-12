@@ -207,6 +207,32 @@ the proper placement of the new code blocks relative to process vs. thread execu
 
 
 
+### Requirement for threading lock on the max_retry_observed that is calculated in the retry_with_backoff:
+
+#### Execution Context: Process vs. Thread
+
+ `tomcat_worker` runs at the **process level**
+- When `main` calls `pool.starmap(tomcat_worker_wrapper, args_list)`, it spawns multiple **OS-level processes**.
+- Each process runs its own copy of `tomcat_worker_wrapper`, which then calls `tomcat_worker`.
+- So the `for sg_id in ...` loop runs **inside a single process**, isolated from others.
+
+AWS API calls inside `retry_with_backoff` are made **per process**
+- Even if one runs 1 thread per process, each process still makes its own API calls to `authorize_security_group_ingress`.
+- If one has 512 processes doing this concurrently, AWS sees 512 simultaneous API requests—hence the **RequestLimitExceeded** errors and high retry counts.
+
+##### Requirment fo the retry_lock (threading.Lock()) in the modified retry_with_backoff (code is below in next section)
+
+If Multiple threads per process there is shared memory (unlike between processes)
+- Inside each process, if one spawns multiple threads (via `ThreadPoolExecutor`), they all share the same `max_retry_observed`.
+- Without a lock, two threads could try to update `max_retry_observed` at the same time, leading to race conditions or incorrect values
+
+The `retry_lock` ensures atomic updates
+- When a thread sees a retry count of 7, and another sees 9, need to make sure `max_retry_observed` ends up as 9.
+- The `with retry_lock:` block guarantees that only one thread updates the counter at a time.
+
+
+
+
 ### Code changes:
 
 There are 3 main code blocks reqiured for this:

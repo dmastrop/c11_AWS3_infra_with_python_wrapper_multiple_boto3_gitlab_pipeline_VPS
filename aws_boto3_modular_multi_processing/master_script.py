@@ -152,9 +152,14 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_USE.py")
 
 
-#### THIS IS THE MODULE2 SCRIPT with patc7c and post execution process level aggregator using write to disk (docker container disk)
+##### THIS IS THE MODULE2 SCRIPT with patch7c and post execution process level aggregator using write to disk (docker container disk)
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk.py")
+
+#### THIS IS THE MODULE2 SCRIPT with adaptive watchdog timeout code added to write to disk
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk.py")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog.py")
+
 
 ## modules 3-11:
 
