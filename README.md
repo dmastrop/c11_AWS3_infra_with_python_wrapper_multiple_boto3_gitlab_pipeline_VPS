@@ -285,10 +285,10 @@ import threading
 max_retry_observed = 0        # updated by modified retry_with_backoff (see above)
 retry_lock = threading.Lock()
 
-def get_watchdog_timeout(node_count, instance_type, avg_retry_attempts):
+def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     base = 15
     scale = 0.15 if instance_type == "micro" else 0.1
-    contention_penalty = min(30, avg_retry_attempts * 2)  # up to +30s
+    contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
     return int(base + scale * node_count + contention_penalty)
 
 
@@ -343,7 +343,7 @@ def run_test(test_name, func, *args,
         WATCHDOG_TIMEOUT = get_watchdog_timeout(
             node_count=node_count,
             instance_type=instance_type,
-            avg_retry_attempts=max_retry_observed
+            peak_retry_attempts=max_retry_observed
         )
  
         print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
