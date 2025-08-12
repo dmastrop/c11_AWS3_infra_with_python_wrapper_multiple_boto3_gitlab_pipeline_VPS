@@ -37,7 +37,9 @@ pertain to the optmizations to this module.
 The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
 
 
+### Major milestone updates to refer to below:
 
+- Update part 21: write-to-disk aggregator reviews the architecture of phase2 at a high level
 
 
 
@@ -464,7 +466,7 @@ NOTE: The code commented out in several functions to revert the run_test and glo
 
 
 
-##### resurrection_monitor_patch7c()
+##### resurrection_monitor_patch7c() This is a work in progress. Patch8 will add more changes to this.
 
 
 
@@ -490,15 +492,10 @@ NOTE: The code commented out in several functions to revert the run_test and glo
 
 
 
+##### run_test()
 
 
-##### main()
-
-
-###### run_test()
-
-
-
+##### main() This is where most of the new aggregation code is now:
 
 
 
