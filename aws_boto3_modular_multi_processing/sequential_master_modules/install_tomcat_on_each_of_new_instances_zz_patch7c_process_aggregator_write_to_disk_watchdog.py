@@ -57,6 +57,28 @@ retry_lock = threading.Lock()
 
 
 
+## Global function get_watchdog_timeout() to calculate the actual adaptive WATCHDOG_TIMEOUT based upon the parameters below
+## This is code block2 for adaptive WATCHDOG_TIMEOUT
+def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
+    base = 15
+    scale = 0.15 if instance_type == "micro" else 0.1
+   
+    contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
+    return int(base + scale * node_count + contention_penalty)
+
+#The node_count is the total number of nodes deployed during the execution run
+#The instance_type is the instance type of the EC2 nodes (for example t2.micro)
+#The peak_rety_attempts will be calcualted per process based upon API contention with AWS (this will be done by a modified
+#retry_with_backoff function)
+#The scale is a multiplier that is based upon the instance type (higher value for smaller vCPU instance type)
+#For initial testing with 512 nodes this will be set to 0.11 so that the watchdog timeout will remain at the original 90 
+#second baseline
+
+
+
+
+
+
 
 ## --- COMMENTED OUT FOR DISK-HANDOFF write-to-disk WORKFLOW ---
 ## all_process_registries is NOT shared between processes and this approach does not work 
