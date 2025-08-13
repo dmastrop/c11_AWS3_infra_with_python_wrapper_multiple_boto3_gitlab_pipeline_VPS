@@ -3685,7 +3685,8 @@ def main():
 
 
     try:
-        instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=120)
+        # make sure to change timeout 120 to 180 for t2.micro when using high process count (i.e, like 512)
+        instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
     except TimeoutError as e:
         print(f"[ERROR] {e}")
         sys.exit(1)
