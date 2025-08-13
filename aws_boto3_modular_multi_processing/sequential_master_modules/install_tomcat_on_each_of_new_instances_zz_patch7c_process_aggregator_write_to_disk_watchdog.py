@@ -708,11 +708,18 @@ def benchmark(test_name, sample_delay=None):
 ## This needs to be slightly modified for the patch7c to return the thread_registry from threaded_install
 ## run test is invoked with func threaded_install and this now returns the thread_registry which will later 
 ## be assigned process_registry to be consumed by resurrection_monitor_patch7c
+
+## This has been modified again to support adaptive WATCHDOG_TIMEOUT. This is code block3 of that implementation.
+
 def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+    
+    # 1) decide whether to sample metrics
     delay = None
+    
     if random.random() < sample_probability:
         delay = random.uniform(min_sample_delay, max_sample_delay)
 
+    # 2) wrap in benchmark context
     with benchmark(test_name, sample_delay=delay):
     
         #func(*args, **kwargs)
@@ -722,6 +729,51 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         # if isinstance(result, list): loop below is executed.
         # result is the return from threaded_install which is thread_registry the process level registry. If multi-threaded there
         # should be an entry for each thread/IP/EC2 instance in the registry.
+
+
+
+
+        # ─── NEW BLOCK  Code block3 for adaptive WATCHDOG_TIMEOUT ───
+        # By the time this function is called in tomcat_worker all the  retry_with_backoff calls have happened already in tomcat_worker
+        # so max_retry_observed is now set for this process.(modified retry_with_backoff calculates this as max_retry_observed
+        # We can compute the dynamic WATCHDOG_TIMEOUT from here with call to get_watchdog_timeout
+
+        global WATCHDOG_TIMEOUT
+
+        # extract node_count from the first arg to func (threaded_install)
+        # node_count = len(args[0]) if args and isinstance(args[0], (list, tuple)) else 0
+        # instance_type = os.getenv("INSTANCE_TYPE", "micro")
+
+
+        # Pull node count and instance type from environment
+        node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+        instance_type = os.getenv("instance_type", "micro")
+
+        # call the get_watchdog_timeout to calculate the adaptive WATCHDOG_TIMEOUT value
+        # max_retry_observed is iteratively set  in the modified retry_with_backoff functin.
+        WATCHDOG_TIMEOUT = get_watchdog_timeout(
+            node_count=node_count,
+            instance_type=instance_type,
+            peak_retry_attempts=max_retry_observed
+        )
+
+
+        print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
+              f"instance_type={instance_type}, node_count={node_count}, "
+              f"max_retry={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+
+
+
+        # ─── actual call to threaded_install which returns thread_registry which is process_registry ───
+        # thread_registry will be assigned the important process_registry in tomcat_worker() the calling function of run_test
+
+        result = func(*args, **kwargs)
+        
+
+        return result  # move this within the benchnark context
+
+
+
 
 
 ## comment out the inline run_test aggregator. This won't work. The processes have their own memory space. Not shared. So even this
@@ -792,7 +844,12 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
 #        print(f"[TRACE] Missing IPs in aggregate: {missing_ips}")
 #        print(f"[TRACE] Extra IPs not in benchmark: {extra_ips}")
 #
-    return result
+
+
+
+#    return result
+#    this was outside of the "with benchmark" context. Not terrible but not ideal. See above. Move this
+#    inside of the benchmark context
 
 
 
