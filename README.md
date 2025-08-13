@@ -175,7 +175,7 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     base = 15
     scale = 0.15 if instance_type == "micro" else 0.1
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
-    return int(base + scale * node_count + contention_penalty)
+    return math.ceil(base + scale * node_count + contention_penalty)
 ```
 
 
@@ -188,6 +188,9 @@ retry_with_backoff function)
 
 The scale is a multiplier that is based upon the instance type (higher value for smaller vCPU instance type)
 For initial testing with 512 nodes this will be set to 0.11 so that the watchdog timeout will remain at the original 90 second baseline
+
+Use the math.ceil to round up.
+
 
 
 ### The WATCHDOG_TIMEOUT calculation will be done per process
@@ -349,7 +352,7 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     base = 15
     scale = 0.15 if instance_type == "micro" else 0.1
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
-    return int(base + scale * node_count + contention_penalty)
+    return math.ceil(base + scale * node_count + contention_penalty)
 
 ```
 
