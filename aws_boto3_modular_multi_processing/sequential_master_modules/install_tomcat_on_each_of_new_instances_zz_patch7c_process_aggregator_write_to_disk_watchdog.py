@@ -1059,7 +1059,7 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
         print(message)
 
     def timestamp():
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     ## These are the resurrection_registry patch 1-5 logs. These are tagged resurrection candidates for Phase3 implementation
     #log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
