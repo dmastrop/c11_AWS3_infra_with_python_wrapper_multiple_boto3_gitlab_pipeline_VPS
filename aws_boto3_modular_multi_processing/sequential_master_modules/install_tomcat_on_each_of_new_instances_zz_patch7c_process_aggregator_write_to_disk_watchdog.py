@@ -64,7 +64,8 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     scale = 0.15 if instance_type == "micro" else 0.1
    
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
-    return int(base + scale * node_count + contention_penalty)
+    #return int(base + scale * node_count + contention_penalty)
+    return math.ceil(base + scale + node_count + contention_penalty)
 
 #The node_count is the total number of nodes deployed during the execution run
 #The instance_type is the instance type of the EC2 nodes (for example t2.micro)
