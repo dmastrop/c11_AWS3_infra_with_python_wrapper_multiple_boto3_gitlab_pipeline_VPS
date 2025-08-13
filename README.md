@@ -40,7 +40,7 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 ### Major milestone updates to refer to below:
 
 - Update part 21: write-to-disk aggregator reviews the architecture of phase2 at a high level
-- Update part 22: watchdog adpative mechansims to improve execution time
+- Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
 
 
 
