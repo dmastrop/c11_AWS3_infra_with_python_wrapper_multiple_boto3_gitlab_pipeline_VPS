@@ -3686,7 +3686,7 @@ def main():
 
     try:
         # make sure to change timeout 120 to 180 for t2.micro when using high process count (i.e, like 512)
-        instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=360)
+        instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=120)
     except TimeoutError as e:
         print(f"[ERROR] {e}")
         sys.exit(1)
@@ -3714,9 +3714,9 @@ def main():
     ]
 
     ### Configurable parameters
-    chunk_size = 1     # Number of IPs per process
-    max_workers = 1       # Threads per process
-    desired_count = 487   # Max concurrent processes
+    chunk_size = 2    # Number of IPs per process
+    max_workers = 2       # Threads per process
+    desired_count = 12   # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
