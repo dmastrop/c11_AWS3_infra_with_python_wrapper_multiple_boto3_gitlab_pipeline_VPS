@@ -220,7 +220,7 @@ AWS API calls inside `retry_with_backoff` are made **per process**
 - Even if one runs 1 thread per process, each process still makes its own API calls to `authorize_security_group_ingress`.
 - If one has 512 processes doing this concurrently, AWS sees 512 simultaneous API requests—hence the **RequestLimitExceeded** errors and high retry counts.
 
-##### Requirment fo the retry_lock (threading.Lock()) in the modified retry_with_backoff (code is below in next section)
+##### Requirement fo the retry_lock (threading.Lock()) in the modified retry_with_backoff (code is below in next section)
 
 If Multiple threads per process there is shared memory (unlike between processes)
 - Inside each process, if one spawns multiple threads (via `ThreadPoolExecutor`), they all share the same `max_retry_observed`.
@@ -230,6 +230,39 @@ The `retry_lock` ensures atomic updates
 - When a thread sees a retry count of 7, and another sees 9, need to make sure `max_retry_observed` ends up as 9.
 - The `with retry_lock:` block guarantees that only one thread updates the counter at a time.
 
+
+
+
+
+### Summary of placement of code blocks:
+
+
+As mentioned above the ideal place for the new code that calculates the adaptive WATCHDOG_TIMEOUT is in run_test
+
+There are 3 main code blocks that will be added (see next section below)
+
+The first one is the retry_with_backoff modified function taht incorporates the calculation of the max_retry_observed over all of the
+threads in the process (max_retry_observed will be calculated per process)
+
+This is a global function at the top of the python module.
+
+The call to the retry_with_backoff is still made in tomcat_worker using the for sg_id in set(security_group_ids): loops. These are
+done early on in tomcat_worker() during the EC2 nodes setup phase. These are done prior to the call to threaded_install via the
+run_test function.
+
+At some point the run_test function is called in tomcat_worker(). By this time the max_retry_observed will have been calculated.
+This metric is part of the calculation formula for the adaptive WATCHDOG_TIMEOUT value (per process)
+
+In run_test the function get_watchdog_timeout is called (per process) to calculate the adaptive WATCHDOG_TIMEOUT value for the 
+process
+
+At the end of run_test the threaded_install function is called and this is where the ThreadPoolExecutor is invoked to actually
+install tomcat on each of the EC2 nodes in the chunk_size for the process (by calling install_tomcat). The WATCHDOG_TIMEOUT
+set earlier will be used for all of the install operations on all the threads in the process. It will have been optimized for 
+the process based upon total number of nodes deployed in the execution, the node (instance) type and of course the API contention
+that the process is experiencing (max_retry_observed).
+
+These three code blocks are listed in the next section below.
 
 
 
