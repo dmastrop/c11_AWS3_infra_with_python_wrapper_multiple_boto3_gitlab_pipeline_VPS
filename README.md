@@ -409,10 +409,12 @@ def run_test(test_name, func, *args,
             instance_type=instance_type,
             peak_retry_attempts=max_retry_observed
         )
- 
+
         print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
-              f"node_count={node_count}, max_retry={max_retry_observed} → "
-              f"WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+              f"instance_type={instance_type}, node_count={node_count}, "
+              f"max_retry={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+
+
 
         # ─── actual call to threaded_install which returns thread_registry which is process_registry ───
         result = func(*args, **kwargs)
