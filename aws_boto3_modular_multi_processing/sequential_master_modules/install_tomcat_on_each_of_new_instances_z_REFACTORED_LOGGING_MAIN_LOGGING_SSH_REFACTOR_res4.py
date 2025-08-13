@@ -115,11 +115,11 @@ def run_module(module_script_path):
 
 
 
-#### This block of code is for the benchmarking wrapper function the the ThreadPoolExecutor in tomcat_worker() function
-#### below. This has the run_test() function that is used in it as well as the  benchmark() function that run_test
-#### requires to run specific benchmarks on the ThreadPoolExecutor
-#### These functions need to be accessible globally in this module.
-#### This is using a custom contextmanager as defined below with yield split as below.
+#### This block of code is for the benchmarking wrapper function the the ThreadPoolExecutor in t#omcat_worker() function
+#### below. This has the run_test() function that is used in it as well as the  benchmark() func#tion that run_test
+#### requires to run specific benchmarks on the ThreadPoolExecutor                              #
+#### These functions need to be accessible globally in this module.                             #
+#### This is using a custom contextmanager as defined below with yield split as below.          #
 #import time
 #import psutil
 #import logging
@@ -841,19 +841,28 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
 
 
+            # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
+            print(f"[RESMON DEBUG] Resurrection registry snapshot:")
+            for ip, entry in resurrection_registry.items():
+                print(f"    {ip}: {entry}")
+
             successful_registry_ips = {
                 ip for ip, entry in resurrection_registry.items()
                 if entry.get("status") == "install_success"
                 and entry.get("watchdog_retries", 0) <= 2
             }
-#            successful_registry_ips = {
-#                ip for ip, entry in resurrection_registry.items()
-#                if entry.get("status") == "install_success"
-#                
-#            }
+
+            # Debugs to tell  how many IPs the above filter pulled through — and what the filter did to the full registry snapshot.
+            print(f"[RESMON DEBUG] Registry IPs classified as successful: {successful_registry_ips}")
+
+
 
             failed_registry_ips = total_registry_ips - successful_registry_ips
+
             missing_registry_ips = benchmark_ips - total_registry_ips
+
+
+
 
             # Dump artifacts
             def dump_set_to_artifact(name, ip_set):
@@ -1949,8 +1958,29 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
 
+
+
+        ## Debugging code to track down the successful_registry_ips tagging issue
+        # 🔍 Trace log to confirm registry tagging per thread
+        try:
+            registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
+            pid = multiprocessing.current_process().pid
+
+            print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
+            print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
+
+        except Exception as e:
+            print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
+
+
+
+
         print(f"Installation completed on {ip}")
         return ip, private_ip, True
+
+    ##### install_tomcat() function ends here
+
+
 
 
 
@@ -2439,7 +2469,7 @@ def main():
     ### Configurable parameters
     chunk_size = 1     # Number of IPs per process
     max_workers = 1       # Threads per process
-    desired_count = 487   # Max concurrent processes
+    desired_count = 12   # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
