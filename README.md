@@ -163,6 +163,7 @@ for sg_id in set(security_group_ids):
 ```
 
 
+### Preview of the get_watchdog_timeout function that calculates the adaptive WATCHDOG_TIMEOUT value
 
 
 This is the new adative watchdog timer code that can be used to adaptively set the WATCHDOG_TIMEOUT in the current watchdog code
