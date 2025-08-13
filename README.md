@@ -66,15 +66,16 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES: part 22: Watchdog adaptive mechanisms to improve execution time: 16, 32, 64, 128, 256, 512 hyper-scaling process benchmark testing.
+## UPDATES: part 22: WATCHDOG_TIMEOUT adaptive mechanisms in hyper-scaling process benchmark testing.
 
 
 
-### Introduction:
+### Introduction on AWS API contention during the control plane node setup:
 
 The static WATCHDOG_TIMEOUT of 90 seconds is quite useful with high number of concurrent processes, because as the number of EC2
 instances scale (assume for simplicity 1 thread per process case; but this supports full multi-threading) the probability of
-API contention on the requests increases.  For 512 concurrent processes there can be over 10 retry requests. In the gitlab console
+API contention during EC2 node setup phase (in tomcat_install function) greatly increases.  For 512 concurrent processes there can be 
+over 10 retry requests when AWS has to apply the security group rules to all of the nodes. In the gitlab console
 logs these show up as RequestLimitExceeded counts with the current retry attempt number listed as well.
 
 For example:
@@ -92,19 +93,9 @@ execution, and this can be used to assess the degree of API contention that the 
 
 
 Thus with respect to the API contention, assessing the real time max  number of RequestLimitExceeded retries for all the threads that
-the process is working on is the best way to incorporate this metric into the overal adpative watchdog timeout at the per process
+the process is working on is the best way to incorporate this metric into the overall adpative watchdog timeout at the per process
 level.  
 
-
-
-These are some of the timeouts and ENV vars for this area of the code:
-
-```
-WATCHDOG_TIMEOUT = 90
-RETRY_LIMIT = 3
-SLEEP_BETWEEN_ATTEMPTS = 5
-STALL_RETRY_THRESHOLD = 2
-```
 
 This is the current API exponential backoff code. This is a global level functon but as noted below it is called in the 
 tomcat_worker() function(.
@@ -126,19 +117,23 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
 ```
 
 
-The current thread installation in done in the instalL_tomcat()) function at the thread level. 
+The current thread installation (data plane operation) is done in the instalL_tomcat()) function at the thread level. 
 
 install_tomcat() is called by threaded_install() at the process level. threaded_install runs at the per process level.
 
-threaded_install is called by run_test in the tomcat_worker function and is the ideal place to put much of the new code blocks below.
+threaded_install is called by run_test in the tomcat_worker function and is the ideal place to put much of the new adaptive watchdog
+code.
 
-The EC2 node setup phase is done prior to the install_tomcat phase for obvious reasons.  The EC2 node setup code is mostly in
-tomcat_worker() function.  The call to run_test() in tomcat_worker() is done after all of the EC2 node setup code. So at this
-point the max  number of RequestLimitExceeded retries can be assessed and incorporated into the function that calculates the
-adaptive watchdog timer value (the function below named get_watchdog_timeout).
+The EC2 node setup phase (control plane) is done prior to the install_tomcat phase for obvious reasons.  
+The EC2 node setup code is mostly in the tomcat_worker() function.  The call to run_test() in tomcat_worker() is done after all 
+of the EC2 node setup code. So at this point the max  number of RequestLimitExceeded retries (a control plane metric) 
+can be assessed and incorporated into the function that calculates the adaptive watchdog timer value (the function below named 
+get_watchdog_timeout). The WATCHDOG_TIMEOUT is a data plan operation that is a timeout for the tomcat installation commands that
+are sent to the node once the SSH connection is opened up.
 
-This is the current watchdog code which invokes the retry_with_backoff function above (there are several of these code blocks in
-tomcat_worker() ):
+This is the code which invokes the retry_with_backoff function above (there are several of these code blocks in
+tomcat_worker() to exponentially back off during periods of API contention as the security rules are applied to the ndoes on the
+backend after the authorize_security_group_ingress method is invoked:
 
 
 ```
@@ -161,6 +156,124 @@ for sg_id in set(security_group_ids):
                 raise
 
 ```
+
+
+### Justification for incorporating the API contention metric above into the data plane metric WATCHDOG_TIMEOUT:
+
+The API contention above occurs during the contorl plane node setup phase of the execution.  The WATCHDOG_TIMEOUT is a 
+data plane installation timeout value for installation commands sent to each node to install the tomcat9 on them.
+
+The two are not related in a cause and effect manner but are correlated to each other.
+
+Is API Contention a Proxy for EC2 Responsiveness?
+
+What API Contention Measures
+ - **RequestLimitExceeded** reflects AWS throttling the  API calls—typically during:
+  - Security group updates
+  - Instance launches
+  - Describe operations
+
+This is **control-plane contention**, not data-plane. This indicates that AWS is under pressure handling the  orchestration commands
+and does not necessarily mean that the EC2 instances themselves are slow which would lead to slow installation times.
+
+
+What API contention does not directly measure
+- EC2 instance boot time
+- SSH responsiveness
+- Disk I/O or CPU performance inside the instance
+- Package installation speed (`apt`, `systemctl`, etc.)
+
+So API contention does not directly imply EC2 sluggishness
+
+
+But There is  a Correlation
+
+
+- When one launches 512 nodes, AWS’s backend is under load.
+- That load can spill over into:
+  - Delayed instance readiness
+  - Slower network provisioning
+  - I/O bottlenecks on shared infrastructure
+
+So while API contention doesn’t cause slow installs, it **often co-occurs** with them—especially in burst scenarios.
+
+
+
+Why Including Contention in `WATCHDOG_TIMEOUT` Still Makes Sense
+
+Even if it’s not causally linked, it’s a **useful signal** for tuning:
+
+- High contention → AWS is under stress → give more slack to watchdog
+- Low contention → AWS is snappy → tighten watchdog to catch hangs faster
+
+It’s a **defensive heuristic**, not a performance predictor.
+
+
+#### Why execution times are not necessarily improved with the adaptive WATCHDOG_TIMEOUT
+
+
+In short, parallelism masks individual install time variance, which is why total pipeline duration remains similar  across 
+vastly different node counts. So even if install time per node creeps up under load, it’s amortized across the swarm.
+And a 30 second increase in installation time across parallel node installations will not add much to the overall execution time
+that is on the order of 10s of minutes.
+
+Why Installation Time Might Not Matter in regards to the adaptive WATCHDOG_TIMEOUT
+
+- **Parallel execution** means the slowest node defines the wall-clock time.
+- If most nodes finish in 22s and a few take 50s, the tail latency matters—but only if it causes retries or watchdog triggers.
+- Unless install time variance causes *failures*, it’s not a bottleneck.
+
+Thus in the case of highly parallel operations,  **installation time is not a strong predictor of total execution time**, 
+especially when the system is resilient to stragglers (which this system is designed to be).
+
+#### The takeaway:
+
+While API contention is a control-plane metric, it correlates with broader AWS infrastructure stress. Incorporating it into `
+WATCHDOG_TIMEOUT` provides a defensive buffer against transient delays during node provisioning and setup. 
+Although installation time per node may not scale linearly with node count due to parallelism, elevated contention increases the 
+likelihood of stragglers and false watchdog triggers. The adaptive timeout mitigates this risk without compromising responsiveness.
+
+
+#### Adaptive `WATCHDOG_TIMEOUT`: Strategic Justification
+
+While execution time across node counts (e.g., 16 vs. 512) may remain roughly constant due to parallelism, the adaptive watchdog still
+plays a critical role in system resilience and orchestration fidelity.
+
+
+#### Why API Contention Still Matters
+
+API contention—measured via `RequestLimitExceeded` retries—is a control-plane signal, not a direct measure of EC2 performance. 
+However, it correlates with broader AWS infrastructure stress. High contention often co-occurs with:
+
+- Delayed instance readiness  (control plane)
+- Slower network provisioning (data plane) 
+- Increased tail latency in node setup  (control plane)
+
+Although installation time per node may not scale linearly with node count, elevated contention increases the likelihood of stragglers
+and false watchdog triggers. Incorporating API contention into the timeout formula provides a defensive buffer against transient delays
+without compromising responsiveness.
+
+
+#### Why Adaptive Timeouts Are Still Valuable
+
+Even if static watchdog data plane timeouts (e.g., 16s or 90s) yield similar total execution times, adaptive logic 
+offers strategic advantages:
+
+| **Benefit**                  | **Description**                                                                 |
+|-----------------------------|---------------------------------------------------------------------------------
+| Early Stall Detection     | Shorter timeouts catch transient hangs quickly, enabling retries before failure. 
+| False Positive Reduction  | Longer timeouts reduce premature aborts caused by temporary delays.             
+| Scalable Logic            | Timeout scales dynamically based on:                                            
+| Node count                | More nodes → higher contention → longer timeout                                
+| API contention            | Retry telemetry reflects AWS backend stress                                    
+| Historical retry patterns | Allows tuning based on empirical data                                          
+| Command type              | `apt` may need more slack than `systemctl`                                     
+
+This adaptive strategy ensures that the watchdog remains responsive to real hangs while tolerating transient infrastructure 
+noise—especially critical in large-scale parallel orchestration
+
+
+
 
 
 ### Preview of the get_watchdog_timeout function that calculates the adaptive WATCHDOG_TIMEOUT value
@@ -224,7 +337,7 @@ AWS API calls inside `retry_with_backoff` are made **per process**
 - Even if one runs 1 thread per process, each process still makes its own API calls to `authorize_security_group_ingress`.
 - If one has 512 processes doing this concurrently, AWS sees 512 simultaneous API requests—hence the **RequestLimitExceeded** errors and high retry counts.
 
-##### Requirement fo the retry_lock (threading.Lock()) in the modified retry_with_backoff (code is below in next section)
+##### Requirement for the retry_lock (threading.Lock()) in the modified retry_with_backoff (code is below in next section)
 
 If Multiple threads per process there is shared memory (unlike between processes)
 - Inside each process, if one spawns multiple threads (via `ThreadPoolExecutor`), they all share the same `max_retry_observed`.
@@ -266,9 +379,21 @@ set earlier will be used for all of the install operations on all the threads in
 the process based upon total number of nodes deployed in the execution, the node (instance) type and of course the API contention
 that the process is experiencing (max_retry_observed).
 
-These three code blocks are listed in the next section below.
+These three code blocks are listed in the section below.
 
 
+
+
+
+
+### These are some of the timeouts and ENV vars for the data plane watchdog area of the code:
+
+```
+WATCHDOG_TIMEOUT = 90
+RETRY_LIMIT = 3
+SLEEP_BETWEEN_ATTEMPTS = 5
+STALL_RETRY_THRESHOLD = 2
+```
 
 ### Code changes:
 
