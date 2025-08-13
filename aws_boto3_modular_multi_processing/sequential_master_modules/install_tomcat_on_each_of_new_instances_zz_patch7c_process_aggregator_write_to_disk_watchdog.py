@@ -1055,6 +1055,8 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 
     thread_id = threading.get_ident()
 
+    def log_debug(message):
+        print(message)
 
 
     ## These are the resurrection_registry patch 1-5 logs. These are tagged resurrection candidates for Phase3 implementation
