@@ -963,8 +963,68 @@ def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, 
     raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
 
 
+# === wait_for_instance_visibility ===
+# Waits until all expected EC2 instances are visible via describe_instances.
+# Uses exponential backoff and filters by tag and state.
+# Returns a list of instance IDs once the expected count is reached.
+def wait_for_instance_visibility(ec2_client, expected_count, tag_key, tag_value, timeout=180):
+    start_time = time.time()
+    delay = 5
+    attempt = 0
+
+    while time.time() - start_time < timeout:
+        attempt += 1
+        print(f"[VISIBILITY] Attempt {attempt}: Checking for {expected_count} instances with tag {tag_key}={tag_value}")
+
+        response = ec2_client.describe_instances(
+            Filters=[
+                {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
+                {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
+            ]
+        )
+
+        instance_ids = []
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                instance_ids.append(instance['InstanceId'])
+
+        print(f"[VISIBILITY] Found {len(instance_ids)} instances")
+
+        if len(instance_ids) >= expected_count:
+            print("[VISIBILITY] All expected instances are visible")
+            return instance_ids
+
+        time.sleep(delay)
+        delay = min(delay * 2, 30)
+
+    raise TimeoutError(f"Only {len(instance_ids)} of {expected_count} instances visible after {timeout} seconds")
 
 
+# === orchestrate_instance_launch_and_ip_polling ===
+# High-level wrapper that:
+# 1. Waits for all EC2 instances to be visible
+# 2. Excludes the controller node if provided
+# 3. Polls for public IPs using wait_for_all_public_ips()
+# Returns structured IP data for all worker instances.
+def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
+    ec2_client = boto3.client('ec2')
+    node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+    logging.info(f"[orchestrator] Launching with node_count={node_count}")
+
+    tag_key = 'BatchID'
+    tag_value = 'test-2025-08-13'
+
+    # Step 1: Wait for all instances to be visible
+    instance_ids = wait_for_instance_visibility(ec2_client, node_count, tag_key, tag_value)
+
+    # Step 2: Exclude controller if needed
+    if exclude_instance_id:
+        instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+
+    # Step 3: Wait for all public IPs
+    instance_ip_data = wait_for_all_public_ips(ec2_client, instance_ids)
+
+    return instance_ip_data
 
 
 
@@ -3727,7 +3787,16 @@ def main():
 
     try:
         # make sure to change timeout 120 to 180 for t2.micro when using high process count (i.e, like 512)
-        instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
+        
+        #instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
+        
+
+        # The new wrapper around wait_for_all_public_ips as AWS is doing batch processing on large EC2 instance launches and
+        # the code needs to wait for all the instances to be present and then poll and loop for all public ips to be present
+        # the new functions are orchestarte_instance_launch_and_ip_polling and wait_for_instance_visiblilty (default timeout is
+        # 180 seconds)
+        instance_ips = orchestrate_instance_launch_and_ip_polling(exclude_instance_id=exclude_instance_id)
+
     except TimeoutError as e:
         print(f"[ERROR] {e}")
         sys.exit(1)
