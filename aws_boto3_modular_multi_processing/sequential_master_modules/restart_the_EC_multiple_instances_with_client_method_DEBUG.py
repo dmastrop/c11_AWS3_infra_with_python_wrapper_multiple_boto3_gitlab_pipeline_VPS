@@ -68,7 +68,17 @@ def restart_ec_multiple_instances():
                 # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
                 # will be applied to the default security group.
                 MinCount=int(min_count),
-                MaxCount=int(max_count)
+                MaxCount=int(max_count),
+                TagSpecifications=[
+                    {
+                        'ResourceType': 'instance',
+                        'Tags': [
+                            {'Key': 'BatchID', 'Value': 'test-2025-08-13'},
+                            {'Key': 'Patch', 'Value': '7c'}
+                        ]
+                    }
+                ]
+
             )
             print("EC2 instances started:", response)
         except Exception as e:
