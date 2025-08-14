@@ -124,9 +124,9 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_ThreadPoolExecutor_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res2.py")
 #
 
-##### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2d with modified resurrection code detection patches 5,6) 
-def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res3.py")
+###### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2d with modified resurrection code detection patches 5,6) 
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_z_REFACTORED_LOGGING_MAIN_LOGGING_SSH_REFACTOR_res3.py")
 #
 
 ###### THIS IS THE MODULE2 SCRIPT latest work for the SSH refactor4 (phase2d with modified resurrection code detection patch 7))
@@ -165,7 +165,18 @@ def install_tomcat_on_instances():
 ##### THIS IS THE MODULE2 SCRIPT with adaptive watchdog timeout code added to write to disk
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog.py")
-#
+
+
+
+
+#### THIS IS THE MODULE2 SCRIPT with adaptive watchdog timeout code added to write to disk
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug.py")
+
+
+
+
+
 
 ## modules 3-11:
 
