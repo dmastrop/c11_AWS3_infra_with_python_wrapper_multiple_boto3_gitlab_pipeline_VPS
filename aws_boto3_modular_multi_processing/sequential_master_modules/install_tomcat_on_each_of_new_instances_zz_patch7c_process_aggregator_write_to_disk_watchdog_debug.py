@@ -922,6 +922,21 @@ def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, 
         print(f"[DEBUG] Attempt {attempt}: Checking public IPs...")
 
         response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
+        
+        # 🔍 Add these debug prints here
+        print(f"[DEBUG] Launch response keys → {response.keys()}")
+        print(f"[DEBUG] Number of Reservations → {len(response['Reservations'])}")
+        for r in response['Reservations'][:2]:  # limit to first 2 for brevity
+            for inst in r['Instances'][:2]:
+                print(f"[DEBUG] Instance ID → {inst['InstanceId']}")
+                print(f"[DEBUG] Public IP → {inst.get('PublicIpAddress')}")
+                print(f"[DEBUG] State → {inst['State']['Name']}")
+        # 🔍 End debug block
+     
+
+
+
+
         instance_ips = []
 
         for reservation in response['Reservations']:
