@@ -1007,10 +1007,24 @@ def wait_for_instance_visibility(ec2_client, expected_count, tag_key, tag_value,
 # 3. Polls for public IPs using wait_for_all_public_ips()
 # Returns structured IP data for all worker instances.
 def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
-    ec2_client = boto3.client('ec2')
+    # Load AWS credentials and region from .env
+    aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    region_name = os.getenv("region_name")
+
+    # Create a session and EC2 client
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=region_name
+    )
+    ec2_client = session.client('ec2')
+
+    # Pull node count from .env
     node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
     logging.info(f"[orchestrator] Launching with node_count={node_count}")
 
+    # Tag used to identify launched instances
     tag_key = 'BatchID'
     tag_value = 'test-2025-08-13'
 
@@ -1025,7 +1039,6 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
     instance_ip_data = wait_for_all_public_ips(ec2_client, instance_ids)
 
     return instance_ip_data
-
 
 
 
