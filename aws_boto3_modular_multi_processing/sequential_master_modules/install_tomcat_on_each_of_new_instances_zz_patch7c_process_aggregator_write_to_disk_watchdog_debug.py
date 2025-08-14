@@ -924,13 +924,13 @@ def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, 
         response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
         
         # 🔍 Add these debug prints here
-        print(f"[DEBUG] Launch response keys → {response.keys()}")
-        print(f"[DEBUG] Number of Reservations → {len(response['Reservations'])}")
+        print(f"[DEBUG1] Launch response keys → {response.keys()}")
+        print(f"[DEBUG1] Number of Reservations → {len(response['Reservations'])}")
         for r in response['Reservations'][:2]:  # limit to first 2 for brevity
             for inst in r['Instances'][:2]:
-                print(f"[DEBUG] Instance ID → {inst['InstanceId']}")
-                print(f"[DEBUG] Public IP → {inst.get('PublicIpAddress')}")
-                print(f"[DEBUG] State → {inst['State']['Name']}")
+                print(f"[DEBUG1] Instance ID → {inst['InstanceId']}")
+                print(f"[DEBUG1] Public IP → {inst.get('PublicIpAddress')}")
+                print(f"[DEBUG1] State → {inst['State']['Name']}")
         # 🔍 End debug block
      
 
@@ -3757,7 +3757,7 @@ def main():
     ### Configurable parameters
     chunk_size = 1    # Number of IPs per process
     max_workers = 1       # Threads per process
-    desired_count = 32   # Max concurrent processes
+    desired_count = 64   # Max concurrent processes
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
