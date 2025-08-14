@@ -884,12 +884,38 @@ def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, 
     Waits for all EC2 instances (excluding the controller) to receive public IPs.
     Uses exponential backoff for retries and includes private IPs in the result.
     """
+    
+    # DEBUG INSTRUMENTATION START
+    print("[DEBUG ENTRY1] wait_for_all_public_ips")
+    print(f"    raw instance_ids:         {instance_ids}")
+    print(f"    exclude_instance_id arg:  {exclude_instance_id!r}")
+    # 
+
+
+
+
     start_time = time.time()
     attempt = 0
     delay = 5  # initial delay in seconds
 
     # Filter out the controller instance if provided
     filtered_instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+
+    
+
+
+    # ADDITIONAL DEBUG LOGS (right after filtering)
+    print(f"[DEBUG1] filtered_instance_ids → {filtered_instance_ids}")
+    print(f"[DEBUG1] count of filtered IDs → {len(filtered_instance_ids)}")
+    # 
+
+    if not filtered_instance_ids:
+        print("[ERROR1] filtered_instance_ids is empty—nothing to poll!")
+        raise ValueError("No instance IDs left after exclude; check your caller.")
+
+   
+
+
 
     while time.time() - start_time < timeout:
         attempt += 1
