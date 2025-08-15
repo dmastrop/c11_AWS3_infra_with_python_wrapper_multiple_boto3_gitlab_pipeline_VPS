@@ -41,7 +41,7 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 21: write-to-disk aggregator reviews the architecture of phase2 at a high level
 - Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
-
+- Update part 23: implemenation of the control plane Public IP orchestrator
 
 
 
@@ -61,6 +61,331 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 •Phase 3 – Thread Healing & Adaptive Retry: Threads flagged in Phase 2 will be dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and potential thread override logic tuned to system state and swap conditions.
 
 •Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns.
+
+
+
+## UPDATES part 23: Implementation of the control plane Public IP orchestrator
+
+
+### Introduction:
+
+During the hyper-scaling testing, at some point the code was unable to accomodate and detect when all of the Public IPs were
+assigned to all of the nodes (EC2 instances). This occurred during the implementations of Updates part 21 and 22 where there
+was no scale process level testing and the tests were only with a small number of EC2 instances (12-16).
+
+Once scale testing was resumed this issue surfaced, but this issue was not present during prior hyper-scaling testing.
+It appears that AWS is doing some sort of staggered batch processing when a very large number of EC2 instances are launched
+all at the same time. The python launching code is in module 1 of the package, whereas the updates in this README mostly 
+pertain to the module2 code.   Thus the fix for this involved a minor change to module 1 (added tagging to all of the AWS
+instances in the launched batch), and a much larger change to module 2 to accomodate this staggered batch like Public IP
+assignment to the nodes.
+
+The behavior of the defect with the orignal code was strange.  16 and 32 nodes continued to work fine but scaling beyond 32
+caused an issue where the code would get stuck waiting for all the Public IPs to be assigned (even long after they had actually
+been assigned by AWS).
+Note in the debugs below that the message is stating 513 of 0 which does not make sense. So the code was getting tangled up.
+
+Initially, I thought the write-to-disk or adaptive watchdog timeout changes caused the issue,but after reverting the code 
+to prior to those commits and seeing the same problem,it was determined that there was a change in the way AWS is deploying 
+and assigned Public IPs with very large batches of launched EC2 instances.
+
+
+In the gitlab logs this showed up as:
+
+
+```
+[DEBUG] Attempt 1: Checking public IPs... [DEBUG] 1 of 0 instances have public IPs. Retrying in 5 seconds... 
+[DEBUG] Attempt 2: Checking public IPs... [DEBUG] 1 of 0 instances have public IPs. Retrying in 10 seconds... [
+DEBUG] Attempt 3: Checking public IPs... [DEBUG] 513 of 0 instances have public IPs. Retrying in 20 seconds... [
+DEBUG] Attempt 4: Checking public IPs... [DEBUG] 513 of 0 instances have public IPs. Retrying in 30 seconds... [
+DEBUG] Attempt 5: Checking public IPs... [DEBUG] 513 of 0 instances have public IPs. Retrying in 30 seconds... 
+[DEBUG] Attempt 6: Checking public IPs... [DEBUG] 513 of 0 instances have public IPs. Retrying in 30 seconds... 
+[DEBUG] Attempt 7: Checking public IPs... [DEBUG] 513 of 0 instances have public IPs. Retrying in 30 seconds... 
+[DEBUG] Attempt 8: Checking public IPs... [DEBUG] 513 of 0 instances have public IPs. Retrying in 30 seconds... [
+ERROR] Not all instances received public IPs within 180 seconds.
+
+```
+
+
+These messages were pointing to an issue with the control plane setup function wait_for_all_public_ips()
+
+
+There is a timeout that is passed to this function and I tried increasing it from 120-180 seconds (which worked before even
+with hyper-scaling) to 300 seconds, but it did not resolve the issue. The issue was more complex than simply waiting longer
+for the all the public IPs to actually come up. The code was getting confused based on the batched nature of the Pubilc IP 
+asisgnments.
+
+After adding several debugs to the wait_for_public_ips function this was showing up:
+
+This is with a 128 node setup:
+
+
+```
+
+[DEBUG ENTRY1] wait_for_all_public_ips
+    raw instance_ids:         ['i-0c52a587c73f0e183', 'i-0c86a35ea5ec3277b', 'i-00aded7c7224bfeaa', 'i-04d7b6d44d1e69655', 'i-04ed838790605533d', 'i-08d40c2acd4b07d2f', 'i-03fa484fab1b501ab', 'i-022858441c3608b81', 'i-0c9f08b8e05db7e30', 'i-0b584c4bd52a5550f', 'i-0accb9be1427b6cdd', 'i-0d88638157b004abd', 'i-0dde60ec821b99f35', 'i-0b3aeb8afb6b2e0fa', 'i-06dd44f5459822be2', 'i-00b4e557e5536a971', 'i-07a3c2c9ec22e4522', 'i-06bea644676f07f4a', 'i-002d19a85830b70f1', 'i-03eb17e5672a4c3c1', 'i-0efb5219daa05f38e', 'i-04fa425a551540667', 'i-02dab600ed9e15d3e']
+    exclude_instance_id arg:  'i-0aaaa1aa8907a9b78'
+[DEBUG1] filtered_instance_ids → ['i-0c52a587c73f0e183', 'i-0c86a35ea5ec3277b', 'i-00aded7c7224bfeaa', 'i-04d7b6d44d1e69655', 'i-04ed838790605533d', 'i-08d40c2acd4b07d2f', 'i-03fa484fab1b501ab', 'i-022858441c3608b81', 'i-0c9f08b8e05db7e30', 'i-0b584c4bd52a5550f', 'i-0accb9be1427b6cdd', 'i-0d88638157b004abd', 'i-0dde60ec821b99f35', 'i-0b3aeb8afb6b2e0fa', 'i-06dd44f5459822be2', 'i-00b4e557e5536a971', 'i-07a3c2c9ec22e4522', 'i-06bea644676f07f4a', 'i-002d19a85830b70f1', 'i-03eb17e5672a4c3c1', 'i-0efb5219daa05f38e', 'i-04fa425a551540667', 'i-02dab600ed9e15d3e']
+[DEBUG1] count of filtered IDs → 23
+[DEBUG] Attempt 1: Checking public IPs...
+[DEBUG1] Launch response keys → dict_keys(['Reservations', 'ResponseMetadata'])
+[DEBUG1] Number of Reservations → 1
+[DEBUG1] Instance ID → i-0c52a587c73f0e183
+[DEBUG1] Public IP → 3.87.240.175
+[DEBUG1] State → running
+[DEBUG1] Instance ID → i-0c86a35ea5ec3277b
+[DEBUG1] Public IP → 54.234.82.64
+[DEBUG1] State → running
+[INFO] All 23 instances have public IPs.
+[DEBUG] instance_ips initialized with 23 entries
+[DEBUG] Null or missing IPs: []
+2025-08-14 03:17:56,780 - 8 - INFO - [MAIN] Total processes: 23
+Process2: install_tomcat_on_instances: [MAIN] Total processes: 23
+2025-08-14 03:17:56,781 - 8 - INFO - [MAIN] Initial batch (desired_count): 128
+Process2: install_tomcat_on_instances: [MAIN] Initial batch (desired_count): 128
+2025-08-14 03:17:56,781 - 8 - INFO - [MAIN] Remaining processes to pool: -105
+Process2: install_tomcat_on_instances: [MAIN] Remaining processes to pool: -105
+[DEBUG] Process 0: chunk size = 1
+```
+It is clear here that the code thinks that 23 Public IP addreses assigned is adequate for a 128 node launch.  The code
+is not checking the Public IP assigned count to the configured node count (max_count from the .env variables in the 
+gitlab-ci.yml pipeline file). Because of the staggered assignment this was now surfacing.  So the original function
+wait_for_all_public_ips first needed to be wrapped in an orchestator function to address this issue.  The orchestrator
+would use a new function, wait_for_instance_visibility to ensure that all the instances that are expected to be launched
+are actually up and running before engaging in the wait_for_all_public_ips check that makes sure that they all have 
+Public IPs. This wasy, the wait_for_public_ips code does NOT have to be changed at all.
+
+wait_for_instance_visiblity does the following:
+```
+# Waits until all expected EC2 instances are visible via describe_instances.
+# Uses exponential backoff and filters by tag and state.
+# Returns a list of instance IDs once the expected count is reached.
+```
+The filtering by tag and state also requires that EC2 instance tagging be used in module1 (the python EC2 node launching
+code). That way the wait_for_instance_visibility can filter only on these instances if the region has other instances for
+other purposes.
+
+The DEBUG trace also revealed another issue. So the 128 node test above actually proceeded with 23 processes (of the intended
+128) and installed tomcat on the instances.   The 512 test completely aborted. So with this fix above I was not sure if it
+would fix the 512 test scenario as well. After testing, it was found that this fix below in its entirety did fix the 512
+node case as well.
+
+
+#### Code additions and changes:
+
+
+As mentione above the wait_for_public_ips function did not have to changed for this fix.
+
+```
+def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=180):
+    """
+    Waits for all EC2 instances (excluding the controller) to receive public IPs.
+    Uses exponential backoff for retries and includes private IPs in the result.
+    """
+
+    # DEBUG INSTRUMENTATION START
+    print("[DEBUG ENTRY1] wait_for_all_public_ips")
+    print(f"    raw instance_ids:         {instance_ids}")
+    print(f"    exclude_instance_id arg:  {exclude_instance_id!r}")
+    # 
+
+
+
+
+    start_time = time.time()
+    attempt = 0
+    delay = 5  # initial delay in seconds
+
+    # Filter out the controller instance if provided
+    filtered_instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+
+
+
+
+    # ADDITIONAL DEBUG LOGS (right after filtering)
+    print(f"[DEBUG1] filtered_instance_ids → {filtered_instance_ids}")
+    print(f"[DEBUG1] count of filtered IDs → {len(filtered_instance_ids)}")
+    # 
+
+    if not filtered_instance_ids:
+        print("[ERROR1] filtered_instance_ids is empty—nothing to poll!")
+        raise ValueError("No instance IDs left after exclude; check your caller.")
+   
+    while time.time() - start_time < timeout:
+        attempt += 1
+        print(f"[DEBUG] Attempt {attempt}: Checking public IPs...")
+
+        response = ec2_client.describe_instances(InstanceIds=filtered_instance_ids)
+
+        # 🔍 Add these debug prints here
+        print(f"[DEBUG1] Launch response keys → {response.keys()}")
+        print(f"[DEBUG1] Number of Reservations → {len(response['Reservations'])}")
+        for r in response['Reservations'][:2]:  # limit to first 2 for brevity
+            for inst in r['Instances'][:2]:
+                print(f"[DEBUG1] Instance ID → {inst['InstanceId']}")
+                print(f"[DEBUG1] Public IP → {inst.get('PublicIpAddress')}")
+                print(f"[DEBUG1] State → {inst['State']['Name']}")
+        # 🔍 End debug block
+
+
+
+        instance_ips = []
+
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                public_ip = instance.get('PublicIpAddress')
+                private_ip = instance.get('PrivateIpAddress')
+                instance_id = instance['InstanceId']
+
+                if public_ip:
+                    instance_ips.append({
+                        'InstanceId': instance_id,
+                        'PublicIpAddress': public_ip,
+                        'PrivateIpAddress': private_ip
+                    })
+
+
+        if len(instance_ips) == len(filtered_instance_ids):
+            print(f"[INFO] All {len(instance_ips)} instances have public IPs.")
+            return instance_ips
+
+        print(f"[DEBUG] {len(instance_ips)} of {len(filtered_instance_ids)} instances have public IPs. Retrying in {delay} seconds...")
+        time.sleep(delay)
+        delay = min(delay * 2, 30)  # exponential backoff with a max delay of 30 seconds
+
+    raise TimeoutError(f"Not all instances received public IPs within {timeout} seconds.")
+```
+
+
+This is the new helper function wait_for_instance_visiblity:
+
+
+
+```
+# === wait_for_instance_visibility ===
+# Waits until all expected EC2 instances are visible via describe_instances.
+# Uses exponential backoff and filters by tag and state.
+# Returns a list of instance IDs once the expected count is reached.
+def wait_for_instance_visibility(ec2_client, expected_count, tag_key, tag_value, timeout=180):
+    start_time = time.time()
+    delay = 5
+    attempt = 0
+
+    while time.time() - start_time < timeout:
+        attempt += 1
+        print(f"[VISIBILITY] Attempt {attempt}: Checking for {expected_count} instances with tag {tag_key}={tag_value}")
+
+        response = ec2_client.describe_instances(
+            Filters=[
+                {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
+                {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
+            ]
+        )
+
+        instance_ids = []
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                instance_ids.append(instance['InstanceId'])
+
+        print(f"[VISIBILITY] Found {len(instance_ids)} instances")
+
+        if len(instance_ids) >= expected_count:
+            print("[VISIBILITY] All expected instances are visible")
+            return instance_ids
+
+        time.sleep(delay)
+        delay = min(delay * 2, 30)
+
+    raise TimeoutError(f"Only {len(instance_ids)} of {expected_count} instances visible after {timeout} seconds")
+```
+
+
+
+
+This is the wrapper function (orchestator) around the wait_for_public_ips:
+
+
+```
+# === orchestrate_instance_launch_and_ip_polling ===
+# High-level wrapper that:
+# 1. Waits for all EC2 instances to be visible
+# 2. Excludes the controller node if provided
+# 3. Polls for public IPs using wait_for_all_public_ips()
+# Returns structured IP data for all worker instances.
+def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
+    # Load AWS credentials and region from .env
+    aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    region_name = os.getenv("region_name")
+
+    # Create a session and EC2 client
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=region_name
+    )
+    ec2_client = session.client('ec2')
+
+    # Pull node count from .env
+    node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+    logging.info(f"[orchestrator] Launching with node_count={node_count}")
+
+    # Tag used to identify launched instances
+    tag_key = 'BatchID'
+    tag_value = 'test-2025-08-13'
+
+    # Step 1: Wait for all instances to be visible
+    instance_ids = wait_for_instance_visibility(ec2_client, node_count, tag_key, tag_value)
+
+    # Step 2: Exclude controller if needed
+    if exclude_instance_id:
+        instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+
+    # Step 3: Wait for all public IPs
+    instance_ip_data = wait_for_all_public_ips(ec2_client, instance_ids)
+
+    return instance_ip_data
+```
+
+
+
+Finally, this tagging of the EC2 instances had to be added to module1 of the python package (all the other changes above
+are from  module2):
+
+This is only a small portion of the module:
+
+```
+       # Start EC2 instances
+        try:
+            response = my_ec2.run_instances(
+                ImageId=image_id,
+                InstanceType=instance_type,
+                KeyName=key_name,
+                SecurityGroupIds=['sg-0a1f89717193f7896'],
+                # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
+                # will be applied to the default security group.
+                MinCount=int(min_count),
+                MaxCount=int(max_count),
+                TagSpecifications=[
+                    {
+                        'ResourceType': 'instance',
+                        'Tags': [
+                            {'Key': 'BatchID', 'Value': 'test-2025-08-13'},
+                            {'Key': 'Patch', 'Value': '7c'}
+                        ]
+                    }
+                ]
+
+            )
+            print("EC2 instances started:", response)
+        except Exception as e:
+            print("Error starting EC2 instances:", e)
+            sys.exit(1)
+
+        return response
+```
+
+
 
 
 
