@@ -43,7 +43,7 @@ push:
 deploy:
   stage: deploy
   variables:
-    PID_JSON_DUMPS: "true"  
+    PID_JSON_DUMPS: "false"  
     # this is a gating env VAR for module2 if I need to disable the process level resurrection candidate
     # or ghost json artifact files during hyper-scalling
   
