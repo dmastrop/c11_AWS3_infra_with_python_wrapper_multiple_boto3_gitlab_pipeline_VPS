@@ -169,12 +169,15 @@ def restart_ec_multiple_instances():
 
 
 
-#### THIS IS THE MODULE2 SCRIPT with adaptive watchdog timeout code added to write to disk
+##### THIS IS THE MODULE2 SCRIPT with adaptive watchdog timeout code added to write to disk with debugs for control plane issue
+##with PublicIps assignment/AWS issue
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug.py")
+
+
+#### THIS IS THE MODULE2 SCRIPT with adaptive watchdog timeout code added to write to disk and patch7d res monitor code
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug.py")
-
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d.py")
 
 
 
