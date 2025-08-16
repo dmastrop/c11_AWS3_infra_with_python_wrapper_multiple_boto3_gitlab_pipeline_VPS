@@ -726,7 +726,7 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         #func(*args, **kwargs)
 
         # get rid of double result. This is causing 2 install tomcat.   Use the one at the end after the new WATCHDOG_TIMEOUT
-        # code.
+        # code. Make sure to move the print to after the real result below. Don't leave it here!!!
         #result = func(*args, **kwargs)
         #print(f"[TRACE][run_test] func returned type: {type(result)}")
         
