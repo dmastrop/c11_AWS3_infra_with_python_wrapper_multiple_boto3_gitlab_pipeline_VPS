@@ -174,7 +174,7 @@ node case as well.
 #### Code additions and changes:
 
 
-As mentione above the wait_for_public_ips function did not have to changed for this fix.
+As mentioned above the wait_for_public_ips function did not have to changed for this fix.
 
 ```
 def wait_for_all_public_ips(ec2_client, instance_ids, exclude_instance_id=None, timeout=180):
@@ -345,6 +345,24 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
     instance_ip_data = wait_for_all_public_ips(ec2_client, instance_ids)
 
     return instance_ip_data
+```
+
+
+
+
+
+In main() replace the call to wait_for_all_public_ips with the wrapper orchestate_instance_launch_and_ip_polling:
+
+
+```
+      #instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
+
+
+        # The new wrapper around wait_for_all_public_ips as AWS is doing batch processing on large EC2 instance launches and
+        # the code needs to wait for all the instances to be present and then poll and loop for all public ips to be present
+        # the new functions are orchestarte_instance_launch_and_ip_polling and wait_for_instance_visiblilty (default timeout is
+        # 180 seconds)
+        instance_ips = orchestrate_instance_launch_and_ip_polling(exclude_instance_id=exclude_instance_id)
 ```
 
 
