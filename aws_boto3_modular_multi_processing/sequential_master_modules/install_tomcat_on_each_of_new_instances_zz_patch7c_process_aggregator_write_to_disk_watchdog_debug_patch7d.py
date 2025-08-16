@@ -1125,6 +1125,15 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
 #
 
 
+
+
+
+
+
+
+
+
+
 # ------------------ RESURRECTION MONITOR (POST-HOOK LOGGER) ------------------
 # Purpose: After all tomcat installations finish inside tomcat_worker(),
 #          this scans the resurrection registry for timeout patterns or stalled attempts.
@@ -1143,7 +1152,19 @@ import copy
 import traceback
 from datetime import datetime
 
-## REVISION 4:
+
+
+
+## REVISION 5
+
+
+## Patch7d is below. This is to fix the ghost and candidate resurrection tagging and the json logging for both
+## NOTE that this is per process level tagging and logging of the threads for ghosts and candidates
+## main() does the logging for these at the aggregate level (for all processes) and that's working fine.
+
+
+
+:
 # ------------------ PATCH7C: THREAD-LOCAL RESURRECTION MONITOR ------------------
 # Goal:   Create isolated thread-level logs for postmortem analysis and retry heuristics.
 # Scope:  Operates on per-process registry (process_registry) assembled via tomcat_worker()
@@ -1741,38 +1762,88 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
     sys.stdout.flush()
 
 
-########## THIS IS THE END OF THE resurrection_monitor_patch7c() function  ######################
+########## THIS IS THE END OF THE resurrection_monitor_patch7d() function  ######################
 
 
 
 
 
-
-
-## Comment out REVISION3 (keeping for now for historical and possible troubleshooting purposes)
-## REVISION3 has been replaced by REVISION4 above that incorporates patch7c and ancillary code changes to replace
-## patch7b
+###### Replacing patch7c with patch7d above #########
+###### Comment out patch7c below and remove the older REVSIONS 3,2, and 1 from comments as part of cleanup #####
 
 
 
 
 
-### REVISION 3: we need to catch failures before the SSH outer retry loop. We are seeing these types of silent failures now.
-## Just log them in the resurrection monitor json file  so that we can see them now.
-## Note that printf logs to gitlab console are for all three: slient failures outside of SSH loop, failures with stall>2 watchdog
-## and for threads that are healthy
-## The json will only log for the first 2: the problematic early exit before SSH loop and the failures wiht stall>2
-##- Early exits → `"early_exit"` key inside `flagged`  
-##- Real Phase 2 flags → populated from the registry  
-##- Empty `flagged` → no file unless you opt to force minimal metadata (which you're skipping for now)
-## The key is that they must be flagged to get into the resurrection monitor json log that will be sent to gitlab artifact
+### REVISION 4:
+## ------------------ PATCH7C: THREAD-LOCAL RESURRECTION MONITOR ------------------
+## Goal:   Create isolated thread-level logs for postmortem analysis and retry heuristics.
+## Scope:  Operates on per-process registry (process_registry) assembled via tomcat_worker()
+## Output: resurrection_registry_log_{pid}.json scoped to thread-local attempts
+## -------------------------------------------------------------------------------
+## Design note: Built atop Patch7b with scoped overrides to preserve thread-local logging clarity.
 #
-#def resurrection_monitor(log_dir="/aws_EC2/logs"):
+## === PATCH7C === Resurrection Monitor: Thread-Local Aggregation
+##def resurrection_monitor_patch7c(log_dir="/aws_EC2/logs"):
+## resurrection_monitor_patch7c needs to accept process_registry from tomcat_worker() now for patch7c
+## process_registry has all IPs for multi-threaded process
+## replace all resurrection_registry calls with process_registry BUT only in resurrection_monitor_patch7c function that gets
+## the process_registry from the run_test call to threaded_install. The other resurrection_montior are global and are not
+## to be changed.
+#
+#def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #    pid = multiprocessing.current_process().pid
-### These are the resurrection_registry patch 1-5 logs
-#    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
-### These are teh resurrection ghost patch 6 logs
-#    ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+#
+#    # add timestamp so that if pid is reused (as with hyper-scaling or pooling) the log files can be differentiated for 
+#    # same pid with timestamp in the log file name.
+#    # stamp each run so PIDs don’t collide
+#    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+#
+#
+#
+#    # This is the thread_id of the calling thread, and not the thread_ids of the worker threads (That are processing the ip addreses
+#    # in the chunk_size
+#    # Since resurrection_monitor_patch7c() is called at the end of tomcat_worker(), which runs in the main thread of the process, this line will return that main thread’s ID
+#    # This will give us traceability if the thread diagnostics are expanded later on.
+#
+#    thread_id = threading.get_ident()
+#
+#    def log_debug(message):
+#        print(message)
+#
+#    def timestamp():
+#        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+#
+#    ## These are the resurrection_registry patch 1-5 logs. These are tagged resurrection candidates for Phase3 implementation
+#    #log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
+#    # These logs will only be created if there are not successful registry entries in the process (to reduce artifact logging 
+#    # overhead of blank json files. Note at global level we will create the json/log file regardless as it is only 1 file each for
+#    # the entire execution.
+#
+#    #log_path = os.path.join(log_dir, f"resurrection_candidates_registry_{pid}.json")
+#    # that new path for this  is defined in the new code block at the bottom of this function 
+#
+#
+#
+#    ## These are teh resurrection ghost patch 7 logs. These are missing registry entires that are in benchmark_ips but are not in the
+#    ## the registry (missing = benchmark - total registry)
+#    #ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
+#    # This json will only be created if there are ghosts in the process
+#
+#    #ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}.json")
+#    # the new path for this is defined in the new code block at the bottom of this function 
+#
+#
+#
+#
+#### This log is now created in main() as part of the aggregation in main()
+##    # This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
+##    # This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
+##    # for max_workers threads
+##    These is no need to create a process level registry json file for all the processes. It will create a large amount of overhead
+##    in terms of artifact files.
+#
+##    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 #
 #
 #    flagged = {}
@@ -1791,17 +1862,43 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #        #- No fingerprint means no resurrection log
 #
 #
-#        total_registry_ips = set(resurrection_registry.keys())
+##        total_registry_ips = set(resurrection_registry.keys())
+##        successful_registry_ips = {
+##            ip for ip, record in resurrection_registry.items()
+##            if record.get("status") == "install_success"
+##        }
+##
+### Replace resurrection_registry with the process_registry for only def resurrection_monitor_patch7c, from threaded_install()
+#        
+#
+#       
+#
+#       # total_registry_ips = set(process_registry.keys()) # process_registry.keys returns uuid and not ip!!
+#       # successful_registry_ips = {
+#       #     ip for ip, record in process_registry.items()
+#       #     if record.get("status") == "install_success"
+#       # }
+#
+#        # this syntax returns ips and not uuids. This is what we want.
+#        total_registry_ips = {
+#            entry.get("public_ip")
+#            for entry in process_registry.values()
+#            if entry.get("public_ip") is not None
+#        }
+#
 #        successful_registry_ips = {
-#            ip for ip, record in resurrection_registry.items()
-#            if record.get("status") == "install_success"
+#            entry.get("public_ip")
+#            for entry in process_registry.values()
+#            if entry.get("status") == "install_success"
 #        }
 #
 #
 #
 #        # ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
 #        
-#        for ip, record in resurrection_registry.items():
+#        for ip, record in process_registry.items():
+#        # replace process_registry for resurrection_registry for patch7c    
+#        #for ip, record in resurrection_registry.items():
 #    
 #
 #            # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
@@ -1869,29 +1966,62 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #        #- This avoids `StreamHandler(sys.stdout)`, which is the usual culprit for GitLab log bleed
 #        #- It ensures everything written is scoped to one file — line-by-line controlled output
 #
-#        summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
-#        summary_handler = logging.FileHandler(summary_log_path)
+#        #summary_log_path = os.path.join(log_dir, f"patch7_summary_{pid}.log")
+#        # use ts (timestamp) to avoid issues with pid reuse that occurs with hyper-scaling and pooling
+#        summary_log_path = os.path.join(
+#          log_dir, f"patch7_summary_{pid}_{ts}.log"
+#         )
+#
+#
+#        # Use write mode use mode="w" to overwrite any existing file of the same name (this is for pid reuse case if files are 
+#        # named the same. This should not happen any longer because timestamp is now added to log filename along with pid)
+#        #summary_handler = logging.FileHandler(summary_log_path)
+#        summary_handler = logging.FileHandler(summary_log_path, mode="w")
+#
 #        summary_formatter = logging.Formatter('[Patch7] %(message)s')
 #        summary_handler.setFormatter(summary_formatter)
 #        patch7_logger.addHandler(summary_handler)
 #
 #        patch7_logger.info("Patch7 Summary — initialized")
 #
-#        # ------- Step 1: Combine runtime benchmark logs -------
+#        ## ------- Step 1: Combine runtime benchmark logs -------
+#        ##merged contents from all `benchmark_*.log` PID logs that were created at runtime
+#        #def combine_benchmark_logs_runtime(log_dir):
+#        #    combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+#        #    with open(combined_path, "w") as outfile:
+#        #        for fname in sorted(os.listdir(log_dir)):
+#        #            #if fname.startswith("benchmark_") and fname.endswith(".log"):
+#        #            # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
+#        #             
+#        #            if (
+#        #                fname.startswith("benchmark_") 
+#        #                and fname.endswith(".log") 
+#        #                and "combined" not in fname
+#        #            ):
+#
+#        #                path = os.path.join(log_dir, fname)
+#        #                try:
+#        #                    with open(path, "r") as infile:
+#        #                        outfile.write(f"===== {fname} =====\n")
+#        #                        outfile.write(infile.read() + "\n")
+#        #                except Exception as e:
+#        #                    patch7_logger.info(f"Skipped {fname}: {e}")
+#        #    patch7_logger.info(f"Combined runtime log written to: {combined_path}")
+#        #    return combined_path
+#
+#        # ------- Step 1: Combine runtime benchmark logs: filtered -------
 #        #merged contents from all `benchmark_*.log` PID logs that were created at runtime
 #        def combine_benchmark_logs_runtime(log_dir):
 #            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
 #            with open(combined_path, "w") as outfile:
 #                for fname in sorted(os.listdir(log_dir)):
-#                    #if fname.startswith("benchmark_") and fname.endswith(".log"):
-#                    # Make sure only combining NON aggregated benchmark logs, i.e. only benchmark pid logs    
-#                     
+#                    # Only combine true benchmark logs — exclude artifact and combined logs
 #                    if (
-#                        fname.startswith("benchmark_") 
-#                        and fname.endswith(".log") 
+#                        fname.startswith("benchmark_")
+#                        and fname.endswith(".log")
 #                        and "combined" not in fname
+#                        and not fname.startswith("benchmark_ips_artifact")
 #                    ):
-#
 #                        path = os.path.join(log_dir, fname)
 #                        try:
 #                            with open(path, "r") as infile:
@@ -1901,7 +2031,6 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #                            patch7_logger.info(f"Skipped {fname}: {e}")
 #            patch7_logger.info(f"Combined runtime log written to: {combined_path}")
 #            return combined_path
-#
 #
 #
 #        # ------- Step 2:Create benchmark_path variable using runtime combiner -------
@@ -1975,7 +2104,20 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #                patch7_logger.info(f"[Patch7] 💧 Hydrated IPs: {benchmark_ips}")
 #
 #
-#            total_registry_ips = set(resurrection_registry.keys())
+#            #total_registry_ips = set(resurrection_registry.keys())
+#            
+#            #replace resurrection_registry with process_registry for patch7c
+#            #total_registry_ips = set(process_registry.keys())
+#            
+#            # the above is using uuid as key. Need ips. Use this:
+#            total_registry_ips = {
+#                entry.get("public_ip")
+#                for entry in process_registry.values()
+#                if entry.get("public_ip") is not None
+#            }
+#
+#
+#
 #
 #            ## Add these to troublehsoot artifact loggin issues. These go to the patch summary logs in the artifacts of gitlab piepline
 #
@@ -1990,15 +2132,28 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #
 #
 #            # Debugs to ensure that the registry is intact from install_tomcat() which looks ok, to the resurrection_monitor() call
+#            # Replace resurrection_registry with process_registry in for loop for patch7c
 #            print(f"[RESMON DEBUG] Resurrection registry snapshot:")
-#            for ip, entry in resurrection_registry.items():
+#            for ip, entry in process_registry.items():
 #                print(f"    {ip}: {entry}")
+#            
+#            # replace resurrection_registry with process_registry below
+#            #successful_registry_ips = {   #this returns uuids and not ips!!
+#            #    ip for ip, entry in process_registry.items()
+#            #    if entry.get("status") == "install_success"
+#            #    and entry.get("watchdog_retries", 0) <= 2
+#            #}
 #
+#
+#            # this will get the public ips and not uuids which is what we want
 #            successful_registry_ips = {
-#                ip for ip, entry in resurrection_registry.items()
+#                entry.get("public_ip")
+#                for entry in process_registry.values()
 #                if entry.get("status") == "install_success"
 #                and entry.get("watchdog_retries", 0) <= 2
+#                and entry.get("public_ip") is not None
 #            }
+#
 #
 #            # Debugs to tell  how many IPs the above filter pulled through — and what the filter did to the full registry snapshot.
 #            print(f"[RESMON DEBUG] Registry IPs classified as successful: {successful_registry_ips}")
@@ -2027,32 +2182,37 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #                except Exception as e:
 #                    patch7_logger.info(f"[Patch7] Failed to write '{tag}': {e}")
 #            
+### coment out the total, missing and the successful and the failed as these are done in main() now at the aggregated and not 
+### the process level. benchmark_ips_artifact.log is the GOLD standard used by main(). So keep this one. Remove the other ones 
+### from here.
 #
-#
-#            if not total_registry_ips:
-#                patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
-#            else:
-#                 safe_artifact_dump("total_registry_ips", total_registry_ips)
+#            #if not total_registry_ips:
+#            #    patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
+#            #else:
+#            #     safe_artifact_dump("total_registry_ips", total_registry_ips)
 #          
 #            if not benchmark_ips:
 #                patch7_logger.info("[Patch7] WARNING: benchmark_ips is empty — skipping artifact.")
 #            else:
 #                safe_artifact_dump("benchmark_ips", benchmark_ips)
 #          
-#            if not missing_registry_ips:
-#                patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
-#            else:
-#                safe_artifact_dump("missing_registry_ips", missing_registry_ips)
+#            #if not missing_registry_ips:
+#            #    patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
+#            #else:
+#            #    safe_artifact_dump("missing_registry_ips", missing_registry_ips)
 #          
-#            if not successful_registry_ips:
-#                patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
-#            else:
-#                safe_artifact_dump("successful_registry_ips", successful_registry_ips)
+#            #if not successful_registry_ips:
+#            #    patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
+#            #else:
+#            #    safe_artifact_dump("successful_registry_ips", successful_registry_ips)
 #          
-#            if not failed_registry_ips:
-#                patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
-#            else:
-#                safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+#            #if not failed_registry_ips:
+#            #    patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
+#            #else:
+#            #    safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+#
+#
+#
 #
 ##            dump_set_to_artifact("total_registry_ips", total_registry_ips)
 ##            dump_set_to_artifact("benchmark_ips", benchmark_ips)
@@ -2095,235 +2255,109 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #
 #
 #
-########## ORIGINAL PATCH 7a ########################
-##
-##
-##        # Inside resurrection_monitor, just before Patch7 block
-##        # Initialize the logger for the patch7 below
-##        patch7_logger = logging.getLogger("patch7")
-##        patch7_logger.setLevel(logging.INFO)
-##
-##        if not patch7_logger.hasHandlers():  # Avoid duplicate handlers
-##            #handler = logging.StreamHandler()
-##            handler = logging.StreamHandler(stream=sys.stdout)  # Ensure we hit stdout
-##            formatter = logging.Formatter('[Patch7] %(message)s')
-##            handler.setFormatter(formatter)
-##            patch7_logger.addHandler(handler)
-##
-##        # ------- Patch7 Setup: Extract and Compare IP Sets(Replace original patch6 with this entire block; this has patch6) -------
-##
-##        # Replace logger.info(...) with patch7_logger.info(...)
-##        patch7_logger.info("Patch7 Summary — etc.")
-##
-##        # Step 1: Combine runtime benchmark logs
-##        def combine_benchmark_logs_runtime(log_dir):
-##            combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
-##            with open(combined_path, "w") as outfile:
-##                for fname in sorted(os.listdir(log_dir)):
-##                    if fname.startswith("benchmark_") and fname.endswith(".log"):
-##                        path = os.path.join(log_dir, fname)
-##                        try:
-##                            with open(path, "r") as infile:
-##                                outfile.write(f"===== {fname} =====\n")
-##                                outfile.write(infile.read() + "\n")
-##                        except Exception as e:
-##                            print(f"[Patch7] Skipped {fname}: {e}")
-##            print(f"[Patch7] Combined runtime log written to: {combined_path}")
-##            return combined_path
-##
-##        # Step 2: Create benchmark_path variable using runtime combiner
-##        benchmark_path = combine_benchmark_logs_runtime(log_dir)
-##
-##        # Step 3: Begin Patch7 logic
-##        try:
-##            with open(benchmark_path, "r") as f:
-##                benchmark_ips = {
-##                    match.group(1)
-##                    for line in f
-##                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
-##                }
-##
-##
-##        # Step 4: Continue with the Patch7 logic
-##
-##            total_registry_ips = set(resurrection_registry.keys())
-##
-##            successful_registry_ips = {
-##                ip for ip, entry in resurrection_registry.items()
-##                if (
-##                    entry.get("install_log") and "Installation completed" in entry["install_log"]
-##                    and entry.get("watchdog_retries", 0) <= 2
-##                )
-##            }
-##
-##            failed_registry_ips = total_registry_ips - successful_registry_ips
-##            missing_registry_ips = benchmark_ips - total_registry_ips
-##
-##            # ------- Dump All Sets to Artifact Log Files -------
-##            def dump_set_to_artifact(name, ip_set):
-##                path = os.path.join(log_dir, f"{name}_artifact.log")
-##                with open(path, "w") as f:
-##                    for ip in sorted(ip_set):
-##                        f.write(ip + "\n")
-##                print(f"[Artifact Dump] {name}: {len(ip_set)} IPs dumped to {path}")
-##
-##            dump_set_to_artifact("total_registry_ips", total_registry_ips)
-##            dump_set_to_artifact("benchmark_ips", benchmark_ips)
-##            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
-##            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
-##            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
-##
-##            # ------- Patch6 Ghost Flagging -------
-##            for ip in missing_registry_ips:
-##                flagged[ip] = {
-##                    "status": "ghost_missing_registry",
-##                    "ghost_reason": "no resurrection registry entry",
-##                    "pid": pid,
-##                    "timestamp": time.time()
-##                }
-##                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
-##
-##
-##            patch7_logger.info("🧪 Patch7 reached summary block execution.")
-## 
-##            # ------- Patch7 Summary using patch7_logger -------
-##            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
-##            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
-##            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
-##            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
-##            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
-##            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
-##
-##
-##
-##        except Exception as e:
-##            log_debug(f"[{timestamp()}] Patch7 failure: {e}")
-##        
-##
 #
-#
-#
-#
-####### INSERT PATCH 6 HERE WITHIN THE resurrection_regisry_lock
-##        # ---------------- Begin Patch 6: Ghosts with NO registry footprint ----------------
-##        try:
-##            benchmark_path = os.path.join(log_dir, "benchmark_combined.log")
-##            with open(benchmark_path, "r") as f:
-##                benchmark_ips = {
-##                    match.group(1)
-##                    for line in f
-##                    if (match := re.search(r"Public IP:\s+(\d{1,3}(?:\.\d{1,3}){3})", line))
-##                }
+###  COMMENT OUT PATCH4 for new code right below this that creates the resurrection candidate and ghost json files more
+### efficiently in line with patch8 code
 ##
-##            # Identify IPs seen in benchmark log but completely missing from resurrection registry
-##            missing_registry_ips = benchmark_ips - total_registry_ips
+### ---- PATCH 4 ----------
+### Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
+### no logs are created for these
 ##
-##            for ip in missing_registry_ips:
-##                flagged[ip] = {
-##                    "status": "ghost_missing_registry",
-##                    "ghost_reason": "no resurrection registry entry",
-##                    "pid": pid,
-##                    "timestamp": time.time()
-##                }
-##                log_debug(f"[{timestamp()}] Ghost flagged (missing registry): {ip}")
-##
-##        except Exception as e:
-##            log_debug(f"[{timestamp()}] Patch 6 failure: {e}")
-##        # ---------------- End Patch 6 ----------------
-##
-#
-#
-## ---- PATCH 4 ----------
-## Replace patch3 with patch4. Still getting {} resurrection logs for successful threads. This will ensure
-## no logs are created for these
-#
-#    # 🔍 Global success check — avoids false early_exit logs
-#    success_found = any(
-#        record.get("status") == "install_success"
-#        for record in resurrection_registry.values()
-#    )
-#    if not flagged and not success_found:
-#        flagged["early_exit"] = {
-#            "status": "early_abort",
-#            "reason": "No registry entries matched. Possible thread exit before retry loop.",
-#            "pid": pid,
-#            "timestamp": time.time()
-#        }
-#
-##    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
-##    # successful installation threads
-##    if flagged:
-##        os.makedirs(log_dir, exist_ok=True)
-##        with open(log_path, "w") as f:
-##            json.dump(flagged, f, indent=4)
-##
-#
-#
-#    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
-#    # successful installation threads
-#    if flagged:
-#        os.makedirs(log_dir, exist_ok=True)
-#
-#        # Write registry resurrection log
-#        with open(log_path, "w") as f:
-#            json.dump(flagged, f, indent=4)
-#
-#        # Patch 6: Write ghost resurrection log if applicable
-#        if missing_registry_ips:
-#            ghost_data = {
-#                ip: {
-#                    "status": "ghost_missing_registry",
-#                    "ghost_reason": "no registry entry",
-#                    "pid": pid,
-#                    "timestamp": time.time()
-#                }
-#                for ip in missing_registry_ips
-#            }
-#            with open(ghost_log_path, "w") as f:
-#                json.dump(ghost_data, f, indent=4)
-#            log_debug(f"[{timestamp()}] Ghost resurrection log created: {ghost_log_path}")
-#
-#
-#
-#
-##    # 🧠 EARLY EXIT LOGIC: only fire if no legitimate registry entries exist. This is patch3 for the issue
-##    # If somehow the good installation fingerprint is still not detected due to timing issues, then screen again
-##    # and make sure to set success_found and makes sure this No registry entries match message does not get thrown
-##    # so that no resurrection log file is created for these "install success" good threads.
-##    if not flagged:
-##        success_found = any(
-##            record.get("status") == "install_success"
-##            for record in resurrection_registry.values()
-##        )
-##        if not success_found:
-##            flagged["early_exit"] = {
-##                "status": "early_abort",
-##                "reason": "No registry entries matched. Possible thread exit before retry loop.",
-##                "pid": pid,
-##                "timestamp": time.time()
-##            }
-##
-#
-#
-##
-##    # 🧠 NEW: Catch silent failures
-##    if not flagged:
+##    # 🔍 Global success check — avoids false early_exit logs
+##    # Replace resurrection_registry with process_registry for phase7a
+##    success_found = any(
+##        record.get("status") == "install_success"
+##        for record in process_registry.values()
+##    )
+##    if not flagged and not success_found:
 ##        flagged["early_exit"] = {
 ##            "status": "early_abort",
 ##            "reason": "No registry entries matched. Possible thread exit before retry loop.",
 ##            "pid": pid,
 ##            "timestamp": time.time()
 ##        }
+##
+###    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
+###    # successful installation threads
+###    if flagged:
+###        os.makedirs(log_dir, exist_ok=True)
+###        with open(log_path, "w") as f:
+###            json.dump(flagged, f, indent=4)
+###
+##
+##
+##    # ✅ Only log if flagged exists. This will ensure that no {} empty resurrection log files are created for the
+##    # successful installation threads
+##    if flagged:
+##        os.makedirs(log_dir, exist_ok=True)
+##
+##        # Write registry resurrection candidates log
+##        with open(log_path, "w") as f:
+##            json.dump(flagged, f, indent=4)
+##
+##        # Patch 7: Write missing ghost resurrection log if applicable
+##        if missing_registry_ips:
+##            ghost_data = {
+##                ip: {
+##                    "status": "ghost_missing_registry",
+##                    "ghost_reason": "no registry entry",
+##                    "pid": pid,
+##                    "timestamp": time.time()
+##                }
+##                for ip in missing_registry_ips
+##            }
+##            with open(ghost_log_path, "w") as f:
+##                json.dump(ghost_data, f, indent=4)
+##            log_debug(f"[{timestamp()}] Ghost resurrection log created: {ghost_log_path}")
+##
+###    Remove this. We are doing total registry only at aggregated level. The snapshots below would create too much overhead
+###    See main() for aggregated total registry
+###    # Patch 7c: Write process registry snapshot log (this is the complete registry (successful and failed) for a given process
+###    # and can catch  multiple threads per process. Make sure this is outside of teh if flagged block. We want to always print this
+###    # out for every process
+###    with open(full_process_snapshot_path, "w") as f:
+###        json.dump(process_registry, f, indent=4)
+###
 #
 #
-## Comment this out and see patch4 above
-##
-##    os.makedirs(log_dir, exist_ok=True)
-##    with open(log_path, "w") as f:
-##        json.dump(flagged, f, indent=4)
-##
-##
+## --- UPDATED RESURRECTION CANDIDATE JSON AND GHOST JSON PER PROCESS CODE. THIS REPLACED THE PATCH4 BLOCK ABOVE ---
+## PID_JSON_DUMPS is an env variable used by gitlab .gitlab-ci.yml file to turn this on and off if it creates too much
+## overhead during debugging hyper-scaling cases (where there can be a large number of registry threads in a failed, not successful
+## state, and/or ghost threads
 #
+#    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+#
+#    # only dump non-empty lists to avoid churn
+#    if os.getenv("PID_JSON_DUMPS", "true").lower() in ("1","true"):
+#        # 1. Build your two lists
+#        candidates = [
+#            entry for entry in process_registry.values()
+#            if entry.get("status") != "install_success"
+#        ]
+#        seen_ips   = {e["public_ip"] for e in process_registry.values()}
+#        # benchmark_ips is already hydrated above by Patch7 logic
+#        ghosts     = sorted(benchmark_ips - seen_ips)
+#
+#        # 2. Define file paths. These have replaced the legacy paths defined earlier.
+#        cand_file  = os.path.join(
+#            log_dir,
+#            f"resurrection_candidates_registry_{pid}_{ts}.json"
+#        )
+#        ghost_file = os.path.join(
+#            log_dir,
+#            f"resurrection_ghost_missing_{pid}_{ts}.json"
+#        )
+#
+#        # 3. Write only if there’s something to write
+#        if candidates:
+#            with open(cand_file, "w") as f:
+#                json.dump(candidates, f, indent=2)
+#            patch7_logger.info(f"[Patch7] Wrote {len(candidates)} candidates to {cand_file}")
+#
+#        if ghosts:
+#            with open(ghost_file, "w") as f:
+#                json.dump(ghosts, f, indent=2)
+#            patch7_logger.info(f"[Patch7] Wrote {len(ghosts)} ghosts to {ghost_file}")
 #
 #
 #    # ✅ Print final status and resurrection monitor final verdict
@@ -2337,54 +2371,17 @@ def resurrection_monitor_patch7c(process_registry, log_dir="/aws_EC2/logs"):
 #
 ### Add flush at the end of the resurrection_monitor to help facilitate the logging to gitlab console configured above in patch7.
 #    sys.stdout.flush()
-
-
-########## THIS IS THE END OF THE resurrection_monitor() function REVISION 3 (replaced with REVISION 4)  ######################
-
-
-
-
-
-### REVISION 2
-## add pid to differentiate the logs. One resurrecction log file per process for all the threads in that process.
 #
-#def resurrection_monitor(log_dir="/aws_EC2/logs"):
-#    pid = multiprocessing.current_process().pid
-#    log_path = os.path.join(log_dir, f"resurrection_registry_log_{pid}.json")
 #
-#    flagged = {}
-#    with resurrection_registry_lock:
-#        for ip, record in resurrection_registry.items():
-#            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
-#                flagged[ip] = record
+########### THIS IS THE END OF THE resurrection_monitor_patch7c() function  ######################
 #
-#    if flagged:
-#        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged.")
-#        os.makedirs(log_dir, exist_ok=True)
-#        with open(log_path, "w") as f:
-#            json.dump(flagged, f, indent=4)
-#    else:
-#        print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
-
-
-## REVISION 1
-#def resurrection_monitor(log_path="/aws_EC2/logs/resurrection_registry_log.json"):
-#    flagged = {}
-#    with resurrection_registry_lock:
-#        for ip, record in resurrection_registry.items():
-#            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
-#                flagged[ip] = record
 #
-#    if flagged:
-#        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged.")
-#        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-#        with open(log_path, "w") as f:
-#            json.dump(flagged, f, indent=4)
-#    else:
-#        print("✅ Resurrection Monitor: No thread failures requiring intervention.")
 #
 
-########## THIS IS THE END OF THE resurrection_monitor() function REVISION 1 and 2 (replaced with REVISION 3) ######################
+
+#### As part of patch7d delete the older REVISIONS 3,2,and 1 from the comments as part of the cleanup to the code #####
+
+
 
 
 
