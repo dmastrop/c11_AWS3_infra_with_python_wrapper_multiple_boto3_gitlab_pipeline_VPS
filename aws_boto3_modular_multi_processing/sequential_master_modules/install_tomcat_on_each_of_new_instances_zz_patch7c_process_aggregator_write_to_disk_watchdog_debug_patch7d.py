@@ -61,7 +61,17 @@ retry_lock = threading.Lock()
 ## This is code block2 for adaptive WATCHDOG_TIMEOUT
 def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     base = 15
-    scale = 0.15 if instance_type == "micro" else 0.1
+   
+    # use a scale map instead of just scale.
+
+    SCALE_MAP = {
+        "t2.micro": 0.15,
+        "t2.small": 0.12,
+        "default": 0.1
+    }
+    scale = SCALE_MAP.get(instance_type, SCALE_MAP["default"])
+
+    #scale = 0.15 if instance_type == "micro" else 0.1
    
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
     #return int(base + scale * node_count + contention_penalty)
