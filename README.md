@@ -37,12 +37,13 @@ pertain to the optmizations to this module.
 The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
 
 
-### Major milestone updates to refer to below:
+## Major milestone updates to refer to below:
 
-- Update part 21: write-to-disk aggregator reviews the architecture of phase2 at a high level
+- Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
 - Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
 - Update part 23: implemenation of the control plane Public IP orchestrator
-
+- Update part 24: Phase 2h: resurrection_monitor_patch7c REFACTOR for process level ghost and res candidate json logging
+- Update part 25: Phase 2i: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
 
 
 ## High level project summary:
