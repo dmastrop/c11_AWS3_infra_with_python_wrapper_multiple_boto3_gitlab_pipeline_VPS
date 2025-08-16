@@ -724,8 +724,12 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
     with benchmark(test_name, sample_delay=delay):
     
         #func(*args, **kwargs)
-        result = func(*args, **kwargs)
-        print(f"[TRACE][run_test] func returned type: {type(result)}")
+
+        # get rid of double result. This is causing 2 install tomcat.   Use the one at the end after the new WATCHDOG_TIMEOUT
+        # code.
+        #result = func(*args, **kwargs)
+        #print(f"[TRACE][run_test] func returned type: {type(result)}")
+        
         # need to determine what is being returned by func which is threaded_install in this case so that 
         # if isinstance(result, list): loop below is executed.
         # result is the return from threaded_install which is thread_registry the process level registry. If multi-threaded there
@@ -769,7 +773,7 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         # thread_registry will be assigned the important process_registry in tomcat_worker() the calling function of run_test
 
         result = func(*args, **kwargs)
-        
+        print(f"[TRACE][run_test] func returned type: {type(result)}")        
 
         return result  # move this within the benchnark context
 
