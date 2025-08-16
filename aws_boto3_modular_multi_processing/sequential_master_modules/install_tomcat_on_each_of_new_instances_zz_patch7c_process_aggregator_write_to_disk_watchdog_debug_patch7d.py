@@ -1155,7 +1155,7 @@ from datetime import datetime
 
 
 
-## REVISION 5
+## REVISION 5: resurrection_monitor_patch7d
 
 
 ## Patch7d is below. This is to fix the ghost and candidate resurrection tagging and the json logging for both
@@ -1164,7 +1164,7 @@ from datetime import datetime
 
 
 
-:
+
 # ------------------ PATCH7C: THREAD-LOCAL RESURRECTION MONITOR ------------------
 # Goal:   Create isolated thread-level logs for postmortem analysis and retry heuristics.
 # Scope:  Operates on per-process registry (process_registry) assembled via tomcat_worker()
