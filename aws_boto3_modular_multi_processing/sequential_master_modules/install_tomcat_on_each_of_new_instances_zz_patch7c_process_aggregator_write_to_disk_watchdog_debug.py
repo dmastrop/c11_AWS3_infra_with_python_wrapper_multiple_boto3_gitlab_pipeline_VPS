@@ -724,7 +724,7 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
     with benchmark(test_name, sample_delay=delay):
     
         #func(*args, **kwargs)
-        #result = func(*args, **kwargs)
+        result = func(*args, **kwargs)
         print(f"[TRACE][run_test] func returned type: {type(result)}")
         # need to determine what is being returned by func which is threaded_install in this case so that 
         # if isinstance(result, list): loop below is executed.
@@ -1019,38 +1019,6 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
         region_name=region_name
     )
     ec2_client = session.client('ec2')
-
-
-# ─── DEBUG BLOCK ───────────────────────────────────────────
-    print("▶︎ [DEBUG] Orchestrator starting")
-    print("▶︎ [DEBUG] region_name       =", region_name)
-    from pprint import pprint
-    sts = session.client("sts")
-    identity = sts.get_caller_identity()
-    print("▶︎ [DEBUG] Caller Account   =", identity["Account"])
-    print("▶︎ [DEBUG] Caller ARN       =", identity["Arn"])
-
-    tag_key   = 'BatchID'
-    tag_value = 'test-2025-08-13'
-    print(f"▶︎ [DEBUG] Filtering on tag:{tag_key} = {tag_value}")
-
-    resp = ec2_client.describe_instances(
-        Filters=[
-            {'Name': f'tag:{tag_key}',      'Values': [tag_value]},
-            {'Name': 'instance-state-name', 'Values': ['pending','running']}
-        ]
-    )
-    all_ids = [
-        inst['InstanceId']
-        for r in resp.get('Reservations', [])
-        for inst in r.get('Instances', [])
-    ]
-    print("▶︎ [DEBUG] Raw instance IDs  =", all_ids)
-    print("▶︎ [DEBUG] Excluding ctrl ID  =", exclude_instance_id)
-    instance_ids = [i for i in all_ids if i != exclude_instance_id]
-    print("▶︎ [DEBUG] Final instance_ids =", instance_ids)
-
-
 
 
 
