@@ -289,7 +289,7 @@ def run_resurrection_monitor_diag(process_registry):
     # === Resurrection Monitor Execution ===
     try:
         resurrection_monitor_patch7d(process_registry)
-        print(f"[PATCH7C] ✅ resurrection_monitor_patch7d executed successfully for PID {pid}")
+        print(f"[PATCH7D] ✅ resurrection_monitor_patch7d executed successfully for PID {pid}")
     except Exception as e:
         print(f"[ERROR] 💥 resurrection_monitor_patch7d failed for PID {pid}: {e}")
         traceback.print_exc()
