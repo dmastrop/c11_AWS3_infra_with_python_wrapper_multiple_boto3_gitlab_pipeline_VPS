@@ -1302,11 +1302,172 @@ NOTE: The code commented out in several functions to revert the run_test and glo
 
 
 
+NOTE: At the process level the log and json files will not be produced if there is no data in them.  
+Conversely,  at the aggregate level (this write-to-disk aggregation code), blank files will be produced.
+The reasoning is that blank aggregate level artifact files will not produce a lot of overhead during hyper-scaling of
+processes, whereas blank process level artifcat files would have created an enormous amount of unecessary overhead
+during process hyper-scaling.
 
 
 
-##### resurrection_monitor_patch7c() This is a work in progress. Patch8 will add more changes to this.
+##### resurrection_monitor_patch7c() This is a work in progress. Patch7d and Patch8  will add more changes to this.
 
+
+The main changes to the resurrection_monitor_patch7c are the commenting out of the artifact log files below. These
+have been migrated to the main() level rather than being assembled at the process level. In patch7d and patch8 of the
+resurrectino_monitor, the process level logging for resurrection candidates and ghost threads will be added, but the
+log files below that are commented out are not necessary at the process level. All of these will be generated in main()
+at the aggregate level.
+
+
+```
+## coment out the total, missing and the successful and the failed as these are done in main() now at the aggregated and not 
+## the process level. benchmark_ips_artifact.log is the GOLD standard used by main(). So keep this one. Remove the other ones 
+## from here.
+
+            #if not total_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: total_registry_ips is empty — skipping artifact.")   
+            #else:
+            #     safe_artifact_dump("total_registry_ips", total_registry_ips)
+
+            if not benchmark_ips:
+                patch7_logger.info("[Patch7] WARNING: benchmark_ips is empty — skipping artifact.")
+            else:
+                safe_artifact_dump("benchmark_ips", benchmark_ips)
+
+            #if not missing_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: missing_registry_ips is empty — skipping artifact.")
+            #else:
+            #    safe_artifact_dump("missing_registry_ips", missing_registry_ips)
+
+            #if not successful_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: successful_registry_ips is empty — skipping artifact.")
+            #else:
+            #    safe_artifact_dump("successful_registry_ips", successful_registry_ips)
+
+            #if not failed_registry_ips:
+            #    patch7_logger.info("[Patch7] WARNING: failed_registry_ips is empty — skipping artifact.")
+            #else:
+            #    safe_artifact_dump("failed_registry_ips", failed_registry_ips)
+
+
+
+
+#            dump_set_to_artifact("total_registry_ips", total_registry_ips)
+#            dump_set_to_artifact("benchmark_ips", benchmark_ips)
+#            dump_set_to_artifact("missing_registry_ips", missing_registry_ips)
+#            dump_set_to_artifact("successful_registry_ips", successful_registry_ips)
+#            dump_set_to_artifact("failed_registry_ips", failed_registry_ips)
+```
+
+
+The following functions are listed from top (main()) level down to the process level functions and then to the thread level
+function (install_tomcat())
+
+It is important to differentiate between process level, thread level and the aggregate level functions when designing the
+write-to-disk aggregator code (mostly residing in main())
+
+The design is apparent when looking at the code from the top down as follows:
+
+
+
+
+
+
+##### main() This is where most of the new aggregation code is now:
+
+Note that all of the log and json artifact files generated in main are at the aggregate level (the total execution 
+set of IPs). The process level artifacts will be created in a resurrection_monitor_patch7d at a later time.
+
+
+```
+
+        # write-to-disk code in main() to aggregate the per process JSON in tomcat_worker into registries
+        # registries is then passed to write-to-disk aggregate_process_registries to flatten it out
+        # this final_registry is then passed to summarize_registry to summarize the status(tags) of each thread registry item
+        print("[TRACE][aggregator] Starting disk-based aggregation…")
+
+        os.makedirs("/aws_EC2/logs", exist_ok=True)
+
+        # 1. Load every per-process JSON that was created in tomcat_worker into registries
+        registries = []
+        for fname in os.listdir("/aws_EC2/logs"):
+            if fname.startswith("process_registry_") and fname.endswith(".json"):
+                path = os.path.join("/aws_EC2/logs", fname)
+                with open(path) as f:
+                    registries.append(json.load(f))
+
+        # 2. Flatten (merge process registries into flat thread registries) & summarize registries using the call to 
+        # aggregate_process_registries
+        final_registry = aggregate_process_registries(registries)
+        summary = summarize_registry(final_registry)
+
+        # 3. Persist final_registry to final_aggregate_execution_run_registry.json (exported as artifact to gitlab pipeline) 
+        # This is the merged master registry
+        agg_path = "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
+        with open(agg_path, "w") as f:
+            json.dump(final_registry, f, indent=2)
+        print("[TRACE][aggregator] Wrote final JSON to", agg_path)
+
+        # 4. Print summary counts by status/tag to the gitlab console
+        print("[TRACE][aggregator] Final registry summary:")
+        for tag, count in summary.items():
+            print(f"  {tag}: {count}")
+
+        # 5. Load the benchmark IP list (gold standard to compare to). This is created in resurrection_monitor_patch7c() function
+        benchmark_ips = set()
+        with open("/aws_EC2/logs/benchmark_ips_artifact.log") as f:
+            for line in f:
+                ip = line.strip()
+                if ip:
+                    benchmark_ips.add(ip)
+
+        # 6. Build IP sets from final_registry statuses (final registry is the aggregate runtime list of all the threads with ip addresses)
+        # Get the success_ips from the tag(status), get failed as total - success and get missing as benchmark_ips(gold) - total_ips
+        total_ips   = {e["public_ip"] for e in final_registry.values()}
+        success_ips = {
+            e["public_ip"]
+            for e in final_registry.values()
+            if e.get("status") == "install_success"
+        }
+        failed_ips  = total_ips - success_ips
+        missing_ips = benchmark_ips - total_ips
+
+        # 7. Dump per-category artifact logs to gitlab console
+        for name, ip_set in [
+            ("total_registry_ips", total_ips),
+            ("successful_registry_ips", success_ips),
+            ("failed_registry_ips", failed_ips),
+            ("missing_registry_ips", missing_ips),
+        ]:
+            path = f"/aws_EC2/logs/{name}_artifact.log"
+            with open(path, "w") as f:
+                for ip in sorted(ip_set):
+                    f.write(ip + "\n")
+            print(f"[TRACE][aggregator] Wrote {len(ip_set)} IPs to {path}")
+
+        # 8. Dump resurrection candidates JSON (all non-success entries; i.e. failed = total - successful or !successful)
+        # This is also done in resurrection_monitor_patch7c at the process level.
+        ts = int(time.time())
+        candidates = [
+            entry
+            for entry in final_registry.values()
+            if entry.get("status") != "install_success"
+        ]
+        cand_path = f"/aws_EC2/logs/resurrection_candidates_registry_{ts}.json"
+        with open(cand_path, "w") as f:
+            json.dump(candidates, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(candidates)} candidates to {cand_path}")
+
+        # 9. Dump ghost/missing JSON (benchmark IPs never touched). By definition these are simply ips and not registry entries
+        # since they have never been processed as threads (true ghosts). This is done in the resurrection_monitor_patch7c at
+        # the process level
+        ghosts = sorted(missing_ips)
+        ghost_path = f"/aws_EC2/logs/resurrection_ghost_missing_{ts}.json"
+        with open(ghost_path, "w") as f:
+            json.dump(ghosts, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
+```
 
 
 
@@ -1314,12 +1475,93 @@ NOTE: The code commented out in several functions to revert the run_test and glo
 
 ##### tomcat_worker()
 
+The call to tomcat_woker is done from tomcat_worker_wrapper which is called directly from main()
+
+tomcat_worker_wrapper is used for upper level orchestration logging via the setup_logging() helper function 
+No changes were required in the wrapper itself.
+
+tomcat_worker has the "process_registry" which is created by calling threaded_install by using the run_test helper
+function
+
+```
+## threaded_install now returns the thread_registry (list of all IPs in the process as a process registry)
+    ## Assign this thread_registry the name process_registry. This will later be passed to the new resurrection_monitor_patch7c
+    ## for collating and tag processing
+    ## NOTE that run_test needs to be slightly modified to return the thread_registry from threaded_install so that it can be
+    ## assigned to the process_registry
+    process_registry = run_test("Tomcat Installation Threaded", threaded_install)
+```
+
+
+Once the process_registry is obtained for the current process that is running tomcat_worker, it needs to be written
+to disk. This is because memory is NOT shared between processes, so the state needs to be saved as a discrete 
+`process_registry_{pid}_{tag}.json file`, that is later assembled at the aggregate level in main() (see above; step 1)
+
+
+```
+## write-to-disk aggregator code in tomcat_worker
+## This writes the current process call on tomcat_worker process_registry to disk and saves it as
+## "/aws_EC2/logs/process_registry_{pid}_{tag}.json". This will later be aggregated with the other process process_registry in main()
+## as "/aws_EC2/logs/final_aggregate_execution_run_registry.json"
+## make sure to import multiprocessing, json, os at top of this module.
+
+    os.makedirs("/aws_EC2/logs", exist_ok=True)                # ensure directory exists 
+    pid = multiprocessing.current_process().pid
+    tag = uuid.uuid4().hex[:8]
+    out = f"/aws_EC2/logs/process_registry_{pid}_{tag}.json"
+    with open(out, "w") as f:
+        json.dump(process_registry, f, indent=2)
+    print(f"[TRACE] Wrote process registry to {out}")
+```
+
+
+
+
+##### run_test()
+
+The call to run_test is done within tomcat_worker() (see above)
+run_test is used to call threaded_install which returns thread_registry which is the process_registry for the current process
+
+No changes were required in run_test for the write-to-disk.
+
+The threaded_install function is called through the `*args` in the return at the end of run_test():
+
+```
+result = func(*args, **kwargs)
+```
 
 
 
 
 
 ##### threaded_install()
+
+The call to threaded_install() is from tomcat_worker via the run_test helper function.  threaded_install is a process level 
+function and returns thread_registry which is assigned to "process_registry" in tomcat worker
+
+
+The threaded_install calls install_tomcat through the ThreadPoolExecutor a multi-threading thread level executor of the tomcat
+installation for all the threads in the process. Given that the process_registry is written to disk in the threaded_install
+function (see above), no changes were required for the write-to-disk aggregator in threaded_install
+
+```
+       with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+```
+
+NOTE for future patches to resurrection_monitor that the registry should always be indexed by the thread_uuid:
+
+```
+# Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
+                # For multi-threaded multi-processed registry entries keying by thread_uuid is best.
+                # thre thread_registry will be built up with all thread registry entries for per process and returned to the
+                # calling function of threaded_install which is tomcat worker. Tomcat_worker will assign this to process_registry
+                # retgistry_entry is returned from install_tomcat to this function, threaded_install
+                thread_registry[thread_uuid] = registry_entry
+```
+
+threaded_install will return thread_registry which is effectively process_registry to the calling function run_test which 
+returns this registry list to tomcat_worker so that these process level registries can be aggregated in main()
 
 
 
@@ -1328,13 +1570,17 @@ NOTE: The code commented out in several functions to revert the run_test and glo
 
 ##### install_tomcat()
 
+The call to install_tomcat() is done from threaded_install() via the ThreadPoolExceutor. install_tomcat() is a thread level
+functon and returns registry_entry, a single thread registry entry, to threaded_install, a process level function that 
+collects all of the registry_entry from all the threads in the process and then returns them to tomcat_worker. This process
+level registry is "process_registry". 
+
+install_tomcat as a thread level function does not require any changes for the write-to-disk aggregator.
 
 
-
-##### run_test()
-
-
-##### main() This is where most of the new aggregation code is now:
+In summary, the code changes for the write-to-disk aggregator are at the process and top aggregation level. As such the 
+lower level functions did ot require any changes and  most of the changes were in main() and tomcat_worker() as detailed
+above.
 
 
 
