@@ -1190,7 +1190,41 @@ from datetime import datetime
 # the process_registry from the run_test call to threaded_install. The other resurrection_montior are global and are not
 # to be changed.
 
-def resurrection_monitor_patch7d(process_registry, log_dir="/aws_EC2/logs"):
+
+
+
+
+######## patch7d ##########
+#For patch7d we need to pass the instance_info from the higher level functions (tomcat_worker and tomcat_worker_wrapper) to
+#the resurrection_monitor. instance_info is derived from tomcat_worker_wrapper which is called from main with the 
+#  args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks] . This chunk is the chunk of ips that is 
+# assigned to the pariticular process that will be run.  
+
+# In main(), The chunk is derived from the instance_ips and the parameters as shown below:
+# chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+# and this enumeration: for i, chunk in enumerate(chunks):   
+# along with the args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks] 
+# The arg list with chunk is passed to tomcat_worker_wrapper as `instance_info` : 
+# `def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers)`
+
+# main uses this function call to tomcat_worker_wrapper using the args_list above:
+# `with multiprocessing.Pool(processes=desired_count) as pool:`
+#            'pool.starmap(tomcat_worker_wrapper, args_list)`
+
+# each process receives a `chunk` of IPs via `instance_info`, and that chunk is the authoritative list of IPs that the  process
+# is responsible for. This is the  per-process GOLD standard analagous to the benchmark_ips at the aggregate level 
+# (benchmark_ips_artifact.log)
+
+# assigned_ips are the actual chunk ips assigned to this process, i.e. chunk or instance_info
+# These are passed from the calling function tomcat_worker to resurrection_monitor_patch7d(process_registry, instance_info)
+# THus instance_info is assigned_ips within this function
+############################
+
+
+#def resurrection_monitor_patch7d(process_registry, log_dir="/aws_EC2/logs"):
+def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_EC2/logs"):
+
+
     pid = multiprocessing.current_process().pid
 
     # add timestamp so that if pid is reused (as with hyper-scaling or pooling) the log files can be differentiated for 
@@ -1245,8 +1279,37 @@ def resurrection_monitor_patch7d(process_registry, log_dir="/aws_EC2/logs"):
 #    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
 
+
+
     flagged = {}
     with resurrection_registry_lock:
+        
+        ####################
+        ## insert patch7d fixes:
+        # Extract seen IPs from the current process registry
+        seen_ips = {entry["public_ip"] for entry in process_registry.values() if entry.get("public_ip")}
+        # Build assigned IPs set from the chunk passed to this process
+        assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+        # Detect ghosts — IPs assigned to this process but missing from registry
+        ghosts = sorted(assigned_ip_set - seen_ips)
+        
+        # log to console 
+        for ip in ghosts:
+            print(f"[Patch7d] 👻 Ghost detected in process {pid}: {ip}")
+
+        # log to the artifacts in gitlab
+        if ghosts:
+            ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+            with open(ghost_file, "w") as f:
+                json.dump(ghosts, f, indent=2)
+         ####################
+
+
+
+
+
+
+
 
         # Patch5: This sets the stage for patches 5 and 6.  We are creating total_registry_ips for all ips in registry
         # (i.e. watchdogs that exceeded threshold, our unknown signature ghost, successful fingerprinted ones in install_tomcat,
@@ -3304,9 +3367,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+
+
+
+
     ### This is the wrapped multi-threading code for benchmarking statistics
     ### Make sure to indent this within the tomcat_worker function!
-    def threaded_install():
+    #def threaded_install():
+        
+    ## For patch7d of resurrection_monitor add the args to the threaded install function. This is not absolutely required
+    ## since threaded_install and install_tomcat are both inside of tomcat_worker which has these 2 args but adding it
+    ## for clarity sake. instance_info or chunk or assigned_ips is required for per process ghost detection.
+    def threaded_install(instance_info, max_workers):
+
+
+
         import uuid # This is for adding uuid to the logs. See below
 
         thread_registry = {}  # Shared across threads in this process. This is required to collect all ips in the thread
@@ -3513,13 +3588,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     print("ThreadPoolExecutor script execution completed.")
 
+
+
+
+
+
 ###### Call the resurrection monitor function. This is run per process. So if 5 threads in a process it the resurrection registry
 ###### will have scanned for 5 EC2 instance installs and logged any that have failed 2 watchdog attempts. These are resurrection
 ###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
 ###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
-      
-    
-     
+           
 
     # resurrection_monitor()
     
@@ -3534,7 +3612,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     # add the process_registry (see above) which is the registry of the multi-threading process IPs. This is from threaded_install
     # which now returns the thread_registry which is the process_registry. Will have to update the resurrection monitor to
     # accept the process_registry
-    resurrection_monitor_patch7d(process_registry)
+    
+    #resurrection_monitor_patch7d(process_registry)
+
+
+    ##### patch7d: add the argument chunk which is instance_info which will be assigned_ips in the resurrection_monitor_patch7d
+    ##### function. This is required so that we have a GOLD ip list of what should be processed by the thread in the process
+    ##### Real time process_registry entries missing from that list of ips are ghosts.
+    ##### After `threaded_install()` returns `process_registry`, pass both `process_registry` and `instance_info` 
+    ##### (which is the assigned chunk) to the monitor:
+    resurrection_monitor_patch7d(thread_registry, instance_info)
+
+
 
     # use the run_resurrection_monitor_diag() function to troublshoot the issues in resurrection_monitor_patch7c
     #run_resurrection_monitor_diag(process_registry)
