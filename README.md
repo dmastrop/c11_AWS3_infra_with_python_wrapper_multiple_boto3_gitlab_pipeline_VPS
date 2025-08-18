@@ -40,9 +40,14 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 ## Major milestone updates to refer to below:
 
 - Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
+
 - Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
+
 - Update part 23: implementation of the control plane Public IP orchestrator
-- Update part 24: Phase 2h: resurrection_monitor patch7d for process level ghost and res candidate json logging
+
+- Update part 24: Phase 2h: resurrection_monitor patch7d for process level ghost and res candidate json logging 
+(instance_info for process level GOLD ip list for ghost detection)
+
 - Update part 25: Phase 2i: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
 
 
