@@ -180,11 +180,14 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d.py")
 #
 
-#### THIS IS THE MODULE2 SCRIPT with res monitor patch7d changes to tomcat_worker and threaded_install for instance_info
+##### THIS IS THE MODULE2 SCRIPT with res monitor patch7d changes to tomcat_worker and threaded_install for instance_info
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_1.py")
+
+
+#### THIS IS THE MODULE2 SCRIPT with res monitor patch7d breaking up into subfunctions and restructuring
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_1.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_2.py")
 
 
 ## modules 3-11:
