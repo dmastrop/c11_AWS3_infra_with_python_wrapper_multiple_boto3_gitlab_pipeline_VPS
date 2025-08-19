@@ -3626,7 +3626,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ##### Real time process_registry entries missing from that list of ips are ghosts.
     ##### After `threaded_install()` returns `process_registry`, pass both `process_registry` and `instance_info` 
     ##### (which is the assigned chunk) to the monitor:
-    resurrection_monitor_patch7d(thread_registry, instance_info)
+    resurrection_monitor_patch7d(process_registry, instance_info)
 
 
 
