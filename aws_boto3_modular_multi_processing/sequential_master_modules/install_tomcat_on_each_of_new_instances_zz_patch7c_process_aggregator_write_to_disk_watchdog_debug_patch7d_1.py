@@ -3518,8 +3518,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ## for collating and tag processing
     ## NOTE that run_test needs to be slightly modified to return the thread_registry from threaded_install so that it can be
     ## assigned to the process_registry
-    process_registry = run_test("Tomcat Installation Threaded", threaded_install)
 
+    #process_registry = run_test("Tomcat Installation Threaded", threaded_install)
+
+    # For resurrection_monitor_patch7d need to pass instance_info and max_workers because i have chnaged the 
+    # def threaded_install from threaded_install() to def threaded_install(instance_info, max_workers). Another option
+    # is to revert back to threaded_install() and then the change below is not required. I will use the args for clarity.
+    process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers)
 
 
     ## debug prints for run_test call to threaded_install which returns thread_registry which is assigned to process_registry
