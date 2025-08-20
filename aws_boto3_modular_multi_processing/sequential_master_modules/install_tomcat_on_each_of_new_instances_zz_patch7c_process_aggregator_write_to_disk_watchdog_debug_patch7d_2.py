@@ -71,11 +71,11 @@ retry_lock = threading.Lock()
 # === RESMON PATCH7D UTILITY ===
 ### 🧩 `hydrate_benchmark_ips()` Function
 def hydrate_benchmark_ips(log_dir):
-    benchmark_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+    benchmark_combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
     benchmark_ips = set()
 
     try:
-        with open(benchmark_path, "r") as f:
+        with open(benchmark_combined_path, "r") as f:
             lines = f.readlines()
             print(f"[RESMON_7d] Runtime log line count: {len(lines)}")
 
@@ -1373,6 +1373,32 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
 
     #full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
+
+    # Patch 7d2 move this block from the old code for the benchmark_combined_runtime.log generation
+    # ------- Combine runtime benchmark logs: filtered for benchmark_combined_runtime.log  -------
+    #merged contents from all `benchmark_*.log` PID logs that were created at runtime
+    def combine_benchmark_logs_runtime(log_dir):
+        benchmark_combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+        with open(benchmark_combined_path, "w") as outfile:
+            for fname in sorted(os.listdir(log_dir)):
+                # Only combine true benchmark logs — exclude artifact and combined logs
+                if (
+                    fname.startswith("benchmark_")
+                    and fname.endswith(".log")
+                    and "combined" not in fname
+                    and not fname.startswith("benchmark_ips_artifact")
+                ):
+                    path = os.path.join(log_dir, fname)
+                    try:
+                        with open(path, "r") as infile:
+                            outfile.write(f"===== {fname} =====\n")
+                            outfile.write(infile.read() + "\n")
+                    except Exception as e:
+                        patch7_logger.info(f"Skipped {fname}: {e}")
+        patch7_logger.info(f"Combined runtime log written to: {combined_path}")
+        return combined_path
+
+    benchmark_combined_path = combine_benchmark_logs_runtime(log_dir)
 
 
 
