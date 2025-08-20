@@ -51,7 +51,7 @@ level GOLD ip list for ghost detection
 - Update part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for
 ghost detection json file generation, etc. (major overhaul)
 
-- Update part 25: Phase 2j: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
+- Update part 26: Phase 2j: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
 
 
 ## High level project summary:
@@ -75,6 +75,254 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 ## UPDATES part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info for process level GOLD ip list for ghost detection
+
+
+### Introduction:
+
+The ghost detection at the per process leve needs to be revised. The issue is that the current IP list that is being used to
+detect missing ips from the registry is for the global execution aggregate level.  The requirement is for the thread ip list
+that has been assigned to the current process that is using the resurrection_monitor (the resurrection_monitor function is 
+called through the tomcat_worker function at the process level after the process_registry for the process has been formed).
+
+The GOLD standard thread ip list (the list of EC2 instance ips from the original batch created on AWS in module1 of the 
+python package) is in the instance_info list.
+
+The instance_info list has the following etiology:
+
+
+Recall that main calls tomcat_worker_wrapper which calls tomcat_worker which calls threaded_install and threaded_install, 
+through the ThreadPool_Executor calls install_tomcat at the thread level.  tomcat_worker calls threaded_install through
+a helper process named run_test.  Because tomacat_worker and run_test and threaded_install are at the process level, they
+are the ideal place to grab the process level list of IPs that were originally created by AWS and assigned to the process by
+the main() function call to tomcat_worker_wrapper at this line of code:
+
+```
+try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+```
+
+The args_list that is passed to tomcat_worker_wrapper has this:
+
+```
+args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
+```
+
+
+This args_list has the chunk of ips that are assigned to a pariticular process that the multiprocessing.Pool will use when
+calling the tomcat_worker_wrapper function.
+
+The chunk is derived as follows:
+
+```
+### Configurable parameters
+    chunk_size = 2   # Number of IPs per process
+    max_workers = 2    # Threads per process
+    desired_count = 6   # Max concurrent processes for iniital batch
+
+    chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+
+
+    # ADD this for the pooling level logging in main() that uses setup_main_logging() helper function
+    total_processes = len(chunks)
+    remaining = total_processes - desired_count
+    pooled_batches = (remaining + desired_count - 1) // desired_count if remaining > 0 else 0
+    # this uses ceiling division. for example 200 processes with desired_count 75 is (125+75-1)//75 =
+    # 199/75 = round down(2.65)= 2 additional batches of the 75 max will cover the remaining 125 pooled processes
+
+    logger.info(f"[MAIN] Total processes: {total_processes}")
+    logger.info(f"[MAIN] Initial batch (desired_count): {desired_count}")
+    logger.info(f"[MAIN] Remaining processes to pool: {remaining}")
+    logger.info(f"[MAIN] Number of batches of the pooled processes. This is the *additional waves of processes that will be needed after the initial batch (`desired_count`) to complete all the work: {pooled_batches}")
+
+
+
+
+    # [DEBUG] Show chunk details
+    for i, chunk in enumerate(chunks):
+        print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
+        print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
+
+
+    args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
+```
+
+This chunk list of ips is mapped to a list called instance_info when the call is made to tomcat_worker_wrapper:
+
+```
+def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers):
+```
+
+
+This instance_nfo is the list of IPs to which to compare the process process_registry list of threads to determine if there
+are any IPs (threads) completely missing (no status/tag, no reccord of the thread at all; this can happen under some rare
+circumstances, for example the EC2 node never comes up to running state). This is the definition of a true ghost thread.
+These threads are NOT the same as resurrection candidate threads/registry entries. Resurrection candidates have registry 
+entries in the process_registry but for whatever reason (we will get into tags/status) they have some sort of failed status.
+Ghosts have no entry in the process_registry hence the reliance upon the instance_info as a GOLD standard to detect them.
+
+Given that tomcat_worker_wrapper calls tomcat_worker, some minor changes need to be made in tomcat_worker when it calls
+threaded_install through the run_test helper function.
+
+### Refactored code blocks
+
+
+##### resurrection_monitor_patch7d:
+
+First change is to pass the instance_info described above, essentailly the chunk of IPs designated to be worked on by
+the threads in the process, to the resurrection_monitor to scan for ghosts.
+
+```
+def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_EC2/logs"):
+```
+
+Thus the function is now defined with an assigned_ips local argument which as shown below maps to the instance_info of the
+calling function in tomcat_install
+
+The new ghost detection logic in the resurrection_monitor_patch7d is below:
+
+```
+        ####################
+        ## insert patch7d fixes:
+        # Extract seen IPs from the current process registry
+        seen_ips = {entry["public_ip"] for entry in process_registry.values() if entry.get("public_ip")}
+        # Build assigned IPs set from the chunk passed to this process
+        assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+        # Detect ghosts — IPs assigned to this process but missing from registry
+        ghosts = sorted(assigned_ip_set - seen_ips)
+
+        # log to console 
+        for ip in ghosts:
+            print(f"[Patch7d] 👻 Ghost detected in process {pid}: {ip}")
+
+        # log to the artifacts in gitlab
+        if ghosts:
+            ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+            with open(ghost_file, "w") as f:
+                json.dump(ghosts, f, indent=2)
+         ####################
+```
+
+This effectively compares the process.registry for the process to this assigned_ips (instance_info) list of ips to detect
+if any threads have completely fallen out of the process_registry
+
+The ghosts are then exported as an artifact to the gitlab pipeline as resurrection_ghost_missing_{pid}.json at the per
+process level.
+
+Note that there is an aggregate ghost json file generated at the main() level but this uses a GOLD list of all the 
+ips (threads) for the entire execution runtime list (benchmark_ips) and compares that to an aggregated list of all the 
+process_registry log files (this is detailed in an earlier update as write-to-disk implementation).
+
+ 
+
+##### tomcat_worker(), run_test() and threaded_install() functions:
+
+tomcat_worker_wrapper has the instance_info as one of its arguments (see above)
+When tomcat_worker_wrapper calls tomcat_worker it does so by this:
+
+```
+return tomcat_worker(instance_info, security_group_ids, max_workers)
+```
+
+
+Thus tomcat_worker now has the instance_info.
+
+tomcat_woker calls threaded_install and assign process_registry for the process with this line where we need to explicitly
+pass this instance_info to threaded_install (via run_test)
+
+```
+   # For resurrection_monitor_patch7d need to pass instance_info and max_workers because i have chnaged the 
+    # def threaded_install from threaded_install() to def threaded_install(instance_info, max_workers). Another option
+    # is to revert back to threaded_install() and then the change below is not required. I will use the args for clarity.
+    
+    process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers)
+```
+
+This change to add the args to threaded_install was not mandatory because threaded_install is defined inside of tomcat_worker 
+scope, but I decided to add the args so that the code arg requirements could be more easily followed.
+
+run_test is already defined to handle any args passed to it with the `*args`:
+
+
+```
+def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+
+```
+The test_name is threaded_install.
+
+Finally. threaded_install has the following def:
+
+```
+    ## For patch7d of resurrection_monitor add the args to the threaded install function. This is not absolutely required
+    ## since threaded_install and install_tomcat are both inside of tomcat_worker which has these 2 args but adding it
+    ## for clarity sake. instance_info or chunk or assigned_ips is required for per process ghost detection.
+    
+    def threaded_install(instance_info, max_workers):
+```
+
+
+
+#### resurrection_monitor function:
+
+The resurrection monitor function is called from tomcat_worker right soon after the process_registry has been assigned
+(see above), and this requires that the instance_info arg be added so that the new code in it (see above) can work with this 
+IP list as the process level GOLD standard IP list to compare the process_registry list to.
+
+```
+    ##### patch7d: add the argument chunk which is instance_info which will be assigned_ips in the resurrection_monitor_patch7d
+    ##### function. This is required so that we have a GOLD ip list of what should be processed by the thread in the process
+    ##### Real time process_registry entries missing from that list of ips are ghosts.
+    ##### After `threaded_install()` returns `process_registry`, pass both `process_registry` and `instance_info` 
+    ##### (which is the assigned chunk) to the monitor:
+
+    resurrection_monitor_patch7d(process_registry, instance_info)
+```
+
+instance_info maps to the internal arg assigned_ips in the resurrection monitor function
+This is used in the new code block in the section above to find the list of ghost ips.
+This has been tested with at 16 node simple exeution run but needs to be negative tested with real ghosts during the 
+hyper-scaling process test runs. At 16 nodes there are obviously no ghost threads and that is what the process level 
+ghost files demonstrated (no files were created at the process level)
+
+
+
+
+
+
+
+
+### Summary from the module2 comments:
+
+
+```
+######## patch7d ##########
+#For patch7d we need to pass the instance_info from the higher level functions (tomcat_worker and tomcat_worker_wrapper) to
+#the resurrection_monitor. instance_info is derived from tomcat_worker_wrapper which is called from main with the 
+#  args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks] . This chunk is the chunk of ips that is 
+# assigned to the pariticular process that will be run.  
+
+# In main(), The chunk is derived from the instance_ips and the parameters as shown below:
+# chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+# and this enumeration: for i, chunk in enumerate(chunks):   
+# along with the args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks] 
+# The arg list with chunk is passed to tomcat_worker_wrapper as `instance_info` : 
+# `def tomcat_worker_wrapper(instance_info, security_group_ids, max_workers)`
+
+# main uses this function call to tomcat_worker_wrapper using the args_list above:
+# `with multiprocessing.Pool(processes=desired_count) as pool:`
+#            'pool.starmap(tomcat_worker_wrapper, args_list)`
+
+# each process receives a `chunk` of IPs via `instance_info`, and that chunk is the authoritative list of IPs that the  process
+# is responsible for. This is the  per-process GOLD standard analagous to the benchmark_ips at the aggregate level 
+# (benchmark_ips_artifact.log)
+
+# assigned_ips are the actual chunk ips assigned to this process, i.e. chunk or instance_info
+# These are passed from the calling function tomcat_worker to resurrection_monitor_patch7d(process_registry, instance_info)
+# THus instance_info is assigned_ips within this function
+############################
+```
+
+
 
 
 
