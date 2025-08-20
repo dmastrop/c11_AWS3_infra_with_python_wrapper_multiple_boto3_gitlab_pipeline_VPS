@@ -1377,20 +1377,20 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
 
 
 
-## Patch 7d2 modularization patch changes:
-## Frist call to hydrate_benchmark_ips global helper function to derive the benchmark_ips GOLD standard thread/ip list that
-## is required for ghost detection in main() at the aggregate level
-## Large blocks of the old code for this need to be commented out below. These will be noted with 7d2 in the comments.
+    ## Patch 7d2 modularization patch changes:
+    ## Frist call to hydrate_benchmark_ips global helper function to derive the benchmark_ips GOLD standard thread/ip list that
+    ## is required for ghost detection in main() at the aggregate level
+    ## Large blocks of the old code for this need to be commented out below. These will be noted with 7d2 in the comments.
 
 
-benchmark_ips = hydrate_benchmark_ips(log_dir)
+    benchmark_ips = hydrate_benchmark_ips(log_dir)
 
-## print the artifact that is derived from benchmark_ips,the benchmark_ips_artifact.log that is the runtime list of all
-## the IPs/theads in the execution run.This is exported out to the gitlab pipeline
+    ## print the artifact that is derived from benchmark_ips,the benchmark_ips_artifact.log that is the runtime list of all
+    ## the IPs/theads in the execution run.This is exported out to the gitlab pipeline
 
-with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
-    for ip in sorted(benchmark_ips):
-        f.write(ip + "\n")
+    with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
+        for ip in sorted(benchmark_ips):
+            f.write(ip + "\n")
 
 
 
