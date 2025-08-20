@@ -1377,7 +1377,7 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
     # Patch 7d2 move this block from the old code for the benchmark_combined_runtime.log generation
     # ------- Combine runtime benchmark logs: filtered for benchmark_combined_runtime.log  -------
     #merged contents from all `benchmark_*.log` PID logs that were created at runtime
-    def combine_benchmark_logs_runtime(log_dir):
+    def combine_benchmark_logs_runtime(log_dir, patch7_logger):
         benchmark_combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
         with open(benchmark_combined_path, "w") as outfile:
             for fname in sorted(os.listdir(log_dir)):
@@ -1398,25 +1398,9 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
         patch7_logger.info(f"Combined runtime log written to: {combined_path}")
         return combined_path
 
-    benchmark_combined_path = combine_benchmark_logs_runtime(log_dir)
 
 
 
-
-    ## Patch 7d2 modularization patch changes:
-    ## Frist call to hydrate_benchmark_ips global helper function to derive the benchmark_ips GOLD standard thread/ip list that
-    ## is required for ghost detection in main() at the aggregate level
-    ## Large blocks of the old code for this need to be commented out below. These will be noted with 7d2 in the comments.
-
-
-    benchmark_ips = hydrate_benchmark_ips(log_dir)
-
-    ## print the artifact that is derived from benchmark_ips,the benchmark_ips_artifact.log that is the runtime list of all
-    ## the IPs/theads in the execution run.This is exported out to the gitlab pipeline
-
-    with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
-        for ip in sorted(benchmark_ips):
-            f.write(ip + "\n")
 
 
 
@@ -1435,26 +1419,6 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
     flagged = {}
     with resurrection_registry_lock:
         
-        ####################
-        ## insert patch7d fixes:
-        ## This is early code for testing the refactor for ghost detection for 7d2 modularization. This is working well.
-        # Extract seen IPs from the current process registry
-        seen_ips = {entry["public_ip"] for entry in process_registry.values() if entry.get("public_ip")}
-        # Build assigned IPs set from the chunk passed to this process
-        assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
-        # Detect ghosts — IPs assigned to this process but missing from registry
-        ghosts = sorted(assigned_ip_set - seen_ips)
-        
-        # log to console 
-        for ip in ghosts:
-            print(f"[Patch7d] 👻 Ghost detected in process {pid}: {ip}")
-
-        # log to the artifacts in gitlab
-        if ghosts:
-            ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
-            with open(ghost_file, "w") as f:
-                json.dump(ghosts, f, indent=2)
-         ####################
 
 
 
@@ -1564,6 +1528,11 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
 ### Updated Patch7 Block 
 
 
+
+
+
+
+
         # ------- Patch7 Logger Isolation -------
         #This creates a **dedicated logger instance** for Patch7 inside the resurrection monitor, uniquely scoped to the process that’s
         #running it.
@@ -1606,6 +1575,57 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
         patch7_logger.addHandler(summary_handler)
 
         patch7_logger.info("Patch7 Summary — initialized")
+
+
+
+
+
+
+
+        ###### for patch7d2 modularization. Move all of this stuff after the patch7_logger is defined ########
+        
+        # this will create the benchmark_combined_runtime.log from which we can hydrate benchmark_ips
+        benchmark_combined_path = combine_benchmark_logs_runtime(log_dir, patch7_logger)
+
+
+        ## Patch 7d2 modularization patch changes:
+        ## Frist call to hydrate_benchmark_ips global helper function to derive the benchmark_ips GOLD standard thread/ip list that
+        ## is required for ghost detection in main() at the aggregate level
+        ## Large blocks of the old code for this need to be commented out below. These will be noted with 7d2 in the comments.
+
+
+        benchmark_ips = hydrate_benchmark_ips(log_dir)
+
+        ## print the artifact that is derived from benchmark_ips,the benchmark_ips_artifact.log that is the runtime list of all
+        ## the IPs/theads in the execution run.This is exported out to the gitlab pipeline
+
+        with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
+            for ip in sorted(benchmark_ips):
+                f.write(ip + "\n")
+
+
+        ##  Move this block to here. This will be replaced by the detect_ghosts() helper function.
+
+        ####################
+        ## insert patch7d fixes:
+        ## This is early code for testing the refactor for ghost detection for 7d2 modularization. This is working well.
+        # Extract seen IPs from the current process registry
+        seen_ips = {entry["public_ip"] for entry in process_registry.values() if entry.get("public_ip")}
+        # Build assigned IPs set from the chunk passed to this process
+        assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+        # Detect ghosts — IPs assigned to this process but missing from registry
+        ghosts = sorted(assigned_ip_set - seen_ips)
+        
+        # log to console 
+        for ip in ghosts:
+            print(f"[Patch7d] 👻 Ghost detected in process {pid}: {ip}")
+
+        # log to the artifacts in gitlab
+        if ghosts:
+            ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+            with open(ghost_file, "w") as f:
+                json.dump(ghosts, f, indent=2)
+         ####################
 
 
 
@@ -1836,14 +1856,14 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
             patch7_logger.info("🔄 Patch7 logger flushed successfully.")
 
 
-            # Summary conclusion:
-            patch7_logger.info("🧪 Patch7 reached summary block execution.")
-            patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
-            patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
-            patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
-            patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
-            patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
-            patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+            # Summary conclusion: This block will be used with patch 7d2 for process level stats .
+            #Patch7_logger.info("🧪 Patch7 reached summary block execution.")
+            #Patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+            #Patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+            #Patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+            #Patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+            #Patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+            #Patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
             
 
         # try block indentation level is here.
