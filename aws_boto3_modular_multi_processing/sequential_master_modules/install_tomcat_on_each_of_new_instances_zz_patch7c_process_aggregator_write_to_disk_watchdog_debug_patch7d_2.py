@@ -1395,8 +1395,8 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
                             outfile.write(infile.read() + "\n")
                     except Exception as e:
                         patch7_logger.info(f"Skipped {fname}: {e}")
-        patch7_logger.info(f"Combined runtime log written to: {combined_path}")
-        return combined_path
+        patch7_logger.info(f"Combined runtime log written to: {benchmark_combined_path}")
+        return benchmark_combined_path
 
 
 
