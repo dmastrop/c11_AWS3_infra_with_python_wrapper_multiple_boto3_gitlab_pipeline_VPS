@@ -45,10 +45,13 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 23: implementation of the control plane Public IP orchestrator
 
-- Update part 24: Phase 2h: resurrection_monitor patch7d for process level ghost and res candidate json logging 
-(instance_info for process level GOLD ip list for ghost detection)
+- Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info for process
+level GOLD ip list for ghost detection
 
-- Update part 25: Phase 2i: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
+- Update part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for
+ghost detection json file generation, etc. (major overhaul)
+
+- Update part 25: Phase 2j: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
 
 
 ## High level project summary:
@@ -67,6 +70,13 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 •Phase 3 – Thread Healing & Adaptive Retry: Threads flagged in Phase 2 will be dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and potential thread override logic tuned to system state and swap conditions.
 
 •Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns.
+
+
+
+
+## UPDATES part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info for process level GOLD ip list for ghost detection
+
+
 
 
 
