@@ -1194,7 +1194,7 @@ from datetime import datetime
 
 
 
-######## patch7d ##########
+######## patch7d1 ##########
 #For patch7d we need to pass the instance_info from the higher level functions (tomcat_worker and tomcat_worker_wrapper) to
 #the resurrection_monitor. instance_info is derived from tomcat_worker_wrapper which is called from main with the 
 #  args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks] . This chunk is the chunk of ips that is 
@@ -1218,6 +1218,17 @@ from datetime import datetime
 # assigned_ips are the actual chunk ips assigned to this process, i.e. chunk or instance_info
 # These are passed from the calling function tomcat_worker to resurrection_monitor_patch7d(process_registry, instance_info)
 # THus instance_info is assigned_ips within this function
+############################
+
+
+######## patch 7d2 ##########
+
+# modularize and restructure the resurrection_monitor as it has a lot of old legacy code to be cleaned out and it also
+# needs to be more organized. Will start with the hydrate_benchmark_ips() and the detect_ghosts() helper functions (global
+# at the top of this python module. After that will continue to modularize the function as a lead in to patch8 which will
+# code in the the definitive tags(statuses) of the registry values, both defining them and tagging the registries if
+# they fail.   For patch 7d the logs will be noded as [RESMON_7d] for troubleshooting.
+# A lot of the legacy code will be commented out or removed.
 ############################
 
 
