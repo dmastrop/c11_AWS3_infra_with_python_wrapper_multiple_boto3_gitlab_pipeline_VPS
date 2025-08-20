@@ -262,7 +262,7 @@ Finally. threaded_install has the following def:
 
 
 
-#### resurrection_monitor function:
+#### Call to the resurrection_monitor function from tomcat_worker():
 
 The resurrection monitor function is called from tomcat_worker right soon after the process_registry has been assigned
 (see above), and this requires that the instance_info arg be added so that the new code in it (see above) can work with this 
