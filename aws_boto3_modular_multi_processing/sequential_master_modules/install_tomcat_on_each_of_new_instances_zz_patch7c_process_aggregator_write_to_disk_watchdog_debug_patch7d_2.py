@@ -1802,9 +1802,9 @@ with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
 
 
 
+        try:
 
-
-        # Flush the logger handlers to ensure all logs are written right before thread exit and summary conclusion
+            # Flush the logger handlers to ensure all logs are written right before thread exit and summary conclusion
             for handler in patch7_logger.handlers:
                 handler.flush()
             patch7_logger.info("🔄 Patch7 logger flushed successfully.")
@@ -1818,7 +1818,7 @@ with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
             patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
             patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
             patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
-        
+            
 
         # try block indentation level is here.
 
