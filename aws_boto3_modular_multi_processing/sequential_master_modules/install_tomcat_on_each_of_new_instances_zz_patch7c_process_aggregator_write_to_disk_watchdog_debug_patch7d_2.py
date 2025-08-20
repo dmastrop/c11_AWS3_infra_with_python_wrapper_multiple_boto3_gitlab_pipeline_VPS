@@ -1354,7 +1354,6 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
     # that new path for this  is defined in the new code block at the bottom of this function 
 
 
-
     ## These are teh resurrection ghost patch 7 logs. These are missing registry entires that are in benchmark_ips but are not in the
     ## the registry (missing = benchmark - total registry)
     #ghost_log_path = os.path.join(log_dir, f"resurrection_ghost_log_{pid}.json")
@@ -1365,16 +1364,34 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
 
 
 
+    ### This log is now created in main() as part of the aggregation in main()
+    ## This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
+    ## This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
+    ## for max_workers threads
+    #These is no need to create a process level registry json file for all the processes. It will create a large amount of overhead
+    #in terms of artifact files.
 
-### This log is now created in main() as part of the aggregation in main()
-#    # This is the full snapshot of the registry (all of them: success and fail) per process as part of phase7c
-#    # This is multi-threaded and will have all the registry IPs that are being processed by the process (chunk_size number of IPs)
-#    # for max_workers threads
-#    These is no need to create a process level registry json file for all the processes. It will create a large amount of overhead
-#    in terms of artifact files.
+    #full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
-#    full_process_snapshot_path = os.path.join(log_dir, f"resurrection_process_registry_snapshot_{pid}.json")
 
+
+
+
+## Patch 7d2 modularization patch changes:
+
+
+
+
+
+
+
+
+## With patch7d2 the resurrection_registry_lock is no longer required:
+##- **`process_registry` is per-process and local** — no shared memory, no race conditions.
+##- **`resurrection_registry_lock` was originally protecting shared writes** to a global registry or artifact store, but
+## these are now being modularized.
+##- **Ghost detection and benchmark hydration are read-only operations** — they don’t mutate shared state, so locking is 
+##unnecessary.
 
 
 
