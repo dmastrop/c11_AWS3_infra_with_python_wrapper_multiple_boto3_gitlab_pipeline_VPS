@@ -37,6 +37,8 @@ import re # this is absolutely required for all the stuff we are doing in the re
 import math # for math.ceil watchdog timeout adaptive code
 
 
+
+
 ## These variables are used throughout for the resurrection based code. Put at top of module for easy reference
 # :=:= Module-level constants for resurrection/watchdog logic
 WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled
@@ -54,6 +56,90 @@ max_retry_observed = 0  # default initialize it at 0
 retry_lock = threading.Lock() 
 # this prevents multiple threads from messing up the max_retry_observed that is calculated in the call to retry_with_backoff
 # when there are multiple threads per process updating the max_retry_observed for each process.
+
+
+
+## Global helper function for resurrection_monitor_patch7d. This 7d2  is the hydrate_benchmark_ips() helper function that
+## replaces the exisiting working code in the resurrection monitor for creating the benchmark_ips_artifact.log file
+## from the benchmark_combined_runtime.log which is from the process level pid logs. These are real time logs of the actual
+## IP/threads that were created for each process (created during the control plane setup phase). This is used to created the 
+# benchmark_ips,  the GOLD IP list used by main() to detect ghosts at the aggregate level. 
+## benchmark_ips is used to then create the bencmarrk_ips_artifact.log list of total IPs (runtime) during the execution run
+## and output as artifact to gitlab pipeline.
+## The artifact creation is done in resurrection_monitor_patch7d after calling this function from the return benchmark_ips
+
+# === RESMON PATCH7D UTILITY ===
+### 🧩 `hydrate_benchmark_ips()` Function
+def hydrate_benchmark_ips(log_dir):
+    benchmark_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+    benchmark_ips = set()
+
+    try:
+        with open(benchmark_path, "r") as f:
+            lines = f.readlines()
+            print(f"[RESMON_7d] Runtime log line count: {len(lines)}")
+
+            public_ip_lines = [line for line in lines if "Public IP:" in line]
+            print(f"[RESMON_7d] Sample 'Public IP:' lines: {public_ip_lines[:3]}")
+
+            for i, line in enumerate(lines):
+                if "Public IP:" in line:
+                    print(f"[RESMON_7d] Raw line {i}: {repr(line)}")
+                    ip_matches = re.findall(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+                    if ip_matches:
+                        print(f"[RESMON_7d] Matched IPs: {ip_matches}")
+                    else:
+                        print(f"[RESMON_7d] No IP match in line {i}: {line.strip()}")
+
+            benchmark_ips = {
+                match.group(1)
+                for line in lines
+                if (match := re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line))
+            }
+            print(f"[RESMON_7d] Hydrated benchmark IPs: {benchmark_ips}")
+
+    except Exception as e:
+        print(f"[RESMON_7d] Failed to hydrate benchmark IPs: {e}")
+
+    return benchmark_ips
+
+
+
+## Global helper function for resurrection_monitor_patch7d. This 7d2 is the detect_ghosts() helper function that
+## replaces the new code in the resurrection monitor for ghost thread identification and logging. The function below
+## will simply modularize that code so that res monitor can now call it cleanly.
+
+# === RESMON PATCH7D UTILITY ===
+### 🧩 `detect_ghosts()` Function
+def detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir):
+    # Extract seen IPs from the current process registry
+    seen_ips = {entry["public_ip"] for entry in process_registry.values() if entry.get("public_ip")}
+    # Build assigned IPs set from the chunk passed to this process
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+    # Detect ghosts — IPs assigned to this process but missing from registry
+    ghosts = sorted(assigned_ip_set - seen_ips)
+
+    # Debug logs
+    print(f"[RESMON_7d] Assigned IPs: {sorted(assigned_ip_set)}")
+    print(f"[RESMON_7d] Seen IPs: {sorted(seen_ips)}")
+    for ip in ghosts:
+        print(f"[RESMON_7d] 👻 Ghost detected in process {pid}: {ip}")
+
+    # Write ghost artifact if any
+    if ghosts:
+        ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+        try:
+            with open(ghost_file, "w") as f:
+                json.dump(ghosts, f, indent=2)
+            print(f"[RESMON_7d] Ghost artifact written: {ghost_file}")
+        except Exception as e:
+            print(f"[RESMON_7d] Failed to write ghost artifact: {e}")
+
+    return ghosts
+
+
+
+
 
 
 
