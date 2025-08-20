@@ -245,7 +245,7 @@ run_test is already defined to handle any args passed to it with the `*args`:
 
 
 ```
-def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+`def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):`
 
 ```
 The test_name is threaded_install.
