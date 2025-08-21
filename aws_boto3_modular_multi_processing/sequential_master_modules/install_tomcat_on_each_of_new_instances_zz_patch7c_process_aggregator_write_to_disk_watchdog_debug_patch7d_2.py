@@ -1885,37 +1885,46 @@ def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_E
 
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
 
-    # only dump non-empty lists to avoid churn
-    if os.getenv("PID_JSON_DUMPS", "true").lower() in ("1","true"):
-        # 1. Build your two lists
-        candidates = [
-            entry for entry in process_registry.values()
-            if entry.get("status") != "install_success"
-        ]
-        seen_ips   = {e["public_ip"] for e in process_registry.values()}
-        # benchmark_ips is already hydrated above by Patch7 logic
-        ghosts     = sorted(benchmark_ips - seen_ips)
 
-        # 2. Define file paths. These have replaced the legacy paths defined earlier.
-        cand_file  = os.path.join(
-            log_dir,
-            f"resurrection_candidates_registry_{pid}_{ts}.json"
-        )
-        ghost_file = os.path.join(
-            log_dir,
-            f"resurrection_ghost_missing_{pid}_{ts}.json"
-        )
 
-        # 3. Write only if there’s something to write
-        if candidates:
-            with open(cand_file, "w") as f:
-                json.dump(candidates, f, indent=2)
-            patch7_logger.info(f"[Patch7] Wrote {len(candidates)} candidates to {cand_file}")
 
-        if ghosts:
-            with open(ghost_file, "w") as f:
-                json.dump(ghosts, f, indent=2)
-            patch7_logger.info(f"[Patch7] Wrote {len(ghosts)} ghosts to {ghost_file}")
+# 🔒 Legacy ghost/candidate dump logic disabled — replaced by detect_ghosts() in Patch7d2
+# Commented out to prevent redundant artifact writes and confusion during modular refactor
+
+    ## only dump non-empty lists to avoid churn
+    #if os.getenv("PID_JSON_DUMPS", "true").lower() in ("1","true"):
+    #    # 1. Build your two lists
+    #    candidates = [
+    #        entry for entry in process_registry.values()
+    #        if entry.get("status") != "install_success"
+    #    ]
+    #    seen_ips   = {e["public_ip"] for e in process_registry.values()}
+    #    # benchmark_ips is already hydrated above by Patch7 logic
+    #    ghosts     = sorted(benchmark_ips - seen_ips)
+
+    #    # 2. Define file paths. These have replaced the legacy paths defined earlier.
+    #    cand_file  = os.path.join(
+    #        log_dir,
+    #        f"resurrection_candidates_registry_{pid}_{ts}.json"
+    #    )
+    #    ghost_file = os.path.join(
+    #        log_dir,
+    #        f"resurrection_ghost_missing_{pid}_{ts}.json"
+    #    )
+
+    #    # 3. Write only if there’s something to write
+    #    if candidates:
+    #        with open(cand_file, "w") as f:
+    #            json.dump(candidates, f, indent=2)
+    #        patch7_logger.info(f"[Patch7] Wrote {len(candidates)} candidates to {cand_file}")
+
+    #    if ghosts:
+    #        with open(ghost_file, "w") as f:
+    #            json.dump(ghosts, f, indent=2)
+    #        patch7_logger.info(f"[Patch7] Wrote {len(ghosts)} ghosts to {ghost_file}")
+
+
+
 
 
     # ✅ Print final status and resurrection monitor final verdict
