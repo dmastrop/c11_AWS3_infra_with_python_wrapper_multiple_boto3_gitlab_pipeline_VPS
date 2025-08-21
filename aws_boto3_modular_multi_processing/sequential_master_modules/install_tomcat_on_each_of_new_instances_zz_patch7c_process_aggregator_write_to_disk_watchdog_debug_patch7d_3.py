@@ -4094,6 +4094,7 @@ def main():
     ######  A ghost is defined as a thread that does not have a registry entry and thus no failure status tag
     ######  A ghost usually will not even have an assigned PID, thus it cannot have a registry entry to track it
     
+    log_dir = "/aws_EC2/logs"
     aggregate_gold_ips = hydrate_aggregate_chunk_gold_ip_list(chunks, log_dir)
 
     print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
