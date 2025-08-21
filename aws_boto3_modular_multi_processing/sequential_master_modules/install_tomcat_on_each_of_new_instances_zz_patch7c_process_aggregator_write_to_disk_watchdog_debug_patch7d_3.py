@@ -59,6 +59,36 @@ retry_lock = threading.Lock()
 
 
 
+
+
+## Global helper function for the GOLD standard IP list creation from the AWS control plane for the execution run
+## This function will be called from main() after chunks is defined. Chunks is the pre-processsing done on the 
+## complete AWS control list of IP addresses in the execution run. It needs to be processed to pull out the public ip
+## addresses. This IP list will be used as  GOLD standard to compare the aggregated registry list to. Any missing ips
+## are considered "true" ghosts (threads that have no registry value and thus no failure status tag by which to
+## resurrect them). The only way to track these ghosts is through the IP address from the AWS control plane.
+## gold_ips will be returned to the main() so that it can compare it to the aggregate registry list and create a
+## log and json file as artifacts to gitlab pipeline
+
+def hydrate_aggregate_chunk_gold_ip_list(chunks, log_dir):
+    gold_ips = set()
+    for chunk in chunks:
+        for ip_info in chunk:
+            ip = ip_info.get("PublicIpAddress")
+            if ip:
+                gold_ips.add(ip)
+
+    output_path = os.path.join(log_dir, "aggregate_chunk_gold_ip_list.log")
+    with open(output_path, "w") as f:
+        for ip in sorted(gold_ips):
+            f.write(ip + "\n")
+
+    return gold_ips
+
+
+
+
+
 ## Global helper function for resurrection_monitor_patch7d. This 7d2  is the hydrate_benchmark_ips() helper function that
 ## replaces the exisiting working code in the resurrection monitor for creating the benchmark_ips_artifact.log file
 ## from the benchmark_combined_runtime.log which is from the process level pid logs. These are real time logs of the actual
