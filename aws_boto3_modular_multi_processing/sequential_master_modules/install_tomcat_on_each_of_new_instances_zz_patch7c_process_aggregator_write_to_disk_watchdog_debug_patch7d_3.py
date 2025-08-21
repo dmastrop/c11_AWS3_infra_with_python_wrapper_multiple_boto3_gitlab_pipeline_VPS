@@ -60,7 +60,7 @@ retry_lock = threading.Lock()
 
 
 
-
+## aggregate gold ips from chunks
 ## Global helper function for the GOLD standard IP list creation from the AWS control plane for the execution run
 ## This function will be called from main() after chunks is defined. Chunks is the pre-processsing done on the 
 ## complete AWS control list of IP addresses in the execution run. It needs to be processed to pull out the public ip
@@ -4085,6 +4085,22 @@ def main():
     desired_count = 487   # Max concurrent processes for iniital batch
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
+
+
+    ######  aggregate gold ips from chunks  #########
+    ######  Call to helper function hydrate_aggregate_chunk_gold_ip_list() to create a gold ip list of the 
+    ######  AWS control plane list of IPs for the execution run. Later below the ghost detection logic will
+    ######  use this GOLD list to compare to the aggregate registry for ghost thread detection. 
+    ######  A ghost is defined as a thread that does not have a registry entry and thus no failure status tag
+    ######  A ghost usually will not even have an assigned PID, thus it cannot have a registry entry to track it
+    
+    aggregate_gold_ips = hydrate_aggregate_chunk_gold_ip_list(chunks, log_dir)
+
+    print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
+    for ip in sorted(aggregate_gold_ips):
+        print(f"  {ip}")
+    print(f"[TRACE][aggregator] Total GOLD IPs: {len(aggregate_gold_ips)}")
+
 
 
     # ADD this for the pooling level logging in main() that uses setup_main_logging() helper function
