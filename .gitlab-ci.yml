@@ -114,7 +114,7 @@ deploy:
 
       - logs/benchmark_combined_runtime.log  # this is the python run time created benchmark_combined stats log created from the benchmark_*.log pid logs that are created during run time.  
       
-      - logs/benchmark_ips_artifact.log  # this is the GOLD standard by which to compare the runtime registires to for missing, failed, successful and total (in addtion to scanning the tags/status)
+      - logs/benchmark_ips_artifact.log  # this a list of benchmark ips from the threads in the benchmark_combined_runtime.log
 
       - logs/total_registry_ips_artifact.log  # stats created from the final_aggregate_execution_run_registry.json registry. THese are the actual registry entries, not stats. Same for the next 3 logs as well.
       - logs/missing_registry_ips_artifact.log
@@ -135,13 +135,16 @@ deploy:
       # This log below is done in main()
       - logs/final_aggregate_execution_run_registry.json
       
-        # per process registry logs from tomcat_worker(). These are used to create the final_registry and summary and these are then used to create the aggregate registry for the execution run : logs/final_aggregate_execution_run_registry.json
+      # per process registry logs from tomcat_worker(). These are used to create the final_registry and summary and these are then used to create the aggregate registry for the execution run : logs/final_aggregate_execution_run_registry.json
       - logs/process_registry_*.json  
         
-        
-        
-        #- logs/resurrection_registry_log_*.json
-        #- logs/resurrection_ghost_log_*.json
+      # This is the log file for the GOLD aggreagate IP EC2 list from the AWS control plane operations. This will be used for ghost detection at aggregate level. This is derived from "chunks" the pre-processing  of the IPs for the multi-processing engine.
+      - logs/aggregate_chunk_gold_ip_list.log  
+       
+      # This is an aggregate level ghost list of ips from the GOLD standard comparison list above
+
+      - logs/aggregate_ghost_summary.log  
+
           
     expire_in: 1 week
 
