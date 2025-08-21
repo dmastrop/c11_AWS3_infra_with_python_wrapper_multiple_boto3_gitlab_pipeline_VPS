@@ -4093,7 +4093,8 @@ def main():
     ######  use this GOLD list to compare to the aggregate registry for ghost thread detection. 
     ######  A ghost is defined as a thread that does not have a registry entry and thus no failure status tag
     ######  A ghost usually will not even have an assigned PID, thus it cannot have a registry entry to track it
-    
+    ######  The helper function returns gold_ips assigned to aggregate_gold_ips
+
     log_dir = "/aws_EC2/logs"
     aggregate_gold_ips = hydrate_aggregate_chunk_gold_ip_list(chunks, log_dir)
 
@@ -4294,13 +4295,14 @@ def main():
         for tag, count in summary.items():
             print(f"  {tag}: {count}")
 
-        # 5. Load the benchmark IP list (gold standard to compare to). This is created in resurrection_monitor_patch7c() function
-        benchmark_ips = set()
-        with open("/aws_EC2/logs/benchmark_ips_artifact.log") as f:
-            for line in f:
-                ip = line.strip()
-                if ip:
-                    benchmark_ips.add(ip)
+        ##### comment this out for aggregate gold ips from chunks implementation for GOLD standard ####
+        ## 5. Load the benchmark IP list (gold standard to compare to). This is created in resurrection_monitor_patch7c() function
+        #benchmark_ips = set()
+        #with open("/aws_EC2/logs/benchmark_ips_artifact.log") as f:
+        #    for line in f:
+        #        ip = line.strip()
+        #        if ip:
+        #            benchmark_ips.add(ip)
 
         # 6. Build IP sets from final_registry statuses (final registry is the aggregate runtime list of all the threads with ip addresses)
         # Get the success_ips from the tag(status), get failed as total - success and get missing as benchmark_ips(gold) - total_ips
@@ -4311,7 +4313,11 @@ def main():
             if e.get("status") == "install_success"
         }
         failed_ips  = total_ips - success_ips
-        missing_ips = benchmark_ips - total_ips
+        #missing_ips = benchmark_ips - total_ips
+        #### aggregate gold ips from chunks ####
+        missing_ips = aggregate_gold_ips - total_ips
+
+
 
         # 7. Dump per-category artifact logs to gitlab console
         for name, ip_set in [
@@ -4342,11 +4348,25 @@ def main():
         # 9. Dump ghost/missing JSON (benchmark IPs never touched). By definition these are simply ips and not registry entries
         # since they have never been processed as threads (true ghosts). This is done in the resurrection_monitor_patch7c at
         # the process level
+        
         ghosts = sorted(missing_ips)
+        
         ghost_path = f"/aws_EC2/logs/resurrection_ghost_missing_{ts}.json"
         with open(ghost_path, "w") as f:
             json.dump(ghosts, f, indent=2)
         print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
+
+
+        ##### aggregate gold ips from chunks ####
+        # 10. Dump ghost IPs to plain-text log format (for GitLab artifact visibility)
+        ghost_log_path = f"/aws_EC2/logs/aggregate_ghost_summary.log"
+        with open(ghost_log_path, "w") as f:
+            for ip in ghosts:
+                f.write(ip + "\n")
+        print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_log_path}")
+
+
+
 
 
         # timing and cleanup
