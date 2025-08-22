@@ -75,6 +75,23 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+## UPDATES part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
+
+
+
+
+
+
+## UPDATES part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for ghost detection json file generation, etc. (major overhaul)
+
+
+### Introduction:
+
+
+
+
+
+
 
 ## UPDATES part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection
 
