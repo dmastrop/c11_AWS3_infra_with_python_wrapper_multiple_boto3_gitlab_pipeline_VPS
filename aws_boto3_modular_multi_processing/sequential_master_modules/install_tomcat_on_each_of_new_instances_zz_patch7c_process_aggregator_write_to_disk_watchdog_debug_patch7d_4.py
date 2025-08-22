@@ -2954,7 +2954,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 # Function to install Tomcat on an instance
     def install_tomcat(ip, private_ip, instance_id):
-       
+        
+        import uuid 
         ## install_tomcat is the definitive thread_uuid source. It is removed from calling function threaded_install
         thread_uuid = uuid.uuid4().hex[:8]
 
@@ -3619,8 +3620,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                 # add thread_uuid to the registry_entry and keeping IPs inside the entry helps make logs easier to parse later — 
                 #especially if UUIDs are opaque.
-                # this is from the install_tomcat the definitive source
-                registry_entry["thread_uuid"] = thread_uuid
+                # this is now from the install_tomcat the definitive source
+                # install_tomcat is called by ThreadPoolExecutor above and will return its thread_uuid in the registry 
+                # for threaded_install(this function) to consume. 
+                #registry_entry["thread_uuid"] = thread_uuid
+                
                 #registry_entry["public_ip"] = ip
                 #registry_entry["private_ip"] = private_ip
 
