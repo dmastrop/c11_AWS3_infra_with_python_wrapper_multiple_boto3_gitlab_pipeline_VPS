@@ -2954,450 +2954,495 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 # Function to install Tomcat on an instance
     def install_tomcat(ip, private_ip, instance_id):
-        wait_for_instance_running(instance_id, my_ec2)
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
-        # debug for patch7c issues. We have isolated it to install_tomcat and the thread_registry in threaded_install
-        print(f"[TRACE][install_tomcat] Beginning installation on {ip}")
-
-
-
-        for attempt in range(5):
-            try:
-                print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
-                ssh.connect(ip, port, username, key_filename=key_path)
-                break
-            except paramiko.ssh_exception.NoValidConnectionsError as e:
-                print(f"Connection failed: {e}")
-                time.sleep(10)
-        else:
-            print(f"Failed to connect to {ip} after multiple attempts")
-            return ip, private_ip, False
-
-        print(f"Connected to {ip}. Executing commands...")
-
-#        for command in commands:
-#            for attempt in range(3):
-#                stdin, stdout, stderr = ssh.exec_command(command)
-#                stdout_output = stdout.read().decode()
-#                stderr_output = stderr.read().decode()
-#                print(f"Executing command: {command}")
-#                print(f"STDOUT: {stdout_output}")
-#                print(f"STDERR: {stderr_output}")
-#
-#                
-#                # Check for real errors and ignore warnings
-#                if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-#                    print(f"Installation failed for {ip} due to package issue.")
-#                    stdin.close()
-#                    stdout.close()
-#                    stderr.close()
-#                    ssh.close()
-#                    return ip, private_ip, False
-#                
-#                # Ignore specific warnings that are not critical errors
-#                if "WARNING:" in stderr_output:
-#                    print(f"Warning on {ip}: {stderr_output}")
-#                    stderr_output = ""
-#                
-#                if stderr_output.strip():  # If there are any other errors left after ignoring warnings
-#                    print(f"Error executing command on {ip}: {stderr_output}")
-#                    stdin.close()
-#                    stdout.close()
-#                    stderr.close()
-#                    ssh.close()
-#                    return ip, private_ip, False
-#                
-#                print(f"Retrying command: {command} (Attempt {attempt + 1})")
-#                ### increase this delay for the 400/0 hyper-processing case from 10 to 20 seconds
-#                #time.sleep(10)
-#                time.sleep(20)
-#            
-#            stdin.close()
-#            stdout.close()
-#            stderr.close()
-
-## UPDATED CODE FOR ABOVE BLOCK:
-
-#        for command in commands:
-#            for attempt in range(3):
-#                try:
-#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
-#                    stdout_output = stdout.read().decode()
-#                    stderr_output = stderr.read().decode()
-#
-#                    print(f"Executing command: {command}")
-#                    print(f"STDOUT: {stdout_output}")
-#                    print(f"STDERR: {stderr_output}")
-#
-#                    # Check for real errors and ignore warnings 
-#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-#                        print(f"Installation failed for {ip} due to package issue.")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#                    
-#                    # Ignore specific warnings that are not critical errors
-#                    if "WARNING:" in stderr_output:
-#                        print(f"Warning on {ip}: {stderr_output}")
-#                        stderr_output = ""
-#
-#                    if stderr_output.strip():   # If there are any other errors left after ignoring warnings:
-#                        print(f"Error executing command on {ip}: {stderr_output}")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    print(f"Retrying command: {command} (Attempt {attempt + 1})")
-#                    time.sleep(20) #Increase this from 10 to 20 seconds
-#                except Exception as e:
-#                    print(f"[Error] exec_command timeout or failure on {ip}: {e}")
-#                    ssh.close()
-#                    return ip, private_ip, False
-#                finally:
-#                    stdin.close()
-#                    stdout.close()
-#                    stderr.close()
-
-## REFACTOR SSH 1:
-
-#        for command in commands:
-#            for attempt in range(3):
-#                try:
-#                    print(f"[DEBUG] Starting SSH command attempt {attempt + 1} on {ip}: {command}")
-#
-#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
-#
-#                    print(f"[DEBUG] Command sent: {command}")
-#                    print(f"[DEBUG] Waiting to read stdout...")
-#                    stdout_output = stdout.read().decode()
-#                    print(f"[DEBUG] Waiting to read stderr...")
-#                    stderr_output = stderr.read().decode()
-#
-#                    print(f"[DEBUG] Read complete for {ip}")
-#                    print(f"[INFO] Executing command: {command}")
-#                    print(f"[INFO] STDOUT length: {len(stdout_output)} chars")
-#                    print(f"[INFO] STDERR length: {len(stderr_output)} chars")
-#                    print(f"STDOUT: {stdout_output}")
-#                    print(f"STDERR: {stderr_output}")
-#
-#                    # Detect specific fatal Tomcat errors early
-#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-#                        print(f"[ERROR] Fatal: No install candidate on {ip}")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    # Warning softener
-#                    if "WARNING:" in stderr_output:
-#                        print(f"[WARN] Non-fatal warning on {ip}: {stderr_output}")
-#                        stderr_output = ""
-#
-#                    # Catch any remaining stderr (actual failures)
-#                    if stderr_output.strip():
-#                        print(f"[ERROR] Command error output on {ip}: {stderr_output}")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    print(f"[DEBUG] Retrying command: {command} (Attempt {attempt + 1})")
-#                    time.sleep(20)
-#
-#                except Exception as e:
-#                    print(f"[EXCEPTION] exec_command failed on {ip}: {e}")
-#
-#                    # Log partial output if available
-#                    try:
-#                        if stdout:
-#                            stdout_output = stdout.read().decode()
-#                            print(f"[EXCEPTION DEBUG] Partial STDOUT ({len(stdout_output)}): {stdout_output}")
-#                        if stderr:
-#                            stderr_output = stderr.read().decode()
-#                            print(f"[EXCEPTION DEBUG] Partial STDERR ({len(stderr_output)}): {stderr_output}")
-#                    except Exception as inner:
-#                        print(f"[EXCEPTION] Error reading from stdout/stderr after failure: {inner}")
-#
-#                    ssh.close()
-#                    return ip, private_ip, False
-#
-#                finally:
-#                    if stdin: stdin.close()
-#                    if stdout: stdout.close()
-#                    if stderr: stderr.close()
-#
-#
-
-
-## REFACTOR SSH 2:
-
-#
-#        from datetime import datetime
-#
-#        for idx, command in enumerate(commands):
-#            for attempt in range(3):
-#                try:
-#                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
-#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
-#
-#
-#                    ## Add this timout code to detect why some instances are silently failing without hitting my except block below
-#                    ## this will force it out of the try loop to execept bloc.
-#
-#                    # 🔒 Ensure the VPS doesn’t hang forever waiting on output
-#                    stdout.channel.settimeout(90)
-#                    stderr.channel.settimeout(90)
-#
-#                    stdout_output = stdout.read().decode()
-#                    stderr_output = stderr.read().decode()
-#
-#                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
-#                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
-#
-#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-#                        print(f"[{ip}] [{datetime.now()}] ❌ Package install failure. Exiting early.")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    if "WARNING:" in stderr_output:
-#                        print(f"[{ip}] [{datetime.now()}] ⚠️ Warning ignored: {stderr_output.strip()}")
-#                        stderr_output = ""
-#
-#                    if stderr_output.strip():
-#                        print(f"[{ip}] [{datetime.now()}] ❌ Non-warning error output. Command failed.")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    print(f"[{ip}] [{datetime.now()}] ✅ Command succeeded.")
-#                    time.sleep(20)
-#
-#                except Exception as e:
-#                    print(f"[{ip}] [{datetime.now()}] 💥 Exception during exec_command: {e}")
-#                    ssh.close()
-#                    return ip, private_ip, False
-#
-#                finally:
-#                    stdin.close()
-#                    stdout.close()
-#                    stderr.close()
-#
-#
-#        ssh.close()
-#        transport = ssh.get_transport()
-#        if transport is not None:
-#            transport.close()
-#        print(f"Installation completed on {ip}")
-#        return ip, private_ip, True
-#
-#
-
-
-
-### REFACTOR SSH 3 – Phase 1: Retry + Watchdog Protection
-### The stdout and stderr are now wrapped in the watchdog function read_output_with_watchdog
-#
-#        from datetime import datetime
-#        import time
-#
-#        WATCHDOG_TIMEOUT = 90
-#        RETRY_LIMIT = 3
-#        SLEEP_BETWEEN_ATTEMPTS = 5
-#
-#        def read_output_with_watchdog(stream, label, ip):
-#            start = time.time()
-#            collected = b''
-#            while True:
-#                if stream.channel.recv_ready():
-#                    try:
-#                        collected += stream.read()
-#                        break
-#                    except Exception as e:
-#                        print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
-#                        break
-#                if time.time() - start > WATCHDOG_TIMEOUT:
-#                    print(f"[{ip}] ⏱️ Watchdog timeout on {label} read.")
-#                    break
-#                time.sleep(1)
-#            return collected.decode()
-#
-#        for idx, command in enumerate(commands):
-#            for attempt in range(RETRY_LIMIT):
-#                try:
-#                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
-#                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
-#
-#                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
-#                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
-#
-#                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip)
-#                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip)
-#
-#                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
-#                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
-#
-#                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
-#                        print(f"[{ip}] ❌ Tomcat install failure.")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    if "WARNING:" in stderr_output:
-#                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
-#                        stderr_output = ""
-#
-#                    if stderr_output.strip():
-#                        print(f"[{ip}] ❌ Non-warning stderr received.")
-#                        ssh.close()
-#                        return ip, private_ip, False
-#
-#                    print(f"[{ip}] ✅ Command succeeded.")
-#                    time.sleep(20)
-#                    break  # Command succeeded, no need to retry
-#
-#                except Exception as e:
-#                    print(f"[{ip}] 💥 Exception during exec_command: {e}")
-#                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-#
-#                finally:
-#                    stdin.close()
-#                    stdout.close()
-#                    stderr.close()
-#
-#
-
-## REFACTOR SSH 4 - Phase 2 The new resurrection policy to flag connecitons that have failed 2 watchdog timeouts
-## and update resurrection registry.  Multiple stalls detected. Flagging for resurrection
-## Note the read_output_with_watchdog function and an new function update_resurrection_registry have been added/moved to just
-## above the main tomcat_worker function above. This makes them global so that we can utilize the resurrection monitor
-## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
-## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
-## The read_output_with_watchdog calls the update_resurrection_registry function
-
-
-
-        for idx, command in enumerate(commands):
-            for attempt in range(RETRY_LIMIT):
-                try:
-                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
-                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
-
-                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
-                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
-
-                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
-                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
-
-                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
-                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
-
-
-                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
-                    ## arguments for this function call
-
-                    should_resurrect = resurrection_gatekeeper(
-                        stderr_output=stderr_output,
-                        stdout_output=stdout_output,
-                        command_status="Command succeeded",
-                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
-                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
-                        pid=multiprocessing.current_process().pid,
-                        ip_address=ip,
-                        resurrection_registry=resurrection_registry
-                    )
-
-                    if should_resurrect:
-                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
-                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
-                    else:
-                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
-
-
-                    if "E: Package 'tomcat9'" in stderr_output:
-                        print(f"[{ip}] ❌ Tomcat install failure.")
-                        ssh.close()
-                        return ip, private_ip, False
-
-                    if "WARNING:" in stderr_output:
-                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
-                        stderr_output = ""
-
-                    if stderr_output.strip():
-                        print(f"[{ip}] ❌ Non-warning stderr received.")
-                        ssh.close()
-                        return ip, private_ip, False
-
-                    print(f"[{ip}] ✅ Command succeeded.")
-                    time.sleep(20)
-                    break  # Success
-
-                except Exception as e:
-                    print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-
-                finally:
-                    stdin.close()
-                    stdout.close()
-                    stderr.close()
-
-            # insert patch7b debug here for the inner for loop
-            print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
-
-
-
-        ssh.close()
-        transport = ssh.get_transport()
-        if transport:
-            transport.close()
-
-
-
-
-        #debug for patch7c
-        print(f"[TRACE][install_tomcat] Reached registry update step for {ip}")
-
-
-        # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
-        # from creating a resurrection log. This will ensure that all installation threads leave some sort
-        # of registry fingerprint unless they are legitimate early thread failures.
-        update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
-
-
-        # For patch7c: Thread-local tagging block (add this right after update_resurrection_registry)
-        # This is part of the code  necesary for the patch7c in resurrection_monitor_patch7c() function. 
-        # This creates a thread_registry for the current ip and since this part of the code is"install_success" the thread
-        # entry is configured as such for status.  To make the thread registry persist through multiple calls of the install_tomcat
-        # which threaded_install() will do per process if multiple threads in the process, we need additional code as well
-
-        ## NOTES: This snippet only handles a single IP **per thread**. To persist across all IPs (i.e. multiple calls to `install_tomcat()`), the `registry_entry` needs to live outside the function — ideally as a **shared mutable dict** owned by `threaded_install()`
-        ## so we need to return this registry_entry to the calling function threaded_install.
-        ## If keeping `registry_entry` local to this function, it will be recreated for every call. Which is what we need.
-        ## Create it fresh for each new thread/IP and then return it to threaded_install for adding to the thread_registry which
-        ## will eventuall be called the process_registry in the tomcat_worker that calls threaded_install
-
-        registry_entry = {
-            "status": "install_success",
-            "attempt": 0,
-            "timestamp": str(datetime.utcnow()),
-            "pid": multiprocessing.current_process().pid,
-            "thread_id": threading.get_ident(),
-        }
-
-
-
-        ## Debugging code to track down the successful_registry_ips tagging issue
-        # 🔍 Trace log to confirm registry tagging per thread
+        ## wrap the showl SSH install_tomcat in try block and put an exception after it and create stub registry 
+        ## for threads that throw an exception and exit.  This is for IP thread tracking forensics. This threads
+        ## will be tagged with a stub registry status of 
         try:
-            registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
-            pid = multiprocessing.current_process().pid
 
-            print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
-            print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
 
+            wait_for_instance_running(instance_id, my_ec2)
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            
+            # debug for patch7c issues. We have isolated it to install_tomcat and the thread_registry in threaded_install
+            print(f"[TRACE][install_tomcat] Beginning installation on {ip}")
+
+
+
+            for attempt in range(5):
+                try:
+                    print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+                    ssh.connect(ip, port, username, key_filename=key_path)
+                    break
+                except paramiko.ssh_exception.NoValidConnectionsError as e:
+                    print(f"Connection failed: {e}")
+                    time.sleep(10)
+            else:
+                print(f"Failed to connect to {ip} after multiple attempts")
+                return ip, private_ip, False
+
+            print(f"Connected to {ip}. Executing commands...")
+
+    #        for command in commands:
+    #            for attempt in range(3):
+    #                stdin, stdout, stderr = ssh.exec_command(command)
+    #                stdout_output = stdout.read().decode()
+    #                stderr_output = stderr.read().decode()
+    #                print(f"Executing command: {command}")
+    #                print(f"STDOUT: {stdout_output}")
+    #                print(f"STDERR: {stderr_output}")
+    #
+    #                
+    #                # Check for real errors and ignore warnings
+    #                if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+    #                    print(f"Installation failed for {ip} due to package issue.")
+    #                    stdin.close()
+    #                    stdout.close()
+    #                    stderr.close()
+    #                    ssh.close()
+    #                    return ip, private_ip, False
+    #                
+    #                # Ignore specific warnings that are not critical errors
+    #                if "WARNING:" in stderr_output:
+    #                    print(f"Warning on {ip}: {stderr_output}")
+    #                    stderr_output = ""
+    #                
+    #                if stderr_output.strip():  # If there are any other errors left after ignoring warnings
+    #                    print(f"Error executing command on {ip}: {stderr_output}")
+    #                    stdin.close()
+    #                    stdout.close()
+    #                    stderr.close()
+    #                    ssh.close()
+    #                    return ip, private_ip, False
+    #                
+    #                print(f"Retrying command: {command} (Attempt {attempt + 1})")
+    #                ### increase this delay for the 400/0 hyper-processing case from 10 to 20 seconds
+    #                #time.sleep(10)
+    #                time.sleep(20)
+    #            
+    #            stdin.close()
+    #            stdout.close()
+    #            stderr.close()
+
+    ## UPDATED CODE FOR ABOVE BLOCK:
+
+    #        for command in commands:
+    #            for attempt in range(3):
+    #                try:
+    #                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+    #                    stdout_output = stdout.read().decode()
+    #                    stderr_output = stderr.read().decode()
+    #
+    #                    print(f"Executing command: {command}")
+    #                    print(f"STDOUT: {stdout_output}")
+    #                    print(f"STDERR: {stderr_output}")
+    #
+    #                    # Check for real errors and ignore warnings 
+    #                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+    #                        print(f"Installation failed for {ip} due to package issue.")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #                    
+    #                    # Ignore specific warnings that are not critical errors
+    #                    if "WARNING:" in stderr_output:
+    #                        print(f"Warning on {ip}: {stderr_output}")
+    #                        stderr_output = ""
+    #
+    #                    if stderr_output.strip():   # If there are any other errors left after ignoring warnings:
+    #                        print(f"Error executing command on {ip}: {stderr_output}")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    print(f"Retrying command: {command} (Attempt {attempt + 1})")
+    #                    time.sleep(20) #Increase this from 10 to 20 seconds
+    #                except Exception as e:
+    #                    print(f"[Error] exec_command timeout or failure on {ip}: {e}")
+    #                    ssh.close()
+    #                    return ip, private_ip, False
+    #                finally:
+    #                    stdin.close()
+    #                    stdout.close()
+    #                    stderr.close()
+
+    ## REFACTOR SSH 1:
+
+    #        for command in commands:
+    #            for attempt in range(3):
+    #                try:
+    #                    print(f"[DEBUG] Starting SSH command attempt {attempt + 1} on {ip}: {command}")
+    #
+    #                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+    #
+    #                    print(f"[DEBUG] Command sent: {command}")
+    #                    print(f"[DEBUG] Waiting to read stdout...")
+    #                    stdout_output = stdout.read().decode()
+    #                    print(f"[DEBUG] Waiting to read stderr...")
+    #                    stderr_output = stderr.read().decode()
+    #
+    #                    print(f"[DEBUG] Read complete for {ip}")
+    #                    print(f"[INFO] Executing command: {command}")
+    #                    print(f"[INFO] STDOUT length: {len(stdout_output)} chars")
+    #                    print(f"[INFO] STDERR length: {len(stderr_output)} chars")
+    #                    print(f"STDOUT: {stdout_output}")
+    #                    print(f"STDERR: {stderr_output}")
+    #
+    #                    # Detect specific fatal Tomcat errors early
+    #                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+    #                        print(f"[ERROR] Fatal: No install candidate on {ip}")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    # Warning softener
+    #                    if "WARNING:" in stderr_output:
+    #                        print(f"[WARN] Non-fatal warning on {ip}: {stderr_output}")
+    #                        stderr_output = ""
+    #
+    #                    # Catch any remaining stderr (actual failures)
+    #                    if stderr_output.strip():
+    #                        print(f"[ERROR] Command error output on {ip}: {stderr_output}")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    print(f"[DEBUG] Retrying command: {command} (Attempt {attempt + 1})")
+    #                    time.sleep(20)
+    #
+    #                except Exception as e:
+    #                    print(f"[EXCEPTION] exec_command failed on {ip}: {e}")
+    #
+    #                    # Log partial output if available
+    #                    try:
+    #                        if stdout:
+    #                            stdout_output = stdout.read().decode()
+    #                            print(f"[EXCEPTION DEBUG] Partial STDOUT ({len(stdout_output)}): {stdout_output}")
+    #                        if stderr:
+    #                            stderr_output = stderr.read().decode()
+    #                            print(f"[EXCEPTION DEBUG] Partial STDERR ({len(stderr_output)}): {stderr_output}")
+    #                    except Exception as inner:
+    #                        print(f"[EXCEPTION] Error reading from stdout/stderr after failure: {inner}")
+    #
+    #                    ssh.close()
+    #                    return ip, private_ip, False
+    #
+    #                finally:
+    #                    if stdin: stdin.close()
+    #                    if stdout: stdout.close()
+    #                    if stderr: stderr.close()
+    #
+    #
+
+
+    ## REFACTOR SSH 2:
+
+    #
+    #        from datetime import datetime
+    #
+    #        for idx, command in enumerate(commands):
+    #            for attempt in range(3):
+    #                try:
+    #                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+    #                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+    #
+    #
+    #                    ## Add this timout code to detect why some instances are silently failing without hitting my except block below
+    #                    ## this will force it out of the try loop to execept bloc.
+    #
+    #                    # 🔒 Ensure the VPS doesn’t hang forever waiting on output
+    #                    stdout.channel.settimeout(90)
+    #                    stderr.channel.settimeout(90)
+    #
+    #                    stdout_output = stdout.read().decode()
+    #                    stderr_output = stderr.read().decode()
+    #
+    #                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+    #                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+    #
+    #                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+    #                        print(f"[{ip}] [{datetime.now()}] ❌ Package install failure. Exiting early.")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    if "WARNING:" in stderr_output:
+    #                        print(f"[{ip}] [{datetime.now()}] ⚠️ Warning ignored: {stderr_output.strip()}")
+    #                        stderr_output = ""
+    #
+    #                    if stderr_output.strip():
+    #                        print(f"[{ip}] [{datetime.now()}] ❌ Non-warning error output. Command failed.")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    print(f"[{ip}] [{datetime.now()}] ✅ Command succeeded.")
+    #                    time.sleep(20)
+    #
+    #                except Exception as e:
+    #                    print(f"[{ip}] [{datetime.now()}] 💥 Exception during exec_command: {e}")
+    #                    ssh.close()
+    #                    return ip, private_ip, False
+    #
+    #                finally:
+    #                    stdin.close()
+    #                    stdout.close()
+    #                    stderr.close()
+    #
+    #
+    #        ssh.close()
+    #        transport = ssh.get_transport()
+    #        if transport is not None:
+    #            transport.close()
+    #        print(f"Installation completed on {ip}")
+    #        return ip, private_ip, True
+    #
+    #
+
+
+
+    ### REFACTOR SSH 3 – Phase 1: Retry + Watchdog Protection
+    ### The stdout and stderr are now wrapped in the watchdog function read_output_with_watchdog
+    #
+    #        from datetime import datetime
+    #        import time
+    #
+    #        WATCHDOG_TIMEOUT = 90
+    #        RETRY_LIMIT = 3
+    #        SLEEP_BETWEEN_ATTEMPTS = 5
+    #
+    #        def read_output_with_watchdog(stream, label, ip):
+    #            start = time.time()
+    #            collected = b''
+    #            while True:
+    #                if stream.channel.recv_ready():
+    #                    try:
+    #                        collected += stream.read()
+    #                        break
+    #                    except Exception as e:
+    #                        print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+    #                        break
+    #                if time.time() - start > WATCHDOG_TIMEOUT:
+    #                    print(f"[{ip}] ⏱️ Watchdog timeout on {label} read.")
+    #                    break
+    #                time.sleep(1)
+    #            return collected.decode()
+    #
+    #        for idx, command in enumerate(commands):
+    #            for attempt in range(RETRY_LIMIT):
+    #                try:
+    #                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+    #                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+    #
+    #                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+    #                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+    #
+    #                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip)
+    #                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip)
+    #
+    #                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+    #                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+    #
+    #                    if "E: Package 'tomcat9' has no installation candidate" in stderr_output:
+    #                        print(f"[{ip}] ❌ Tomcat install failure.")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    if "WARNING:" in stderr_output:
+    #                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+    #                        stderr_output = ""
+    #
+    #                    if stderr_output.strip():
+    #                        print(f"[{ip}] ❌ Non-warning stderr received.")
+    #                        ssh.close()
+    #                        return ip, private_ip, False
+    #
+    #                    print(f"[{ip}] ✅ Command succeeded.")
+    #                    time.sleep(20)
+    #                    break  # Command succeeded, no need to retry
+    #
+    #                except Exception as e:
+    #                    print(f"[{ip}] 💥 Exception during exec_command: {e}")
+    #                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+    #
+    #                finally:
+    #                    stdin.close()
+    #                    stdout.close()
+    #                    stderr.close()
+    #
+    #
+
+    ## REFACTOR SSH 4 - Phase 2 The new resurrection policy to flag connecitons that have failed 2 watchdog timeouts
+    ## and update resurrection registry.  Multiple stalls detected. Flagging for resurrection
+    ## Note the read_output_with_watchdog function and an new function update_resurrection_registry have been added/moved to just
+    ## above the main tomcat_worker function above. This makes them global so that we can utilize the resurrection monitor
+    ## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
+    ## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
+    ## The read_output_with_watchdog calls the update_resurrection_registry function
+
+
+
+            for idx, command in enumerate(commands):
+                for attempt in range(RETRY_LIMIT):
+                    try:
+                        print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+                        stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+                        stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+                        stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                        stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                        stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
+
+                        print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                        print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+
+                        ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
+                        ## arguments for this function call
+
+                        should_resurrect = resurrection_gatekeeper(
+                            stderr_output=stderr_output,
+                            stdout_output=stdout_output,
+                            command_status="Command succeeded",
+                            exit_code=0,  # If you start capturing this via exec_command(), update accordingly
+                            runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
+                            pid=multiprocessing.current_process().pid,
+                            ip_address=ip,
+                            resurrection_registry=resurrection_registry
+                        )
+
+                        if should_resurrect:
+                            update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
+                            print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
+                        else:
+                            print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
+
+
+                        if "E: Package 'tomcat9'" in stderr_output:
+                            print(f"[{ip}] ❌ Tomcat install failure.")
+                            ssh.close()
+                            return ip, private_ip, False
+
+                        if "WARNING:" in stderr_output:
+                            print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                            stderr_output = ""
+
+                        if stderr_output.strip():
+                            print(f"[{ip}] ❌ Non-warning stderr received.")
+                            ssh.close()
+                            return ip, private_ip, False
+
+                        print(f"[{ip}] ✅ Command succeeded.")
+                        time.sleep(20)
+                        break  # Success
+
+                    except Exception as e:
+                        print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
+                        time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+
+                    finally:
+                        stdin.close()
+                        stdout.close()
+                        stderr.close()
+
+                # insert patch7b debug here for the inner for loop
+                print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+
+
+
+            ssh.close()
+            transport = ssh.get_transport()
+            if transport:
+                transport.close()
+
+
+
+
+            #debug for patch7c
+            print(f"[TRACE][install_tomcat] Reached registry update step for {ip}")
+
+
+            # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
+            # from creating a resurrection log. This will ensure that all installation threads leave some sort
+            # of registry fingerprint unless they are legitimate early thread failures.
+            update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
+
+
+            # For patch7c: Thread-local tagging block (add this right after update_resurrection_registry)
+            # This is part of the code  necesary for the patch7c in resurrection_monitor_patch7c() function. 
+            # This creates a thread_registry for the current ip and since this part of the code is"install_success" the thread
+            # entry is configured as such for status.  To make the thread registry persist through multiple calls of the install_tomcat
+            # which threaded_install() will do per process if multiple threads in the process, we need additional code as well
+
+            ## NOTES: This snippet only handles a single IP **per thread**. To persist across all IPs (i.e. multiple calls to `install_tomcat()`), the `registry_entry` needs to live outside the function — ideally as a **shared mutable dict** owned by `threaded_install()`
+            ## so we need to return this registry_entry to the calling function threaded_install.
+            ## If keeping `registry_entry` local to this function, it will be recreated for every call. Which is what we need.
+            ## Create it fresh for each new thread/IP and then return it to threaded_install for adding to the thread_registry which
+            ## will eventuall be called the process_registry in the tomcat_worker that calls threaded_install
+
+            
+            registry_entry = {
+                "status": "install_success",
+                "attempt": 0,
+                "timestamp": str(datetime.utcnow()),
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": private_ip
+            }
+
+
+
+            #registry_entry = {
+            #    "status": "install_success",
+            #    "attempt": 0,
+            #    "timestamp": str(datetime.utcnow()),
+            #    "pid": multiprocessing.current_process().pid,
+            #    "thread_id": threading.get_ident(),
+            #}
+
+
+
+            ## Debugging code to track down the successful_registry_ips tagging issue
+            # 🔍 Trace log to confirm registry tagging per thread
+            try:
+                registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
+                pid = multiprocessing.current_process().pid
+
+                print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
+                print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
+
+            except Exception as e:
+                print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
+
+            # debug for patch7c 
+            print(f"[TRACE][install_tomcat] Returning install result for {ip}")
+
+            print(f"Installation completed on {ip}")
+
+            # make sure to return this registry_entry for this thread instance to threaded_install
+            return ip, private_ip, registry_entry
+
+
+
+
+
+
+        # This is the exception block. Tag the thread with the stub_created_after_exception. This will be categorized
+        # as a failed_registry_ips and not missing_registry_ips. Missing is only for true ghosts that have no pid.
+        # An exception has a PID and an IP address. This thread can potentially be resurrected.
         except Exception as e:
-            print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
-
-        # debug for patch7c 
-        print(f"[TRACE][install_tomcat] Returning install result for {ip}")
-
-        print(f"Installation completed on {ip}")
-
-        # make sure to return this registry_entry for this thread instance to threaded_install
-        return ip, private_ip, registry_entry
+            print(f"[ERROR][install_tomcat] Exception occurred for {ip}: {e}")
+            registry_entry = {
+                "status": "stub_created_after_exception",
+                "attempt": 0,
+                "timestamp": str(datetime.utcnow()),
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": None,
+                "tags": ["ghost_post_pid", "stub"],
+                "error": str(e)
+            }
+            return ip, None, registry_entry
 
     ##### END OF install_tomcat() function ends here ######
 
