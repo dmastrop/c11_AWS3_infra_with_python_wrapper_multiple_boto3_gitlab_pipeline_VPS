@@ -3643,6 +3643,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # is malformed), then default to the string `'undefined'`.”  That way it will fall into the else and we can see  it
                 # logged as Install failed for further forensic thread investigation.
                 status = registry_entry.get("status", "undefined")
+                
+
+
+                # insert this for thread_uuid usage in logging
+                thread_uuid = registry_entry["thread_uuid"]
+
 
                 if registry_entry.get("status") == "install_success":
                 #if registry_entry:
