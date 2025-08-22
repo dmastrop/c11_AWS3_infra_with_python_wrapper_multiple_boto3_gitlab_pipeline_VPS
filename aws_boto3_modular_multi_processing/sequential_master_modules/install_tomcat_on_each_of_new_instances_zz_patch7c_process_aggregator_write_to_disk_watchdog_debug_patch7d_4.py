@@ -3633,7 +3633,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # thre thread_registry will be built up with all thread registry entries for per process and returned to the
                 # calling function of threaded_install which is tomcat worker. Tomcat_worker will assign this to process_registry
                 # retgistry_entry is returned from install_tomcat to this function, threaded_install
-                thread_registry[thread_uuid] = registry_entry
+                #thread_registry[thread_uuid] = registry_entry
+                thread_registry[registry_entry["thread_uuid"]] = registry_entry
 
 
                 # Keep the logging as before
