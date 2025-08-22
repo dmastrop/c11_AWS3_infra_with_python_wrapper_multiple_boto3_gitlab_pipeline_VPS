@@ -185,14 +185,14 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_1.py")
 
 
-##### THIS IS THE MODULE2 SCRIPT with res monitor patch7d2 breaking up into subfunctions and restructuring
-#def install_tomcat_on_instances():
-#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_2.py")
-
-
-#### THIS IS THE MODULE2 SCRIPT with res monitor patch7d3 going back to migrate from benchmark_ips to chunks for gold ip list to be used for ghost detection
+#### THIS IS THE MODULE2 SCRIPT with res monitor patch7d2 breaking up into subfunctions and restructuring
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_3.py")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_2.py")
+
+
+##### THIS IS THE MODULE2 SCRIPT with res monitor patch7d3 going back to migrate from benchmark_ips to chunks for gold ip list to be used for ghost detection
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_3.py")
 
 ##### THIS IS THE MODULE2 SCRIPT with res monitor patch7d3 going back to migrate from benchmark_ips to chunks for gold ip list to be used for ghost detection
 #def install_tomcat_on_instances():
