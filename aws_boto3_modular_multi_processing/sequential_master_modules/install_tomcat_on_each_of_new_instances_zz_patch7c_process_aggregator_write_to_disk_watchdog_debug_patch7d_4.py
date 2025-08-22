@@ -2954,7 +2954,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 # Function to install Tomcat on an instance
     def install_tomcat(ip, private_ip, instance_id):
-        
+       
+        ## install_tomcat is the definitive thread_uuid source. It is removed from calling function threaded_install
+        thread_uuid = uuid.uuid4().hex[:8]
+
+
+
+
         ## wrap the showl SSH install_tomcat in try block and put an exception after it and create stub registry 
         ## for threads that throw an exception and exit.  This is for IP thread tracking forensics. This threads
         ## will be tagged with a stub registry status of 
@@ -3599,7 +3605,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 #ip, private_ip, result = future.result()
                 ip, private_ip, registry_entry = future.result()
                 pid = multiprocessing.current_process().pid
-                thread_uuid = uuid.uuid4().hex[:8]
+                
+                ## get rid of this and use the install_tomcat thread_uuid as definitive source.
+                #thread_uuid = uuid.uuid4().hex[:8]
 
                 # Updated for patch7c
                 # registry_entry. This is built in the install_tomcat() 
@@ -3611,9 +3619,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                 # add thread_uuid to the registry_entry and keeping IPs inside the entry helps make logs easier to parse later — 
                 #especially if UUIDs are opaque.
+                # this is from the install_tomcat the definitive source
                 registry_entry["thread_uuid"] = thread_uuid
-                registry_entry["public_ip"] = ip
-                registry_entry["private_ip"] = private_ip
+                #registry_entry["public_ip"] = ip
+                #registry_entry["private_ip"] = private_ip
 
                 # Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
                 # For multi-threaded multi-processed registry entries keying by thread_uuid is best.
