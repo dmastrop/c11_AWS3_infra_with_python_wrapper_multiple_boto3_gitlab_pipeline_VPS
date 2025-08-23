@@ -504,7 +504,7 @@ multiprocessing.Pool above. So at this point one can clearly see the clean and l
 
 
 ```
-try:
+    try:
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
     finally:
@@ -560,7 +560,7 @@ try:
         failed_ips  = total_ips - success_ips
         #missing_ips = benchmark_ips - total_ips
         #### aggregate gold ips from chunks ####
-        missing_ips = aggregate_gold_ips - total_ips
+        missing_ips = aggregate_gold_ips - total_ips <<<<<<<<<<<<<<<
 
 
 
