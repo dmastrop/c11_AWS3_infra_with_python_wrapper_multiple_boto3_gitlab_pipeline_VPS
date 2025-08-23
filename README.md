@@ -37,7 +37,7 @@ pertain to the optmizations to this module.
 The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
 
 
-## Major milestone updates to refer to below:
+## Latest milestone updates to refer to below:
 
 - Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
 
@@ -56,6 +56,9 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 - Update part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
 
 - Update part 29: Phase 2m: Patch8 resurrectino_monitor implementation: status registry tagging for failure scenarios and hook into the STUB registry logic (ssh_init_failed case, etc.)
+
+
+
 
 ## High level project summary:
 
@@ -76,6 +79,10 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+
+
+
+
 ## UPDATES part 29: Phase 2m: Patch8 resurrectino_monitor implementation: status registry tagging for failure scenarios and hook into the STUB registry logic (ssh_init_failed case, etc.) 
 
 
@@ -83,10 +90,50 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+
+
+
+
+
+
 ## UPDATES part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
 
 
 ### Introduction:
+
+
+### Code changes:
+
+
+A small block of code in the resurrection__monitor function was commented out with the followign comment:
+
+```
+# 🔒 Legacy ghost/candidate dump logic disabled — replaced by detect_ghosts() in Patch7d2
+# Commented out to prevent redundant artifact writes and confusion during modular refactor
+```
+
+This is part of the effort to continue to clean up the resurrection_monitor in preparation for the patch8 integration for 
+the function.
+
+
+This block is commented out s well. This will be populated at the process level with another helper function (note
+all of these are also calclated at the aggregate level in main()):
+
+
+```
+ # Summary conclusion: This block will be used with patch 7d2 for process level stats .
+            #Patch7_logger.info("🧪 Patch7 reached summary block execution.")
+            #Patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
+            #Patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
+            #Patch7_logger.info(f"Missing registry IPs: {len(missing_registry_ips)}")
+            #Patch7_logger.info(f"Successful installs: {len(successful_registry_ips)}")
+            #Patch7_logger.info(f"Failed installs: {len(failed_registry_ips)}")
+            #Patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
+
+```
+
+
+
 
 
 
@@ -297,6 +344,13 @@ def maybe_create_stub_registry(ip, pid, thread_uuid=None):
     create_stub_registry(ip, pid, thread_uuid)
 ```
 
+### Code Implementation:
+
+
+
+
+
+
 
 
 
@@ -305,6 +359,35 @@ def maybe_create_stub_registry(ip, pid, thread_uuid=None):
 
 
 ### Introduction:
+
+After the existing benchmark_ips and benchmark_ips_artifact.log code was modularized in UPDATES part 25 below, it was found
+that the benchmark pid logs that are used to create the benchmark_combined_runtome.log was susceptible to not catching
+all of the IPs that are provisioned during the AWS setup and condtrol plane. This was found through an ssh init failed
+thread that showed up as missing in the benchmark_ps list.  The ssh init failed case will be reviewd in the next update
+in detail.  Nonetheless, the benchmark_ips cannot be used as a GOLD ip list when implementing process level
+ ghost detection code.
+
+ In Update part 24 below, the process level was instrumented to use the chunk from chunks which is created in main() during
+the AWS control plane provisioning stage of the AWS instances.  In like fashion the aggregate level code for ghost detection
+needs to use chunks (plural) from main() as the GOLD ip list when implementing aggregate ghost detection code.
+
+The benchmark_ips and benchmark_ips_artifact.log data is deprecated for ghost detection purposes, but the code has not
+been commented out because it still may have a good future use.
+
+
+
+### Code changes to refactor using chunks rather than benchmark_ips as the GOLD ip list in aggregate ghost detection 
+
+Note that this code will be implemented in the resurrection_monitor_patch7d function. That is where the benchmark_ips
+code is as well (see UPDATES part 25 below).
+
+The first code change is to create a global helper function 
+
+
+
+
+
+
 
 
 
@@ -322,6 +405,149 @@ still has a lot of legacy code in it.
 
 ### Code changes:
 
+The first step in modularizing this code in resurrection_monitor_patch7d is to comment out the old code.
+In the python module this is noted as the following comment:
+
+```
+##### Begin comment out of old benchmark_ips  code.
+##### This is the old benchmark_ips generation code.This has been replaced by the global modular function above
+##### as part of patch 7d2, hydrate_benchmark_ips()
+##### All of this code needs to be commented out after adding the call to hydrate_benchmark_ips early in the 
+##### res mon function (see above)
+```
+
+This is a large block of code that not only includes the core logic for calculating the benchmark_ips list and the
+benchmark_ips_artifact.log file, but also a lot of logging and deprecated stats logic (for failed, missing, total, 
+and succesful ips) that is now done in main() at the aggregate level.
+
+
+
+
+
+The next step involmves creating a new global helper function hydrate_benchmark_ips() to remove some of the bulk
+in resurrection_monitor and clean up the code.
+
+
+
+```
+## Global helper function for resurrection_monitor_patch7d. This 7d2  is the hydrate_benchmark_ips() helper function that
+## replaces the exisiting working code in the resurrection monitor for creating the benchmark_ips_artifact.log file
+## from the benchmark_combined_runtime.log which is from the process level pid logs. These are real time logs of the actual
+## IP/threads that were created for each process (created during the control plane setup phase). This is used to created the 
+# benchmark_ips,  the GOLD IP list used by main() to detect ghosts at the aggregate level. 
+## benchmark_ips is used to then create the bencmarrk_ips_artifact.log list of total IPs (runtime) during the execution run
+## and output as artifact to gitlab pipeline.
+## The artifact creation is done in resurrection_monitor_patch7d after calling this function from the return benchmark_ips
+
+# === RESMON PATCH7D UTILITY ===
+### 🧩 `hydrate_benchmark_ips()` Function
+def hydrate_benchmark_ips(log_dir):
+    benchmark_combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+    benchmark_ips = set()
+
+    try:
+        with open(benchmark_combined_path, "r") as f:
+            lines = f.readlines()
+            print(f"[RESMON_7d] Runtime log line count: {len(lines)}")
+
+            public_ip_lines = [line for line in lines if "Public IP:" in line]
+            print(f"[RESMON_7d] Sample 'Public IP:' lines: {public_ip_lines[:3]}")
+
+            for i, line in enumerate(lines):
+                if "Public IP:" in line:
+                    print(f"[RESMON_7d] Raw line {i}: {repr(line)}")
+                    ip_matches = re.findall(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+                    if ip_matches:
+                        print(f"[RESMON_7d] Matched IPs: {ip_matches}")
+                    else:
+                        print(f"[RESMON_7d] No IP match in line {i}: {line.strip()}")
+
+            benchmark_ips = {
+                match.group(1)
+                for line in lines
+                if (match := re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line))
+            }
+            print(f"[RESMON_7d] Hydrated benchmark IPs: {benchmark_ips}")
+
+    except Exception as e:
+        print(f"[RESMON_7d] Failed to hydrate benchmark IPs: {e}")
+
+    return benchmark_ips
+```
+
+
+
+The third step involes getting this function (this is defined within the resurrection_monitor_patch7d function so 
+it is not a global function) from the old benchmark_ips code that was commented out. This function still needs
+to be used.
+
+
+
+```
+  # Patch 7d2 move this block from the old code for the benchmark_combined_runtime.log generation
+    # ------- Combine runtime benchmark logs: filtered for benchmark_combined_runtime.log  -------
+    #merged contents from all `benchmark_*.log` PID logs that were created at runtime
+    def combine_benchmark_logs_runtime(log_dir, patch7_logger):
+        benchmark_combined_path = os.path.join(log_dir, "benchmark_combined_runtime.log")
+        with open(benchmark_combined_path, "w") as outfile:
+            for fname in sorted(os.listdir(log_dir)):
+                # Only combine true benchmark logs — exclude artifact and combined logs
+                if (
+                    fname.startswith("benchmark_")
+                    and fname.endswith(".log")
+                    and "combined" not in fname
+                    and not fname.startswith("benchmark_ips_artifact")
+                ):
+                    path = os.path.join(log_dir, fname)
+                    try:
+                        with open(path, "r") as infile:
+                            outfile.write(f"===== {fname} =====\n")
+                            outfile.write(infile.read() + "\n")
+                    except Exception as e:
+                        patch7_logger.info(f"Skipped {fname}: {e}")
+        patch7_logger.info(f"Combined runtime log written to: {benchmark_combined_path}")
+        return benchmark_combined_path```
+```
+
+
+
+The fourth step involves wiring or hooking this helper function into the resurrection_monitor_patch7d now that
+most of the the old benchmark_ip code has been commented out.
+
+Note that this code must be added AFTER the patch7.logger has been initialized, etc. 
+
+The call is made through the benchmark_ips = hydrate_benchmark_ips(log_dir)
+
+Once the benchmark_ips is returned by the hyrdate_benchmark_ips, it can be used to create the artifact 
+benchmark_ips_artifact.log in the log_dir, which is mounted from the docker container to the gitlab /logs directory
+so that the artifact can be downloaed directly from the pipeline.
+
+This has been tested an is working well.
+
+
+```
+        ###### for patch7d2 modularization. Move all of this stuff after the patch7_logger is defined ########
+
+        # this will create the benchmark_combined_runtime.log from which we can hydrate benchmark_ips
+        benchmark_combined_path = combine_benchmark_logs_runtime(log_dir, patch7_logger)
+
+
+        ## Patch 7d2 modularization patch changes:
+        ## Frist call to hydrate_benchmark_ips global helper function to derive the benchmark_ips GOLD standard thread/ip list that
+        ## is required for ghost detection in main() at the aggregate level
+        ## Large blocks of the old code for this need to be commented out below. These will be noted with 7d2 in the comments.
+
+
+        benchmark_ips = hydrate_benchmark_ips(log_dir)
+
+        ## print the artifact that is derived from benchmark_ips,the benchmark_ips_artifact.log that is the runtime list of all
+        ## the IPs/theads in the execution run.This is exported out to the gitlab pipeline
+
+        with open(os.path.join(log_dir, "benchmark_ips_artifact.log"), "w") as f:
+            for ip in sorted(benchmark_ips):
+                f.write(ip + "\n")
+
+```
 
 
 
