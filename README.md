@@ -481,7 +481,8 @@ The third step involes getting this function (this is defined within the resurre
 it is not a global function) from the old benchmark_ips code that was commented out. This function still needs
 to be used.
 
-
+This function is placed near the top of the resurrection_monitor_patch7d function so that it can be used
+later in the code.
 
 ```
   # Patch 7d2 move this block from the old code for the benchmark_combined_runtime.log generation
@@ -516,7 +517,12 @@ most of the the old benchmark_ip code has been commented out.
 
 Note that this code must be added AFTER the patch7.logger has been initialized, etc. 
 
-The call is made through the benchmark_ips = hydrate_benchmark_ips(log_dir)
+Note that the first line calls the combine_benchmark_logs_runtime(log_dir, patch7_logger).
+patch7_logger has to be passed to the function because it does write to the logger to the gitlab console
+
+The helper function hydrate_benchmark_ips uses this benchmark_combined_path when it creates the benchmark_ips
+
+The call to the helper function is made through the benchmark_ips = hydrate_benchmark_ips(log_dir)
 
 Once the benchmark_ips is returned by the hyrdate_benchmark_ips, it can be used to create the artifact 
 benchmark_ips_artifact.log in the log_dir, which is mounted from the docker container to the gitlab /logs directory
@@ -529,6 +535,7 @@ This has been tested an is working well.
         ###### for patch7d2 modularization. Move all of this stuff after the patch7_logger is defined ########
 
         # this will create the benchmark_combined_runtime.log from which we can hydrate benchmark_ips
+        
         benchmark_combined_path = combine_benchmark_logs_runtime(log_dir, patch7_logger)
 
 
