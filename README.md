@@ -75,14 +75,14 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
+## UPDATES part 25: Phase 2i: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
 
 
 
 
 
 
-## UPDATES part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for ghost detection json file generation, etc. (major overhaul)
+## UPDATES part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for PROCESS LEVEL ghost detection json file generation, etc. (major overhaul)
 
 
 ### Introduction:
@@ -90,10 +90,243 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
+## UPDATES part 26: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
+
+
+### Introduction:
+
+A true ghost is a thread that has not had a process assigned to it at all. There are some instances whereby the thread
+siliently fails and currently the tagging of these types of failures is not in place because there is absoutely no 
+registry created for this type of failure. The failure occurs in install_tomcat() typically during the SSH initialization
+phase, where the first packet sent out from the python controller (docker container) is sliently dropped. There is no 
+acknowledgement from the EC2 node for whatever reason and the thread siliently dies.  It has been discovered that in 
+these cases there is no registry created for the thread at all, thus tagging the registry with a status is not possible,
+and this thread(ip) will show up as a ghost at the process and aggreaget level when comparing the chunks list of AWS 
+IPs to the process_registry or aggregated process registry list of IPs. It will be completely missing.
+
+It is desired to resurrect such threads and the only way to do this is to "capture" the IP in what is called a STUB
+registry which is essentially a registry that is created in install_tomcat at the thread level when all else fails and 
+the thread simply dies.
+
+This is a gitlab console log of one such failure, what we will eventually tag as ssh_init_failed status:
+(finding this entry as noted below was very difficult given that the gitlab log console was over 22MB. The STUB 
+registry will make the process much easier in terms of forensics and traceablilty).
 
 
 
-## UPDATES part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection
+Such a failure to connect might show up as an exception in the python gilab pipeline logs as: 
+
+```
+dmastrop@LAPTOP-RAT831LJ:/mnt/c/Users/davem/Downloads/logs_168$ grep 184.72.85.254 gitlab_log_pid_reuse_ssh_init_512.txt
+[DEBUG] Process 84: IPs = ['184.72.85.254']
+[TRACE][install_tomcat] Beginning installation on 184.72.85.254
+Attempting to connect to 184.72.85.254 (Attempt 1)
+```
+This is the complete exchange. Given that the python code reports WATCHDOGS and retries at all levels (SSH connection for
+5 retries, install tomcat for 3 retries and a WATCHDOG_THRESHOLD of 2 for each of the install tomcat attempts) normally
+scripts have a lot of log information and the registry can easily be tagged with one of the failure statuses.
+
+This case above currently cannot, and it can only be tagged through a STUB registry 
+
+
+
+```
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 51, in starmapstar
+    return list(itertools.starmap(args[0], args[1]))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 603, in tomcat_worker_wrapper
+  File "<string>", line 3614, in tomcat_worker
+  File "<string>", line 871, in run_test
+  File "<string>", line 3516, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2930, in install_tomcat
+  File "/usr/local/lib/python3.11/site-packages/paramiko/client.py", line 451, in connect
+    t.start_client(timeout=timeout)
+  File "/usr/local/lib/python3.11/site-packages/paramiko/transport.py", line 773, in start_client
+    raise e
+  File "/usr/local/lib/python3.11/site-packages/paramiko/transport.py", line 2201, in run
+    ptype, m = self.packetizer.read_message()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/packet.py", line 496, in read_message
+    header = self.read_all(self.__block_size_in, check_rekey=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/packet.py", line 320, in read_all
+    raise EOFError()
+EOFError
+
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/aws_EC2/master_script.py", line 190, in install_tomcat_on_instances
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_2.py")
+  File "/aws_EC2/master_script.py", line 15, in run_module
+    exec(code, globals())
+  File "<string>", line 4344, in <module>
+  File "<string>", line 4170, in main
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 375, in starmap
+    return self._map_async(func, iterable, starmapstar, chunksize).get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 774, in get
+    raise self._value
+EOFError
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+Contents of logs directory after container run:
+ [32;1m$ ls -l logs/ [0;m
+
+```
+
+The EOFError: This is see from python Paramiko as a symptom of an SSH handshake failure
+It percolates up to the multiprocessing.Pool as shown above
+
+
+Currently finding these failure threads in a hyper-scaled environment with 100s or 1000s of nodes is difficult and the 
+STUB registry along with the tag on the STUB so that the thread shows up in the failed_registry_ips.log file, will make
+this process much easier in terms of forensics.
+
+
+To get this ip in this particular circumstance the following steps were done:
+
+1. **Extract all 512 IPs** from the GitLab debug dump (with the 512 node test the file is massive 22MB of text)
+2. **Compare** against the 511 IPs from `benchmark_combinedruntime` or the  PID logs. Through a previous exercise
+the PID 97 log file was found to missing the Public IP address, so it was narrowed down to PID97
+3. **Find the one IP** that exists in the GitLab debug dump but is missing from the benchmark logs.
+4. **Tag it** as the ghost IP — tied to PID 97 or whichever process failed early.
+
+It is a "ghost" but technically not really. The purpose of the STUB registry code will be to tag such threads that 
+did get a PID to a STUB registry.   The orchestration code fortunately did create a PID log for the process.
+
+If the thread does not ever get assigned a PID by multiprocessing.Pool then that is a true ghost. That will show up in the missing_registry_ips.log and in the stats as missing ip.
+
+The ssh init failed however will get a stub failure status code (tag) in the stub registry along with the IP address so that
+the IP can easily be grepped out in the massive gitlab log for further forensics.
+
+
+### Proposed STUB architecture:
+
+To make the detection of such corner cases above easier in extremely large hyper-scaled settings with massive large data
+sets, the STUB registry will be created as a kind of default directory if all of the other traditional status tagging
+logic fails to get a "hit".   
+
+The approach is the following :
+
+Tagged Registry Entries (Normal Failure Cases)
+These are real registry entries that were created during execution but tagged with failure states like:
+- `"status": "watchdog_timeout"`  
+- `"status": "ssh_init_failed"`  
+- `"status": "install_failed"`  
+- `"status": "stderr_empty"`  
+
+These entries are not stub. They’re valid, hydrated, and traceable — just marked as failed. They contain:
+- PID  
+- IP  
+- `thread_uuid`  
+- Possibly partial logs or metadata  
+
+
+
+Stub Registry Entries (Last Resort Recovery)
+This is the  “fallback forensic patch.” Similar to the example in the introduction.  A stub is:
+- Created only when no registry entry exists 
+- Based on AWS control plane data (i.e. chunk IP, maybe PID)  
+- Used when all tagging logic fails and the node is missing from process_registry (for whatever reason, like the example 
+above  
+- Hydrated with minimal info: PID, IP, maybe a guessed `thread_uuid`  
+- Tagged as `"status": "stub_created"` or `"status": "unknown_failure"`  
+
+
+This is a forensic safety net.
+
+
+Very simple logic flow (this is not actual code that will be used. The failure detection code will be fairly complex)
+
+At the top level, look for a registry entry, and then if none, require that a pid be assigned to the thread/IP. Otherwise
+we want the call to create_stub_registry to fail and let the existing ghost detection logic (which uses AWS control plane
+chunk IP data and compares to process_registry and aggregate registry) kick in.
+
+
+```
+if registry_entry_exists(ip):
+    tag_registry(ip, status="ssh_init_failed")
+else:
+    create_stub_registry(ip, pid, status="stub_created")
+```
+
+
+Basically tag if you can and only STUB if you must, but it has to have a PID assigned.
+
+During post-mortem triage:
+- IPs with no registry and no PID → ghosts
+- IPs with registry but `"status": "failed"` → resurrectable
+- IPs with stub registry and PID → fallback recovery candidates
+
+A three-tiered forensic map:
+1. Tagged failures  
+2. Stubbed unknowns  
+3. True ghosts
+
+
+To prevent the case in the introduction from crasshing the create_stub_registry function above, add simple logic to
+require the pid, otherwise return and let the robust chunk based ghost detection logic already in place handl the 
+IP/thread. That thread with no PID is a true ghost.  The case above in the intro is not a true ghost and will get a
+fabricated STUB registry entry with its ip address, PID and a status indicating it is a stub based failed thread that
+is a suitable candidate for resurrection.
+
+
+```
+def maybe_create_stub_registry(ip, pid, thread_uuid=None):
+    if not pid:
+        return  # Let ghost detection handle it
+    create_stub_registry(ip, pid, thread_uuid)
+```
+
+## UPDATES part 26: Phase 2j: Refactoring the aggregation level ghost detection code with the chunks in main() as GOLD standard
+
+
+
+### Introduction:
+
+
+
+
+## UPDATES part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function
+
+
+### Introduction:
+
+Note that this code is deprecated but still has potential future use.  The helper function is hydrate_benchmark_ips() and is
+called from resurrection_monitor_patch7d. The modularization will help clean up the resurrection monitor function that
+still has a lot of legacy code in it.
+
+
+
+### Code changes:
+
+
+
+
+
+
+## UPDATES part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for PROCESS level GOLD ip list for ghost detection 
+
+(This code will be modularized using helper function detect_ghosts() at a later time)
+
 
 
 ### Introduction:
@@ -199,6 +432,7 @@ Thus the function is now defined with an assigned_ips local argument which as sh
 calling function in tomcat_install
 
 The new ghost detection logic in the resurrection_monitor_patch7d is below:
+(This code will be modularized into the helper function detect_ghosts() at a later time)
 
 ```
         ####################
