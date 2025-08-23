@@ -45,16 +45,17 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 23: implementation of the control plane Public IP orchestrator
 
-- Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process
-level GOLD ip list for ghost detection
+- Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection
 
-- Update part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for
-ghost detection json file generation, etc. (major overhaul)
+- Update part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function
 
 - Update part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
 
-- Update part 27: Phase 2k: resurrection_monitor Patch8 regiistry tagging(status) overhaul and ssh issue tagging
+- Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
 
+- Update part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
+
+- Update part 29: Phase 2m: Patch8 resurrectino_monitor implementation: status registry tagging for failure scenarios and hook into the STUB registry logic (ssh_init_failed case, etc.)
 
 ## High level project summary:
 
@@ -75,14 +76,14 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 25: Phase 2i: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
+## UPDATES part 29: Phase 2m: Patch8 resurrectino_monitor implementation: status registry tagging for failure scenarios and hook into the STUB registry logic (ssh_init_failed case, etc.) 
+
+
+### Introduction:
 
 
 
-
-
-
-## UPDATES part 25: Phase 2i: resurrection_monitor patch7d2 restructuring using helper functions for benchmark_ips and for PROCESS LEVEL ghost detection json file generation, etc. (major overhaul)
+## UPDATES part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
 
 
 ### Introduction:
@@ -90,7 +91,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 26: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
+## UPDATES part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
 
 
 ### Introduction:
@@ -295,6 +296,9 @@ def maybe_create_stub_registry(ip, pid, thread_uuid=None):
         return  # Let ghost detection handle it
     create_stub_registry(ip, pid, thread_uuid)
 ```
+
+
+
 
 ## UPDATES part 26: Phase 2j: Refactoring the aggregation level ghost detection code with the chunks in main() as GOLD standard
 
