@@ -416,6 +416,20 @@ before reaching the end of the install_tomcat() return function whereby the regi
 install for the process registry listing thread_registry. In either case there is no registry_entry for the thread.
 
 
+If the function hits an EOFError or socket-level failure, and it’s not caught by `except`, then:
+
+- The function exits immediately  
+- No registry is created  
+- No return statement is reached  
+- Control returns to `threaded_install()` with a `None` or malformed result
+
+This is exactly what happened in the `ssh_init_failed` case. The thread was alive, had a PID, but never returned a 
+registry entry.
+
+
+
+
+
 ### Stub code placement:
 
 
