@@ -365,6 +365,44 @@ issue, for example, to be classified as a ghost and in the missing_registry_ips.
 to be classified as a failed thread in the failed_registry_ips.log file.
 
 
+In install_tomcat where half of the stub logic will be (the other half will be in threaded_install, the function that
+calls install_tomcat), there are some additional scnearios to incorporate for the stub. In install_tomcat there is 
+an SSH loop (5 retries) to establish the SSH connection to the node, and then there is the tomcat command installation
+loop (3 retries) that python issues to the node after the SSH connection is up (to install tomcat).  Inside this install
+retry loop (each attempted loop) there is a watchdog stall (2 watchdogs failed).  All the stalls as notied in the table
+below will be failure tagged (the code is not there yet, but they will be) and they will be listed in the 
+failed_registry_ips.log.   
+
+The SSH int drop (detailed above) will trigger a stub, and it will also be classified in the failed_registry_ips.log
+
+The tomcat command drop (no output) (I have not seen this to date) will trigger a stub, and it will be classified
+in the failed_registry_ips.log
+
+The rest of the bad thread scenarios will be caught by the ghost detection logic. These typically don't even have a 
+PID assigned and their only forensic traceability is in the AWS control plane chunk data. The ghost detection logic
+works at both the process and the aggregate main() level to classify in the missing_registry_ips.
+
+Of note, all of these threads are potential resurrection candidates except for the ghosts (missing_registry_ips.log).
+(the last row in the table below)
+
+Looking a bit ahead to the implementation of the explicit failure tagging(patch 8), the rows 2, 3, and 4 will be 
+explicitly failure tagged. Rows 5 and 6 will be stubs. Row 7 will be the ghosts.
+
+
+| Scenario                          | PID Assigned | Status Tagged         | Registry Created       | Stub Triggered |
+|----------------------------------|--------------|------------------------|------------------------|----------------|
+| Install Success                  | ✅           | ✅                     | ✅                     | ❌              |
+| SSH Retry Exhaustion (5x)        | ✅           | ❌ (currently)         | ✅ (patch8)            | ❌              |
+| Tomcat Install Retry Exhaustion  | ✅           | ✅ (mis-tagged)        | ✅                     | ❌              |
+| Watchdog Stall (2x)              | ✅           | ✅                     | ✅                     | ❌              |
+| SSH Init Drop (no response)      | ✅           | ❌                     | ❌                     | ✅              |
+| Tomcat Command Drop (no output)  | ✅           | ❌                     | ❌                     | ✅              |
+| No PID Assigned                  | ❌           | ❌                     | ❌                     | ❌ → ghost logic|
+
+
+
+
+
 ### Why the registry is currently not created in the SSH init drop case?
 
 - The thread is spawned  
@@ -378,7 +416,7 @@ before reaching the end of the install_tomcat() return function whereby the regi
 install for the process registry listing thread_registry. In either case there is no registry_entry for the thread.
 
 
-### Code design:
+### Stub code placement:
 
 
 
