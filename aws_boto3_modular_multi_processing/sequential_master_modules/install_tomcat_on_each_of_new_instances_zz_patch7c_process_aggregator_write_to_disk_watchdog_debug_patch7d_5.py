@@ -2977,22 +2977,84 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # debug for patch7c issues. We have isolated it to install_tomcat and the thread_registry in threaded_install
         print(f"[TRACE][install_tomcat] Beginning installation on {ip}")
 
+########## this code block is for the SSH connection establishment code  ############
+        
+        ## comment out this code and replace with the new code below with failure status codes for the registry 
+        ## as well as with stub registry protection in case of aborted silent for/else loop.
 
+        #for attempt in range(5):
+        #    try:
+        #        print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+        #        ssh.connect(ip, port, username, key_filename=key_path)
+        #        break
+        #    except paramiko.ssh_exception.NoValidConnectionsError as e:
+        #        print(f"Connection failed: {e}")
+        #        time.sleep(10)
+        #else:
+        #    print(f"Failed to connect to {ip} after multiple attempts")
+        #    return ip, private_ip, False
+
+        #print(f"Connected to {ip}. Executing commands...")
+
+
+
+########## this is the new code for the SSH connection establishment code with registry failure tagging and ###########
+########## with stub registry protection if the for/else loop is abruptly terminated with no exception      ###########
+########## the stub helps a lot with forensic traceability                                                  ###########
+
+
+
+
+        ssh_connected = False
+        status_tagged = False
+        registry_entry_created = False
+        ssh_success = False  # temp flag to suppress stub
 
         for attempt in range(5):
             try:
                 print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
                 ssh.connect(ip, port, username, key_filename=key_path)
+                ssh_connected = True
+                ssh_success = True  # suppress stub
                 break
             except paramiko.ssh_exception.NoValidConnectionsError as e:
                 print(f"Connection failed: {e}")
                 time.sleep(10)
         else:
             print(f"Failed to connect to {ip} after multiple attempts")
-            return ip, private_ip, False
+            registry_entry = {
+                "status": "ssh_retry_failed",
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": str(datetime.utcnow()),
+                "tags": ["ssh_retry_failed"]
+            }
+            status_tagged = True
+            registry_entry_created = True
+            return ip, private_ip, registry_entry
 
-        print(f"Connected to {ip}. Executing commands...")
 
+        if not status_tagged and not registry_entry_created and not ssh_success:
+            pid = multiprocessing.current_process().pid
+            if pid:  # only stub if pid exists
+                print(f"[STUB] install_tomcat exited early for {ip}")
+                stub_entry = {
+                    "status": "stub",
+                    "pid": pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": ["stub", "early_exit"]
+                }
+                return ip, private_ip, stub_entry
+
+
+########## these old block are for the early installation of tomcat code ###############
 #        for command in commands:
 #            for attempt in range(3):
 #                stdin, stdout, stderr = ssh.exec_command(command)
