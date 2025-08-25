@@ -96,7 +96,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
+## UPDATES part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) process level registry stats status generation
 
 
 ### Introduction:
@@ -412,8 +412,8 @@ explicitly failure tagged. Rows 5 and 6 will be stubs. Row 7 will be the ghosts.
 - **No response at all** — not even a timeout  
 - The thread hits an **EOFError or socket-level exception**  
 - The function install_tomcat() exits prematurely — before reaching any registry hydration logic for registry_entry or
-before reaching the end of the install_tomcat() return function whereby the registry_entry is returned to threaded
-install for the process registry listing thread_registry. In either case there is no registry_entry for the thread.
+before reaching the end of the install_tomcat() return function whereby the registry_entry is returned to threaded_install
+for the process registry listing thread_registry. In either case there is no registry_entry for the thread.
 
 
 If the function hits an EOFError or socket-level failure, and it’s not caught by `except`, then:
