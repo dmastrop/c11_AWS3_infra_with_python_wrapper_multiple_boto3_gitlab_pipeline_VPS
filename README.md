@@ -433,9 +433,35 @@ registry entry.
 ### Stub code placement:
 
 
+##### in threaded_install():
+
+This function needs stub logic right after the ThreadPoolExecutor invocation of install_tomcat()
+The purpose here is to catch any catostropic thread failure in install_tomcat() as this will cause an abrupt exit
+to the calling function threaded_install().   See above more a more complete description.
+
+
+
+
+
+#### in install_tomcat():
+
+This function needs stub logic in 2 areas, in the first SSH retry 5 loop and then in the second for idx loop for the 
+installation of tomcat (3 retries with threshold of 2 watchdogs on each retry)
+
+
+
 
 
 ### Code Implementation:
+
+
+#### threaded_install():
+
+
+
+#### install_tomcat():
+
+
 
 
 
