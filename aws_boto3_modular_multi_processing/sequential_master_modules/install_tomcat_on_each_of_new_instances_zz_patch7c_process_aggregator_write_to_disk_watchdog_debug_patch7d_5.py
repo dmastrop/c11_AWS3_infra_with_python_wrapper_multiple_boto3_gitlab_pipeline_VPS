@@ -3606,63 +3606,122 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ## install_tomcat invoked by the ThreadPoolExecutor will return registry_entry as the result
 ## So assign future.result() from install_tomcat to registry_entry, the current thread's registry entry
 
+            ##### this has the threaded_install() stub registry logic for protection against catostrophic failures
+            ##### in install_tomcat. These failures will now genearte a stub registry for reliable forensics and tracking
+
             for future in as_completed(futures):
-                #ip, private_ip, result = future.result()
-                ip, private_ip, registry_entry = future.result()
-                pid = multiprocessing.current_process().pid
-                
-                ## get rid of this and use the install_tomcat thread_uuid as definitive source.
-                #thread_uuid = uuid.uuid4().hex[:8]
+                try:
+                    ip, private_ip, registry_entry = future.result()
+                    pid = multiprocessing.current_process().pid
 
-                # Updated for patch7c
-                # registry_entry. This is built in the install_tomcat() 
-                # This is a single thread/ip entry that is used to build up the process thread_registry
-                # which will end up with all the ips in the process once all threads have been executed in the process
-                # thread_registry is built up with index thread_uuid to ensure it is totally unique. This will be the 
-                # current registry_entry and this is added to it for each thread executed by the ThreadPoolExecutor called by
-                # the current process running threaded_install
+                    if registry_entry and "thread_uuid" in registry_entry:
+                        thread_registry[registry_entry["thread_uuid"]] = registry_entry
+                        thread_uuid = registry_entry["thread_uuid"]
 
-                # add thread_uuid to the registry_entry and keeping IPs inside the entry helps make logs easier to parse later — 
-                #especially if UUIDs are opaque.
-                # this is now from the install_tomcat the definitive source
-                # install_tomcat is called by ThreadPoolExecutor above and will return its thread_uuid in the registry 
-                # for threaded_install(this function) to consume. 
-                #registry_entry["thread_uuid"] = thread_uuid
-                
-                #registry_entry["public_ip"] = ip
-                #registry_entry["private_ip"] = private_ip
+                    else:
+                        # Silent failure — no registry returned
+                        pid = multiprocessing.current_process().pid
+                        if pid:
+                            stub_uuid = uuid.uuid4().hex[:8]
+                            stub_entry = {
+                                "status": "stub",
+                                "pid": pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": stub_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["stub", "silent_abort", "no_registry"]
+                            }
+                            thread_registry[stub_uuid] = stub_entry
+                            thread_uuid = stub_uuid  # For logging below
+                            registry_entry = stub_entry  # So status and IPs can be logged
 
-                # Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
-                # For multi-threaded multi-processed registry entries keying by thread_uuid is best.
-                # thre thread_registry will be built up with all thread registry entries for per process and returned to the
-                # calling function of threaded_install which is tomcat worker. Tomcat_worker will assign this to process_registry
-                # retgistry_entry is returned from install_tomcat to this function, threaded_install
-                #thread_registry[thread_uuid] = registry_entry
-                thread_registry[registry_entry["thread_uuid"]] = registry_entry
+                    # Logging and IP tracking
+                    status = registry_entry["status"] if "status" in registry_entry else "undefined"
+                    pid = registry_entry.get("pid", "N/A")
 
+                    if status == "install_success":
+                        logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+                        successful_ips.append(ip)
+                        successful_private_ips.append(private_ip)
+                    else:
+                        logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+                        failed_ips.append(ip)
+                        failed_private_ips.append(private_ip)
+            #### try block ends here #####
 
-                # Keep the logging as before
-                # we need to catch if registry has corruption 
-                # Try to retrieve the value for `'status'` from `registry_entry`. If it’s missing (not set, or the whole entry 
-                # is malformed), then default to the string `'undefined'`.”  That way it will fall into the else and we can see  it
-                # logged as Install failed for further forensic thread investigation.
-                status = registry_entry.get("status", "undefined")
-                
-
-
-                # insert this for thread_uuid usage in logging
-                thread_uuid = registry_entry["thread_uuid"]
+                except Exception as e:
+                    print(f"[ERROR][threaded_install] Future failed: {e}")
 
 
-                if registry_entry.get("status") == "install_success":
-                #if registry_entry:
-                    logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
-                    successful_ips.append(ip)
-                    successful_private_ips.append(private_ip)
-                else:
-                    logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
-                    failed_ips.append(ip)
-                    failed_private_ips.append(private_ip)
+
+
+
+
+
+
+            ######### Replaced this  block below with the one above to incorporate stub registry in catostropic exist
+            #########  from install_tomcat(). We have seen this happen before, but very infrequently and only under hyper-
+            ########  scaling of processes
+
+            #for future in as_completed(futures):
+            #    #ip, private_ip, result = future.result()
+            #    ip, private_ip, registry_entry = future.result()
+            #    pid = multiprocessing.current_process().pid
+            #    
+            #    ## get rid of this and use the install_tomcat thread_uuid as definitive source.
+            #    #thread_uuid = uuid.uuid4().hex[:8]
+
+            #    # Updated for patch7c
+            #    # registry_entry. This is built in the install_tomcat() 
+            #    # This is a single thread/ip entry that is used to build up the process thread_registry
+            #    # which will end up with all the ips in the process once all threads have been executed in the process
+            #    # thread_registry is built up with index thread_uuid to ensure it is totally unique. This will be the 
+            #    # current registry_entry and this is added to it for each thread executed by the ThreadPoolExecutor called by
+            #    # the current process running threaded_install
+
+            #    # add thread_uuid to the registry_entry and keeping IPs inside the entry helps make logs easier to parse later — 
+            #    #especially if UUIDs are opaque.
+            #    # this is now from the install_tomcat the definitive source
+            #    # install_tomcat is called by ThreadPoolExecutor above and will return its thread_uuid in the registry 
+            #    # for threaded_install(this function) to consume. 
+            #    #registry_entry["thread_uuid"] = thread_uuid
+            #    
+            #    #registry_entry["public_ip"] = ip
+            #    #registry_entry["private_ip"] = private_ip
+
+            #    # Store in registry keyed by IP or UUID. This keeps them uniqe regardless of pid reuse.
+            #    # For multi-threaded multi-processed registry entries keying by thread_uuid is best.
+            #    # thre thread_registry will be built up with all thread registry entries for per process and returned to the
+            #    # calling function of threaded_install which is tomcat worker. Tomcat_worker will assign this to process_registry
+            #    # retgistry_entry is returned from install_tomcat to this function, threaded_install
+            #    #thread_registry[thread_uuid] = registry_entry
+            #    thread_registry[registry_entry["thread_uuid"]] = registry_entry
+
+
+            #    # Keep the logging as before
+            #    # we need to catch if registry has corruption 
+            #    # Try to retrieve the value for `'status'` from `registry_entry`. If it’s missing (not set, or the whole entry 
+            #    # is malformed), then default to the string `'undefined'`.”  That way it will fall into the else and we can see  it
+            #    # logged as Install failed for further forensic thread investigation.
+            #    status = registry_entry.get("status", "undefined")
+            #    
+
+
+            #    # insert this for thread_uuid usage in logging
+            #    thread_uuid = registry_entry["thread_uuid"]
+
+
+            #    if registry_entry.get("status") == "install_success":
+            #    #if registry_entry:
+            #        logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+            #        successful_ips.append(ip)
+            #        successful_private_ips.append(private_ip)
+            #    else:
+            #        logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+            #        failed_ips.append(ip)
+            #        failed_private_ips.append(private_ip)
 
 
 
