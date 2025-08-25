@@ -330,7 +330,7 @@ A three-tiered forensic map:
 3. True ghosts
 
 
-To prevent the case in the introduction from crasshing the create_stub_registry function above, add simple logic to
+To prevent the case in the introduction from crashing the create_stub_registry function above, add simple logic to
 require the pid, otherwise return and let the robust chunk based ghost detection logic already in place handl the 
 IP/thread. That thread with no PID is a true ghost.  The case above in the intro is not a true ghost and will get a
 fabricated STUB registry entry with its ip address, PID and a status indicating it is a stub based failed thread that
@@ -343,6 +343,45 @@ def maybe_create_stub_registry(ip, pid, thread_uuid=None):
         return  # Let ghost detection handle it
     create_stub_registry(ip, pid, thread_uuid)
 ```
+
+
+In summary, the stub example above serves as a prime example of the application use of the stub directory.  It's use is 
+not confined to this scenario above.   Any scenario that meets the criteria of the PID assigned, no registry created, and
+therefore no status tagged (in the pre-stub code implementation) is suitable for stub registry assignment.
+
+| Scenario                      | PID Assigned | Status Tagged | Registry Created | Stub Logic Triggered |
+|------------------------------|--------------|----------------|------------------|-----------------------|
+| Install Success              | ✅           | ✅              | ✅                | ❌                    |
+| SSH Retry Failure (5x)       | ✅           | ✅ (patch8)     | ✅                | ❌                    |
+| SSH Init Drop (no response)  | ✅           | ❌              | ❌                | ✅                    |
+| No PID Assigned              | ❌           | ❌              | ❌                | ❌ → ghost detection  |
+
+
+As noted above, the stub will make the forensic back tracing of these types of thread issues much easier.
+
+The second and third examples above are both suitable for resurrection of the original thread, with perhaps a new
+thread_uuid. (That is part of Phase 3 of this project). The major point is that we do not want the SSH init drop
+issue, for example, to be classified as a ghost and in the missing_registry_ips.log file, but rather we want it 
+to be classified as a failed thread in the failed_registry_ips.log file.
+
+
+### Why the registry is currently not created in the SSH init drop case?
+
+- The thread is spawned  
+- PID is assigned  
+- IP is provisioned  
+- First SSH packet is sent  
+- **No response at all** — not even a timeout  
+- The thread hits an **EOFError or socket-level exception**  
+- The function install_tomcat() exits prematurely — before reaching any registry hydration logic for registry_entry or
+before reaching the end of the install_tomcat() return function whereby the registry_entry is returned to threaded
+install for the process registry listing thread_registry. In either case there is no registry_entry for the thread.
+
+
+### Code design:
+
+
+
 
 ### Code Implementation:
 
