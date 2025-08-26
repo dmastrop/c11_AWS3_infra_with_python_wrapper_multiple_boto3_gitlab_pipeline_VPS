@@ -3711,7 +3711,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
                         failed_ips.append(ip)
                         failed_private_ips.append(private_ip)
-            #### try block ends here #####
+                #### try block ends here #####
 
                 except Exception as e:
                     print(f"[ERROR][threaded_install] Future failed: {e}")

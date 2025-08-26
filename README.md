@@ -440,7 +440,40 @@ The purpose here is to catch any catostropic thread failure in install_tomcat() 
 to the calling function threaded_install().   See above more a more complete description.
 
 
+The code insertion point is shown below:
 
+
+The first part of the for future block has to be commented out as shown below:
+
+
+```
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+
+#            for future in as_completed(futures):
+#                ip, private_ip, result = future.result()
+#                if result:
+#                    successful_ips.append(ip)
+#                    successful_private_ips.append(private_ip)
+#                else:
+#                    failed_ips.append(ip)
+#                    failed_private_ips.append(private_ip)
+
+### Add ip visiblity for troubleshooting the EC2 instances to pid in logs for resurrection code:
+#            for future in as_completed(futures):
+#                ip, private_ip, result = future.result()
+#                pid = multiprocessing.current_process().pid
+#
+#                if result:
+#                    logging.info(f"[PID {pid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+#                    successful_ips.append(ip)
+#                    successful_private_ips.append(private_ip)
+#                else:
+#                    logging.info(f"[PID {pid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+#                    failed_ips.append(ip)
+#                    failed_private_ips.append(private_ip)
+
+```
 
 
 #### in install_tomcat():
@@ -448,18 +481,201 @@ to the calling function threaded_install().   See above more a more complete des
 This function needs stub logic in 2 areas, in the first SSH retry 5 loop and then in the second for idx loop for the 
 installation of tomcat (3 retries with threshold of 2 watchdogs on each retry)
 
+For the first part (the SSH retry 5 loop) the stub logic is inserted after the for/else block as shown in the next section
+below.
 
+The original code below is completely commented out (the original for/else blocK) because there is addtional failure logic
+added within the for/else block.
+
+
+```
+       ## comment out this code and replace with the new code below with failure status codes for the registry 
+        ## as well as with stub registry protection in case of aborted silent for/else loop.
+
+        #for attempt in range(5):
+        #    try:
+        #        print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+        #        ssh.connect(ip, port, username, key_filename=key_path)
+        #        break
+        #    except paramiko.ssh_exception.NoValidConnectionsError as e:
+        #        print(f"Connection failed: {e}")
+        #        time.sleep(10)
+        #else:
+        #    print(f"Failed to connect to {ip} after multiple attempts")
+        #    return ip, private_ip, False
+
+        #print(f"Connected to {ip}. Executing commands...")
+```
 
 
 
 ### Code Implementation:
 
+The stub code and failure status logic needs to be incorporated into 2 different areas in the code: The first in the
+threaded_install() function and the second in the install_tomcat() function.  The threaded_install function is a process
+level function and the install_tomcat function is a thread level function.
+
+It is important to note that the thread_uuid as the uniqe key to the aggregate registry, is only generated in the 
+install_tomcat function. The special stub_uuid is a fabricated uuid just for the purposes of filling in the keying material
+for the stub registry in the threaded_install because it has no thread_uuid generation. This is ok as the stub created
+in the threaded_install is a very rare event and the likelihood of a collision between the stub_uuid value and a 
+thread_uuid value is very very low.
+
+
 
 #### threaded_install():
+
+After commenting out the first part of the for futures block as noted above, the new code is inserted below.
+The later part of this block below is basically the same except for a 1 line rewrite of the "undefined" tag
+just to make it clear how it is used.
+
+
+```
+          for future in as_completed(futures):
+                try:
+                    ip, private_ip, registry_entry = future.result()
+                    pid = multiprocessing.current_process().pid
+
+                    if registry_entry and "thread_uuid" in registry_entry:
+                        thread_registry[registry_entry["thread_uuid"]] = registry_entry
+                        thread_uuid = registry_entry["thread_uuid"]
+
+                    else:
+                        # Silent failure — no registry returned
+                        pid = multiprocessing.current_process().pid
+                        if pid:
+                            stub_uuid = uuid.uuid4().hex[:8]
+                            stub_entry = {
+                                "status": "stub",
+                                "pid": pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": stub_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["stub", "silent_abort", "no_registry"]
+                            }
+                            thread_registry[stub_uuid] = stub_entry
+                            thread_uuid = stub_uuid  # For logging below
+                            registry_entry = stub_entry  # So status and IPs can be logged
+
+                    # Logging and IP tracking
+                    status = registry_entry["status"] if "status" in registry_entry else "undefined"
+                    pid = registry_entry.get("pid", "N/A")
+
+                    if status == "install_success":
+                        logging.info(f"[PID {pid}] [UUID {thread_uuid}] ✅ Install succeeded | Public IP: {ip} | Private IP: {private_ip}")
+                        successful_ips.append(ip)
+                        successful_private_ips.append(private_ip)
+                    else:
+                        logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Install failed | Public IP: {ip} | Private IP: {private_ip}")
+                        failed_ips.append(ip)
+                        failed_private_ips.append(private_ip)
+                #### try block ends here #####
+```
+
+
 
 
 
 #### install_tomcat():
+
+As noted above, there are two areas that need stub registry protection in the install_tomcat() function. 
+
+
+##### (1) SSH connect:
+
+
+The first is the for/else loop (5 retries) that is used to establish the SSH connection to the node.
+
+The stub code is below the for/else block. The for/else block has addtional logic added to it for various failure
+scenarios with a tag/status provided to the registry_entry:
+
+
+The "status": "ssh_retry_failed" tag is a deterministic failure outcome, not a stub. It’s the expected forensic tag when all 5 SSH attempts are exhausted. That’s part of the core logic, not fallback behavior.
+
+The "status": "stub" tag, on the other hand, is reserved for:
+
+- Silent exits (EOF, socket drops, or thread aborts without registry hydration)
+
+- Unexpected gaps in artifact creation or PID traceability
+
+- Any thread that vanishes without triggering the retry logic or install flow
+
+Note the important break in the "for try" block"  This will occur if there is a successful ssh connect.
+The ssh_success flag is set to True only in this case. This flag is to prevent a stub registry assignment.
+
+The break will cause execution to move to the next block outside of the for/else block which is the 
+stub block right below it. The stub block has very stringent conditions as described above: The code requires
+status is not tagged and no registry created and False on the ssh_success flag.  The first 2 are met but the 
+third condition fails so the stub registry is correctly NOT applied to a successful ssh connection.
+
+All the way at the end of the install_tomcat() function, providing that tomcat is successfully installed (The 
+for idx loop), the registry will be created for this thread/ip and the status will be set to install_success.
+
+
+```
+
+########## this is the new code for the SSH connection establishment code with registry failure tagging and ###########
+########## with stub registry protection if the for/else loop is abruptly terminated with no exception      ###########
+########## the stub helps a lot with forensic traceability                                                  ###########
+
+
+        ssh_connected = False
+        status_tagged = False
+        registry_entry_created = False
+        ssh_success = False  # temp flag to suppress stub
+
+        for attempt in range(5):
+            try:
+                print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+                ssh.connect(ip, port, username, key_filename=key_path)
+                ssh_connected = True
+                ssh_success = True  # suppress stub
+                break
+            except paramiko.ssh_exception.NoValidConnectionsError as e:
+                print(f"Connection failed: {e}")
+                time.sleep(10)
+        else:
+            print(f"Failed to connect to {ip} after multiple attempts")
+            registry_entry = {
+                "status": "ssh_retry_failed",
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": str(datetime.utcnow()),
+                "tags": ["ssh_retry_failed"]
+            }
+            status_tagged = True
+            registry_entry_created = True
+            return ip, private_ip, registry_entry
+
+        if not status_tagged and not registry_entry_created and not ssh_success:
+            pid = multiprocessing.current_process().pid
+            if pid:  # only stub if pid exists
+                print(f"[STUB] install_tomcat exited early for {ip}")
+                stub_entry = {
+                    "status": "stub",
+                    "pid": pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": ["stub", "early_exit"]
+                }
+                return ip, private_ip, stub_entry
+```
+
+##### (2) Installation of tomcat:
+
+The second area of stub protection is the for idx loop (3 retries with a watchdog threshold of 2 per retry) for the 
+installation of tomcat.
+
+
+
 
 
 
