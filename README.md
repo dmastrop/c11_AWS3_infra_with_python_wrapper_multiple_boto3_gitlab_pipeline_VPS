@@ -583,7 +583,7 @@ just to make it clear how it is used.
 As noted above, there are two areas that need stub registry protection in the install_tomcat() function. 
 
 
-##### (1) SSH connect:
+##### (1a) SSH connect:
 
 
 The first is the for/else loop (5 retries) that is used to establish the SSH connection to the node.
@@ -671,7 +671,7 @@ for idx loop), the registry will be created for this thread/ip and the status wi
 
 
 
-#### (1b) Watchdog timeout in  the ssh.connect for/try block:
+##### (1b) Watchdog timeout in  the ssh.connect for/try block:
 
 In testing the above fix, the code did not cause any breakage in install_tomcat but teh 512 node test revealed interesting
 data. There were 3 "failures". One was a true ghost (missing_registry_ips, where the AWS control plane chunk IP of the
