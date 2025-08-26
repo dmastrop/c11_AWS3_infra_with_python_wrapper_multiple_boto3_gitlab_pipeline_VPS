@@ -669,6 +669,114 @@ for idx loop), the registry will be created for this thread/ip and the status wi
                 return ip, private_ip, stub_entry
 ```
 
+
+
+#### (1b) Watchdog timeout in  the ssh.connect for/try block:
+
+In testing the above fix, the code did not cause any breakage in install_tomcat but teh 512 node test revealed interesting
+data. There were 3 "failures". One was a true ghost (missing_registry_ips, where the AWS control plane chunk IP of the
+thread completely vanished. No PID assigned, no Attempting to connect, etc).
+
+The other 2 were similar to the EOF failure detailed in the introduction, but there were no exceptions in the gitlab
+log. So the print:               print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+is in the gitlab logs and there is an attempting to connect but that is all the evidence of the IP.
+
+The PID is assigned as well, but the benchmark pid log has a missing ip by the time the orchestrator logging tracks it
+The IP is listed in the gold IP AWS control plane list of deployed EC2 instances.
+This is what made tracking this thread so easy.
+
+
+
+Here are the gitlab logs of one such occurrence:
+
+```
+[TRACE][install_tomcat] Beginning installation on 34.204.0.244
+Attempting to connect to 34.204.0.244 (Attempt 1) <<<<<<
+```
+
+Since there is no exception in paramilo.ssh, the existing stub code outside of the for/else block is never reached,
+and the install_tomcat() function never returns to threaded_install() for that stub to kick in. So no stub was created
+
+These 2 failures do have a PID so a stub should be created for them.
+
+For example, the first thread:
+```
+[Patch7d] 👻 Ghost detected in process 45: 34.204.0.244
+```
+Here we finally get the PID. It is 45.
+
+Looking at the PID45 logs we see this:
+
+
+Here is the benchmark PID 45 log. It is very similar to the EOF failure in that there is no Public IP (but there was in the gold chunk list)
+
+
+```
+2025-08-26 00:55:36,303 - 45 - MainThread - Test log entry to ensure file is created.
+2025-08-26 00:55:41,444 - 45 - MainThread - [PID 45] START: Tomcat Installation Threaded
+2025-08-26 00:55:41,458 - 45 - MainThread - [PID 45] Initial swap usage: 1.28 GB
+2025-08-26 00:55:41,458 - 45 - MainThread - [PID 45] Initial CPU usage: 0.00%
+2025-08-26 00:58:15,335 - 45 - Thread-4 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-08-26 00:58:35,900 - 45 - MainThread - [PID 45] END: Tomcat Installation Threaded
+2025-08-26 00:58:35,937 - 45 - MainThread - [PID 45] Final swap usage: 21.83 GB
+2025-08-26 00:58:35,937 - 45 - MainThread - [PID 45] Final CPU usage: 0.00%
+2025-08-26 00:58:35,937 - 45 - MainThread - [PID 45] Total runtime: 174.02 seconds
+```
+
+The PID json registry file has nothing in it:
+{}
+
+
+The only way to create a stub for this type of failed thread is to add this code inside the for/try block as shown below:
+
+The timeout of 30 seconds will need to be emprically tested so that it is a resonable watchdog timeout without creating
+false stub entries (failures)
+
+```
+
+for attempt in range(5):
+    try:
+        print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+
+        # Start a watchdog timer in a separate thread. This is to catch mysterious thread drops and create a stub entry for those.
+        # The status of stub will make them show up in the failed_ips_list rather than missing 
+        def watchdog():
+            time.sleep(30)  # or whatever threshold you want
+            if not ssh_connected:
+                watchdog_triggered = True
+                pid = multiprocessing.current_process().pid
+                if pid:
+                    stub_entry = {
+                        "status": "stub",
+                        "pid": pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                    }
+                    thread_registry[thread_uuid] = stub_entry
+                    return ip, private_ip, stub_entry
+
+        threading.Thread(target=watchdog, daemon=True).start()
+
+        ssh.connect(ip, port, username, key_filename=key_path)
+        ssh_connected = True
+        ssh_success = True
+        break
+
+    except paramiko.ssh_exception.NoValidConnectionsError as e:
+        print(f"Connection failed: {e}")
+        time.sleep(10)
+```
+
+
+
+
+
+
+
 ##### (2) Installation of tomcat:
 
 The second area of stub protection is the for idx loop (3 retries with a watchdog threshold of 2 per retry) for the 
