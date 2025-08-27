@@ -3017,24 +3017,50 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # Start a watchdog timer in a separate thread. 
                 # This is to catch mysterious thread drops and create a stub entry for those.
                 # The status of stub will make them show up in the failed_ips_list rather than missing 
+            
+                #def watchdog():
+                #    time.sleep(30)  # or whatever threshold you want
+                #    if not ssh_connected:
+                #        watchdog_triggered = True
+                #        pid = multiprocessing.current_process().pid
+                #        if pid:
+                #            stub_entry = {
+                #                "status": "stub",
+                #                "pid": pid,
+                #                "thread_id": threading.get_ident(),
+                #                "thread_uuid": thread_uuid,
+                #                "public_ip": ip,
+                #                "private_ip": private_ip,
+                #                "timestamp": str(datetime.utcnow()),
+                #                "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                #            }
+                #            thread_registry[thread_uuid] = stub_entry
+                #            return ip, private_ip, stub_entry
+                
+                # saw an exception on the watchdog thread itself so use a try/except block so that we have an error message
+                # thrown in the logs if this happens again. The original error without the try/except was a generic thread
+                # exception from threading.Thread
+
                 def watchdog():
-                    time.sleep(30)  # or whatever threshold you want
-                    if not ssh_connected:
-                        watchdog_triggered = True
-                        pid = multiprocessing.current_process().pid
-                        if pid:
-                            stub_entry = {
-                                "status": "stub",
-                                "pid": pid,
-                                "thread_id": threading.get_ident(),
-                                "thread_uuid": thread_uuid,
-                                "public_ip": ip,
-                                "private_ip": private_ip,
-                                "timestamp": str(datetime.utcnow()),
-                                "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
-                            }
-                            thread_registry[thread_uuid] = stub_entry
-                            return ip, private_ip, stub_entry
+                    try:
+                        time.sleep(30)
+                        if not ssh_connected:
+                            pid = multiprocessing.current_process().pid
+                            if pid:
+                                stub_entry = {
+                                    "status": "stub",
+                                    "pid": pid,
+                                    "thread_id": threading.get_ident(),
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": str(datetime.utcnow()),
+                                    "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                                }
+                                thread_registry[thread_uuid] = stub_entry
+                                return ip, private_ip, stub_entry
+                    except Exception as e:
+                        print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
 
                 threading.Thread(target=watchdog, daemon=True).start()
                 ####### end of watchdog code ##########        
