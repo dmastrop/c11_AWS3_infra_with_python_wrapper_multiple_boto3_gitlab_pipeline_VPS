@@ -732,6 +732,13 @@ The only way to create a stub for this type of failed thread is to add this code
 The timeout of 30 seconds will need to be emprically tested so that it is a resonable watchdog timeout without creating
 false stub entries (failures)
 
+
+NOTE: the watchdog thread itself can have an exception. This is not a big deal, it just means that the watchdog thread
+won't be active for that particular thread and it won't be offering any type of timeout/stub protection.   However, just
+because the watchdog for a thread has an exception, does not mean that the worker install tomcat thread is affected. In the
+512 node test I saw on watchdog thread exception and added the tryp/except block below, inside of the watchdog, to print
+out more information to the gitlab console logs in case this happens again in the future.
+
 ```
 
 for attempt in range(5):
