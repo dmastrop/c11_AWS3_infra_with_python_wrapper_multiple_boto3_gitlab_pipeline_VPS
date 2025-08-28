@@ -39,6 +39,23 @@ import math # for math.ceil watchdog timeout adaptive code
 
 
 
+
+## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
+## failure and stub code is added
+
+STATUS_TAGS = {
+    "install_success",
+    "install_failed",
+    "stub",
+    "gatekeeper_resurrect",
+    "watchdog_timeout",
+    "ssh_initiated_failed",
+    "ssh_retry_failed",
+    "no_tags"
+}
+
+
+
 ## These variables are used throughout for the resurrection based code. Put at top of module for easy reference
 # :=:= Module-level constants for resurrection/watchdog logic
 WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled
@@ -272,30 +289,62 @@ def aggregate_process_registries(complete_process_registries):
     return final_registry
 
 
-### this is the summarize_registry(final_registry) function.
-### this creates stats of the status/tag of each registry entry (thread/IP instance) 
-### this will be modified as more tags are added during patch8 to the resurrection_monitor_patch7c() function that does a lot of
-### the tagging along with the gatekeeper function
+
+
+
+
+### New summarize_registry for write-to-disk
+### final_registry is from the call below in main
+### final_registry = aggregate_process_registries(registries)
+### summary = summarize_registry(final_registry)
+### aggregate_process_registries above flattens out process dict to a dict of thread id registry entries
+#
 #def summarize_registry(final_registry):
 #    summary = {
 #        "total": len(final_registry),
 #        "install_success": 0,
 #        "gatekeeper_resurrect": 0,
 #        "watchdog_timeout": 0,
-#        "missing_tags": 0,
+#        "ssh_initiated_failed": 0,   # placeholder for Patch 8 later
+#        "ssh_retry_failed": 0,       # placeholder for patch 8 later
+#        "no_tags": 0,
 #    }
+#    
 #
+#    #for entry in final_registry.values():
+#    #    if entry.get("install_success"):
+#    #        summary["install_success"] += 1
+#    #    if entry.get("gatekeeper_resurrect"):
+#    #        summary["gatekeeper_resurrect"] += 1
+#    #    if entry.get("watchdog_timeout"):
+#    #        summary["watchdog_timeout"] += 1
+#    #    # count entries that lack all outcome tags
+#    #    if not any(tag in entry for tag in [
+#    #        "install_success",
+#    #        "gatekeeper_resurrect",
+#    #        "watchdog_timeout"
+#    #    ]):
+#    #        summary["no_tags"] += 1
+#    #
+#
+#
+### summary code was checking `entry.get("install_success")` (a Boolean) instead of `entry["status"] == "install_success"
+### this now alligns with status inside registry entries of final_registry
 #    for entry in final_registry.values():
-#        if entry.get("install_success"):
+#        s = entry.get("status")
+#        if s == "install_success":
 #            summary["install_success"] += 1
-#        if entry.get("gatekeeper_resurrect"):
+#        elif s == "gatekeeper_resurrect":
 #            summary["gatekeeper_resurrect"] += 1
-#        if entry.get("watchdog_timeout"):
+#        elif s == "watchdog_timeout":
 #            summary["watchdog_timeout"] += 1
+#        elif s == "ssh_initiated_failed":
+#            summary["ssh_initiated_failed"] += 1
+#        elif s == "ssh_retry_failed":
+#            summary["ssh_retry_failed"] += 1
+#        else:
+#            summary["no_tags"] += 1
 #
-#        # Count entries missing any of the key tags
-#        if not any(tag in entry for tag in ["install_success", "gatekeeper_resurrect", "watchdog_timeout"]):
-#            summary["missing_tags"] += 1
 #
 #    return summary
 #
@@ -303,12 +352,10 @@ def aggregate_process_registries(complete_process_registries):
 
 
 
+## updated def summarize_registry for latest status codes:
+## See also the STATUS_TAGS at the top of this module for status tags that can be used with registry_entry.
 
-## New summarize_registry for write-to-disk
-## final_registry is from the call below in main
-## final_registry = aggregate_process_registries(registries)
-## summary = summarize_registry(final_registry)
-## aggregate_process_registries above flattens out process dict to a dict of thread id registry entries
+
 
 def summarize_registry(final_registry):
     summary = {
@@ -316,31 +363,13 @@ def summarize_registry(final_registry):
         "install_success": 0,
         "gatekeeper_resurrect": 0,
         "watchdog_timeout": 0,
-        "ssh_initiated_failed": 0,   # placeholder for Patch 8 later
-        "ssh_retry_failed": 0,       # placeholder for patch 8 later
-        "no_tags": 0,
+        "ssh_initiated_failed": 0,
+        "ssh_retry_failed": 0,
+        "install_failed": 0,  # Newly added
+        "stub": 0,            # Newly added for stub registry
+        "no_tags": 0
     }
-    
 
-    #for entry in final_registry.values():
-    #    if entry.get("install_success"):
-    #        summary["install_success"] += 1
-    #    if entry.get("gatekeeper_resurrect"):
-    #        summary["gatekeeper_resurrect"] += 1
-    #    if entry.get("watchdog_timeout"):
-    #        summary["watchdog_timeout"] += 1
-    #    # count entries that lack all outcome tags
-    #    if not any(tag in entry for tag in [
-    #        "install_success",
-    #        "gatekeeper_resurrect",
-    #        "watchdog_timeout"
-    #    ]):
-    #        summary["no_tags"] += 1
-    #
-
-
-## summary code was checking `entry.get("install_success")` (a Boolean) instead of `entry["status"] == "install_success"
-## this now alligns with status inside registry entries of final_registry
     for entry in final_registry.values():
         s = entry.get("status")
         if s == "install_success":
@@ -353,14 +382,14 @@ def summarize_registry(final_registry):
             summary["ssh_initiated_failed"] += 1
         elif s == "ssh_retry_failed":
             summary["ssh_retry_failed"] += 1
+        elif s == "install_failed":
+            summary["install_failed"] += 1
+        elif s == "stub":
+            summary["stub"] += 1
         else:
             summary["no_tags"] += 1
 
-
     return summary
-
-
-
 
 
 
@@ -3093,7 +3122,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         if not status_tagged and not registry_entry_created and not ssh_success:
             pid = multiprocessing.current_process().pid
             if pid:  # only stub if pid exists
-                print(f"[STUB] install_tomcat exited early for {ip}")
+                print(f"[STUB] install_tomcat ssh.connecct exited early for {ip}")
                 stub_entry = {
                     "status": "stub",
                     "pid": pid,
@@ -3102,7 +3131,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     "public_ip": ip,
                     "private_ip": private_ip,
                     "timestamp": str(datetime.utcnow()),
-                    "tags": ["stub", "early_exit"]
+                    "tags": ["stub", "early_exit", "ssh_init_failed"]
                 }
                 return ip, private_ip, stub_entry
 
