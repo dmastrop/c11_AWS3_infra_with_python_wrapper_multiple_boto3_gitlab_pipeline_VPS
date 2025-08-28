@@ -3402,7 +3402,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         for idx, command in enumerate(commands):
+
+        ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
+        ## be modified for any command installation type (any application)
+
             for attempt in range(RETRY_LIMIT):
+            ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
+            ## each attempt (of 3) will use the adaptive WATCHDOG_TIMEOUT as a watchdog and if the watchdog expires it
+            ## can re-attempt for STALL_RETRY_THRESHOLD =2 number of times watchdogs on each command attemp (of 3 total)
+
                 try:
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
@@ -3465,10 +3473,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdout.close()
                     stderr.close()
 
-            # insert patch7b debug here for the inner for loop
+            # insert patch7b debug here for the inner attempt for loop
             print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
 
-
+        # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
 
         ssh.close()
         transport = ssh.get_transport()
