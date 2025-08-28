@@ -3485,7 +3485,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
         # from creating a resurrection log. This will ensure that all installation threads leave some sort
         # of registry fingerprint unless they are legitimate early thread failures.
-        update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
+        
+        ## Comment out this line as it is a blanket install_success for any exit out of the for idx loop
+        #update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
 
 
         # For patch7c: Thread-local tagging block (add this right after update_resurrection_registry)
@@ -3523,18 +3525,22 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #}
 
 
+        ##### Get rid of this code block as part of legacy code that we no longer need
+        ##### successful_regsitry_ips is done in aggregate main() code and at the process level in resurrection_monitor_patch7d
+        ### Debugging code to track down the successful_registry_ips tagging issue
+        ## 🔍 Trace log to confirm registry tagging per thread
+        #try:
+        #    registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
+        #    pid = multiprocessing.current_process().pid
 
-        ## Debugging code to track down the successful_registry_ips tagging issue
-        # 🔍 Trace log to confirm registry tagging per thread
-        try:
-            registry_snapshot = dict(resurrection_registry)  # shallow copy under lock-less read
-            pid = multiprocessing.current_process().pid
+        #    print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
+        #    print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
 
-            print(f"[TRACE] ✅ Tagging success for IP {ip} | PID {pid}")
-            print(f"[TRACE] Registry BEFORE update: {registry_snapshot.get(ip, 'Not present')}")
+        #except Exception as e:
+        #    print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
 
-        except Exception as e:
-            print(f"[TRACE ERROR] Snapshot read failed for {ip} | PID {pid} — {e}")
+
+
 
         # debug for patch7c 
         print(f"[TRACE][install_tomcat] Returning install result for {ip}")
