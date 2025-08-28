@@ -3479,8 +3479,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
             # and we need to create and tag the registry_entry with the failure below
 
+            
             registry_entry = {
                 "status": "install_failed",
+                "attempt": -1,
                 "pid": multiprocessing.current_process().pid,
                 "thread_id": threading.get_ident(),
                 "thread_uuid": thread_uuid,
@@ -3489,6 +3491,20 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 "timestamp": str(datetime.utcnow()),
                 "tags": [f"install_failed_command_{idx}", command]
             }
+
+
+
+
+            #registry_entry = {
+            #    "status": "install_failed",
+            #    "pid": multiprocessing.current_process().pid,
+            #    "thread_id": threading.get_ident(),
+            #    "thread_uuid": thread_uuid,
+            #    "public_ip": ip,
+            #    "private_ip": private_ip,
+            #    "timestamp": str(datetime.utcnow()),
+            #    "tags": [f"install_failed_command_{idx}", command]
+            #}
              
 
             # Optional: close SSH connection if you don't plan to resurrect
