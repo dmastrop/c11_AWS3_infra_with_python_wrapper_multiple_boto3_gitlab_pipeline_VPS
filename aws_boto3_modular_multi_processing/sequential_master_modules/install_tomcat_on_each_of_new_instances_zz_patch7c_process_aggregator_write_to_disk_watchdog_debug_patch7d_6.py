@@ -3476,6 +3476,32 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             # insert patch7b debug here for the inner attempt for loop
             print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
 
+            # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
+            # and we need to create and tag the registry_entry with the failure below
+
+            registry_entry = {
+                "status": "install_failed",
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": str(datetime.utcnow()),
+                "tags": [f"install_failed_command_{idx}", command]
+            }
+             
+
+            # Optional: close SSH connection if you don't plan to resurrect
+            # Most likely will keep the SSH connection open so that it can be easily resurrected on the same SSH connection
+            # This is becasue teh SSH connection is okay, it is just the installation commands that are failing.
+            # ssh.close()
+
+            return ip, private_ip, registry_entry
+            # return the registry_entry failure above to threaded_install and the thread_registry which will be returned
+            # to tomcat_worker and incorporated into this process' process_registry
+
+
+
         # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
 
         ssh.close()
@@ -3493,9 +3519,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
         # from creating a resurrection log. This will ensure that all installation threads leave some sort
         # of registry fingerprint unless they are legitimate early thread failures.
-        
-        ## Comment out this line as it is a blanket install_success for any exit out of the for idx loop
+       
+
+
+
+        ## Comment out this line as it is a blanket install_success for any exit out of the for idx loop ##
         #update_resurrection_registry(ip, attempt=0, status="install_success", pid=multiprocessing.current_process().pid)
+
+
+
 
 
         # For patch7c: Thread-local tagging block (add this right after update_resurrection_registry)
