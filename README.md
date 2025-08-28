@@ -793,6 +793,11 @@ for attempt in range(5):
 The second area of stub protection is the for idx loop (3 retries with a watchdog threshold of 2 per retry) for the 
 installation of tomcat.
 
+This area of code requires a major overhaul. There is a lot of legacy code and the resurrection_registry is  no longer
+required. Instead the process_registry needs to be used. There are also logical issues wthe the current code in this 
+area (the for idx loop on down to the end of install_tomcat())
+
+
 
 
 
