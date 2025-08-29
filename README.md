@@ -53,9 +53,9 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
 
-- Update part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
+- Update part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_moniotr_patch8
 
-- Update part 29: Phase 2m: Patch8 resurrectino_monitor implementation: status registry tagging for failure scenarios and hook into the STUB registry logic (ssh_init_failed case, etc.)
+- Update part 29: Phase 2m: resurrection_monitor patch8 restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
 
 
 
@@ -83,20 +83,8 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 29: Phase 2m: Patch8 resurrectino_monitor implementation: status registry tagging for failure scenarios and hook into the STUB registry logic (ssh_init_failed case, etc.) 
 
-
-### Introduction:
-
-
-
-
-
-
-
-
-
-## UPDATES part 28: Phase 2l: resurrection_monitor patch7d restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) process level registry stats status generation
+## UPDATES part 28: Phase 2m: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) process level registry stats status generation
 
 
 ### Introduction:
@@ -131,6 +119,67 @@ all of these are also calclated at the aggregate level in main()):
             #Patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
 
 ```
+
+
+
+## UPDATES part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_moniotr_patch8
+
+
+
+### Introduction: 
+
+These are major updates to the code in the install_tomcat and resurrection_monitor to refine the resurrection code tagging 
+with all of the stub logic and failure registry_entry tagging done in the last update.
+
+The install_tomcat and resurrection_monitor still have a lot of legacy code that needs to be refactored.
+
+Here is a high level of the code changes required:
+
+
+
+
+
+#### Stage1:
+Remove `update_resurrection_registry`. Resurrection tagging should be completely centralized
+- Refactor `read_output_with_watchdog` to return output and status only: `(stdout, stderr, status)` only
+- Move all resurrection tagging logic out of `install_tomcat`.
+- Let `resurrection_monitor_patch8` handle all resurrection logic based on `process_registry`
+
+
+
+#### Stage2:
+Move Resurrection Candidate Logic to `resurrection_monitor_patch8` This will be a process level resurrection candidate json
+file. There is already an aggregate resurrection candidate json file artifact.
+
+This resurrection candidate process level file will be done from the process_registry:
+
+- Scan `process_registry` in real time for `status != "install_success"`.
+- Tag resurrection candidates based on process-level heuristics.
+- Eliminate `resurrection_registry` entirely.
+
+Inside `resurrection_monitor_patch8`, scan using the logic !=install_success tentatively (this will cover all stub and 
+install_failed registry threads, etc.)
+``
+for thread_uuid, entry in process_registry.items():
+    if entry.get("status") != "install_success":
+        # Tag as resurrection candidate
+```
+
+This eliminates the need for a separate `resurrection_registry` and keeps all resurrection logic in one place.
+
+
+
+
+#### Stage3:
+Modularize Resurrection Gatekeeper (currently called from install_tomcat, but it needs to be called from resurrection_monitor)
+- Refactor `resurrection_gatekeeper()` to be reusable outside `install_tomcat`.
+- Use it in `resurrection_monitor_patch8` to decide which threads to resurrect. Bascially all of the install_failed and most 
+if not all of the stubs (i.e., not install_success registry_entry threads)
+- Filter resurrection candidates
+- Decide whether to retry based on tags like `"install_failed"` or `"stub"`
+- This sets the stage for Phase3 of this project where the threads will be resurrected.
+
+
 
 
 
@@ -808,9 +857,12 @@ watchdog threshold of 2), or an install command failing, or an exception in the 
 
 As shown in the code samples below, these registry_entry are status install_failedwith the following tags:
 
+```
 "tags": ["fatal_package_missing", command]
 "tags": ["exception_RuntimeError", command]
 "tags": [f"install_failed_command_{idx}", command]
+```
+
 
 The stub registry is not required here because any abrupt silent exit will be picked up by the stub code in threaded_install
 (see above for that code), the calling function.
@@ -823,6 +875,235 @@ A lot of the resurrection code will be moved to the resurrection_monitor functio
 preparation for Phase3 of this project.
 
 
+The code block incorporating all the changes for failure registry_entry is below. The extensive comments make this 
+self-explanatory. Note there is an outer loop (for idx) that controls the command iteration (in this case 4 commands, 
+but this can be used to adopt any installaton dynamic), and an inner loop inside each idx loop (for attempt loop)
+that executes each command. There are 3 retries per command allowed with 2 watchdog timeouts max per command retry.
+So the failure code is deisgned around this structure.
+
+```
+ for idx, command in enumerate(commands):
+
+        ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
+        ## be modified for any command installation type (any application)
+
+            ## Code for the conidtional registry entry if hit install error: First, Add a success flag before the attempt loop 
+            ## set the command_succeeded flag to the default of False BEFORE the for attempt loop
+            ## This flag is used to gate the install_failed registry_entry block after the for attempt loop IF
+            ## the install_succeeded and break (out of the for attempt loop). This is to prevent a install_failed on
+            ## successful installs and preserve the failure logic if the for attempt loop aborts
+            command_succeeded = False
+
+
+
+            for attempt in range(RETRY_LIMIT):
+            ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
+            ## each attempt (of 3) will use the adaptive WATCHDOG_TIMEOUT as a watchdog and if the watchdog expires it
+            ## can re-attempt for STALL_RETRY_THRESHOLD =2 number of times watchdogs on each command attemp (of 3 total)
+
+                try:
+                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
+
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+
+                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
+                    ## arguments for this function call
+
+                    should_resurrect = resurrection_gatekeeper(
+                        stderr_output=stderr_output,
+                        stdout_output=stdout_output,
+                        command_status="Command succeeded",
+                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
+                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
+                        pid=multiprocessing.current_process().pid,
+                        ip_address=ip,
+                        resurrection_registry=resurrection_registry
+                    )
+
+                    if should_resurrect:
+                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
+                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
+                    else:
+                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
+
+                    # 🔴 Fatal error: missing tomcat9 package — tag and return
+                    if "E: Package 'tomcat9'" in stderr_output:
+                        print(f"[{ip}] ❌ Tomcat install failure — package not found.")
+                        registry_entry = {
+                            "status": "install_failed",
+                            "attempt": attempt,
+                            "pid": multiprocessing.current_process().pid,
+                            "thread_id": threading.get_ident(),
+                            "thread_uuid": thread_uuid,
+                            "public_ip": ip,
+                            "private_ip": private_ip,
+                            "timestamp": str(datetime.utcnow()),
+                            "tags": ["fatal_package_missing", command]
+                        }
+                        ssh.close()
+                        return ip, private_ip, registry_entry
+
+
+                    #if "E: Package 'tomcat9'" in stderr_output:
+                    #    print(f"[{ip}] ❌ Tomcat install failure.")
+                    #    ssh.close()
+                    #    return ip, private_ip, False
+                    #    # this error is a critical error so return to calling thread but need to set registry
+
+
+
+                    # ⚠️ Non-fatal warning — clear stderr and proceed
+                    if "WARNING:" in stderr_output:
+                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                        stderr_output = ""
+                        # clear the stderr output
+
+
+
+                    # ⚠️ Unexpected stderr — retry instead of exiting
+                    if stderr_output.strip():
+                        #print(f"[{ip}] ❌ Non-warning stderr received.")
+                        
+                        #ssh.close()
+                        #return ip, private_ip, False
+                        # this is not a criitical error. Will set a continue to give another retry (of 3) instead
+                        # of ssh.close and return to calling function
+
+                        print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
+                        continue  # Retry the attempt loop
+
+
+
+                    print(f"[{ip}] ✅ Command succeeded.")
+                    ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
+                    ## this will gate the install_failed registry_entry following this "for attempt" block
+                    ## The successful install can then proceed to the next for idx command (outer loop) and once
+                    ## the for idx loop is done it will proceed through the code to the registry_entry install_succeeded
+                    command_succeeded = True
+
+                    time.sleep(20)
+                    break  # Success. This is a break out of the for attempt loop. The install_failed registry_entry logic
+                    # is gated so that it will not fire if there is this break for Success
+
+                except Exception as e:
+                    print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    # Tag as install_failed with exception details. This is part of the traceability for the install_tomcat
+                    # thread forensics.  
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_for_attempt_loop_abort", f"exception_{type(e).__name__}", command]
+                    }
+                    return ip, private_ip, registry_entry
+
+
+                finally:
+                    stdin.close()
+                    stdout.close()
+                    stderr.close()
+                ## END of the for attempt loop 
+
+            # insert patch7b debug here for the inner attempt for loop
+            #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+
+            ## Keep the trace oustide of the failure block below. This is so that each command will get a TRACE message
+            ## For successful commands all four 1/4 through 4/4 will get a print message
+            ## For the failure case (if the for attempt loop exhausts after 3 retries), the print will also be done
+            # Always print when attempt loop ends — success or failure. Note for the success case for all 4 commands
+            # there will be 4 prints for the ip/threas
+            
+            #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip}")
+
+            print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip} — Success flag: {command_succeeded}")
+
+
+            # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
+            # The default setting for command_succeeded is False and so this value will be False and the code block
+            # below will execute setting the registry_entry to install_failed with a tag of the command that failed
+             
+            # This ensures: - If the command succeeds, we skip the failure block  - The outer `for idx` loop continues to
+            # the next command  - Only true failures are tagged and returned
+            # Note that the attempt -1 is required for the registry_entry because there has to be an attempt field in the
+            # registry.   The -1 is used as a filler for failed command registry entries.
+
+            # this block does catch silent failures inside the for attempt loop, as long as the loop completes 
+            # without success or exception. If the for attempt loop silently aborts and code flow returns to threaded_install,
+            # the calling function, there is stub logic there as well to create a stub registry_entry
+
+            if not command_succeeded:
+                #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+                registry_entry = {
+                    "status": "install_failed",
+                    "attempt": -1,
+                    "pid": multiprocessing.current_process().pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": [f"install_failed_command_{idx}", command]
+                }
+                
+                # Optional: close SSH connection if don't plan to resurrect
+                # Most likely will keep the SSH connection open so that it can be easily resurrected on the same SSH connection
+                # This is becasue teh SSH connection is okay, it is just the installation commands that are failing.
+                
+                #ssh.close()
+
+                return ip, private_ip, registry_entry # the return will return this registry_entry to threaded_install()
+                # and the thread_registry, which will be returned to tomcat_worker and incorproated into this process'
+                # process_registry.
+                 
+        # END of the for idx loop
+        # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
+
+        ssh.close()
+        transport = ssh.get_transport()
+        if transport:
+            transport.close()
+
+
+
+
+        #debug for patch7c
+        print(f"[TRACE][install_tomcat] Reached successful registry update step for {ip}")
+
+       registry_entry = {
+            "status": "install_success",
+            "attempt": 0,
+            "timestamp": str(datetime.utcnow()),
+            "pid": multiprocessing.current_process().pid,
+            "thread_id": threading.get_ident(),
+            "thread_uuid": thread_uuid,
+            "public_ip": ip,
+            "private_ip": private_ip
+        }
+
+        # debug for patch7c 
+        print(f"[TRACE][install_tomcat] Returning install result for {ip}")
+
+        print(f"Installation completed on {ip}")
+
+        # make sure to return this registry_entry for this thread instance to threaded_install
+        return ip, private_ip, registry_entry
+
+```
 
 
 
