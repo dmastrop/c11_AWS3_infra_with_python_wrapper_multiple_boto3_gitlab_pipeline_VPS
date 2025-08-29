@@ -3483,24 +3483,53 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     else:
                         print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
 
-
+                    # 🔴 Fatal error: missing tomcat9 package — tag and return
                     if "E: Package 'tomcat9'" in stderr_output:
-                        print(f"[{ip}] ❌ Tomcat install failure.")
+                        print(f"[{ip}] ❌ Tomcat install failure — package not found.")
+                        registry_entry = {
+                            "status": "install_failed",
+                            "attempt": attempt,
+                            "pid": multiprocessing.current_process().pid,
+                            "thread_id": threading.get_ident(),
+                            "thread_uuid": thread_uuid,
+                            "public_ip": ip,
+                            "private_ip": private_ip,
+                            "timestamp": str(datetime.utcnow()),
+                            "tags": ["fatal_package_missing", command]
+                        }
                         ssh.close()
-                        return ip, private_ip, False
-                        # this error is a critical error so return to calling thread but need to set registry
+                        return ip, private_ip, registry_entry
 
+
+                    #if "E: Package 'tomcat9'" in stderr_output:
+                    #    print(f"[{ip}] ❌ Tomcat install failure.")
+                    #    ssh.close()
+                    #    return ip, private_ip, False
+                    #    # this error is a critical error so return to calling thread but need to set registry
+
+
+
+                    # ⚠️ Non-fatal warning — clear stderr and proceed
                     if "WARNING:" in stderr_output:
                         print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
                         stderr_output = ""
                         # clear the stderr output
 
+
+
+                    # ⚠️ Unexpected stderr — retry instead of exiting
                     if stderr_output.strip():
-                        print(f"[{ip}] ❌ Non-warning stderr received.")
-                        ssh.close()
-                        return ip, private_ip, False
+                        #print(f"[{ip}] ❌ Non-warning stderr received.")
+                        
+                        #ssh.close()
+                        #return ip, private_ip, False
                         # this is not a criitical error. Will set a continue to give another retry (of 3) instead
                         # of ssh.close and return to calling function
+
+                        print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
+                        continue  # Retry the attempt loop
+
+
 
                     print(f"[{ip}] ✅ Command succeeded.")
                     ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
