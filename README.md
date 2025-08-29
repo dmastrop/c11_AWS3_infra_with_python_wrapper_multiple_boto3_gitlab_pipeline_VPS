@@ -55,7 +55,7 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
-- Update part 29: Phase 2m: resurrection_monitor patch8 restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
+- Update part 29: Phase 2m: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 
@@ -84,7 +84,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 28: Phase 2m: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) process level registry stats status generation
+## UPDATES part 29: Phase 2m: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 ### Introduction:
