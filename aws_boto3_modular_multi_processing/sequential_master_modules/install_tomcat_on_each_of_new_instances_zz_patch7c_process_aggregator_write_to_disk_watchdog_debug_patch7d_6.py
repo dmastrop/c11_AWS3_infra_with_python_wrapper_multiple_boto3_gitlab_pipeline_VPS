@@ -3545,6 +3545,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 except Exception as e:
                     print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    # Tag as install_failed with exception details. This is part of the traceability for the install_tomcat
+                    # thread forensics.  
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_for_attempt_loop_abort", f"exception_{type(e).__name__}", command]
+                    }
+                    return ip, private_ip, registry_entry
+
 
                 finally:
                     stdin.close()
