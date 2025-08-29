@@ -3435,11 +3435,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
         ## be modified for any command installation type (any application)
 
-            ## Step 1: Add a success flag before the attempt loop 
+            ## Code for the conidtional registry entry if hit install error: First, Add a success flag before the attempt loop 
             ## set the command_succeeded flag to the default of False BEFORE the for attempt loop
             ## This flag is used to gate the install_failed registry_entry block after the for attempt loop IF
             ## the install_succeeded and break (out of the for attempt loop). This is to prevent a install_failed on
-            ## successful installs.
+            ## successful installs and preserve the failure logic if the for attempt loop aborts
             command_succeeded = False
 
 
@@ -3568,8 +3568,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
             # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
             # The default setting for command_succeeded is False and so this value will be False and the code block
-            # below will execute setting the registry_entry to install_failed.
-            # and we need to create and tag the registry_entry with the failure below
+            # below will execute setting the registry_entry to install_failed with a tag of the command that failed
              
             # This ensures: - If the command succeeds, we skip the failure block  - The outer `for idx` loop continues to
             # the next command  - Only true failures are tagged and returned
