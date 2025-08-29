@@ -439,6 +439,8 @@ This function needs stub logic right after the ThreadPoolExecutor invocation of 
 The purpose here is to catch any catostropic thread failure in install_tomcat() as this will cause an abrupt exit
 to the calling function threaded_install().   See above more a more complete description.
 
+This should catch any abrupt exit in either the ssh.connect code in instalL_tomcat or the installaton code in install_tomat
+(for "for idx" loop or the "for attempt" loop)
 
 The code insertion point is shown below:
 
@@ -478,8 +480,11 @@ The first part of the for future block has to be commented out as shown below:
 
 #### in install_tomcat():
 
-This function needs stub logic in 2 areas, in the first SSH retry 5 loop and then in the second for idx loop for the 
-installation of tomcat (3 retries with threshold of 2 watchdogs on each retry)
+This function needs stub logic in one area, in the first SSH retry 5 loop. Regarding the "for idx" loop and the 
+"for attempt" loop  for the installation of tomcat (3 retries with threshold of 2 watchdogs on each retry), there
+is no stub logic required as all exists are accounted for by errors or exeptions. However the stub protection in 
+threaded_install will cover an abrupt exit from the "for idx" loop or the "for attempt" loop if they are silent and 
+code flow returns to the calling function.
 
 For the first part (the SSH retry 5 loop) the stub logic is inserted after the for/else block as shown in the next section
 below.
@@ -580,7 +585,7 @@ just to make it clear how it is used.
 
 #### install_tomcat():
 
-As noted above, there are two areas that need stub registry protection in the install_tomcat() function. 
+There  are two areas that need stub registry protection in the install_tomcat() function. 
 
 
 ##### (1a) SSH connect:
@@ -791,18 +796,85 @@ for attempt in range(5):
 
 
 
-##### (2) Installation of tomcat:
+##### (2) Installation of tomcat (not stubs):
 
-The second area of stub protection is the for idx loop (3 retries with a watchdog threshold of 2 per retry) for the 
-installation of tomcat.
+Although this area of code with the "for idx" loop and the "for attempt" loop seems like it would have a need for 
+stubs, after coding the protection in this area, it was found that all of the registry_entry code was non-stub, i.e.
+there were reasons as to why the thread failed and so install_failed status code could be applied to the registry_entry
+
+The examples of this coverage are below.  All the errors are install_failed status code and attributed to direct causes
+like the "for attempt" loop retry expiring (count of 3 attempts per command of the "for idx" loop; each attempt having a
+watchdog threshold of 2), or an install command failing, or an exception in the "for attemp" try/except block.  
+
+As shown in the code samples below, these registry_entry are status install_failedwith the following tags:
+
+"tags": ["fatal_package_missing", command]
+"tags": ["exception_RuntimeError", command]
+"tags": [f"install_failed_command_{idx}", command]
+
+The stub registry is not required here because any abrupt silent exit will be picked up by the stub code in threaded_install
+(see above for that code), the calling function.
 
 This area of code requires a major overhaul. There is a lot of legacy code and the resurrection_registry is  no longer
-required. Instead the process_registry needs to be used. There are also logical issues wthe the current code in this 
-area (the for idx loop on down to the end of install_tomcat())
+required. Instead the process_registry needs to be used. 
+The logical issues with the code have been corrected in this area, but the resurrecction_registry and gatekeeper
+changes will be done in separate updates in the fture.
+A lot of the resurrection code will be moved to the resurrection_monitor function which continues to be developed in
+preparation for Phase3 of this project.
 
 
 
 
+
+
+
+### Summary of stub logic:
+
+The stub is a very selective and narrow regitry_entry reserved only for very special circumstances. To date there are only
+3 areas of code that are usin stub code, 2 of them in the install_tomcat ssh.connect code as noted above and one in the
+threaded_install calling function.  There will be future additions of stub code as needed when hyper-scaling testing 
+resumes.
+
+#### layers of protection for registry_entry forensics:
+
+The registry_entry is the most detailed form of forensics in the log artifacts.   The objective is:
+Layers of logic protection in install_tomcat and threaded_install for forensic thread integrity and traceablity.
+There are two main layers, one in install_tomcat with varaious stub and failure registry_entry logic and the second layer
+in threaded_install with the stub logic to track silent failures the abruptly exit install_tomcat and go back to 
+threaded_install. In addtion there are various watchdogs in install_tomcat as well and corresponding stub registry entries
+for those test cases. As the hyper-scaling ramps up there will be addtional stubs added to the code for forensic tracking.
+
+
+#### Definition of a stub:
+
+The definition of a stub was mentioned several times.  This is a summary of the definition so that the stub is never used
+when an applicable failure registry_entry with causation can be used.
+
+The objective is always to minimize the number of ghost threads, the threads that are missing and vanish when compared
+to the gold ip AWS control plane list of EC2 instances.
+
+What a “Stub” Really Means
+
+In this architecture, a **stub** is a placeholder registry entry created when:
+- The thread exits without completing its intended logic  
+- There's **no definitive status** like `install_failed` or `ssh_retry_failed`  
+- The failure is **silent or ambiguous** — no stdout, no stderr, no traceback
+
+Examples:
+- SSH init fails before connection — no command ever runs - caught by stub 
+- Watchdog times out during connect — no output captured - caught by watchdog timers and stub
+- A thread exits without returning a registry — caught by `threaded_install` stub logic
+
+These are true stubs: they represent **absence of information**, not a known failure.
+
+Why an Exception Is *Not* a Stub
+
+When an exception is raised inside the `for attempt` try/except loop block (for example):
+- There is  a traceback  
+- There is knowledge of the  command that failed  
+- The registry_entry can have a status of `install_failed` and include the exception type in the tags
+
+That’s not a stub — it’s a **classified failure** with forensic traceability.
 
 
 

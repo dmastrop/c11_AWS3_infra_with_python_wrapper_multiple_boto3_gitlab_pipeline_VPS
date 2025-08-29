@@ -3572,7 +3572,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
              
             # This ensures: - If the command succeeds, we skip the failure block  - The outer `for idx` loop continues to
             # the next command  - Only true failures are tagged and returned
- 
+            # Note that the attempt -1 is required for the registry_entry because there has to be an attempt field in the
+            # registry.   The -1 is used as a filler for failed command registry entries.
+
+            # this block does catch silent failures inside the for attempt loop, as long as the loop completes 
+            # without success or exception. If the for attempt loop silently aborts and code flow returns to threaded_install,
+            # the calling function, there is stub logic there as well to create a stub registry_entry
+
             if not command_succeeded:
                 #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
                 registry_entry = {
@@ -3867,7 +3873,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         thread_uuid = registry_entry["thread_uuid"]
 
                     else:
-                        # Silent failure — no registry returned
+                        # Silent failure — no registry returned. This will catch slient failures that occur either in
+                        # the ssh.connect loop or the for attemp loop (installing tomcat) of install_tomcat, where the 
+                        # code flow returns back from install_tomcat to threaded_install(This function).
                         pid = multiprocessing.current_process().pid
                         if pid:
                             stub_uuid = uuid.uuid4().hex[:8]
