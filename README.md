@@ -610,6 +610,9 @@ stub block right below it. The stub block has very stringent conditions as descr
 status is not tagged and no registry created and False on the ssh_success flag.  The first 2 are met but the 
 third condition fails so the stub registry is correctly NOT applied to a successful ssh connection.
 
+The code execution proceeds to the for idx loop and the 4 commands are issues over the SSH connection to install
+tomcat9
+
 All the way at the end of the install_tomcat() function, providing that tomcat is successfully installed (The 
 for idx loop), the registry will be created for this thread/ip and the status will be set to install_success.
 
