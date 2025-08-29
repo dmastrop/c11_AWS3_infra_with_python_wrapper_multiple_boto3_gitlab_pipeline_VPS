@@ -3435,6 +3435,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
         ## be modified for any command installation type (any application)
 
+            ## Step 1: Add a success flag before the attempt loop 
+            ## set the command_succeeded flag to the default of False BEFORE the for attempt loop
+            ## This flag is used to gate the install_failed registry_entry block after the for attempt loop IF
+            ## the install_succeeded and break (out of the for attempt loop). This is to prevent a install_failed on
+            ## successful installs.
+            command_succeeded = False
+
+
+
             for attempt in range(RETRY_LIMIT):
             ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
             ## each attempt (of 3) will use the adaptive WATCHDOG_TIMEOUT as a watchdog and if the watchdog expires it
@@ -3479,19 +3488,30 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"[{ip}] ❌ Tomcat install failure.")
                         ssh.close()
                         return ip, private_ip, False
+                        # this error is a critical error so return to calling thread but need to set registry
 
                     if "WARNING:" in stderr_output:
                         print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
                         stderr_output = ""
+                        # clear the stderr output
 
                     if stderr_output.strip():
                         print(f"[{ip}] ❌ Non-warning stderr received.")
                         ssh.close()
                         return ip, private_ip, False
+                        # this is not a criitical error. Will set a continue to give another retry (of 3) instead
+                        # of ssh.close and return to calling function
 
                     print(f"[{ip}] ✅ Command succeeded.")
+                    ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
+                    ## this will gate the install_failed registry_entry following this "for attempt" block
+                    ## The successful install can then proceed to the next for idx command (outer loop) and once
+                    ## the for idx loop is done it will proceed through the code to the registry_entry install_succeeded
+                    command_succeeded = True
+
                     time.sleep(20)
-                    break  # Success
+                    break  # Success. This is a break out of the for attempt loop. The install_failed registry_entry logic
+                    # is gated so that it will not fire if there is this break for Success
 
                 except Exception as e:
                     print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
@@ -3501,52 +3521,55 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdin.close()
                     stdout.close()
                     stderr.close()
+                ## END of the for attempt loop 
 
             # insert patch7b debug here for the inner attempt for loop
-            print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+            #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+
+            ## Keep the trace oustide of the failure block below. This is so that each command will get a TRACE message
+            ## For successful commands all four 1/4 through 4/4 will get a print message
+            ## For the failure case (if the for attempt loop exhausts after 3 retries), the print will also be done
+            # Always print when attempt loop ends — success or failure. Note for the success case for all 4 commands
+            # there will be 4 prints for the ip/threas
+            
+            #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip}")
+
+            print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip} — Success flag: {command_succeeded}")
+
 
             # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
+            # The default setting for command_succeeded is False and so this value will be False and the code block
+            # below will execute setting the registry_entry to install_failed.
             # and we need to create and tag the registry_entry with the failure below
-
-            
-            registry_entry = {
-                "status": "install_failed",
-                "attempt": -1,
-                "pid": multiprocessing.current_process().pid,
-                "thread_id": threading.get_ident(),
-                "thread_uuid": thread_uuid,
-                "public_ip": ip,
-                "private_ip": private_ip,
-                "timestamp": str(datetime.utcnow()),
-                "tags": [f"install_failed_command_{idx}", command]
-            }
-
-
-
-
-            #registry_entry = {
-            #    "status": "install_failed",
-            #    "pid": multiprocessing.current_process().pid,
-            #    "thread_id": threading.get_ident(),
-            #    "thread_uuid": thread_uuid,
-            #    "public_ip": ip,
-            #    "private_ip": private_ip,
-            #    "timestamp": str(datetime.utcnow()),
-            #    "tags": [f"install_failed_command_{idx}", command]
-            #}
              
+            # This ensures: - If the command succeeds, we skip the failure block  - The outer `for idx` loop continues to
+            # the next command  - Only true failures are tagged and returned
+ 
+            if not command_succeeded:
+                #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+                registry_entry = {
+                    "status": "install_failed",
+                    "attempt": -1,
+                    "pid": multiprocessing.current_process().pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": [f"install_failed_command_{idx}", command]
+                }
+                
+                # Optional: close SSH connection if don't plan to resurrect
+                # Most likely will keep the SSH connection open so that it can be easily resurrected on the same SSH connection
+                # This is becasue teh SSH connection is okay, it is just the installation commands that are failing.
+                
+                #ssh.close()
 
-            # Optional: close SSH connection if you don't plan to resurrect
-            # Most likely will keep the SSH connection open so that it can be easily resurrected on the same SSH connection
-            # This is becasue teh SSH connection is okay, it is just the installation commands that are failing.
-            # ssh.close()
-
-            return ip, private_ip, registry_entry
-            # return the registry_entry failure above to threaded_install and the thread_registry which will be returned
-            # to tomcat_worker and incorporated into this process' process_registry
-
-
-
+                return ip, private_ip, registry_entry # the return will return this registry_entry to threaded_install()
+                # and the thread_registry, which will be returned to tomcat_worker and incorproated into this process'
+                # process_registry.
+                 
+        # END of the for idx loop
         # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
 
         ssh.close()
@@ -3558,7 +3581,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         #debug for patch7c
-        print(f"[TRACE][install_tomcat] Reached registry update step for {ip}")
+        print(f"[TRACE][install_tomcat] Reached successful registry update step for {ip}")
 
 
         # This is patch1:  ✅ Log registry entry for successful installs. This prevents empty registry entries (successes) 
@@ -3599,15 +3622,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             "private_ip": private_ip
         }
 
-
-
-        #registry_entry = {
-        #    "status": "install_success",
-        #    "attempt": 0,
-        #    "timestamp": str(datetime.utcnow()),
-        #    "pid": multiprocessing.current_process().pid,
-        #    "thread_id": threading.get_ident(),
-        #}
 
 
         ##### Get rid of this code block as part of legacy code that we no longer need
