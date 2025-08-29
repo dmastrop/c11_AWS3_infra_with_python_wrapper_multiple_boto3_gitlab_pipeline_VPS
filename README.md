@@ -53,7 +53,7 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
 
-- Update part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_moniotr_patch8
+- Update part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
 - Update part 29: Phase 2m: resurrection_monitor patch8 restructuring using helper functions for PROCESS LEVEL ghost detection using chunk for process level GOLD list, and for process level registry stats status generation
 
@@ -122,7 +122,7 @@ all of these are also calclated at the aggregate level in main()):
 
 
 
-## UPDATES part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_moniotr_patch8
+## UPDATES part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
 
 
@@ -159,7 +159,9 @@ This resurrection candidate process level file will be done from the process_reg
 
 Inside `resurrection_monitor_patch8`, scan using the logic !=install_success tentatively (this will cover all stub and 
 install_failed registry threads, etc.)
-``
+
+
+```
 for thread_uuid, entry in process_registry.items():
     if entry.get("status") != "install_success":
         # Tag as resurrection candidate
