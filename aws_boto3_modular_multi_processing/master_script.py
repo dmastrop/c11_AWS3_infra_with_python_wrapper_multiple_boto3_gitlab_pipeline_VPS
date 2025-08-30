@@ -205,12 +205,14 @@ def restart_ec_multiple_instances():
 #
 
 
-#### THIS IS THE MODULE2 SCRIPT with stub logic in the threaded_install
+##### THIS IS THE MODULE2 SCRIPT with stub logic in the threaded_install
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_6.py")
+
+
+#### THIS IS THE MODULE2 SCRIPT with resurrection code changes moving out of install_tomcat and added to resurrection_monitor_patch8
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch7d_6.py")
-
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8.py")
 
 ## modules 3-11:
 
