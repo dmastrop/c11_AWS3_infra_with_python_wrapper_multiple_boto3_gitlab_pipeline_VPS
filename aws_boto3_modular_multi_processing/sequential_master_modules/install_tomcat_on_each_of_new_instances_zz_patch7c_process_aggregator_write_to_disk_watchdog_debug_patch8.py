@@ -3245,6 +3245,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             print(f"Failed to connect to {ip} after multiple attempts")
             registry_entry = {
                 "status": "ssh_retry_failed",
+                "attempt": -1,
                 "pid": multiprocessing.current_process().pid,
                 "thread_id": threading.get_ident(),
                 "thread_uuid": thread_uuid,
