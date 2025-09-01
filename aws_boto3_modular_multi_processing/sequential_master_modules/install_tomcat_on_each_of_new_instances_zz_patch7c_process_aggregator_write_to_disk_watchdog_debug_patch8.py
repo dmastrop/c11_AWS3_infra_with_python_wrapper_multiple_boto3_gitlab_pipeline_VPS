@@ -58,7 +58,8 @@ STATUS_TAGS = {
 
 ## These variables are used throughout for the resurrection based code. Put at top of module for easy reference
 # :=:= Module-level constants for resurrection/watchdog logic
-WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled
+WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled. This is the default. The WATCHDOG_TIMTOUE is now
+# adaptive. See the function get_watchdog_timeout. 
 RETRY_LIMIT               = 3    # number of re-executes per SSH command (for example install tomcat9)
 SLEEP_BETWEEN_ATTEMPTS    = 5    # seconds to wait between retries
 STALL_RETRY_THRESHOLD     = 2    # attempts before tagging as “stall” ghost (watchdog)
