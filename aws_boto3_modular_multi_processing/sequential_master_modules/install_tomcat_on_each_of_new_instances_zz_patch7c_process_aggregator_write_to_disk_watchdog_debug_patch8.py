@@ -3216,6 +3216,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             if pid:
                                 stub_entry = {
                                     "status": "stub",
+                                    "attempt": -1,
                                     "pid": pid,
                                     "thread_id": threading.get_ident(),
                                     "thread_uuid": thread_uuid,
@@ -3263,6 +3264,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print(f"[STUB] install_tomcat ssh.connecct exited early for {ip}")
                 stub_entry = {
                     "status": "stub",
+                    "attempt": -1,
                     "pid": pid,
                     "thread_id": threading.get_ident(),
                     "thread_uuid": thread_uuid,
@@ -3626,7 +3628,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"[{ip}] ❌ Tomcat install failure — package not found.")
                         registry_entry = {
                             "status": "install_failed",
-                            "attempt": attempt,
+                            "attempt": -1,
                             "pid": multiprocessing.current_process().pid,
                             "thread_id": threading.get_ident(),
                             "thread_uuid": thread_uuid,
@@ -3687,7 +3689,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # thread forensics.  
                     registry_entry = {
                         "status": "install_failed",
-                        "attempt": attempt,
+                        "attempt": -1,
                         "pid": multiprocessing.current_process().pid,
                         "thread_id": threading.get_ident(),
                         "thread_uuid": thread_uuid,
@@ -3798,7 +3800,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         ## will eventuall be called the process_registry in the tomcat_worker that calls threaded_install
 
         
-        registry_entry = {
+        registry_entry = {    
             "status": "install_success",
             "attempt": 0,
             "timestamp": str(datetime.utcnow()),
@@ -3807,6 +3809,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             "thread_uuid": thread_uuid,
             "public_ip": ip,
             "private_ip": private_ip
+            "tags": ["install_success", "installation_tomcat_completed"]
         }
 
 
@@ -4034,6 +4037,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             stub_uuid = uuid.uuid4().hex[:8]
                             stub_entry = {
                                 "status": "stub",
+                                "attempt": -1
                                 "pid": pid,
                                 "thread_id": threading.get_ident(),
                                 "thread_uuid": stub_uuid,
