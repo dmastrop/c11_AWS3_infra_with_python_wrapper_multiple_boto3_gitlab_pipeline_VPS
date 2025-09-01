@@ -3809,7 +3809,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             "thread_id": threading.get_ident(),
             "thread_uuid": thread_uuid,
             "public_ip": ip,
-            "private_ip": private_ip
+            "private_ip": private_ip,
             "tags": ["install_success", "installation_tomcat_completed"]
         }
 
