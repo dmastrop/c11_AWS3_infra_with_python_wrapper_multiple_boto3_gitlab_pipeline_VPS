@@ -2803,32 +2803,68 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
         }
     print(f"[TRACE][res_registry] Finished registry update for {ip}")    
 
-def read_output_with_watchdog(stream, label, ip, attempt):
-    start = time.time()
+
+
+
+#def read_output_with_watchdog(stream, label, ip, attempt):
+#    start = time.time()
+#    collected = b''
+#    while True:
+#        if stream.channel.recv_ready():
+#            try:
+#                collected += stream.read()
+#                break
+#            except Exception as e:
+#                print(f"[{ip}] ⚠️ Failed reading {label} (Attempt {attempt}): {e}")
+#                break
+#
+#        elapsed = time.time() - start
+#        if elapsed > WATCHDOG_TIMEOUT:
+#            print(f"[{ip}] ⏱️ Watchdog timeout on {label} read (Attempt {attempt}).")
+#            if attempt >= STALL_RETRY_THRESHOLD:
+#                print(f"[{ip}] 🔄 Multiple stalls detected. Flagging for resurrection.")
+#                update_resurrection_registry(ip, attempt, f"watchdog_timeout_on_{label}", pid=multiprocessing.current_process().pid)
+#            break # break out if stall retry threshold is reached and return to install_tomcat. We will create a stub
+#        # registry entry for this case in install_tomcat upon the break return.
+#        time.sleep(1)
+#    return collected.decode()
+
+
+## The read_output_with_watchdog needs to be refactored. The attempt from install_tomcat for attempt loop should not
+## be used for assessing teh STALL_RETRY_THRESHOLD. Instead, create a new counter "
+
+def read_output_with_watchdog(stream, label, ip):
+    stall_count = 0
     collected = b''
+    start = time.time()
+
     while True:
         if stream.channel.recv_ready():
             try:
                 collected += stream.read()
                 break
             except Exception as e:
-                print(f"[{ip}] ⚠️ Failed reading {label} (Attempt {attempt}): {e}")
+                print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
                 break
 
         elapsed = time.time() - start
         if elapsed > WATCHDOG_TIMEOUT:
-            print(f"[{ip}] ⏱️ Watchdog timeout on {label} read (Attempt {attempt}).")
-            if attempt >= STALL_RETRY_THRESHOLD:
-                print(f"[{ip}] 🔄 Multiple stalls detected. Flagging for resurrection.")
-                update_resurrection_registry(ip, attempt, f"watchdog_timeout_on_{label}", pid=multiprocessing.current_process().pid)
-            break # break out if stall retry threshold is reached and return to install_tomcat. We will create a stub
-        # registry entry for this case in install_tomcat upon the break return.
+            stall_count += 1
+            print(f"[{ip}] ⏱️ Watchdog timeout on {label} read. Stall count: {stall_count}")
+            if stall_count >= STALL_RETRY_THRESHOLD:
+                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}.")
+                return "", True  # Empty output, stall detected
+            start = time.time()  # Reset timer for next stall window
+
         time.sleep(1)
-    return collected.decode()
 
-
-
-
+    return collected.decode(), False  
+    # Output received, no stall. If it makes it this far there is no stall and get stdout and stderr
+    # for that case. If successful command then there will be stdout and no stderr. If there is unsuccessful command then 
+    #There will be stdout and stderr. If stall detected the stdout will be blank and no stderr but a stub registry_entry will  
+    # be created to track it. This is done in install_tomcat based upon what this function returns to it.
+    #If the command fails there is failure logic in install_tomcat for attempt loop to create an 
+    #install_failed registry_entry
 
 
 
