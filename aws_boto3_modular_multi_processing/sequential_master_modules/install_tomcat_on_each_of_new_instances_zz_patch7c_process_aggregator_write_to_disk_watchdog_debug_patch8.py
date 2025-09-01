@@ -2821,7 +2821,8 @@ def read_output_with_watchdog(stream, label, ip, attempt):
             if attempt >= STALL_RETRY_THRESHOLD:
                 print(f"[{ip}] 🔄 Multiple stalls detected. Flagging for resurrection.")
                 update_resurrection_registry(ip, attempt, f"watchdog_timeout_on_{label}", pid=multiprocessing.current_process().pid)
-            break
+            break # break out if stall retry threshold is reached and return to install_tomcat. We will create a stub
+        # registry entry for this case in install_tomcat upon the break return.
         time.sleep(1)
     return collected.decode()
 
@@ -3602,6 +3603,20 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+
+
+                    ###### insert stub registry_entry here and if the watchdog threshold is exceeded then create the stub,
+                    ###### otherwise proceed and skip this.
+                    
+
+
+
+
+
+
+
+
 
 
                     ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
