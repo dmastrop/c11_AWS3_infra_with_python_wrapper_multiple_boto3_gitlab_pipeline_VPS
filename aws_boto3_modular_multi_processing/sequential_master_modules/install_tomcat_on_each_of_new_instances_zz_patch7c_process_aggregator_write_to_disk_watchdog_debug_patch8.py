@@ -4038,7 +4038,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             stub_uuid = uuid.uuid4().hex[:8]
                             stub_entry = {
                                 "status": "stub",
-                                "attempt": -1
+                                "attempt": -1,
                                 "pid": pid,
                                 "thread_id": threading.get_ident(),
                                 "thread_uuid": stub_uuid,
