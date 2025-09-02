@@ -2849,6 +2849,35 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
 ##  - The stall threshold was hit **and**
 ##  - The decoded output is empty (i.e. `not output.strip()`)
 
+#def read_output_with_watchdog(stream, label, ip):
+#    stall_count = 0
+#    collected = b''
+#    start = time.time()
+#
+#    while True:
+#        if stream.channel.recv_ready():
+#            try:
+#                collected += stream.read()
+#                break
+#            except Exception as e:
+#                print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+#                break
+#
+#        elapsed = time.time() - start
+#        if elapsed > WATCHDOG_TIMEOUT:
+#            stall_count += 1
+#            print(f"[{ip}] ⏱️ Watchdog timeout on {label} read. Stall count: {stall_count}")
+#            if stall_count >= STALL_RETRY_THRESHOLD:
+#                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}.")
+#                break  # Don't return early — let output flush after break
+#            start = time.time()
+#
+#        time.sleep(1)
+#
+#    output = collected.decode()
+#    stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
+#    return output, stalled
+
 def read_output_with_watchdog(stream, label, ip):
     stall_count = 0
     collected = b''
@@ -2868,16 +2897,23 @@ def read_output_with_watchdog(stream, label, ip):
             stall_count += 1
             print(f"[{ip}] ⏱️ Watchdog timeout on {label} read. Stall count: {stall_count}")
             if stall_count >= STALL_RETRY_THRESHOLD:
-                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}.")
-                break  # Don't return early — let output flush after break
+                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}. Breaking loop.")
+                break  # Exit loop, but do final flush check below
             start = time.time()
 
         time.sleep(1)
 
-    output = collected.decode()
+    # Final flush attempt after stall threshold. This is the main modification.
+    if stream.channel.recv_ready():
+        try:
+            collected += stream.read()
+            print(f"[{ip}] 📥 Final flush read succeeded on {label}.")
+        except Exception as e:
+            print(f"[{ip}] ⚠️ Final read failed after stall threshold on {label}: {e}")
+
+    output = collected.decode(errors="ignore")
     stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
     return output, stalled
-
 
 
 
