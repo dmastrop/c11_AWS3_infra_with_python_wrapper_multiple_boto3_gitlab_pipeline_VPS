@@ -213,7 +213,7 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     adaptive_timeout = math.ceil(base + scale * node_count + contention_penalty)
 
     # Enforce a minimum floor of 30 seconds
-    return max(30, adaptive_timeout) # set the base to 30 seconds for testing
+    return max(90, adaptive_timeout) # set the base to 30 seconds for testing
 
 
 
