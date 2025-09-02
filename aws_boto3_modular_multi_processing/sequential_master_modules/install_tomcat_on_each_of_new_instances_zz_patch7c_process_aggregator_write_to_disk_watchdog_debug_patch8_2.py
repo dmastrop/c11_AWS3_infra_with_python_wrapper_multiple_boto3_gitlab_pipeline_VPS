@@ -3634,24 +3634,39 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdout.channel.settimeout(WATCHDOG_TIMEOUT)
                     stderr.channel.settimeout(WATCHDOG_TIMEOUT)
 
-                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
-                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
+                    #stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                    #stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
 
-                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
-                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+                    #print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    #print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
 
 
                     ###### insert stub registry_entry here and if the watchdog threshold is exceeded then create the stub,
                     ###### otherwise proceed and skip this.
-                    
+                    ###### With the refactorerd read_output_with_watchdog, do not pass attempt to the function
+
+                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip)
+                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip)
 
 
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
-
-
-
-
+                    if stdout_stalled and stderr_stalled: # These will both be True if stall watchdog threshold is reached in read_output_with_watchdog
+                        print(f"[{ip}] ⏱️ Watchdog stall threshold reached — tagging stub for command {idx + 1}/4.")
+                        stub_entry = {
+                            "status": "stub",
+                            "attempt": -1,
+                            "pid": multiprocessing.current_process().pid,
+                            "thread_id": threading.get_ident(),
+                            "thread_uuid": thread_uuid,
+                            "public_ip": ip,
+                            "private_ip": private_ip,
+                            "timestamp": str(datetime.utcnow()),
+                            "tags": ["stub", f"watchdog_install_timeout_command_{idx}", "stall_retry_threshold", command]
+                        }
+                        return ip, private_ip, stub_entry
 
 
 
