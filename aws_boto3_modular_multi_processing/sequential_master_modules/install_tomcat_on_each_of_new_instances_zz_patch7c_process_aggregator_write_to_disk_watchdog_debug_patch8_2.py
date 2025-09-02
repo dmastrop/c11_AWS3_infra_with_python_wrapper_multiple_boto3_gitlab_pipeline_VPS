@@ -62,7 +62,7 @@ WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled. Thi
 # adaptive. See the function get_watchdog_timeout. 
 RETRY_LIMIT               = 3    # number of re-executes per SSH command (for example install tomcat9)
 SLEEP_BETWEEN_ATTEMPTS    = 5    # seconds to wait between retries
-STALL_RETRY_THRESHOLD     = 2    # attempts before tagging as “stall” ghost (watchdog)
+STALL_RETRY_THRESHOLD     = 3    # attempts before tagging as “stall” ghost (watchdog)
 
 
 # global vars used for the modified retry_with_backoff() function as part of the adaptive watchdog timeout.
@@ -208,8 +208,19 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     #scale = 0.15 if instance_type == "micro" else 0.1
    
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
+    
+
+    adaptive_timeout = math.ceil(base + scale * node_count + contention_penalty)
+
+    # Enforce a minimum floor of 30 seconds
+    return max(30, adaptive_timeout) # set the base to 30 seconds for testing
+
+
+
+    ## int does not work. Use math.ceil
     #return int(base + scale * node_count + contention_penalty)
-    return math.ceil(base + scale * node_count + contention_penalty)
+    
+    #return math.ceil(base + scale * node_count + contention_penalty)
 
 #The node_count is the total number of nodes deployed during the execution run
 #The instance_type is the instance type of the EC2 nodes (for example t2.micro)
