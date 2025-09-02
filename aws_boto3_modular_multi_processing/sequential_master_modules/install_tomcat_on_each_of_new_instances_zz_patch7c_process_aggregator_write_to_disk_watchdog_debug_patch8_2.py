@@ -62,7 +62,7 @@ WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled. Thi
 # adaptive. See the function get_watchdog_timeout. 
 RETRY_LIMIT               = 3    # number of re-executes per SSH command (for example install tomcat9)
 SLEEP_BETWEEN_ATTEMPTS    = 5    # seconds to wait between retries
-STALL_RETRY_THRESHOLD     = 3    # attempts before tagging as “stall” ghost (watchdog)
+STALL_RETRY_THRESHOLD     = 3  # attempts before tagging as “stall” ghost (watchdog)
 
 
 # global vars used for the modified retry_with_backoff() function as part of the adaptive watchdog timeout.
@@ -210,14 +210,11 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
     contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
     
 
+
     adaptive_timeout = math.ceil(base + scale * node_count + contention_penalty)
-
-    # Enforce a minimum floor of 30 seconds
-    return max(90, adaptive_timeout) # set the base to 30 seconds for testing
+    return max(30, adaptive_timeout) # set the base to 30 seconds for testing
 
 
-
-    ## int does not work. Use math.ceil
     #return int(base + scale * node_count + contention_penalty)
     
     #return math.ceil(base + scale * node_count + contention_penalty)
@@ -2839,10 +2836,18 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
 #        # registry entry for this case in install_tomcat upon the break return.
 #        time.sleep(1)
 #    return collected.decode()
+#
 
 
-## The read_output_with_watchdog needs to be refactored. The attempt from install_tomcat for attempt loop should not
-## be used for assessing teh STALL_RETRY_THRESHOLD. Instead, create a new counter "
+
+
+
+## updated and refactored read_output_with_watchdog. Remove attempt and add a local counter for detecting watchdog 
+## threshold. Add logic to wait for the output to threads to flush late before declaring a stub
+## check both STDOUT and STDERR for zero and must be stalled as well.
+##- `stalled` is only `True` if:
+##  - The stall threshold was hit **and**
+##  - The decoded output is empty (i.e. `not output.strip()`)
 
 def read_output_with_watchdog(stream, label, ip):
     stall_count = 0
@@ -2864,18 +2869,15 @@ def read_output_with_watchdog(stream, label, ip):
             print(f"[{ip}] ⏱️ Watchdog timeout on {label} read. Stall count: {stall_count}")
             if stall_count >= STALL_RETRY_THRESHOLD:
                 print(f"[{ip}] 🔄 Stall threshold exceeded on {label}.")
-                return "", True  # Empty output, stall detected
-            start = time.time()  # Reset timer for next stall window
+                break  # Don't return early — let output flush after break
+            start = time.time()
 
         time.sleep(1)
 
-    return collected.decode(), False  
-    # Output received, no stall. If it makes it this far there is no stall and get stdout and stderr
-    # for that case. If successful command then there will be stdout and no stderr. If there is unsuccessful command then 
-    #There will be stdout and stderr. If stall detected the stdout will be blank and no stderr but a stub registry_entry will  
-    # be created to track it. This is done in install_tomcat based upon what this function returns to it.
-    #If the command fails there is failure logic in install_tomcat for attempt loop to create an 
-    #install_failed registry_entry
+    output = collected.decode()
+    stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
+    return output, stalled
+
 
 
 
@@ -3645,39 +3647,24 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdout.channel.settimeout(WATCHDOG_TIMEOUT)
                     stderr.channel.settimeout(WATCHDOG_TIMEOUT)
 
-                    #stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
-                    #stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
+                    stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                    stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
 
-                    #print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
-                    #print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
 
 
                     ###### insert stub registry_entry here and if the watchdog threshold is exceeded then create the stub,
                     ###### otherwise proceed and skip this.
-                    ###### With the refactorerd read_output_with_watchdog, do not pass attempt to the function
-
-                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip)
-                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip)
+                    
 
 
-                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
-                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
-                    if stdout_stalled and stderr_stalled: # These will both be True if stall watchdog threshold is reached in read_output_with_watchdog
-                        print(f"[{ip}] ⏱️ Watchdog stall threshold reached — tagging stub for command {idx + 1}/4.")
-                        stub_entry = {
-                            "status": "stub",
-                            "attempt": -1,
-                            "pid": multiprocessing.current_process().pid,
-                            "thread_id": threading.get_ident(),
-                            "thread_uuid": thread_uuid,
-                            "public_ip": ip,
-                            "private_ip": private_ip,
-                            "timestamp": str(datetime.utcnow()),
-                            "tags": ["stub", f"watchdog_install_timeout_command_{idx}", "stall_retry_threshold", command]
-                        }
-                        return ip, private_ip, stub_entry
+
+
+
+
 
 
 
