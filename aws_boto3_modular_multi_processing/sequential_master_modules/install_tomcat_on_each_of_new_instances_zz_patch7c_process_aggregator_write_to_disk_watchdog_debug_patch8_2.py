@@ -2903,15 +2903,32 @@ def read_output_with_watchdog(stream, label, ip):
 
         time.sleep(1)
 
-    # Final flush attempt after stall threshold. This is the main modification.
-    if stream.channel.recv_ready():
-        try:
-            collected += stream.read()
-            print(f"[{ip}] 📥 Final flush read succeeded on {label}.")
-        except Exception as e:
-            print(f"[{ip}] ⚠️ Final read failed after stall threshold on {label}: {e}")
+    ## Final flush attempt after stall threshold. This is the main modification.
+    #if stream.channel.recv_ready():
+    #    try:
+    #        collected += stream.read()
+    #        print(f"[{ip}] 📥 Final flush read succeeded on {label}.")
+    #    except Exception as e:
+    #        print(f"[{ip}] ⚠️ Final read failed after stall threshold on {label}: {e}")
+
+
+
+    # After breaking loop due to stall threshold
+    flush_deadline = time.time() + 5  # Grace window: 5 seconds
+    while time.time() < flush_deadline:
+        if stream.channel.recv_ready():
+            try:
+                chunk = stream.read()
+                collected += chunk
+                print(f"[{ip}] 📥 Post-loop flush read: {len(chunk)} bytes on {label}")
+                break  # Exit early if output arrives
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Post-loop flush read failed on {label}: {e}")
+        time.sleep(0.5)
 
     output = collected.decode(errors="ignore")
+    print(f"[{ip}] 🔍 Final output after flush: '{output.strip()}'")
+
     stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
     return output, stalled
 
