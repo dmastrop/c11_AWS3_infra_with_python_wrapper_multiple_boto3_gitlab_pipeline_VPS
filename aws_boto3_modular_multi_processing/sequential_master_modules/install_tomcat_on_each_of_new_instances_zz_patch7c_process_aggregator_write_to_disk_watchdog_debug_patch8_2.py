@@ -2927,7 +2927,14 @@ def read_output_with_watchdog(stream, label, ip):
         time.sleep(0.5)
 
     output = collected.decode(errors="ignore")
-    print(f"[{ip}] 🔍 Final output after flush: '{output.strip()}'")
+    lines = output.strip().splitlines()
+    preview = "\n".join(lines[:10])
+    print(f"[{ip}] 🔍 Final output after flush (first {min(len(lines),10)} lines):\n{preview}")
+
+
+
+    # Get rid of this and replace with above. This is too verbose.  Need to limit gitlab console logs.  
+    #print(f"[{ip}] 🔍 Final output after flush: '{output.strip()}'")
 
     stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
     return output, stalled
