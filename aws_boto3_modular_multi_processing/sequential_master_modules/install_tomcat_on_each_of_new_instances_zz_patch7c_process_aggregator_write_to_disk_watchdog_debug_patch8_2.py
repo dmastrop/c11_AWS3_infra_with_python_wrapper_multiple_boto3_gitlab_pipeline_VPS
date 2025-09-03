@@ -2928,8 +2928,8 @@ def read_output_with_watchdog(stream, label, ip):
 
     output = collected.decode(errors="ignore")
     lines = output.strip().splitlines()
-    preview = "\n".join(lines[:10])
-    print(f"[{ip}] 🔍 Final output after flush (first {min(len(lines),10)} lines):\n{preview}")
+    preview = "\n".join(lines[:3])
+    print(f"[{ip}] 🔍 Final output after flush (first {min(len(lines),3)} lines):\n{preview}")
 
 
 
