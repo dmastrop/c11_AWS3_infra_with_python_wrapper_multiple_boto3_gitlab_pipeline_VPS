@@ -3728,9 +3728,26 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+                    
 
-                    if stdout_stalled and stderr_stalled:
-                        print(f"[{ip}] ⏱️ Watchdog stall threshold reached — tagging stub for command {idx + 1}/4.")
+
+                    ## only stub the thread if stdout_stalled AND stderr_stalled (from read_output_with_watchdog) AND
+                    ## Attempts on the command is at the RETRY_LIMIT (see for attempt loop above).  Note that
+                    ## attempt starts at 0 and the for attempt uses range RETRY_LIMIT so for 3 that is [0,1,2] thus
+                    ## use RETRY_LIMIT -1 in the if statement below.
+
+                    #if stdout_stalled and stderr_stalled:
+                        
+                    if stdout_stalled and stderr_stalled and attempt == RETRY_LIMIT - 1:
+                        # Only tag as stub on final retry
+
+                        #print(f"[{ip}] ❌ Streams stalled on final attempt — tagging stub")
+                        ## Proceed with stub tagging logic here
+                        #print(f"[{ip}] ⏱️ Watchdog stall threshold reached — tagging stub for command {idx + 1}/4.")
+                        
+                        print(f"[{ip}] ❌ Final attempt stalled — tagging stub for command {idx + 1}/4.")
+
+
                         stub_entry = {
                             "status": "stub",
                             "attempt": -1,
@@ -3745,7 +3762,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         return ip, private_ip, stub_entry
 
 
-
+                    else:
+                        if stdout_stalled and stderr_stalled:
+                            print(f"[{ip}] 🔄 Streams stalled but retrying (attempt {attempt + 1} of {RETRY_LIMIT})")
 
 
 
