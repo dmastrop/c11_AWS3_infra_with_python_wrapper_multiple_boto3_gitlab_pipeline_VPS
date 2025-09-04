@@ -62,7 +62,8 @@ WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled. Thi
 # adaptive. See the function get_watchdog_timeout. 
 RETRY_LIMIT               = 3    # number of re-executes per SSH command (for example install tomcat9)
 SLEEP_BETWEEN_ATTEMPTS    = 5    # seconds to wait between retries
-STALL_RETRY_THRESHOLD     = 3  # attempts before tagging as “stall” ghost (watchdog)
+STALL_RETRY_THRESHOLD     = 1    # number of watchdog reattempts for each command in the for attempt loop. Note that this has
+# nothing to do with the command attempt number. That is the number attempts in attempting to execute the command on the node.
 
 
 # global vars used for the modified retry_with_backoff() function as part of the adaptive watchdog timeout.
@@ -212,7 +213,7 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
 
 
     adaptive_timeout = math.ceil(base + scale * node_count + contention_penalty)
-    return max(30, adaptive_timeout) # set the base to 30 seconds for testing
+    return max(18, adaptive_timeout) # set the base to 30 seconds for testing
 
 
     #return int(base + scale * node_count + contention_penalty)
