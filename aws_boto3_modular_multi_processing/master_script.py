@@ -215,9 +215,14 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8.py")
 
 
-#### THIS IS THE MODULE2 SCRIPT with resurrection code changes starting with the refactor of read_output_with_watchdog
+##### THIS IS THE MODULE2 SCRIPT with resurrection code changes starting with the refactor of read_output_with_watchdog
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_2.py")
+
+#### THIS IS THE MODULE2 SCRIPT with new gating logic for stubs and failures from output of read_output_with_watchdog into install_tomcat
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_2.py")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_3.py")
+
 
 
 ## modules 3-11:
