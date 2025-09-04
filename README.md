@@ -53,9 +53,13 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
 
-- Update part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+- Update part 28: Phase 2L: Reworking of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
-- Update part 29: Phase 2m: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+- Update part 29: Phase 2m: Reworking the adaptive watchdog timeout and the API congestion function retry_with_backoff
+
+- Update part 30: Phase 2n: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+
+- Update part 31 Phase 2o: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 
@@ -84,7 +88,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 29: Phase 2m: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+## UPDATES part 31: Phase 2o: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 ### Introduction:
@@ -122,7 +126,7 @@ all of these are also calclated at the aggregate level in main()):
 
 
 
-## UPDATES part 28: Phase 2L: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+## UPDATES part 30: Phase 2n: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
 
 
@@ -209,6 +213,51 @@ STATUS_TAGS = {
     "no_tags"
 }
 ```
+
+
+
+
+
+## UPDATES part 29: Phase 2m: Reworking the adaptive watchdog timeout and the API congestion function retry_with_backoff
+
+
+### Introduction: 
+
+
+
+
+
+
+## UPDATES part 28: Phase 2L: Reworking of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
+
+### Introduction:
+
+This code reworks the install_tomcat logic from the thread stream data from the read_output_with_watchdog. Both functions have
+been radically modified. The code changes will be indicated below.
+
+The code is now stream agnostic in terms of forensics and falure detection, meaning this can be used to install any application
+or package onto the EC2 linux nodes. It is now very extensible, all within this self-learning failure detection and forensic
+log framework (Phases 1,2,3 and 4).
+
+The stream detection is now a  **general-purpose, resilient command orchestrator**. The logic is now:
+
+- **Stream-agnostic**: handles verbose and silent commands equally well  
+
+- **Retry-aware**: gives each command a fair chance to succeed  
+
+- **Failure-deterministic**: tags known errors vs. silent failures with forensic clarity (registry_entry with status stub or
+install_failed or install_success, etc; and registry_entry has tags for commands and error codes so that in-depth forensics
+can be done on failed nodes)
+ 
+- **Extensible**: you can drop in any command sequence — from package installs to service restarts to custom scripts — and the framework will handle it
+
+The orchestration logic has been abstracted from the command semantics, which means we can now layer in new workflows without rewriting core behavior. (modular engineering at its best).
+
+These code changes were very challenging but will provide a  stable foundation to build resurrection logic, ghost detection, and adaptive orchestration on top. (Phase 3 and 4 machine learning).
+
+
+
+
 
 
 
