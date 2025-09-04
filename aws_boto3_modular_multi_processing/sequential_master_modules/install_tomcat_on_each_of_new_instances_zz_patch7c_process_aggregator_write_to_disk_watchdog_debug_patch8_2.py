@@ -2879,6 +2879,16 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
 #    stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
 #    return output, stalled
 
+
+
+
+
+
+## further optimizations on the waiting for the output to flush from the node. Introduced the grace window.
+## The purpose of the watchdog at the thread level is to detect thread output data flush starvation and give the
+## thread enough time to collect STDOUT and STDERR for further analysis by install_tomcat (failure/stub detection)
+
+
 def read_output_with_watchdog(stream, label, ip):
     stall_count = 0
     collected = b''
@@ -2936,6 +2946,20 @@ def read_output_with_watchdog(stream, label, ip):
 
     # Get rid of this and replace with above. This is too verbose.  Need to limit gitlab console logs.  
     #print(f"[{ip}] 🔍 Final output after flush: '{output.strip()}'")
+
+
+
+    # the key decision logic is below. The watchdog at this level is to detect thread starvation and not to decide
+    # failure, success or stub status (that is done in install_tomcat, the calling function)
+    # Logic below:
+    #This is the key line:
+    #- If we hit the stall threshold **and** the output is blank → `stalled = True`
+    #- If we hit the stall threshold **but** got some output → `stalled = False`
+    #- If we never hit the stall threshold → `stalled = False`
+
+    #Special case is commands that have no output. They will hit the watchdog attempts threshold and there will be no output 
+    #and it will be stalled =True but the logic in install_tomcat will prevent a stub or failed registry_entry due to command 
+    #attempt count of 1 (attempt=0) and an exit code of 0 (success). Stub and failed registry_entry in install_tomcat are gated.
 
     stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
     return output, stalled
