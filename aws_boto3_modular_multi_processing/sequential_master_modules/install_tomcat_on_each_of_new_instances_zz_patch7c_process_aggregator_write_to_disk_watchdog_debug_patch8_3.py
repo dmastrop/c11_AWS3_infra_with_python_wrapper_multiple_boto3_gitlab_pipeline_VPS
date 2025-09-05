@@ -3733,26 +3733,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stderr.channel.settimeout(WATCHDOG_TIMEOUT)
 
 
-
-
                     #stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
                     #stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
 
                     #print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     #print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
-
-
-
-
-
-
-
-                    ###### insert stub registry_entry here and if the watchdog threshold is exceeded AND output in 
-                    ###### STDOUT and STDERR is zero then and only then declare it a stub. See the read_output_with_watchdog
-                    ###### for the wait for output flush on each thread logic so as to not prematurely declare a stub.
-                    ###### otherwise proceed and skip this.
-                    
-
 
 
                     stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip)
@@ -3763,11 +3748,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     
 
 
-## comment out the entire block below for new code below this.  This has the new logic based upon STDERR output from
+## comment out the entire block below for new code below this.  The new code has new logic based upon STDERR output from
 ## read_output_with_watchdog and also using exit_status and the command attempt iteration of this for attempt loop
-## the watchdog in read_output_with_watchdog is designed for stream stall detection and not failure detection.
-## Failure detection is done below in this install_tomcat function.
+## The watchdog in read_output_with_watchdog is designed for stream stall detection and not failure detection.
+## Failure detection is done in the new code in this install_tomcat function.
 
+                    ### OLD CODE:(this was using the watchdog for failure detection. This does not work right
                     ### only stub the thread if stdout_stalled AND stderr_stalled (from read_output_with_watchdog) AND
                     ### Attempts on the command is at the RETRY_LIMIT (see for attempt loop above).  Note that
                     ### attempt starts at 0 and the for attempt uses range RETRY_LIMIT so for 3 that is [0,1,2] thus
@@ -3804,7 +3790,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #        print(f"[{ip}] 🔄 Streams stalled but retrying (attempt {attempt + 1} of {RETRY_LIMIT})")
 
 
-## New revised code 
+## NEW REVISED CODE:
 ## Logic:
 ## | Condition | Action |
 ##|----------|--------|
@@ -3863,8 +3849,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all the relevant 
-                    ## arguments for this function call
+                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
+                    ## the relevant arguments for this function call
 
                     should_resurrect = resurrection_gatekeeper(
                         stderr_output=stderr_output,
@@ -3883,29 +3869,63 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     else:
                         print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
 
-                    # 🔴 Fatal error: missing tomcat9 package — tag and return
-                    if "E: Package 'tomcat9'" in stderr_output:
-                        print(f"[{ip}] ❌ Tomcat install failure — package not found.")
-                        registry_entry = {
-                            "status": "install_failed",
-                            "attempt": -1,
-                            "pid": multiprocessing.current_process().pid,
-                            "thread_id": threading.get_ident(),
-                            "thread_uuid": thread_uuid,
-                            "public_ip": ip,
-                            "private_ip": private_ip,
-                            "timestamp": str(datetime.utcnow()),
-                            "tags": ["fatal_package_missing", command]
-                        }
-                        ssh.close()
-                        return ip, private_ip, registry_entry
 
+
+
+                    # FAILURE HEURISTICS: 
+
+                    # 🔴 Fatal error: missing tomcat9 package — tag and return
+                   
 
                     #if "E: Package 'tomcat9'" in stderr_output:
                     #    print(f"[{ip}] ❌ Tomcat install failure.")
                     #    ssh.close()
                     #    return ip, private_ip, False
                     #    # this error is a critical error so return to calling thread but need to set registry
+
+
+                    #if "E: Package 'tomcat9'" in stderr_output:
+                    #    print(f"[{ip}] ❌ Tomcat install failure — package not found.")
+                    #    registry_entry = {
+                    #        "status": "install_failed",
+                    #        "attempt": -1,
+                    #        "pid": multiprocessing.current_process().pid,
+                    #        "thread_id": threading.get_ident(),
+                    #        "thread_uuid": thread_uuid,
+                    #        "public_ip": ip,
+                    #        "private_ip": private_ip,
+                    #        "timestamp": str(datetime.utcnow()),
+                    #        "tags": ["fatal_package_missing", command]
+                    #    }
+                    #    ssh.close()
+                    #    return ip, private_ip, registry_entry
+
+                    
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
+
+                    if "E: Package 'tomcat9'" in stderr_output:
+                        if attempt == RETRY_LIMIT - 1:
+                            print(f"[{ip}] ❌ Tomcat install failure — package not found on final attempt.")
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": attempt,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["fatal_package_missing", command]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Package not found — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue  # skip the rest of the for attempt loop and iterate to the next attempt fo this current
+                            # for idx command.
+
 
 
 
@@ -3917,17 +3937,45 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+                    ## ⚠️ Unexpected stderr — retry instead of exiting
+                    #if stderr_output.strip():
+                    #    #print(f"[{ip}] ❌ Non-warning stderr received.")
+                    #    
+                    #    #ssh.close()
+                    #    #return ip, private_ip, False
+                    #    # this is not a criitical error. Will set a continue to give another retry (of 3) instead
+                    #    # of ssh.close and return to calling function
+
+                    #    print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
+                    #    continue  # Retry the attempt loop
+
+
+
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
                     # ⚠️ Unexpected stderr — retry instead of exiting
                     if stderr_output.strip():
-                        #print(f"[{ip}] ❌ Non-warning stderr received.")
-                        
-                        #ssh.close()
-                        #return ip, private_ip, False
-                        # this is not a criitical error. Will set a continue to give another retry (of 3) instead
-                        # of ssh.close and return to calling function
+                        if attempt == RETRY_LIMIT - 1:
+                            print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": attempt,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["stderr_detected", command]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
 
-                        print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
-                        continue  # Retry the attempt loop
+
 
 
 
@@ -3936,6 +3984,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ## this will gate the install_failed registry_entry following this "for attempt" block
                     ## The successful install can then proceed to the next for idx command (outer loop) and once
                     ## the for idx loop is done it will proceed through the code to the registry_entry install_succeeded
+                    
                     command_succeeded = True
 
                     time.sleep(20)
@@ -4045,8 +4094,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
-
         # For patch7c: Thread-local tagging block (add this right after update_resurrection_registry)
         # This is part of the code  necesary for the patch7c in resurrection_monitor_patch7c() function. 
         # This creates a thread_registry for the current ip and since this part of the code is"install_success" the thread
@@ -4059,7 +4106,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         ## Create it fresh for each new thread/IP and then return it to threaded_install for adding to the thread_registry which
         ## will eventuall be called the process_registry in the tomcat_worker that calls threaded_install
 
-        
+
+        # install_success only after the for idx iterates through all commands successfully (no failure or stubs hit), at
+        # which time, exit the for idx and create registry below:
         registry_entry = {    
             "status": "install_success",
             "attempt": 0,
