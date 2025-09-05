@@ -266,7 +266,40 @@ These code changes were very challenging but will provide a  stable foundation t
 
 
 
+### High level code changes summary:
 
+There are a lot of complex changes in this area of the code since this area of the code is very critical.
+
+- Retry logic and gating thresholds in install_tomcat and read_output_with_watchdog
+
+- SSH and Command failure and stub detection in install_tomcat based upon output stream from read_output_with_watchdog
+
+- Failure tagging rationale (install_failed vs stub)  See update part 27 below for further detail. The same methodology
+has been applied to all additional code here. We only have 4 stub registry_entry thus far. The criteria is very strict.
+
+- Watchdog behavior in read_output_with_watchdog, and STDOUT and STDERR output and giltab console output limiting
+
+- Ensure that the failure registry_entry and stub registry_entry logic only kicks in at the last attempt for both SSH
+connections and command attempts in install_tomcat
+
+- Extensibility of command error detection and forensics to arbitrary command sets
+
+
+The code changes are indicated below (removed code is commented out). The changes were very signficant and the comments
+are self-explanatory
+
+
+
+### Code changes:
+
+
+#### read_output_with_watchdog:
+
+
+
+
+
+#### install_tomcat: 
 
 
 

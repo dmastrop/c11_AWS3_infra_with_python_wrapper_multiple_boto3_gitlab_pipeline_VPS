@@ -2887,7 +2887,10 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
 ## further optimizations on the waiting for the output to flush from the node. Introduced the grace window.
 ## The purpose of the watchdog at the thread level is to detect thread output data flush starvation and give the
 ## thread enough time to collect STDOUT and STDERR for further analysis by install_tomcat (failure/stub detection)
-
+## The stalled indicator below is not used, but is left in for possible future use.  The watchdog in read_output_with_watchdog
+## is NOT used for failure detection. Failure detection is done solely based upon the stream detection done in 
+## read_output_with_watchodg. Based upon the command semantics and output the decision on whether is is a falure, stub, 
+## or success is done in install_tomcat logic based on STDOUT and STDERR of the output flush stream for that command.
 
 def read_output_with_watchdog(stream, label, ip):
     stall_count = 0
@@ -2937,6 +2940,7 @@ def read_output_with_watchdog(stream, label, ip):
                 print(f"[{ip}] ⚠️ Post-loop flush read failed on {label}: {e}")
         time.sleep(0.5)
 
+    ## output limiting. There is no need to collect the entire output stream for purposes of command success or failure.
     output = collected.decode(errors="ignore")
     lines = output.strip().splitlines()
     preview = "\n".join(lines[:3])
@@ -2964,7 +2968,9 @@ def read_output_with_watchdog(stream, label, ip):
     stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
     return output, stalled
 
-
+    ## for now "stalled" is not used in the criteria for command success or failure. This logic has been moved to 
+    ## install_tomcat. The output stream is the primary artifact from read_output_with_watchdog that is used by
+    ## install_tomcat to decide on command success or failure. See install_tomcat, the calling function.
 
 
 
@@ -3798,14 +3804,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ##| `exit_status == 0` and `stderr_output.strip() == ""` | Mark command as succeeded |
 ##| After all commands succeed | Tag `install_success` outside the `for idx` loop |
 ##
+
 ## Examples:
 ##Condition | Outcome | Reason |
 ##|----------|---------|--------|
 
+
+## exit_status !=0
 ##| `stderr_output.strip()` is non-empty AND all command attempts exhausted | `install_failed` | We know what went wrong — stderr gives us the cause |
 
-##| `stderr_output.strip()` is empty AND all command attempts exhausted | `stub` | Silent failure — no output, no clue what happened |
+## exit_status !=0
+##| `stderr_output.strip()` is empty AND all command attempts exhausted | `stub` | Silent failure — no output, no clue what happened |   NOTE: this is only our 4th stub. The criteria for a stub is very strict.
 
+## exit_status =0
 ##| Any attempt succeeds (exit_status=0, no fatal stderr) command succeeded | No need to retry or tag failure . This will bypass all stub and failure registry logic and command succeeded will be reached at the bottom of install_tomcat. If all commands execute in this fashion the registry_entry will be status install_success (outside of the for idx loop).  Note that exit_status is 0 in this case
 
 
