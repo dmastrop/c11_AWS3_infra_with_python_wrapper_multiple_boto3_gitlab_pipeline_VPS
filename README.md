@@ -53,9 +53,9 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
 
-- Update part 28: Phase 2L: Reworking of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
+- Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
-- Update part 29: Phase 2m: Reworking the adaptive watchdog timeout and the API congestion function retry_with_backoff
+- Update part 29: Phase 2m: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
 - Update part 30: Phase 2n: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
@@ -93,6 +93,14 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 ### Introduction:
 
+Currently, the ghost detection code in inline in the module resurrection_monitor_patch8.  This simply moves out that code into
+a helper function similar to what was done for the hydrate_benmchmark_ips (deprecated now).    ALso add the PROCESS level 
+registry stats to the resurrection_monitor_patch8. This is a per process level statistics of the registry_entry status/tags
+for that specific process. This is already done at the aggregate level (post execution write-to-disk) in main() and getting 
+the process level stats is trivial (they are already available).
+
+
+
 
 ### Code changes:
 
@@ -100,12 +108,11 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 A small block of code in the resurrection__monitor function was commented out with the followign comment:
 
 ```
-# 🔒 Legacy ghost/candidate dump logic disabled — replaced by detect_ghosts() in Patch7d2
+# 🔒 Legacy ghost/candidate dump logic disabled — replaced by detect_ghosts() in Patch8
 # Commented out to prevent redundant artifact writes and confusion during modular refactor
 ```
 
-This is part of the effort to continue to clean up the resurrection_monitor in preparation for the patch8 integration for 
-the function.
+This is part of the effort to continue to clean up the resurrection_monitor
 
 
 This block is commented out s well. This will be populated at the process level with another helper function (note
@@ -123,6 +130,8 @@ all of these are also calclated at the aggregate level in main()):
             #Patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
 
 ```
+
+
 
 
 
@@ -218,7 +227,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 29: Phase 2m: Reworking the adaptive watchdog timeout and the API congestion function retry_with_backoff
+## UPDATES part 29: Phase 2m: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
 
 ### Introduction: 
@@ -228,7 +237,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 28: Phase 2L: Reworking of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
+## UPDATES part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
 ### Introduction:
 
