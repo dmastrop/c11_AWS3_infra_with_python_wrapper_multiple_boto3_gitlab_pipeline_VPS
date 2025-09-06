@@ -394,6 +394,8 @@ Likewise, in install_tomcat there were many changes.
 
 The following blocks of install_tomcat were changed.
 
+Note the use of a few stub registry_entry below.  These have no definitive cause or traceback.
+
 For the SSH "for attempt" block (ssh.connect):
 
 ```
@@ -666,7 +668,8 @@ in the logic can be noted.
 The critical logic is below:
 (see the comments above for and explanation and some examples of this flow based logic based on the output from 
 read_output_with_watchdog)
-
+Note the stub registry_entry below. Stubs are only used when there is no explicit evidence or trace of the thread 
+failure.
 
 ```
                     exit_status = stdout.channel.recv_exit_status()
@@ -823,7 +826,7 @@ The failure heuristics have also been optimized in install_tomcat:
 ```
 
 The rest of the install_tomcat function is the same:
-(The for idx loop and the for attemp loop (inside of the for idx loop) terminates below)
+(The for idx loop and the for attempt loop (inside of the for idx loop) terminates below)
 
 
 ```
