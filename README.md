@@ -669,7 +669,7 @@ read_output_with_watchdog)
 
 
 ```
-                   exit_status = stdout.channel.recv_exit_status()
+                    exit_status = stdout.channel.recv_exit_status()
                     if exit_status != 0 or stderr_output.strip():
                         print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
 
@@ -825,6 +825,8 @@ The failure heuristics have also been optimized in install_tomcat:
 The rest of the install_tomcat function is the same:
 (The for idx loop and the for attemp loop (inside of the for idx loop) terminates below)
 
+
+```
                     print(f"[{ip}] ✅ Command succeeded.")
                     ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
                     ## this will gate the install_failed registry_entry following this "for attempt" block
