@@ -390,6 +390,547 @@ def read_output_with_watchdog(stream, label, ip):
 
 #### install_tomcat: 
 
+Likewise, in install_tomcat there were many changes.
+
+The following blocks of install_tomcat were changed.
+
+For the SSH "for attempt" block (ssh.connect):
+
+```
+######### this is the new code for the SSH connection establishment code with registry failure tagging and ###########
+########## with stub registry protection if the for/else loop is abruptly terminated with no exception      ###########
+########## the stub helps a lot with forensic traceability                                                  ###########
+
+
+
+
+        ssh_connected = False
+        status_tagged = False
+        registry_entry_created = False
+        ssh_success = False  # temp flag to suppress stub
+
+        for attempt in range(5):
+            try:
+                print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+
+                # Start a watchdog timer in a separate thread. 
+                # This is to catch mysterious thread drops and create a stub entry for those.
+                # The status of stub will make them show up in the failed_ips_list rather than missing 
+
+
+                # saw an exception on the watchdog thread itself so use a try/except block so that we have an error message
+                # thrown in the logs if this happens again. The original error without the try/except was a generic thread
+                # exception from threading.Thread
+
+            ##### OLD CODE #####
+            #    def watchdog():
+            #        try:
+            #            time.sleep(30)
+            #            if not ssh_connected:
+            #                pid = multiprocessing.current_process().pid
+            #                if pid:
+            #                    stub_entry = {
+            #                        "status": "stub",
+            #                        "attempt": -1,
+            #                        "pid": pid,
+            #                        "thread_id": threading.get_ident(),
+            #                        "thread_uuid": thread_uuid,
+            #                        "public_ip": ip,
+            #                        "private_ip": private_ip,
+            #                        "timestamp": str(datetime.utcnow()),
+            #                        "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+            #                    }
+            #                    thread_registry[thread_uuid] = stub_entry
+            #                    return ip, private_ip, stub_entry
+            #        except Exception as e:
+            #            print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
+
+            #    threading.Thread(target=watchdog, daemon=True).start()
+            #    ####### end of watchdog code ##########        
+
+
+            #    ssh.connect(ip, port, username, key_filename=key_path)
+            #    ssh_connected = True
+            #    ssh_success = True  # suppress stub
+            #    break  # break out of the for attempt(5) loop
+            #
+            #except paramiko.ssh_exception.NoValidConnectionsError as e:
+            #    print(f"Connection failed: {e}")
+            #    time.sleep(10)
+
+
+
+            ##### NEW CODE with attempt == 4 gating #####
+                def watchdog():
+                    try:
+                        time.sleep(30)
+                        if not ssh_connected and attempt == 4:  # Only tag stub on final attempt
+                            pid = multiprocessing.current_process().pid
+                            if pid:
+                                stub_entry = {
+                                    "status": "stub",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": threading.get_ident(),
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": str(datetime.utcnow()),
+                                    "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                                }
+                                thread_registry[thread_uuid] = stub_entry
+                                return ip, private_ip, stub_entry
+                    except Exception as e:
+                        print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
+
+                threading.Thread(target=watchdog, daemon=True).start()
+                ####### end of watchdog code ##########
+
+                ssh.connect(ip, port, username, key_filename=key_path)
+                ssh_connected = True
+                ssh_success = True  # suppress stub
+                break  # break out of the for attempt(5) loop
+
+            except paramiko.ssh_exception.NoValidConnectionsError as e:
+                print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
+        else:
+            print(f"Failed to connect to {ip} after multiple attempts")
+            registry_entry = {
+                "status": "ssh_retry_failed",
+                "attempt": -1,
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": str(datetime.utcnow()),
+                "tags": ["ssh_retry_failed"]
+            }
+            status_tagged = True
+            registry_entry_created = True
+            return ip, private_ip, registry_entry
+
+
+        if not status_tagged and not registry_entry_created and not ssh_success:
+            pid = multiprocessing.current_process().pid
+            if pid:  # only stub if pid exists
+                print(f"[STUB] install_tomcat ssh.connecct exited early for {ip}")
+                stub_entry = {
+                    "status": "stub",
+                    "attempt": -1,
+                    "pid": pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": ["stub", "early_exit", "ssh_init_failed"]
+                }
+                return ip, private_ip, stub_entry
+```
+
+
+The next major revision to the install_tomcat was in the "for idx" loop for the command installatoin of the application 
+(in this case tomcat9; but te code can be used with any command set for any application. Failure and stub detection is
+agnostic to the command semantics, and is based on flow detection from read_output_with_watchdog (STDERR and 
+exit_status and the current attempt number on the command.   All the old code is commented out below so that the difference 
+in the logic can be noted.
+
+
+```
+
+    for idx, command in enumerate(commands):
+
+        ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
+        ## be modified for any command installation type (any application)
+
+            ## Code for the conidtional registry entry if hit install error: First, Add a success flag before the attempt loop 
+            ## set the command_succeeded flag to the default of False BEFORE the for attempt loop
+            ## This flag is used to gate the install_failed registry_entry block after the for attempt loop IF
+            ## the install_succeeded and break (out of the for attempt loop). This is to prevent a install_failed on
+            ## successful installs and preserve the failure logic if the for attempt loop aborts
+            command_succeeded = False
+
+
+
+            for attempt in range(RETRY_LIMIT):
+            ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
+            ## each attempt (of 3) will use the adaptive WATCHDOG_TIMEOUT as a watchdog and if the watchdog expires it
+            ## can re-attempt for STALL_RETRY_THRESHOLD =2 number of times watchdogs on each command attemp (of 3 total)
+
+                try:
+                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+                    stdout.channel.settimeout(WATCHDOG_TIMEOUT)
+                    stderr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+
+                    #stdout_output = read_output_with_watchdog(stdout, "STDOUT", ip, attempt)
+                    #stderr_output = read_output_with_watchdog(stderr, "STDERR", ip, attempt)
+
+                    #print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    #print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+
+                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip)
+                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip)
+
+                    print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
+                    print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
+
+## comment out the entire block below for new code below this.  The new code has new logic based upon STDERR output from
+## read_output_with_watchdog and also using exit_status and the command attempt iteration of this for attempt loop
+## The watchdog in read_output_with_watchdog is designed for stream stall detection and not failure detection.
+## Failure detection is done in the new code in this install_tomcat function.
+
+                    ### OLD CODE:(this was using the watchdog for failure detection. This does not work right
+                    ### only stub the thread if stdout_stalled AND stderr_stalled (from read_output_with_watchdog) AND
+                    ### Attempts on the command is at the RETRY_LIMIT (see for attempt loop above).  Note that
+                    ### attempt starts at 0 and the for attempt uses range RETRY_LIMIT so for 3 that is [0,1,2] thus
+                    ### use RETRY_LIMIT -1 in the if statement below.
+
+                    ##if stdout_stalled and stderr_stalled:
+                    #    
+                    #if stdout_stalled and stderr_stalled and attempt == RETRY_LIMIT - 1:
+                    #    # Only tag as stub on final retry
+
+                    #    #print(f"[{ip}] ❌ Streams stalled on final attempt — tagging stub")
+                    #    ## Proceed with stub tagging logic here
+                    #    #print(f"[{ip}] ⏱️  Watchdog stall threshold reached — tagging stub for command {idx + 1}/4.")
+                    #    
+                    #    print(f"[{ip}] ❌ Final attempt stalled — tagging stub for command {idx + 1}/4.")
+
+
+                    #    stub_entry = {
+                    #        "status": "stub",
+                    #        "attempt": -1,
+                    #        "pid": multiprocessing.current_process().pid,
+                    #        "thread_id": threading.get_ident(),
+                    #        "thread_uuid": thread_uuid,
+                    #        "public_ip": ip,
+                    #        "private_ip": private_ip,
+                    #        "timestamp": str(datetime.utcnow()),
+                    #        "tags": ["stub", f"watchdog_install_timeout_command_{idx}", "stall_retry_threshold", command]
+                    #    }
+                    #    return ip, private_ip, stub_entry
+                   
+
+                     #else:
+                    #    if stdout_stalled and stderr_stalled:
+                    #        print(f"[{ip}] 🔄 Streams stalled but retrying (attempt {attempt + 1} of {RETRY_LIMIT})")
+
+
+## NEW REVISED CODE:
+## Logic:
+## | Condition | Action |
+##|----------|--------|
+##| `exit_status != 0` or `stderr_output.strip()` | Retry (continue) or tag failure depending on attempt |
+##| `exit_status == 0` and `stderr_output.strip() == ""` | Mark command as succeeded |
+##| After all commands succeed | Tag `install_success` outside the `for idx` loop |
+##
+
+## Examples:
+##Condition | Outcome | Reason |
+##|----------|---------|--------|
+
+
+## exit_status !=0
+##| `stderr_output.strip()` is non-empty AND all command attempts exhausted | `install_failed` | We know what went wrong — stderr gives us the cause |
+
+## exit_status !=0
+##| `stderr_output.strip()` is empty AND all command attempts exhausted | `stub` | Silent failure — no output, no clue what happened |   NOTE: this is only our 4th stub. The criteria for a stub is very strict.
+
+## exit_status =0
+##| Any attempt succeeds (exit_status=0, no fatal stderr) command succeeded | No need to retry or tag failure . This will bypass all stub and failure registry logic and command succeeded will be reached at the bottom of install_tomcat. If all commands execute in this fashion the registry_entry will be status install_success (outside of the for idx loop).  Note that exit_status is 0 in this case
+```
+
+The critical logic is below:
+(see the comments above for and explanation and some examples of this flow based logic based on the output from 
+read_output_with_watchdog)
+
+
+```
+                   exit_status = stdout.channel.recv_exit_status()
+                    if exit_status != 0 or stderr_output.strip():
+                        print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
+
+                        if attempt == RETRY_LIMIT - 1:
+                            # Final attempt — tag failure
+                            if stderr_output.strip():
+                                registry_entry = {
+                                    "status": "install_failed",
+                                    "attempt": attempt,
+                                    "pid": multiprocessing.current_process().pid,
+                                    "thread_id": threading.get_ident(),
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": str(datetime.utcnow()),
+                                    "tags": ["fatal_error", command]
+                                }
+                            else:
+                                registry_entry = {
+                                    "status": "stub",
+                                    "attempt": attempt,
+                                    "pid": multiprocessing.current_process().pid,
+                                    "thread_id": threading.get_ident(),
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": str(datetime.utcnow()),
+                                    "tags": ["silent_failure", command]
+                                }
+                            return ip, private_ip, registry_entry
+                        else:
+                            # Retry the command
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue  # the continue is critical. If the retry limit is not reached exit entirely out of this
+                        # for attempt loop and go to the next attempt iteration of the same command (give it another try).
+                        # all the falure and success logic below will be bypassed which is what we want.
+
+```
+
+
+
+The failure heuristics have also been optimized in install_tomcat:
+(This is within the for attempt loop that is within the for idx loop)
+
+```
+                    # FAILURE HEURISTICS: 
+
+                    # 🔴 Fatal error: missing tomcat9 package — tag and return
+
+
+                    #if "E: Package 'tomcat9'" in stderr_output:
+                    #    print(f"[{ip}] ❌ Tomcat install failure.")
+                    #    ssh.close()
+                    #    return ip, private_ip, False
+                    #    # this error is a critical error so return to calling thread but need to set registry
+
+
+                    #if "E: Package 'tomcat9'" in stderr_output:
+                    #    print(f"[{ip}] ❌ Tomcat install failure — package not found.")
+                    #    registry_entry = {
+                    #        "status": "install_failed",
+                    #        "attempt": -1,
+                    #        "pid": multiprocessing.current_process().pid,
+                    #        "thread_id": threading.get_ident(),
+                    #        "thread_uuid": thread_uuid,
+                    #        "public_ip": ip,
+                    #        "private_ip": private_ip,
+                    #        "timestamp": str(datetime.utcnow()),
+                    #        "tags": ["fatal_package_missing", command]
+                    #    }
+                    #    ssh.close()
+                    #    return ip, private_ip, registry_entry
+
+
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
+
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
+
+                    if "E: Package 'tomcat9'" in stderr_output:
+                        if attempt == RETRY_LIMIT - 1:
+                            print(f"[{ip}] ❌ Tomcat install failure — package not found on final attempt.")
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": attempt,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["fatal_package_missing", command]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Package not found — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue  # skip the rest of the for attempt loop and iterate to the next attempt fo this current
+                            # for idx command.
+
+
+
+
+                    # ⚠️ Non-fatal warning — clear stderr and proceed
+                    if "WARNING:" in stderr_output:
+                        print(f"[{ip}] ⚠️ Warning ignored: {stderr_output.strip()}")
+                        stderr_output = ""
+                        # clear the stderr output
+
+
+                    ## ⚠️ Unexpected stderr — retry instead of exiting
+                    #if stderr_output.strip():
+                    #    #print(f"[{ip}] ❌ Non-warning stderr received.")
+                    #    
+                    #    #ssh.close()
+                    #    #return ip, private_ip, False
+                    #    # this is not a criitical error. Will set a continue to give another retry (of 3) instead
+                    #    # of ssh.close and return to calling function
+
+                    #    print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
+                    #    continue  # Retry the attempt loop
+
+
+
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
+                    # ⚠️ Unexpected stderr — retry instead of exiting
+                    if stderr_output.strip():
+                        if attempt == RETRY_LIMIT - 1:
+                            print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": attempt,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["stderr_detected", command]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
+
+```
+
+The rest of the install_tomcat function is the same:
+(The for idx loop and the for attemp loop (inside of the for idx loop) terminates below)
+
+                    print(f"[{ip}] ✅ Command succeeded.")
+                    ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
+                    ## this will gate the install_failed registry_entry following this "for attempt" block
+                    ## The successful install can then proceed to the next for idx command (outer loop) and once
+                    ## the for idx loop is done it will proceed through the code to the registry_entry install_succeeded
+
+                    command_succeeded = True
+
+                    time.sleep(20)
+                    break  # Success. This is a break out of the for attempt loop. The install_failed registry_entry logic
+                    # is gated so that it will not fire if there is this break for Success
+
+                except Exception as e:
+                    print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    # Tag as install_failed with exception details. This is part of the traceability for the install_tomcat
+                    # thread forensics.  
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": -1,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_for_attempt_loop_abort", f"exception_{type(e).__name__}", command]
+                    }
+                    return ip, private_ip, registry_entry
+
+
+                finally:
+                    stdin.close()
+                    stdout.close()
+                    stderr.close()
+                ## END of the for attempt loop 
+
+
+            # insert patch7b debug here for the inner attempt for loop
+            #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+
+            ## Keep the trace oustide of the failure block below. This is so that each command will get a TRACE message
+            ## For successful commands all four 1/4 through 4/4 will get a print message
+            ## For the failure case (if the for attempt loop exhausts after 3 retries), the print will also be done
+            # Always print when attempt loop ends — success or failure. Note for the success case for all 4 commands
+            # there will be 4 prints for the ip/threas
+
+            #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip}")
+
+            print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip} — Success flag: {command_succeeded}")
+
+
+            # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
+            # The default setting for command_succeeded is False and so this value will be False and the code block
+            # below will execute setting the registry_entry to install_failed with a tag of the command that failed
+
+            # This ensures: - If the command succeeds, we skip the failure block  - The outer `for idx` loop continues to
+            # the next command  - Only true failures are tagged and returned
+            # Note that the attempt -1 is required for the registry_entry because there has to be an attempt field in the
+            # registry.   The -1 is used as a filler for failed command registry entries.
+
+            # this block does catch silent failures inside the for attempt loop, as long as the loop completes 
+            # without success or exception. If the for attempt loop silently aborts and code flow returns to threaded_install,
+            # the calling function, there is stub logic there as well to create a stub registry_entry
+
+            if not command_succeeded:
+                #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
+                registry_entry = {
+                    "status": "install_failed",
+                    "attempt": -1,
+                    "pid": multiprocessing.current_process().pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": [f"install_failed_command_{idx}", command]
+                }
+
+                # Optional: close SSH connection if don't plan to resurrect
+                # Most likely will keep the SSH connection open so that it can be easily resurrected on the same SSH connection
+                # This is becasue teh SSH connection is okay, it is just the installation commands that are failing.
+
+                #ssh.close()
+
+                return ip, private_ip, registry_entry # the return will return this registry_entry to threaded_install()
+                # and the thread_registry, which will be returned to tomcat_worker and incorproated into this process'
+                # process_registry.
+
+        # END of the for idx loop
+        # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
+
+        ssh.close()
+        transport = ssh.get_transport()
+        if transport:
+            transport.close()
+
+
+
+
+        #debug for patch7c
+        print(f"[TRACE][install_tomcat] Reached successful registry update step for {ip}")
+
+<< REST of the install_success logic in install_tomcat() follows >>
+
+```
 
 
 
