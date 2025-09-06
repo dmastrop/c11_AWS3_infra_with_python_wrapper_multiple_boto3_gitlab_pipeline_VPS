@@ -295,7 +295,96 @@ are self-explanatory
 
 #### read_output_with_watchdog:
 
+The read_output_with_watchdog was significantly modified. 
 
+```
+## further optimizations on the waiting for the output to flush from the node. Introduced the grace window.
+## The purpose of the watchdog at the thread level is to detect thread output data flush starvation and give the
+## thread enough time to collect STDOUT and STDERR for further analysis by install_tomcat (failure/stub detection)
+## The stalled indicator below is not used, but is left in for possible future use.  The watchdog in read_output_with_watchdog
+## is NOT used for failure detection. Failure detection is done solely based upon the stream detection done in 
+## read_output_with_watchodg. Based upon the command semantics and output the decision on whether it is a failure, stub, 
+## or success is done in install_tomcat logic based on STDOUT and STDERR of the output flush stream for that command.
+
+def read_output_with_watchdog(stream, label, ip):
+    stall_count = 0
+    collected = b''
+    start = time.time()
+
+    while True:
+        if stream.channel.recv_ready():
+            try:
+                collected += stream.read()
+                break
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+                break
+
+        elapsed = time.time() - start
+        if elapsed > WATCHDOG_TIMEOUT:
+            stall_count += 1
+            print(f"[{ip}] ⏱️  Watchdog timeout on {label} read. Stall count: {stall_count}")
+            if stall_count >= STALL_RETRY_THRESHOLD:
+                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}. Breaking loop.")
+                break  # Exit loop, but do final flush check below
+            start = time.time()
+
+        time.sleep(1)
+   ## Final flush attempt after stall threshold. This is the main modification.
+    #if stream.channel.recv_ready():
+    #    try:
+    #        collected += stream.read()
+    #        print(f"[{ip}] 📥 Final flush read succeeded on {label}.")
+    #    except Exception as e:
+    #        print(f"[{ip}] ⚠️ Final read failed after stall threshold on {label}: {e}")
+
+
+
+    # After breaking loop due to stall threshold
+    flush_deadline = time.time() + 5  # Grace window: 5 seconds
+    while time.time() < flush_deadline:
+        if stream.channel.recv_ready():
+            try:
+                chunk = stream.read()
+                collected += chunk
+                print(f"[{ip}] 📥 Post-loop flush read: {len(chunk)} bytes on {label}")
+                break  # Exit early if output arrives
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Post-loop flush read failed on {label}: {e}")
+        time.sleep(0.5)
+
+    ## output limiting. There is no need to collect the entire output stream for purposes of command success or failure.
+    output = collected.decode(errors="ignore")
+    lines = output.strip().splitlines()
+    preview = "\n".join(lines[:3])
+    print(f"[{ip}] 🔍 Final output after flush (first {min(len(lines),3)} lines):\n{preview}")
+
+
+
+    # Get rid of this and replace with above. This is too verbose.  Need to limit gitlab console logs.  
+    #print(f"[{ip}] 🔍 Final output after flush: '{output.strip()}'")
+
+
+    # the key decision logic is below. The watchdog at this level is to detect thread starvation and not to decide
+    # failure, success or stub status (that is done in install_tomcat, the calling function)
+    # So this logic is not used. It is left in for possible future use.
+    # Logic below:
+    #This is the key line:
+    #- If we hit the stall threshold **and** the output is blank → `stalled = True`
+    #- If we hit the stall threshold **but** got some output → `stalled = False`
+    #- If we never hit the stall threshold → `stalled = False`
+
+    #Special case is commands that have no output. They will hit the watchdog attempts threshold and there will be no output 
+    #and it will be stalled =True but the logic in install_tomcat will prevent a stub or failed registry_entry due to command 
+    #attempt count of 1 (attempt=0) and an exit code of 0 (success). Stub and failed registry_entry in install_tomcat are gated.
+
+    stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
+    return output, stalled
+
+    ## for now "stalled" is not used in the criteria for command success or failure. This logic has been moved to 
+    ## install_tomcat. The output stream is the primary artifact from read_output_with_watchdog that is used by
+    ## install_tomcat to decide on command success or failure. See install_tomcat, the calling function.
+```
 
 
 
