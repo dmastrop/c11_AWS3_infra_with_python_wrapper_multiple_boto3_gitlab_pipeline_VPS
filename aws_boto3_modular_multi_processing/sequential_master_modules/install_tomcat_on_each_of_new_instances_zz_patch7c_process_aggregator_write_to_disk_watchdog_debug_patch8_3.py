@@ -3326,33 +3326,54 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # This is to catch mysterious thread drops and create a stub entry for those.
                 # The status of stub will make them show up in the failed_ips_list rather than missing 
             
-                #def watchdog():
-                #    time.sleep(30)  # or whatever threshold you want
-                #    if not ssh_connected:
-                #        watchdog_triggered = True
-                #        pid = multiprocessing.current_process().pid
-                #        if pid:
-                #            stub_entry = {
-                #                "status": "stub",
-                #                "pid": pid,
-                #                "thread_id": threading.get_ident(),
-                #                "thread_uuid": thread_uuid,
-                #                "public_ip": ip,
-                #                "private_ip": private_ip,
-                #                "timestamp": str(datetime.utcnow()),
-                #                "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
-                #            }
-                #            thread_registry[thread_uuid] = stub_entry
-                #            return ip, private_ip, stub_entry
                 
                 # saw an exception on the watchdog thread itself so use a try/except block so that we have an error message
                 # thrown in the logs if this happens again. The original error without the try/except was a generic thread
                 # exception from threading.Thread
 
+            ##### OLD CODE #####
+            #    def watchdog():
+            #        try:
+            #            time.sleep(30)
+            #            if not ssh_connected:
+            #                pid = multiprocessing.current_process().pid
+            #                if pid:
+            #                    stub_entry = {
+            #                        "status": "stub",
+            #                        "attempt": -1,
+            #                        "pid": pid,
+            #                        "thread_id": threading.get_ident(),
+            #                        "thread_uuid": thread_uuid,
+            #                        "public_ip": ip,
+            #                        "private_ip": private_ip,
+            #                        "timestamp": str(datetime.utcnow()),
+            #                        "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+            #                    }
+            #                    thread_registry[thread_uuid] = stub_entry
+            #                    return ip, private_ip, stub_entry
+            #        except Exception as e:
+            #            print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
+
+            #    threading.Thread(target=watchdog, daemon=True).start()
+            #    ####### end of watchdog code ##########        
+
+
+            #    ssh.connect(ip, port, username, key_filename=key_path)
+            #    ssh_connected = True
+            #    ssh_success = True  # suppress stub
+            #    break  # break out of the for attempt(5) loop
+            #
+            #except paramiko.ssh_exception.NoValidConnectionsError as e:
+            #    print(f"Connection failed: {e}")
+            #    time.sleep(10)
+                
+
+
+            ##### NEW CODE with attempt == 4 gating #####
                 def watchdog():
                     try:
                         time.sleep(30)
-                        if not ssh_connected:
+                        if not ssh_connected and attempt == 4:  # Only tag stub on final attempt
                             pid = multiprocessing.current_process().pid
                             if pid:
                                 stub_entry = {
@@ -3372,16 +3393,34 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
 
                 threading.Thread(target=watchdog, daemon=True).start()
-                ####### end of watchdog code ##########        
-
+                ####### end of watchdog code ##########
 
                 ssh.connect(ip, port, username, key_filename=key_path)
                 ssh_connected = True
                 ssh_success = True  # suppress stub
-                break
+                break  # break out of the for attempt(5) loop
+
             except paramiko.ssh_exception.NoValidConnectionsError as e:
-                print(f"Connection failed: {e}")
-                time.sleep(10)
+                print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
+
         else:
             print(f"Failed to connect to {ip} after multiple attempts")
             registry_entry = {
