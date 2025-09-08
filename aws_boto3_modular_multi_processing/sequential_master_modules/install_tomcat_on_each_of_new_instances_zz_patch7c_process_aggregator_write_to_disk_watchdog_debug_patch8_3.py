@@ -2928,7 +2928,7 @@ def read_output_with_watchdog(stream, label, ip):
 
 
     # After breaking loop due to stall threshold
-    flush_deadline = time.time() + 5  # Grace window: 5 seconds
+    flush_deadline = time.time() + 10  # Grace window: 5 seconds, increase to 10 seconds for negative testing.
     while time.time() < flush_deadline:
         if stream.channel.recv_ready():
             try:
@@ -3895,7 +3895,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         "public_ip": ip,
                                         "private_ip": private_ip,
                                         "timestamp": str(datetime.utcnow()),
-                                        "tags": ["silent_failure", command]
+                                        "tags": ["silent_failure", 
+                                            command, 
+                                            f"command_retry_{attempt + 1}",
+                                            "exit_status_nonzero_stderr_blank"
+                                        ]
                                     }
                                     return ip, private_ip, registry_entry
                                 else:
