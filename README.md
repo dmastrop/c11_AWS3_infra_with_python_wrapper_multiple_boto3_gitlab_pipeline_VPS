@@ -690,19 +690,26 @@ failure.
                                     "timestamp": str(datetime.utcnow()),
                                     "tags": ["fatal_error", command]
                                 }
+
                             else:
-                                registry_entry = {
-                                    "status": "stub",
-                                    "attempt": attempt,
-                                    "pid": multiprocessing.current_process().pid,
-                                    "thread_id": threading.get_ident(),
-                                    "thread_uuid": thread_uuid,
-                                    "public_ip": ip,
-                                    "private_ip": private_ip,
-                                    "timestamp": str(datetime.utcnow()),
-                                    "tags": ["silent_failure", command]
-                                }
-                            return ip, private_ip, registry_entry
+                                pid = multiprocessing.current_process().pid
+                                if pid:
+                                    registry_entry = {
+                                        "status": "stub",
+                                        "attempt": -1,
+                                        "pid": pid,
+                                        "thread_id": threading.get_ident(),
+                                        "thread_uuid": thread_uuid,
+                                        "public_ip": ip,
+                                        "private_ip": private_ip,
+                                        "timestamp": str(datetime.utcnow()),
+                                        "tags": ["silent_failure", command]
+                                    }
+                                    return ip, private_ip, registry_entry
+                                else:
+                                    print(f"[{ip}] ⚠️ Stub skipped — missing PID on final attempt for silent failure.")
+                                    return ip, private_ip, None  # Or fallback logic if needed
+
                         else:
                             # Retry the command
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
