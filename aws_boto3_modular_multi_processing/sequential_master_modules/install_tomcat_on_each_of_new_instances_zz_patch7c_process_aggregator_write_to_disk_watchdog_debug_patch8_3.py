@@ -4022,7 +4022,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 "public_ip": ip,
                                 "private_ip": private_ip,
                                 "timestamp": str(datetime.utcnow()),
-                                "tags": ["stderr_detected", command]
+                                "tags": [
+                                    "stderr_detected",
+                                    command,
+                                    f"command_retry_{attempt + 1}"  # e.g. command_retry_3
+                                ]
                             }
                             ssh.close()
                             return ip, private_ip, registry_entry
@@ -4061,7 +4065,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "public_ip": ip,
                         "private_ip": private_ip,
                         "timestamp": str(datetime.utcnow()),
-                        "tags": ["install_for_attempt_loop_abort", f"exception_{type(e).__name__}", command]
+                        "tags": [
+                            "install_for_attempt_loop_abort",
+                            f"exception_{type(e).__name__}",
+                            command,
+                            f"command_retry_{attempt + 1}"  # e.g. command_retry_2
+                        ]
                     }
                     return ip, private_ip, registry_entry
 
