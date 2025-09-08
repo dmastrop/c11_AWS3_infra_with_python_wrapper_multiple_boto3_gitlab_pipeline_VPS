@@ -3965,7 +3965,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             print(f"[{ip}] ❌ Tomcat install failure — package not found on final attempt.")
                             registry_entry = {
                                 "status": "install_failed",
-                                "attempt": attempt,
+                                "attempt": -1,
                                 "pid": multiprocessing.current_process().pid,
                                 "thread_id": threading.get_ident(),
                                 "thread_uuid": thread_uuid,
@@ -4015,7 +4015,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
                             registry_entry = {
                                 "status": "install_failed",
-                                "attempt": attempt,
+                                "attempt": -1,
                                 "pid": multiprocessing.current_process().pid,
                                 "thread_id": threading.get_ident(),
                                 "thread_uuid": thread_uuid,
