@@ -689,12 +689,12 @@ failure.
                                     "public_ip": ip,
                                     "private_ip": private_ip,
                                     "timestamp": str(datetime.utcnow()),
-				    "tags": [
-					"fatal_error",
-					command,
-					f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
+                                    "tags": [
+                                        "fatal_error",
+                                        command,
+                                        f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
                                     ]                                   
-                                }
+                        }
 
                             else:
                                 pid = multiprocessing.current_process().pid
