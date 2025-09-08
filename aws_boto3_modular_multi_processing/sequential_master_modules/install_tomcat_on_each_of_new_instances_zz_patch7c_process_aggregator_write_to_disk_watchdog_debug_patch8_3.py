@@ -3868,15 +3868,20 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             if stderr_output.strip():
                                 registry_entry = {
                                     "status": "install_failed",
-                                    "attempt": attempt,
+                                    "attempt": -1,
                                     "pid": multiprocessing.current_process().pid,
                                     "thread_id": threading.get_ident(),
                                     "thread_uuid": thread_uuid,
                                     "public_ip": ip,
                                     "private_ip": private_ip,
                                     "timestamp": str(datetime.utcnow()),
-                                    "tags": ["fatal_error", command]
+                                    "tags": [
+                                        "fatal_error",
+                                        command,
+                                        f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
+                                    ]
                                 }
+
                             else:
                                 pid = multiprocessing.current_process().pid
                                 if pid:
@@ -3972,7 +3977,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 "public_ip": ip,
                                 "private_ip": private_ip,
                                 "timestamp": str(datetime.utcnow()),
-                                "tags": ["fatal_package_missing", command]
+                                "tags": [
+                                    "fatal_package_missing",
+                                    command,
+                                    f"command_retry_{attempt + 1}"  # e.g. command_retry_3
+                                ]
                             }
                             ssh.close()
                             return ip, private_ip, registry_entry

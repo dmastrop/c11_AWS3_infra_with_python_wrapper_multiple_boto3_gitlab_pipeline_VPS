@@ -671,6 +671,7 @@ read_output_with_watchdog)
 Note the stub registry_entry below. Stubs are only used when there is no explicit evidence or trace of the thread 
 failure.
 
+
 ```
                     exit_status = stdout.channel.recv_exit_status()
                     if exit_status != 0 or stderr_output.strip():
@@ -681,14 +682,18 @@ failure.
                             if stderr_output.strip():
                                 registry_entry = {
                                     "status": "install_failed",
-                                    "attempt": attempt,
+                                    "attempt": -1,
                                     "pid": multiprocessing.current_process().pid,
                                     "thread_id": threading.get_ident(),
                                     "thread_uuid": thread_uuid,
                                     "public_ip": ip,
                                     "private_ip": private_ip,
                                     "timestamp": str(datetime.utcnow()),
-                                    "tags": ["fatal_error", command]
+				    "tags": [
+					"fatal_error",
+					command,
+					f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
+                                    ]                                   
                                 }
 
                             else:
@@ -765,7 +770,7 @@ The failure heuristics have also been optimized in install_tomcat:
                             print(f"[{ip}] ❌ Tomcat install failure — package not found on final attempt.")
                             registry_entry = {
                                 "status": "install_failed",
-                                "attempt": attempt,
+                                "attempt": -1,
                                 "pid": multiprocessing.current_process().pid,
                                 "thread_id": threading.get_ident(),
                                 "thread_uuid": thread_uuid,
@@ -814,7 +819,7 @@ The failure heuristics have also been optimized in install_tomcat:
                             print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
                             registry_entry = {
                                 "status": "install_failed",
-                                "attempt": attempt,
+                                "attempt": -1,
                                 "pid": multiprocessing.current_process().pid,
                                 "thread_id": threading.get_ident(),
                                 "thread_uuid": thread_uuid,
@@ -943,6 +948,115 @@ The rest of the install_tomcat function is the same:
 << REST of the install_success logic in install_tomcat() follows >>
 
 ```
+### Negative test encounter:
+
+
+Shortly after committing the code changes above, one of the 16 node tests encountered an error. In the gitlab console logs
+this showed up as a failed attempt 1 for command 1 of 4, and then the code correcctly retried the command 1 of 4 for 
+attempt 2 and succeeded.
+
+The forensics on the initial error illusrate that the code logic above works. Here is the gitlab lab console for the 
+error encountered during command 1 of 4 for this particular node:
+
+
+```
+34.236.152.36] 🔍 Final output after flush (first 1 lines):
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+[34.236.152.36] [2025-09-08 01:21:03.421487] STDOUT: ''
+[34.236.152.36] [2025-09-08 01:21:03.421521] STDERR: 'WARNING: apt does not have a stable CLI interface. Use with caution in scripts.'
+[34.236.152.36] ❌ Command failed — exit status 0, stderr: WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+```
+
+
+In the code block below the exit_status == 0 because the stderr was not fatal, but the stderr_output.strip() was present
+so the code above was entrered and the Command failed message was sent to the console:
+
+
+```
+
+                    exit_status = stdout.channel.recv_exit_status()
+                    if exit_status != 0 or stderr_output.strip():
+                        print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
+
+                        if attempt == RETRY_LIMIT - 1:
+                            # Final attempt — tag failure
+                            if stderr_output.strip():
+                                registry_entry = {
+                                    "status": "install_failed",
+                                    "attempt": -1,
+                                    "pid": multiprocessing.current_process().pid,
+                                    "thread_id": threading.get_ident(),
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": str(datetime.utcnow()),
+                                    "tags": [
+                                        "fatal_error",
+                                        command,
+                                        f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
+                                    ]
+                                }
+                            else:
+                                pid = multiprocessing.current_process().pid
+                                if pid:
+                                    registry_entry = {
+                                        "status": "stub",
+                                        "attempt": -1,
+                                        "pid": pid,
+                                        "thread_id": threading.get_ident(),
+                                        "thread_uuid": thread_uuid,
+                                        "public_ip": ip,
+                                        "private_ip": private_ip,
+                                        "timestamp": str(datetime.utcnow()),
+                                        "tags": ["silent_failure", command]
+                                    }
+                                    return ip, private_ip, registry_entry
+                                else:
+                                    print(f"[{ip}] ⚠️ Stub skipped — missing PID on final attempt for silent failure.")
+                                    return ip, private_ip, None  # Or fallback logic if needed                                  
+```
+
+
+However, because it was only the first attempt, the "if attempt == RETRY_LIMIT - 1:" was false and so the install_failed and
+the stub registry_entry were NOT created, which is the correct behavior.  Instead the for attempt loop iterated to the 
+second attempt for the command 1 of 4, and on the seccond attempt the command succeeded.
+
+
+This is precisely working as designed.
+
+In summary,
+
+- First attempt of command 1/4 on IP `34.236.152.36` returned:
+  - `exit_status == 0` ✅
+  - `STDOUT == ''` ❌ (unexpectedly blank)
+  - `STDERR == 'WARNING: apt does not have a stable CLI interface...'` ❌
+
+- The logic correctly flagged this as a failure (non-fatal), because:
+
+  ```
+  if exit_status != 0 or stderr_output.strip():
+  ```
+  
+That `stderr_output.strip()` triggered the failure path.
+
+- Since it was not the final attempt, the code did not tag `install_failed` or `stub, and instead retried.
+
+- Second attempt succeeded, with full STDOUT captured and no STDERR — tagged as `install_success`.
+
+
+
+```
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+```
+is technically not fatal, but the logic treats any non-empty STDERR as a signal to retry. That’s intentional because:
+
+- It avoids false positives from noisy package managers
+- It ensures clean installs with no warnings or ambiguity
+- It gives you deterministic control over what counts as success
+
+
+
+
 
 
 
