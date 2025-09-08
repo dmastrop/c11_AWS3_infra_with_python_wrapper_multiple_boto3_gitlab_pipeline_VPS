@@ -3075,7 +3075,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     commands = [
         'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
-        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
+        #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
+        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
         'sudo systemctl start tomcat9',
         'sudo systemctl enable tomcat9'
     ]
