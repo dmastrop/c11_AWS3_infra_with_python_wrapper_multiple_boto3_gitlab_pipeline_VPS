@@ -3075,12 +3075,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     commands = [
         'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
-        #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
-        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
+        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
+        #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
         'sudo systemctl start tomcat9',
         'sudo systemctl enable tomcat9'
     ]
 
+    # Negative testing: Inject failure into first thread only
+    target_ip = instance_info[0]['public_ip']
 
 
 
@@ -3749,6 +3751,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
 ## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
 ## The read_output_with_watchdog calls the update_resurrection_registry function
+
+
+
+
+        # Negative testin: get the target_ip defined in tomcat_worker(the calling function), and use it to set the 
+        # command[1] (the second command) to the corrupted tomcat99 for negative testing
+        if ip == target_ip:
+            commands[1] = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
+
 
 
 
