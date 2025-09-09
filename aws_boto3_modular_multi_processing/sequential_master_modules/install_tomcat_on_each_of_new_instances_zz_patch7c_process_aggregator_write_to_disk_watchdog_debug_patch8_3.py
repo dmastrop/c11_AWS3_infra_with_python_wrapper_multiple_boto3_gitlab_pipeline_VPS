@@ -3078,7 +3078,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         
         #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
         #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
-        'sudo nonexistent_binary --fail' # simulate a runtime crash or exception
+        'sudo nonexistent_binary --fail', # simulate a runtime crash or exception
         
         'sudo systemctl start tomcat9',
         
