@@ -3755,15 +3755,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-        # Negative testin: get the target_ip defined in tomcat_worker(the calling function), and use it to set the 
+        # Negative testing: get the target_ip defined in tomcat_worker(the calling function), and use it to set the 
         # command[1] (the second command) to the corrupted tomcat99 for negative testing
+        local_commands = commands.copy()
         if ip == target_ip:
-            commands[1] = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
+            local_commands[1] = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
+
+        # Negative testing use this:
+        for idx, command in enumerate(local_commands)
+
+
+        #NON-Negative testing use this: (and comment out the above)
+        #for idx, command in enumerate(commands):
 
 
 
-
-        for idx, command in enumerate(commands):
 
         ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
         ## be modified for any command installation type (any application)
