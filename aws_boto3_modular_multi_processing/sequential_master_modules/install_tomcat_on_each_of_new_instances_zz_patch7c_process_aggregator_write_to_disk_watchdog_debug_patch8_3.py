@@ -3762,7 +3762,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             local_commands[1] = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
 
         # Negative testing use this:
-        for idx, command in enumerate(local_commands)
+        for idx, command in enumerate(local_commands):
 
 
         #NON-Negative testing use this: (and comment out the above)
