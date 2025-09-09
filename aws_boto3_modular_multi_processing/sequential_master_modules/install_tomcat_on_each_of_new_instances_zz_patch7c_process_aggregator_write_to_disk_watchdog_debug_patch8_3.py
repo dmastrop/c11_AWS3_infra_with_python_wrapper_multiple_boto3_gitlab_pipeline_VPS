@@ -3076,10 +3076,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     commands = [
         'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
         
-        #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
+        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
         #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
         #'sudo nonexistent_binary --fail', # simulate a runtime crash or exception
-        'sudo bash -c "nonexistent_binary --fail; sleep 1"',
+        #'sudo bash -c "nonexistent_binary --fail; sleep 1"',
 
         'sudo systemctl start tomcat9',
         
