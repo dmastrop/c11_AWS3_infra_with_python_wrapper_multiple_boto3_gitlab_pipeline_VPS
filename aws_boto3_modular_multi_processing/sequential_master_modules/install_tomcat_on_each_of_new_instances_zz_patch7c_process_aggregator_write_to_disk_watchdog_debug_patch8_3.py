@@ -3081,9 +3081,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         'sudo systemctl enable tomcat9'
     ]
 
-    # Negative testing: Inject failure into first thread only
-    target_ip = instance_info[0]['public_ip']
-
 
 
     ## Define SSH details
@@ -3755,18 +3752,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-        # Negative testing: get the target_ip defined in tomcat_worker(the calling function), and use it to set the 
-        # command[1] (the second command) to the corrupted tomcat99 for negative testing
-        local_commands = commands.copy()
-        if ip == target_ip:
-            local_commands[1] = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
-
-        # Negative testing use this:
-        for idx, command in enumerate(local_commands):
-
 
         #NON-Negative testing use this: (and comment out the above)
-        #for idx, command in enumerate(commands):
+        for idx, command in enumerate(commands):
 
 
 
