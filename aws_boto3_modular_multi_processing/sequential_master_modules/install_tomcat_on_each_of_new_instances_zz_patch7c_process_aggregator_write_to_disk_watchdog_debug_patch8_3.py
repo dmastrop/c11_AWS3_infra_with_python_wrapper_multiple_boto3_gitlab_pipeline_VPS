@@ -2928,7 +2928,7 @@ def read_output_with_watchdog(stream, label, ip):
 
 
     # After breaking loop due to stall threshold
-    flush_deadline = time.time() + 5  # Grace window: 5 seconds
+    flush_deadline = time.time() + 10  # Grace window: 5 seconds
     while time.time() < flush_deadline:
         if stream.channel.recv_ready():
             try:
@@ -3081,6 +3081,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         'sudo systemctl enable tomcat9'
     ]
 
+
+    ## Negative testing: Inject failure into first thread only
+    #target_ip = instance_info[0]['public_ip']
+
+     
 
 
     ## Define SSH details
@@ -3756,6 +3761,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #NON-Negative testing use this: (and comment out the above)
         for idx, command in enumerate(commands):
 
+        ## Negative testing:
+        #if ip == target_ip and idx == 1:
+        #    command = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
 
 
 
