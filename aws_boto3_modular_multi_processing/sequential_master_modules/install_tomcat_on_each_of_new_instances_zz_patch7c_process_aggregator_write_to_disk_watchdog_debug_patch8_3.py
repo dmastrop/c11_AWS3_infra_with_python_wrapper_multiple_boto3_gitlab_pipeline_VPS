@@ -3082,8 +3082,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ]
 
 
-    ## Negative testing: Inject failure into first thread only
-    #target_ip = instance_info[0]['public_ip']
+    # Negative testing: Inject failure into first thread only
+    target_ip = instance_info[0]['public_ip']
 
      
 
@@ -3761,9 +3761,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #NON-Negative testing use this: (and comment out the above)
         for idx, command in enumerate(commands):
 
-        ## Negative testing:
-        #if ip == target_ip and idx == 1:
-        #    command = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
+            # Negative testing:
+            if ip == target_ip and idx == 1:
+                command = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
 
 
 
