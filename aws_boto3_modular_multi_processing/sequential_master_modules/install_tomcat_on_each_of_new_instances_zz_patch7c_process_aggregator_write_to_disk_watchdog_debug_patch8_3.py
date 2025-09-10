@@ -3085,9 +3085,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         
         #'sudo bash -c "nonexistent_binary --fail; sleep 1"',  # still an issue with exit_status 5 which does not make sense
 
-        #'bash -c "nonexistent_binary"'  #new test1
+        'bash -c "nonexistent_binary"',  #new test1
           
-        'bash -c \'nonexistent_binary\''  # new test2
+        #'bash -c \'nonexistent_binary\'',  # new test2
 
 
         'sudo systemctl start tomcat9',
