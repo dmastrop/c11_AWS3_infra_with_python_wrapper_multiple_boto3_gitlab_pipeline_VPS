@@ -3085,9 +3085,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         
         #'sudo bash -c "nonexistent_binary --fail; sleep 1"',  # still an issue with exit_status 5 which does not make sense
 
-        'bash -c "nonexistent_binary"',  #new test1
+        #'bash -c "nonexistent_binary"',  #new test1
           
-        #'bash -c \'nonexistent_binary\'',  # new test2
+        'bash -c \'nonexistent_binary\'',  # new test2
 
 
         'sudo systemctl start tomcat9',
@@ -3801,6 +3801,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 try:
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+
+
+                    # Debugging the blank STDERR issue
+                    raw_stdout = stdout.read()
+                    raw_stderr = stderr.read()
+                    print(f"[{ip}] RAW STDOUT: {repr(raw_stdout)}")
+                    print(f"[{ip}] RAW STDERR: {repr(raw_stderr)}")
+                    # end debug
 
                     stdout.channel.settimeout(WATCHDOG_TIMEOUT)
                     stderr.channel.settimeout(WATCHDOG_TIMEOUT)
