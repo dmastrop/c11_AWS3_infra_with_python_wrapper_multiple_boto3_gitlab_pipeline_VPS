@@ -261,6 +261,20 @@ exit_status, the attempt retry count and the STDERR (stderr_output.strip from re
 to classify the status of the thread.
 
 
+
+```
+
+                    exit_status = stdout.channel.recv_exit_status()
+                    if exit_status != 0 or stderr_output.strip():
+                        print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
+
+                        if attempt == RETRY_LIMIT - 1:
+
+
+```
+
+
+
 ## UPDATES part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
 ### Introduction:
