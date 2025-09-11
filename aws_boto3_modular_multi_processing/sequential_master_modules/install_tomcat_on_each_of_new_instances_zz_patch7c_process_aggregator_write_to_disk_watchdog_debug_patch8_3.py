@@ -2928,7 +2928,7 @@ def read_output_with_watchdog(stream, label, ip):
 
 
     # After breaking loop due to stall threshold
-    flush_deadline = time.time() + 20  # Grace window: 5 seconds
+    flush_deadline = time.time() + 10  # Grace window: 5 seconds
     while time.time() < flush_deadline:
         if stream.channel.recv_ready():
             try:
@@ -3077,7 +3077,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
         
         # second command semantics #
-        #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
+        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
         
         #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
 
@@ -3087,7 +3087,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         #'bash -c "nonexistent_binary"',  #new test1
           
-        'bash -c \'nonexistent_binary\'',  # new test2
+        #'bash -c \'nonexistent_binary\'',  # new test2
 
 
         'sudo systemctl start tomcat9',
