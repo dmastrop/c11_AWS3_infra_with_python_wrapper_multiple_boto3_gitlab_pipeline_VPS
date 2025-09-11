@@ -55,11 +55,13 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
-- Update part 29: Phase 2m: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
+- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog to deal with the buffer cross contamination between install_tomcat and read_output_with_watchdog
 
-- Update part 30: Phase 2n: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+- Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
-- Update part 31 Phase 2o: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+- Update part 31: Phase 2o: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+
+- Update part 32 Phase 2p: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 
@@ -88,7 +90,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 
 
-## UPDATES part 31: Phase 2o: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+## UPDATES part 32: Phase 2p: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 ### Introduction:
@@ -135,7 +137,7 @@ all of these are also calclated at the aggregate level in main()):
 
 
 
-## UPDATES part 30: Phase 2n: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+## UPDATES part 31: Phase 2o: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
 
 
@@ -227,7 +229,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 29: Phase 2m: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
+## UPDATES part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
 
 ### Introduction: 
@@ -235,6 +237,28 @@ STATUS_TAGS = {
 
 
 
+
+
+
+
+
+## UPDATES part 29: Phase 2m: Refactoring of the read_output_with_watchdog to deal with the buffer cross contamination between install_tomcat and read_output_with_watchdog
+
+
+### Introduction:
+
+From the preceeding update:
+
+The negative testing of the preceeding section revealed read buffer contamination between the install_tomcat function and the
+read_output_with_watchdog function.   Need to consolidate all buffer output flush reads in read_output_with_watchdog
+and remove all reads in install_tomcat. 
+
+install_tomcat only needs to be provided with the read output flush from
+read_output_with_watchdog, and then install_tomcat has the decision logic (failure, success, and stub logic) to decide
+what the registry_entry status of that thread is.  The logic does not need to be changed after this is corrected.
+
+exit_status, the attempt retry count and the STDERR (stderr_output.strip from read_output_with_watchdog) are used
+to classify the status of the thread.
 
 
 ## UPDATES part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
@@ -1086,8 +1110,26 @@ commands = [
 ```
 
 
+This part of the negative testing revealed read buffer contamination between the install_tomcat function and the 
+read_output_with_watchdog function.   Need to consolidate all buffer output flush reads in read_output_with_watchdog
+and remove all reads in install_tomcat. install_tomcat only needs to be provided with the read output flush from 
+read_output_with_watchdog, and then install_tomcat has the decision logic (failure, success, and stub logic) to decide
+what the registry_entry status of that thread is.  The logic does not need to be changed after this is corrected.
+
+exit_status, the attempt retry count and the STDERR (stderr_output.strip from read_output_with_watchdog) are used
+to classify the status of the thread.
+
+```
+
+                    exit_status = stdout.channel.recv_exit_status()
+                    if exit_status != 0 or stderr_output.strip():
+                        print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
+
+                        if attempt == RETRY_LIMIT - 1:
 
 
+```
+See the next update above (Phase 2m) for the refactor of read_output_with_watchdog.
 
 
 
