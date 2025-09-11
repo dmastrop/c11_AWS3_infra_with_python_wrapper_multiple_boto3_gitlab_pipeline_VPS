@@ -3175,13 +3175,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     my_ec2 = session.client('ec2')
 
     commands = [
-        'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
+        'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1', # put STDERR and STDOUT into one stream
+
+        #'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
         
+
+
+
         # second command semantics #
         'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
         
         #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
 
+        
         #'sudo nonexistent_binary --fail', # simulate a runtime crash or exception
         
         #'sudo bash -c "nonexistent_binary --fail; sleep 1"',  # still an issue with exit_status 5 which does not make sense
@@ -3189,6 +3195,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #'bash -c "nonexistent_binary"',  #new test1
           
         #'bash -c \'nonexistent_binary\'',  # new test2
+
 
 
         'sudo systemctl start tomcat9',
