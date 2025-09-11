@@ -3803,12 +3803,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
 
 
-                    # Debugging the blank STDERR issue
-                    raw_stdout = stdout.read()
-                    raw_stderr = stderr.read()
-                    print(f"[{ip}] RAW STDOUT: {repr(raw_stdout)}")
-                    print(f"[{ip}] RAW STDERR: {repr(raw_stderr)}")
-                    # end debug
+                    ## Debugging the blank STDERR issue with RAW
+                    #raw_stdout = stdout.read()
+                    #raw_stderr = stderr.read()
+                    #print(f"[{ip}] RAW STDOUT: {repr(raw_stdout)}")
+                    #print(f"[{ip}] RAW STDERR: {repr(raw_stderr)}")
+                    ## end debug
 
                     stdout.channel.settimeout(WATCHDOG_TIMEOUT)
                     stderr.channel.settimeout(WATCHDOG_TIMEOUT)
