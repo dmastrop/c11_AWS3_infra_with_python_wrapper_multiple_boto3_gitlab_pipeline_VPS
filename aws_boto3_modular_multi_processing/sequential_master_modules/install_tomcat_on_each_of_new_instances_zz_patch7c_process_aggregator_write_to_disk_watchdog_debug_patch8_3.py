@@ -2928,7 +2928,7 @@ def read_output_with_watchdog(stream, label, ip):
 
 
     # After breaking loop due to stall threshold
-    flush_deadline = time.time() + 10  # Grace window: 5 seconds
+    flush_deadline = time.time() + 20  # Grace window: 5 seconds
     while time.time() < flush_deadline:
         if stream.channel.recv_ready():
             try:
