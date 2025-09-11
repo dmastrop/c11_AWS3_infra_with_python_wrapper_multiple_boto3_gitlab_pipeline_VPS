@@ -3174,34 +3174,73 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     )
     my_ec2 = session.client('ec2')
 
-    commands = [
-        'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1', # put STDERR and STDOUT into one stream
+    #commands = [
+    #    
+    #    #"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'"
 
-        #'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
-        
+    #        
+    #    'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1', # put STDERR and STDOUT into one stream
+
+    #    #'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
+    #    
+
+    #    
+
+    #    # second command semantics #
+    #    'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
+    #    
+    #    #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
+
+    #    
+    #    #'sudo nonexistent_binary --fail', # simulate a runtime crash or exception
+    #    
+    #    #'sudo bash -c "nonexistent_binary --fail; sleep 1"',  # still an issue with exit_status 5 which does not make sense
+
+    #    #'bash -c "nonexistent_binary"',  #new test1
+    #      
+    #    #'bash -c \'nonexistent_binary\'',  # new test2
 
 
 
-        # second command semantics #
-        'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
-        
-        #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
-
-        
-        #'sudo nonexistent_binary --fail', # simulate a runtime crash or exception
-        
-        #'sudo bash -c "nonexistent_binary --fail; sleep 1"',  # still an issue with exit_status 5 which does not make sense
-
-        #'bash -c "nonexistent_binary"',  #new test1
-          
-        #'bash -c \'nonexistent_binary\'',  # new test2
+    #    'sudo systemctl start tomcat9',
+    #    
+    #    'sudo systemctl enable tomcat9'
+    #]
 
 
 
-        'sudo systemctl start tomcat9',
-        
-        'sudo systemctl enable tomcat9'
-    ]
+
+
+
+commands = [
+    # ORIGINAL — apt update without stream collapse
+    "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+
+    # ORIGINAL — apt install without stream collapse
+    "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+
+    # Optional: apt update with collapsed streams (wrapped in bash)
+    # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
+
+    # Optional: apt install with collapsed streams (wrapped in bash)
+    # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
+
+    # Optional: simulate package failure
+    # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
+
+    # Optional: simulate runtime crash
+    # "sudo nonexistent_binary --fail",
+
+    # Optional: simulate chained failure with sleep
+    # "sudo bash -c 'nonexistent_binary --fail; sleep 1'",
+
+    # Optional: raw bash invocation
+    # "bash -c 'nonexistent_binary'",
+
+    # Non-apt commands (leave unwrapped)
+    "sudo systemctl start tomcat9",
+    "sudo systemctl enable tomcat9"
+]
 
 
     ## Negative testing: Inject failure into first thread only
