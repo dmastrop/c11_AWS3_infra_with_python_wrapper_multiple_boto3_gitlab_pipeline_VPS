@@ -3220,7 +3220,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
 
         # Optional: apt update with collapsed streams (wrapped in bash)
-         "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
+        "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
 
         # Optional: apt install with collapsed streams (wrapped in bash)
         "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
