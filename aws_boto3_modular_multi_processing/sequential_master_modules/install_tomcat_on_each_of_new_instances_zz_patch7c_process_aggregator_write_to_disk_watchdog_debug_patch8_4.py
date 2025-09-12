@@ -3220,10 +3220,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
 
         # Optional: apt update with collapsed streams (wrapped in bash)
-         "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
+        # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
 
         # Optional: apt install with collapsed streams (wrapped in bash)
-         "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
+        #"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
+
+
+        # Optional: apt update with collapsed streams and write to file and then STDOUT
+        f"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y > /tmp/apt_output_{thread_uuid}.txt 2>&1; cat /tmp/apt_output_{thread_uuid}.txt; rm /tmp/apt_output_{thread_uuid}.txt'",
+        
+
+        # Optional: apt install with collapsed streams and write to file and then STDOUT
+        f"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 > /tmp/apt_output_{thread_uuid}.txt 2>&1; cat /tmp/apt_output_{thread_uuid}.txt; rm /tmp/apt_output_{thread_uuid}.txt'",
+ 
+
+
 
         # Optional: simulate package failure. For apt commmands with collapsed streams this will result in a stub
         # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
