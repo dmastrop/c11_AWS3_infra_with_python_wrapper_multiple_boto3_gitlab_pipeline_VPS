@@ -55,7 +55,7 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
-- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog to deal with the buffer cross contamination between install_tomcat and read_output_with_watchdog
+- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat to support intelligent output flow based decision making for command execution
 
 - Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
@@ -242,12 +242,17 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 29: Phase 2m: Refactoring of the read_output_with_watchdog to deal with the buffer cross contamination between install_tomcat and read_output_with_watchdog
+## UPDATES part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat to support intelligent output flow based decision making for command execution:
 
 
 ### Introduction:
 
-From the preceeding update:
+This update will contain many areas that need refactoring, namely in the read_output_with_watchdog function and the 
+install_tomcat function.
+
+
+
+From the preceeding update
 
 The negative testing of the preceeding section revealed read buffer contamination between the install_tomcat function and the
 read_output_with_watchdog function.   Need to consolidate all buffer output flush reads in read_output_with_watchdog
@@ -272,6 +277,33 @@ to classify the status of the thread.
 
 
 ```
+
+
+The next area is the conversion of the stream based output flush in read_output_with_watchdog to a raw output. The 
+stream based is consistently missing the STDERR channel in the gitlab console logs.   The STDERR provides critial
+information for the failure heuristics in install_tomcat (read_output_with_watchdog returns all of this output to 
+install_tomcat).   The decision making in install_tomcat needs an overhaul.  Namely whitelist for many STDERR
+output that should not be flagged as install_failed or stub.   In addtion the whitelist needs to be adaptabile to 
+other applications and commands, not just tomcat9 installations.   So there will be a very large dictionary of output 
+phrases that will be used to make the decison of a stub, install_failed or install_success which is based upon the 
+command success or failures that are determined in install_tomcat.  The heuritics will eventually include AI based type
+techniques to make the decision.
+
+The raw based output refactoring for the read_output_with_watchdog is below:
+
+
+
+
+
+
+Finally, there is a need for a whitelist fitering of the STDERR output for the reasons outlined below. 
+
+
+
+
+
+
+
 
 
 
