@@ -2,6 +2,14 @@ FROM python:3.11.9
 WORKDIR /aws_EC2
 ENV PYTHONUNBUFFERED=1
 
+# Confirm default shell
+RUN echo "Default shell: $(readlink /bin/sh)"
+
+# Install Bash to ensure proper stream redirection
+RUN apt-get update && apt-get install -y bash
+
+
+
 COPY ./aws_EC2_boto3_class /aws_EC2
 RUN pip install --no-cache-dir -r requirements.txt
 
