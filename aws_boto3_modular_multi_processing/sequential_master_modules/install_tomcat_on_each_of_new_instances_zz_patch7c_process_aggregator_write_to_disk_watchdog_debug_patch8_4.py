@@ -3967,7 +3967,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                 try:
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
-                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
+                    
+                    #try pty for debugging
+                    stdin, stdout, stderr = ssh.exec_command(command, timeout=60, get_pty=True)
+                                                            
+                    #stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
 
 
                     ## Debugging the blank STDERR issue with RAW
