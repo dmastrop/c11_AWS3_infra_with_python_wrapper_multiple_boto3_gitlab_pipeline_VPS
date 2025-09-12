@@ -3214,18 +3214,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     commands = [
         # ORIGINAL — apt update without stream collapse
-        "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+        #"sudo DEBIAN_FRONTEND=noninteractive apt update -y",
 
         # ORIGINAL — apt install without stream collapse
-        "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+        #"sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
 
         # Optional: apt update with collapsed streams (wrapped in bash)
-        # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
+         "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
 
         # Optional: apt install with collapsed streams (wrapped in bash)
-        # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
+         "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
 
-        # Optional: simulate package failure
+        # Optional: simulate package failure. For apt commmands with collapsed streams this will result in a stub
         # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
 
         # Optional: simulate runtime crash
@@ -3238,7 +3238,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # "bash -c 'nonexistent_binary'",
 
         # Non-apt commands (leave unwrapped)
+
+        
+        ## commands 3 and 4: 
+
         "sudo systemctl start tomcat9",
+        
+        # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
+        #"sudo systemctl start tomcat99",
+
+
         "sudo systemctl enable tomcat9"
     ]
 
