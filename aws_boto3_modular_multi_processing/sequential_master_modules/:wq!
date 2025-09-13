@@ -62,7 +62,7 @@ APT_WHITELIST_REGEX = [
     r"Fetched .* in .*",
     r"Reading database .*",
     r"Selecting previously unselected package .*",
-    r"0 upgraded, .* not upgraded",
+    r"0 upgraded, .* not upgraded"
     r"Waiting for cache lock: Could not get lock .*lock-frontend.*"
 ]
 
