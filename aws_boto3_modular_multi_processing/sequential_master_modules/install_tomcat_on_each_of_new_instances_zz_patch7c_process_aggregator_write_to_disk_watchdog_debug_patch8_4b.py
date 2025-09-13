@@ -63,7 +63,7 @@ APT_WHITELIST_REGEX = [
     r"Reading database .*",
     r"Selecting previously unselected package .*",
     r"0 upgraded, .* not upgraded",
-    r"Waiting for cache lock: Could not get lock .*lock-frontend.*"
+    r"Waiting for cache lock: Could not get lock .*lock-frontend.*" #added
 ]
 
 def is_whitelisted_line(line):
@@ -4119,7 +4119,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 "tags": [
                                     "fatal_package_missing",
                                     command,
-                                    f"command_retry_{attempt + 1}"  # e.g. command_retry_3
+                                    f"command_retry_{attempt + 1}",  # e.g. command_retry_3
+                                    *stderr_output.strip().splitlines()[:3]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
@@ -4141,47 +4142,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-                    ## ⚠️ Unexpected stderr — retry instead of exiting
-                    #if stderr_output.strip():
-                    #    #print(f"[{ip}] ❌ Non-warning stderr received.")
-                    #    
-                    #    #ssh.close()
-                    #    #return ip, private_ip, False
-                    #    # this is not a criitical error. Will set a continue to give another retry (of 3) instead
-                    #    # of ssh.close and return to calling function
-
-                    #    print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
-                    #    continue  # Retry the attempt loop
-
-
-
-                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
-                    ## and failed registry entries uniless all retries have been exhausted
-                    # ⚠️ Unexpected stderr — retry instead of exiting
-                    if stderr_output.strip():
-                        if attempt == RETRY_LIMIT - 1:
-                            print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
-                            registry_entry = {
-                                "status": "install_failed",
-                                "attempt": -1,
-                                "pid": multiprocessing.current_process().pid,
-                                "thread_id": threading.get_ident(),
-                                "thread_uuid": thread_uuid,
-                                "public_ip": ip,
-                                "private_ip": private_ip,
-                                "timestamp": str(datetime.utcnow()),
-                                "tags": [
-                                    "stderr_detected",
-                                    command,
-                                    f"command_retry_{attempt + 1}"  # e.g. command_retry_3
-                                ]
-                            }
-                            ssh.close()
-                            return ip, private_ip, registry_entry
-                        else:
-                            print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
-                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                            continue
 
 
 
@@ -4355,7 +4315,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         f"command_retry_{attempt + 1}",
                                         f"exit_status_{exit_status}",
                                         "stderr_present",
-                                        *non_whitelisted_lines[:3]  # include first few lines for forensic trace
+                                        *non_whitelisted_lines[:3],  # include first few lines for forensic trace
+                                        *stderr_output.strip().splitlines()[:3]  # snapshot for traceability
                                     ]
                                 }
                             else:
@@ -4405,7 +4366,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     f"command_retry_{attempt + 1}",
                                     "exit_status_zero",
                                     "non_whitelisted_stderr",
-                                    *non_whitelisted_lines[:3]  # include first few lines for traceability
+                                    *non_whitelisted_lines[:3],  # include first few lines for traceability
+                                    *stderr_output.strip().splitlines()[:3]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
@@ -4423,7 +4385,54 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         break
 
 
+## This block below is from faiure heuristics BLOCK2(4) above. This is a last resort catchall.
+##- **Edge cases** where `STDERR` is present but doesn’t match any known fatal pattern
+##- **Crash scenarios** where `STDERR` is truncated or malformed
+##- **Future commands** that emit unexpected output not yet covered by heuristics or whitelist
 
+
+                    ## ⚠️ Unexpected stderr — retry instead of exiting
+                    #if stderr_output.strip():
+                    #    #print(f"[{ip}] ❌ Non-warning stderr received.")
+                    #    
+                    #    #ssh.close()
+                    #    #return ip, private_ip, False
+                    #    # this is not a criitical error. Will set a continue to give another retry (of 3) instead
+                    #    # of ssh.close and return to calling function
+
+                    #    print(f"[{ip}] ❌ Unexpected stderr received — retrying: {stderr_output.strip()}")
+                    #    continue  # Retry the attempt loop
+
+
+
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
+                    # ⚠️ Unexpected stderr — retry instead of exiting
+                    if stderr_output.strip():
+                        if attempt == RETRY_LIMIT - 1:
+                            print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": -1,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": [
+                                    "stderr_detected",
+                                    command,
+                                    f"command_retry_{attempt + 1}",  # e.g. command_retry_3
+                                    *stderr_output.strip().splitlines()[:3]  # snapshot for traceability
+                                ]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
 
 
 ##### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
