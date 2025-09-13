@@ -298,8 +298,20 @@ The raw based output refactoring for the read_output_with_watchdog is below:
 
 Finally, there is a need for a whitelist fitering of the STDERR output for the reasons outlined below. 
 
+This forms the bulk of the changes. The objectives are to build upon the agnostic output flow analysis to achieve
+the following objectives:
 
+- Failure heuristics that reason like a human operator
 
+- Regex-based whitelist filtering to separate noise from signal on dirty STDERR installs (for example apt is notorious 
+for STDOUT leakage into STDERR)
+
+- Registry tagging that captures forensic snapshots of each attempt
+
+- This sets the stage for robust resurrection logic that anticipates chaos and builds in recovery
+
+- The above framework is tested with adaptive testing, injecting controlled failures to validate the system’s reasoning
+This is where the code is edited to real world scenarios.
 
 
 
