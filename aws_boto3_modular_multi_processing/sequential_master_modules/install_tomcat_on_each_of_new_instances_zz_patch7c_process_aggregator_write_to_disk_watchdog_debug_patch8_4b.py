@@ -63,7 +63,14 @@ APT_WHITELIST_REGEX = [
     r"Reading database .*",
     r"Selecting previously unselected package .*",
     r"0 upgraded, .* not upgraded",
-    r"Waiting for cache lock: Could not get lock .*lock-frontend.*" #added
+    r"Waiting for cache lock: Could not get lock .*lock-frontend.*", #added
+    r"debconf: delaying package configuration.*",  #Deferred config during apt install
+    r"update-initramfs:.*",  #Kernel/initramfs update messages         
+    r"systemd-sysv-generator.*", #Systemd compatibility notices            
+    r"invoke-rc.d:.*",  #Init script invocation (non-fatal)       
+    r"insserv: warning: script.*",  #Legacy init script warnings              
+    r"insserv: warning: current start runlevel.*"  #Runlevel compatibility warning         
+
 ]
 
 def is_whitelisted_line(line):
@@ -3301,7 +3308,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         
         ## commands 3 and 4: 
 
-        "sudo systemctl start tomcat99",
+        "sudo systemctl start tomcat9",
         
         # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
         #"sudo systemctl start tomcat99",
