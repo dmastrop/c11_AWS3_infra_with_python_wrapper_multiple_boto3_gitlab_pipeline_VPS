@@ -225,12 +225,14 @@ def restart_ec_multiple_instances():
 
 
 
-#### THIS IS THE MODULE2 SCRIPT with refactoring of read_output_with_watchdog to raw instead of stream output
+###### THIS IS THE MODULE2 SCRIPT with refactoring of read_output_with_watchdog to raw instead of stream output
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4.py")
+
+
+#### THIS IS THE MODULE2 SCRIPT with refactoring of install_tomcat with whitelist logic
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4.py")
-
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4b.py")
 
 
 
