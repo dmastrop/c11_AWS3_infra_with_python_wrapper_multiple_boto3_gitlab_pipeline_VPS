@@ -293,6 +293,58 @@ The raw based output refactoring for the read_output_with_watchdog is below:
 
 
 
+```
+
+def read_output_with_watchdog(stream, label, ip):
+    stall_count = 0
+    collected = b''
+    start = time.time()
+
+    while True:
+        if stream.channel.recv_ready():  # these are the key changes from METHOD1. This is RAW:
+            try:
+                chunk = stream.channel.recv(4096)
+                collected += chunk
+                print(f"[{ip}] 📥 Watchdog read: {len(chunk)} bytes on {label}")
+                break  # Exit after first successful read
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+                break
+
+        elapsed = time.time() - start
+        if elapsed > WATCHDOG_TIMEOUT:
+            stall_count += 1
+            print(f"[{ip}] ⏱️  Watchdog timeout on {label} read. Stall count: {stall_count}")
+            if stall_count >= STALL_RETRY_THRESHOLD:
+                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}. Breaking loop.")
+                break
+            start = time.time()
+
+        time.sleep(1)
+
+    # Post-loop grace flush
+    flush_deadline = time.time() + 10  # Grace window
+    while time.time() < flush_deadline:
+        if stream.channel.recv_ready():
+            try:
+                chunk = stream.channel.recv(4096)
+                collected += chunk
+                print(f"[{ip}] 📥 Post-loop flush read: {len(chunk)} bytes on {label}")
+                break
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Post-loop flush read failed on {label}: {e}")
+        time.sleep(0.5)
+
+    # Decode and preview
+    output = collected.decode(errors="ignore")
+    lines = output.strip().splitlines()
+    preview = "\n".join(lines[:3])
+    print(f"[{ip}] 🔍 Final output after flush (first {min(len(lines),3)} lines):\n{preview}")
+
+    # Stall logic
+    stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
+    return output, stalled
+```
 
 
 
