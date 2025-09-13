@@ -315,6 +315,21 @@ This is where the code is edited to real world scenarios.
 
 
 
+The last changes are with making the whitelist extensible to other package managerslike yum, dnf, and apk
+Since the stream output is agnostic to the package manager it is only natural to develop the whitelist accordingly.
+The proposed code something like this:
+
+
+```
+def is_whitelisted_line(line, tool="apt"):
+      regex_map = {
+          "apt": APT_WHITELIST_REGEX,
+          "yum": YUM_WHITELIST_REGEX,
+          ...
+      }
+      return any(re.match(pattern, line) for pattern in regex_map.get(tool, []))
+```
+
 
 
 
