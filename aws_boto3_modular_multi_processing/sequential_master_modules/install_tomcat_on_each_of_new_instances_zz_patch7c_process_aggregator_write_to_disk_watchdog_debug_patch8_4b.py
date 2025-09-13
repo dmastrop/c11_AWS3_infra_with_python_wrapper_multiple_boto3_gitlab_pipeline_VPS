@@ -4007,12 +4007,24 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+
+
+###### Major overhaul of the "for attempt" command loop below to support whitelist filtering for agnostic output 
+###### flush analysis of thread STDOUT and STDERR so that the registry_entry can be assigned a status
+######  BLOCKS 1, 2,3 and 4 are to be reordered as shown below, and BLOCK 3 is completely replaced with new 
+###### whitelist based decison making. The whitelist is defined at the top of this module APT_WHITELIST_REGEX 
+###### and will be generalized to be stream/app agnostic at some point
+###### The helper function is_whitelisted_line is also defined at the top of this module.
+###### BLOCK number refers to NEW#(ORIGINAL#)
+
             for attempt in range(RETRY_LIMIT):
             ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
             ## each attempt (of 3) will use the adaptive WATCHDOG_TIMEOUT as a watchdog and if the watchdog expires it
             ## can re-attempt for STALL_RETRY_THRESHOLD =2 number of times watchdogs on each command attemp (of 3 total)
 
                 try:
+                    #BLOCK1(1)
+
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                     
                     #try pty for debugging
@@ -4089,88 +4101,212 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #        print(f"[{ip}] 🔄 Streams stalled but retrying (attempt {attempt + 1} of {RETRY_LIMIT})")
 
 
-## NEW REVISED CODE:
-## Logic:
-## | Condition | Action |
-##|----------|--------|
-##| `exit_status != 0` or `stderr_output.strip()` | Retry (continue) or tag failure depending on attempt |
-##| `exit_status == 0` and `stderr_output.strip() == ""` | Mark command as succeeded |
-##| After all commands succeed | Tag `install_success` outside the `for idx` loop |
-##
-
-## Examples:
-##Condition | Outcome | Reason |
-##|----------|---------|--------|
 
 
-## exit_status !=0
-##| `stderr_output.strip()` is non-empty AND all command attempts exhausted | `install_failed` | We know what went wrong — stderr gives us the cause |
 
-## exit_status !=0
-##| `stderr_output.strip()` is empty AND all command attempts exhausted | `stub` | Silent failure — no output, no clue what happened |   NOTE: this is only our 4th stub. The criteria for a stub is very strict.
+#### Comment out original BLOCK3(2)(Below) and replace this with the new whitelist based filtering logic below
 
-## exit_status =0
-##| Any attempt succeeds (exit_status=0, no fatal stderr) command succeeded | No need to retry or tag failure . This will bypass all stub and failure registry logic and command succeeded will be reached at the bottom of install_tomcat. If all commands execute in this fashion the registry_entry will be status install_success (outside of the for idx loop).  Note that exit_status is 0 in this case
+                    ### NEW REVISED CODE:
+                    ### Logic:
+                    ### | Condition | Action |
+                    ###|----------|--------|
+                    ###| `exit_status != 0` or `stderr_output.strip()` | Retry (continue) or tag failure depending on attempt |
+                    ###| `exit_status == 0` and `stderr_output.strip() == ""` | Mark command as succeeded |
+                    ###| After all commands succeed | Tag `install_success` outside the `for idx` loop |
+                    ###
+
+                    ### Examples:
+                    ###Condition | Outcome | Reason |
+                    ###|----------|---------|--------|
+
+
+                    ### exit_status !=0
+                    ###| `stderr_output.strip()` is non-empty AND all command attempts exhausted | `install_failed` | 
+                    ###We know what went wrong — stderr gives us the cause |
+
+                    ### exit_status !=0
+                    ###| `stderr_output.strip()` is empty AND all command attempts exhausted | `stub` | Silent failure — 
+                    ###no output, no clue what happened |   NOTE: this is only our 4th stub. The criteria for a stub is 
+                    ###very strict.
+
+                    ### exit_status =0
+                    ###| Any attempt succeeds (exit_status=0, no fatal stderr) command succeeded | No need to retry or tag 
+                    ###failure . This will bypass all stub and failure registry logic and command succeeded will be reached at 
+                    ###the bottom of install_tomcat. If all commands execute in this fashion the registry_entry will be status 
+                    ###install_success (outside of the for idx loop).  Note that exit_status is 0 in this case
+
+                    ## BLOCK3(2)
+                    #exit_status = stdout.channel.recv_exit_status()
+                    #if exit_status != 0 or stderr_output.strip():
+                    #    print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
+                    #    
+                    #    if attempt == RETRY_LIMIT - 1:
+                    #        # Final attempt — tag failure
+                    #        if stderr_output.strip():
+                    #            registry_entry = {
+                    #                "status": "install_failed",
+                    #                "attempt": -1,
+                    #                "pid": multiprocessing.current_process().pid,
+                    #                "thread_id": threading.get_ident(),
+                    #                "thread_uuid": thread_uuid,
+                    #                "public_ip": ip,
+                    #                "private_ip": private_ip,
+                    #                "timestamp": str(datetime.utcnow()),
+                    #                "tags": [
+                    #                    "fatal_error",
+                    #                    command,
+                    #                    f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
+                    #                ]
+                    #            }
+
+                    #        else:
+                    #            pid = multiprocessing.current_process().pid
+                    #            if pid:
+                    #                registry_entry = {
+                    #                    "status": "stub",
+                    #                    "attempt": -1,
+                    #                    "pid": pid,
+                    #                    "thread_id": threading.get_ident(),
+                    #                    "thread_uuid": thread_uuid,
+                    #                    "public_ip": ip,
+                    #                    "private_ip": private_ip,
+                    #                    "timestamp": str(datetime.utcnow()),
+                    #                    "tags": ["silent_failure", 
+                    #                        command, 
+                    #                        f"command_retry_{attempt + 1}",
+                    #                        "exit_status_nonzero_stderr_blank"
+                    #                    ]
+                    #                }
+                    #                return ip, private_ip, registry_entry
+                    #            else:
+                    #                print(f"[{ip}] ⚠️ Stub skipped — missing PID on final attempt for silent failure.")
+                    #                return ip, private_ip, None  # Or fallback logic if needed
+    
+                    #    else:
+                    #        # Retry the command
+                    #        time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    #        continue  # the continue is critical. If the retry limit is not reached exit entirely out of this
+                    #    # for attempt loop and go to the next attempt iteration of the same command (give it another try).
+                    #    # all the falure and success logic below will be bypassed which is what we want.
+
+
+
+
+
+##### New whitelist decision making code replacing orignal BLOCK3(2) above. The basic logic constructs are intact with
+##### the exit_status, RETRY_LIMIT, STDERR output being the main decision making criteria, but also adding in the 
+##### whitelist as well, for apps that don't behave well with STDOUT and STDERR channel separation.  With these types of
+##### installs, STDERR is very dirty and needs to be filtered through the whitelist.
 
 
                     exit_status = stdout.channel.recv_exit_status()
-                    if exit_status != 0 or stderr_output.strip():
-                        print(f"[{ip}] ❌ Command failed — exit status {exit_status}, stderr: {stderr_output.strip()}")
-                        
+                    stderr_lines = stderr_output.strip().splitlines()
+                    non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+                    # 🔍 Case 1: Non-zero exit status — failure or stub
+                    if exit_status != 0:
                         if attempt == RETRY_LIMIT - 1:
-                            # Final attempt — tag failure
+                            pid = multiprocessing.current_process().pid
+                            thread_id = threading.get_ident()
+                            timestamp = str(datetime.utcnow())
+
                             if stderr_output.strip():
                                 registry_entry = {
                                     "status": "install_failed",
                                     "attempt": -1,
-                                    "pid": multiprocessing.current_process().pid,
-                                    "thread_id": threading.get_ident(),
+                                    "pid": pid,
+                                    "thread_id": thread_id,
                                     "thread_uuid": thread_uuid,
                                     "public_ip": ip,
                                     "private_ip": private_ip,
-                                    "timestamp": str(datetime.utcnow()),
+                                    "timestamp": timestamp,
                                     "tags": [
-                                        "fatal_error",
+                                        "fatal_exit_nonzero",
                                         command,
-                                        f"command_retry_{attempt + 1}"  # Optional, for forensic clarity
+                                        f"command_retry_{attempt + 1}",
+                                        f"exit_status_{exit_status}",
+                                        "stderr_present",
+                                        *non_whitelisted_lines[:3]  # include first few lines for forensic trace
                                     ]
                                 }
-
                             else:
-                                pid = multiprocessing.current_process().pid
-                                if pid:
-                                    registry_entry = {
-                                        "status": "stub",
-                                        "attempt": -1,
-                                        "pid": pid,
-                                        "thread_id": threading.get_ident(),
-                                        "thread_uuid": thread_uuid,
-                                        "public_ip": ip,
-                                        "private_ip": private_ip,
-                                        "timestamp": str(datetime.utcnow()),
-                                        "tags": ["silent_failure", 
-                                            command, 
-                                            f"command_retry_{attempt + 1}",
-                                            "exit_status_nonzero_stderr_blank"
-                                        ]
-                                    }
-                                    return ip, private_ip, registry_entry
-                                else:
-                                    print(f"[{ip}] ⚠️ Stub skipped — missing PID on final attempt for silent failure.")
-                                    return ip, private_ip, None  # Or fallback logic if needed
-    
+                                registry_entry = {
+                                    "status": "stub",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": thread_id,
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": timestamp,
+                                    "tags": [
+                                        "silent_failure",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        f"exit_status_{exit_status}",
+                                        "exit_status_nonzero_stderr_blank"
+                                    ]
+                                }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
                         else:
-                            # Retry the command
+                            print(f"[{ip}] ⚠️ Non-zero exit — retrying attempt {attempt + 1}")
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                            continue  # the continue is critical. If the retry limit is not reached exit entirely out of this
-                        # for attempt loop and go to the next attempt iteration of the same command (give it another try).
-                        # all the falure and success logic below will be bypassed which is what we want.
+                            continue
+
+                    # 🔍 Case 2: Zero exit but non-whitelisted stderr — unexpected failure
+                    elif non_whitelisted_lines:
+                        if attempt == RETRY_LIMIT - 1:
+                            pid = multiprocessing.current_process().pid
+                            thread_id = threading.get_ident()
+                            timestamp = str(datetime.utcnow())
+
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": -1,
+                                "pid": pid,
+                                "thread_id": thread_id,
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": timestamp,
+                                "tags": [
+                                    "stderr_detected",
+                                    command,
+                                    f"command_retry_{attempt + 1}",
+                                    "exit_status_zero",
+                                    "non_whitelisted_stderr",
+                                    *non_whitelisted_lines[:3]  # include first few lines for traceability
+                                ]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
+
+                    # ✅ Case 3: Success — zero exit and all stderr lines whitelisted
+                    else:
+                        print(f"[{ip}] ✅ Command succeeded.")
+                        command_succeeded = True
+                        time.sleep(20)
+                        break
+
+
+
+
+
+
+
+
 
 
 
                     ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
                     ## the relevant arguments for this function call
 
+                    # BLOCK4(3)
                     should_resurrect = resurrection_gatekeeper(
                         stderr_output=stderr_output,
                         stdout_output=stdout_output,
@@ -4190,8 +4326,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+##### This block BLOCK2(4)needs to be moved after BLOCK1(1) and before BLOCK3(2)
+##### The failure heuristics can be applied without whitelist filtering as these are known errors
 
-                    # FAILURE HEURISTICS: 
+                    # FAILURE HEURISTICS: BLOCK2(4)
 
                     # 🔴 Fatal error: missing tomcat9 package — tag and return
                    
@@ -4223,6 +4361,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
                     ## and failed registry entries uniless all retries have been exhausted
 
+                    #BLOCK2(4)
                     if "E: Package 'tomcat9'" in stderr_output:
                         if attempt == RETRY_LIMIT - 1:
                             print(f"[{ip}] ❌ Tomcat install failure — package not found on final attempt.")
@@ -4304,7 +4443,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+##### BLOCK5)5) Command succeeded default
 
                     print(f"[{ip}] ✅ Command succeeded.")
                     ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
