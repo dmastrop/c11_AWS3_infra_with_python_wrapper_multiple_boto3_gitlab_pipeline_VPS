@@ -39,6 +39,39 @@ import math # for math.ceil watchdog timeout adaptive code
 
 
 
+## This is the whitelist code to be used in install_tomcat for categorizing the status of the registry_entry of the
+## threads.  The helper function is used in install_tomcat to do a pattern search for this whitelist in the STDERR
+## output flush from read_output_with_watchdog that is called from install_tomcat
+## The list is dynamic and other command taxonomy (like yum, etc) will be added to make this agnostic to the actual
+## commands.
+
+
+APT_WHITELIST_REGEX = [
+    r"Reading state information.*",
+    r"Run 'apt list --upgradable' to see them.*",
+    r"WARNING: apt does not have a stable CLI interface.*",
+    r"Reading package lists.*",
+    r"Building dependency tree.*",
+    r"Preparing to unpack.*",
+    r"Unpacking.*",
+    r"Setting up.*",
+    r"Processing triggers for.*",
+    r"update-alternatives:.*",
+    r"Get:.*",
+    r"Hit:.*",
+    r"Fetched .* in .*",
+    r"Reading database .*",
+    r"Selecting previously unselected package .*",
+    r"0 upgraded, .* not upgraded"
+]
+
+def is_whitelisted_line(line):
+    return any(re.match(pattern, line) for pattern in APT_WHITELIST_REGEX)
+
+
+
+
+
 
 ## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
 ## failure and stub code is added
