@@ -69,6 +69,19 @@ def is_whitelisted_line(line):
     return any(re.match(pattern, line) for pattern in APT_WHITELIST_REGEX)
 
 
+### Will make this helper function extensible in the future:
+#def is_whitelisted_line(line, tool="apt"):
+#      regex_map = {
+#          "apt": APT_WHITELIST_REGEX,
+#          "yum": YUM_WHITELIST_REGEX,
+#          ...
+#      }
+#      return any(re.match(pattern, line) for pattern in regex_map.get(tool, []))
+
+
+
+
+
 
 
 
