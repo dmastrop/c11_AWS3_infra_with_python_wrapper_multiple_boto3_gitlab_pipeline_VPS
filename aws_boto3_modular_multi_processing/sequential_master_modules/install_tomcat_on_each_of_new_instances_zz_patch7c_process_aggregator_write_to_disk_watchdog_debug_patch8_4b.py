@@ -4389,6 +4389,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ##- **Edge cases** where `STDERR` is present but doesn’t match any known fatal pattern
 ##- **Crash scenarios** where `STDERR` is truncated or malformed
 ##- **Future commands** that emit unexpected output not yet covered by heuristics or whitelist
+##- It catches **any `STDERR` that slips through** due to:
+##  - Regex misfires
+##  - Encoding issues
+##  - Unexpected formatting
+##- It acts as a **final safety net** in case the whitelist logic fails silently or doesn’t cover a new edge case
+##- It ensures that **every command attempt is accounted for**, even if something goes wrong mid-evaluation
 
 
                     ## ⚠️ Unexpected stderr — retry instead of exiting
