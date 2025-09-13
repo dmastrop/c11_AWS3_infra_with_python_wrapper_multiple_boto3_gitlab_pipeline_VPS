@@ -3295,7 +3295,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
 
         # Optional: simulate runtime crash
-        # "sudo nonexistent_binary --fail",
+        "sudo nonexistent_binary --fail",
 
         # Optional: simulate chained failure with sleep
         # "sudo bash -c 'nonexistent_binary --fail; sleep 1'",
