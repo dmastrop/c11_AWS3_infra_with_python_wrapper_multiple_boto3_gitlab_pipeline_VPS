@@ -3291,11 +3291,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+#### Failure commands for negative testing #####
+
         # Optional: simulate package failure. For apt commmands with collapsed streams this will result in a stub
         # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
 
         # Optional: simulate runtime crash
-        "sudo nonexistent_binary --fail",
+        #"sudo nonexistent_binary --fail",
 
         # Optional: simulate chained failure with sleep
         # "sudo bash -c 'nonexistent_binary --fail; sleep 1'",
@@ -3303,9 +3305,24 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # Optional: raw bash invocation
         # "bash -c 'nonexistent_binary'",
 
-        # Non-apt commands (leave unwrapped)
 
+
+        # touch: cannot touch '/root/testfile': Permission denied
+        "sudo touch /root/testfile",
         
+        # bash: nonexistent_command: command not found
+        "bash -c \"nonexistent_command\"",
+
+        # small script that exits with error and writes to STDERR
+        "bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+        
+        # E: Unable to locate package tomcat99 (BLOCK2 failure heuristic check install_failed)
+        "sudo apt install tomcat99",
+
+
+
+#### resume normal commands #####
+
         ## commands 3 and 4: 
 
         "sudo systemctl start tomcat9",
