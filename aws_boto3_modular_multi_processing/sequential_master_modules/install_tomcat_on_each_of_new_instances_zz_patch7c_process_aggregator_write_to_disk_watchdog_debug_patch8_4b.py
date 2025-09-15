@@ -3306,7 +3306,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c 'nonexistent_binary'",
 
         # force a shell level failure
-        "sudo bash -c 'echo test > /root/testfile'"
+        "sudo bash -c 'echo test > /root/testfile'",
 
         # touch: cannot touch '/root/testfile': Permission denied. This is not throwing any STDOUT or STDERR and exit_code is 0?
         "sudo touch /root/testfile",
