@@ -3305,10 +3305,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # Optional: raw bash invocation
         #"bash -c 'nonexistent_binary'",
 
-        # force a shell level failure
-        "sudo bash -c 'echo test > /root/testfile'",
 
-        # touch: cannot touch '/root/testfile': Permission denied. This is not throwing any STDOUT or STDERR and exit_code is 0?
+
+
+        # force a shell level failure. Not seeing STDOUT, STDERR and exit code is 0 verified with raw print of exit_code
+        #"sudo bash -c 'echo test > /root/testfile'",
+
+        # test out the strace on the echo test above
+        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile' && cat /tmp/trace.log",
+
+
+
+
+        # touch: cannot touch '/root/testfile': Permission denied. This is not throwing any STDOUT or STDERR and exit_code is 0
         "sudo touch /root/testfile",
         
         # bash: nonexistent_command: command not found
