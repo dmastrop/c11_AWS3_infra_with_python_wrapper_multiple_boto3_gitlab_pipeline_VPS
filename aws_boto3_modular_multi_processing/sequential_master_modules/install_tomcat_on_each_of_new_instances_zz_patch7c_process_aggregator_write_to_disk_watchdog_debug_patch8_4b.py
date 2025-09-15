@@ -4314,6 +4314,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
                     exit_status = stdout.channel.recv_exit_status()
+                    #log.info(f"[{ip}] Raw exit status from SSH channel: {exit_status}") # debug the negative test case issues
+                    print(f"[{ip}] Raw exit status from SSH channel: {exit_status}")
+
                     stderr_lines = stderr_output.strip().splitlines()
                     non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
 
