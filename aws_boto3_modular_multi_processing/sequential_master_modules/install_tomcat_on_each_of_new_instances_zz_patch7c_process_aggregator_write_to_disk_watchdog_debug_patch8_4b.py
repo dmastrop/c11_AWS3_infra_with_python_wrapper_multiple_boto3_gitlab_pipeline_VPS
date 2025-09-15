@@ -3303,7 +3303,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # "sudo bash -c 'nonexistent_binary --fail; sleep 1'",
 
         # Optional: raw bash invocation
-        # "bash -c 'nonexistent_binary'",
+        "bash -c 'nonexistent_binary'",
 
 
 
