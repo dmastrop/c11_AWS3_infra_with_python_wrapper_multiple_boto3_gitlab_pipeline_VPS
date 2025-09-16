@@ -75,6 +75,11 @@ APT_WHITELIST_REGEX = [
     r".*\.deb \.\.\. .*"  # refining
 
 ]
+STRACE_WHITELIST_REGEX = [
+    r"write\(2, .* = \d+\)",  # benign stderr writes
+    r"execve\(.*\) = 0",      # successful exec calls
+    r"\+\+\+ exited with 0 \+\+\+",  # clean exit
+]
 
 def is_whitelisted_line(line):
     return any(re.match(pattern, line) for pattern in APT_WHITELIST_REGEX)
