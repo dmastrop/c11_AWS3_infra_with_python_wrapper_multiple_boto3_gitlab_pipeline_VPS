@@ -3311,12 +3311,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # force a shell level failure. Not seeing STDOUT, STDERR and exit code is 0 verified with raw print of exit_code
         #"sudo bash -c 'echo test > /root/testfile'",
 
+
+
         # test out the strace on the echo test above. We are now getting exit_code=1 which is good but no logging
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile' && cat /tmp/trace.log",
  
         # strace same as above but pipe all the strace error (-1) log lines to STDERR. The rest of the logic will take 
         # care of tagging the registry_entry status for this.
-        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2",
+        #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2",
+
+        # strace still no STDERR with above. Try this, writing directly to /dev/stderr
+        "strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
 
 
 
