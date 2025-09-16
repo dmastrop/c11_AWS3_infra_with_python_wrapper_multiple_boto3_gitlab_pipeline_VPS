@@ -347,6 +347,24 @@ def read_output_with_watchdog(stream, label, ip):
 ```
 
 
+The next major area of refactoring was a complete restructure and re-ordering of the failure logic. This was done to incorporate
+the use of a whitelist (see next paragraph below). 
+
+In short the ordering is:
+
+- Whitelist and whitlist helper function at top of the python module
+- In install_tomcat() the stdout/stderr from read_output_with_watchdog (see above; using raw now)
+- Next block in install_tomcat() move the failure heuristic code to be BEFORE the new whitelist code
+- Add the new whitelist code and the accompanying failure logic (major update)
+- Keep the legacy resurrection_monitor code hooks for now. (These will be moved and refactored later on; they work at a basic
+level)
+- Default command success logic is the last block.  
+
+
+The code blocks are listed below:  <<<< TO DO >>>>>>>
+
+
+
 
 Finally, there is a need for a whitelist fitering of the STDERR output for the reasons outlined below. 
 
