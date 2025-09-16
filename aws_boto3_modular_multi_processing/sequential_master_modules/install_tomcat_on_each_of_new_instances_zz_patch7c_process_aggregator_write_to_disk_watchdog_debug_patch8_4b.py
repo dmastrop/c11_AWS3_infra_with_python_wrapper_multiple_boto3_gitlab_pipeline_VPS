@@ -75,14 +75,28 @@ APT_WHITELIST_REGEX = [
     r".*\.deb \.\.\. .*"  # refining
 
 ]
+
+
+# adding whitelist for the strace that is used with bash or bash like command "commands" in the list 
+# With this whitelist in place all the original error logic for APT will apply to discriminate between stub, install_failed
+# and install_success status for the registry_entry
+
 STRACE_WHITELIST_REGEX = [
     r"write\(2, .* = \d+\)",  # benign stderr writes
     r"execve\(.*\) = 0",      # successful exec calls
     r"\+\+\+ exited with 0 \+\+\+",  # clean exit
 ]
 
+
+
+
+WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX  # + YUM_WHITELIST_REGEX, etc.
+
 def is_whitelisted_line(line):
-    return any(re.match(pattern, line) for pattern in APT_WHITELIST_REGEX)
+    return any(re.match(pattern, line) for pattern in WHITELIST_REGEX)
+
+#def is_whitelisted_line(line):
+#    return any(re.match(pattern, line) for pattern in APT_WHITELIST_REGEX)
 
 
 ### Will make this helper function extensible in the future:
@@ -4349,12 +4363,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
 
                     # Optional trace dump if command was wrapped with strace
+                    # strace is required on commands that are bash or bash-like. Will write the wrapper function for this
+                    # and the pre-processing for this later. Right now testing with single strace command 
                     if "strace" in command and exit_status != 0 and not stderr_output.strip():
                         trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
                         trace_output = trace_out.read().decode()
                         print(f"[{ip}] strace output:\n{trace_output}")
-
-
+                        sys.stderr.write(f"[{ip}] strace output:\n{trace_output}\n")# write the print above(trace_output) to STDERR
+                        # Now all the existing complex logic below can be used to filter these types of commands.
 
 
 
