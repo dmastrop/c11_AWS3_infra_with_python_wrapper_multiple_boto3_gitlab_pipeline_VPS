@@ -3314,8 +3314,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # force a shell level failure. Not seeing STDOUT, STDERR and exit code is 0 verified with raw print of exit_code
         #"sudo bash -c 'echo test > /root/testfile'",
 
-
-
         # test out the strace on the echo test above. We are now getting exit_code=1 which is good but no logging
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile' && cat /tmp/trace.log",
  
@@ -3324,7 +3322,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2",
 
         # strace still no STDERR with above. Try this, writing directly to /dev/stderr
-        "strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
+        #"strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
+
+        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
+
+
+
 
 
 
@@ -4339,6 +4342,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     stderr_lines = stderr_output.strip().splitlines()
                     non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+                    # Optional trace dump if command was wrapped with strace
+                    if "strace" in command and exit_status != 0 and not stderr_output.strip():
+                        trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
+                        trace_output = trace_out.read().decode()
+                        print(f"[{ip}] strace output:\n{trace_output}")
+
+
+
+
 
                     # 🔍 Case 1: Non-zero exit status — failure or stub
                     if exit_status != 0:
