@@ -4369,7 +4369,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
                         trace_output = trace_out.read().decode()
                         print(f"[{ip}] strace output:\n{trace_output}")
-                        sys.stderr.write(f"[{ip}] strace output:\n{trace_output}\n")# write the print above(trace_output) to STDERR
+                        sys.stderr.write(f"[{ip}] strace STDERR output:\n{trace_output}\n")
+                        # write the print above(trace_output) to STDERR
                         # Now all the existing complex logic below can be used to filter these types of commands.
 
 
