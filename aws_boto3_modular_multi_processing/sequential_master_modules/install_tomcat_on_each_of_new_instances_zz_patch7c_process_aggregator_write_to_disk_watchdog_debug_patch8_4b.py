@@ -4359,19 +4359,37 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #log.info(f"[{ip}] Raw exit status from SSH channel: {exit_status}") # debug the negative test case issues
                     print(f"[{ip}] Raw exit status from SSH channel: {exit_status}")
 
-                    stderr_lines = stderr_output.strip().splitlines()
-                    non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
-
+                    # Inject strace output into stderr_output if needed
                     # Optional trace dump if command was wrapped with strace
                     # strace is required on commands that are bash or bash-like. Will write the wrapper function for this
                     # and the pre-processing for this later. Right now testing with single strace command 
+
                     if "strace" in command and exit_status != 0 and not stderr_output.strip():
+
                         trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
                         trace_output = trace_out.read().decode()
                         print(f"[{ip}] strace output:\n{trace_output}")
-                        sys.stderr.write(f"[{ip}] strace STDERR output:\n{trace_output}\n")
-                        # write the print above(trace_output) to STDERR
-                        # Now all the existing complex logic below can be used to filter these types of commands.
+                        stderr_output = trace_output  # Inject into failure logic
+                        # make sure to use stderr_output here so that we inject the strace stderr from the print into 
+                        # teh stderr_output_strip below so that it can be used in all the falure and whitelist logic
+                        # Note that the whitelist has been updated for strace (in addtion to the apt already there).
+                        # Now all the logic below can be used to filter these bash and bash like commands. Will do the 
+                        # wrapper function and the pre-processing for this later.
+
+
+                    stderr_lines = stderr_output.strip().splitlines()
+                    non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+                    ## Optional trace dump if command was wrapped with strace
+                    ## strace is required on commands that are bash or bash-like. Will write the wrapper function for this
+                    ## and the pre-processing for this later. Right now testing with single strace command 
+                    #if "strace" in command and exit_status != 0 and not stderr_output.strip():
+                    #    trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
+                    #    trace_output = trace_out.read().decode()
+                    #    print(f"[{ip}] strace output:\n{trace_output}")
+                    #    sys.stderr.write(f"[{ip}] strace STDERR output:\n{trace_output}\n")
+                    #    # write the print above(trace_output) to STDERR
+                    #    # Now all the existing complex logic below can be used to filter these types of commands.
 
 
 
