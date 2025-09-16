@@ -365,6 +365,12 @@ for STDOUT leakage into STDERR)
 - The above framework is tested with adaptive testing, injecting controlled failures to validate the system’s reasoning
 This is where the code is edited to real world scenarios.
 
+- During failure analysis and negative testing: added a strace whitelist for bash and bash like commands. This effectively
+create a stderr channel flow using an strace wrapper around these types of commands that lack native stderr output. This enables
+failure filtering for these types of commands.  The prototype is working very well. There will be a wrapper function, and 
+pre-processing of known bash and bash like commands so that the user does not have to manually apply strace to these types
+of commands. It will be automatically done.
+
 
 
 The last changes are with making the whitelist extensible to other package managerslike yum, dnf, and apk
