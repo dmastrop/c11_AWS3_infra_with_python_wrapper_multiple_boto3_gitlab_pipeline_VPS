@@ -3356,7 +3356,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo touch /root/testfile",
 
         # apply strace to the command above
-        "strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
+        # THIS IS WORKING
+        #"strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
 
 
 
@@ -3365,7 +3366,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"nonexistent_command\"",
 
         # apply strace to the command above
-        "strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
+        "strace -e write,execve -o /tmp/trace.log bash -c \"nonexistent_command\"",
 
 
 
@@ -4209,7 +4210,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     "fatal_package_missing",
                                     command,
                                     f"command_retry_{attempt + 1}",  # e.g. command_retry_3
-                                    *stderr_output.strip().splitlines()[:3]  # snapshot for traceability
+                                    *stderr_output.strip().splitlines()[:4]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
