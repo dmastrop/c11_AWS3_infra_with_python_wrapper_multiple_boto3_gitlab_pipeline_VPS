@@ -3316,7 +3316,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
  
         # strace same as above but pipe all the strace error (-1) log lines to STDERR. The rest of the logic will take 
         # care of tagging the registry_entry status for this.
-        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2"
+        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2",
 
 
 
