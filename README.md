@@ -444,7 +444,14 @@ def is_whitelisted_line(line, tool="apt"):
       }
       return any(re.match(pattern, line) for pattern in regex_map.get(tool, []))
 ```
+OR this:
 
+```
+WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX  # + YUM_WHITELIST_REGEX, etc.
+
+def is_whitelisted_line(line):
+    return any(re.match(pattern, line) for pattern in WHITELIST_REGEX)
+```
 
 
 
