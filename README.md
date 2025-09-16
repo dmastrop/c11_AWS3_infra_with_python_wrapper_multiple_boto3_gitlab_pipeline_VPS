@@ -250,7 +250,18 @@ STATUS_TAGS = {
 This update will contain many areas that need refactoring, namely in the read_output_with_watchdog function and the 
 install_tomcat function.
 
+The areas are:
 
+- Log contamination from read_output_with_watchdog and install_tomcat (the calling function)
+- Convert the stream based output from read_output_with_watchdog to raw output
+- Restructuring and reordering of failure heuritic code in install_tomcat
+- Whitelist prototyping with apt commands
+- Whitelist extensibility to other bash like commands (using strace) and other package managers (yum, etc.....) (wrapper design) 
+
+
+
+
+### Log contamination fix:
 
 From the preceeding update
 
@@ -265,7 +276,7 @@ what the registry_entry status of that thread is.  The logic does not need to be
 exit_status, the attempt retry count and the STDERR (stderr_output.strip from read_output_with_watchdog) are used
 to classify the status of the thread.
 
-
+Early code:
 
 ```
 
@@ -278,6 +289,7 @@ to classify the status of the thread.
 
 ```
 
+### Convert the stream based output in read_output_with_Watchdog to raw output:
 
 The next area is the conversion of the stream based output flush in read_output_with_watchdog to a raw output. The 
 stream based is consistently missing the STDERR channel in the gitlab console logs.   The STDERR provides critial
@@ -346,25 +358,46 @@ def read_output_with_watchdog(stream, label, ip):
     return output, stalled
 ```
 
+### Complete restructuring of the failure logic in install_tomcat. (BLOCKS 1 through 5 below)
 
 The next major area of refactoring was a complete restructure and re-ordering of the failure logic. This was done to incorporate
 the use of a whitelist (see next paragraph below). 
 
 In short the ordering is:
 
-- Whitelist and whitlist helper function at top of the python module
-- In install_tomcat() the stdout/stderr from read_output_with_watchdog (see above; using raw now)
-- Next block in install_tomcat() move the failure heuristic code to be BEFORE the new whitelist code
-- Add the new whitelist code and the accompanying failure logic (major update)
+- Whitelist and whitelist helper function at top of the python module
+- In install_tomcat() the stdout/stderr from read_output_with_watchdog (see above; using raw now) (BLOCK1)
+- Next block in install_tomcat() move the failure heuristic code to be BEFORE the new whitelist code (BLOCK2)
+- Add the new whitelist code and the accompanying failure logic (major update). This utilizes the whitelist and whitelist helper
+function at the top of the python module (BLOCK3)
 - Keep the legacy resurrection_monitor code hooks for now. (These will be moved and refactored later on; they work at a basic
-level)
-- Default command success logic is the last block.  
+level) (BLOCK4)
+- Default command success logic is the last block.(BLOCK5)  
 
 
 The code blocks are listed below:  <<<< TO DO >>>>>>>
 
+#### BLOCK1:
 
 
+
+#### BLOCK2:
+
+
+#### BLOCK3: See the sections below concerning whitelist code design
+
+
+#### BLOCK4:
+
+
+
+#### BLOCK5:
+
+
+
+
+
+### Initial whitelist prototpying with apt commands:
 
 Finally, there is a need for a whitelist fitering of the STDERR output for the reasons outlined below. 
 
@@ -383,12 +416,18 @@ for STDOUT leakage into STDERR)
 - The above framework is tested with adaptive testing, injecting controlled failures to validate the system’s reasoning
 This is where the code is edited to real world scenarios.
 
-- During failure analysis and negative testing: added a strace whitelist for bash and bash like commands. This effectively
+
+
+
+
+### Whitelist extensibility to other package managers and command types (wrapper design):
+
+
+During failure analysis and negative testing: added a strace whitelist for bash and bash like commands. This effectively
 create a stderr channel flow using an strace wrapper around these types of commands that lack native stderr output. This enables
-failure filtering for these types of commands.  The prototype is working very well. There will be a wrapper function, and 
+failure filtering for these types of commands.  The prototype is working very well. There will be a wrapper function, and
 pre-processing of known bash and bash like commands so that the user does not have to manually apply strace to these types
 of commands. It will be automatically done.
-
 
 
 The last changes are with making the whitelist extensible to other package managerslike yum, dnf, and apk
