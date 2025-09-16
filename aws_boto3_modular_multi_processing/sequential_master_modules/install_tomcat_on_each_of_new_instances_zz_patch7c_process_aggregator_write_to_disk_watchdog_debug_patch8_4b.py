@@ -70,6 +70,9 @@ APT_WHITELIST_REGEX = [
     r"invoke-rc.d:.*",  #Init script invocation (non-fatal)       
     r"insserv: warning: script.*",  #Legacy init script warnings              
     r"insserv: warning: current start runlevel.*"  #Runlevel compatibility warning         
+    r"\(Reading database \.\.\. \d+%.*",  # refining
+    r"\(Reading database \.\.\. \d+ files and directories currently installed\.\)", # refining
+    r".*\.deb \.\.\. .*"  # refining
 
 ]
 
