@@ -4431,8 +4431,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # Optional trace dump if command was wrapped with strace
                     # strace is required on commands that are bash or bash-like. Will write the wrapper function for this
                     # and the pre-processing for this later. Right now testing with single strace command 
-
-                    if "strace" in command and exit_status != 0 and not stderr_output.strip():
+                    
+                    if "strace" in command and not stderr_output.strip():
+                    #if "strace" in command and exit_status != 0 and not stderr_output.strip():
 
                         trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
                         trace_output = trace_out.read().decode()
