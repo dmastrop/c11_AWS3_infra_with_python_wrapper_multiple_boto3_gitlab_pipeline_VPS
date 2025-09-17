@@ -72,7 +72,22 @@ APT_WHITELIST_REGEX = [
     r"insserv: warning: current start runlevel.*"  #Runlevel compatibility warning         
     r"\(Reading database \.\.\. \d+%.*",  # refining
     r"\(Reading database \.\.\. \d+ files and directories currently installed\.\)", # refining
-    r".*\.deb \.\.\. .*"  # refining
+    r".*\.deb \.\.\. .*",  # refining
+
+    # Already installed confirmation
+    r".* is already the newest version.*",
+
+    # No changes summary
+    r"0 upgraded, 0 newly installed, 0 to remove and .* not upgraded",
+
+    # Package metadata fetch
+    r"Reading package lists... Done",
+    r"Building dependency tree... Done",
+    r"Reading state information... Done",
+
+    # Locale or language warnings (sometimes noisy but harmless)
+    r"perl: warning: Setting locale failed.*",
+    r"perl: warning: Falling back to the standard locale.*"
 
 ]
 
@@ -85,6 +100,16 @@ STRACE_WHITELIST_REGEX = [
     r"write\(2, .* = \d+\)",  # benign stderr writes
     r"execve\(.*\) = 0",      # successful exec calls
     r"\+\+\+ exited with 0 \+\+\+",  # clean exit
+
+    # Benign stdout writes (e.g., echoing script content)
+    r"write\(1, .* = \d+\)",
+
+    # Successful sudo exec
+    r"execve\(\"/usr/bin/sudo\", .* = 0",
+
+    # SIGCHLD noise from child process exits
+    r"--- SIGCHLD .* ---",
+
 ]
 
 
