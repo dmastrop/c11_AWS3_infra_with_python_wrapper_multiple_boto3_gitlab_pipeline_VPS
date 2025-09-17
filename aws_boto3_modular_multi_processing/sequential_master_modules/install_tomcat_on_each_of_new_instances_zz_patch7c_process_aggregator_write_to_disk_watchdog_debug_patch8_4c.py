@@ -96,6 +96,13 @@ APT_WHITELIST_REGEX = [
     r"After this operation, .* of additional disk space will be used\."
     r"\(Reading database \.\.\. *",  # catches incomplete progress lines
 
+    # This next block was found by hitting the infamous exit_code = 0 but non_whitelisted_stderr BLOCK3 code block only found
+    # by running the large node 512 test.
+    r"\d+ packages can be upgraded\. Run 'apt list --upgradable' to see them\.",
+    r"Building dependency tree\.\.\.",
+    r"Reading state information\.\.\.",
+
+
 ]
 
 
