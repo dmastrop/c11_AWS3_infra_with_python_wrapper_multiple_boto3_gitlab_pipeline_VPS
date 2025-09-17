@@ -4442,13 +4442,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # strace is required on commands that are bash or bash-like. Will write the wrapper function for this
                     # and the pre-processing for this later. Right now testing with single strace command 
                     
-                    if "strace" in command and not stderr_output.strip():
-                    #if "strace" in command and exit_status != 0 and not stderr_output.strip():
+                    #if "strace" in command and not stderr_output.strip():
+                    if "strace" in command and exit_status != 0 and not stderr_output.strip():
 
                         trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
                         trace_output = trace_out.read().decode()
                         print(f"[{ip}] strace output:\n{trace_output}")
                         stderr_output = trace_output  # Inject into failure logic
+                        
                         # make sure to use stderr_output here so that we inject the strace stderr from the print into 
                         # teh stderr_output_strip below so that it can be used in all the falure and whitelist logic
                         # Note that the whitelist has been updated for strace (in addtion to the apt already there).
