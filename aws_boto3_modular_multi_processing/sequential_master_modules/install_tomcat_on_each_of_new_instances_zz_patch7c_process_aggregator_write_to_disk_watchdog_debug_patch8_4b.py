@@ -89,6 +89,12 @@ APT_WHITELIST_REGEX = [
     r"perl: warning: Setting locale failed.*",
     r"perl: warning: Falling back to the standard locale.*"
 
+    r"The following additional packages will be installed:"
+    r"Suggested packages:"
+    r"The following NEW packages will be installed:"
+    r"Need to get .* of archives\."
+    r"After this operation, .* of additional disk space will be used\."
+
 ]
 
 
