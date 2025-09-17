@@ -377,8 +377,8 @@ function at the top of the python module (BLOCK3)
 level) (BLOCK4)
 - Default command success logic is the last block.(BLOCK5)  
 
-
-For attempt loop
+```
+For attempt loop in install_tomcat: (block in parenthesis is the original block order)
     try block
              Stdout/stderr block from read_output_with_watchdog KEEP AS IS BLOCK1(1)
              Move failure heuristics (all of them) here before the new code block with whitelist BLOCK2(4)
@@ -389,7 +389,7 @@ For attempt loop
     except block (keep as is) 
 
     finally block (keep as is) 
-
+```
 
 The code blocks are listed below:  <<<< TO DO >>>>>>>
 
