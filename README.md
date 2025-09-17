@@ -375,6 +375,19 @@ level) (BLOCK4)
 - Default command success logic is the last block.(BLOCK5)  
 
 
+For attempt loop
+    try block
+             Stdout/stderr block from read_output_with_watchdog KEEP AS IS BLOCK1(1)
+             Move failure heuristics (all of them) here before the new code block with whitelist BLOCK2(4)
+             NEW CODE INSERT HERE WITH WHITELIST (this is the latest revision you sent) BLOCK3(2)
+             Keep legacy resurrection code for now BLOCK4(3)
+             Command succeeded BLOCK5(5)
+
+    except block (keep as is) 
+
+    finally block (keep as is) 
+
+
 The code blocks are listed below:  <<<< TO DO >>>>>>>
 
 #### BLOCK1:
