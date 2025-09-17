@@ -3406,11 +3406,29 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
 
+        # This one will produce exit_status of 0 but will have a non-whitelist in the stderr and so should be install_failed
+        "strace -e write,execve -o /tmp/trace.log bash -c \"echo 'error: something went wrong' >&2; exit 0\""
+
+
+
+
+
 
 
 
         # E: Unable to locate package tomcat99 (BLOCK2 failure heuristic check install_failed)
-        "sudo apt install tomcat99",
+        # THIS IS WORKING (but is stubbed; there is no error in stdout or stderr at all so this is the best we can do)
+        #"sudo apt install tomcat99",
+
+
+
+## More negative tests of new items added to the APT and strace whitelist
+
+
+
+
+
+
 
 
 
