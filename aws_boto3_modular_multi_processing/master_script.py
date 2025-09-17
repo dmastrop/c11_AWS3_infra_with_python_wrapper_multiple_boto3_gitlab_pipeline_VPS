@@ -230,9 +230,16 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4.py")
 
 
-#### THIS IS THE MODULE2 SCRIPT with refactoring of install_tomcat with whitelist logic
+##### THIS IS THE MODULE2 SCRIPT with refactoring of install_tomcat with whitelist logic
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4b.py")
+
+
+#### THIS IS THE MODULE2 SCRIPT with wrapper code for command agnotic approach to support bash and bash-like commands, etc.
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4b.py")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4c.py")
+
+
 
 
 
