@@ -4211,7 +4211,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     "fatal_package_missing",
                                     command,
                                     f"command_retry_{attempt + 1}",  # e.g. command_retry_3
-                                    *stderr_output.strip().splitlines()[:8]  # snapshot for traceability
+                                    *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
@@ -4441,7 +4441,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         f"exit_status_{exit_status}",
                                         "stderr_present",
                                         *non_whitelisted_lines[:4],  # include first few lines for forensic trace
-                                        *stderr_output.strip().splitlines()[:8]  # snapshot for traceability
+                                        *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                     ]
                                 }
                             else:
@@ -4492,7 +4492,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     "exit_status_zero",
                                     "non_whitelisted_stderr",
                                     *non_whitelisted_lines[:4],  # include first few lines for traceability
-                                    *stderr_output.strip().splitlines()[:8]  # snapshot for traceability
+                                    *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
@@ -4555,7 +4555,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     "stderr_detected",
                                     command,
                                     f"command_retry_{attempt + 1}",  # e.g. command_retry_3
-                                    *stderr_output.strip().splitlines()[:8]  # snapshot for traceability
+                                    *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
