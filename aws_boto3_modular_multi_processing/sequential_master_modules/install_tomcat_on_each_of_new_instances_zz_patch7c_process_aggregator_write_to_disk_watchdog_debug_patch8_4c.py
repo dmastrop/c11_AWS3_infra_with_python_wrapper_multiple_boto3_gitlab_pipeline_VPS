@@ -101,6 +101,7 @@ APT_WHITELIST_REGEX = [
     r"\d+ packages can be upgraded\. Run 'apt list --upgradable' to see them\.",
     r"Building dependency tree\.\.\.",
     r"Reading state information\.\.\.",
+    r"\(Reading database \.\.\. ?\d*%?\)?"
 
 
 ]
