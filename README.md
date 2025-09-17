@@ -259,6 +259,9 @@ The areas are:
 - Whitelist extensibility to other bash like commands (using strace) and other package managers (yum, etc.....) (wrapper design) 
 
 
+The main objective of these changes is to create a agnostic output failure analysis command installer and orchestrator.
+
+
 
 
 ### Log contamination fix:
