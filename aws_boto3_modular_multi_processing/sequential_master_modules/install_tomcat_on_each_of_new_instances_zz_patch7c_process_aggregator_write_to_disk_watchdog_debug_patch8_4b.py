@@ -4401,9 +4401,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         # Now all the logic below can be used to filter these bash and bash like commands. Will do the 
                         # wrapper function and the pre-processing for this later.
 
-
+                    ## non-whitelisted lines in stderr to detect true errors in stderr. This filters out whitelisted items
+                    ## that may leak in from stdout to stderr with apt
                     stderr_lines = stderr_output.strip().splitlines()
                     non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+                    print(f"[{ip}] Non-whitelisted stderr lines: {non_whitelisted_lines}")
+
+                    ## non-whitelisted lines in stdout (basically blacklisted lines) to detect errors in stdout
+                    stdout_lines = stdout_output.strip().splitlines()
+                    stdout_blacklisted_lines = [line for line in stdout_lines if not is_whitelisted_line(line)]
+
+                    print(f"[{ip}] Blacklisted stdout lines: {stdout_blacklisted_lines}")
+
+
+
 
                     ## Optional trace dump if command was wrapped with strace
                     ## strace is required on commands that are bash or bash-like. Will write the wrapper function for this
