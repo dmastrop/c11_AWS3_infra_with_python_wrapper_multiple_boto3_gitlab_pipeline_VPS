@@ -3407,7 +3407,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # This one will produce exit_status of 0 but will have a non-whitelist in the stderr and so should be install_failed
-        "strace -e write,execve -o /tmp/trace.log bash -c \"echo 'error: something went wrong' >&2; exit 0\""
+        "strace -e write,execve -o /tmp/trace.log bash -c \"echo 'error: something went wrong' >&2; exit 0\"",
 
 
 
