@@ -94,6 +94,7 @@ APT_WHITELIST_REGEX = [
     r"The following NEW packages will be installed:"
     r"Need to get .* of archives\."
     r"After this operation, .* of additional disk space will be used\."
+    r"\(Reading database \.\.\. *",  # catches incomplete progress lines
 
 ]
 
