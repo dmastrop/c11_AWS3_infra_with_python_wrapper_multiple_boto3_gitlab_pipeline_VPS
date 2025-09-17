@@ -257,7 +257,7 @@ The areas are:
 - Restructuring and reordering of failure heuritic code in install_tomcat
 - Whitelist prototyping with apt commands
 - Whitelist extensibility to other bash like commands (using strace) and other package managers (yum, etc.....) (wrapper design) 
-
+- Statistical 512 node testing to refine the whitelist. Running the APT WHITELIST through a few 512 node tests will statistically augment the integrity of the APT WHITELIST greatly.
 
 The main objective of these changes is to create a agnostic output failure analysis command installer and orchestrator.
 
@@ -504,6 +504,75 @@ def is_whitelisted_line(line):
     return any(re.match(pattern, line) for pattern in WHITELIST_REGEX)
 ```
 
+
+### Running the APT_WHITELIST_REGEX through the 512 node test a few times:
+
+This has shown to improve the integrity of the whitelist greatly. APT is  notorious for not only STDOUT/STDERR leakage but for
+the trivial commands that tend to leak into the STDERR. The 512 node tests have revealed a few addtional whitelist items 
+
+
+Current APT_WHITELIST is below:
+
+```
+APT_WHITELIST_REGEX = [
+    r"Reading state information.*",
+    r"Run 'apt list --upgradable' to see them.*",
+    r"WARNING: apt does not have a stable CLI interface.*",
+    r"Reading package lists.*",
+    r"Building dependency tree.*",
+    r"Preparing to unpack.*",
+    r"Unpacking.*",
+    r"Setting up.*",
+    r"Processing triggers for.*",
+    r"update-alternatives:.*",
+    r"Get:.*",
+    r"Hit:.*",
+    r"Fetched .* in .*",
+    r"Reading database .*",
+    r"Selecting previously unselected package .*",
+    r"0 upgraded, .* not upgraded",
+    r"Waiting for cache lock: Could not get lock .*lock-frontend.*", #added
+    r"debconf: delaying package configuration.*",  #Deferred config during apt install
+    r"update-initramfs:.*",  #Kernel/initramfs update messages         
+    r"systemd-sysv-generator.*", #Systemd compatibility notices            
+    r"invoke-rc.d:.*",  #Init script invocation (non-fatal)       
+    r"insserv: warning: script.*",  #Legacy init script warnings              
+    r"insserv: warning: current start runlevel.*"  #Runlevel compatibility warning         
+    r"\(Reading database \.\.\. \d+%.*",  # refining
+    r"\(Reading database \.\.\. \d+ files and directories currently installed\.\)", # refining
+    r".*\.deb \.\.\. .*",  # refining
+
+    # Already installed confirmation
+    r".* is already the newest version.*",
+
+    # No changes summary
+    r"0 upgraded, 0 newly installed, 0 to remove and .* not upgraded",
+
+    # Package metadata fetch
+    r"Reading package lists... Done",
+    r"Building dependency tree... Done",
+    r"Reading state information... Done",
+
+    # Locale or language warnings (sometimes noisy but harmless)
+    r"perl: warning: Setting locale failed.*",
+    r"perl: warning: Falling back to the standard locale.*"
+   
+    r"The following additional packages will be installed:"
+    r"Suggested packages:"
+    r"The following NEW packages will be installed:"
+    r"Need to get .* of archives\."
+    r"After this operation, .* of additional disk space will be used\."
+    r"\(Reading database \.\.\. *",  # catches incomplete progress lines
+
+    # This next block was found by hitting the infamous exit_code = 0 but non_whitelisted_stderr BLOCK3 code block only found
+    # by running the large node 512 test.
+    r"\d+ packages can be upgraded\. Run 'apt list --upgradable' to see them\.",
+    r"Building dependency tree\.\.\.",
+    r"Reading state information\.\.\.",
+
+
+] 
+```
 
 
 
