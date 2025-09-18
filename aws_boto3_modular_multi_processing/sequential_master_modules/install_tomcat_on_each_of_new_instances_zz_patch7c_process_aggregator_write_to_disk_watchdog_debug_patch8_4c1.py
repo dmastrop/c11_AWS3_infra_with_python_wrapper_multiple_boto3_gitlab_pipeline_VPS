@@ -3448,14 +3448,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 ## More negative tests of new items added to the APT and strace whitelist
 
-
-
-
-
-
-
-
-
 #### resume normal commands #####
 
         ## commands 3 and 4: 
