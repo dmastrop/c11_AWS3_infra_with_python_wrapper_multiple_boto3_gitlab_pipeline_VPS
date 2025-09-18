@@ -107,7 +107,7 @@ APT_WHITELIST_REGEX = [
 ]
 
 
-# adding whitelist for the strace that is used with bash or bash like command "commands" in the list 
+# adding whitelist for the strace that is used with bash or bash like command "commands" in the list (these are not failures)
 # With this whitelist in place all the original error logic for APT will apply to discriminate between stub, install_failed
 # and install_success status for the registry_entry
 
@@ -124,6 +124,10 @@ STRACE_WHITELIST_REGEX = [
 
     # SIGCHLD noise from child process exits
     r"--- SIGCHLD .* ---",
+
+    # To catch common subprocesses used in injected commands. We want to whitelist these in the injected stderr as not failures
+    r"execve\(\"/usr/bin/bash\", .* = 0",
+    r"execve\(\"/usr/bin/python3\", .* = 0",
 
 ]
 
