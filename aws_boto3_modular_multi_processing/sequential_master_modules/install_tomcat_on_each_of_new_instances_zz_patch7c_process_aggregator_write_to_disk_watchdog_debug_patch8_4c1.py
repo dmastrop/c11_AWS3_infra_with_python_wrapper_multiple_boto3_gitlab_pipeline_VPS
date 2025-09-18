@@ -3388,7 +3388,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
 
         # apply strace with this methodology.  Write the logs to /tmp/trace.log  
-        # THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr
+        # THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero exit
+        # code and also injected stderr, so install_failed
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
 
@@ -3400,7 +3401,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo touch /root/testfile",
 
         # apply strace to the command above
-        # THIS IS WORKING. This throws a nonzero exit code and also injected stderr so install_failed.
+        # THIS IS WORKING. 
         #"strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
 
 
