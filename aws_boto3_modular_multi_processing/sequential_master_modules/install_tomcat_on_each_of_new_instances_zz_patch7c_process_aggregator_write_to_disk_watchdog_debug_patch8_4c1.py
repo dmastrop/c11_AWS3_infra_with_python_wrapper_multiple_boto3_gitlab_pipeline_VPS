@@ -4456,22 +4456,33 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # strace is required on commands that are bash or bash-like. Will write the wrapper function for this
                     # and the pre-processing for this later. Right now testing with single strace command 
                     
-                    #if "strace" in command and not stderr_output.strip():
-                    if "strace" in command and exit_status != 0 and not stderr_output.strip():
 
-                        trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
-                        trace_output = trace_out.read().decode()
-                        print(f"[{ip}] strace output:\n{trace_output}")
-                        stderr_output = trace_output  # Inject into failure logic
-                        
-                        # make sure to use stderr_output here so that we inject the strace stderr from the print into 
-                        # teh stderr_output_strip below so that it can be used in all the falure and whitelist logic
-                        # Note that the whitelist has been updated for strace (in addtion to the apt already there).
-                        # Now all the logic below can be used to filter these bash and bash like commands. Will do the 
-                        # wrapper function and the pre-processing for this later.
+                    
+                    ####### Comment out the original strace logic for the refactored logic below this.  
+                    ####### The refactored code has to be placed after the non_whitelisted_lines
+                      
+                   # #if "strace" in command and not stderr_output.strip():
+                   # if "strace" in command and exit_status != 0 and not stderr_output.strip():
+
+                   #     trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
+                   #     trace_output = trace_out.read().decode()
+                   #     print(f"[{ip}] strace output:\n{trace_output}")
+                   #     stderr_output = trace_output  # Inject into failure logic
+                   #     
+                   #     # make sure to use stderr_output here so that we inject the strace stderr from the print into 
+                   #     # teh stderr_output_strip below so that it can be used in all the falure and whitelist logic
+                   #     # Note that the whitelist has been updated for strace (in addtion to the apt already there).
+                   #     # Now all the logic below can be used to filter these bash and bash like commands. Will do the 
+                   #     # wrapper function and the pre-processing for this later.
+
+                   
+
+
+
 
                     ## non-whitelisted lines in stderr to detect true errors in stderr. This filters out whitelisted items
-                    ## that may leak in from stdout to stderr with apt
+                    ## that may leak in from stdout to stderr with apt and also for other package installers as defined by
+                    ## their specific whitelists. Also used for strace logic.
                     stderr_lines = stderr_output.strip().splitlines()
                     non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
 
@@ -4483,6 +4494,73 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     print(f"[{ip}] Blacklisted stdout lines: {stdout_blacklisted_lines}")
 
+
+
+
+
+
+                    ############# New refactored strace code ############
+                    # This was done to handle corner cases as well as to integrate with the strace wrapper and pre-processing
+                    # functions that are too be added. This block must be placed after the non_whitelisted_lines
+
+                    if "strace" in command and not stderr_output.strip():
+                        # --- STRACE SPECIAL LOGIC ---
+                        # If this is a strace-wrapped command and there is no original stderr,
+                        # inject the strace trace log into stderr_output for downstream error logic.
+                        trace_in, trace_out, trace_err = ssh.exec_command(f"cat /tmp/trace_{thread_uuid}.log")
+                        trace_output = trace_out.read().decode()
+                        stderr_output = trace_output  # Inject strace output into stderr
+
+                        # Parse trace output for whitelist filtering
+                        stderr_lines = stderr_output.strip().splitlines()
+                        non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+                        # --- NONZERO EXIT CODE CASE ---
+                        # If the exit code is nonzero, we do NOT need to check for non-whitelisted lines.
+                        # The presence of a nonzero exit code is sufficient to fail the command.
+                        # We inject the strace output so the downstream registry entry will have the correct stderr context.
+                        if exit_status != 0:
+                            # Injected stderr_output will now be handled by generic nonzero exit logic outside this block.
+                            # Do nothing here, fall through to generic error logic outside this block.
+                            pass
+
+                        # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) ---
+                        # If we get here, exit_status == 0, so we must check for non-whitelisted lines.
+                        # This is the special case where strace reveals hidden stderr anomalies despite a clean exit code.
+                        if non_whitelisted_lines:
+                            # Only elevate to install_failed on the final retry attempt.
+                            if attempt == RETRY_LIMIT - 1:
+                                pid = multiprocessing.current_process().pid
+                                thread_id = threading.get_ident()
+                                timestamp = str(datetime.utcnow())
+
+                                registry_entry = {
+                                    "status": "install_failed",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": thread_id,
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": timestamp,
+                                    "tags": [
+                                        "stderr_detected",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        "exit_status_zero",   # We know exit_status is zero here.
+                                        "non_whitelisted_stderr",
+                                        *non_whitelisted_lines[:4],  # First few lines for traceability.
+                                        *stderr_output.strip().splitlines()[:12]  # Snapshot for traceability.
+                                    ]
+                                }
+                                ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+                            else:
+                                print(f"[{ip}] ⚠️ Unexpected strace stderr — retrying attempt {attempt + 1}")
+                                ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
+                                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                                continue
 
 
 
