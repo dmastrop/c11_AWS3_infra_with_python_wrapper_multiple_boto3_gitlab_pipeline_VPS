@@ -4588,6 +4588,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     else:
                         print(f"[{ip}] ✅ Command succeeded.")
                         command_succeeded = True
+
+                        if "strace" in command:
+                            ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Optional, but consistent for the strace case
+
                         time.sleep(20)
                         break
 
@@ -4685,6 +4689,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ## the for idx loop is done it will proceed through the code to the registry_entry install_succeeded
                     
                     command_succeeded = True
+                    
+                    if "strace" in command:
+                        ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next command for strace
 
                     time.sleep(20)
                     break  # Success. This is a break out of the for attempt loop. The install_failed registry_entry logic
@@ -4726,6 +4733,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdin.close()
                     stdout.close()
                     stderr.close()
+                
+                    if "strace" in command:
+                        ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next retry for strace
+
+
+
+
                 ## END of the for attempt loop 
 
 
