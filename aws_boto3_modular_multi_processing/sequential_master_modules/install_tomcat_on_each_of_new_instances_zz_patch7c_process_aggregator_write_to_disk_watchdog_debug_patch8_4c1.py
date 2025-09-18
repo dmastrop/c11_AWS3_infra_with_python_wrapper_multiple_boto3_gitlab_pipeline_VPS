@@ -4806,6 +4806,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 #### finally block for the "for attempt loop"
+#### This executes even if a break or continue in the for attempt loop. We need to clear the trace.log between command
+#### retry attempts
 
                 finally:
                     stdin.close()
