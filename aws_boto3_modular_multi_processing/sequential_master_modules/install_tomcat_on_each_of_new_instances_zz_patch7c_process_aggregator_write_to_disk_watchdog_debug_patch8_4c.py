@@ -3385,7 +3385,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # apply strace with this methodology.  Write the logs to /tmp/trace.log  
         # THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr
-        #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
+        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
 
 
