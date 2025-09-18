@@ -26,6 +26,7 @@ import json
 import sys
 import uuid
 import random
+import string
 import botocore.exceptions
 import time
 import psutil
