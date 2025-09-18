@@ -574,6 +574,11 @@ APT_WHITELIST_REGEX = [
 ] 
 ```
 
+In general,large-scale statistical testing can drive whitelist evolution
+
+
+
+
 
 
 ## UPDATES part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
