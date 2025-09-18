@@ -3400,7 +3400,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo touch /root/testfile",
 
         # apply strace to the command above
-        # THIS IS WORKING
+        # THIS IS WORKING. This throws a nonzero exit code and also injected stderr so install_failed.
         "strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
 
 
@@ -4668,8 +4668,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"[{ip}] ✅ Command succeeded.")
                         command_succeeded = True
 
-                        if "strace" in command:
-                            ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Optional, but consistent for the strace case
+                        #if "strace" in command:  ## clear trace1
+                        #    ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Optional, but consistent for the strace case
 
                         time.sleep(20)
                         break
@@ -4769,8 +4769,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     
                     command_succeeded = True
                     
-                    if "strace" in command:
-                        ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next command for strace
+                    #if "strace" in command:  ## clear trace2
+                    #    ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next command for strace
 
                     time.sleep(20)
                     break  # Success. This is a break out of the for attempt loop. The install_failed registry_entry logic
@@ -4815,8 +4815,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     stdout.close()
                     stderr.close()
                 
-                    if "strace" in command:
-                        ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next retry for strace
+                    #if "strace" in command:  ## clear trace3
+                    #    ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next retry for strace
 
 
 
