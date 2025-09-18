@@ -3381,7 +3381,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile' && cat /tmp/trace.log",
  
         # strace same as above but pipe all the strace error (-1) log lines to STDERR. The rest of the logic will take 
-    g   # care of tagging the registry_entry status for this.
+        # care of tagging the registry_entry status for this.
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2",
 
         # strace still no STDERR with above. Try this, writing directly to /dev/stderr
@@ -3390,7 +3390,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # apply strace with this methodology.  Write the logs to /tmp/trace.log  
         # THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero exit
         # code and also injected stderr, so install_failed
-        #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
+        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
 
 
