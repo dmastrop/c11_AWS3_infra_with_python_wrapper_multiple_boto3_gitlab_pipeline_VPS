@@ -3401,7 +3401,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # apply strace to the command above
         # THIS IS WORKING
-        #"strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
+        "strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
 
 
 
