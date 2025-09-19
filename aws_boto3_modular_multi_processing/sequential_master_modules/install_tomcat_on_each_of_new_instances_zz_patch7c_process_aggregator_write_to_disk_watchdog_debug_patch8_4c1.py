@@ -4690,6 +4690,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #    # write the print above(trace_output) to STDERR
                     #    # Now all the existing complex logic below can be used to filter these types of commands.
 
+ 
+
+                    ## non-strace logic: 
+
                     #print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
 
 
