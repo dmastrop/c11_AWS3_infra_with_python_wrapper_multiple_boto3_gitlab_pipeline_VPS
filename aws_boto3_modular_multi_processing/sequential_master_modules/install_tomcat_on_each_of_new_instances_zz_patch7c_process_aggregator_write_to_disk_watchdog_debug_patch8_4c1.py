@@ -4577,12 +4577,62 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         # If the exit code is nonzero, we do NOT need to check for non-whitelisted lines.
                         # The presence of a nonzero exit code is sufficient to fail the command.
                         # We inject the strace output so the downstream registry entry will have the correct stderr context.
+                        
+                        #if exit_status != 0:
+                        #    # Injected stderr_output will now be handled by generic nonzero exit logic outside this block.
+                        #    # Do nothing here, fall through to generic error logic outside this block.Exit this strace if
+                        #    # block with continue. Let that code evaluate the status of the thread.
+                        #    #pass
+                        #    continue
+
+
                         if exit_status != 0:
-                            # Injected stderr_output will now be handled by generic nonzero exit logic outside this block.
-                            # Do nothing here, fall through to generic error logic outside this block.Exit this strace if
-                            # block with continue. Let that code evaluate the status of the thread.
-                            #pass
-                            continue
+                            if attempt == RETRY_LIMIT - 1:
+                                pid = multiprocessing.current_process().pid
+                                thread_id = threading.get_ident()
+                                timestamp = str(datetime.utcnow())
+
+                                if stderr_output.strip():
+                                    registry_entry = {
+                                        "status": "install_failed",
+                                        "attempt": -1,
+                                        "pid": pid,
+                                        "thread_id": thread_id,
+                                        "thread_uuid": thread_uuid,
+                                        "public_ip": ip,
+                                        "private_ip": private_ip,
+                                        "timestamp": timestamp,
+                                        "tags": [
+                                            "fatal_exit_nonzero",
+                                            command,
+                                            f"command_retry_{attempt + 1}",
+                                            f"exit_status_{exit_status}",
+                                            "stderr_present",
+                                            *non_whitelisted_lines[:4],  # include first few lines for forensic trace
+                                            *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
+                                        ]
+                                    }
+                                else:
+                                    registry_entry = {
+                                        "status": "stub",
+                                        "attempt": -1,
+                                        "pid": pid,
+                                        "thread_id": thread_id,
+                                        "thread_uuid": thread_uuid,
+                                        "public_ip": ip,
+                                        "private_ip": private_ip,
+                                        "timestamp": timestamp,
+                                        "tags": [
+                                            "silent_failure",
+                                            command,
+                                            f"command_retry_{attempt + 1}",
+                                            f"exit_status_{exit_status}",
+                                            "exit_status_nonzero_stderr_blank"
+                                        ]
+                                    }
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+
 
 
                         # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) ---
