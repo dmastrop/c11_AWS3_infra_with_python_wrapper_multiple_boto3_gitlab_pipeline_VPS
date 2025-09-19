@@ -253,13 +253,23 @@ install_tomcat function.
 The areas are:
 
 - Log contamination from read_output_with_watchdog and install_tomcat (the calling function)
+
 - Convert the stream based output from read_output_with_watchdog to raw output
+
 - Restructuring and reordering of failure heuritic code in install_tomcat
+
 - Whitelist prototyping with apt commands
+
 - Whitelist extensibility to other bash like commands (using strace) and other package managers (yum, etc.....) (wrapper design) 
+
 - Statistical 512 node testing to refine the whitelist. Running the APT WHITELIST through a few 512 node tests will statistically augment the integrity of the APT WHITELIST greatly.
 
-The main objective of these changes is to create a agnostic output failure analysis command installer and orchestrator.
+- Wrapper design and pre-processor design for strace (bash and bash-like) commanands. The pre-processor will identify commands of this type and then wrap them in an strace so that they can be processed through the stderr intelligent parsing.
+
+
+
+The main objective of these changes is to create a agnostic command installer and orchestrator that can intelligently detect 
+failures in the stderr.
 
 
 
@@ -574,6 +584,16 @@ APT_WHITELIST_REGEX = [
 ```
 
 In general,large-scale statistical testing can drive whitelist evolution
+
+
+
+### Wrapper design and pre-processor design for strace (bash and bash-like) commanands. 
+
+
+The pre-processor will identify commands of this type and then wrap them in an strace so that they can be processed through the stderr intelligent parsing.
+
+
+
 
 
 
