@@ -3404,7 +3404,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
 
         # apply strace with this methodology.  Write the logs to /tmp/trace.log  
-        # THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero exit
+        # test1 THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero exit
         # code and also injected stderr, so install_failed
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
@@ -3417,7 +3417,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo touch /root/testfile",
 
         # apply strace to the command above
-        # THIS IS WORKING. 
+        # test3 THIS IS WORKING. 
         #"strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
 
 
@@ -3427,7 +3427,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"nonexistent_command\"",
 
         # apply strace to the command above
-        # THIS IS WORKING
+        # test4 THIS IS WORKING
         #"strace -e write,execve -o /tmp/trace.log bash -c \"nonexistent_command\"",
 
 
@@ -3438,7 +3438,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
         # apply strace to the command above
-        # THIS IS WORKING
+        # test5 THIS IS WORKING
         #"strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
 
@@ -3451,23 +3451,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import sys; sys.stderr.write('error: something went wrong\\\\n')\\\"; exit 0\"",
         #"strace -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
          
-        # THIS IS WORKING FOR THE test D1 negative test case:
+        # test6 THIS IS WORKING FOR THE test D1 negative test case:
         #"strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
 
 
 
-        # E: Unable to locate package tomcat99 (BLOCK2 failure heuristic check install_failed)
+        # test7  E: Unable to locate package tomcat99 (BLOCK2 failure heuristic check install_failed)
         # THIS IS WORKING (but is stubbed; there is no error in stdout or stderr at all so this is the best we can do)
         #"sudo apt install tomcat99",
 
 
         # test case 8 (negative)  This will have an exit code of 1 but whitelisted stderr
-        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
-        ## POSITIVE test case for strace (test case2)
-        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
+        ## test2 POSITIVE test case for strace (test case2)
+        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
 ## More negative tests of new items added to the APT and strace whitelist
