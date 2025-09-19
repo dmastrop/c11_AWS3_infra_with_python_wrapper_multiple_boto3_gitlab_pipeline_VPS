@@ -4194,7 +4194,22 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #BLOCK1(1)
 
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
-                    
+                   
+                    ## Place this before teh stdin, stdout, stderr = ssh.exec_command(command) for the strace commands
+                    ## This important block of code generates a random number trace log file suffix so that the trace.log
+                    ## file for the strace is unique per thread, per command and per retry of command. This prevents cross
+                    ## contamination of the strace output which is eventually injected into the stderr to determine the thread
+                    ## status. THe wrapper function for strace will conataine /tmp/trace.log by default and this is the 
+                    ## replacement string for trace_trace_suffix.log
+                    if "strace" in command:
+                        trace_suffix = generate_trace_suffix()
+                        trace_path = f"/tmp/trace_{trace_suffix}.log"
+                        command = command.replace("/tmp/trace.log", trace_path)
+
+
+
+
+
                     #try pty for debugging
                     #stdin, stdout, stderr = ssh.exec_command(command, timeout=60, get_pty=True)
                                                             
@@ -4510,16 +4525,39 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     if "strace" in command and not stderr_output.strip():
                         # --- STRACE SPECIAL LOGIC ---
+                        ## If this is a strace-wrapped command and there is no original stderr,
+                        ## inject the strace trace log into stderr_output for downstream error logic.
+                        #trace_in, trace_out, trace_err = ssh.exec_command(f"cat /tmp/trace_{thread_uuid}.log")
+                        #trace_output = trace_out.read().decode()
+                        #print(f"[{ip}] strace output:\n{trace_output}")
+                        #stderr_output = trace_output  # Inject strace output into stderr
+                        
+                        ## Parse trace output for whitelist filtering
+                        #stderr_lines = stderr_output.strip().splitlines()
+                        #non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+
+                    # Revised to support distinct trace.log file names per thread per command per retry
+                    if "strace" in command and not stderr_output.strip():
+                        # --- STRACE SPECIAL LOGIC ---
                         # If this is a strace-wrapped command and there is no original stderr,
                         # inject the strace trace log into stderr_output for downstream error logic.
-                        trace_in, trace_out, trace_err = ssh.exec_command(f"cat /tmp/trace_{thread_uuid}.log")
+
+                        # Extract the trace path from the command string. if strace, the command has been pre-processed with a
+                        # unique trace path/trace.log filename
+                        trace_path = command.split("-o")[1].split()[0].strip()
+
+                        trace_in, trace_out, trace_err = ssh.exec_command(f"cat {trace_path}")
                         trace_output = trace_out.read().decode()
+
                         print(f"[{ip}] strace output:\n{trace_output}")
                         stderr_output = trace_output  # Inject strace output into stderr
-                        
+
                         # Parse trace output for whitelist filtering
                         stderr_lines = stderr_output.strip().splitlines()
                         non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+
+
 
                         # --- NONZERO EXIT CODE CASE ---
                         # If the exit code is nonzero, we do NOT need to check for non-whitelisted lines.
