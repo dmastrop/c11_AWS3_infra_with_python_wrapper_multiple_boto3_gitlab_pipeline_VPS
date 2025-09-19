@@ -4636,7 +4636,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #    # write the print above(trace_output) to STDERR
                     #    # Now all the existing complex logic below can be used to filter these types of commands.
 
-                    print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
+                    #print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
 
 
                     # 🔍 Case 1: Non-zero exit status — failure or stub
