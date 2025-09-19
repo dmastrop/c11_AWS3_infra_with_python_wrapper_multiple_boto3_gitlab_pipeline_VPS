@@ -3462,10 +3462,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo apt install tomcat99",
 
 
+        # test case 8 (negative)  This will have an exit code of 1 but whitelisted stderr
+        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'"
 
 
-## POSITIVE test case for strace
-        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
+        ## POSITIVE test case for strace (test case2)
+        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
 ## More negative tests of new items added to the APT and strace whitelist
