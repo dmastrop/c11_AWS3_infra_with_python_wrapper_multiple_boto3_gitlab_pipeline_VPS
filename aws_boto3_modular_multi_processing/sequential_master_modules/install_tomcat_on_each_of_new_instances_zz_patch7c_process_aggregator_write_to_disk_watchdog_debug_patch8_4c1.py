@@ -4579,9 +4579,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         # We inject the strace output so the downstream registry entry will have the correct stderr context.
                         if exit_status != 0:
                             # Injected stderr_output will now be handled by generic nonzero exit logic outside this block.
-                            # Do nothing here, fall through to generic error logic outside this block.
-                            pass
-
+                            # Do nothing here, fall through to generic error logic outside this block.Exit this strace if
+                            # block with continue
+                            #pass
+                            continue
 
 
                         # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) ---
