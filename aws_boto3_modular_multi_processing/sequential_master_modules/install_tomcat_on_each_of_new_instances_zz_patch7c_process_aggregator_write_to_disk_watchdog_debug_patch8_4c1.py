@@ -3463,7 +3463,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # test case 8 (negative)  This will have an exit code of 1 but whitelisted stderr
-        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'"
+        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
         ## POSITIVE test case for strace (test case2)
