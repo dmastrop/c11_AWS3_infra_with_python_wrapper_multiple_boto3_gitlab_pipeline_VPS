@@ -3465,7 +3465,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 ## POSITIVE test case for strace
-        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'"
+        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
 ## More negative tests of new items added to the APT and strace whitelist
