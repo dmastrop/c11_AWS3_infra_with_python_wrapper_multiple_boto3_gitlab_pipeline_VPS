@@ -200,6 +200,17 @@ retry_lock = threading.Lock()
 
 
 
+
+## helper function used for the strace command syntax by the install_tomcat for idx commands/for attempt retry loop
+## The strace code needs a trace.log file to hold its output prior to injecting it into stderr, and we need to 
+## have unique trace.log filenames, and this appends a suffix to the trace_suffix.log filename. This prevents cross
+## log corruption between command execution, retries of command execution at the per thread level. So 
+## commands and retries all use unique trace.log filenames per thread.
+def generate_trace_suffix():
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+
+
 ## aggregate gold ips from chunks
 ## Global helper function for the GOLD standard IP list creation from the AWS control plane for the execution run
 ## This function will be called from main() after chunks is defined. Chunks is the pre-processsing done on the 
