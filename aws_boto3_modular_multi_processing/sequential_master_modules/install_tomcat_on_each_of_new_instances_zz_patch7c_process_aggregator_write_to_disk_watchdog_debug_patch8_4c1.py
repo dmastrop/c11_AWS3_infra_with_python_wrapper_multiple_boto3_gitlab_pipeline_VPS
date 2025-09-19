@@ -4496,25 +4496,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                    #     # wrapper function and the pre-processing for this later.
 
                    
+                    if "strace" not in command:
 
+                        ## non-whitelisted lines in stderr to detect true errors in stderr. This filters out whitelisted items
+                        ## that may leak in from stdout to stderr with apt and also for other package installers as defined by
+                        ## their specific whitelists. Also used for strace logic.
+                        stderr_lines = stderr_output.strip().splitlines()
+                        non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
 
+                        print(f"[{ip}] Non-whitelisted stderr lines: {non_whitelisted_lines}")
 
+                        ## non-whitelisted lines in stdout (basically blacklisted lines) to detect errors in stdout
+                        stdout_lines = stdout_output.strip().splitlines()
+                        stdout_blacklisted_lines = [line for line in stdout_lines if not is_whitelisted_line(line)]
 
-                    ## non-whitelisted lines in stderr to detect true errors in stderr. This filters out whitelisted items
-                    ## that may leak in from stdout to stderr with apt and also for other package installers as defined by
-                    ## their specific whitelists. Also used for strace logic.
-                    stderr_lines = stderr_output.strip().splitlines()
-                    non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
-
-                    print(f"[{ip}] Non-whitelisted stderr lines: {non_whitelisted_lines}")
-
-                    ## non-whitelisted lines in stdout (basically blacklisted lines) to detect errors in stdout
-                    stdout_lines = stdout_output.strip().splitlines()
-                    stdout_blacklisted_lines = [line for line in stdout_lines if not is_whitelisted_line(line)]
-
-                    print(f"[{ip}] Blacklisted stdout lines: {stdout_blacklisted_lines}")
-
-
+                        print(f"[{ip}] Blacklisted stdout lines: {stdout_blacklisted_lines}")
 
 
 
@@ -4553,9 +4549,27 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"[{ip}] strace output:\n{trace_output}")
                         stderr_output = trace_output  # Inject strace output into stderr
 
-                        # Parse trace output for whitelist filtering
+                        # from the trace_output (injected into stderr_output) parse out the actual exit status of the 
+                        # wrapped command and not of strace itself (which is based on 
+                        # exit_status = stdout.channel.recv_exit_status())
+                        # This resets the exit_status to the correct value for strace commands so that they can be 
+                        # logically failed or passed
+                        match = re.search(r"\+\+\+ exited with (\d+) \+\+\+", trace_output)
+                        if match:
+                            exit_status = int(match.group(1))
+                            print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
+
+
+                        # Parse trace output for whitelist filtering and do the printout for strace case:
+                        # (same as the non-strace case; see above)
                         stderr_lines = stderr_output.strip().splitlines()
                         non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
+                        print(f"[{ip}] Non-whitelisted stderr lines: {non_whitelisted_lines}")
+
+                        stdout_lines = stdout_output.strip().splitlines()
+                        stdout_blacklisted_lines = [line for line in stdout_lines if not is_whitelisted_line(line)]
+                        print(f"[{ip}] Blacklisted stdout lines: {stdout_blacklisted_lines}")
+
 
 
 
@@ -4567,6 +4581,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             # Injected stderr_output will now be handled by generic nonzero exit logic outside this block.
                             # Do nothing here, fall through to generic error logic outside this block.
                             pass
+
+
 
                         # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) ---
                         # If we get here, exit_status == 0, so we must check for non-whitelisted lines.
