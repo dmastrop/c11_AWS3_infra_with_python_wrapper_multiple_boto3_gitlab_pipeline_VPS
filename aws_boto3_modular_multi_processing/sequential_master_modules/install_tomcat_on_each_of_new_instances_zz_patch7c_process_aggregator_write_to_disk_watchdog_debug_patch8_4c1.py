@@ -114,6 +114,10 @@ APT_WHITELIST_REGEX = [
 
 STRACE_WHITELIST_REGEX = [
     r"write\(2, .* = \d+\)",  # benign stderr writes
+    r'write\(1, ".*\\n", \d+\) *= *\d+', # to catch the \n on positive writes
+    r'write\(1, .*\\n.* = \d+\)',  # to catch the \n on positive writes 
+
+
     r"execve\(.*\) = 0",      # successful exec calls
     r"\+\+\+ exited with 0 \+\+\+",  # clean exit
 
