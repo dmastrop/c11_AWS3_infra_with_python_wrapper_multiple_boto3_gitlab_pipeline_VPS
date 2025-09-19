@@ -369,13 +369,23 @@ the use of a whitelist (see next paragraph below).
 In short the ordering is:
 
 - Whitelist and whitelist helper function at top of the python module
+
 - In install_tomcat() the stdout/stderr from read_output_with_watchdog (see above; using raw now) (BLOCK1)
+
 - Next block in install_tomcat() move the failure heuristic code to be BEFORE the new whitelist code (BLOCK2)
+
 - Add the new whitelist code and the accompanying failure logic (major update). This utilizes the whitelist and whitelist helper
-function at the top of the python module (BLOCK3)
+function at the top of the python module (BLOCK3). This block also has the new code to support strace type commands (bash and 
+bash-like commands).
+
 - Keep the legacy resurrection_monitor code hooks for now. (These will be moved and refactored later on; they work at a basic
 level) (BLOCK4)
+
 - Default command success logic is the last block.(BLOCK5)  
+
+
+
+
 
 ```
 For attempt loop in install_tomcat: (block in parenthesis is the original block order)
@@ -391,7 +401,16 @@ For attempt loop in install_tomcat: (block in parenthesis is the original block 
     finally block (keep as is) 
 ```
 
+
+
+ 
 The code blocks are listed below:  <<<< TO DO >>>>>>>
+
+
+#### Whitelist helper function and the APT and strace whitelists (more to be added later):
+
+
+
 
 #### BLOCK1:
 
@@ -449,39 +468,19 @@ pre-processing of known bash and bash like commands so that the user does not ha
 of commands. It will be automatically done.
 
 
-The modifications that were made to install_tomcat for this strace whitelist are below. This involves literally injecting
-the strace error into the stderr_output PRIOR to the whitelist processing:
+The modifications that were made to install_tomcat for this strace whitelist are below. 
+These additions were added to the BLOCK3 above
+This involves literally injecting the strace error into the stderr_output PRIOR to the whitelist processing:
 
 ```
-
-                    exit_status = stdout.channel.recv_exit_status()
-                    #log.info(f"[{ip}] Raw exit status from SSH channel: {exit_status}") # debug the negative test case issues
-                    print(f"[{ip}] Raw exit status from SSH channel: {exit_status}")
-
-                    # Inject strace output into stderr_output if needed
-                    # Optional trace dump if command was wrapped with strace
-                    # strace is required on commands that are bash or bash-like. Will write the wrapper function for this
-                    # and the pre-processing for this later. Right now testing with single strace command 
-
-                    if "strace" in command and exit_status != 0 and not stderr_output.strip():
-
-                        trace_in, trace_out, trace_err = ssh.exec_command("cat /tmp/trace.log")
-                        trace_output = trace_out.read().decode()
-                        print(f"[{ip}] strace output:\n{trace_output}")
-                        stderr_output = trace_output  # Inject into failure logic
-                        # make sure to use stderr_output here so that we inject the strace stderr from the print into 
-                        # teh stderr_output_strip below so that it can be used in all the falure and whitelist logic
-                        # Note that the whitelist has been updated for strace (in addtion to the apt already there).
-                        # Now all the logic below can be used to filter these bash and bash like commands. Will do the 
-                        # wrapper function and the pre-processing for this later.
-
-
-                    stderr_lines = stderr_output.strip().splitlines()
-                    non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
-
+<<<< Insert the new code here  >>>>>>
 ```
 
-The last changes are with making the whitelist extensible to other package managerslike yum, dnf, and apk
+
+
+
+
+The design for  making the whitelist extensible to other package managerslike yum, dnf, and apk is below
 Since the stream output is agnostic to the package manager it is only natural to develop the whitelist accordingly.
 The proposed code something like this:
 
@@ -495,7 +494,7 @@ def is_whitelisted_line(line, tool="apt"):
       }
       return any(re.match(pattern, line) for pattern in regex_map.get(tool, []))
 ```
-OR this:
+OR this: (this is the method that is currently being used)
 
 ```
 WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX  # + YUM_WHITELIST_REGEX, etc.
