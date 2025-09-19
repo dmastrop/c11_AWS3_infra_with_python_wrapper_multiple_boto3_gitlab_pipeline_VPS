@@ -4633,6 +4633,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 ssh.close()
                                 return ip, private_ip, registry_entry
 
+                            else:
+                                print(f"[{ip}] ⚠️ Non-zero exit — retrying attempt {attempt + 1}")
+                                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                                continue
 
 
                         # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) ---
