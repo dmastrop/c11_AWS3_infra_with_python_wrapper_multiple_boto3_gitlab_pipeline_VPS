@@ -4580,7 +4580,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         if exit_status != 0:
                             # Injected stderr_output will now be handled by generic nonzero exit logic outside this block.
                             # Do nothing here, fall through to generic error logic outside this block.Exit this strace if
-                            # block with continue
+                            # block with continue. Let that code evaluate the status of the thread.
                             #pass
                             continue
 
