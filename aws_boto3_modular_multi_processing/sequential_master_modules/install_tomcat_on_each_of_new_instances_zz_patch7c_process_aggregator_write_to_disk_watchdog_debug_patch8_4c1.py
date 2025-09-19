@@ -4969,7 +4969,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             
             #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip}")
 
-            print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip} — Success flag: {command_succeeded}")
+            #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip} — Success flag: {command_succeeded}")
+
+
+
+            print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/{len(commands)}: '{command}' on IP {ip} — Success flag: {command_succeeded}")
 
 
             # This is outside of the for attempt loop. If there is NO successful attempt the loop will be exited
