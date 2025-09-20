@@ -3489,11 +3489,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # test case 8 (negative)  This will have an exit code of 1 and  whitelisted stderr for install_failed
-        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
         ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
-        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
+        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
 ## More negative tests of new items added to the APT and strace whitelist
@@ -3507,13 +3507,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         ## commands 3 and 4: 
         # COMMAND 3:
-        #"sudo systemctl start tomcat9",
+        "sudo systemctl start tomcat9",
         
         # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
         #"sudo systemctl start tomcat99",
 
         # COMMAND 4:
-        #"sudo systemctl enable tomcat9"
+        "sudo systemctl enable tomcat9"
     ]
 
 
