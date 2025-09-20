@@ -3506,14 +3506,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #### resume normal commands #####
 
         ## commands 3 and 4: 
-
-        "sudo systemctl start tomcat9",
+        # COMMAND 3:
+        #"sudo systemctl start tomcat9",
         
         # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
         #"sudo systemctl start tomcat99",
 
-
-        "sudo systemctl enable tomcat9"
+        # COMMAND 4:
+        #"sudo systemctl enable tomcat9"
     ]
 
 
