@@ -5092,7 +5092,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             "thread_uuid": thread_uuid,
             "public_ip": ip,
             "private_ip": private_ip,
-            "tags": ["install_success", "installation_tomcat_completed"]
+            "tags": ["install_success", "installation_completed"]   # the command orchestrator is agnostic so no mention of tomcat
         }
 
 
