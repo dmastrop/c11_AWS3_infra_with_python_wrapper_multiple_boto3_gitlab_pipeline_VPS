@@ -3431,7 +3431,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # apply strace with this methodology.  Write the logs to /tmp/trace.log  
         # test1 THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero 
         # exit code and also injected nonwhitelisted stderr, so install_failed
-        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
+        #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
 
 
@@ -3493,7 +3493,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
-        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
+        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
 ## More negative tests of new items added to the APT and strace whitelist
