@@ -3429,9 +3429,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
 
         # apply strace with this methodology.  Write the logs to /tmp/trace.log  
-        # test1 THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero exit
-        # code and also injected stderr, so install_failed
-        #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
+        # test1 THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero 
+        # exit code and also injected nonwhitelisted stderr, so install_failed
+        "strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
 
 
@@ -3477,7 +3477,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"strace -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
          
         # test6 THIS IS WORKING FOR THE test D1 negative test case: This has exit code of 0 but nonwhitelisted material for error
-        "strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+        # install_failed
+        #"strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
 
 
@@ -3487,11 +3488,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo apt install tomcat99",
 
 
-        # test case 8 (negative)  This will have an exit code of 1 but whitelisted stderr
+        # test case 8 (negative)  This will have an exit code of 1 and  whitelisted stderr for install_failed
         #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
-        ## test2 POSITIVE test case for strace (test case2)
+        ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
         #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
