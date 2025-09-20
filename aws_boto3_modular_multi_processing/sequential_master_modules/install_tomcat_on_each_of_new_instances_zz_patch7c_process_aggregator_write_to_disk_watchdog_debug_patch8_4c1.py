@@ -117,9 +117,9 @@ APT_WHITELIST_REGEX = [
 STRACE_WHITELIST_REGEX = [
     
     ## Test case 6 additions to remove process id exited with messages
-    r"^\s*\d*\s*\+\+\+ exited with \d+ \+\+\+"
-    r"^\s*\d*\s*execve\(.*\) = \d+"
-    r"^\s*\d*\s*write\(.*\) = \d+"
+    r"^\s*\d*\s*\+\+\+ exited with \d+ \+\+\+",
+    r"^\s*\d*\s*execve\(.*\) = \d+",
+    r"^\s*\d*\s*write\(.*\) = \d+",
 
 
     # Test case 8 additions. We can remove all exited with <> patterns because we rewrite the exit_code variable with
@@ -129,7 +129,7 @@ STRACE_WHITELIST_REGEX = [
     # It’s metadata about the process exit, not a semantic error message. 
     r"\+\+\+ exited with \d+ \+\+\+",       # covers all strace exit codes
     r"execve\(.+\) = \d+",                  # general execve success/failure trace
-    r"write\(.+\) = \d+"                    # general write trace (stdout/stderr)
+    r"write\(.+\) = \d+",                    # general write trace (stdout/stderr)
 
 
     r"write\(2, .* = \d+\)",  # benign stderr writes
@@ -151,7 +151,7 @@ STRACE_WHITELIST_REGEX = [
 
     # To catch common subprocesses used in injected commands. We want to whitelist these in the injected stderr as not failures
     r"execve\(\"/usr/bin/bash\", .* = 0",
-    r"execve\(\"/usr/bin/python3\", .* = 0",
+    r"execve\(\"/usr/bin/python3\", .* = 0"
 
 
 
