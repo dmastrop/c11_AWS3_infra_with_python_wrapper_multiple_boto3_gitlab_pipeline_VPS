@@ -582,10 +582,32 @@ APT_WHITELIST_REGEX = [
     r"Reading state information\.\.\.",
 
 
-] 
-```
+]
 
-In general,large-scale statistical testing can drive whitelist evolution
+```
+In general,large-scale testing can drive whitelist evolution from a statistical perspecitve with the APT whitelist given 
+that the STDOUT/STDERR cross contamination is entirely non-deterministic.
+
+
+
+### Running the strace whitelist STRACE_WHITELIST_REGEX through several methodical test cases
+
+
+The test cases are designed to test the intricate failure logic with this type of bash and bash-like command syntax.
+The test cases have several variants and for now (prior to the strace wrapper function (see next section below)) are manually
+wrapped in strace in the commands block of the python module.
+
+At a high level the test cases hit these 4 areas in accordance with testing the failure logic:
+
+| Exit Code | Injected Stderr | Whitelisted? | Expected Outcome |
+|-----------|------------------|--------------|------------------|
+| 0         | Yes              | ❌ No        | `install_failed` | 
+| 0         | Yes              | ✅ Yes       | `install_success |
+| ≠ 0       | Yes              | ✅ Yes       | `install_failed` (generic) |
+| ≠ 0       | Yes              | ❌ No        | `install_failed` (generic) |
+
+
+
 
 
 
