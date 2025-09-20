@@ -4634,7 +4634,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                             f"command_retry_{attempt + 1}",
                                             f"exit_status_{exit_status}",
                                             "stderr_present",
-                                            *non_whitelisted_lines[:4],  # include first few lines for forensic trace
+                                            *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],  # include first few lines for forensic trace
                                             *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                         ]
                                     }
@@ -4690,7 +4690,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         f"command_retry_{attempt + 1}",
                                         "exit_status_zero",   # We know exit_status is zero here.
                                         "non_whitelisted_stderr",
-                                        *non_whitelisted_lines[:4],  # First few lines for traceability.
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # First few lines for traceability.
                                         *stderr_output.strip().splitlines()[:12]  # Snapshot for traceability.
                                     ]
                                 }
@@ -4746,7 +4746,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         f"command_retry_{attempt + 1}",
                                         f"exit_status_{exit_status}",
                                         "stderr_present",
-                                        *non_whitelisted_lines[:4],  # include first few lines for forensic trace
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for forensic trace
                                         *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                     ]
                                 }
@@ -4797,7 +4797,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     f"command_retry_{attempt + 1}",
                                     "exit_status_zero",
                                     "non_whitelisted_stderr",
-                                    *non_whitelisted_lines[:4],  # include first few lines for traceability
+                                    *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for traceability
                                     *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                 ]
                             }
