@@ -115,11 +115,15 @@ APT_WHITELIST_REGEX = [
 # to the top of the list. Python short-circuits the list upon getting a hit and this will optimize, especially under hyper-scaling
 
 STRACE_WHITELIST_REGEX = [
-    
+   
+
+        
     ## Test case 6 additions to remove process id exited with messages
     r"^\s*\d*\s*\+\+\+ exited with \d+ \+\+\+",
     r"^\s*\d*\s*execve\(.*\) = \d+",
-    r"^\s*\d*\s*write\(.*\) = \d+",
+    #r"^\s*\d*\s*write\(.*\) = \d+", # REMOVE THIS
+    r"^\s*\d*\s*write\(1, .* = \d+",        # ✅ stdout-only
+
 
 
     # Test case 8 additions. We can remove all exited with <> patterns because we rewrite the exit_code variable with
@@ -129,10 +133,10 @@ STRACE_WHITELIST_REGEX = [
     # It’s metadata about the process exit, not a semantic error message. 
     r"\+\+\+ exited with \d+ \+\+\+",       # covers all strace exit codes
     r"execve\(.+\) = \d+",                  # general execve success/failure trace
-    r"write\(.+\) = \d+",                    # general write trace (stdout/stderr)
+    #r"write\(.+\) = \d+",                    # general write trace (stdout/stderr)
 
 
-    r"write\(2, .* = \d+\)",  # benign stderr writes
+    #r"write\(2, .* = \d+\)",  # benign stderr writes REMOVE THIS
     r'write\(1, ".*\\n", \d+\) *= *\d+', # to catch the \n on positive writes; escaped newline version
     r'write\(1, .*\\n.* = \d+\)',  # to catch the \n on positive writes; fallback catch-all
 
