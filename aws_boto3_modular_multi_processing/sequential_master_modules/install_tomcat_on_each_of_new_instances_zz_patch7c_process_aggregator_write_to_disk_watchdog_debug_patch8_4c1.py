@@ -151,7 +151,7 @@ STRACE_WHITELIST_REGEX = [
 
     # To catch common subprocesses used in injected commands. We want to whitelist these in the injected stderr as not failures
     r"execve\(\"/usr/bin/bash\", .* = 0",
-    r"execve\(\"/usr/bin/python3\", .* = 0"
+    r"execve\(\"/usr/bin/python3\", .* = 0",
 
 
 
