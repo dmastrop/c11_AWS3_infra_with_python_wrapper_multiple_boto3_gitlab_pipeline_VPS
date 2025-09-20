@@ -394,8 +394,10 @@ level) (BLOCK4)
 - Default command success logic is the last block.(BLOCK5)  
 
 
-
-
+The high level of the BLOCK insertion is in the "for attempt" loop which is in the "for idx" loop in the install_tomcat
+function. See below
+This block design has run through several different postive and negative tests with apt and strace(bash and bash-like) command
+syntax and has performed well so far.
 
 ```
 For attempt loop in install_tomcat: (block in parenthesis is the original block order)
