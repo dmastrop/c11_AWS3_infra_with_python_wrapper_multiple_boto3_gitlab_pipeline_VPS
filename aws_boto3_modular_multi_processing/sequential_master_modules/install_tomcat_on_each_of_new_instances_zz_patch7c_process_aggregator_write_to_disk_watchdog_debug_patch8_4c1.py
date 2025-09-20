@@ -134,6 +134,16 @@ STRACE_WHITELIST_REGEX = [
     r"execve\(\"/usr/bin/bash\", .* = 0",
     r"execve\(\"/usr/bin/python3\", .* = 0",
 
+    # Test case 8 additions. We can remove all exited with <> patterns because we rewrite the exit_code variable with
+    # a parse of this stderr from strace.  So there is no possiblity of an exited with 1, for example, with an exit_code
+    # of 0.  
+    # It is not stderr from the command itself — it’s an strace annotation. 
+    # It’s metadata about the process exit, not a semantic error message. 
+    r"\+\+\+ exited with \d+ \+\+\+",       # covers all strace exit codes
+    r"execve\(.+\) = \d+",                  # general execve success/failure trace
+    r"write\(.+\) = \d+"                    # general write trace (stdout/stderr)
+
+
 ]
 
 
