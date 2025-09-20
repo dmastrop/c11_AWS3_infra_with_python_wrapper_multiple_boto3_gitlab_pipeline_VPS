@@ -111,8 +111,27 @@ APT_WHITELIST_REGEX = [
 # adding whitelist for the strace that is used with bash or bash like command "commands" in the list (these are not failures)
 # With this whitelist in place all the original error logic for APT will apply to discriminate between stub, install_failed
 # and install_success status for the registry_entry
+# Note due to the way these regex lists are processed by pythnon always add the newer findings that are usually more broad
+# to the top of the list. Python short-circuits the list upon getting a hit and this will optimize, especially under hyper-scaling
 
 STRACE_WHITELIST_REGEX = [
+    
+    ## Test case 6 additions to remove process id exited with messages
+    r"^\s*\d*\s*\+\+\+ exited with \d+ \+\+\+"
+    r"^\s*\d*\s*execve\(.*\) = \d+"
+    r"^\s*\d*\s*write\(.*\) = \d+"
+
+
+    # Test case 8 additions. We can remove all exited with <> patterns because we rewrite the exit_code variable with
+    # a parse of this stderr from strace.  So there is no possiblity of an exited with 1, for example, with an exit_code
+    # of 0.  
+    # It is not stderr from the command itself — it’s an strace annotation. 
+    # It’s metadata about the process exit, not a semantic error message. 
+    r"\+\+\+ exited with \d+ \+\+\+",       # covers all strace exit codes
+    r"execve\(.+\) = \d+",                  # general execve success/failure trace
+    r"write\(.+\) = \d+"                    # general write trace (stdout/stderr)
+
+
     r"write\(2, .* = \d+\)",  # benign stderr writes
     r'write\(1, ".*\\n", \d+\) *= *\d+', # to catch the \n on positive writes; escaped newline version
     r'write\(1, .*\\n.* = \d+\)',  # to catch the \n on positive writes; fallback catch-all
@@ -134,14 +153,6 @@ STRACE_WHITELIST_REGEX = [
     r"execve\(\"/usr/bin/bash\", .* = 0",
     r"execve\(\"/usr/bin/python3\", .* = 0",
 
-    # Test case 8 additions. We can remove all exited with <> patterns because we rewrite the exit_code variable with
-    # a parse of this stderr from strace.  So there is no possiblity of an exited with 1, for example, with an exit_code
-    # of 0.  
-    # It is not stderr from the command itself — it’s an strace annotation. 
-    # It’s metadata about the process exit, not a semantic error message. 
-    r"\+\+\+ exited with \d+ \+\+\+",       # covers all strace exit codes
-    r"execve\(.+\) = \d+",                  # general execve success/failure trace
-    r"write\(.+\) = \d+"                    # general write trace (stdout/stderr)
 
 
 ]
