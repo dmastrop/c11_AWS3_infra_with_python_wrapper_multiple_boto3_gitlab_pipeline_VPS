@@ -3637,7 +3637,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
          
         # test6 THIS IS WORKING FOR THE test D1 negative test case: This has exit code of 0 but nonwhitelisted material for error
         # install_failed
-        "strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+        #"strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
 
 
@@ -3654,7 +3654,33 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-        ## More negative tests of new items added to the APT and strace whitelist
+
+        #### stripped test cases 1-6 and 8 (raw) without the strace wrapper to test out the new wrapper code wrap_command and
+        #### should_wrap
+
+        # Test Case 1: Nonzero exit + nonwhitelisted stderr
+        #"sudo bash -c 'echo test > /root/testfile'",
+
+        # Test Case 2: Exit 0 + no stderr (install_success)
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+
+        # Test Case 3: Nonzero exit + stderr from sudo
+        #"sudo touch /root/testfile",
+
+        # Test Case 4: Nonexistent command (exit 127)
+        #"bash -c \"nonexistent_command\"",
+
+        # Test Case 5: Script with stderr + exit 1
+        #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+
+        # Test Case 6: Python stderr injection + exit 0
+        #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+
+        # Test Case 8: Whitelisted stderr + exit 1
+        #"bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+
+
+
 
 
 
