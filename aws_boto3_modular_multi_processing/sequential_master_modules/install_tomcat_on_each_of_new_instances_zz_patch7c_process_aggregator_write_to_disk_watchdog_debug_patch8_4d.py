@@ -253,13 +253,33 @@ def generate_trace_suffix():
 ## trace.log unique for each command iterantion and each command retry iteration and unique per thread. This prevents 
 ## cross-contamination since the threads are multi-threaded in parallel and run in parallel processes.
 
+#def should_wrap(cmd):
+#    suspicious_patterns = [
+#        r"sudo bash -c .*> /root/.*",
+#        r"bash -c 'nonexistent_command'",
+#        r"sudo touch /root/.*"
+#    ]
+#    return any(re.search(pat, cmd) for pat in suspicious_patterns)
+
+
 def should_wrap(cmd):
     suspicious_patterns = [
-        r"sudo bash -c .*> /root/.*",
-        r"bash -c 'nonexistent_command'",
-        r"sudo touch /root/.*"
+        r"sudo bash -c .*?> /root/.*",
+        r"bash -c .*nonexistent_command.*",
+        r"sudo touch /root/.*",
+        r"bash -c .*echo.*hello world.*",
+        r"bash -c .*sudo /tmp/fail.sh.*",
+        r"bash -c .*os\.write\(2,.*",
+        r"bash -c .*exit 1.*"
     ]
-    return any(re.search(pat, cmd) for pat in suspicious_patterns)
+    if any(re.search(pat, cmd) for pat in suspicious_patterns):
+        return True
+    if cmd.strip().startswith("bash -c"):
+        return True
+    return False
+
+
+
 
 #def wrap_command(cmd):
 #    if should_wrap(cmd):
