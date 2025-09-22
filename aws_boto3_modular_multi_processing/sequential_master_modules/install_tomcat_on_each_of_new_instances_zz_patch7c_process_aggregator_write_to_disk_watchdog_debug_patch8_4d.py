@@ -291,9 +291,10 @@ def should_wrap(cmd):
 def wrap_command(cmd):
     matched = should_wrap(cmd)
     if matched:
-        # debug: this is True or False
+        # debug: this is True and won't print anything if False
         #print(f"[{ip}] should_wrap matched: {matched}")
-        print(f"should_wrap matched: {matched}")
+        #print(f"should_wrap matched: {matched}")
+        print(f"should_wrap matched: {matched} → Command: {cmd}")
         return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
     return cmd
 
