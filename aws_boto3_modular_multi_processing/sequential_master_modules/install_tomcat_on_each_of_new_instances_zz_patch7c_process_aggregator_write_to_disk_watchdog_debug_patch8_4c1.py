@@ -3453,7 +3453,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # apply strace to the command above
         # test4 THIS IS WORKING
-        "strace -e write,execve -o /tmp/trace.log bash -c \"nonexistent_command\"",
+       # "strace -e write,execve -o /tmp/trace.log bash -c \"nonexistent_command\"",
 
 
 
@@ -3464,7 +3464,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # apply strace to the command above
         # test5 THIS IS WORKING
-        #"strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+        "strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
 
 
