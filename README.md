@@ -806,10 +806,35 @@ the code as a part of the first pass testing in this area. The suspicious_patter
 performed.
 
 The commands list and the native_commands list are in the tomcat_worker function  (tomcat_worker calls threaded_install which 
-calls intall_tomcat.
+calls intall_tomcat)
+
+The native_commands list changes are below (this is not the complete list)
+These will serve as the first pass testing of the wrapper function and the should_wrap (suspicious_patterns) function.
 
 ```
+        #### stripped test cases 1-6 and 8 (raw) without the strace wrapper to test out the new wrapper code wrap_command and
+        #### should_wrap
 
+        # Test Case 1: Nonzero exit + nonwhitelisted stderr
+        #"sudo bash -c 'echo test > /root/testfile'",
+
+        # Test Case 2: Exit 0 + no stderr (install_success)
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+
+        # Test Case 3: Nonzero exit + stderr from sudo
+        #"sudo touch /root/testfile",
+
+        # Test Case 4: Nonexistent command (exit 127)
+        #"bash -c \"nonexistent_command\"",
+
+        # Test Case 5: Script with stderr + exit 1
+        #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+
+        # Test Case 6: Python stderr injection + exit 0
+        #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+
+        # Test Case 8: Whitelisted stderr + exit 1
+        #"bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 ```
 
