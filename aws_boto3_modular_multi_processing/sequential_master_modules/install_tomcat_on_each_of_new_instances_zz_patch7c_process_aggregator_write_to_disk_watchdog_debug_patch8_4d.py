@@ -261,12 +261,20 @@ def should_wrap(cmd):
     ]
     return any(re.search(pat, cmd) for pat in suspicious_patterns)
 
+#def wrap_command(cmd):
+#    if should_wrap(cmd):
+#
+#        return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+#    return cmd
+
+
 def wrap_command(cmd):
-    if should_wrap(cmd):
+    matched = should_wrap(cmd)
+    if matched:
+        # debug: this is True or False
+        print(f"[{ip}] should_wrap matched: {matched}")
         return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
     return cmd
-
-
 
 
 
@@ -4433,12 +4441,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ## contamination of the strace output which is eventually injected into the stderr to determine the thread
                     ## status. THe wrapper function for strace will conataine /tmp/trace.log by default and this is the 
                     ## replacement string for trace_trace_suffix.log
+                    
+                    original_command = command   # Snapshot before trace path mutation (not used downstream)
+
+
                     if "strace" in command:
                         trace_suffix = generate_trace_suffix()
                         trace_path = f"/tmp/trace_{trace_suffix}.log"
                         command = command.replace("/tmp/trace.log", trace_path)
 
-
+                    # strace wrapper debug
+                    print(f"[{ip}]  Wrapped processed command(strace debug): {command}")
 
 
 
