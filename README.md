@@ -665,10 +665,16 @@ STRACE_WHITELIST_REGEX = [
 
 
 
-### Wrapper design and pre-processor design for strace (bash and bash-like) commands.
+### Wrapper design and pre-processor design for bash and bash-like commands using strace as the wrapper:
 
 
-The pre-processor will identify commands of this type and then wrap them in an strace so that they can be processed through the stderr intelligent parsing.
+The pre-processor will identify commands of this type and then wrap them in an strace so that they can be processed through the 
+strace intelligent logic for failure analysis. The strace output will be injected into the stderr so that the existing stderr
+method of analysis can be applied here. 
+
+
+
+
 
 
 
