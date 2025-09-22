@@ -3443,7 +3443,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # apply strace to the command above
         # test3 THIS IS WORKING. 
-        #"strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
+        "strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
 
 
 
@@ -3489,7 +3489,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # test case 8 (negative)  This will have an exit code of 1 and  whitelisted stderr for install_failed
-        "strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
         ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
