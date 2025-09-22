@@ -55,7 +55,7 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
 
-- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat to support intelligent output flow based decision making for command execution
+- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator
 
 - Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
@@ -242,7 +242,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat to support intelligent output flow based decision making for command execution:
+## UPDATES part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator:
 
 
 ### Introduction:
