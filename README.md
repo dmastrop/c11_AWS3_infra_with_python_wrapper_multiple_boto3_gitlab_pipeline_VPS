@@ -516,6 +516,10 @@ def is_whitelisted_line(line):
 ```
 
 
+
+
+
+
 ### Running the APT_WHITELIST_REGEX through the 512 node test a few times:
 
 This has shown to improve the integrity of the whitelist greatly. APT is  notorious for not only STDOUT/STDERR leakage but for
@@ -587,6 +591,10 @@ APT_WHITELIST_REGEX = [
 ```
 In general,large-scale testing can drive whitelist evolution from a statistical perspecitve with the APT whitelist given 
 that the STDOUT/STDERR cross contamination is entirely non-deterministic.
+
+
+
+
 
 
 
@@ -673,6 +681,77 @@ strace intelligent logic for failure analysis. The strace output will be injecte
 method of analysis can be applied here. 
 
 
+
+#### Wrapper function prerequisite: trace.log isolation
+
+Prior to introducing the wrapper function for this, in BLOCK1 above we introduced the code to ensure that the trace.log
+function that is used to store the strace data and inject it into the stderr for further analysis is unique.
+It has to be kept unique between threads and within a thread it has to be unique for each command iteration (for idx loop)
+and for each retry of each command (for attempt loop). Otherwise there is a risk of cross-contamination of the strace data
+that is injected into stderr as the commands and command retries are iterated through for a give thread and across threads
+in this multi-threaded environment.  The code is below.
+
+
+The first block is the helper function and the second block is from BLOCK1 above (at the very beginning of BLOCK1).
+
+
+
+```
+## helper function used for the strace command syntax by the install_tomcat for idx commands/for attempt retry loop
+## The strace code needs a trace.log file to hold its output prior to injecting it into stderr, and we need to 
+## have unique trace.log filenames, and this appends a suffix to the trace_suffix.log filename. This prevents cross
+## log corruption between command execution, retries of command execution at the per thread level. So 
+## commands and retries all use unique trace.log filenames per thread.
+
+def generate_trace_suffix():
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+```
+
+
+The code below is from BLOCK1 in install_tomcat. This is at the very beginning of the BLOCK1
+The wrapper function will contain a generic /tmp/trace.log format and this will be rewritten with the trace_suffix
+as indicated below for each command, and for each command retry, per thread ensuring log isolation.
+The native commands only require this generic /tmp/trace.log. The pre-processor (see further below) will identify the
+native commands that need to be processed and this trac.log will automatically be re-written by the call to generate_trace_suffix
+as shown below.
+
+The pre-processor code will be indicated in the next section below.
+
+
+```
+## Place this before teh stdin, stdout, stderr = ssh.exec_command(command) for the strace commands
+                    ## This important block of code generates a random number trace log file suffix so that the trace.log
+                    ## file for the strace is unique per thread, per command and per retry of command. This prevents cross
+                    ## contamination of the strace output which is eventually injected into the stderr to determine the thread
+                    ## status. THe wrapper function for strace will conataine /tmp/trace.log by default and this is the 
+                    ## replacement string for trace_trace_suffix.log
+
+                    if "strace" in command:
+                        trace_suffix = generate_trace_suffix()
+                        trace_path = f"/tmp/trace_{trace_suffix}.log"
+                        command = command.replace("/tmp/trace.log", trace_path)
+ 
+```
+
+So this code is a necesary part of part of the pre-processing process on these types of commands.
+
+
+
+#### Wrapper pre-processor code:
+
+
+
+
+
+#### The wrapper function:
+
+
+
+
+#### Rename commands list as native_commands so that the list can be pre-processed and wrapped accoringly by the wrapper function:
+
+This keeps the command pipeline clean and lets `install_tomcat` consume `commands` without any structural changes.
 
 
 
