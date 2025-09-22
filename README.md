@@ -749,7 +749,7 @@ So this code is a necesary part of part of the pre-processing process on these t
 
 
 
-#### Rename commands list as native_commands so that the list can be pre-processed and wrapped accoringly by the wrapper function:
+#### Rename commands list as native_commands so that the list can be pre-processed and wrapped accordingly by the wrapper function:
 
 This keeps the command pipeline clean and lets `install_tomcat` consume `commands` without any structural changes.
 
