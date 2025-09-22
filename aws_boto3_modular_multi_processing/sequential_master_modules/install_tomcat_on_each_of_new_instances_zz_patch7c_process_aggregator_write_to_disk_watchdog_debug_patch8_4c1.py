@@ -3464,7 +3464,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # apply strace to the command above
         # test5 THIS IS WORKING
-        "strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+        #"strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
 
 
@@ -3478,7 +3478,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
          
         # test6 THIS IS WORKING FOR THE test D1 negative test case: This has exit code of 0 but nonwhitelisted material for error
         # install_failed
-        #"strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+        "strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
 
 
@@ -4710,12 +4710,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         *stderr_output.strip().splitlines()[:12]  # Snapshot for traceability.
                                     ]
                                 }
-                                ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
+                                #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
                                 ssh.close()
                                 return ip, private_ip, registry_entry
                             else:
                                 print(f"[{ip}] ⚠️ Unexpected strace stderr — retrying attempt {attempt + 1}")
-                                ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
+                                #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
                                 time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                                 continue
 
