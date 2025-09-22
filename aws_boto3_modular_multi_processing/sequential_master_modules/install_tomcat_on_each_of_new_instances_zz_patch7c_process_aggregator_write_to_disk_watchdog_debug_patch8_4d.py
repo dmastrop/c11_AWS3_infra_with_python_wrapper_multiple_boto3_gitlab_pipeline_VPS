@@ -230,6 +230,11 @@ retry_lock = threading.Lock()
 
 
 
+
+
+
+##### helper functions for strace command support ########
+
 ## helper function used for the strace command syntax by the install_tomcat for idx commands/for attempt retry loop
 ## The strace code needs a trace.log file to hold its output prior to injecting it into stderr, and we need to 
 ## have unique trace.log filenames, and this appends a suffix to the trace_suffix.log filename. This prevents cross
@@ -237,6 +242,33 @@ retry_lock = threading.Lock()
 ## commands and retries all use unique trace.log filenames per thread.
 def generate_trace_suffix():
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+
+## helper functions for the wrapper for the strace command syntax. The commands[] list will be transformed to 
+## native_commands (stripped of the strace) so that the user does not have to manually apply the strace transform to the 
+## commands list.  The suspicious_patterns will be modified accordingly as the testing is done in this area.
+## The should_wrap is the pre-processor and the wrap_command helper function actually applies the strace transform to the
+## "native_command"
+## Note that the /tmp/trace.log is re-written in install_tomcat and a trace_suffix is added to the trace.log name to make each
+## trace.log unique for each command iterantion and each command retry iteration and unique per thread. This prevents 
+## cross-contamination since the threads are multi-threaded in parallel and run in parallel processes.
+
+def should_wrap(cmd):
+    suspicious_patterns = [
+        r"sudo bash -c .*> /root/.*",
+        r"bash -c 'nonexistent_command'",
+        r"sudo touch /root/.*"
+    ]
+    return any(re.search(pat, cmd) for pat in suspicious_patterns)
+
+def wrap_command(cmd):
+    if should_wrap(cmd):
+        return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+    return cmd
+
+
+
+
 
 
 
@@ -3335,37 +3367,155 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     )
     my_ec2 = session.client('ec2')
 
+
+
+
+
+    ### commands blocks inside tomcat_worker: 
+    ### (deprecated and replace with native_commands (see below) which is used with the
+    ### strace wrapper function
+
     #commands = [
+    #    # ORIGINAL — apt update without stream collapse
+    #    "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+
+
+    #    # ORIGINAL — apt install without stream collapse
+    #    "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+
+    #    # Optional: apt update with collapsed streams (wrapped in bash)
+    #    #"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
+
+    #    # Optional: apt install with collapsed streams (wrapped in bash)
+    #    #"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 2>&1'",
+
+
+    #    # Optional: apt update with collapsed streams and write to file and then STDOUT
+    #    #f"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y > /tmp/apt_output_{thread_uuid}.txt 2>&1; cat /tmp/apt_output_{thread_uuid}.txt; rm /tmp/apt_output_{thread_uuid}.txt'",
     #    
-    #    #"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'"
 
-    #        
-    #    'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1', # put STDERR and STDOUT into one stream
+    #    # Optional: apt install with collapsed streams and write to file and then STDOUT
+    #    #f"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9 > /tmp/apt_output_{thread_uuid}.txt 2>&1; cat /tmp/apt_output_{thread_uuid}.txt; rm /tmp/apt_output_{thread_uuid}.txt'",
+ 
 
-    #    #'sudo DEBIAN_FRONTEND=noninteractive apt update -y',
+
+
+    #    #### Failure commands for negative testing #####
+
+    #    # Optional: simulate package failure. For apt commmands with collapsed streams this will result in a stub
+    #    # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
+
+    #    # Optional: simulate runtime crash
+    #    #"sudo nonexistent_binary --fail",
+
+    #    # Optional: simulate chained failure with sleep
+    #    # "sudo bash -c 'nonexistent_binary --fail; sleep 1'",
+
+    #    # Optional: raw bash invocation
+    #    #"bash -c 'nonexistent_binary'",
+
+
+
+
+    #    # force a shell level failure. Not seeing STDOUT, STDERR and exit code is 0 verified with raw print of exit_code
+    #    #"sudo bash -c 'echo test > /root/testfile'",
+
+    #    # test out the strace on the echo test above. We are now getting exit_code=1 which is good but no logging
+    #    #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile' && cat /tmp/trace.log",
+ 
+    #    # strace same as above but pipe all the strace error (-1) log lines to STDERR. The rest of the logic will take 
+    #    # care of tagging the registry_entry status for this.
+    #    #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'; grep -E ' = -1 ' /tmp/trace.log >&2",
+
+    #    # strace still no STDERR with above. Try this, writing directly to /dev/stderr
+    #    #"strace -e write,execve -o /dev/stderr sudo bash -c 'echo test > /root/testfile'",
+
+    #    # apply strace with this methodology.  Write the logs to /tmp/trace.log  
+    #    # test1 THIS IS WORKING with the added logic in install_tomcat to write the /tmp/trace.log to stderr. This throws nonzero 
+    #    # exit code and also injected nonwhitelisted stderr, so install_failed
+    #    #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
+
+
+
+
+
+
+    #    # touch: cannot touch '/root/testfile': Permission denied. This is not throwing any STDOUT or STDERR and exit_code is 0
+    #    #"sudo touch /root/testfile",
+
+    #    # apply strace to the command above
+    #    # test3 THIS IS WORKING. 
+    #    #"strace -e write,execve -o /tmp/trace.log sudo touch /root/testfile",
+
+
+
+
+    #    # bash: nonexistent_command: command not found
+    #    #"bash -c \"nonexistent_command\"",
+
+    #    # apply strace to the command above
+    #    # test4 THIS IS WORKING
+    #   # "strace -e write,execve -o /tmp/trace.log bash -c \"nonexistent_command\"",
+
+
+
+
+
+    #    # small script that exits with error and writes to STDERR
+    #    #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+
+    #    # apply strace to the command above
+    #    # test5 THIS IS WORKING
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+
+
+
+
+    #    ## Negative test D1 (exit_code forced to zero but non-whitelist stderr from strace to hit BLOCK3 install_failed code)
+    #    # This one will produce exit_status of 0 but will have a non-whitelist in the stderr and so should be install_failed
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c \"echo 'error: something went wrong' >&2; exit 0\"",
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c \"python3 -c 'import sys; sys.stderr.write(\"error: something went wrong\\n\")'; exit 0\"",
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import sys; sys.stderr.write('error: something went wrong\\\\n')\\\"; exit 0\"",
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+    #     
+    #    # test6 THIS IS WORKING FOR THE test D1 negative test case: This has exit code of 0 but nonwhitelisted material for error
+    #    # install_failed
+    #    "strace -f -e write,execve -o /tmp/trace.log bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+
+
+
+
+    #    # test7  E: Unable to locate package tomcat99 (BLOCK2 failure heuristic check install_failed)
+    #    # THIS IS WORKING (but is stubbed; there is no error in stdout or stderr at all so this is the best we can do)
+    #    #"sudo apt install tomcat99",
+
+
+    #    # test case 8 (negative)  This will have an exit code of 1 and  whitelisted stderr for install_failed
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+
+
+    #    ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
+    #    #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
+
+
+    #    ## More negative tests of new items added to the APT and strace whitelist
+
+
+
+
+
+
+    #    #### resume normal commands #####
+
+    #    ## commands 3 and 4: 
+    #    # COMMAND 3:
+    #    "sudo systemctl start tomcat9",
     #    
+    #    # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
+    #    #"sudo systemctl start tomcat99",
 
-    #    
-
-    #    # second command semantics #
-    #    'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9',
-    #    
-    #    #'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99',
-
-    #    
-    #    #'sudo nonexistent_binary --fail', # simulate a runtime crash or exception
-    #    
-    #    #'sudo bash -c "nonexistent_binary --fail; sleep 1"',  # still an issue with exit_status 5 which does not make sense
-
-    #    #'bash -c "nonexistent_binary"',  #new test1
-    #      
-    #    #'bash -c \'nonexistent_binary\'',  # new test2
-
-
-
-    #    'sudo systemctl start tomcat9',
-    #    
-    #    'sudo systemctl enable tomcat9'
+    #    # COMMAND 4:
+    #    "sudo systemctl enable tomcat9"
     #]
 
 
@@ -3373,7 +3523,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    commands = [
+
+    ## native commands in tomcat_worker to be used with the strace wrapper function (in place of commands block above):
+
+    native_commands = [
         # ORIGINAL — apt update without stream collapse
         "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
 
@@ -3398,7 +3551,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-#### Failure commands for negative testing #####
+        #### Failure commands for negative testing #####
 
         # Optional: simulate package failure. For apt commmands with collapsed streams this will result in a stub
         # "bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99 2>&1'",
@@ -3433,6 +3586,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # exit code and also injected nonwhitelisted stderr, so install_failed
         #"strace -e write,execve -o /tmp/trace.log sudo bash -c 'echo test > /root/testfile'",
 
+
+
+
+        ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
+        # THIS IS WORKING
+        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
 
@@ -3489,21 +3648,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # test case 8 (negative)  This will have an exit code of 1 and  whitelisted stderr for install_failed
+        # THIS IS WORKING
         #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
-        ## test2 POSITIVE test case for strace (test case2)  exit code of 0 and no nonwhitelisted material for install_success
-        #"strace -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile'",
 
 
-## More negative tests of new items added to the APT and strace whitelist
-
+        ## More negative tests of new items added to the APT and strace whitelist
 
 
 
-
-
-#### resume normal commands #####
+        #### resume normal commands #####
 
         ## commands 3 and 4: 
         # COMMAND 3:
@@ -3515,6 +3670,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # COMMAND 4:
         "sudo systemctl enable tomcat9"
     ]
+    
+
 
 
     ## Negative testing: Inject failure into first thread only
@@ -4190,9 +4347,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ## The read_output_with_watchdog calls the update_resurrection_registry function
 
 
+        #### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
+        #### The helper functions wrap_command and should_wrap and the native_commands list that is from the original commands list
+        #### are at the top of this module but later on will modularize the wrap command so that it can be used with other 
+        #### service installations like gitlab and mariadb, etc....
+
+        commands = [wrap_command(cmd) for cmd in native_commands]
 
 
 
+        #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
         #NON-Negative testing use this: (and comment out the above)
         for idx, command in enumerate(commands):
 
@@ -4734,7 +4898,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
  
 
-                    ## non-strace logic: 
+                    ############ non-strace logic: #################
 
                     #print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
 
