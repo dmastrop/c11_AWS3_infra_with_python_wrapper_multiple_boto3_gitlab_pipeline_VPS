@@ -734,27 +734,84 @@ The pre-processor code will be indicated in the next section below.
  
 ```
 
-So this code is a necesary part of part of the pre-processing process on these types of commands.
+So this code above is a necesary part of part of the pre-processing process on these types of commands.
 
 
 
 #### Wrapper pre-processor code:
+Initial revision: 
 
 
+```
+## helper functions for the wrapper for the strace command syntax. The commands[] list will be transformed to 
+## native_commands (stripped of the strace) so that the user does not have to manually apply the strace transform to the 
+## commands list.  The suspicious_patterns will be modified accordingly as the testing is done in this area.
+## The should_wrap is the pre-processor and the wrap_command helper function actually applies the strace transform to the
+## "native_command"
+## Note that the /tmp/trace.log is re-written in install_tomcat and a trace_suffix is added to the trace.log name to make each
+## trace.log unique for each command iterantion and each command retry iteration and unique per thread. This prevents 
+## cross-contamination since the threads are multi-threaded in parallel and run in parallel processes.
 
+def should_wrap(cmd):
+    suspicious_patterns = [
+        r"sudo bash -c .*> /root/.*",
+        r"bash -c 'nonexistent_command'",
+        r"sudo touch /root/.*"
+    ]
+    return any(re.search(pat, cmd) for pat in suspicious_patterns)
+```
+
+The suspicious_patterns will be expanded as we test this area of code.
 
 
 #### The wrapper function:
 
 
 
+```
+def wrap_command(cmd):
+    if should_wrap(cmd):
+        return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+    return cmd
+```
+
 
 #### Rename commands list as native_commands so that the list can be pre-processed and wrapped accordingly by the wrapper function:
 
 This keeps the command pipeline clean and lets `install_tomcat` consume `commands` without any structural changes.
+This is placed right before the for idx loop begins, in the install_tomcat function
+
+In the install_tomcat function: 
+
+```
+
+
+        #### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
+        #### The helper functions wrap_command and should_wrap and the native_commands list that is from the original commands list
+        #### are at the top of this module but later on will modularize the wrap command so that it can be used with other 
+        #### service installations like gitlab and mariadb, etc....
+
+        commands = [wrap_command(cmd) for cmd in native_commands]
 
 
 
+        #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
+        for idx, command in enumerate(commands):
+
+```
+
+
+The native_commands list is the commands list stripped of the strace transform. These test cases will need to be run through
+the code as a part of the first pass testing in this area. The suspicious_patterns will be modified accordingly as the testing is 
+performed.
+
+The commands list and the native_commands list are in the tomcat_worker function  (tomcat_worker calls threaded_install which 
+calls intall_tomcat.
+
+```
+
+
+```
 
 
 
