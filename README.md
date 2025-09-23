@@ -437,11 +437,21 @@ The code blocks in install_tomcat are listed below:
 #### BLOCK1:
 
 ```
- #### BLOCK1(1) is the STDOUT and STDERR output flush from read_output_with_watchdog function
+#### BLOCK1(1) is the STDOUT and STDERR output flush from read_output_with_watchdog function
 
                     #BLOCK1(1)
 
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+
+
+
+                    command = original_command  # original_command is set outside of the "for attempt" loop. See above.
+                    # Reset TO before mutation so that the path is reset to /tmp/trace.log for each attempt on the command
+                    # that way the command.replace (below) will work for each retry  since /tmp/trace.log remains consistent 
+                    # for each re-attempt, and the filename will get a new trace_suffix each time. Without this the trace_suffix 
+                    # will remain the same for all command retries because the command.replace will not match for the second
+                    # and third retry.
+
 
                     ## Place this before teh stdin, stdout, stderr = ssh.exec_command(command) for the strace commands
                     ## This important block of code generates a random number trace log file suffix so that the trace.log
@@ -449,9 +459,6 @@ The code blocks in install_tomcat are listed below:
                     ## contamination of the strace output which is eventually injected into the stderr to determine the thread
                     ## status. THe wrapper function for strace will conataine /tmp/trace.log by default and this is the 
                     ## replacement string for trace_trace_suffix.log
-
-                    original_command = command   # Snapshot before trace path mutation (not used downstream)
-
 
                     if "strace" in command:
                         trace_suffix = generate_trace_suffix()
@@ -465,7 +472,6 @@ The code blocks in install_tomcat are listed below:
 
                     #try pty for debugging
                     #stdin, stdout, stderr = ssh.exec_command(command, timeout=60, get_pty=True)
-
                     stdin, stdout, stderr = ssh.exec_command(command, timeout=60)
                     
                     stdout.channel.settimeout(WATCHDOG_TIMEOUT)
@@ -1190,7 +1196,7 @@ Prior to introducing the wrapper function for this, in BLOCK1 above we introduce
 function that is used to store the strace data and inject it into the stderr for further analysis is unique.
 It has to be kept unique between threads and within a thread it has to be unique for each command iteration (for idx loop)
 and for each retry of each command (for attempt loop). Otherwise there is a risk of cross-contamination of the strace data
-that is injected into stderr as the commands and command retries are iterated through for a give thread and across threads
+that is injected into stderr as the commands and command retries are iterated through for a given thread and across threads
 in this multi-threaded environment.  The code is below.
 
 
@@ -1214,21 +1220,60 @@ def generate_trace_suffix():
 The code below is from BLOCK1 in install_tomcat. This is at the very beginning of the BLOCK1
 The wrapper function will contain a generic /tmp/trace.log format and this will be rewritten with the trace_suffix
 as indicated below for each command, and for each command retry, per thread ensuring log isolation.
+
 The native commands only require this generic /tmp/trace.log. The pre-processor (see further below) will identify the
-native commands that need to be processed and this trac.log will automatically be re-written by the call to generate_trace_suffix
+native commands that need to be processed and this trace.log will automatically be re-written by the call to generate_trace_suffix
 as shown below.
+
+A key requirement is that the command be reintialized to path /tmp/trace.log between command re-attempts. Otherwise the 
+second and third attempts will not get unique trace_suffix, but the same suffix as the first attempt.
+
 
 The pre-processor code will be indicated in the next section below.
 
 
 ```
+(outside of the for attempt loop and right before it starts define the original_command that is the wrapped command with the
+/tmp/trace.log path)
+
+            original_command = command
+            # Snapshot before any mutation.  This ensures that the path /tmp/trace.log 
+            # is stored and can be used to reset the path during command re-attempts (see below)
+
+
+(then proceed with the for attempt loop) 
+
+
+            for attempt in range(RETRY_LIMIT):
+            ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
+            ## each attempt (of 3) will use the adaptive WATCHDOG_TIMEOUT as a watchdog and if the watchdog expires it
+            ## can re-attempt for STALL_RETRY_THRESHOLD =2 number of times watchdogs on each command attemp (of 3 total)
+
+                try:
+
+ #### BLOCK1(1) is the STDOUT and STDERR output flush from read_output_with_watchdog function
+
+                    #BLOCK1(1)
+
+                    print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
+
+
+
+                    command = original_command  # original_command is set outside of the "for attempt" loop. See above.
+                    # Reset TO before mutation so that the path is reset to /tmp/trace.log for each attempt on the command
+                    # that way the command.replace (below) will work for each retry  since /tmp/trace.log remains consistent 
+                    # for each re-attempt, and the filename will get a new trace_suffix each time. Without this the trace_suffix 
+                    # will remain the same for all command retries because the command.replace will not match for the second
+                    # and third retry.
+
+
                     ## Place this before teh stdin, stdout, stderr = ssh.exec_command(command) for the strace commands
                     ## This important block of code generates a random number trace log file suffix so that the trace.log
                     ## file for the strace is unique per thread, per command and per retry of command. This prevents cross
                     ## contamination of the strace output which is eventually injected into the stderr to determine the thread
                     ## status. THe wrapper function for strace will conataine /tmp/trace.log by default and this is the 
                     ## replacement string for trace_trace_suffix.log
-
+                    
                     if "strace" in command:
                         trace_suffix = generate_trace_suffix()
                         trace_path = f"/tmp/trace_{trace_suffix}.log"

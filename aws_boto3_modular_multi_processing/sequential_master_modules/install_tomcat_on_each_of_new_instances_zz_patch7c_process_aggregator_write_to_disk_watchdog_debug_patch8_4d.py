@@ -4432,7 +4432,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             ## successful installs and preserve the failure logic if the for attempt loop aborts
             command_succeeded = False
 
-
+            original_command = command  
+            # Snapshot before any mutation.  This ensures that the path /tmp/trace.log 
+            # is stored and can be used to reset the path during command re-attempts (see below)
 
 
 
@@ -4457,6 +4459,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     print(f"[{ip}] [{datetime.now()}] Command {idx+1}/{len(commands)}: {command} (Attempt {attempt + 1})")
                    
+                    
+
+                    command = original_command  # original_command is set outside of the "for attempt" loop. See above.
+                    # Reset TO before mutation so that the path is reset to /tmp/trace.log for each attempt on the command
+                    # that way the command.replace (below) will work for each retry  since /tmp/trace.log remains consistent 
+                    # for each re-attempt, and the filename will get a new trace_suffix each time. Without this the trace_suffix 
+                    # will remain the same for all command retries because the command.replace will not match for the second
+                    # and third retry.
+
+
                     ## Place this before teh stdin, stdout, stderr = ssh.exec_command(command) for the strace commands
                     ## This important block of code generates a random number trace log file suffix so that the trace.log
                     ## file for the strace is unique per thread, per command and per retry of command. This prevents cross
@@ -4464,9 +4476,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ## status. THe wrapper function for strace will conataine /tmp/trace.log by default and this is the 
                     ## replacement string for trace_trace_suffix.log
                     
-                    original_command = command   # Snapshot before trace path mutation (not used downstream)
-
-
                     if "strace" in command:
                         trace_suffix = generate_trace_suffix()
                         trace_path = f"/tmp/trace_{trace_suffix}.log"
