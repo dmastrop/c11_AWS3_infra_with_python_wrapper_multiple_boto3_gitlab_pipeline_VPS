@@ -4469,6 +4469,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # and third retry.
 
 
+
+
+
+                    print(f"[{ip}] Reset command before mutation AND set to original_command: {command}")
+
+
                     ## Place this before teh stdin, stdout, stderr = ssh.exec_command(command) for the strace commands
                     ## This important block of code generates a random number trace log file suffix so that the trace.log
                     ## file for the strace is unique per thread, per command and per retry of command. This prevents cross
