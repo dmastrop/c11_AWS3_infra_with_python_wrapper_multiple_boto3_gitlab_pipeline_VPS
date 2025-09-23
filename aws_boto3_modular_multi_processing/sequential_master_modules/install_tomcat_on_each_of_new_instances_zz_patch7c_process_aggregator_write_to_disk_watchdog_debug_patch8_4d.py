@@ -3689,10 +3689,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### should_wrap
 
         # Test Case 1: Nonzero exit + nonwhitelisted stderr
-        #"sudo bash -c 'echo test > /root/testfile'",
+        "sudo bash -c 'echo test > /root/testfile'",
 
         # Test Case 2: Exit 0 + no stderr (install_success)
-        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
 
         # Test Case 3: Nonzero exit + stderr from sudo
         #"sudo touch /root/testfile",
