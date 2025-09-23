@@ -3692,10 +3692,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo bash -c 'echo test > /root/testfile'",
 
         # Test Case 2: Exit 0 + no stderr (install_success)
-        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        
 
         # Test Case 3: Nonzero exit + stderr from sudo
-        "sudo touch /root/testfile",
+        #"sudo touch /root/testfile",
 
         # Test Case 4: Nonexistent command (exit 127)
         #"bash -c \"nonexistent_command\"",
