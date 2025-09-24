@@ -3703,10 +3703,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sudo touch /root/testfile",
 
         # Test Case 4: Nonexistent command (exit 127)
-        "bash -c \"nonexistent_command\"",
+        #"bash -c \"nonexistent_command\"",
 
         # Test Case 5: Script with stderr + exit 1
-        #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+        "bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
         # Test Case 6: Python stderr injection + exit 0
         #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
@@ -4492,7 +4492,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         trace_path = f"/tmp/trace_{trace_suffix}.log"
                         command = command.replace("/tmp/trace.log", trace_path)
 
-                    # strace wrapper debug
+                    # strace wrapper debug. Note that this prints for both non-strace and strace commands so that we can
+                    # make sure that non-strace commmands are not getting re-written with the wrapper. This verifies the 
+                    # should_wrap function logic. Note that this prints for both non-strace and strace commands so that we can
+                    # make sure that non-strace commmands are not getting re-written with the wrapper. This verifies the 
+                    # should_wrap function logic..
                     print(f"[{ip}]  Wrapped processed command(strace debug): {command}")
 
 
