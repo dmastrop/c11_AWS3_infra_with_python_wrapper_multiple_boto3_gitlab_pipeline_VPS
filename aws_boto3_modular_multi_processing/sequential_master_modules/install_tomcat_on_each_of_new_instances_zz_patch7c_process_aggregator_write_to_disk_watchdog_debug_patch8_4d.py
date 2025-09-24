@@ -3619,7 +3619,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # ORIGINAL — apt install without stream collapse
-        "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+        #"sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+
+
+
+
 
         # Optional: apt update with collapsed streams (wrapped in bash)
         #"bash -c 'sudo DEBIAN_FRONTEND=noninteractive apt update -y 2>&1'",
@@ -3792,13 +3796,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         ## commands 3 and 4: 
         # COMMAND 3:
-        "sudo systemctl start tomcat9",
+        #"sudo systemctl start tomcat9",
         
         # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
         #"sudo systemctl start tomcat99",
 
         # COMMAND 4:
-        "sudo systemctl enable tomcat9"
+        #"sudo systemctl enable tomcat9"
     ]
     
 
