@@ -3686,19 +3686,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         #### stripped test cases 1-6 and 8 (raw) without the strace wrapper to test out the new wrapper code wrap_command and
-        #### should_wrap
+        #### should_wrap.   The failure cases will retry 3 times and each retry should have a unique trace_suffix on the trace.log
+        #### filenmae.
 
         # Test Case 1: Nonzero exit + nonwhitelisted stderr
         #"sudo bash -c 'echo test > /root/testfile'",
 
         # Test Case 2: Exit 0 + no stderr (install_success)
-        "bash -c 'echo \"hello world\" > /tmp/testfile'",
-        "bash -c 'echo \"hello world\" > /tmp/testfile'",
-        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        # Test three in a row and ensure that trace.log is unique for each of them.
+        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         
 
         # Test Case 3: Nonzero exit + stderr from sudo
-        #"sudo touch /root/testfile",
+        "sudo touch /root/testfile",
 
         # Test Case 4: Nonexistent command (exit 127)
         #"bash -c \"nonexistent_command\"",
