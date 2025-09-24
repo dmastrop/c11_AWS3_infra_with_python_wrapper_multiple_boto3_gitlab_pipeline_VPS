@@ -1406,16 +1406,23 @@ The suspicious_patterns will be expanded as we test this area of code.
 
 #### The wrapper function:
 
+Note that the -f flag is required in the strace syntax below.   There are some commands that require that the forked subprocesses
+be followed to get the necessary strace output (that can then be scrubbed with the whitelist and possibly be tagged as 
+non-whitelisted material, so that the installation can be failed).  This occurs with test case 6, a negative python bash like
+command string. The error text is in a forked subprocess.
 
 ```
 def wrap_command(cmd):
     matched = should_wrap(cmd)
     if matched:
-        # debug: this is True or False
         print(f"should_wrap matched: {matched} → Command: {cmd}")
-        return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
-    return cmd
+        #return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
 
+        return f"strace -f -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+        
+        # -f is needed to follow forked subprocesses. Some commands do this and to get the non-whitelist material from them
+        # in the strace output one needs to use the -f flag.
+    return cmd
 ```
 
 
