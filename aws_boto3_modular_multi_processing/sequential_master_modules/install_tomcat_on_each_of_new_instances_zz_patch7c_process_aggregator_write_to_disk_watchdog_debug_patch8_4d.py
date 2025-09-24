@@ -115,9 +115,7 @@ APT_WHITELIST_REGEX = [
 # to the top of the list. Python short-circuits the list upon getting a hit and this will optimize, especially under hyper-scaling
 
 STRACE_WHITELIST_REGEX = [
-   
-
-        
+           
     ## Test case 6 additions to remove process id exited with messages
     r"^\s*\d*\s*\+\+\+ exited with \d+ \+\+\+",
     r"^\s*\d*\s*execve\(.*\) = \d+",
@@ -157,14 +155,69 @@ STRACE_WHITELIST_REGEX = [
     r"execve\(\"/usr/bin/bash\", .* = 0",
     r"execve\(\"/usr/bin/python3\", .* = 0",
 
+]
 
-
+YUM_WHITELIST_REGEX = [
+    r"Loaded plugins:.*",
+    r"Resolving Dependencies",
+    r"--> Running transaction check",
+    r"--> Processing Dependency:.*",
+    r"--> Finished Dependency Resolution",
+    r"Dependencies Resolved",
+    r"Transaction Summary",
+    r"Install\s+\d+ Package\(s\)",
+    r"Total download size: .*",
+    r"Installed size: .*",
+    r"Downloading packages:",
+    r"Running transaction",
+    r"Installing : .*",
+    r"Verifying  : .*",
+    r"Complete!",
+    r"Package .* already installed and latest version",
+    r"No package .* available",
+    r"Nothing to do",
+    r"Exiting on user command",
+    r"Cleaning up",
+    r"Not all dependencies resolved",
+    r"Warning:.*",
+    r"Public key for .* is not installed",
+    r"Importing GPG key .*",
+    r"Retrieving key from .*",
+    r"Key imported successfully",
+    r"yum update -y",
+    r"yum install -y .*",
 ]
 
 
+DNF_WHITELIST_REGEX = [
+    r"Dependencies resolved",
+    r"Transaction Summary",
+    r"Install\s+\d+ Package\(s\)",
+    r"Total download size: .*",
+    r"Installed size: .*",
+    r"Downloading Packages:",
+    r"Running transaction",
+    r"Preparing  : .*",
+    r"Installing : .*",
+    r"Verifying  : .*",
+    r"Running scriptlet: .*",
+    r"Complete!",
+    r"Nothing to do",
+    r"Package .* is already installed",
+    r"No match for argument: .*",
+    r"Error: Nothing to do",
+    r"Importing GPG key .*",
+    r"Retrieving key from .*",
+    r"Key imported successfully",
+    r"dnf install -y .*",
+    r"dnf update -y",
+    r"Warning:.*",
+]
 
 
-WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX  # + YUM_WHITELIST_REGEX, etc.
+WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX + YUM_WHITELIST_REGEX + DNF_WHITELIST_REGEX
+
+#WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX  # + YUM_WHITELIST_REGEX, etc.
 
 def is_whitelisted_line(line):
     return any(re.match(pattern, line) for pattern in WHITELIST_REGEX)
