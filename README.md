@@ -95,7 +95,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 ### Introduction:
 
-Currently, the ghost detection code in inline in the module resurrection_monitor_patch8.  This simply moves out that code into
+Currently, the ghost detection code is inline in the module resurrection_monitor_patch8.  This simply moves out that code into
 a helper function similar to what was done for the hydrate_benmchmark_ips (deprecated now).    ALso add the PROCESS level 
 registry stats to the resurrection_monitor_patch8. This is a per process level statistics of the registry_entry status/tags
 for that specific process. This is already done at the aggregate level (post execution write-to-disk) in main() and getting 
