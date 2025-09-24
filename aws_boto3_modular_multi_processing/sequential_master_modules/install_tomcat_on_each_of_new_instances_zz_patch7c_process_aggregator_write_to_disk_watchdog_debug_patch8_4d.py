@@ -3747,7 +3747,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### filenmae.
 
         # Test Case 1: Nonzero exit + nonwhitelisted stderr
-        #"sudo bash -c 'echo test > /root/testfile'",
+        "sudo bash -c 'echo test > /root/testfile'",
 
         # Test Case 2: Exit 0 + no stderr (install_success)
         # Test three in a row and ensure that trace.log is unique for each of them.
@@ -3763,7 +3763,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"nonexistent_command\"",
 
         # Test Case 5: Script with stderr + exit 1
-        "bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
+        #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
         # Test Case 6: Python stderr injection + exit 0
         #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
