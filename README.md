@@ -1283,7 +1283,12 @@ The pre-processor code will be indicated in the next section below.
 
 So this code above is a necesary part of part of the pre-processing process on these types of commands.
 
-
+The trace.log file uniqueness has been tested across several different test case scenarios, primarily with failure commands
+that instigate the 3 retries (trace.log is unique across all retries for a given command in a given thread), as well as for 
+multiple strace commands (successful) that execute in a thread (all have unique trace.log filenames). In addtion, the 
+trace.log file names are unique across different threads. So this is a per thread, per command, per retry level of uniqueness
+that is required to prevent cross-contamination of the strace injected error data into the stderr channel for each command retry
+per thread.
 
 #### Wrapper pre-processor code:
 Initial revision: 
