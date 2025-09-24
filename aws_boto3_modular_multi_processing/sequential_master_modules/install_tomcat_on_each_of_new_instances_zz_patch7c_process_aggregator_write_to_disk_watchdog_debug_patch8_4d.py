@@ -3766,10 +3766,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"echo -e '#!/bin/bash\\necho \\\"This is stderr\\\" >&2\\nexit 1' > /tmp/fail.sh && chmod +x /tmp/fail.sh && sudo /tmp/fail.sh\"",
 
         # Test Case 6: Python stderr injection + exit 0
-        "bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
+        #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
         # Test Case 8: Whitelisted stderr + exit 1
-        #"bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        "bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
 
