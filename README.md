@@ -1026,8 +1026,6 @@ def is_whitelisted_line(line):
 
 
 
-
-
 ### Running the APT_WHITELIST_REGEX through the 512 node test a few times:
 
 This has shown to improve the integrity of the whitelist greatly. APT is  notorious for not only STDOUT/STDERR leakage but for
@@ -1105,7 +1103,6 @@ that the STDOUT/STDERR cross contamination is entirely non-deterministic.
 
 
 
-
 ### Running the strace whitelist STRACE_WHITELIST_REGEX through several methodical test cases
 
 
@@ -1176,6 +1173,86 @@ STRACE_WHITELIST_REGEX = [
 
 
 ]
+
+```
+
+
+### YUM and DNF regex whitelists for future testing (To be completed):
+
+Since the command processing is application agnostic there is a plan to test this with yum installations on fedora and centos
+EC2 instances as well and dnf installations.
+
+The package installers have known signatures, but these whitelists will be refined with the testing process. In particular, 
+if the STDOUT and STDERR channels leak between each other (like the APT commands do), the testing will require a high scale
+node test (the 512 node test) so that statistically speaking, the whitelist (and non-whitetlisted material for STDERR) can be
+refined over time and testing.(see above for the APT WHITELIST result after running with a 512 node test a few times). 
+
+```
+YUM_WHITELIST_REGEX = [
+    r"Loaded plugins:.*",
+    r"Resolving Dependencies",
+    r"--> Running transaction check",
+    r"--> Processing Dependency:.*",
+    r"--> Finished Dependency Resolution",
+    r"Dependencies Resolved",
+    r"Transaction Summary",
+    r"Install\s+\d+ Package\(s\)",
+    r"Total download size: .*",
+    r"Installed size: .*",
+    r"Downloading packages:",
+    r"Running transaction",
+    r"Installing : .*",
+    r"Verifying  : .*",
+    r"Complete!",
+    r"Package .* already installed and latest version",
+    r"No package .* available",
+    r"Nothing to do",
+    r"Exiting on user command",
+    r"Cleaning up",
+    r"Not all dependencies resolved",
+    r"Warning:.*",
+    r"Public key for .* is not installed",
+    r"Importing GPG key .*",
+    r"Retrieving key from .*",
+    r"Key imported successfully",
+    r"yum update -y",
+    r"yum install -y .*",
+]
+```
+
+
+```
+DNF_WHITELIST_REGEX = [
+    r"Dependencies resolved",
+    r"Transaction Summary",
+    r"Install\s+\d+ Package\(s\)",
+    r"Total download size: .*",
+    r"Installed size: .*",
+    r"Downloading Packages:",
+    r"Running transaction",
+    r"Preparing  : .*",
+    r"Installing : .*",
+    r"Verifying  : .*",
+    r"Running scriptlet: .*",
+    r"Complete!",
+    r"Nothing to do",
+    r"Package .* is already installed",
+    r"No match for argument: .*",
+    r"Error: Nothing to do",
+    r"Importing GPG key .*",
+    r"Retrieving key from .*",
+    r"Key imported successfully",
+    r"dnf install -y .*",
+    r"dnf update -y",
+    r"Warning:.*",
+]
+```
+
+And the aggregated WHITELIST_REGEX that is used in the functions themselves: 
+
+
+```
+WHITELIST_REGEX = APT_WHITELIST_REGEX + STRACE_WHITELIST_REGEX + YUM_WHITELIST_REGEX + DNF_WHITELIST_REGEX
 
 ```
 
