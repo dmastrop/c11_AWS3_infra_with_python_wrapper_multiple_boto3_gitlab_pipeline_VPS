@@ -1501,7 +1501,19 @@ Partial native_commands list:
 
         # Test Case 8: Whitelisted stderr + exit 1
         #"bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        
+        # Test Case 9: Chained commands
+        #"bash -c 'echo hello && echo world && exit 1'",
 
+        # Test Case 10: Subshell 
+        #"bash -c '(echo hello; exit 1)'",
+
+        # Test Case 11: Background Job
+        #"bash -c 'sleep 1 & exit 1'",
+
+
+        # Test Case 12: Pipe
+        #"bash -c 'echo hello | grep h; exit 1'"
 ```
 
 

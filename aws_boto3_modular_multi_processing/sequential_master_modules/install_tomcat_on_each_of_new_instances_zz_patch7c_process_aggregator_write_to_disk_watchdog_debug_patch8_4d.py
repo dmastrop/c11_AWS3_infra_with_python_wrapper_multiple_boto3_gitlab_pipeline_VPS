@@ -3773,17 +3773,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-        # Test Case 9
+        # Test Case 9: Chained commands
         #"bash -c 'echo hello && echo world && exit 1'",
 
-        # Test Case 10
+        # Test Case 10: Subshell 
         #"bash -c '(echo hello; exit 1)'",
 
-        # Test Case 11
+        # Test Case 11: Background Job
         #"bash -c 'sleep 1 & exit 1'",
 
 
-        # Test Case 12
+        # Test Case 12: Pipe
         #"bash -c 'echo hello | grep h; exit 1'"
 
 
