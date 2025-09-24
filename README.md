@@ -597,10 +597,22 @@ The code blocks in install_tomcat are listed below:
                         # exit_status = stdout.channel.recv_exit_status())
                         # This resets the exit_status to the correct value for strace commands so that they can be 
                         # logically failed or passed
-                        match = re.search(r"\+\+\+ exited with (\d+) \+\+\+", trace_output)
-                        if match:
-                            exit_status = int(match.group(1))
+
+
+
+                        #match = re.search(r"\+\+\+ exited with (\d+) \+\+\+", trace_output)
+                        #if match:
+                        #    exit_status = int(match.group(1))
+                        #    print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
+
+
+                        # In the case of forked processes need the FINAL exit status not the interim (test case 5)                   
+                        matches = re.findall(r"\+\+\+ exited with (\d+) \+\+\+", trace_output)
+                        if matches:
+                            exit_status = int(matches[-1])  # Use the final exit status
                             print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
+
+
 
 
                         # Parse trace output for whitelist filtering and do the printout for strace case:
@@ -650,7 +662,7 @@ The code blocks in install_tomcat are listed below:
                                             f"exit_status_{exit_status}",
                                             "stderr_present",
                                             *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],  # include first few lines for forensic trace
-                                            *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
+                                            *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
                                         ]
                                     }
                                 else:
@@ -706,7 +718,7 @@ The code blocks in install_tomcat are listed below:
                                         "exit_status_zero",   # We know exit_status is zero here.
                                         "non_whitelisted_stderr",
                                         *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # First few lines for traceability.
-                                        *stderr_output.strip().splitlines()[:12]  # Snapshot for traceability.
+                                        *stderr_output.strip().splitlines()[:25]  # Snapshot for traceability.
                                     ]
                                 }
                                 #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
@@ -749,7 +761,7 @@ The code blocks in install_tomcat are listed below:
                                         f"exit_status_{exit_status}",
                                         "stderr_present",
                                         *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for forensic trace
-                                        *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
+                                        *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
                                     ]
                                 }
                             else:
@@ -800,7 +812,7 @@ The code blocks in install_tomcat are listed below:
                                     "exit_status_zero",
                                     "non_whitelisted_stderr",
                                     *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for traceability
-                                    *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
+                                    *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
                                 ]
                             }
                             ssh.close()
