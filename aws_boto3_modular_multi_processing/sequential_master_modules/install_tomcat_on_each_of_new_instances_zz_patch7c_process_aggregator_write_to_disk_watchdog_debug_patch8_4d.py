@@ -348,7 +348,11 @@ def wrap_command(cmd):
         #print(f"[{ip}] should_wrap matched: {matched}")
         #print(f"should_wrap matched: {matched}")
         print(f"should_wrap matched: {matched} → Command: {cmd}")
-        return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+        #return f"strace -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+        
+        return f"strace -f -e write,execve -o /tmp/trace.log {cmd} 2>/dev/null && cat /tmp/trace.log >&2"
+        # -f is needed to follow forked subprocesses. Some commands do this and to get the non-whitelist material from them
+        # in the strace output one needs to use the -f flag.
     return cmd
 
 
