@@ -4979,6 +4979,22 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+                        # non_shell exit failure codes (like 1) are flgged with a print below for further investigation
+                        # They are not the norm.  The non_shell_failure_tag will be added to the install_success registry
+                        # block
+                        non_shell_failures = [
+                            (pid, status) for pid, status in exit_lines
+                            if pid != shell_pid and int(status) != 0
+                        ]
+
+                        # Format tag if needed
+                        non_shell_failure_tag = None
+                        if non_shell_failures:
+                            print(f"[{ip}] ⚠️ Warning: Non-shell PID(s) exited with non-zero status: {non_shell_failures}")
+                            non_shell_failure_tag = f"non_shell_exit_failure: {non_shell_failures}"
+
+
+
                         # Parse trace output for whitelist filtering and do the printout for strace case:
                         # (same as the non-strace case; see above)
                         stderr_lines = stderr_output.strip().splitlines()
@@ -5460,7 +5476,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # install_success only after the for idx iterates through all commands successfully (no failure or stubs hit), at
         # which time, exit the for idx and create registry below:
-        registry_entry = {    
+        # the commmand orchestrator is agnostic so no mention of tomcat
+        registry_entry = {
             "status": "install_success",
             "attempt": 0,
             "timestamp": str(datetime.utcnow()),
@@ -5469,9 +5486,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             "thread_uuid": thread_uuid,
             "public_ip": ip,
             "private_ip": private_ip,
-            "tags": ["install_success", "installation_completed"]   # the command orchestrator is agnostic so no mention of tomcat
+            "tags": [
+                "install_success",
+                "installation_completed"
+            ] + ([non_shell_failure_tag] if non_shell_failure_tag else [])
         }
-
 
 
         ##### Get rid of this code block as part of legacy code that we no longer need
