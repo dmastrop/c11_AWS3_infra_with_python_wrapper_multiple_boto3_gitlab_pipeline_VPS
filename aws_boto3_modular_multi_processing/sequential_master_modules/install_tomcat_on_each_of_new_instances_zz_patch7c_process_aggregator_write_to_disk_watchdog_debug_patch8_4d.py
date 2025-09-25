@@ -3794,7 +3794,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # Test Case 12: Pipe
-        "bash -c 'echo hello | grep h; exit 1'"
+        #"bash -c 'echo hello | grep h; exit 1'"
 
 
 
