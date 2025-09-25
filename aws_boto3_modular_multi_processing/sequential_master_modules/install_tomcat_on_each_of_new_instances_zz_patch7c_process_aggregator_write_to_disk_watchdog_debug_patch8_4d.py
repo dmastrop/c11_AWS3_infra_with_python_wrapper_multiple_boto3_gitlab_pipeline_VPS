@@ -3773,7 +3773,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
         # Test Case 8: Whitelisted stderr + exit 1
-        "bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
 
@@ -3784,7 +3784,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # Test Case 9: Chained commands
-        #"bash -c 'echo hello && echo world && exit 1'",
+        "bash -c 'echo hello && echo world && exit 1'",
 
         # Test Case 10: Subshell 
         #"bash -c '(echo hello; exit 1)'",
