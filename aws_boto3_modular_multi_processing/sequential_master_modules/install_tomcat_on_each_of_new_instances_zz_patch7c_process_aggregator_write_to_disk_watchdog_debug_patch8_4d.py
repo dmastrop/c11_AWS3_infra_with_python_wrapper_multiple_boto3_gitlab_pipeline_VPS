@@ -3751,11 +3751,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### filenmae.
 
         # Test Case 1: Nonzero exit + nonwhitelisted stderr
-        #"sudo bash -c 'echo test > /root/testfile'",
+        "sudo bash -c 'echo test > /root/testfile'",
 
         # Test Case 2: Exit 0 + no stderr (install_success)
         # Test three in a row and ensure that trace.log is unique for each of them.
-        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         
