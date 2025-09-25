@@ -646,6 +646,22 @@ The code blocks in install_tomcat are listed below:
                         print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
 
 
+                        # non_shell exit failure codes (like 1) are flgged with a print below for further investigation
+                        # They are not the norm.  The non_shell_failure_tag will be added to the install_success registry
+                        # block
+                        non_shell_failures = [
+                            (pid, status) for pid, status in exit_lines
+                            if pid != shell_pid and int(status) != 0
+                        ]
+
+                        # Format tag if needed
+                        non_shell_failure_tag = None
+                        if non_shell_failures:
+                            print(f"[{ip}] ⚠️ Warning: Non-shell PID(s) exited with non-zero status: {non_shell_failures}")
+                            non_shell_failure_tag = f"non_shell_exit_failure: {non_shell_failures}"
+
+
+
 
                         # Parse trace output for whitelist filtering and do the printout for strace case:
                         # (same as the non-strace case; see above)
