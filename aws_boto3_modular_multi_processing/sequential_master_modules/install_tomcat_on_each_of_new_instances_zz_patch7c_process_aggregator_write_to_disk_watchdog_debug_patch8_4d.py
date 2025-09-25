@@ -3787,10 +3787,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c 'echo hello && echo world && exit 1'",
 
         # Test Case 10: Subshell 
-        "bash -c '(echo hello; exit 1)'",
+        #"bash -c '(echo hello; exit 1)'",
 
         # Test Case 11: Background Job
-        #"bash -c 'sleep 1 & exit 1'",
+        "bash -c 'sleep 1 & exit 1'",
 
 
         # Test Case 12: Pipe
