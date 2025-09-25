@@ -4907,10 +4907,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     if "strace" in command and not stderr_output.strip():
                         # --- STRACE SPECIAL LOGIC ---
                         # If this is a strace-wrapped command and there is no original stderr,
+                        
                         # inject the strace trace log into stderr_output for downstream error logic.
 
-                        # Extract the trace path from the command string. if strace, the command has been pre-processed with a
-                        # unique trace path/trace.log filename
+                        # Extract the trace path from the command string. 
+                        # If strace, the command has been pre-processed with a unique trace path/trace.log filename
+                        
+                        ## The pre-processing is done at the top of this for attempt loop as: 
+                        #                    if "strace" in command:
+                        #                        trace_suffix = generate_trace_suffix()
+                        #                        trace_path = f"/tmp/trace_{trace_suffix}.log"
+                        #                        command = command.replace("/tmp/trace.log", trace_path)
+
                         trace_path = command.split("-o")[1].split()[0].strip()
 
                         trace_in, trace_out, trace_err = ssh.exec_command(f"cat {trace_path}")
@@ -4931,13 +4939,44 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         #    print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
 
 
-                        # In the case of forked processes need the FINAL exit status not the interim (test case 5)                   
-                        matches = re.findall(r"\+\+\+ exited with (\d+) \+\+\+", trace_output)
-                        if matches:
-                            exit_status = int(matches[-1])  # Use the final exit status
-                            print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
+                        ## In the case of forked processes need the FINAL exit status not the interim (test case 5)                   
+                        #matches = re.findall(r"\+\+\+ exited with (\d+) \+\+\+", trace_output)
+                        #if matches:
+                        #    exit_status = int(matches[-1])  # Use the final exit status
+                        #    print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
 
-                         
+
+
+                        # In the case of background jobs, if the background job exits after the main shell, the exit_status
+                        # will be the last item in the strace output, so we cannot simply grep out the last exit_status as above
+                        # Must first extract all exit status lines along with their PIDs
+                        # Then find the exit status for the original shell PID by grepping for the execve line in the trace_output
+                        # If that is found then use that as the exit status. If not use the last exit status in the trace_output
+                        
+                        # Always fallback to the last exit status if the shell PID is not found by the execve search.
+                        
+                        # Extract all exit status lines with their PIDs
+                        
+                        exit_lines = re.findall(r"(\d+)\s+\+\+\+ exited with (\d+) \+\+\+", trace_output)
+
+                        # Try to find the exit status for the original shell PID.
+                        # This is the shell PID exit code. This is the one that we want. Grep on execve
+                        shell_pid_match = re.search(r"(\d+)\s+execve\(\"/usr/bin/bash\",", trace_output)
+                        if shell_pid_match:
+                            shell_pid = shell_pid_match.group(1)
+                            for pid, status in exit_lines:
+                                if pid == shell_pid:
+                                    exit_status = int(status)
+                                    break
+                            else:
+                                # Fallback to last exit if shell PID not found
+                                exit_status = int(exit_lines[-1][1])
+                        else:
+                            # Fallback to last exit if shell PID not found
+                            exit_status = int(exit_lines[-1][1])
+
+                        print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
+
 
 
                         # Parse trace output for whitelist filtering and do the printout for strace case:
@@ -4953,7 +4992,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-                        # --- NONZERO EXIT CODE CASE ---
+                        # --- NONZERO EXIT CODE CASE (strace) ---
                         # If the exit code is nonzero, we do NOT need to check for non-whitelisted lines.
                         # The presence of a nonzero exit code is sufficient to fail the command.
                         # We inject the strace output so the downstream registry entry will have the correct stderr context.
@@ -5019,7 +5058,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 continue
 
 
-                        # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) ---
+                        # --- ZERO EXIT CODE + NON-WHITELISTED STDERR CASE (D1 BLOCK3) (strace)---
                         # If we get here, exit_status == 0, so we must check for non-whitelisted lines.
                         # This is the special case where strace reveals hidden stderr anomalies despite a clean exit code.
                         if non_whitelisted_lines:
