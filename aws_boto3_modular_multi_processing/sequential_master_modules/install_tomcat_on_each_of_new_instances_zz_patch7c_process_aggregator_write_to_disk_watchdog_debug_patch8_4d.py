@@ -4959,6 +4959,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         
                         exit_lines = re.findall(r"(\d+)\s+\+\+\+ exited with (\d+) \+\+\+", trace_output)
 
+
+                        shell_pid = None  # Ensure it's always defined otherwise will get a NameError with certain commands
+
+
                         # Try to find the exit status for the original shell PID.
                         # This is the shell PID exit code. This is the one that we want. Grep on execve
                         shell_pid_match = re.search(r"(\d+)\s+execve\(\"/usr/bin/bash\",", trace_output)
@@ -4982,10 +4986,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         # non_shell exit failure codes (like 1) are flgged with a print below for further investigation
                         # They are not the norm.  The non_shell_failure_tag will be added to the install_success registry
                         # block
+                        # Make sure that the shell_pid is defined.
                         non_shell_failures = [
                             (pid, status) for pid, status in exit_lines
-                            if pid != shell_pid and int(status) != 0
+                            if shell_pid and pid != shell_pid and int(status) != 0
                         ]
+
 
                         # Format tag if needed
                         non_shell_failure_tag = None
