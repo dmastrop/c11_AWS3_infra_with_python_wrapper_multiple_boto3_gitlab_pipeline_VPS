@@ -3755,7 +3755,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # Test Case 2: Exit 0 + no stderr (install_success)
         # Test three in a row and ensure that trace.log is unique for each of them.
-        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         
@@ -3790,11 +3790,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c '(echo hello; exit 1)'",
 
         # Test Case 11: Background Job
-        "bash -c 'sleep 1 & exit 1'",
+        #"bash -c 'sleep 1 & exit 1'",
 
 
         # Test Case 12: Pipe
-        #"bash -c 'echo hello | grep h; exit 1'"
+        "bash -c 'echo hello | grep h; exit 1'"
 
 
 
