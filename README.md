@@ -84,6 +84,18 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 •Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns.
 
 
+Some features: 
+
+- Manual tagging of ghost PIDs  
+- Registry snapshots with thread_uuid lineage  
+- Synthetic edge case injection for wrapper brittleness  
+- Explicit override logic for shell PID vs subprocess ambiguity  
+- Deterministic artifact lineage across chaotic shell flows
+- Forensic triage via non-whitelisted stderr detection 
+- Manual registry tagging for scenario-specific traceability
+- Resurrection monitor logic with phase-tagged recovery attempts  
+- Cross-platform shell wrapper resilience with synthetic test injection 
+- Adaptive orchestration logic with ML/LLM feedback hooks (planned)  
 
 
 
