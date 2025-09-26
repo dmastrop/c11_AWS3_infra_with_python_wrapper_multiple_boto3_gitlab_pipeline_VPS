@@ -4948,7 +4948,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #    non_whitelisted_lines = [line for line in stderr_lines if not is_whitelisted_line(line)]
 
 
+
                     # Revised to support distinct trace.log file names per thread per command per retry
+                    tags = []  # ✅ Initialize tags before any strace logic
+
                     if "strace" in command and not stderr_output.strip():
                         # --- STRACE SPECIAL LOGIC ---
                         # If this is a strace-wrapped command and there is no original stderr,
