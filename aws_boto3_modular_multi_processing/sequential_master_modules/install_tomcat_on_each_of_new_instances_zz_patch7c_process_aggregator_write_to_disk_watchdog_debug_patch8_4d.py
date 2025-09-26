@@ -5011,6 +5011,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         # Try to find the exit status for the original shell PID.
                         # This is the shell PID exit code. This is the one that we want. Grep on execve
                         shell_pid_match = re.search(r"(\d+)\s+execve\(\"/usr/bin/bash\",", trace_output)
+
+
                         if shell_pid_match:
                             shell_pid = shell_pid_match.group(1)
                             for pid, status in exit_lines:
@@ -5019,10 +5021,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     break
                             else:
                                 # Fallback to last exit if shell PID not found
-                                exit_status = int(exit_lines[-1][1])
+                                if exit_lines:
+                                    exit_status = int(exit_lines[-1][1])
+                                else:
+                                    exit_status = 1  # or fallback to SSH channel exit
+                                    tags.append("fallback_exit_status")
                         else:
                             # Fallback to last exit if shell PID not found
-                            exit_status = int(exit_lines[-1][1])
+                            if exit_lines:
+                                exit_status = int(exit_lines[-1][1])
+                            else:
+                                exit_status = 1
+                                tags.append("fallback_exit_status")
+
 
                         print(f"[{ip}] 🔍 Overriding exit status from strace: {exit_status}")
 
