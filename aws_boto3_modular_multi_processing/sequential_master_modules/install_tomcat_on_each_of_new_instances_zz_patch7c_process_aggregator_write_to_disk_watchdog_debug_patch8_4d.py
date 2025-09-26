@@ -3787,13 +3787,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # Test Case 2: Exit 0 + no stderr (install_success)
         # Test three in a row and ensure that trace.log is unique for each of them.
-        "bash -c 'echo \"hello world\" > /tmp/testfile'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         
 
         # Test Case 3: Nonzero exit + stderr from sudo
-        #"sudo touch /root/testfile",
+        "sudo touch /root/testfile",
 
         # Test Case 4: Nonexistent command (exit 127)
         #"bash -c \"nonexistent_command\"",
@@ -6376,7 +6376,7 @@ def main():
     ]
 
     ### Configurable parameters
-    chunk_size = 2  # Number of IPs per process
+    chunk_size = 2  # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
     max_workers = 2 # Threads per process
     desired_count = 6 # Max concurrent processes (NOT threads) for iniital batch.
     #### For the 16 node test chunk_size of 2, max_workers of 2, and desired_count of 6 so that 2 processes are pooled for the
