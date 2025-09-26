@@ -1458,15 +1458,50 @@ Initial revision:
 
 
 def should_wrap(cmd):
+
     suspicious_patterns = [
+        # Existing bash-based patterns
         r"sudo bash -c .*?> /root/.*",
         r"bash -c .*nonexistent_command.*",
         r"sudo touch /root/.*",
         r"bash -c .*echo.*hello world.*",
         r"bash -c .*sudo /tmp/fail.sh.*",
         r"bash -c .*os\.write\(2,.*",
-        r"bash -c .*exit 1.*"
+        r"bash -c .*exit 1.*",
+
+        # Python one-liners that emit stderr or exit nonzero
+        r"python -c .*exit\(1\).*",
+        r"python -c .*os\.write\(2,.*",  # stderr emit
+        r"python3 -c .*exit\(1\).*",
+        r"python3 -c .*os\.write\(2,.*",
+
+        # sh-based invocations
+        r"sh -c .*exit 1.*",
+        r"sh -c .*echo.*",
+
+        # Direct exit calls
+        r"exit 1",
+        r"exit 2",
+        r"exit 127",
+
+        # Background jobs and pipes
+        r".*\|.*",
+        r".*&.*",
+
+        # Subshells and chained commands
+        r".*;.*",
+        r".*&&.*",
+        r".*\(.*\).*",
+
+        # Anything invoking sudo or python directly
+        r"sudo .*",
+        r"python .*",
+        r"python3 .*",
     ]
+
+
+
+
     if any(re.search(pat, cmd) for pat in suspicious_patterns):
         return True
     if cmd.strip().startswith("bash -c"):
