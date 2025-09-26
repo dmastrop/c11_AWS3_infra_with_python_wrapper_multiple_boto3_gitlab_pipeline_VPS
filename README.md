@@ -589,6 +589,8 @@ The code blocks in install_tomcat are listed below:
 
 
                     # Revised to support distinct trace.log file names per thread per command per retry
+                    tags = []  # ✅ Initialize tags before any strace logic
+                    
                     if "strace" in command and not stderr_output.strip():
                         # --- STRACE SPECIAL LOGIC ---
                         # If this is a strace-wrapped command and there is no original stderr,
@@ -658,14 +660,14 @@ The code blocks in install_tomcat are listed below:
                                 if exit_lines:
                                     exit_status = int(exit_lines[-1][1])
                                 else:
-                                    exit_status = 1  # or fallback to SSH channel exit
+                                    #exit_status fallback to SSH channel exit_status that was set earlier
                                     tags.append("fallback_exit_status")
                         else:
                             # Fallback to last exit if shell PID not found
                             if exit_lines:
                                 exit_status = int(exit_lines[-1][1])
                             else:
-                                exit_status = 1
+                                #exit_status fallback to SSH channel exit_status that was set earlier
                                 tags.append("fallback_exit_status")
 
 
