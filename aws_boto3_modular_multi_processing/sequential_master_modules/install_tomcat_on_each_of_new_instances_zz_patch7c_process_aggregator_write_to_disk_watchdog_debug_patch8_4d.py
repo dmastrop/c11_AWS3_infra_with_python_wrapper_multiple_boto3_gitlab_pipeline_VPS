@@ -3793,7 +3793,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         
 
         # Test Case 3: Nonzero exit + stderr from sudo
-        "sudo touch /root/testfile",
+        #"sudo touch /root/testfile",
 
         # Test Case 4: Nonexistent command (exit 127)
         #"bash -c \"nonexistent_command\"",
@@ -3826,7 +3826,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # Test Case 12: Pipe
-        #"bash -c 'echo hello | grep h; exit 1'"
+        "bash -c 'echo hello | grep h; exit 1'"
 
 
 
