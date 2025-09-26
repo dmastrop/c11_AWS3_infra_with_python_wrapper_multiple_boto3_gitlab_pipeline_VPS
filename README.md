@@ -1044,6 +1044,9 @@ output for non-whitelisted material in the stderr that can be used in the regist
 
 ```
                     # Revised to support distinct trace.log file names per thread per command per retry
+                    
+                    tags = []  # ✅ Initialize tags before any strace logic
+                    
                     if "strace" in command and not stderr_output.strip():
                         
                         # --- STRACE SPECIAL LOGIC ---
