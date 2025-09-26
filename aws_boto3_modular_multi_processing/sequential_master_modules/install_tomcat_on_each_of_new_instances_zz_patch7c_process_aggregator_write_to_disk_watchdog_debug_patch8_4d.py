@@ -3798,6 +3798,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+        # test case 13 failure testing failback logic
+        #"python -c \"exit(1)\""
+
+
+
+        # test case 14 success 
+        #"sh -c \"echo test\""
+
+
+
+
+
         #### resume normal commands #####
 
         ## commands 3 and 4: 
