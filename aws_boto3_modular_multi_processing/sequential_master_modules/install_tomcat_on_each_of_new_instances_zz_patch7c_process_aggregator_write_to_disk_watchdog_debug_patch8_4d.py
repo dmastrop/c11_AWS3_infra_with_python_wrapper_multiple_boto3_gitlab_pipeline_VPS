@@ -3773,7 +3773,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c \"python3 -c \\\"import os; os.write(2, b'error: something went wrong\\\\n')\\\"; exit 0\"",
 
         # Test Case 8: Whitelisted stderr + exit 1
-        "bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
+        #"bash -c 'echo \"hello world\" > /tmp/testfile; exit 1'",
 
 
 
@@ -3799,7 +3799,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # test case 13 failure testing failback logic
-        #"python -c \"exit(1)\""
+        "python -c \"exit(1)\""
 
 
 
