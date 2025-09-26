@@ -5028,6 +5028,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     exit_status = int(exit_lines[-1][1])
                                 else:
                                     #exit_status fallback to SSH channel exit_status that was set earlier
+                                    print(f"[{ip}] ✅ Fallback tag appended due to empty exit_lines")
                                     tags.append("fallback_exit_status")
                         else:
                             # Fallback to last exit if shell PID not found
@@ -5035,6 +5036,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 exit_status = int(exit_lines[-1][1])
                             else:
                                 # exit_status fallback to SSH channel exit_status that was set earlier
+                                print(f"[{ip}] ✅ Fallback tag appended due to empty exit_lines")
                                 tags.append("fallback_exit_status")
 
 
@@ -5123,6 +5125,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         "private_ip": private_ip,
                                         "timestamp": timestamp,
                                         "tags": [
+                                            *tags,  # ✅ Include fallback tags only here for the "no strace"output case where exit_lines is completely blank
                                             "silent_failure",
                                             command,
                                             f"command_retry_{attempt + 1}",
