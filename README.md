@@ -1458,9 +1458,8 @@ Initial revision:
 
 
 def should_wrap(cmd):
-
     suspicious_patterns = [
-        # Existing bash-based patterns
+        # Original bash-based patterns
         r"sudo bash -c .*?> /root/.*",
         r"bash -c .*nonexistent_command.*",
         r"sudo touch /root/.*",
@@ -1469,9 +1468,9 @@ def should_wrap(cmd):
         r"bash -c .*os\.write\(2,.*",
         r"bash -c .*exit 1.*",
 
-        # Python one-liners that emit stderr or exit nonzero
+        # New additions — python one-liners and stderr emitters
         r"python -c .*exit\(1\).*",
-        r"python -c .*os\.write\(2,.*",  # stderr emit
+        r"python -c .*os\.write\(2,.*",
         r"python3 -c .*exit\(1\).*",
         r"python3 -c .*os\.write\(2,.*",
 
@@ -1493,14 +1492,10 @@ def should_wrap(cmd):
         r".*&&.*",
         r".*\(.*\).*",
 
-        # Anything invoking sudo or python directly
-        r"sudo .*",
-        r"python .*",
-        r"python3 .*",
+        # Sudo-wrapped brittle commands (but not apt/yum/dnf)
+        r"sudo .*python.*",
+        r"sudo .*fail.*",
     ]
-
-
-
 
     if any(re.search(pat, cmd) for pat in suspicious_patterns):
         return True
