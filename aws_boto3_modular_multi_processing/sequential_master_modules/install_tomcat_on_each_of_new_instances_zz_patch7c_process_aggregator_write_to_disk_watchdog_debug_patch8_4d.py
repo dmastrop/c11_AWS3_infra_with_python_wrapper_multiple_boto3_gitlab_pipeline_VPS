@@ -3832,12 +3832,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # test case 13 failure testing failback logic
         # this will test the fallback logic when fails to find a shell PID
-        "python -c \"exit(1)\""
+        #"python -c \"exit(1)\""
 
 
 
         # test case 14 success 
-        #"sh -c \"echo test\""
+        "sh -c \"echo test\""
 
 
 
