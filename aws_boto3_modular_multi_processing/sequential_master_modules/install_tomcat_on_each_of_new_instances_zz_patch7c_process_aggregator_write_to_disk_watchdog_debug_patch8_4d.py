@@ -3822,7 +3822,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"bash -c '(echo hello; exit 1)'",
 
         # Test Case 11: Background Job
-        "bash -c 'sleep 1 & exit 1'",
+        #"bash -c 'sleep 1 & exit 1'",
 
 
         # Test Case 12: Pipe
@@ -3832,7 +3832,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # test case 13 failure testing failback logic
         # this will test the fallback logic when fails to find a shell PID
-        #"python -c \"exit(1)\""
+        "python -c \"exit(1)\""
 
 
 
