@@ -1710,9 +1710,49 @@ Partial native_commands list:
 
         # Test Case 12: Pipe
         #"bash -c 'echo hello | grep h; exit 1'"
+
+
+        # test case 13 failure testing failback logic
+        # this will test the fallback logic when fails to find a shell PID
+        "python -c \"exit(1)\""
+
+
+
+        # test case 14 success 
+        #"sh -c \"echo test\""
+
+
 ```
 
 
+#### Final Regression Test matrix for the strace wrapper implementation:
+
+
+| Test Case | Description | Status | Key Tags |
+|-----------|-------------|--------|----------|
+| **1** | Nonzero exit + nonwhitelisted stderr | `install_failed` | `fatal_exit_nonzero`, `stderr_present`, `nonwhitelisted_material` |
+| **2** | Exit 0 + no stderr (3x) | `install_success` | `install_success`, `installation_completed` |
+| **3** | Nonzero exit + stderr from sudo | `install_failed` | `fatal_exit_nonzero`, `stderr_present`, `nonwhitelisted_material` |
+| **4** | Nonexistent command (`exit 127`) | `install_failed` | `exit_status_127`, `fatal_exit_nonzero`, `stderr_present`, `nonwhitelisted_material` |
+| **5** | Script with stderr + exit 1 | `install_failed` | `fatal_exit_nonzero`, `stderr_present`, `nonwhitelisted_material` |
+| **6** | Python stderr injection + exit 0 (Test D1) | `install_failed` | `exit_status_zero`, `stderr_detected`, `non_whitelisted_stderr`, `nonwhitelisted_material` |
+| **8** | Whitelisted stderr + exit 1 | `install_failed` | `exit_status_1`, `fatal_exit_nonzero`, `stderr_present` |
+| **9** | Chained commands ending in `exit 1` | `install_failed` | `exit_status_1`, `fatal_exit_nonzero`, `stderr_present` |
+| **10** | Subshell with `exit 1` | `install_failed` | `exit_status_1`, `fatal_exit_nonzero`, `stderr_present`, `nonwhitelisted_material` |
+| **11** | Background job + `exit 1` | `install_failed` | `exit_status_1`, `fatal_exit_nonzero`, `stderr_present` |
+| **12** | Pipe + `exit 1` | `install_failed` | `exit_status_1`, `fatal_exit_nonzero`, `stderr_present`, `nonwhitelisted_material` |
+| **13** | Silent failure with blank stderr | `stub` | `exit_status_1`, `fallback_exit_status`, `silent_failure`, `exit_status_nonzero_stderr_blank` |
+| **14** | Clean success | `install_success` | `install_success`, `installation_completed` |
+
+---
+
+### 🧩 Observations
+
+- ✅ **Exit code threading** is deterministic across pipes, subshells, and background jobs  
+- ✅ **Strace parsing** correctly anchors to shell PID, not line position  
+- ✅ **Fallback logic** handles silent exits with no stderr gracefully  
+- ✅ **Tag stack** is consistent and forensic-grade across all failure modes  
+- ✅ **Retry logic** is uniformly applied (`command_retry_3`) for all failed cases
 
 
 
