@@ -1746,7 +1746,17 @@ Partial native_commands list:
 
 ---
 
-### Observations
+#### Test Case Genearal  Observations:
+
+The code implementation looks robust and is extensible to future changes (if need be based upon hyper-scaling testing)
+via the wrapper filter regex and the strace whitelist 
+
+Foresnsic traceablity is very robust via the tags that are in the regsitry_entry for each thread (IP/node). The aggregate
+registry_entry  json listing for the entire execution run is part of a much larger logging and reporting infrastructure.
+The logging and reporting aggregate and process and thread level orchestration reporting is done via gitlab pipeline artifact log 
+files and json files. They are always reported as part of each pipeline run.
+
+
 
 - ✅ **Exit code threading** is deterministic across pipes, subshells, and background jobs  
 - ✅ **Strace parsing** correctly anchors to shell PID, not line position  
