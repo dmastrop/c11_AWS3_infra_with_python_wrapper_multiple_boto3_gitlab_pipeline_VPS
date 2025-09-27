@@ -1746,7 +1746,7 @@ Partial native_commands list:
 
 ---
 
-### 🧩 Observations
+### Observations
 
 - ✅ **Exit code threading** is deterministic across pipes, subshells, and background jobs  
 - ✅ **Strace parsing** correctly anchors to shell PID, not line position  
