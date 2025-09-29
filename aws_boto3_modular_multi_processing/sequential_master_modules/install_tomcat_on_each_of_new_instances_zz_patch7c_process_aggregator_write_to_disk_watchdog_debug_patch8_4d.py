@@ -3651,7 +3651,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
         # ORIGINAL — apt install without stream collapse
-        #"sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+        "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
 
 
 
@@ -3787,7 +3787,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # Test Case 2: Exit 0 + no stderr (install_success)
         # Test three in a row and ensure that trace.log is unique for each of them.
-        #"bash -c 'echo \"hello world\" > /tmp/testfile'",
+        "bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         #"bash -c 'echo \"hello world\" > /tmp/testfile'",
         
@@ -3832,7 +3832,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         # test case 13 failure testing failback logic
         # this will test the fallback logic when fails to find a shell PID
-        "python -c \"exit(1)\""
+        #"python -c \"exit(1)\""
 
 
 
@@ -3847,13 +3847,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         ## commands 3 and 4: 
         # COMMAND 3:
-        #"sudo systemctl start tomcat9",
+        "sudo systemctl start tomcat9",
         
         # Optional: simulate a systemctl start failure. This is not a collapsed stream, should emit STDERR and should result in install_failed
         #"sudo systemctl start tomcat99",
 
         # COMMAND 4:
-        #"sudo systemctl enable tomcat9"
+        "sudo systemctl enable tomcat9"
     ]
     
 
