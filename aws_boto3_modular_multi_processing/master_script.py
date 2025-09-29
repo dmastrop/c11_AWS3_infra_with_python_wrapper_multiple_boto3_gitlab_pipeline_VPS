@@ -245,11 +245,14 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4c1.py")
 
 
-#### THIS IS THE MODULE2 SCRIPT with wrapper code for command agnotic approach to support bash and bash-like commands, etc.
+##### THIS IS THE MODULE2 SCRIPT with wrapper code for command agnotic approach to support bash and bash-like commands, etc.
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4d.py")
+
+
+#### THIS IS THE MODULE2 SCRIPT with the refactor for the adaptive watchdog timeout and fix API congestion.
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_4d.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_5.py")
 
 
 ## modules 3-11:
