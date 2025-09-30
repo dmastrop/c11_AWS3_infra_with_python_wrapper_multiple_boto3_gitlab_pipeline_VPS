@@ -816,8 +816,17 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
 
     for attempt in range(max_retries):
         try:
+            if attempt == 0 and "authorize_security_group_ingress" in func.__name__:
+                print(f"[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for {func.__name__}")
+                raise botocore.exceptions.ClientError(
+                    {"Error": {"Code": "RequestLimitExceeded", "Message": "Synthetic throttle"}},
+                    "FakeOperation"
+                )
+            
+
             if attempt > 0:
                 print(f"[RETRY] Attempt {attempt + 1} for {func.__name__} (args={args}, kwargs={kwargs})")
+
 
             result = func(*args, **kwargs)
 
