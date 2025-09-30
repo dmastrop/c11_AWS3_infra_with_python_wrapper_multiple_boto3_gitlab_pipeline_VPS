@@ -259,22 +259,39 @@ STATUS_TAGS = {
 
 
 
-## These variables are used throughout for the resurrection based code. Put at top of module for easy reference
-# :=:= Module-level constants for resurrection/watchdog logic
-WATCHDOG_TIMEOUT          = 90   # seconds before we declare a read stalled. This is the default. The WATCHDOG_TIMTOUE is now
+
+
+
+##### Put at top of module for easy reference
+
+##### Get rid of this. The adaptive watchdog timeout is per process and not global. 
+#####  We will still use the WATCHDOG_TIMEOUT but it will be adaptive, calculated in get_watchdog_timeout and used by
+##### read_output_with_watchdog which is called by install_tomcat
+
+#WATCHDOG_TIMEOUT          = 90   
+# seconds before we declare a read stalled. This is the default. The WATCHDOG_TIMTOUE is now
 # adaptive. See the function get_watchdog_timeout. 
+
+
+
+##### These are used by the read_output_with_watchdog the raw output for STDOUT and STDERR of each thread.
 RETRY_LIMIT               = 3    # number of re-executes per SSH command (for example install tomcat9)
 SLEEP_BETWEEN_ATTEMPTS    = 5    # seconds to wait between retries
 STALL_RETRY_THRESHOLD     = 1    # number of watchdog reattempts for each command in the for attempt loop. Note that this has
 # nothing to do with the command attempt number. That is the number attempts in attempting to execute the command on the node.
 
 
+##### Get rid of this. The adaptive watchdog tiomeout is per process and not global.
 # global vars used for the modified retry_with_backoff() function as part of the adaptive watchdog timeout.
 # Will continue to use the global var WATCHDOG_TIMEOUT above, but it will be overwritten per process
 # This is ok as per process memory is segregated
 # Per-process tracker for the highest retry attempt seen
-max_retry_observed = 0  # default initialize it at 0
 
+#max_retry_observed = 0  # default initialize it at 0
+
+
+
+##### thread-safe retry tracking **within a process**
 retry_lock = threading.Lock() 
 # this prevents multiple threads from messing up the max_retry_observed that is calculated in the call to retry_with_backoff
 # when there are multiple threads per process updating the max_retry_observed for each process.
@@ -810,7 +827,12 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
     This max_retry_observed is set per process for all the threads in that process based upon the code below which is called
     from 3 blocks of code in tomcat_worker()
     """
-    global max_retry_observed
+    ##### remove the global max_retry_observed. Memory is NOT shared between processes so there is no such thing here.
+    ##### max_retry_observed will be calculated per process 
+    
+    #global max_retry_observed
+
+
 
     print(f"[RETRY] Wrapper invoked for {func.__name__} with max_retries={max_retries}")
 
@@ -1234,7 +1256,13 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         # so max_retry_observed is now set for this process.(modified retry_with_backoff calculates this as max_retry_observed
         # We can compute the dynamic WATCHDOG_TIMEOUT from here with call to get_watchdog_timeout
 
-        global WATCHDOG_TIMEOUT
+
+        ##### WATCHDOG_TIMEOUT is not global. It is calculated per process. Process memory is not shared across processes.
+        
+        #global WATCHDOG_TIMEOUT
+
+
+
 
         # extract node_count from the first arg to func (threaded_install)
         # node_count = len(args[0]) if args and isinstance(args[0], (list, tuple)) else 0
