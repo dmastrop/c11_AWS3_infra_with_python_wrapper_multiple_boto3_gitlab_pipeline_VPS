@@ -523,7 +523,10 @@ def detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir):
 
 ## Global function get_watchdog_timeout() to calculate the actual adaptive WATCHDOG_TIMEOUT based upon the parameters below
 ## This is code block2 for adaptive WATCHDOG_TIMEOUT
-def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
+
+
+#def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
+def get_watchdog_timeout(node_count, instance_type, max_retry_observed):    
     base = 15
    
     # use a scale map instead of just scale.
@@ -537,8 +540,8 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
 
     #scale = 0.15 if instance_type == "micro" else 0.1
    
-    contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
-    
+    #contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
+    contention_penalty = min(30, max_retry_observed * 2)  # up to +30s
 
 
     adaptive_timeout = math.ceil(base + scale * node_count + contention_penalty)
@@ -1275,16 +1278,23 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
 
         # call the get_watchdog_timeout to calculate the adaptive WATCHDOG_TIMEOUT value
         # max_retry_observed is iteratively set  in the modified retry_with_backoff functin.
+        #WATCHDOG_TIMEOUT = get_watchdog_timeout(
+        #    node_count=node_count,
+        #    instance_type=instance_type,
+        #    peak_retry_attempts=max_retry_observed
+        #)
+
+
         WATCHDOG_TIMEOUT = get_watchdog_timeout(
             node_count=node_count,
             instance_type=instance_type,
-            peak_retry_attempts=max_retry_observed
+            max_retry_observed
         )
-
+        
 
         print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
               f"instance_type={instance_type}, node_count={node_count}, "
-              f"max_retry={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+              f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
 
 
 
