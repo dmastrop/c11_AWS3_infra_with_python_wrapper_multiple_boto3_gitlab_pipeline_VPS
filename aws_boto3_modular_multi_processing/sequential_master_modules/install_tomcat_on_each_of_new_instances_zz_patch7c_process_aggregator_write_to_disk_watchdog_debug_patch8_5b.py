@@ -901,6 +901,9 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
         try:
             if attempt == 0 and "authorize_security_group_ingress" in func.__name__:
                 print(f"[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for {func.__name__}")
+
+                # This is a synthetic injection to test the code. This will induce an attempt count of 1 and a 
+                # RequestLimitExceeded for each SG call to this function. This is for testing purposes only.
                 raise botocore.exceptions.ClientError(
                     {"Error": {"Code": "RequestLimitExceeded", "Message": "Synthetic throttle"}},
                     "FakeOperation"
@@ -909,8 +912,11 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
             if attempt > 0:
                 print(f"[RETRY] Attempt {attempt + 1} for {func.__name__} (args={args}, kwargs={kwargs})")
 
-            result = func(*args, **kwargs)
-            return attempt  # success on this attempt
+            result = func(*args, **kwargs) # execute the API call. In this case for the SG code blocks, they are calling 
+            # my_ec2.authorize_security_group_ingress
+
+            return attempt  # success on this attempt. If the result= func call is  not successful it will hit the except below
+            # and the attempt index will be incremented.
 
         except botocore.exceptions.ClientError as e:
             if "RequestLimitExceeded" in str(e):
