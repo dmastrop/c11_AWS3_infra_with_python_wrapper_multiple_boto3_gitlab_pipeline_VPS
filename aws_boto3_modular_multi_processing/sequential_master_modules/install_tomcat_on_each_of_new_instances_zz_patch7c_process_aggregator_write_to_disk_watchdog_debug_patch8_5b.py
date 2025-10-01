@@ -1272,14 +1272,21 @@ def benchmark(test_name, sample_delay=None):
         logging.info(f"[PID {pid}] Total runtime: {end_time - start_time:.2f} seconds\n")
 
 
+
+
+
+
 ## This needs to be slightly modified for the patch7c to return the thread_registry from threaded_install
 ## run test is invoked with func threaded_install and this now returns the thread_registry which will later 
 ## be assigned process_registry to be consumed by resurrection_monitor_patch7c
 
 ## This has been modified again to support adaptive WATCHDOG_TIMEOUT. This is code block3 of that implementation.
 
-def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
-    
+#def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+# Add WATCHDOG_TIMEOUT to the args. WATCHDOG_TIMEOUT is now dynamically calculated in tomcat_worker which calls run_test
+
+def run_test(test_name, func, *args, WATCHDOG_TIMEOUT=None, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+
     # 1) decide whether to sample metrics
     delay = None
     
@@ -1315,36 +1322,38 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         #global WATCHDOG_TIMEOUT
 
 
-
-
         # extract node_count from the first arg to func (threaded_install)
         # node_count = len(args[0]) if args and isinstance(args[0], (list, tuple)) else 0
         # instance_type = os.getenv("INSTANCE_TYPE", "micro")
 
 
-        # Pull node count and instance type from environment
-        node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
-        instance_type = os.getenv("instance_type", "micro")
 
-        # call the get_watchdog_timeout to calculate the adaptive WATCHDOG_TIMEOUT value
-        # max_retry_observed is iteratively set  in the modified retry_with_backoff functin.
+        ###### COMMENT OUT THIS ENTIRE BLOCK. THIS HAS BEEN MOVED TO tomcat_worker right after the SG rule application
+        ## Pull node count and instance type from environment
+        #node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+        #instance_type = os.getenv("instance_type", "micro")
+
+        ## call the get_watchdog_timeout to calculate the adaptive WATCHDOG_TIMEOUT value
+        ## max_retry_observed is iteratively set  in the modified retry_with_backoff functin.
+        ##WATCHDOG_TIMEOUT = get_watchdog_timeout(
+        ##    node_count=node_count,
+        ##    instance_type=instance_type,
+        ##    peak_retry_attempts=max_retry_observed
+        ##)
+
+
         #WATCHDOG_TIMEOUT = get_watchdog_timeout(
         #    node_count=node_count,
         #    instance_type=instance_type,
-        #    peak_retry_attempts=max_retry_observed
+        #    max_retry_observed=max_retry_observed
         #)
+        #
+        #print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
+        #      f"instance_type={instance_type}, node_count={node_count}, "
+        #      f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
 
 
-        WATCHDOG_TIMEOUT = get_watchdog_timeout(
-            node_count=node_count,
-            instance_type=instance_type,
-            max_retry_observed
-        )
-        
 
-        print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
-              f"instance_type={instance_type}, node_count={node_count}, "
-              f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
 
 
 
@@ -4100,6 +4109,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #### call the my_ec2.authorize_security_group_ingress AWS API to apply the rules to the nodes. It will retrun the number of
 #### attempts which will be recorded as retry_count
 #### max_retry_observed will track the maxiumum of all the retry_counts for all the SG rule applications for this process
+#### This will capture the **highest retry count** seen across all SG rule applications for THIS PROCESs
 #### max_retry_observed will then be used to calculate WATCHDOG_TIMEOUT via the call to get_watchdog_timeout
 
     for sg_id in set(security_group_ids):
@@ -4185,6 +4195,25 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 raise
 
 
+
+    ###### ─── Adaptive Watchdog Timeout Calculation ───
+    ###### This was moved out of run_test and in tomcat_worker. The WATCHDOG_TIMEOUT can then be easily passed to run_test 
+    ###### below.
+
+    # Pull node count and instance type from environment
+    node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+    instance_type = os.getenv("instance_type", "micro")
+
+    # Calculate adaptive timeout
+    WATCHDOG_TIMEOUT = get_watchdog_timeout(
+        node_count=node_count,
+        instance_type=instance_type,
+        max_retry_observed=max_retry_observed
+    )
+
+    print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
+          f"instance_type={instance_type}, node_count={node_count}, "
+          f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
 
 
 
@@ -6106,7 +6135,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     # For resurrection_monitor_patch7d need to pass instance_info and max_workers because i have chnaged the 
     # def threaded_install from threaded_install() to def threaded_install(instance_info, max_workers). Another option
     # is to revert back to threaded_install() and then the change below is not required. I will use the args for clarity.
-    process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers)
+    
+    #process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers)
+
+    
+    ##### Add the WATCHDOG_TIMEOUT (caclucated earlier in tomcat_worker) as an argument to run_test
+    
+    process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers, WATCHDOG_TIMEOUT=WATCHDOG_TIMEOUT)
 
 
     ## debug prints for run_test call to threaded_install which returns thread_registry which is assigned to process_registry
