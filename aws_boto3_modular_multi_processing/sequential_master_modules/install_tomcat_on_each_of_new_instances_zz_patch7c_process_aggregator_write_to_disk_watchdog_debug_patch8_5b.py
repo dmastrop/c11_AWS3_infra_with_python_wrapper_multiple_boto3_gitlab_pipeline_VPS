@@ -5945,26 +5945,26 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # at the thread level.
 
 
+        #with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        #    futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+
+        #    print(f"[DEBUG] Preparing install_tomcat for {len(instance_info)} instances with WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}")
+
+
+        #### Add the WATCHDOG_TIMEOUT to the futures list comprehension:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+            futures = [
+                executor.submit(
+                    install_tomcat,
+                    ip['PublicIpAddress'],
+                    ip['PrivateIpAddress'],
+                    ip['InstanceId'],
+                    WATCHDOG_TIMEOUT  # ← added here
+                )
+                for ip in instance_info
+            ]
 
             print(f"[DEBUG] Preparing install_tomcat for {len(instance_info)} instances with WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}")
-
-
-        ##### Add the WATCHDOG_TIMEOUT to the futures list comprehension:
-        #with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        #    futures = [
-        #        executor.submit(
-        #            install_tomcat,
-        #            ip['PublicIpAddress'],
-        #            ip['PrivateIpAddress'],
-        #            ip['InstanceId'],
-        #            WATCHDOG_TIMEOUT  # ← added here
-        #        )
-        #        for ip in instance_info
-        #    ]
-
-
 
 
 
