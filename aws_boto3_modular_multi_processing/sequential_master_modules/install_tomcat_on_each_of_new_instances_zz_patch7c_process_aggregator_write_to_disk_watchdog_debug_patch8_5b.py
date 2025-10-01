@@ -3439,8 +3439,13 @@ def update_resurrection_registry(ip, attempt, status, pid=None):
 #   - Return decoded output and stall status
 
 
+#### Add the WATCHDOG_TIMEOUT (timeout) to the read_output_with_watchdog. It is no longer global so replace the name
+#### WATCHDOG_TIKMEOUT wiht timeout. It has beeen completely refactored to be process level rather than global.
+#def read_output_with_watchdog(stream, label, ip):
+def read_output_with_watchdog(stream, label, ip, timeout):    
 
-def read_output_with_watchdog(stream, label, ip):
+
+
     stall_count = 0
     collected = b''
     start = time.time()
@@ -3457,7 +3462,8 @@ def read_output_with_watchdog(stream, label, ip):
                 break
 
         elapsed = time.time() - start
-        if elapsed > WATCHDOG_TIMEOUT:
+        #if elapsed > WATCHDOG_TIMEOUT:
+        if elapsed > timeout:
             stall_count += 1
             print(f"[{ip}] ⏱️ Watchdog timeout on {label} read. Stall count: {stall_count}")
             if stall_count >= STALL_RETRY_THRESHOLD:
@@ -4243,8 +4249,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 # Function to install Tomcat on an instance
-    def install_tomcat(ip, private_ip, instance_id):
-        
+    
+    #def install_tomcat(ip, private_ip, instance_id):
+    ##### Add the WATCHDOG_TIMEOUT to the arg list for install_tomcat (passed from the threaded_install ThreadPoolExecutor
+    ##### futures list)
+    def install_tomcat(public_ip, private_ip, instance_id, WATCHDOG_TIMEOUT):    
         import uuid 
         ## install_tomcat is the definitive thread_uuid source. It is removed from calling function threaded_install
         thread_uuid = uuid.uuid4().hex[:8]
@@ -4849,8 +4858,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
 
 
-                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip)
-                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip)
+                    #stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip)
+                    #stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip)
+
+                    #### Add the WATCHDOG_TIMEOUT to the final read_output_with_watchdog function call
+                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip, WATCHDOG_TIMEOUT)
+
+
 
                     print(f"[{ip}] [{datetime.now()}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] [{datetime.now()}] STDERR: '{stderr_output.strip()}'")
