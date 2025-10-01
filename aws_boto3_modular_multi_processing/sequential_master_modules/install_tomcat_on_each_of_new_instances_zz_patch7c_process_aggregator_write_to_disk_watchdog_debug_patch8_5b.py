@@ -4010,28 +4010,59 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+#### Comment out this block and replace with the retry_count = retry_with_backoff for the refactoring of the 
+#### adaptive watchdog timeout WATCHDOG_TIMEOUT using the retry_with_backoff function 
 
-## Need to wrap these calls to authorize_security_group_ingress with the wrapper function above at top of this file
-## retry_with_backoff() .  This implements an exponential backoff on the API calls to the authorize function
-
-
-
-
-#    # Add a security group rule to allow access to port 22
+### Need to wrap these calls to authorize_security_group_ingress with the wrapper function above at top of this file
+### retry_with_backoff() .  This implements an exponential backoff on the API calls to the authorize function
+#
+#
+#
 #    for sg_id in set(security_group_ids):
 #        try:
-#            my_ec2.authorize_security_group_ingress(
+#            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=22")
+#
+#            retry_with_backoff(
+#                my_ec2.authorize_security_group_ingress,
 #                GroupId=sg_id,
-#                IpPermissions=[
-#                    {
-#                        'IpProtocol': 'tcp',
-#                        'FromPort': 22,
-#                        'ToPort': 22,
-#                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-#                    }
-#                ]
+#                IpPermissions=[{
+#                    'IpProtocol': 'tcp',
+#                    'FromPort': 22,
+#                    'ToPort': 22,
+#                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+#                }]
 #            )
+#
+#            print(f"[SECURITY GROUP] Successfully applied port 22 to sg_id={sg_id}")
+#        
+#
 #        except my_ec2.exceptions.ClientError as e:
+#            print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=22")
+#
+#            if 'InvalidPermission.Duplicate' in str(e):
+#                print(f"Rule already exists for security group {sg_id}")
+#            else:
+#                raise
+#
+#
+#    for sg_id in set(security_group_ids):
+#        try:
+#            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
+#
+#            retry_with_backoff(
+#                my_ec2.authorize_security_group_ingress,
+#                GroupId=sg_id,
+#                IpPermissions=[{
+#                    'IpProtocol': 'tcp',
+#                    'FromPort': 80,
+#                    'ToPort': 80,
+#                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+#                }]
+#            )
+#            print(f"[SECURITY GROUP] Successfully applied port 80 to sg_id={sg_id}")
+#        except my_ec2.exceptions.ClientError as e:
+#            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
+#
 #            if 'InvalidPermission.Duplicate' in str(e):
 #                print(f"Rule already exists for security group {sg_id}")
 #            else:
@@ -4039,55 +4070,43 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #
 #
 #
-#
-#
-#    # Add a security group rule to allow access to port 80
 #    for sg_id in set(security_group_ids):
 #        try:
-#            my_ec2.authorize_security_group_ingress(
+#            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080")
+#
+#            retry_with_backoff(
+#                my_ec2.authorize_security_group_ingress,
 #                GroupId=sg_id,
-#                IpPermissions=[
-#                    {
-#                        'IpProtocol': 'tcp',
-#                        'FromPort': 80,
-#                        'ToPort': 80,
-#                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-#                    }
-#                ]
+#                IpPermissions=[{
+#                    'IpProtocol': 'tcp',
+#                    'FromPort': 8080,
+#                    'ToPort': 8080,
+#                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+#                }]
 #            )
+#            print(f"[SECURITY GROUP] Successfully applied port 8080 to sg_id={sg_id}")
 #        except my_ec2.exceptions.ClientError as e:
+#            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080") 
+#
 #            if 'InvalidPermission.Duplicate' in str(e):
 #                print(f"Rule already exists for security group {sg_id}")
 #            else:
 #                raise
-#
-#
-#    # Add a security group rule to allow access to port 8080
-#    for sg_id in set(security_group_ids):
-#        try:
-#            my_ec2.authorize_security_group_ingress(
-#                GroupId=sg_id,
-#                IpPermissions=[
-#                    {
-#                        'IpProtocol': 'tcp',
-#                        'FromPort': 8080,
-#                        'ToPort': 8080,
-#                        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-#                    }
-#                ]
-#            )
-#        except my_ec2.exceptions.ClientError as e:
-#            if 'InvalidPermission.Duplicate' in str(e):
-#                print(f"Rule already exists for security group {sg_id}")
-#            else:
-#                raise
-#
+
+
+#### The new SG blocks of code for the refactored retry_with_backoff. The retry_with_backoff now returns the number of 
+#### attempts for the API call to get through for each SG rule application to all the nodes (threads) in the current process
+#### This is entirely a process level application.  Each SG rule application will call the retry_with_backoff which will 
+#### call the my_ec2.authorize_security_group_ingress AWS API to apply the rules to the nodes. It will retrun the number of
+#### attempts which will be recorded as retry_count
+#### max_retry_observed will track the maxiumum of all the retry_counts for all the SG rule applications for this process
+#### max_retry_observed will then be used to calculate WATCHDOG_TIMEOUT via the call to get_watchdog_timeout
 
     for sg_id in set(security_group_ids):
         try:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=22")
 
-            retry_with_backoff(
+            retry_count = retry_with_backoff(
                 my_ec2.authorize_security_group_ingress,
                 GroupId=sg_id,
                 IpPermissions=[{
@@ -4097,7 +4116,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
                 }]
             )
+            max_retry_observed = max(max_retry_observed, retry_count)
+
             print(f"[SECURITY GROUP] Successfully applied port 22 to sg_id={sg_id}")
+        
 
         except my_ec2.exceptions.ClientError as e:
             print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=22")
@@ -4112,7 +4134,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         try:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
 
-            retry_with_backoff(
+            retry_count = retry_with_backoff(
                 my_ec2.authorize_security_group_ingress,
                 GroupId=sg_id,
                 IpPermissions=[{
@@ -4122,7 +4144,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
                 }]
             )
+            max_retry_observed = max(max_retry_observed, retry_count)
+            
             print(f"[SECURITY GROUP] Successfully applied port 80 to sg_id={sg_id}")
+        
         except my_ec2.exceptions.ClientError as e:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
 
@@ -4137,7 +4162,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         try:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080")
 
-            retry_with_backoff(
+            retry_count = retry_with_backoff(
                 my_ec2.authorize_security_group_ingress,
                 GroupId=sg_id,
                 IpPermissions=[{
@@ -4147,7 +4172,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
                 }]
             )
+            max_retry_observed = max(max_retry_observed, retry_count)
+            
             print(f"[SECURITY GROUP] Successfully applied port 8080 to sg_id={sg_id}")
+        
         except my_ec2.exceptions.ClientError as e:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080") 
 
@@ -4155,9 +4183,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print(f"Rule already exists for security group {sg_id}")
             else:
                 raise
-
-
-
 
 
 
