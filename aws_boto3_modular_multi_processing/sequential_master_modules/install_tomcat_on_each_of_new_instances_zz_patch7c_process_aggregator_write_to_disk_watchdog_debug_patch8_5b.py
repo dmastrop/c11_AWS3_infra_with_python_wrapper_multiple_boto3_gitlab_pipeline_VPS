@@ -4253,7 +4253,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #def install_tomcat(ip, private_ip, instance_id):
     ##### Add the WATCHDOG_TIMEOUT to the arg list for install_tomcat (passed from the threaded_install ThreadPoolExecutor
     ##### futures list)
-    def install_tomcat(public_ip, private_ip, instance_id, WATCHDOG_TIMEOUT):    
+    def install_tomcat(ip, private_ip, instance_id, WATCHDOG_TIMEOUT):    
         import uuid 
         ## install_tomcat is the definitive thread_uuid source. It is removed from calling function threaded_install
         thread_uuid = uuid.uuid4().hex[:8]
