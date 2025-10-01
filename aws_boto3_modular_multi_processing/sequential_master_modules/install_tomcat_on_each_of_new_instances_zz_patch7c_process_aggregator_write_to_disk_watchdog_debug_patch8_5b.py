@@ -822,21 +822,79 @@ def run_resurrection_monitor_diag(process_registry):
 #    raise Exception("Max retries exceeded for AWS API call.")
 
 
-## REVISED retry_with_backoff to support adaptive WATCHDOG_TIMEOUT (Code block 1 of 3)
+### REVISED retry_with_backoff to support adaptive WATCHDOG_TIMEOUT (Code block 1 of 3)
+#def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
+#    """
+#    Wraps an AWS API call with exponential backoff on RequestLimitExceeded,
+#    and updates `max_retry_observed` to the highest retry index seen in this process.
+#    This max_retry_observed is set per process for all the threads in that process based upon the code below which is called
+#    from 3 security group definiation blocks of code in tomcat_worker()
+#    """
+#    ##### remove the global max_retry_observed. Memory is NOT shared between processes so there is no such thing here.
+#    ##### max_retry_observed will be calculated per process 
+#    
+#    #global max_retry_observed
+#
+#
+#
+#    print(f"[RETRY] Wrapper invoked for {func.__name__} with max_retries={max_retries}")
+#
+#    for attempt in range(max_retries):
+#        try:
+#            if attempt == 0 and "authorize_security_group_ingress" in func.__name__:
+#                print(f"[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for {func.__name__}")
+#                raise botocore.exceptions.ClientError(
+#                    {"Error": {"Code": "RequestLimitExceeded", "Message": "Synthetic throttle"}},
+#                    "FakeOperation"
+#                )
+#            
+#
+#            if attempt > 0:
+#                print(f"[RETRY] Attempt {attempt + 1} for {func.__name__} (args={args}, kwargs={kwargs})")
+#
+#
+#            result = func(*args, **kwargs)
+#
+#            # record the highest attempt index (0-based) that succeeded
+#            with retry_lock:
+#                max_retry_observed = max(max_retry_observed, attempt)
+#
+#            return result
+#
+#        except botocore.exceptions.ClientError as e:
+#            if "RequestLimitExceeded" in str(e):
+#                # exponential backoff + jitter
+#                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+#                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+#                time.sleep(delay)
+#            else:
+#                # re-raise any other client errors
+#                raise
+#
+#    # We exhausted all attempts—capture that too
+#    with retry_lock:
+#        max_retry_observed = max(max_retry_observed, max_retries)
+#
+#    raise Exception("Max retries exceeded for AWS API call.")
+
+
+
+##### REVISION2 of retry_with_backoff. We will return the number of unsuccessful attempts for the API call to 
+##### my_ec2.authorize_security_group_ingress for each security group block (3 of them) used in the process
+##### Each call will update the max_retry_observed to the highest attempt number, and when complete the 
+##### max_retry_observed will have the maxiumm number of API calls that needed to be retried for that process' application
+##### of the 3 security group rules to all the nodes(threads) in that process. It is a per process max count.
+##### Note that the calls to retry_with_backoff are made from tomcat_worker (the 3 SG blocks) and max_retry_observed is
+##### updated in that function, not this function. 
+##### max_retry_observed is essentially a record keeper of the latest and highest attempt number from all 3 SG API calls 
+##### as the rules are applied to the nodes in the process and is local only to tomcat_worker and not in retry_with_backoff
+
 def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
     """
-    Wraps an AWS API call with exponential backoff on RequestLimitExceeded,
-    and updates `max_retry_observed` to the highest retry index seen in this process.
-    This max_retry_observed is set per process for all the threads in that process based upon the code below which is called
-    from 3 blocks of code in tomcat_worker()
+    Wraps an AWS API call with exponential backoff on RequestLimitExceeded.
+    Returns the number of attempts it took to succeed (0-based).
+    If all retries fail, returns max_retries.
     """
-    ##### remove the global max_retry_observed. Memory is NOT shared between processes so there is no such thing here.
-    ##### max_retry_observed will be calculated per process 
-    
-    #global max_retry_observed
-
-
-
     print(f"[RETRY] Wrapper invoked for {func.__name__} with max_retries={max_retries}")
 
     for attempt in range(max_retries):
@@ -847,38 +905,24 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
                     {"Error": {"Code": "RequestLimitExceeded", "Message": "Synthetic throttle"}},
                     "FakeOperation"
                 )
-            
 
             if attempt > 0:
                 print(f"[RETRY] Attempt {attempt + 1} for {func.__name__} (args={args}, kwargs={kwargs})")
 
-
             result = func(*args, **kwargs)
-
-            # record the highest attempt index (0-based) that succeeded
-            with retry_lock:
-                max_retry_observed = max(max_retry_observed, attempt)
-
-            return result
+            return attempt  # success on this attempt
 
         except botocore.exceptions.ClientError as e:
             if "RequestLimitExceeded" in str(e):
-                # exponential backoff + jitter
                 delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
                 print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
                 time.sleep(delay)
             else:
-                # re-raise any other client errors
                 raise
 
-    # We exhausted all attempts—capture that too
-    with retry_lock:
-        max_retry_observed = max(max_retry_observed, max_retries)
-
-    raise Exception("Max retries exceeded for AWS API call.")
-
-
-
+    # All attempts failed
+    print(f"[RETRY] Max retries exceeded for {func.__name__}")
+    return max_retries
 
 
 
