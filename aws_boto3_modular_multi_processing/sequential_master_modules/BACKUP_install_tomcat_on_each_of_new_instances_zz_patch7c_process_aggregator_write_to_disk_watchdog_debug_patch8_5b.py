@@ -6049,15 +6049,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         failed_private_ips.append(private_ip)
                 #### try block ends here #####
 
-                #except Exception as e:
-                #    print(f"[ERROR][threaded_install] Future failed: {e}")
-                
-                #### Add the debug except block for the traceback here: 
                 except Exception as e:
-                    import traceback
                     print(f"[ERROR][threaded_install] Future failed: {e}")
-                    traceback.print_exc()
-                
+
+
 
 
 
