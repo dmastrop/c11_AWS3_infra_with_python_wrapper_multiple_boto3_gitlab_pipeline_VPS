@@ -3563,6 +3563,31 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     load_dotenv()
 
+
+    max_retry_observed = 0
+    #### max_retry_observed is used for the adaptive watchdog timeout WATCHDOG_TIMEOUT. Both of these are process level 
+    #### metrics.   max_retry_observed is scoped to tomcat_worker and is updated by each call to retry_with_backoff
+    #### retry_with_backoff is called from each of the SG (Security Group) blocks below using the AWS API function call
+    #### my_ec2.authorize_security_group_ingress to apply each secuirty group rule to each of the nodes in the process
+    #### API contention during hyper-scaling can cause RequestLimitExceeded from AWS and this can be used to adaptively
+    #### set teh WATCHDOG_TIMEOUT at a per process level using the get_watchdog_timeout function
+    #### So each SG block will call retry_with_backoff and then once all SG rules are applied there will be a 
+    #### max_retry_observed which is the highest attempt number for all the rules that are applied to the nodes in the process
+    #### This max_retry_observed will then be passed to the get_watchdog_timeout to dynamically calculate the 
+    #### WATCHDOG_TIMEOUT based upon the API contention that this process is experiencing in setting up the nodes (threads).
+    #### The WATCHDOG_TIMEOUT is then passed to threaded_install via the run_test function from this tomcat_worker function.
+    #### threaded_install callls install_tomcat which calls read_output_with_watchdog which is the raw output orchestrator
+    #### for thread level STDOUT and STDERR that is used for thread level command failure forensiccs and detection.
+    #### NOTE: max_retry_observed is strictly process level and not global.
+    #### A typical lifecylce of the max_retry_observed would be: 
+    #### - Start at 0
+    #### - Be updated if any SG rule takes more than 0 retries
+    ####- End up holding the **highest retry count** seen across all SG rule applications in that process
+
+
+
+
+
     #### This calls the new setup_logging() global function above for per process benchmark logging of the multi-threading
     ####  done by the ThreadPoolExecutor below
     #setup_logging()
