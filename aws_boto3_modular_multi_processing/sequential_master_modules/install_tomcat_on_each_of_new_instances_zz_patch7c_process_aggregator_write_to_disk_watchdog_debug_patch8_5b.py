@@ -1360,7 +1360,10 @@ def run_test(test_name, func, *args, WATCHDOG_TIMEOUT=None, min_sample_delay=50,
         # ─── actual call to threaded_install which returns thread_registry which is process_registry ───
         # thread_registry will be assigned the important process_registry in tomcat_worker() the calling function of run_test
 
-        result = func(*args, **kwargs)
+        #result = func(*args, **kwargs)
+        # Passing the WATCHDO_TIMEOUT from run_test to func which is threaded_install
+        result = func(*args, WATCHDOG_TIMEOUT=WATCHDOG_TIMEOUT, **kwargs)
+
         print(f"[TRACE][run_test] func returned type: {type(result)}")        
 
         return result  # move this within the benchnark context
@@ -5914,9 +5917,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ## For patch7d of resurrection_monitor add the args to the threaded install function. This is not absolutely required
     ## since threaded_install and install_tomcat are both inside of tomcat_worker which has these 2 args but adding it
     ## for clarity sake. instance_info or chunk or assigned_ips is required for per process ghost detection.
-    def threaded_install(instance_info, max_workers):
+    
+    #def threaded_install(instance_info, max_workers):
 
-
+    # Pass the WATCHDOG_TIMEOUT to threaded_install
+    def threaded_install(instance_info, max_workers, WATCHDOG_TIMEOUT=None): 
 
         import uuid # This is for adding uuid to the logs. See below
 
@@ -5925,8 +5930,28 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # at the thread level.
 
 
+        #with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        #    futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+
+
+
+        ##### Add the WATCHDOG_TIMEOUT to the futures list comprehension:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(install_tomcat, ip['PublicIpAddress'], ip['PrivateIpAddress'], ip['InstanceId']) for ip in instance_info]
+            futures = [
+                executor.submit(
+                    install_tomcat,
+                    ip['PublicIpAddress'],
+                    ip['PrivateIpAddress'],
+                    ip['InstanceId'],
+                    WATCHDOG_TIMEOUT  # ← added here
+                )
+                for ip in instance_info
+            ]
+
+
+
+
+
 
 #            for future in as_completed(futures):
 #                ip, private_ip, result = future.result()
