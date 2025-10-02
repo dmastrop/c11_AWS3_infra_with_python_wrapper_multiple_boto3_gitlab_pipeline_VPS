@@ -6319,7 +6319,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #run_resurrection_monitor_diag(process_registry)
 
 
-    print(f"[WATCHDOG METRIC] [PID {os.getpid()}] max_retry_observed = {max_retry_observed}")
+    #print(f"[WATCHDOG METRIC] [PID {os.getpid()}] max_retry_observed = {max_retry_observed}")
+    print(f"[POST-MONITOR METRIC] [PID {os.getpid()}] max_retry_observed = {max_retry_observed}")
+
+
 
 ##### END OF tomcat_worker() function ######
 # tomcat_worker() calls threaded_install() which calls install_tomcat(). Both threaded_install and install_tomcat are defined in
