@@ -4833,7 +4833,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     print(f"[{ip}]  Wrapped processed command(strace debug): {command}")
 
                     #### Debugs
-                    print(f"[TRACE1][{ip}] About to invoke exec_command for command {command_index + 1}/{len(commands)} (Attempt {attempt + 1})")
+                    print(f"[TRACE1][{ip}] [{datetime.now()}] Command {idx + 1}/{len(commands)}: {command} (Attempt {attempt + 1}) — About to invoke exec_command")
 
                     #try pty for debugging
                     #stdin, stdout, stderr = ssh.exec_command(command, timeout=60, get_pty=True)
