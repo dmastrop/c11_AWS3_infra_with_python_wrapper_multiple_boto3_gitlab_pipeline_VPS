@@ -5622,7 +5622,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 except Exception as e:
                     print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
                     
-                    #### Debugs
+                    #### Debugs for TRACE1 print
                     import traceback
                     traceback.print_exc()
 
