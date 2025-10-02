@@ -3583,6 +3583,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
     max_retry_observed = 0
+    #### [[tomcat_worker]]
     #### max_retry_observed is used for the adaptive watchdog timeout WATCHDOG_TIMEOUT. Both of these are process level 
     #### metrics.   max_retry_observed is scoped to tomcat_worker and is updated by each call to retry_with_backoff
     #### retry_with_backoff is called from each of the SG (Security Group) blocks below using the AWS API function call
@@ -4112,6 +4113,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #                raise
 
 
+#### [[tomcat_worfker]]
 #### The new SG blocks of code for the refactored retry_with_backoff. The retry_with_backoff now returns the number of 
 #### attempts for the API call to get through for each SG rule application to all the nodes (threads) in the current process
 #### This is entirely a process level application.  Each SG rule application will call the retry_with_backoff which will 
@@ -4136,7 +4138,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 }]
             )
             max_retry_observed = max(max_retry_observed, retry_count)
-
+            
+            #### add print debugs for max_retry_observed propagation issue
+            print(f"[RETRY METRIC] sg_id={sg_id}, port=22 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
             print(f"[SECURITY GROUP] Successfully applied port 22 to sg_id={sg_id}")
         
 
@@ -4165,6 +4169,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             )
             max_retry_observed = max(max_retry_observed, retry_count)
             
+            #### add print debugs for max_retry_observed propagation issue
+            print(f"[RETRY METRIC] sg_id={sg_id}, port=80 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
             print(f"[SECURITY GROUP] Successfully applied port 80 to sg_id={sg_id}")
         
         except my_ec2.exceptions.ClientError as e:
@@ -4193,6 +4199,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             )
             max_retry_observed = max(max_retry_observed, retry_count)
             
+            #### add print debugs for max_retry_observed propagation issue
+            print(f"[RETRY METRIC] sg_id={sg_id}, port=8080 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
             print(f"[SECURITY GROUP] Successfully applied port 8080 to sg_id={sg_id}")
         
         except my_ec2.exceptions.ClientError as e:
