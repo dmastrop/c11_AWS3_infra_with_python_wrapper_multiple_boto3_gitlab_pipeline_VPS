@@ -4832,7 +4832,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # should_wrap function logic..
                     print(f"[{ip}]  Wrapped processed command(strace debug): {command}")
 
-
+                    #### Debugs
+                    print(f"[TRACE1][{ip}] About to invoke exec_command for command {command_index + 1}/{len(commands)} (Attempt {attempt + 1})")
 
                     #try pty for debugging
                     #stdin, stdout, stderr = ssh.exec_command(command, timeout=60, get_pty=True)
@@ -5620,6 +5621,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                 except Exception as e:
                     print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
+                    
+                    #### Debugs
+                    import traceback
+                    traceback.print_exc()
+
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                     # Tag as install_failed with exception details. This is part of the traceability for the install_tomcat
                     # thread forensics.  
