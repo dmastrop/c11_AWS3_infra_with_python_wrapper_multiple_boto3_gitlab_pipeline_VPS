@@ -4832,7 +4832,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     # should_wrap function logic..
                     print(f"[{ip}]  Wrapped processed command(strace debug): {command}")
 
-                    ##### Debugs
+                    ######  Debugs
                     print(f"[TRACE1][{ip}] [{datetime.now()}] Command {idx + 1}/{len(commands)}: {command} (Attempt {attempt + 1}) — About to invoke exec_command")
 
                     #try pty for debugging
