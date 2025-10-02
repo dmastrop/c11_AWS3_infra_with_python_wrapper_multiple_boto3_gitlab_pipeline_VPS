@@ -4215,7 +4215,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
     ##### [[tomcat_worker]] add debug prior to the WATCHDOG_TIMEOUT calculation call to get_watchdog_timeout
-    print(f"[WATCHDOG METRIC] [PID {pid}] Final max_retry_observed = {max_retry_observed}")
+    #print(f"[WATCHDOG METRIC] [PID {pid}] Final max_retry_observed = {max_retry_observed}")
+    print(f"[WATCHDOG METRIC] [PID {os.getpid()}] Final max_retry_observed = {max_retry_observed}")
 
 
     ###### ─── Adaptive Watchdog Timeout Calculation ───
