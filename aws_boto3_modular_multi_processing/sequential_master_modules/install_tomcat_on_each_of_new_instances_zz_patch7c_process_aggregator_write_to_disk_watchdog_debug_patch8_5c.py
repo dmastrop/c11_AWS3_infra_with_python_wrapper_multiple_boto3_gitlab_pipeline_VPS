@@ -4144,7 +4144,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #### (see next block below the SG blocks)
 
 
-
+    ###### add DEBUGX for the SG issue at scale that we are seeing. 
+    print(f"[DEBUGX] Entering SG block with security_group_ids = {security_group_ids}")
 
     for sg_id in set(security_group_ids):
         retry_count =0 # default a fallback for this local variable
