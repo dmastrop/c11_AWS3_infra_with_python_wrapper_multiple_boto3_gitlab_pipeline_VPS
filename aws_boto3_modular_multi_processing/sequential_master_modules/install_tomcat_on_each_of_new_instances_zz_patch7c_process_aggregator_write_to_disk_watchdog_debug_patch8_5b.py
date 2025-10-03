@@ -931,12 +931,17 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
             #### If the attempt succeeds then the call above will return the attempt. If that attempt fails due to 
             #### rule already exists, then we still want to return the current attempt count, even if duplicate.
             #### The current attempt count is a reflection of the API contention and we do not want to lose that metric
-            #### in the adaptive watchdog calucation.
+            #### in the adaptive watchdog calculation.
             elif "InvalidPermission.Duplicate" in str(e):
                 print(f"[RETRY] Duplicate rule detected on attempt {attempt + 1}")
                 return attempt  # ← return the attempt count even on duplicate
             
+
+
             ####  This will not return the attempt count. If this is hit something crashed.
+            ####  - The API call **did not succeed**
+            ####  - The error is **not one that has been explicitly handled**
+            ####  - don’t want to treat a crash as a valid retry metric
             else:
                 raise
 
@@ -4134,10 +4139,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #### call the my_ec2.authorize_security_group_ingress AWS API to apply the rules to the nodes. It will retrun the number of
 #### attempts which will be recorded as retry_count
 #### max_retry_observed will track the maxiumum of all the retry_counts for all the SG rule applications for this process
-#### This will capture the **highest retry count** seen across all SG rule applications for THIS PROCESs
-#### max_retry_observed will then be used to calculate WATCHDOG_TIMEOUT via the call to get_watchdog_timeout
+#### This will capture the **highest retry count** seen across all SG rule applications for THIS PROCESS
+#### The final max_retry_observed will then be used to calculate WATCHDOG_TIMEOUT via the call to get_watchdog_timeout
+#### (see next block below the SG blocks)
+
+
+
 
     for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
         try:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=22")
 
@@ -4151,23 +4161,27 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
                 }]
             )
-            max_retry_observed = max(max_retry_observed, retry_count)
             
-            #### add print debugs for max_retry_observed propagation issue
-            print(f"[RETRY METRIC] sg_id={sg_id}, port=22 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
             print(f"[SECURITY GROUP] Successfully applied port 22 to sg_id={sg_id}")
         
 
         except my_ec2.exceptions.ClientError as e:
-            print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=22")
 
             if 'InvalidPermission.Duplicate' in str(e):
-                print(f"Rule already exists for security group {sg_id}")
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=22")
             else:
-                raise
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=22 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+
 
 
     for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
         try:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
 
@@ -4181,23 +4195,26 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
                 }]
             )
-            max_retry_observed = max(max_retry_observed, retry_count)
             
-            #### add print debugs for max_retry_observed propagation issue
-            print(f"[RETRY METRIC] sg_id={sg_id}, port=80 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
             print(f"[SECURITY GROUP] Successfully applied port 80 to sg_id={sg_id}")
         
+
         except my_ec2.exceptions.ClientError as e:
-            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
 
             if 'InvalidPermission.Duplicate' in str(e):
-                print(f"Rule already exists for security group {sg_id}")
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=80")
             else:
-                raise
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
 
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=80 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
 
 
     for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
         try:
             print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080")
 
@@ -4211,19 +4228,25 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
                 }]
             )
-            max_retry_observed = max(max_retry_observed, retry_count)
             
-            #### add print debugs for max_retry_observed propagation issue
-            print(f"[RETRY METRIC] sg_id={sg_id}, port=8080 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
             print(f"[SECURITY GROUP] Successfully applied port 8080 to sg_id={sg_id}")
         
+
         except my_ec2.exceptions.ClientError as e:
-            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080") 
 
             if 'InvalidPermission.Duplicate' in str(e):
-                print(f"Rule already exists for security group {sg_id}")
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=8080")
             else:
-                raise
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=8080 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+
+
+
 
 
 
