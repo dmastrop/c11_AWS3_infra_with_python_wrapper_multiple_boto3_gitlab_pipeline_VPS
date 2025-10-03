@@ -258,18 +258,22 @@ There are 3 metrics (currently) that go into calculating the adaptive WATCHDOG_T
 
 These are in the the get_watchdog_timemout function which is a global module function.
 
-The code is below. Basically the EC2 instance type (smaller instances are slower to respond and, in general, this results in more
+The code is below. The 3 metrics are the following:
+
+- EC2 instance type: smaller instances are slower to respond and, in general, this results in more
 API contention at the orchestration layer of the python module, especially if there are hundreds of nodes. 
 
-A contention penalty is calculated based upon the maximun number of retry attempts for that particular process experienced
+- A contention penalty is calculated based upon the maximun number of retry attempts for that particular process experienced
 across all the threads in that process.  This is not a global retry attempts because the memory is not shared between processes
-in python multi-processing.
+in python multi-processing. Most of the refactoring was in this area of the code.  A max_retry_observed for each process is
+used to record the highest number of API attempts to push the rule(s) in the security group to all the nodes (threads) in 
+the process.  This is done across all the security group blocks of code in the tomcat_worker function.
 
 A base is used for the lower bound of the watchdog timemout.
 
 
 ```
-def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
+def get_watchdog_timeout(node_count, instance_type, max_retry_observed):
     base = 15
 
     # use a scale map instead of just scale.
@@ -283,49 +287,192 @@ def get_watchdog_timeout(node_count, instance_type, peak_retry_attempts):
 
     #scale = 0.15 if instance_type == "micro" else 0.1
 
-    contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
-
+    #contention_penalty = min(30, peak_retry_attempts * 2)  # up to +30s
+    contention_penalty = min(30, max_retry_observed * 2)  # up to +30s
 
 
     adaptive_timeout = math.ceil(base + scale * node_count + contention_penalty)
     return max(18, adaptive_timeout) # set the base to 30 seconds for testing
 
+
+    #return int(base + scale * node_count + contention_penalty)
+
+    #return math.ceil(base + scale * node_count + contention_penalty)
+
+#The node_count is the total number of nodes deployed during the execution run
+#The instance_type is the instance type of the EC2 nodes (for example t2.micro)
+#The max_retry_observed will be calcualted per process based upon API contention with AWS (this will be done by a modified
+#retry_with_backoff function)
+#The scale is a multiplier that is based upon the instance type (higher value for smaller vCPU instance type)
+#For initial testing with 512 nodes this will be set to 0.11 so that the watchdog timeout will remain at the original 90 
+#second baseline
+
+
+```
+#### CURRENT code issues and the need for refactoring the code:
+
+
+The current code has several issues. The main issue is that the max_retry_observed is not getting set properly (it stays
+at zero regardlless of the amount of RequestLimitExceeded (API contention) experienced. This was verifed by 
+creating a synthetic RequestLimitExceeded in the first attempt for each security group rule application in each process
+(3 total rules are applied to each node's security group).
+
+The problem was multi-factorial.   The first issue was that both the WATCHDOG_TIMEOUT and the max_retry_observed
+were set as global variables. That was the first thing that had to be changed.
+
+Mulit-processing in python dedicates a discrete process memory space per process that is not shared globally. So the
+adaptive watchdog timeout has to be designed from the bottom up as a process level variable.
+
+The other cleanup required moving all the WATCHDOG calculations (calls to the get_watchdog_timeout function; see previous
+section above), from run_test (that is in tomcat_worker) to tomcat_worker itself.   
+
+#### High level code refactoring design:
+
+The first thing that needed to be done was to set the max_retry_observed =0 at the top of the tomcat_worker function.
+This cleanly and clearly establishes it as a local variable and not a global variable.
+
+The next refactoring had to be done to the retry_with backoff function. The objective of this function is to return
+the number of attempts that it took to apply the rules with the API rather than returning the results of the API
+request itself. The attempt number is what is indicative of the API contention. For testing purposes with the 16 node
+setup, a synthetic RequestLimitExceeded was added to bump the attempt from 0 (the initial attempt index number) to
+1 so that the contention metric could register a value for testing.   This synthetic injection will be removed once
+hyper-scaling testing starts up again.
+
+Once the retry_with_backoff was refactored, the calls to the retry_with_backoff, inside the security group (SG) 
+blocks in the tomcat_worker had to be updated.
+
+At this point the tomcat_worker has attempt numbers that are being returned from the calls to retry_with_backoff.
+As simple max function is then used to record the highest attempt number encountered across all rull security group
+API applications. This is called the max_retry_observed value. Once this value is obtained for the current process
+it can be used in a call to the get_watchdog_timeout (see the functino above) to calculate a per process WATCHDOG_TIMEOUT
+(The max_retry_boserved is passed as an argument to the get_watchdog_timeout)
+
+Once the WATCHDOG_TIMEOUT has been obtained for that process, this can be passed down through the nested function 
+chain all the way down to where it is required in read_output_with_watchdog, the raw output stream orchestrator.
+
+The function call chain arguments all had to have WATCHDOG_TIMEOUT added (this will be shown in the code 
+snippets in the sections that follow).   
+
+The chain is: tomcat_worker uses run_test to call threaded_install. So the run_test has to incorporate the 
+WATCHDOG_TIMEOUT as an argument.
+
+def run_test needs to have WATCHDOG_TIMEOUT added to its arguments
+
+Next, within run_test, the result is a call to threaded_install and the WATCHDOG_TIMEOUT has to be passed to 
+threaded_install through this call. 
+
+def threaded_install needs to have WATCHDOG_TIMEOUT added to its arguments
+
+threaded_install then calls install_tomcat using the ThreadPoolExecutor and the WATCHDOG_TIMEOUT needs to be passed to 
+install_tomcat in the futures list: 
+
+```
+        #### Add the WATCHDOG_TIMEOUT to the futures list comprehension:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(
+                    install_tomcat,
+                    ip['PublicIpAddress'],
+                    ip['PrivateIpAddress'],
+                    ip['InstanceId'],
+                    WATCHDOG_TIMEOUT  # ← added here
+                )
+                for ip in instance_info
+            ]
+
 ```
 
-The process flow from the python perspective is the following (this helps restructure the code during refactoring):
+Next, def install_tomcat needs to have WATCHDOG_TIMEOUT added to its arguments
 
-main() calls tomcat_worker in the multi-processing context (through the tomcat_worker_wrapper; the wrapper is used for
-main aggregate level log orchestration).   The tomcat_worker is a process level function.
+install_tomcat calls the raw output orchestrator read_output_with_watchdog which is the final function that actually uses
+this WATCHDOG_TIMEOUT at a per thread level. The process level WATCHDOG_TIMEOUT is used for all the threads in the process
+when processing the raw output from the commmands that are applied to the nddes (threads) in the process.
 
-tomcat_worker performs a retry_with_backoff on the security group configurations across all the nodes in that process. 
-This is an exponential backoff algorithm.    This call is done per security group configuration as AWS processes the 
-burst of API requests to set the security group configurations on all the nodes in the process. When hyper-scaling 
-(for example, 512 total nodes), things can get bogged down the the exponential backoff helps greatly.
+The call in install_tomcat is the following: 
+```
+                   #### Add the WATCHDOG_TIMEOUT to the final read_output_with_watchdog function call
+                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip, WATCHDOG_TIMEOUT)
+```
 
-Once this is performed by tomcat_worker using the retry_with_backoff for each security group configuration (there are 3 of
-them currently) on the nodes, a max retry count can be obtained. This is the metric that is used in the contention_penalty
-in the get_watchdog_timeout function above.
+def read_output_with_watchdog then used "timeout" internally as the WATCHDOG_TIMEOUT for the processing of the 
+raw output from the nodes.
+The code for this function did not have to be changed other than using "timeout" as the local variable 
 
-tomacat_worker calls run_test to invoke threaded_install (another process level function) which then calls 
-install_tomcat through the ThreadPoolExecutor to work on the nodes.
 
-So step 1 in the process is main() calls tomcat_worker which calls run_test at the process level.
 
-For step 2, inside run_test, the actual WATCHDOG_TIMEOUT variable gets a value by calling the get_watchdog_timeout 
-function above.
+```
+#### Add the WATCHDOG_TIMEOUT (timeout) to the read_output_with_watchdog. It is no longer global so replace the name
+#### WATCHDOG_TIKMEOUT wiht timeout. It has beeen completely refactored to be process level rather than global.
+#def read_output_with_watchdog(stream, label, ip):
+def read_output_with_watchdog(stream, label, ip, timeout):
 
-Step 3 is get_watchdog_timout calculating the value for WATCHDOG_TIMEOUT and returning it to run_test
+    stall_count = 0
+    collected = b''
+    start = time.time()
 
-Step 4 is when run_test calls threaded_install which calls install_tomcat. At this point the WATCHDOG_TIMEOUT is
-defined and can be used by the read_output_with_watchdog that install_tomcat uses to get the raw output (STODOUT and 
-STDERR) from the node that it is working on.   
+    while True:
+        if stream.channel.recv_ready():  # these are the key changes from METHOD1. This is RAW:
+            try:
+                chunk = stream.channel.recv(4096)
+                collected += chunk
+                print(f"[{ip}] 📥 Watchdog read: {len(chunk)} bytes on {label}")
+                break  # Exit after first successful read
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Failed reading {label}: {e}")
+                break
 
-Fron this flow, once can clearly see that the WATCHDOG_TIMEOUT is a process level variable that is used by 
+        elapsed = time.time() - start
+        #if elapsed > WATCHDOG_TIMEOUT:
+        if elapsed > timeout:
+            stall_count += 1
+            print(f"[{ip}] ⏱️  Watchdog timeout on {label} read. Stall count: {stall_count}")
+            if stall_count >= STALL_RETRY_THRESHOLD:
+                print(f"[{ip}] 🔄 Stall threshold exceeded on {label}. Breaking loop.")
+                break
+            start = time.time()
+
+        time.sleep(1)
+
+    # Post-loop grace flush
+    flush_deadline = time.time() + 10  # Grace window
+    while time.time() < flush_deadline:
+        if stream.channel.recv_ready():
+            try:
+                chunk = stream.channel.recv(4096)
+                collected += chunk
+                print(f"[{ip}] 📥 Post-loop flush read: {len(chunk)} bytes on {label}")
+                break
+            except Exception as e:
+                print(f"[{ip}] ⚠️ Post-loop flush read failed on {label}: {e}")
+        time.sleep(0.5)
+
+    # Decode and preview
+    output = collected.decode(errors="ignore")
+    lines = output.strip().splitlines()
+    preview = "\n".join(lines[:3])
+    print(f"[{ip}] 🔍 Final output after flush (first {min(len(lines),3)} lines):\n{preview}")
+
+    # Stall logic
+    stalled = stall_count >= STALL_RETRY_THRESHOLD and not output.strip()
+    return output, stalled
+```
+
+
+From this flow, once can clearly see that the WATCHDOG_TIMEOUT is a process level variable that is used by 
 install_tomcat on each thread in the process when install_tomcat invokes read_output_with_watchdog.
 
 The current issue is related to getting the max retries from the retry_with_backoff at the process level so that it 
-can be used to calculate the WATCHDOG_TIMEOUT at the process level. WATCHDOG_TIMOUT is currently defined as a global
-variable and thus it is the same across all processes. This is not working as designed and needs to be refactored.
+can be used to calculate the WATCHDOG_TIMEOUT at the process level. This issue has been fully resolved with the code
+refactoring in the sections below. Each refactored function or area of the function is shown and the comments are self
+explanatory for the purposes of this README.
+
+
+
+
+### Code refactoring blocks and functions: 
+
+
 
 
 
