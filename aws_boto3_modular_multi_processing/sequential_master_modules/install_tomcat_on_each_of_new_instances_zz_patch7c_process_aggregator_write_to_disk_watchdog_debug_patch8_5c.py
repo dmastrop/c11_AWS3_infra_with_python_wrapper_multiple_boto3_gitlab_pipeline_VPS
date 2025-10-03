@@ -6738,11 +6738,40 @@ def main():
    
 
     ##### DEBUGX code insertion will be here before the args_list for the SG group id list issue.
+    ##### This code is to fix the security_group_ids in the args_list being the full list for ALL the nodes in the execution 
+    ##### run. This should not be the case.  It should only be the nodes(threads) in the current process. So if 2 threads per
+    ##### process and 16 nodes total over 8 processes, it should be a list of only 2 security group ids,  not all 16
+    ##### NOTE: do not change the global security_group_ids, but transform it here and use it in the args_list only.  
+    ##### changing the global security_group_ids might disrupt upper level orchestration logic 
 
 
-    args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
 
-    #### DEBUGX-MAIN for the SG issue with hyper-scaling
+
+    ##### This is the original code, using the security_group_ids (all the node security groups)
+    #args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
+
+    ##### This is the code to transform the list security_group_ids to a process level list of security group ids that pertain 
+    ##### only to the list of nodes in the chunk that the process is handling.
+    ##### The name for this process chunk specific list of security group ids is sg_chunks
+    sg_chunks = []
+    for chunk in chunks:
+        sg_chunk = [
+            sg['GroupId']
+            for reservation in response['Reservations']
+            for instance in reservation['Instances']
+            for sg in instance['SecurityGroups']
+            if instance['InstanceId'] in [node['InstanceId'] for node in chunk]
+            and instance['InstanceId'] != exclude_instance_id
+        ]
+        sg_chunks.append(sg_chunk)
+
+
+    ##### And create the args_list that is used in the multiprocessing.Pool using this sg_chunk rather than security_group_ids
+    args_list = [(chunk, sg_chunk, max_workers) for chunk, sg_chunk in zip(chunks, sg_chunks)]
+
+
+
+    #####  DEBUGX-MAIN for the SG issue with hyper-scaling
     for i, args in enumerate(args_list):
         chunk, sg_ids, max_workers = args
         print(f"[DEBUGX-MAIN] Process {i}: SG IDs = {sg_ids}")
