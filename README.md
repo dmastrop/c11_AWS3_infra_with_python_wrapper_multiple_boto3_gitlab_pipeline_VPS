@@ -472,6 +472,427 @@ explanatory for the purposes of this README.
 
 ### Code refactoring blocks and functions: 
 
+Note: the tomcat_worker, run_test, and threaded_install are process level functions
+install_tomcat is a thread level function. 
+read_output_with_watchdog  is a thread level function
+
+Both threaded_install and install_tomcat are inside of tomcat_worker
+retry_with_backoff and read_output_with_watchdog and run_test are global helper functions
+
+
+#### retry_with_backoff now returns the attempt for each security group API function call:
+
+```
+##### REVISION2 of retry_with_backoff. We will return the number of unsuccessful attempts for the API call to 
+##### my_ec2.authorize_security_group_ingress for each security group block (3 of them) used in the process
+##### Each call will update the max_retry_observed to the highest attempt number, and when complete the 
+##### max_retry_observed will have the maxiumm number of API calls that needed to be retried for that process' application
+##### of the 3 security group rules to all the nodes(threads) in that process. It is a per process max count.
+##### Note that the calls to retry_with_backoff are made from tomcat_worker (the 3 SG blocks) and max_retry_observed is
+##### updated in that function, not this function. 
+##### max_retry_observed is essentially a record keeper of the latest and highest attempt number from all 3 SG API calls 
+##### as the rules are applied to the nodes in the process and is local only to tomcat_worker and not in retry_with_backoff
+
+def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, **kwargs):
+    """
+    Wraps an AWS API call with exponential backoff on RequestLimitExceeded.
+    Returns the number of attempts it took to succeed (0-based).
+    If all retries fail, returns max_retries.
+    """
+    print(f"[RETRY] Wrapper invoked for {func.__name__} with max_retries={max_retries}")
+
+    for attempt in range(max_retries):
+        try:
+            if attempt == 0 and "authorize_security_group_ingress" in func.__name__:
+                print(f"[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for {func.__name__}")
+
+                # This is a synthetic injection to test the code. This will induce an attempt count of 1 and a 
+                # RequestLimitExceeded for each SG call to this function. This is for testing purposes only.
+                raise botocore.exceptions.ClientError(
+                    {"Error": {"Code": "RequestLimitExceeded", "Message": "Synthetic throttle"}},
+                    "FakeOperation"
+                )
+
+            if attempt > 0:
+                print(f"[RETRY] Attempt {attempt + 1} for {func.__name__} (args={args}, kwargs={kwargs})")
+
+            result = func(*args, **kwargs) # execute the API call. In this case for the SG code blocks, they are calling 
+            # my_ec2.authorize_security_group_ingress
+
+            return attempt  # success on this attempt. If the result= func call is  not successful it will hit the except below
+            # and the attempt index will be incremented.
+
+        #### If RequestLimitExceeded then this if block below will be hit and use exponential backoff and then increment
+        #### the attempt and try again with the if attempt > 0 block above submitting a new API request to AWS (attempt 1, 
+        #### for example)
+        except botocore.exceptions.ClientError as e:
+            if "RequestLimitExceeded" in str(e):
+                delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
+                time.sleep(delay)
+
+            #### If the attempt succeeds then the call above will return the attempt. If that attempt fails due to 
+            #### rule already exists, then we still want to return the current attempt count, even if duplicate.
+            #### The current attempt count is a reflection of the API contention and we do not want to lose that metric
+            #### in the adaptive watchdog calculation.
+            elif "InvalidPermission.Duplicate" in str(e):
+                print(f"[RETRY] Duplicate rule detected on attempt {attempt + 1}")
+                return attempt  # ← return the attempt count even on duplicate
+
+
+
+            ####  This will not return the attempt count. If this is hit something crashed.
+            ####  - The API call **did not succeed**
+            ####  - The error is **not one that has been explicitly handled**
+            ####  - don’t want to treat a crash as a valid retry metric
+            else:
+                raise
+
+    # All attempts failed
+    print(f"[RETRY] Max retries exceeded for {func.__name__}")
+    return max_retries
+
+```
+
+#### tomcat_worker security group block calls to retry_with_backoff using the my_ec2.authorize_security_group_ingress API:
+
+
+There are currently 3 security groups for the 3 rules that are applied to all the nodes (threads) in each process. 
+These are done in parallel at the thread level and also at the process level. When hyper-scaling processes this can cause
+API contention.
+
+
+```
+#### [[tomcat_worfker]]
+#### The new SG blocks of code for the refactored retry_with_backoff. The retry_with_backoff now returns the number of 
+#### attempts for the API call to get through for each SG rule application to all the nodes (threads) in the current process
+#### This is entirely a process level application.  Each SG rule application will call the retry_with_backoff which will 
+#### call the my_ec2.authorize_security_group_ingress AWS API to apply the rules to the nodes. It will retrun the number of
+#### attempts which will be recorded as retry_count
+#### max_retry_observed will track the maxiumum of all the retry_counts for all the SG rule applications for this process
+#### This will capture the **highest retry count** seen across all SG rule applications for THIS PROCESS
+#### The final max_retry_observed will then be used to calculate WATCHDOG_TIMEOUT via the call to get_watchdog_timeout
+#### (see next block below the SG blocks)
+
+
+
+
+    for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
+        try:
+            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=22")
+
+            retry_count = retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 22,
+                    'ToPort': 22,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+
+            print(f"[SECURITY GROUP] Successfully applied port 22 to sg_id={sg_id}")
+
+
+        except my_ec2.exceptions.ClientError as e:
+
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=22")
+            else:
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=22 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+
+
+
+    for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
+        try:
+            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
+
+            retry_count = retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 80,
+                    'ToPort': 80,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+
+            print(f"[SECURITY GROUP] Successfully applied port 80 to sg_id={sg_id}")
+
+
+        except my_ec2.exceptions.ClientError as e:
+
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=80")
+            else:
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=80 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+
+
+    for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
+        try:
+            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080")
+
+            retry_count = retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 8080,
+                    'ToPort': 8080,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+
+            print(f"[SECURITY GROUP] Successfully applied port 8080 to sg_id={sg_id}")
+
+
+        except my_ec2.exceptions.ClientError as e:
+
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=8080")
+            else:
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=8080 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+```
+
+
+
+
+
+
+#### removal of the WATCHDOG_TIMEOUT calculation in run_test
+
+All of this code was moved out of the run_test and into the calling funcction tomcat_worker. The WATCHDOG_TIMEOUT is added
+to the call to threaded_install from run_test (see below):
+
+```
+
+        # ─── NEW BLOCK  Code block3 for adaptive WATCHDOG_TIMEOUT ───
+        # By the time this function is called in tomcat_worker all the  retry_with_backoff calls have happened already in tomcat_worker
+        # so max_retry_observed is now set for this process.(modified retry_with_backoff calculates this as max_retry_observed
+        # We can compute the dynamic WATCHDOG_TIMEOUT from here with call to get_watchdog_timeout
+
+
+        ##### WATCHDOG_TIMEOUT is not global. It is calculated per process. Process memory is not shared across processes.
+
+        #global WATCHDOG_TIMEOUT
+
+
+        # extract node_count from the first arg to func (threaded_install)
+        # node_count = len(args[0]) if args and isinstance(args[0], (list, tuple)) else 0
+        # instance_type = os.getenv("INSTANCE_TYPE", "micro")
+
+
+
+        ###### COMMENT OUT THIS ENTIRE BLOCK. THIS HAS BEEN MOVED TO tomcat_worker right after the SG rule application
+        ## Pull node count and instance type from environment
+        #node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+        #instance_type = os.getenv("instance_type", "micro")
+
+        ## call the get_watchdog_timeout to calculate the adaptive WATCHDOG_TIMEOUT value
+        ## max_retry_observed is iteratively set  in the modified retry_with_backoff functin.
+        ##WATCHDOG_TIMEOUT = get_watchdog_timeout(
+        ##    node_count=node_count,
+        ##    instance_type=instance_type,
+        ##    peak_retry_attempts=max_retry_observed
+        ##)
+
+
+        #WATCHDOG_TIMEOUT = get_watchdog_timeout(
+        #    node_count=node_count,
+        #    instance_type=instance_type,
+        #    max_retry_observed=max_retry_observed
+        #)
+        #
+        #print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
+        #      f"instance_type={instance_type}, node_count={node_count}, "
+        #      f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+
+
+
+        # ─── actual call to threaded_install which returns thread_registry which is process_registry ───
+        # thread_registry will be assigned the important process_registry in tomcat_worker() the calling function of run_test
+
+        #result = func(*args, **kwargs)
+        # Passing the WATCHDO_TIMEOUT from run_test to func which is threaded_install
+        result = func(*args, WATCHDOG_TIMEOUT=WATCHDOG_TIMEOUT, **kwargs)
+
+        print(f"[TRACE][run_test] func returned type: {type(result)}")
+
+        return result  # move this within the benchnark context
+
+```
+
+
+
+
+
+
+
+#### moving the WATCHDOG_TIMEOUT calculation function call (using get_watchdog_timeout) to tomcat_worker and passing the 
+WATCHDOG_TIMEOUT to run_test:
+
+
+This code block was removed from run_test and moved to tomcat_worker, the parent function. The WATCHDOG_TIMEOUT
+will then be passed down to the nested function calls as explained in the earlier section above.
+
+
+```
+
+    ##### [[tomcat_worker]] add debug prior to the WATCHDOG_TIMEOUT calculation call to get_watchdog_timeout
+    #print(f"[WATCHDOG METRIC] [PID {pid}] Final max_retry_observed = {max_retry_observed}")
+    print(f"[WATCHDOG METRIC] [PID {os.getpid()}] Final max_retry_observed = {max_retry_observed}")
+
+
+    ###### ─── Adaptive Watchdog Timeout Calculation ───
+    ###### This was moved out of run_test and in tomcat_worker. The WATCHDOG_TIMEOUT can then be easily passed to run_test 
+    ###### below.
+
+    # Pull node count and instance type from environment
+    node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+    instance_type = os.getenv("instance_type", "micro")
+
+    # Calculate adaptive timeout
+    WATCHDOG_TIMEOUT = get_watchdog_timeout(
+        node_count=node_count,
+        instance_type=instance_type,
+        max_retry_observed=max_retry_observed
+    )
+
+    print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
+          f"instance_type={instance_type}, node_count={node_count}, "
+          f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+
+```
+
+In tomcat_worker the  WATCHDOG_TIMEOUT is then passed to run_test: 
+
+```
+    ##### Add the WATCHDOG_TIMEOUT (caclucated earlier in tomcat_worker) as an argument to run_test
+
+    process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers, WATCHDOG_TIMEOUT=WATCHDOG_TIMEOUT)
+```
+
+
+#### Passing WATCHDOG_TIMEOUT from run_test to threaded_install:
+
+Add WATCHDOG_TIMEOUT to def run_test: 
+
+Note that the func is threaded_install (see section above)
+
+```
+def run_test(test_name, func, *args, WATCHDOG_TIMEOUT=None, min_sample_delay=50, max_sample_delay=250, sample_probability=0.1, **kwargs):
+```
+
+
+Then pass WATCHDOG_TIMEOUT to threaded_install:
+
+```
+
+        # ─── actual call to threaded_install which returns thread_registry which is process_registry ───
+        # thread_registry will be assigned the important process_registry in tomcat_worker() the calling function of run_test
+
+        #result = func(*args, **kwargs)
+        # Passing the WATCHDO_TIMEOUT from run_test to func which is threaded_install
+        result = func(*args, WATCHDOG_TIMEOUT=WATCHDOG_TIMEOUT, **kwargs)
+
+        print(f"[TRACE][run_test] func returned type: {type(result)}")
+
+        return result  # move this within the benchnark context
+```
+
+
+
+
+
+
+#### Passing WATCHDOG_TIMEOUT from threaded_install to install_tomcat via the futures list in ThreadPoolExecutor:
+
+Add WATCHDOG_TIKMEOUT to def threaded_install:
+
+```
+    # Pass the WATCHDOG_TIMEOUT to threaded_install
+    def threaded_install(instance_info, max_workers, WATCHDOG_TIMEOUT=None):
+```
+
+
+Then pass the WATCHDOG_TIMEOUT to install_tomcat via the futures list in ThreadPoolExecutor for per thread use:
+
+
+```
+        #### Add the WATCHDOG_TIMEOUT to the futures list comprehension:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(
+                    install_tomcat,
+                    ip['PublicIpAddress'],
+                    ip['PrivateIpAddress'],
+                    ip['InstanceId'],
+                    WATCHDOG_TIMEOUT  # ← added here
+                )
+                for ip in instance_info
+            ]
+
+            print(f"[DEBUG] Preparing install_tomcat for {len(instance_info)} instances with WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}")
+
+```
+
+
+#### Passing WATCHDOG_TIMEOUT from install_tomcat to read_output_with_watchdog thread level raw output orchestrator:
+
+
+Add the WATCHDOG_TIMEOUT to def install_tomcat: 
+
+```
+    #def install_tomcat(ip, private_ip, instance_id):
+    ##### Add the WATCHDOG_TIMEOUT to the arg list for install_tomcat (passed from the threaded_install ThreadPoolExecutor
+    ##### futures list)
+    def install_tomcat(ip, private_ip, instance_id, WATCHDOG_TIMEOUT):
+        import uuid
+        ## install_tomcat is the definitive thread_uuid source. It is removed from calling function threaded_install
+        thread_uuid = uuid.uuid4().hex[:8]
+```
+
+
+
+
+Call read_output_with_watchdog with WATCHDOG_TIMEOUT argument: 
+(this is within the for idx loop and in the for attempt loop)
+
+
+```
+                    #### Add the WATCHDOG_TIMEOUT to the final read_output_with_watchdog function call
+                    stdout_output, stdout_stalled = read_output_with_watchdog(stdout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                    stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip, WATCHDOG_TIMEOUT)
+```
+
+Once the read_output_with_watchdog gets the WATCHDOG_TIKMOUT is uses it as "timeout". See the section above on this and the
+full snipped of the code.
+
+This is where the adatpive watchdog timeout is actually used, at the thread level for the raw output orchestration from 
+each node.
 
 
 
