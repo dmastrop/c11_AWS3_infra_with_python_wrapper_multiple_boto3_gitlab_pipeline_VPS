@@ -269,7 +269,7 @@ in python multi-processing. Most of the refactoring was in this area of the code
 used to record the highest number of API attempts to push the rule(s) in the security group to all the nodes (threads) in 
 the process.  This is done across all the security group blocks of code in the tomcat_worker function.
 
-A base is used for the lower bound of the watchdog timemout.
+- A base is used for the lower bound of the watchdog timemout.
 
 
 ```
