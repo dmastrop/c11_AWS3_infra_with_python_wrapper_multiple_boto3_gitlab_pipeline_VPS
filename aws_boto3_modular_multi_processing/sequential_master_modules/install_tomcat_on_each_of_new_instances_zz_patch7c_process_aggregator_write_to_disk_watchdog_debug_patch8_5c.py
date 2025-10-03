@@ -6738,6 +6738,15 @@ def main():
     
     args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
 
+    #### DEBUG-MAIN for the SG issue with hyper-scaling
+    for i, args in enumerate(args_list):
+        chunk, sg_ids, max_workers = args
+        print(f"[DEBUGX-MAIN] Process {i}: SG IDs = {sg_ids}")
+
+
+
+
+
     # call to the multiprocessing.Pool which calls tomcat_worker function above to process the chunk data of IPs with
     # max_workker threads. chunk_size number of IPs will be in the chunk passed to tomcat_worker
     
