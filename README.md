@@ -887,7 +887,7 @@ Call read_output_with_watchdog with WATCHDOG_TIMEOUT argument:
                     stderr_output, stderr_stalled = read_output_with_watchdog(stderr, "STDERR", ip, WATCHDOG_TIMEOUT)
 ```
 
-Once the read_output_with_watchdog gets the WATCHDOG_TIKMOUT is uses it as "timeout". See the section above on this and the
+Once the read_output_with_watchdog gets the WATCHDOG_TIMEOUT is uses it as "timeout". See the section above on this and the
 full snipped of the code.
 
 This is where the adatpive watchdog timeout is actually used, at the thread level for the raw output orchestration from 
