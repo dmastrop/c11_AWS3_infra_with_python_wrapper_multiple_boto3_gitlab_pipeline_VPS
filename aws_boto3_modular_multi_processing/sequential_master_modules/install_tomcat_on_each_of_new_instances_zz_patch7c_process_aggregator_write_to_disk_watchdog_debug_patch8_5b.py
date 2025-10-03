@@ -918,11 +918,25 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
             return attempt  # success on this attempt. If the result= func call is  not successful it will hit the except below
             # and the attempt index will be incremented.
 
+
+        #### If RequestLimitExceeded then this if block below will be hit and use exponential backoff and then increment
+        #### the attempt and try again with the if attempt > 0 block above submitting a new API request to AWS (attempt 1, 
+        #### for example)
         except botocore.exceptions.ClientError as e:
             if "RequestLimitExceeded" in str(e):
                 delay = min(max_delay, base_delay * (2 ** attempt)) + random.uniform(0, 1)
                 print(f"[Retry {attempt + 1}] RequestLimitExceeded. Retrying in {delay:.2f}s...")
                 time.sleep(delay)
+           
+            #### If the attempt succeeds then the call above will return the attempt. If that attempt fails due to 
+            #### rule already exists, then we still want to return the current attempt count, even if duplicate.
+            #### The current attempt count is a reflection of the API contention and we do not want to lose that metric
+            #### in the adaptive watchdog calucation.
+            elif "InvalidPermission.Duplicate" in str(e):
+                print(f"[RETRY] Duplicate rule detected on attempt {attempt + 1}")
+                return attempt  # ← return the attempt count even on duplicate
+            
+            ####  This will not return the attempt count. If this is hit something crashed.
             else:
                 raise
 
