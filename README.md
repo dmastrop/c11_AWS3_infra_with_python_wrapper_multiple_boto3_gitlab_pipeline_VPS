@@ -751,8 +751,7 @@ to the call to threaded_install from run_test (see below):
 
 
 
-#### moving the WATCHDOG_TIMEOUT calculation function call (using get_watchdog_timeout) to tomcat_worker and passing the 
-WATCHDOG_TIMEOUT to run_test:
+#### moving the WATCHDOG_TIMEOUT calculation function call (using get_watchdog_timeout) to tomcat_worker and passing the WATCHDOG_TIMEOUT to run_test:
 
 
 This code block was removed from run_test and moved to tomcat_worker, the parent function. The WATCHDOG_TIMEOUT
