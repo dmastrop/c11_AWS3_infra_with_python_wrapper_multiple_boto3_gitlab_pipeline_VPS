@@ -6735,10 +6735,14 @@ def main():
         print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
         print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
 
-    
+   
+
+    ##### DEBUGX code insertion will be here before the args_list for the SG group id list issue.
+
+
     args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
 
-    #### DEBUG-MAIN for the SG issue with hyper-scaling
+    #### DEBUGX-MAIN for the SG issue with hyper-scaling
     for i, args in enumerate(args_list):
         chunk, sg_ids, max_workers = args
         print(f"[DEBUGX-MAIN] Process {i}: SG IDs = {sg_ids}")
