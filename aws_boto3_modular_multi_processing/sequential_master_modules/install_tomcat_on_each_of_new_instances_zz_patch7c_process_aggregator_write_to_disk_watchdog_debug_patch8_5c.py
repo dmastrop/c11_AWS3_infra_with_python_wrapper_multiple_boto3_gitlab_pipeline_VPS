@@ -6613,6 +6613,16 @@ def main():
         if instance['InstanceId'] != exclude_instance_id
     ]
 
+
+    print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+
+
+
+
+
 #    while True:
 #        response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
 #        all_running = all(instance['InstanceState']['Name'] == 'running' for instance in response_statuses['InstanceStatuses'])
