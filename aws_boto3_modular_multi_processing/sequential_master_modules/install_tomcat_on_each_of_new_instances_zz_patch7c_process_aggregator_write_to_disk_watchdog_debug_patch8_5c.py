@@ -6750,9 +6750,25 @@ def main():
     ##### This is the original code, using the security_group_ids (all the node security groups)
     #args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
 
+
+
+    #### Print the original security_group_ids before the tranform to sg_chunk
+    print(f"[DEBUGX-ORIG] Full security_group_ids before chunking: {security_group_ids}")
+
+
+
     ##### This is the code to transform the list security_group_ids to a process level list of security group ids that pertain 
     ##### only to the list of nodes in the chunk that the process is handling.
-    ##### The name for this process chunk specific list of security group ids is sg_chunks
+    ##### The name for this process chunk specific list of security group ids is sg_chunk
+    ##### sg_chunks is the full list of per-chunk SG lists — i.e., a list of lists
+    ##### sg_chunk is the individual SG list for one chunk
+    ##### When zip chunks and sg_chunks, there is a  pairing each chunk with its corresponding SG list
+    # each tuple in `args_list` contains:
+    #- A chunk of instances
+    #- The SGs for those instances
+    #- The max worker count
+
+
     sg_chunks = []
     for chunk in chunks:
         sg_chunk = [
@@ -6771,10 +6787,12 @@ def main():
 
 
 
-    #####  DEBUGX-MAIN for the SG issue with hyper-scaling
+    #####  DEBUGX-MAIN for the SG issue with hyper-scaling. This has the transformed security group per process chunk list 
+    #####  sg_chunk
     for i, args in enumerate(args_list):
-        chunk, sg_ids, max_workers = args
-        print(f"[DEBUGX-MAIN] Process {i}: SG IDs = {sg_ids}")
+        #chunk, sg_ids, max_workers = args
+        chunk, sg_chunk, max_workers = args
+        print(f"[DEBUGX-MAIN] Process {i}: SG IDs = {sg_chunk}")
 
 
 
