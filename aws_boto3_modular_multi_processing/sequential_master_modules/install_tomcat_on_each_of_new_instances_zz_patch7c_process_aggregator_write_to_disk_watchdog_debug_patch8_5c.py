@@ -6607,7 +6607,7 @@ def main():
 
     
     ###### Block1 goes with Block1b below
-    #response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+    response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
     #instance_ids = [
     #    instance['InstanceId']
     #    for reservation in response['Reservations']
