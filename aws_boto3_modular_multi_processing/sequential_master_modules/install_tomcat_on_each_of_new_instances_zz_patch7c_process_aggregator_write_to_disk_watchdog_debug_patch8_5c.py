@@ -6605,21 +6605,44 @@ def main():
     exclude_instance_id = 'i-0aaaa1aa8907a9b78'
     print(f"exclude_instance_id: {exclude_instance_id}")
 
-    response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
-    instance_ids = [
-        instance['InstanceId']
-        for reservation in response['Reservations']
-        for instance in reservation['Instances']
-        if instance['InstanceId'] != exclude_instance_id
-    ]
+    
+    ###### Block1 goes with Block1b below
+    #response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+    #instance_ids = [
+    #    instance['InstanceId']
+    #    for reservation in response['Reservations']
+    #    for instance in reservation['Instances']
+    #    if instance['InstanceId'] != exclude_instance_id
+    #]
 
 
-    print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
-    for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+    #print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
+    #for reservation in response['Reservations']:
+    #    for instance in reservation['Instances']:
+    #        print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
 
+    ##### Block2 goes with Block2b below. This is the paginator for hyper-scaling.
+    paginator = my_ec2.get_paginator('describe_instances')
+    response_iterator = paginator.paginate(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
 
+    all_instances = []
+    reservation_count = 0
+    instance_count = 0
+
+    for page in response_iterator:
+        reservation_count += len(page['Reservations'])
+        for reservation in page['Reservations']:
+            for instance in reservation['Instances']:
+                if instance['InstanceId'] != exclude_instance_id:
+                    all_instances.append(instance)
+                instance_count += 1
+                print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+
+    print(f"[DEBUGX-RESERVATIONS] Total reservations across pages: {reservation_count}")
+    print(f"[DEBUGX-INSTANCES] Total instances across pages: {instance_count}")
+
+    instance_ids = [instance['InstanceId'] for instance in all_instances]
+    
 
 
 
@@ -6687,13 +6710,29 @@ def main():
         print("No public IPs found. Exiting.")
         sys.exit(1)
 
+
+
+    ###### BLOCK1b goes with BLOCK1 above
+    #security_group_ids = [
+    #    sg['GroupId']
+    #    for reservation in response['Reservations']
+    #    for instance in reservation['Instances']
+    #    for sg in instance['SecurityGroups']
+    #    if instance['InstanceId'] != exclude_instance_id
+    #]
+
+
+    ##### BLOCK2b goes with paginator BLOCK2 above
     security_group_ids = [
         sg['GroupId']
-        for reservation in response['Reservations']
-        for instance in reservation['Instances']
+        for instance in all_instances
         for sg in instance['SecurityGroups']
-        if instance['InstanceId'] != exclude_instance_id
     ]
+
+
+
+
+
 
     ### Configurable parameters
     chunk_size = 2  # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
