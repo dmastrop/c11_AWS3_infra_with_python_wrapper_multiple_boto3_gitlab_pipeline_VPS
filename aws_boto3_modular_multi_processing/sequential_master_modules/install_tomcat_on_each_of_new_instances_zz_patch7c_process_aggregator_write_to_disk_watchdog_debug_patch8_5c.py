@@ -4463,6 +4463,27 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                     continue
 
+            #### this was found during 512 node testing with the pagination code.
+            except EOFError as e:
+                print(f"[{ip}] 💥 EOFError during SSH handshake on attempt {attempt + 1}: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_failed", "eof_error", "ssh_failure"]
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
 
         else:
             print(f"Failed to connect to {ip} after multiple attempts")
