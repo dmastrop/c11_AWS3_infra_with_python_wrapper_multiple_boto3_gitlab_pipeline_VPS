@@ -6783,7 +6783,7 @@ def main():
     # === Conditional SG Rehydration Pass ===
     if blank_sg_detected:
         print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
-        def describe_instances_in_batches(ec2_client, instance_ids):
+        def describe_instances_metadata_in_batches(ec2_client, instance_ids):
             all_instances = []
             for i in range(0, len(instance_ids), 100):
                 batch = instance_ids[i:i + 100]
@@ -6793,7 +6793,7 @@ def main():
                 ])
             return all_instances
 
-        all_instances = describe_instances_in_batches(ec2_client, instance_ids)
+        all_instances = describe_instances_metadata_in_batches(ec2_client, instance_ids)
         for instance in all_instances:
             instance_id = instance.get('InstanceId')
             sg_list = instance.get('SecurityGroups', [])
