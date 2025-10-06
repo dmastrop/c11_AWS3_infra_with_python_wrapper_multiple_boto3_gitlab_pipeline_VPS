@@ -6764,20 +6764,23 @@ def main():
     ###### Add another 30 second propagation delay and then perform an initial SG sweep, and if that is still blank do an
     ###### SG re-hydration call to describe_instances_in_batches (which the functions above use) to get the sg_list which is 
     ###### SecurityGroups which is then used to create security_group_ids (Block1b below)
+    ###### Make sure to exclude the controller node exclude_instance_id when determining if blank_sg_detected
 
     # === SG Propagation Delay ===
     print("[DEBUGX-SG-DELAY] Sleeping 30s to allow SG propagation...")
     time.sleep(30)
 
-    # === Initial SG Sweep ===
+    # === Initial SG Sweep (excluding controller) ===
     blank_sg_detected = True  # Assume blank until proven otherwise
 
     for reservation in response['Reservations']:
         for instance in reservation['Instances']:
             instance_id = instance.get('InstanceId')
+            if instance_id == exclude_instance_id:
+                continue  # Skip controller node
             sg_list = instance.get('SecurityGroups', [])
             print(f"[DEBUGX-SG-FIRSTSWEEP] Instance {instance_id} → SGs: {sg_list}")
-            if sg_list:  # Found at least one SG
+            if sg_list:  # Found at least one SG on a worker node
                 blank_sg_detected = False
 
     # === Conditional SG Rehydration Pass ===
@@ -6796,8 +6799,11 @@ def main():
         all_instances = describe_instances_metadata_in_batches(ec2_client, instance_ids)
         for instance in all_instances:
             instance_id = instance.get('InstanceId')
+            if instance_id == exclude_instance_id:
+                continue  # Skip controller again
             sg_list = instance.get('SecurityGroups', [])
             print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
+
 
 
 
