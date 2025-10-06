@@ -6754,6 +6754,15 @@ def main():
 
 
 
+
+
+
+    ###### New SG Sweep code will go here 
+
+
+
+
+
     ##### Block1b goes with Block1 above
     security_group_ids = [
         sg['GroupId']
