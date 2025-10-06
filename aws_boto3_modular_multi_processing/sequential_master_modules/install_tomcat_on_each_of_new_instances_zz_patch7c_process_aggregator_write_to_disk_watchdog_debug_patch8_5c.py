@@ -6757,9 +6757,47 @@ def main():
 
 
 
-    ###### New SG Sweep code will go here 
+    ###### New SG Sweep code: This is a patch to troubleshoot hyper-scaling (512 processes) issues with security_group_ids being
+    ###### blank.  This only occurs at higher parallel processes.
+    ###### The code right above calls orchestrate_instance_launch_and_ip_polling which calls wait_for_instance_visibility and
+    ###### then wait_for_all_public_ips. The timemout delay is currently set at 180 seconds on both of these functions. 
+    ###### Add another 30 second propagation delay and then perform an initial SG sweep, and if that is still blank do an
+    ###### SG re-hydration call to describe_instances_in_batches (which the functions above use) to get the sg_list which is 
+    ###### SecurityGroups which is then used to create security_group_ids (Block1b below)
 
+    # === SG Propagation Delay ===
+    print("[DEBUG] Sleeping 30s to allow SG propagation...")
+    time.sleep(30)
 
+    # === Initial SG Sweep ===
+    blank_sg_detected = True  # Assume blank until proven otherwise
+
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            instance_id = instance.get('InstanceId')
+            sg_list = instance.get('SecurityGroups', [])
+            print(f"[DEBUGX-SG] Instance {instance_id} → SGs: {sg_list}")
+            if sg_list:  # Found at least one SG
+                blank_sg_detected = False
+
+    # === Conditional SG Rehydration Pass ===
+    if blank_sg_detected:
+        print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
+        def describe_instances_in_batches(ec2_client, instance_ids):
+            all_instances = []
+            for i in range(0, len(instance_ids), 100):
+                batch = instance_ids[i:i + 100]
+                response = ec2_client.describe_instances(InstanceIds=batch)
+                all_instances.extend([
+                    inst for res in response['Reservations'] for inst in res['Instances']
+                ])
+            return all_instances
+
+        all_instances = describe_instances_in_batches(ec2_client, instance_ids)
+        for instance in all_instances:
+            instance_id = instance.get('InstanceId')
+            sg_list = instance.get('SecurityGroups', [])
+            print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
 
 
 
