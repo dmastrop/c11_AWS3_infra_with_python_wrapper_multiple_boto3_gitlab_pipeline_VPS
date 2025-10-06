@@ -6647,40 +6647,43 @@ def main():
     
     ###### Block1 goes with Block1b below
     response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
-    #instance_ids = [
-    #    instance['InstanceId']
-    #    for reservation in response['Reservations']
-    #    for instance in reservation['Instances']
-    #    if instance['InstanceId'] != exclude_instance_id
-    #]
+    instance_ids = [
+        instance['InstanceId']
+        for reservation in response['Reservations']
+        for instance in reservation['Instances']
+        if instance['InstanceId'] != exclude_instance_id
+    ]
 
 
-    #print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
-    #for reservation in response['Reservations']:
-    #    for instance in reservation['Instances']:
-    #        print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+    print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
 
-    ##### Block2 goes with Block2b below. This is the paginator for hyper-scaling.
-    paginator = my_ec2.get_paginator('describe_instances')
-    response_iterator = paginator.paginate(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
 
-    all_instances = []
-    reservation_count = 0
-    instance_count = 0
 
-    for page in response_iterator:
-        reservation_count += len(page['Reservations'])
-        for reservation in page['Reservations']:
-            for instance in reservation['Instances']:
-                if instance['InstanceId'] != exclude_instance_id:
-                    all_instances.append(instance)
-                instance_count += 1
-                print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
 
-    print(f"[DEBUGX-RESERVATIONS] Total reservations across pages: {reservation_count}")
-    print(f"[DEBUGX-INSTANCES] Total instances across pages: {instance_count}")
+    ###### Block2 goes with Block2b below. This is the paginator for hyper-scaling.
+    #paginator = my_ec2.get_paginator('describe_instances')
+    #response_iterator = paginator.paginate(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
 
-    instance_ids = [instance['InstanceId'] for instance in all_instances]
+    #all_instances = []
+    #reservation_count = 0
+    #instance_count = 0
+
+    #for page in response_iterator:
+    #    reservation_count += len(page['Reservations'])
+    #    for reservation in page['Reservations']:
+    #        for instance in reservation['Instances']:
+    #            if instance['InstanceId'] != exclude_instance_id:
+    #                all_instances.append(instance)
+    #            instance_count += 1
+    #            print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+
+    #print(f"[DEBUGX-RESERVATIONS] Total reservations across pages: {reservation_count}")
+    #print(f"[DEBUGX-INSTANCES] Total instances across pages: {instance_count}")
+
+    #instance_ids = [instance['InstanceId'] for instance in all_instances]
     
 
 
@@ -6751,22 +6754,22 @@ def main():
 
 
 
-    ###### BLOCK1b goes with BLOCK1 above
-    #security_group_ids = [
-    #    sg['GroupId']
-    #    for reservation in response['Reservations']
-    #    for instance in reservation['Instances']
-    #    for sg in instance['SecurityGroups']
-    #    if instance['InstanceId'] != exclude_instance_id
-    #]
-
-
-    ##### BLOCK2b goes with paginator BLOCK2 above
+    ##### Block1b goes with Block1 above
     security_group_ids = [
         sg['GroupId']
-        for instance in all_instances
+        for reservation in response['Reservations']
+        for instance in reservation['Instances']
         for sg in instance['SecurityGroups']
+        if instance['InstanceId'] != exclude_instance_id
     ]
+
+
+    ###### Block2b goes with paginator Block2 above
+    #security_group_ids = [
+    #    sg['GroupId']
+    #    for instance in all_instances
+    #    for sg in instance['SecurityGroups']
+    #]
 
 
 
@@ -6774,9 +6777,9 @@ def main():
 
 
     ### Configurable parameters
-    chunk_size = 2  # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
-    max_workers = 2 # Threads per process
-    desired_count = 6  # Max concurrent processes (NOT threads) for iniital batch.
+    chunk_size = 1  # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
+    max_workers = 1 # Threads per process
+    desired_count = 487  # Max concurrent processes (NOT threads) for iniital batch.
     #### For the 16 node test chunk_size of 2, max_workers of 2, and desired_count of 6 so that 2 processes are pooled for the
     #### last 4 of 16 nodes
     #### For the 512 test, it is one thread per process, so: chunk_size of 1, max_workers of 1, desired_count of 487 so that 
