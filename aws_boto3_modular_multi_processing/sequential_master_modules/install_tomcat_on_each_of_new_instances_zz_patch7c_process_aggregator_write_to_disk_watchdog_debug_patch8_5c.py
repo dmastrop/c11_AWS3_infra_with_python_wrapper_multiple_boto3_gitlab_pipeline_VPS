@@ -6136,7 +6136,25 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     import traceback
                     print(f"[ERROR][threaded_install] Future failed: {e}")
                     traceback.print_exc()
-                
+
+                    # Patch: Tag future failure in registry. The stub is for None, but if futures throws an error this will
+                    # now catch it. This was found during a 512 hyper-scaling test.
+                    pid = multiprocessing.current_process().pid
+                    failed_uuid = uuid.uuid4().hex[:8]
+                    failed_entry = {
+                        "status": "install_failed",
+                        "attempt": -1,
+                        "pid": pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": failed_uuid,
+                        "public_ip": ip if 'ip' in locals() else "unknown",
+                        "private_ip": private_ip if 'private_ip' in locals() else "unknown",
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_failed", "future_exception", type(e).__name__]
+                    }
+                    thread_registry[failed_uuid] = failed_entry
+                    logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
+        
 
 
 
