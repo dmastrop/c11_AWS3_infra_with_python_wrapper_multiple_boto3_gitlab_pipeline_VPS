@@ -4132,7 +4132,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #                raise
 
 
-#### [[tomcat_worfker]]
+#### [[tomcat_worker]]
 #### The new SG blocks of code for the refactored retry_with_backoff. The retry_with_backoff now returns the number of 
 #### attempts for the API call to get through for each SG rule application to all the nodes (threads) in the current process
 #### This is entirely a process level application.  Each SG rule application will call the retry_with_backoff which will 
@@ -4145,7 +4145,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
     ###### add DEBUGX for the SG issue at scale that we are seeing. 
-    print(f"[DEBUGX] Entering SG block with security_group_ids = {security_group_ids}")
+    print(f"[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = {security_group_ids}")
 
     for sg_id in set(security_group_ids):
         retry_count =0 # default a fallback for this local variable
@@ -6766,7 +6766,7 @@ def main():
     ###### SecurityGroups which is then used to create security_group_ids (Block1b below)
 
     # === SG Propagation Delay ===
-    print("[DEBUG] Sleeping 30s to allow SG propagation...")
+    print("[DEBUGX-SG-DELAY] Sleeping 30s to allow SG propagation...")
     time.sleep(30)
 
     # === Initial SG Sweep ===
@@ -6776,7 +6776,7 @@ def main():
         for instance in reservation['Instances']:
             instance_id = instance.get('InstanceId')
             sg_list = instance.get('SecurityGroups', [])
-            print(f"[DEBUGX-SG] Instance {instance_id} → SGs: {sg_list}")
+            print(f"[DEBUGX-SG-FIRSTSWEEP] Instance {instance_id} → SGs: {sg_list}")
             if sg_list:  # Found at least one SG
                 blank_sg_detected = False
 
@@ -6890,8 +6890,8 @@ def main():
 
 
 
-    #### Print the original security_group_ids before the tranform to sg_chunk
-    print(f"[DEBUGX-ORIG] Full security_group_ids before chunking: {security_group_ids}")
+    #### Print the original security_group_ids (complete list)  before the tranform to sg_chunk (process level list)
+    print(f"[DEBUGX-ORIG-POSTSG-ALL] Full security_group_ids before chunking: {security_group_ids}")
 
 
 
@@ -6930,7 +6930,7 @@ def main():
     for i, args in enumerate(args_list):
         #chunk, sg_ids, max_workers = args
         chunk, sg_chunk, max_workers = args
-        print(f"[DEBUGX-MAIN] Process {i}: SG IDs = {sg_chunk}")
+        print(f"[DEBUGX-MAIN-POSTSG-PROCESS] Process {i}: SG IDs = {sg_chunk}")
 
 
 
