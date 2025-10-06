@@ -239,6 +239,29 @@ STATUS_TAGS = {
 
 
 
+## UPDATES part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
+
+
+### Introduction:
+
+While testing for the adaptive watchdog timeout, it was found to work fine for the 16 node test but when hyperscaling to 
+512 nodes (512 processes with 1 thread per process), the security_group_ids list was coming up blank. This caused
+the contention penalty to zero out because the SG blocks call retry_with_backoff to assess the number of API re-attempts
+and that re-attempt number is used to calculate a max_retry_observed over all the SGs in the process. This max_retry_observed
+is used to calculate the contention_penalty in the adaptive watchdog timeout.  If the SGs are blank for all the  nodes, 
+there will be a max_retry_observed of 0 and a 0 contention_penalty.  This only occurs with the hyper-scaling test cases.
+```
+ contention_penalty = min(30, max_retry_observed * 2)  # up to +30s
+```
+
+
+
+
+
+
+
+
+
 
 
 ## UPDATES part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff

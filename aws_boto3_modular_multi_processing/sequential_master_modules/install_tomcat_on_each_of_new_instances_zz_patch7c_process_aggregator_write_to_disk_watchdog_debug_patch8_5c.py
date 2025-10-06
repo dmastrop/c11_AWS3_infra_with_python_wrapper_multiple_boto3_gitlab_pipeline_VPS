@@ -6790,13 +6790,13 @@ def main():
             all_instances = []
             for i in range(0, len(instance_ids), 100):
                 batch = instance_ids[i:i + 100]
-                response = ec2_client.describe_instances(InstanceIds=batch)
+                response = my_ec2.describe_instances(InstanceIds=batch)
                 all_instances.extend([
                     inst for res in response['Reservations'] for inst in res['Instances']
                 ])
             return all_instances
 
-        all_instances = describe_instances_metadata_in_batches(ec2_client, instance_ids)
+        all_instances = describe_instances_metadata_in_batches(my_ec2, instance_ids)
         for instance in all_instances:
             instance_id = instance.get('InstanceId')
             if instance_id == exclude_instance_id:
