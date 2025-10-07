@@ -6784,9 +6784,13 @@ def main():
                 blank_sg_detected = False
 
     # === Conditional SG Rehydration Pass ===
+    # use instance_ip_data which is returned from wait_for_all_public_ips and main() gets this through the 
+    # call above to orchestrate_instance_launch_and_ip_polling
+    # === Conditional SG Rehydration Pass ===
     if blank_sg_detected:
         print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
-        def describe_instances_metadata_in_batches(ec2_client, instance_ids):
+
+        def describe_instances_metadata_in_batches(my_ec2, instance_ids):
             all_instances = []
             for i in range(0, len(instance_ids), 100):
                 batch = instance_ids[i:i + 100]
@@ -6796,13 +6800,35 @@ def main():
                 ])
             return all_instances
 
-        all_instances = describe_instances_metadata_in_batches(my_ec2, instance_ids)
+        rehydration_ids = [entry["InstanceId"] for entry in instance_ip_data]  # from orchestrate
+        all_instances = describe_instances_metadata_in_batches(my_ec2, rehydration_ids)
+
         for instance in all_instances:
             instance_id = instance.get('InstanceId')
-            if instance_id == exclude_instance_id:
-                continue  # Skip controller again
             sg_list = instance.get('SecurityGroups', [])
             print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
+
+
+    ## === Conditional SG Rehydration Pass ===
+    #if blank_sg_detected:
+    #    print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
+    #    def describe_instances_metadata_in_batches(ec2_client, instance_ids):
+    #        all_instances = []
+    #        for i in range(0, len(instance_ids), 100):
+    #            batch = instance_ids[i:i + 100]
+    #            response = my_ec2.describe_instances(InstanceIds=batch)
+    #            all_instances.extend([
+    #                inst for res in response['Reservations'] for inst in res['Instances']
+    #            ])
+    #        return all_instances
+
+    #    all_instances = describe_instances_metadata_in_batches(my_ec2, instance_ids)
+    #    for instance in all_instances:
+    #        instance_id = instance.get('InstanceId')
+    #        if instance_id == exclude_instance_id:
+    #            continue  # Skip controller again
+    #        sg_list = instance.get('SecurityGroups', [])
+    #        print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
 
 
 
