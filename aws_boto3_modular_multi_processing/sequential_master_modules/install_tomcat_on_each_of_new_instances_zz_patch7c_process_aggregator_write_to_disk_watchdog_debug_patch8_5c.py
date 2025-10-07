@@ -6840,6 +6840,10 @@ def main():
             # NEED TO PRESERVE ORDER with list(dict): 
             #Chunking logic maps SGs to processes predictably, Registry tagging reflects the correct SG lineage,Debug prints and artifact hydration stay deterministic
 
+            # Populate security_group_ids from rehydrated SG metadata.
+            # Deduplicate while preserving discovery order — required for deterministic chunking and registry lineage.
+            # Do NOT use set() — it scrambles SG order and breaks process mapping.
+
             security_group_ids.extend([sg["GroupId"] for sg in sg_list])
             security_group_ids = list(dict.fromkeys(security_group_ids))  # dedupe while preserving order
 
