@@ -6785,7 +6785,9 @@ def main():
 
     # === Conditional SG Rehydration Pass ===
     # use instance_ip_data which is returned from wait_for_all_public_ips and main() gets this through the 
-    # call above to orchestrate_instance_launch_and_ip_polling
+    # call above to orchestrate_instance_launch_and_ip_polling. In main() instance_ip_data is called
+    # instance_ips
+
     # === Conditional SG Rehydration Pass ===
     if blank_sg_detected:
         print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
@@ -6800,7 +6802,7 @@ def main():
                 ])
             return all_instances
 
-        rehydration_ids = [entry["InstanceId"] for entry in instance_ip_data]  # from orchestrate
+        rehydration_ids = [entry["InstanceId"] for entry in instance_ips]  # from orchestrate function
         all_instances = describe_instances_metadata_in_batches(my_ec2, rehydration_ids)
 
         for instance in all_instances:
