@@ -6811,6 +6811,8 @@ def main():
     # instance_ips
 
     # === Conditional SG Rehydration Pass ===
+    security_group_ids = []
+
     if blank_sg_detected:
         print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
 
