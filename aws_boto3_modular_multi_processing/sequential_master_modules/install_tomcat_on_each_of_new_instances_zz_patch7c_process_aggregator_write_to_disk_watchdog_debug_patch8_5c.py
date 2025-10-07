@@ -6665,7 +6665,7 @@ def main():
     ###### Block1 — legacy reservation logic
     # Retained for backward compatibility and potential tag hydration.
     # SG metadata from this block may be stale or incomplete due to AWS propagation lag.
-    # Primary SG resolution now handled via rehydration sweep (see DEBUG-SG-RESWEEP).
+    # Primary SG resolution now handled via rehydration sweep (see DEBUGX-SG-RESWEEP).
     # Do NOT rely on this block for security_group_ids population — use rehydrated list instead.
 
     response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
@@ -6832,25 +6832,23 @@ def main():
         for instance in all_instances:
             instance_id = instance.get('InstanceId')
             sg_list = instance.get('SecurityGroups', [])
-            print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
+            print(f"[DEBUGX-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
            
             #### redefine security_group_ids here and get rid of Block1b legacy code below. Block1b (below) does not work.
             #### See notes below in Block1b
-            #- SGs are collected per instance
-            # - Duplicates are removed
-            # - Original discovery order is preserved for chunking logic
-            # NEED TO PRESERVE ORDER with list(dict): 
-            #Chunking logic maps SGs to processes predictably, Registry tagging reflects the correct SG lineage,Debug prints and artifact hydration stay deterministic
+            ###### SG Rehydration — Full List Collection (No Deduplication)
+            # Collect security group IDs per instance during rehydration sweep.
+            # Preserve full list, including duplicates, to maintain one-to-one mapping with instance_ips.
+            # This ensures future compatibility when SGs vary per node — critical for retry logic, chunking, and registry tagging.
+            # Do NOT deduplicate — deduping breaks process-to-SG alignment and undermines traceability.
+            # SGs must be ordered and complete to support deterministic orchestration and per-thread rule pushes.
 
-            # Populate security_group_ids from rehydrated SG metadata.
-            # Deduplicate while preserving discovery order — required for deterministic chunking and registry lineage.
-            # Do NOT use set() — it scrambles SG order and breaks process mapping.
+            # Append SGs per instance, even if duplicates
+            for sg in sg_list:
+                security_group_ids.append(sg["GroupId"])
 
-            security_group_ids.extend([sg["GroupId"] for sg in sg_list])
-            security_group_ids = list(dict.fromkeys(security_group_ids))  # dedupe while preserving order
-
-
-
+            #security_group_ids.extend([sg["GroupId"] for sg in sg_list])
+            #security_group_ids = list(dict.fromkeys(security_group_ids))  # dedupe while preserving order
 
 
     ##### Block1b goes with Block1 above
