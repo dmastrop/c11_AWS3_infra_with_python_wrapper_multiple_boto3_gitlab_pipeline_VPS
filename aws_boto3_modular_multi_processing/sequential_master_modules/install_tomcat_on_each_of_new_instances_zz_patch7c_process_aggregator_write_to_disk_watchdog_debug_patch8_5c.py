@@ -4280,7 +4280,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
     def wait_for_instance_running(instance_id, ec2_client):
+       
+        elapsed = 0
+        MAX_WAIT_SECONDS = 1200  # 20 minutes
+
         while True:
+            
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
             statuses = instance_status.get('InstanceStatuses', [])
 
@@ -4295,8 +4300,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print(f"No status yet for instance {instance_id}. Waiting...")
 
             print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
+            
             time.sleep(10)
 
+            elapsed += 10
+
+            if elapsed >= MAX_WAIT_SECONDS:   # stop and start the node if it is stuck in status 1/2 passed. Needs more work.
+                print(f"[AWS-ISSUE-NODE-REQUIRED-STOP-AND-START] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
+
+                ec2_client.stop_instances(InstanceIds=[instance_id])
+                time.sleep(30)
+                ec2_client.start_instances(InstanceIds=[instance_id])
+
+                elapsed = 0  # reset watchdog after restart
 
 
 
