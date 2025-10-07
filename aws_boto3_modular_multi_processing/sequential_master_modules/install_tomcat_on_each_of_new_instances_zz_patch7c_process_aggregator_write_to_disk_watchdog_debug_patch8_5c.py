@@ -6662,6 +6662,12 @@ def main():
 
     
     ###### Block1 goes with Block1b below
+    ###### Block1 — legacy reservation logic
+    # Retained for backward compatibility and potential tag hydration.
+    # SG metadata from this block may be stale or incomplete due to AWS propagation lag.
+    # Primary SG resolution now handled via rehydration sweep (see DEBUG-SG-RESWEEP).
+    # Do NOT rely on this block for security_group_ids population — use rehydrated list instead.
+
     response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
     instance_ids = [
         instance['InstanceId']
@@ -6778,8 +6784,8 @@ def main():
     ###### The code right above calls orchestrate_instance_launch_and_ip_polling which calls wait_for_instance_visibility and
     ###### then wait_for_all_public_ips. The timemout delay is currently set at 180 seconds on both of these functions. 
     ###### Add another 30 second propagation delay and then perform an initial SG sweep, and if that is still blank do an
-    ###### SG re-hydration call to describe_instances_in_batches (which the functions above use) to get the sg_list which is 
-    ###### SecurityGroups which is then used to create security_group_ids (Block1b below)
+    ###### SG re-hydration call to describe_instances_metadata_in_batches to get the sg_list which is 
+    ###### SecurityGroups which is then used to create security_group_ids 
     ###### Make sure to exclude the controller node exclude_instance_id when determining if blank_sg_detected
 
     # === SG Propagation Delay ===
