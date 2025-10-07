@@ -6824,47 +6824,46 @@ def main():
                 ])
             return all_instances
 
-        rehydration_ids = [entry["InstanceId"] for entry in instance_ips]  # from orchestrate function
+        rehydration_ids = [entry["InstanceId"] for entry in instance_ips]  # instance_ips from orchestrate function. Must use this.
         all_instances = describe_instances_metadata_in_batches(my_ec2, rehydration_ids)
 
         for instance in all_instances:
             instance_id = instance.get('InstanceId')
             sg_list = instance.get('SecurityGroups', [])
             print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
+           
+            #### redefine security_group_ids here and get rid of Block1b legacy code below. Block1b (below) does not work.
+            #### See notes below in Block1b
+            #- SGs are collected per instance
+            # - Duplicates are removed
+            # - Original discovery order is preserved for chunking logic
+            # NEED TO PRESERVE ORDER with list(dict): 
+            #Chunking logic maps SGs to processes predictably, Registry tagging reflects the correct SG lineage,Debug prints and artifact hydration stay deterministic
 
+            security_group_ids.extend([sg["GroupId"] for sg in sg_list])
+            security_group_ids = list(dict.fromkeys(security_group_ids))  # dedupe while preserving order
 
-    ## === Conditional SG Rehydration Pass ===
-    #if blank_sg_detected:
-    #    print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
-    #    def describe_instances_metadata_in_batches(ec2_client, instance_ids):
-    #        all_instances = []
-    #        for i in range(0, len(instance_ids), 100):
-    #            batch = instance_ids[i:i + 100]
-    #            response = my_ec2.describe_instances(InstanceIds=batch)
-    #            all_instances.extend([
-    #                inst for res in response['Reservations'] for inst in res['Instances']
-    #            ])
-    #        return all_instances
-
-    #    all_instances = describe_instances_metadata_in_batches(my_ec2, instance_ids)
-    #    for instance in all_instances:
-    #        instance_id = instance.get('InstanceId')
-    #        if instance_id == exclude_instance_id:
-    #            continue  # Skip controller again
-    #        sg_list = instance.get('SecurityGroups', [])
-    #        print(f"[DEBUG-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
 
 
 
 
     ##### Block1b goes with Block1 above
-    security_group_ids = [
-        sg['GroupId']
-        for reservation in response['Reservations']
-        for instance in reservation['Instances']
-        for sg in instance['SecurityGroups']
-        if instance['InstanceId'] != exclude_instance_id
-    ]
+    ##### Block1b — deprecated SG collection logic
+    # This block relied on response['Reservations'], which may be stale or incomplete.
+    # SGs now collected via rehydration sweep using instance_ips from orchestrate logic.
+    # Commented out to prevent overwriting security_group_ids with partial data.
+    # Retained for reference only — do not re-enable unless rehydration fails.
+
+    #security_group_ids = [
+    #    sg['GroupId']
+    #    for reservation in response['Reservations']
+    #    for instance in reservation['Instances']
+    #    for sg in instance['SecurityGroups']
+    #    if instance['InstanceId'] != exclude_instance_id
+    #]
+
+
+
 
 
     ###### Block2b goes with paginator Block2 above
