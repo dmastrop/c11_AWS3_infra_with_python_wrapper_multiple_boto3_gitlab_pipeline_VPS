@@ -59,9 +59,11 @@ The pem key is a generic pem key for all of the ephemeral test EC2 instances. Th
 
 - Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
 
-- Update part 31: Phase 2o: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+- Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
 
-- Update part 32 Phase 2p: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+- Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+
+- Update part 33 Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 
@@ -102,7 +104,7 @@ Some features:
 
 
 
-## UPDATES part 32: Phase 2p: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+## UPDATES part 33: Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 
 ### Introduction:
@@ -149,7 +151,7 @@ all of these are also calclated at the aggregate level in main()):
 
 
 
-## UPDATES part 31: Phase 2o: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
 
 
 
@@ -247,12 +249,147 @@ STATUS_TAGS = {
 While testing for the adaptive watchdog timeout, it was found to work fine for the 16 node test but when hyperscaling to 
 512 nodes (512 processes with 1 thread per process), the security_group_ids list was coming up blank. This caused
 the contention penalty to zero out because the SG blocks call retry_with_backoff to assess the number of API re-attempts
-and that re-attempt number is used to calculate a max_retry_observed over all the SGs in the process. This max_retry_observed
-is used to calculate the contention_penalty in the adaptive watchdog timeout.  If the SGs are blank for all the  nodes, 
-there will be a max_retry_observed of 0 and a 0 contention_penalty.  This only occurs with the hyper-scaling test cases.
+and that re-attempt number is used to calculate a max_retry_observed over all the SGs in the process. 
+
+This max_retry_observed is used to calculate the contention_penalty in the adaptive watchdog timeout.  If the SGs are 
+blank for all the  nodes, there will be a max_retry_observed of 0 and a 0 contention_penalty.  This only occurs with the 
+hyper-scaling test cases.
 ```
  contention_penalty = min(30, max_retry_observed * 2)  # up to +30s
 ```
+The main reason for this is because the instance metadata needs to use describe_instances with batch processing when
+scaling to over 100 instances.   The batch processing staggers the describe_instances requests to AWS so that it can
+respond accordingly. The python code logic can use any batch size, but 100 seems to work fine (code will be shown 
+below when the code step through is done).
+
+To refactor to this type of instance metadata discover was quite challenging. The standard reservation/response code, 
+for example, the block below, had to be retooled to use an orchestrator function that was fortunately already in use and
+present. This orcehestrator function was used to wait for all the instances to have status checks passed and to get a
+public ip. So leveraging this code made the refactoring in this area much easier. The orchestrator code is very resilient.
+
+
+The deprecated code consists of blocks like this: 
+```
+   ###### Block1 goes with Block1b below
+    ###### Block1 — legacy reservation logic
+    # Retained for backward compatibility and potential tag hydration.
+    # SG metadata from this block may be stale or incomplete due to AWS propagation lag.
+    # Primary SG resolution now handled via rehydration sweep (see DEBUGX-SG-RESWEEP).
+    # Do NOT rely on this block for security_group_ids population — use rehydrated list instead.
+
+    response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+    instance_ids = [
+        instance['InstanceId']
+        for reservation in response['Reservations']
+        for instance in reservation['Instances']
+        if instance['InstanceId'] != exclude_instance_id
+    ]
+
+
+    print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+```
+
+This code is unable to accomodate exremely large numbers of nodes (instances). 
+
+This block below, for example, works fine with a 16 node test but fails (blank) with the 512 node test:
+```
+   # === Initial SG Sweep (excluding controller) ===
+    blank_sg_detected = True  # Assume blank until proven otherwise
+
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            instance_id = instance.get('InstanceId')
+            if instance_id == exclude_instance_id:
+                continue  # Skip controller node
+            sg_list = instance.get('SecurityGroups', [])
+            print(f"[DEBUGX-SG-FIRSTSWEEP] Instance {instance_id} → SGs: {sg_list}")
+            if sg_list:  # Found at least one SG on a worker node
+                blank_sg_detected = False
+
+```
+
+
+This block fails as well with the 512 node test but works fine for the 16 node test: 
+
+```
+    ##### Block1b goes with Block1 above
+    ##### Block1b — deprecated SG collection logic
+    # This block relied on response['Reservations'], which may be stale or incomplete.
+    # SGs now collected via rehydration sweep using instance_ips from orchestrate logic.
+    # Commented out to prevent overwriting security_group_ids with partial data.
+    # Retained for reference only — do not re-enable unless rehydration fails.
+
+    #security_group_ids = [
+    #    sg['GroupId']
+    #    for reservation in response['Reservations']
+    #    for instance in reservation['Instances']
+    #    for sg in instance['SecurityGroups']
+    #    if instance['InstanceId'] != exclude_instance_id
+    #]
+```
+
+
+
+Finally, this was the last block that had to be refactored. This failed with 512 nodes but worked with 16 nodes:
+
+```
+    ##### This is the code to transform the list security_group_ids to a process level list of security group ids that pertain 
+    ##### only to the list of nodes in the chunk that the process is handling.
+    ##### The name for this process chunk specific list of security group ids is sg_chunk
+    ##### sg_chunks is the full list of per-chunk SG lists — i.e., a list of lists
+    ##### sg_chunk is the individual SG list for one chunk
+    ##### When zip chunks and sg_chunks, there is a  pairing each chunk with its corresponding SG list
+    # each tuple in `args_list` contains:
+    #- A chunk of instances
+    #- The SGs for those instances
+    #- The max worker count
+
+    # This block below is deprecated. It uses the response/reservation block1 stuff and this cannot handle the hyper-scaling
+    # hyper-scaling needs to use the orchestator instance blocks above and the describe_instances_metadata_in_batches using
+    # batches of 100 each. Otherwise AWS fails to get the complete security_group_ids list and sg_chunks is blank
+
+    #sg_chunks = []
+    #for chunk in chunks:
+    #    sg_chunk = [
+    #        sg['GroupId']
+    #        for reservation in response['Reservations']
+    #        for instance in reservation['Instances']
+    #        for sg in instance['SecurityGroups']
+    #        if instance['InstanceId'] in [node['InstanceId'] for node in chunk]
+    #        and instance['InstanceId'] != exclude_instance_id
+    #    ]
+    #    sg_chunks.append(sg_chunk)
+```
+
+So from the above, it is clear that there were multiple areas of the code that required refactoring to accomodate the 
+hyper-scaling test cases. These blocks above have all been replaced with code that works with very large numbers of 
+nodes/processes.
+
+With this new code in place the refactored adaptive watchdog timeout code (see part 30 below) is working extremely well.
+On the 512 node test, there are differential contention penalties at the per process level giving each process a 
+uniqute adaptive watchdog timeout based on this API SG contention.  A complete code walk though is.   Each section follows
+logically from the preceeding section. As mentioned above, the orchestrator code that was already present provided a robust
+foundation for the rest of the code.  Getting the security group ids to their respective chunk (process) list of ips would
+have been very difficult without this foundaton already in place.
+
+
+### Methodical code walkthrough: 
+
+#### Section 1
+
+
+#### Section 2
+
+#### Section 3
+ 
+#### Section 4
+
+#### Section 5
+
+#### Section 5: tomcat_worker function destination where the SG rules are actually applied to the nodes (chunk) for the process
 
 
 
