@@ -6946,7 +6946,10 @@ def main():
         print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
         print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
 
-   
+  
+
+
+
 
     ##### DEBUGX code insertion will be here before the args_list for the SG group id list issue.
     ##### This code is to fix the security_group_ids in the args_list being the full list for ALL the nodes in the execution 
@@ -6956,15 +6959,13 @@ def main():
     ##### changing the global security_group_ids might disrupt upper level orchestration logic 
 
 
-
-
     ##### This is the original code, using the security_group_ids (all the node security groups)
     #args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
 
-
-
     #### Print the original security_group_ids (complete list)  before the tranform to sg_chunk (process level list)
     print(f"[DEBUGX-ORIG-POSTSG-ALL] Full security_group_ids before chunking: {security_group_ids}")
+
+
 
 
 
@@ -6979,21 +6980,45 @@ def main():
     #- The SGs for those instances
     #- The max worker count
 
+    # This block below is deprecated. It uses the response/reservation block1 stuff and this cannot handle the hyper-scaling
+    # hyper-scaling needs to use the orchestator instance blocks above and the describe_instances_metadata_in_batches using
+    # batches of 100 each. Otherwise AWS fails to get the complete security_group_ids list and sg_chunks is blank
+    
+    #sg_chunks = []
+    #for chunk in chunks:
+    #    sg_chunk = [
+    #        sg['GroupId']
+    #        for reservation in response['Reservations']
+    #        for instance in reservation['Instances']
+    #        for sg in instance['SecurityGroups']
+    #        if instance['InstanceId'] in [node['InstanceId'] for node in chunk]
+    #        and instance['InstanceId'] != exclude_instance_id
+    #    ]
+    #    sg_chunks.append(sg_chunk)
 
+
+
+    ##### This revised chunk to security group id(s) code uses the all_instances from the refactored code above (SG rehydration
+    ##### code). This has all of the instances and all of the metadata for each instance via the describe_instances_metadata_in_batches
+    ##### function. Here we are simply getting the sg_chunk and sg_chunks. These are the security group ids for each specific
+    ##### chunk list of ips (sg_chunk) and chunks (sg_chunks). We need this for process based correlation of the processs
+    ##### chunk to their security group ids. See below (zip)
+    ##### sg_chunk will be passed to the multiprocessing.Pool via the args_list. See further down below.
     sg_chunks = []
     for chunk in chunks:
+        chunk_instance_ids = {node['InstanceId'] for node in chunk}
         sg_chunk = [
             sg['GroupId']
-            for reservation in response['Reservations']
-            for instance in reservation['Instances']
-            for sg in instance['SecurityGroups']
-            if instance['InstanceId'] in [node['InstanceId'] for node in chunk]
-            and instance['InstanceId'] != exclude_instance_id
+            for instance in all_instances
+            if instance['InstanceId'] in chunk_instance_ids and instance['InstanceId'] != exclude_instance_id
+            for sg in instance.get('SecurityGroups', [])
         ]
         sg_chunks.append(sg_chunk)
 
 
+
     ##### And create the args_list that is used in the multiprocessing.Pool using this sg_chunk rather than security_group_ids
+    ##### The zip will correlate each chunk to the sg_chunk for chunks and sg_chunks.
     args_list = [(chunk, sg_chunk, max_workers) for chunk, sg_chunk in zip(chunks, sg_chunks)]
 
 
