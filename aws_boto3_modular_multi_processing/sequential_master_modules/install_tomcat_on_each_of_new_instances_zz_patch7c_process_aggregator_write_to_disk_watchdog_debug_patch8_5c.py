@@ -6996,8 +6996,6 @@ def main():
 
 
 
-
-
     ##### This is the code to transform the list security_group_ids to a process level list of security group ids that pertain 
     ##### only to the list of nodes in the chunk that the process is handling.
     ##### The name for this process chunk specific list of security group ids is sg_chunk

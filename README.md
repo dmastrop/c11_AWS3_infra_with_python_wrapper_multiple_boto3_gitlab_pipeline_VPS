@@ -628,14 +628,177 @@ in hyper-scaling test cases.
 
 ```
 
+Some examples of the logging that the above provides is below:
+
+
+```
+[DEBUGX-SG-DELAY] Sleeping 30s to allow SG propagation...
+[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...
+[DEBUGX-SG-RESWEEP] Instance i-0448c14248832d5dc → SGs: [{'GroupId': 'sg-0a1f89717193f7896', 'GroupName': 'default'}]
+[DEBUGX-SG-RESWEEP] Instance i-0cb80d367edb4586c → SGs: [{'GroupId': 'sg-0a1f89717193f7896', 'GroupName': 'default'}]
+[DEBUGX-SG-RESWEEP] Instance i-0b3c11fd09c8d5e8e → SGs: [{'GroupId': 'sg-0a1f89717193f7896', 'GroupName': 'default'}]
+[DEBUGX-SG-RESWEEP] Instance i-003f197921dc1717d → SGs: [{'GroupId': 'sg-0a1f89717193f7896', 'GroupName': 'default'}]
+```
+
+The instance id is listed with its respective sg_list security group id list.
+
 
 
 
 #### Section 4: 
 
-#### Section 5
+The code between Section 3 and Section 4 below consists of a lot of chunk processing. None of the fundamental process chunk 
+code had to be modified.   
+
+The code below is required to derive the sg_chunk that is described in many of the earlier comments above. The sg_chunk is 
+the list of security group ids that pertain to the current process chunk list of ips (nodes). This is the ultimate goal, 
+because the sg_chunk list of security group ids is applied in tomcat_worker via AWS API to apply the rules to the
+security group(s) for the ips (nodes) that the current process is working on. THis AWS API application is what causes
+the contention_penalty in the adaptive watchdog timeout, a per process watchdog timeout based upon API contention.
+
+This makes the system as a whole self-adaptive to AWS conditions and will be useful when the Machine Learning layer is
+applied to the architecture.
+
+
+```
+    ##### DEBUGX code insertion will be here before the args_list for the SG group id list issue.
+    ##### This code is to fix the security_group_ids in the args_list being the full list for ALL the nodes in the execution 
+    ##### run. This should not be the case.  It should only be the nodes(threads) in the current process. So if 2 threads per
+    ##### process and 16 nodes total over 8 processes, it should be a list of only 2 security group ids,  not all 16
+    ##### NOTE: do not change the global security_group_ids, but transform it here and use it in the args_list only.  
+    ##### changing the global security_group_ids might disrupt upper level orchestration logic 
+
+
+    ##### This is the original code, using the security_group_ids (all the node security groups)
+    #args_list = [(chunk, security_group_ids, max_workers) for chunk in chunks]
+
+    #### Print the original security_group_ids (complete list)  before the tranform to sg_chunk (process level list)
+    print(f"[DEBUGX-ORIG-POSTSG-ALL] Full security_group_ids before chunking: {security_group_ids}")
+
+
+    ##### This is the code to transform the list security_group_ids to a process level list of security group ids that pertain 
+    ##### only to the list of nodes in the chunk that the process is handling.
+    ##### The name for this process chunk specific list of security group ids is sg_chunk
+    ##### sg_chunks is the full list of per-chunk SG lists — i.e., a list of lists
+    ##### sg_chunk is the individual SG list for one chunk
+    ##### When zip chunks and sg_chunks, there is a  pairing each chunk with its corresponding SG list
+    # each tuple in `args_list` contains:
+    #- A chunk of instances
+    #- The SGs for those instances
+    #- The max worker count
+
+    # This block below is deprecated. It uses the response/reservation block1 stuff and this cannot handle the hyper-scaling
+    # hyper-scaling needs to use the orchestator instance blocks above and the describe_instances_metadata_in_batches using
+    # batches of 100 each. Otherwise AWS fails to get the complete security_group_ids list and sg_chunks is blank
+
+    #sg_chunks = []
+    #for chunk in chunks:
+    #    sg_chunk = [
+    #        sg['GroupId']
+    #        for reservation in response['Reservations']
+    #        for instance in reservation['Instances']
+    #        for sg in instance['SecurityGroups']
+    #        if instance['InstanceId'] in [node['InstanceId'] for node in chunk]
+    #        and instance['InstanceId'] != exclude_instance_id
+    #    ]
+    #    sg_chunks.append(sg_chunk)
+
+
+    ##### This revised chunk to security group id(s) code uses the all_instances from the refactored code above (SG rehydration
+    ##### code). This has all of the instances and all of the metadata for each instance via the describe_instances_metadata_in_batches
+    ##### function. Here we are simply getting the sg_chunk and sg_chunks. These are the security group ids for each specific
+    ##### chunk list of ips (sg_chunk) and chunks (sg_chunks). We need this for process based correlation of the processs
+    ##### chunk to their security group ids. See below (zip)
+    ##### sg_chunk will be passed to the multiprocessing.Pool via the args_list. See further down below.
+    sg_chunks = []
+    for chunk in chunks:
+        chunk_instance_ids = {node['InstanceId'] for node in chunk}
+        sg_chunk = [
+            sg['GroupId']
+            for instance in all_instances
+            if instance['InstanceId'] in chunk_instance_ids and instance['InstanceId'] != exclude_instance_id
+            for sg in instance.get('SecurityGroups', [])
+        ]
+        sg_chunks.append(sg_chunk)
+
+
+
+    ##### And create the args_list that is used in the multiprocessing.Pool using this sg_chunk rather than security_group_ids
+    ##### The zip will correlate each chunk to the sg_chunk for chunks and sg_chunks.
+    args_list = [(chunk, sg_chunk, max_workers) for chunk, sg_chunk in zip(chunks, sg_chunks)]
+
+
+
+    #####  DEBUGX-MAIN for the SG issue with hyper-scaling. This has the transformed security group per process chunk list 
+    #####  sg_chunk. It prints the process along with the sg_chunk security group id. Note that the process index number
+    #####  is NOT the PID. It is just used for print record keeping.
+    for i, args in enumerate(args_list):
+        #chunk, sg_ids, max_workers = args
+        chunk, sg_chunk, max_workers = args
+        print(f"[DEBUGX-MAIN-POSTSG-PROCESS] Process {i}: SG IDs = {sg_chunk}")
+```
+
+
+
+Some examples of the logs printed in the code above are listed below. One can clearly see the transform of the 
+full list of security_group_ids to the per process sg_chunk list of security group ids.
+
+It is this process level list of security group ids that are applied to each node in the process (chunk list of ips) as 
+rules (see Section 5 below for an example of this code). 
+
+DEBUGX-ORIG-POSTSG-ALL is for a 512 node test. 
+```
+[DEBUGX-ORIG-POSTSG-ALL] Full security_group_ids before chunking: ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+```
+Here is the process level chunking. In this test there is 1 thread (node) per process, so there are 512 such log entries.
+This is truncated for brevity.
+Note that the process numbers are NOT PIDs. These are just indexes for the logging so that the processes can easily be counted
+when hyper-scaling. PIDs can be forensically found via the registry_entry for each thread that is created as part of the 
+diagnostic artifact logging capability.
+For this test only 1 SG per process is being used and it is the same SG. This does not have to be the case.
+There is flexiibilty to assign different SGs to blocks of nodes via the nodes that are assigned to the process.
+
+Note that SG assignments are per process.
+```
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 0: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 1: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 2: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 3: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 4: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 5: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 6: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 7: SG IDs = ['sg-0a1f89717193f7896']
+[DEBUGX-MAIN-POSTSG-PROCESS] Process 8: SG IDs = ['sg-0a1f89717193f7896']
+
+(output truncated)
+
+```
+ 
+
+The args_list in the code above that has this sg_chunk in it is finally used later on in main() when teh multiprocessing.Pool
+is called to process the chunk list of ips for the process. As noted throughout this documentation, this 
+multiprocessing.Pool calls tomcat_worker_wrapper which calls tomcat_worker which calls threaded_install (via 
+run_test) which calls install_tomcat the thread level code which finally calls the read_output_with_watchdog to 
+process the node output for STDOUT/STDERR which is used in the foresnsic analysis of the node installation health.
+
+
+```
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+
+```
+
+
+ 
 
 #### Section 6: tomcat_worker function destination where the SG rules are actually applied to the nodes (chunk) for the process
+
+All of the code changes above are in main().
+The code below is just presented for completeness, illustrating where the SG rules are actually applied to the nodes 
+that are in the chunk for the current process.  Only 1 of the 3 rules is listed below for illustrative purposes.
+
 
 
 
