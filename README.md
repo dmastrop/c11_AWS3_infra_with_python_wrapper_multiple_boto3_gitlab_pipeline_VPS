@@ -295,19 +295,31 @@ The deprecated code consists of blocks like this:
 This code is unable to accomodate exremely large numbers of nodes (instances). 
 
 This block below, for example, works fine with a 16 node test but fails (blank) with the 512 node test:
+
+
+
 ```
-   # === Initial SG Sweep (excluding controller) ===
+    # === Initial SG Sweep (excluding controller) ===
     blank_sg_detected = True  # Assume blank until proven otherwise
 
-    for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            instance_id = instance.get('InstanceId')
-            if instance_id == exclude_instance_id:
-                continue  # Skip controller node
-            sg_list = instance.get('SecurityGroups', [])
-            print(f"[DEBUGX-SG-FIRSTSWEEP] Instance {instance_id} → SGs: {sg_list}")
-            if sg_list:  # Found at least one SG on a worker node
-                blank_sg_detected = False
+
+    ##### Commenting this block out. This is legacy code and the rehydration code is much more dependable and it is necessary
+    ##### for hyper-scaling to 100s of nodes. The code block below works for low number of nodes (for example 16), but it is
+    ##### better to have all configurations (16 node, 512 node, etc) go thorugh the same robust code path and use the 
+    ##### rehydration code below which is ultimately used to derive all_instances that is used to get the sg_chunk, the per
+    ##### process chunk to security group id correlation.
+    ##### NOTE: leave the blank_sg_detected = True to force all configurations through the rehydration block below. sg_detected
+    ##### may be used in the future if we require different code paths.
+
+    #for reservation in response['Reservations']:
+    #    for instance in reservation['Instances']:
+    #        instance_id = instance.get('InstanceId')
+    #        if instance_id == exclude_instance_id:
+    #            continue  # Skip controller node
+    #        sg_list = instance.get('SecurityGroups', [])
+    #        print(f"[DEBUGX-SG-FIRSTSWEEP] Instance {instance_id} → SGs: {sg_list}")
+    #        if sg_list:  # Found at least one SG on a worker node
+    #            blank_sg_detected = False
 
 ```
 
@@ -389,7 +401,7 @@ have been very difficult without this foundaton already in place.
 
 #### Section 5
 
-#### Section 5: tomcat_worker function destination where the SG rules are actually applied to the nodes (chunk) for the process
+#### Section 6: tomcat_worker function destination where the SG rules are actually applied to the nodes (chunk) for the process
 
 
 
