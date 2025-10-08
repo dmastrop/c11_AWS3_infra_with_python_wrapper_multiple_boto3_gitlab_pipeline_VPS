@@ -6710,6 +6710,17 @@ def main():
 
 
 
+
+
+
+####### ORCHESTRATOR instance code: returns instance_ip_data = instance_ips in main() below#############
+####### This is used to get instance_ids = rehydration_ids which is passed to describe_instances_metadata_in_batches ########
+####### using 100 at a time, to get all_instances which is used to get sg_list (security group per instance id) which ########
+####### is used to build security_group_ids, a list of all the security group ids for each node in the entire execution ########
+####### run (security_group_ids).  This is later correlated to each process chunk list of ips so that the security group #######
+####### rules can be applied to each node in the process.
+
+
 #    while True:
 #        response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
 #        all_running = all(instance['InstanceState']['Name'] == 'running' for instance in response_statuses['InstanceStatuses'])
@@ -6826,7 +6837,10 @@ def main():
                 ])
             return all_instances
 
-        rehydration_ids = [entry["InstanceId"] for entry in instance_ips]  # instance_ips from orchestrate function. Must use this.
+        rehydration_ids = [entry["InstanceId"] for entry in instance_ips]  
+        # instance_ips is from orchestrate function above. Must use this. From this get the instance ids and then pass
+        # this to describe_instances_metdadata_in_batches. This is all_instances
+        
         all_instances = describe_instances_metadata_in_batches(my_ec2, rehydration_ids)
 
         for instance in all_instances:
