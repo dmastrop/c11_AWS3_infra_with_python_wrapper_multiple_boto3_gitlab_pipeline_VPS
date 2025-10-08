@@ -6796,7 +6796,7 @@ def main():
     ###### then wait_for_all_public_ips. The timemout delay is currently set at 180 seconds on both of these functions. 
     ###### Add another 30 second propagation delay and then perform an initial SG sweep, and if that is still blank do an
     ###### SG re-hydration call to describe_instances_metadata_in_batches to get the sg_list which is 
-    ###### SecurityGroups which is then used to create security_group_ids 
+    ###### per instance SecurityGroups which is then used to create the complete definitve security_group_ids 
     ###### Make sure to exclude the controller node exclude_instance_id when determining if blank_sg_detected
 
     # === SG Propagation Delay ===
@@ -6814,8 +6814,8 @@ def main():
     ##### better to have all configurations (16 node, 512 node, etc) go thorugh the same robust code path and use the 
     ##### rehydration code below which is ultimately used to derive all_instances that is used to get the sg_chunk, the per
     ##### process chunk to security group id correlation.
-    ##### NOTE: leave the blank_sg_detected = True to force all configurations through the rehydration block below. sg_detected
-    ##### may be used in the future if we require different code paths.
+    ##### NOTE: leave the blank_sg_detected = True to force all configurations through the rehydration block below. 
+    ##### blank_sg_detected may be used in the future if we require different code paths.
 
     #for reservation in response['Reservations']:
     #    for instance in reservation['Instances']:
@@ -6828,13 +6828,26 @@ def main():
     #            blank_sg_detected = False
 
 
-
-
-
     # === Conditional SG Rehydration Pass ===
-    # use instance_ip_data which is returned from wait_for_all_public_ips and main() gets this through the 
-    # call above to orchestrate_instance_launch_and_ip_polling. In main() instance_ip_data is called
-    # instance_ips
+    # use instance_ip_data which is returned from the orchestrate_instance_launch_and_ip_polling.
+    # main() assigns this to instance_ips
+    # rehydration_ids uses this instance_ips to get the instance ids
+    # These instance ids are passed to the describe_instances_metadata_in_batches which does the batch processing on the 
+    # instances and collects all the metadata for each instance(security group ids, ip address, instance id, etc)
+ 
+    # This is called all_instances. all_instances will be used to extract a complete security group id list of all the 
+    # instances. This is done by first create a per instance id list of security groups called sg_list
+    # sg_list provdes the security groups that are associated with each instance id for forensics and troublshooting.
+    # sg_list is then used to build the complete definitive list of all the security_group_ids.
+
+    # all_instances is used later to derive the sg_chunk which is the list of security group ids for the chunk list of ips
+    # that the current process is handling. This is required in this multiprocessing environment.  This is so that the
+    # chunk list of ips can be directly correlated to their security group ids so that we can calculate a per process 
+    # API contention when the security group rules are applied to each of the nodes in the process. This API contention is
+    # called contention_penalty in the adaptive watchdog timeout, a per process watchdog timeout that is used in the 
+    # read_output_with_watchdog that does node output stdout/stderr processing for each node (thread) in the process.
+    # This forms the foundation of the thread level forensic logging capability.
+
 
     # === Conditional SG Rehydration Pass ===
     security_group_ids = []
@@ -6854,7 +6867,7 @@ def main():
 
         rehydration_ids = [entry["InstanceId"] for entry in instance_ips]  
         # instance_ips is from orchestrate function above. Must use this. From this get the instance ids and then pass
-        # this to describe_instances_metdadata_in_batches. This is all_instances
+        # this to describe_instances_metdadata_in_batches. 
         
         all_instances = describe_instances_metadata_in_batches(my_ec2, rehydration_ids)
 
@@ -6868,7 +6881,8 @@ def main():
             ###### SG Rehydration — Full List Collection (No Deduplication)
             # Collect security group IDs per instance during rehydration sweep.
             # Preserve full list, including duplicates, to maintain one-to-one mapping with instance_ips.
-            # This ensures future compatibility when SGs vary per node — critical for retry logic, chunking, and registry tagging.
+            # This ensures future compatibility when SGs vary per node — critical for retry logic, chunking, and registry 
+            # tagging.
             # Do NOT deduplicate — deduping breaks process-to-SG alignment and undermines traceability.
             # SGs must be ordered and complete to support deterministic orchestration and per-thread rule pushes.
 

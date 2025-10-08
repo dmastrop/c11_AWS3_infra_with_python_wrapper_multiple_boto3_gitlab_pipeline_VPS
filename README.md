@@ -308,8 +308,8 @@ This block below, for example, works fine with a 16 node test but fails (blank) 
     ##### better to have all configurations (16 node, 512 node, etc) go thorugh the same robust code path and use the 
     ##### rehydration code below which is ultimately used to derive all_instances that is used to get the sg_chunk, the per
     ##### process chunk to security group id correlation.
-    ##### NOTE: leave the blank_sg_detected = True to force all configurations through the rehydration block below. sg_detected
-    ##### may be used in the future if we require different code paths.
+    ##### NOTE: leave the blank_sg_detected = True to force all configurations through the rehydration block below. 
+    ##### blank_sg_detected may be used in the future if we require different code paths.
 
     #for reservation in response['Reservations']:
     #    for instance in reservation['Instances']:
@@ -382,22 +382,256 @@ nodes/processes.
 
 With this new code in place the refactored adaptive watchdog timeout code (see part 30 below) is working extremely well.
 On the 512 node test, there are differential contention penalties at the per process level giving each process a 
-uniqute adaptive watchdog timeout based on this API SG contention.  A complete code walk though is.   Each section follows
-logically from the preceeding section. As mentioned above, the orchestrator code that was already present provided a robust
+unique adaptive watchdog timeout based on this API SG contention.  A complete code walk through is below.   Each section follows
+logically from the preceeding section. As mentioned above, the orchestrator code that was already present, provided a robust
 foundation for the rest of the code.  Getting the security group ids to their respective chunk (process) list of ips would
 have been very difficult without this foundaton already in place.
 
 
 ### Methodical code walkthrough: 
 
-#### Section 1
+Most of the changes in the code were done in main() unless noted otherwise.
 
 
-#### Section 2
+#### Section 1: Legacy code retained for backward compatibility. 
 
-#### Section 3
+The response/reservation code for getting the security group ids of the nodes is deprecated. It does not work when scaling over
+100 nodes, and noted in the Introduction above.   The code is below: 
+
+```
+    ###### Block1 goes with Block1b below
+    ###### Block1 — legacy reservation logic
+    # Retained for backward compatibility and potential tag hydration.
+    # SG metadata from this block may be stale or incomplete due to AWS propagation lag.
+    # Primary SG resolution now handled via rehydration sweep (see DEBUGX-SG-RESWEEP).
+    # Do NOT rely on this block for security_group_ids population — use rehydrated list instead.
+
+    response = my_ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+    instance_ids = [
+        instance['InstanceId']
+        for reservation in response['Reservations']
+        for instance in reservation['Instances']
+        if instance['InstanceId'] != exclude_instance_id
+    ]
+
+
+    print(f"[DEBUGX-RESERVATIONS] Reservation count = {len(response['Reservations'])}")
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            print(f"[DEBUGX-INSTANCE] ID = {instance['InstanceId']}, SGs = {instance.get('SecurityGroups', [])}")
+```
+
+There is a Block2 that follows. This is the same type of approach above but using a paginator. 
+```
+paginator = my_ec2.get_paginator('describe_instances')
+```
+
+
+This did  not resolve the issue with hyper-scaling, and the block2 has been commented out.
+
+
+
+#### Section 2: The original orchestrator code using helper function orchestrate_instance_launch_and_ip_polling
+
+This code did not have to be modified but has been included as part of the essential flow of the code that is required
+to resolve the hyper-scaling issue.  This code was used instead of using the response/reservation approach in Section 1 above
+and this orchestrator provides the foundation for the rest of the code that fixed this issue.
+
+
+The comments in the code snippet below detail all of the variables that are involved in extracting the data setting up the 
+process level correlation of the process chunk list of ips to their respetive security group ids.
+
+Note that this orchestarte_instance_launch_and_ip_pooling is a wrapper function around 2 helper functions: the original
+wait_for_all_public_ips and another function that was added to handle large number of nodes, wait_for_instance_visibility.
+Both use a recommended 180 second timeout that can be decreased if the instance type is upgraded from t2.micro.
+
+
+```
+####### ORCHESTRATOR instance code: returns instance_ip_data = instance_ips in main() below#############
+####### This is used to get instance_ids = rehydration_ids which is passed to describe_instances_metadata_in_batches ########
+####### using 100 at a time, to get all_instances which is used to get sg_list (security group per instance id) which ########
+####### is used to build security_group_ids, a list of all the security group ids for each node in the entire execution ########
+####### run (security_group_ids).  This is later correlated to each process chunk list of ips so that the security group #######
+####### rules can be applied to each node in the process. #######
+
+    while True:
+        response_statuses = {'InstanceStatuses': describe_instances_in_batches(my_ec2, instance_ids)}
+
+        for instance in response_statuses['InstanceStatuses']:
+            instance_id = instance['InstanceId']
+            state = instance['InstanceState']['Name']
+            system_status = instance['SystemStatus']['Status']
+            instance_status_check = instance['InstanceStatus']['Status']
+
+            print(f"[DEBUG] Instance {instance_id} -> State: {state}, SystemStatus: {system_status}, InstanceStatus: {instance_status_check}")
+
+        all_running = all(instance['InstanceState']['Name'] == 'running' for instance in response_statuses['InstanceStatuses'])
+
+        if all_running:
+            break
+
+        print("Waiting for all instances to be in running state...")
+        time.sleep(10)
+    try:
+
+
+        # The new wrapper around wait_for_all_public_ips as AWS is doing batch processing on large EC2 instance launches and
+        # the code needs to wait for all the instances to be present and then poll and loop for all public ips to be present
+        # the new functions are orchestrate_instance_launch_and_ip_polling and wait_for_instance_visiblilty (default timeout is
+        # 180 seconds)
+        instance_ips = orchestrate_instance_launch_and_ip_polling(exclude_instance_id=exclude_instance_id)
+
+    except TimeoutError as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+
+    print("[DEBUG] instance_ips initialized with", len(instance_ips), "entries")
+
+    null_ips = [ip for ip in instance_ips if 'PublicIpAddress' not in ip or not ip['PublicIpAddress']]
+    print(f"[DEBUG] Null or missing IPs: {null_ips}")
+
+    expected_count = len(instance_ids)
+    actual_count = len(instance_ips)
+    if actual_count != expected_count:
+        print(f"[WARNING] Expected {expected_count} IPs but got {actual_count}")
+
+    if not any(ip['PublicIpAddress'] for ip in instance_ips):
+        print("No public IPs found. Exiting.")
+        sys.exit(1)
+```
+
+
+#### Section 3: The new SG (Security Group) sweep and rehydration code to deal with hyper-scaling test cases
+
+The code blocks are below. The comments are self explanatory.
+Batch processing that is present in the orchestrate code above has to be used as the foundation for the instance metadata
+in hyper-scaling test cases.
+
+
+```
+    ###### New SG Sweep code: This is a patch to troubleshoot hyper-scaling (512 processes) issues with security_group_ids being
+    ###### blank.  This only occurs at higher parallel processes.
+    ###### The code right above calls orchestrate_instance_launch_and_ip_polling which calls wait_for_instance_visibility and
+    ###### then wait_for_all_public_ips. The timemout delay is currently set at 180 seconds on both of these functions. 
+    ###### Add another 30 second propagation delay and then perform an initial SG sweep, and if that is still blank do an
+    ###### SG re-hydration call to describe_instances_metadata_in_batches to get the sg_list which is 
+    ###### per instance SecurityGroups which is then used to create the complete definitve security_group_ids 
+    ###### Make sure to exclude the controller node exclude_instance_id when determining if blank_sg_detected
+
+
+    # === SG Propagation Delay ===
+    print("[DEBUGX-SG-DELAY] Sleeping 30s to allow SG propagation...")
+    time.sleep(30)
+
+
+
+    # === Initial SG Sweep (excluding controller) ===
+    blank_sg_detected = True  # Assume blank until proven otherwise
+
+
+    ##### Commenting this block out. This is legacy code and the rehydration code is much more dependable and it is necessary
+    ##### for hyper-scaling to 100s of nodes. The code block below works for low number of nodes (for example 16), but it is
+    ##### better to have all configurations (16 node, 512 node, etc) go thorugh the same robust code path and use the 
+    ##### rehydration code below which is ultimately used to derive all_instances that is used to get the sg_chunk, the per
+    ##### process chunk to security group id correlation.
+    ##### NOTE: leave the blank_sg_detected = True to force all configurations through the rehydration block below.
+    ##### blank_sg_detected may be used in the future if we require different code paths for different node configurations.
+
+    #for reservation in response['Reservations']:
+    #    for instance in reservation['Instances']:
+    #        instance_id = instance.get('InstanceId')
+    #        if instance_id == exclude_instance_id:
+    #            continue  # Skip controller node
+    #        sg_list = instance.get('SecurityGroups', [])
+    #        print(f"[DEBUGX-SG-FIRSTSWEEP] Instance {instance_id} → SGs: {sg_list}")
+    #        if sg_list:  # Found at least one SG on a worker node
+    #            blank_sg_detected = False
  
-#### Section 4
+
+    # === Conditional SG Rehydration Pass ===
+    # use instance_ip_data which is returned from the orchestrate_instance_launch_and_ip_polling.
+    # main() assigns this to instance_ips
+    # rehydration_ids uses this instance_ips to get the instance ids
+    # These instance ids are passed to the describe_instances_metadata_in_batches which does the batch processing on the 
+    # instances and collects all the metadata for each instance(security group ids, ip address, instance id, etc)
+
+    # This is called all_instances. all_instances will be used to extract a complete security group id list of all the 
+    # instances. This is done by first create a per instance id list of security groups called sg_list
+    # sg_list provdes the security groups that are associated with each instance id for forensics and troublshooting.
+    # sg_list is then used to build the complete definitive list of all the security_group_ids.
+
+    # all_instances is used later to derive the sg_chunk which is the list of security group ids for the chunk list of ips
+    # that the current process is handling. This is required in this multiprocessing environment.  This is so that the
+    # chunk list of ips can be directly correlated to their security group ids so that we can calculate a per process 
+    # API contention when the security group rules are applied to each of the nodes in the process. This API contention is
+    # called contention_penalty in the adaptive watchdog timeout, a per process watchdog timeout that is used in the 
+    # read_output_with_watchdog that does node output stdout/stderr processing for each node (thread) in the process.
+    # This forms the foundation of the thread level forensic logging capability.
+
+    # === Conditional SG Rehydration Pass ===
+    security_group_ids = []
+
+    if blank_sg_detected:
+        print("[DEBUGX-SG-BLANK] SGs still blank — triggering rehydration pass...")
+
+        def describe_instances_metadata_in_batches(my_ec2, instance_ids):
+            all_instances = []
+            for i in range(0, len(instance_ids), 100):
+                batch = instance_ids[i:i + 100]
+                response = my_ec2.describe_instances(InstanceIds=batch)
+                all_instances.extend([
+                    inst for res in response['Reservations'] for inst in res['Instances']
+                ])
+            return all_instances
+
+        rehydration_ids = [entry["InstanceId"] for entry in instance_ips]
+        # instance_ips is from orchestrate function above. Must use this. From this get the instance ids and then pass
+        # this to describe_instances_metdadata_in_batches. 
+
+        all_instances = describe_instances_metadata_in_batches(my_ec2, rehydration_ids)
+
+        for instance in all_instances:
+            instance_id = instance.get('InstanceId')
+            sg_list = instance.get('SecurityGroups', [])
+            print(f"[DEBUGX-SG-RESWEEP] Instance {instance_id} → SGs: {sg_list}")
+
+            #### redefine security_group_ids here and get rid of Block1b legacy code below. Block1b (below) does not work.
+            #### See notes below in Block1b
+            ###### SG Rehydration — Full List Collection (No Deduplication)
+            # Collect security group IDs per instance during rehydration sweep.
+            # Preserve full list, including duplicates, to maintain one-to-one mapping with instance_ips.
+            # This ensures future compatibility when SGs vary per node — critical for retry logic, chunking, and registry 
+            # tagging.
+            # Do NOT deduplicate — deduping breaks process-to-SG alignment and undermines traceability.
+            # SGs must be ordered and complete to support deterministic orchestration and per-thread rule pushes.
+
+            # Append SGs per instance, even if duplicates
+            for sg in sg_list:
+                security_group_ids.append(sg["GroupId"])
+
+
+
+    ##### Block1b goes with Block1 above
+    ##### Block1b — deprecated SG collection logic
+    # This block relied on response['Reservations'], which may be stale or incomplete.
+    # SGs now collected via rehydration sweep using instance_ips from orchestrate logic.
+    # Commented out to prevent overwriting security_group_ids with partial data.
+    # Retained for reference only — do not re-enable unless rehydration fails.
+
+    #security_group_ids = [
+    #    sg['GroupId']
+    #    for reservation in response['Reservations']
+    #    for instance in reservation['Instances']
+    #    for sg in instance['SecurityGroups']
+    #    if instance['InstanceId'] != exclude_instance_id
+    #]
+
+```
+
+
+
+
+#### Section 4: 
 
 #### Section 5
 
