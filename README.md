@@ -507,7 +507,7 @@ The code blocks are below. The comments are self explanatory.
 Batch processing that is present in the orchestrate code above has to be used as the foundation for the instance metadata
 in hyper-scaling test cases.
 
-
+The Code Block1b is commented out as it uses the response/reservation code that cannot accommodate hyer-scaling.
 ```
     ###### New SG Sweep code: This is a patch to troubleshoot hyper-scaling (512 processes) issues with security_group_ids being
     ###### blank.  This only occurs at higher parallel processes.
@@ -793,15 +793,194 @@ process the node output for STDOUT/STDERR which is used in the foresnsic analysi
 
  
 
-#### Section 6: tomcat_worker function destination where the SG rules are actually applied to the nodes (chunk) for the process
+#### Section 5: tomcat_worker function destination where the SG rules are actually applied to the nodes (chunk) for the process
 
 All of the code changes above are in main().
+
 The code below is just presented for completeness, illustrating where the SG rules are actually applied to the nodes 
 that are in the chunk for the current process.  Only 1 of the 3 rules is listed below for illustrative purposes.
 
+This code is from the tomcat_worker which is called from the multipprocessing.Pool via the tomcat_worker_wrapper
+
+
+```
+#### [[tomcat_worker]]
+#### The new SG blocks of code for the refactored retry_with_backoff. The retry_with_backoff now returns the number of 
+#### attempts for the API call to get through for each SG rule application to all the nodes (threads) in the current process
+#### This is entirely a process level application.  Each SG rule application will call the retry_with_backoff which will 
+#### call the my_ec2.authorize_security_group_ingress AWS API to apply the rules to the nodes. It will retrun the number of
+#### attempts which will be recorded as retry_count
+#### max_retry_observed will track the maxiumum of all the retry_counts for all the SG rule applications for this process
+#### This will capture the **highest retry count** seen across all SG rule applications for THIS PROCESS
+#### The final max_retry_observed will then be used to calculate WATCHDOG_TIMEOUT via the call to get_watchdog_timeout
+#### (see next block below the SG blocks)
+
+
+    ###### add DEBUGX for the SG issue at scale that we are seeing. 
+    print(f"[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = {security_group_ids}")
+
+    for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
+        try:
+            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=22")
+
+            retry_count = retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 22,
+                    'ToPort': 22,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+
+            print(f"[SECURITY GROUP] Successfully applied port 22 to sg_id={sg_id}")
+
+
+        except my_ec2.exceptions.ClientError as e:
+
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=22")
+            else:
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=22 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
 
 
 
+    for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
+        try:
+            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=80")
+
+            retry_count = retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 80,
+                    'ToPort': 80,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+
+            print(f"[SECURITY GROUP] Successfully applied port 80 to sg_id={sg_id}")
+
+
+        except my_ec2.exceptions.ClientError as e:
+
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=80")
+            else:
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=80 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+```
+
+This code is realted to the adaptive watchdog timeout code presented in the previous section. As the SG rules are applied
+to the nodes in the process, a max_retry_observed is calculated and this is what feeds into the contention_penalty of the
+adaptive watchdog timeout formula.
+
+Some examples of the print logs in this area of the code are below: 
+
+
+```
+
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.37s...
+
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.75s...
+
+
+
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.83s...
+[SECURITY GROUP] Successfully applied port 22 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=22 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=80
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.90s...
+
+
+
+[SECURITY GROUP] Successfully applied port 8080 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=8080 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 8080, 'ToPort': 8080, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[SECURITY GROUP] Successfully applied port 22 to sg_id=sg-0a1f89717193f7896[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.97s...
+
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 80 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=80 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=8080
+[RETRY] Duplicate rule detected on attempt 2
+[RETRY] Duplicate rule detected on attempt 2
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896']
+
+<<As the test progresses, more API contention, as shown by max_retry_observed increasing>>
+
+[Dynamic Watchdog] [PID 42] instance_type=t2.micro, node_count=512, max_retry_observed=2 → WATCHDOG_TIMEOUT=96s
+[SECURITY GROUP] Successfully applied port 8080 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=8080 → retry_count=1, max_retry_observed=1
+
+
+
+
+
+<<different processes are experiencing different API contention>>
+
+
+[WATCHDOG METRIC] [PID 86] Final max_retry_observed = 2
+
+[WATCHDOG METRIC] [PID 41] Final max_retry_observed = 3
+
+
+<<the adaptive watchdog timeout values vary with respect to API contention>>
+
+
+[Dynamic Watchdog] [PID 32] instance_type=t2.micro, node_count=512, max_retry_observed=3 → WATCHDOG_TIMEOUT=98s
+
+
+[Dynamic Watchdog] [PID 41] instance_type=t2.micro, node_count=512, max_retry_observed=3 → WATCHDOG_TIMEOUT=98s
+
+[Dynamic Watchdog] [PID 63] instance_type=t2.micro, node_count=512, max_retry_observed=4 → WATCHDOG_TIMEOUT=100s
+
+[Dynamic Watchdog] [PID 48] instance_type=t2.micro, node_count=512, max_retry_observed=5 → WATCHDOG_TIMEOUT=102s
+
+
+[POST-MONITOR METRIC] [PID 174] max_retry_observed = 4
+
+[POST-MONITOR METRIC] [PID 225] max_retry_observed = 3
+
+[POST-MONITOR METRIC] [PID 121] max_retry_observed = 4
+
+[POST-MONITOR METRIC] [PID 401] max_retry_observed = 1
+
+
+```
 
 
 
