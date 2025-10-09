@@ -3240,22 +3240,23 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
+#### Comment out this entire block including update_resurrection_registry for res mon 8_6 refactoring:
 
-resurrection_registry = {}
-resurrection_registry_lock = threading.Lock()
-
-# As part of phase2, add pid to the update_resurrection_registry for patch 6 fix and make sure to add pid=multiprocessing.current_process().pid to all the function call arguments using this function
-
-def update_resurrection_registry(ip, attempt, status, pid=None):
-    print(f"[TRACE][res_registry] Updating registry for {ip} with PID {pid}")
-    with resurrection_registry_lock:
-        resurrection_registry[ip] = {
-            "status": status,
-            "attempt": attempt,
-            "timestamp": datetime.now().isoformat(),
-            "pid": pid
-        }
-    print(f"[TRACE][res_registry] Finished registry update for {ip}")    
+#resurrection_registry = {}
+#resurrection_registry_lock = threading.Lock()
+#
+## As part of phase2, add pid to the update_resurrection_registry for patch 6 fix and make sure to add pid=multiprocessing.current_process().pid to all the function call arguments using this function
+#
+#def update_resurrection_registry(ip, attempt, status, pid=None):
+#    print(f"[TRACE][res_registry] Updating registry for {ip} with PID {pid}")
+#    with resurrection_registry_lock:
+#        resurrection_registry[ip] = {
+#            "status": status,
+#            "attempt": attempt,
+#            "timestamp": datetime.now().isoformat(),
+#            "pid": pid
+#        }
+#    print(f"[TRACE][res_registry] Finished registry update for {ip}")    
 
 
 
@@ -5657,29 +5658,29 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
 
-
-##### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
-
-                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
-                    ## the relevant arguments for this function call
-
-                    # BLOCK4(3)
-                    should_resurrect = resurrection_gatekeeper(
-                        stderr_output=stderr_output,
-                        stdout_output=stdout_output,
-                        command_status="Command succeeded",
-                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
-                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
-                        pid=multiprocessing.current_process().pid,
-                        ip_address=ip,
-                        resurrection_registry=resurrection_registry
-                    )
-
-                    if should_resurrect:
-                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
-                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
-                    else:
-                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
+###### Comment out this block 4 for res mon 8_6 refactoring
+###### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
+#
+#                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
+#                    ## the relevant arguments for this function call
+#
+#                    # BLOCK4(3)
+#                    should_resurrect = resurrection_gatekeeper(
+#                        stderr_output=stderr_output,
+#                        stdout_output=stdout_output,
+#                        command_status="Command succeeded",
+#                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
+#                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
+#                        pid=multiprocessing.current_process().pid,
+#                        ip_address=ip,
+#                        resurrection_registry=resurrection_registry
+#                    )
+#
+#                    if should_resurrect:
+#                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
+#                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
+#                    else:
+#                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
 
 
 
