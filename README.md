@@ -886,12 +886,18 @@ This code is from the tomcat_worker which is called from the multipprocessing.Po
         print(f"[RETRY METRIC] sg_id={sg_id}, port=80 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
 ```
 
-This code is realted to the adaptive watchdog timeout code presented in the previous section. As the SG rules are applied
-to the nodes in the process, a max_retry_observed is calculated and this is what feeds into the contention_penalty of the
-adaptive watchdog timeout formula.
+This code is realted to the adaptive watchdog timeout code presented in the previous UPDATE. 
+The adpative watchdog code has been completely refactored and works very well. The fixes in this UPDATE have completed 
+all of the function implementatino in this area.
+
+As the SG rules are applied to the nodes in the process, a max_retry_observed is calculated and this is what feeds into the contention_penalty of the adaptive watchdog timeout formula.
 
 Some examples of the print logs in this area of the code are below: 
 
+The SYNTHETIC injection was used in some of the smaller node test executions.   As shown below at 512 nodes, the API contention
+becomes real, with variable max_retry_observed from 1 all the way to 5 or 6.
+
+The watchdog timeout then reflects the contention penalty accordingly at the per process level.
 
 ```
 
