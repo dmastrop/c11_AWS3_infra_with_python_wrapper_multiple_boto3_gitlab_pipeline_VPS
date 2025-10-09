@@ -3241,6 +3241,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 #### Comment out this entire block including update_resurrection_registry for res mon 8_6 refactoring:
+#### The resurrection_registry has been replaced with the process_registry
 
 #resurrection_registry = {}
 #resurrection_registry_lock = threading.Lock()
@@ -5659,6 +5660,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             continue
 
 ###### Comment out this block 4 for res mon 8_6 refactoring
+###### The resurrection_registry has been replaced by the process_registry
+
 ###### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
 #
 #                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
