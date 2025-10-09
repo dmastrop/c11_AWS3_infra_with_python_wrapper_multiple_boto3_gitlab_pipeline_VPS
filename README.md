@@ -37,34 +37,6 @@ pertain to the optmizations to this module.
 The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
 
 
-## Latest milestone updates to refer to below:
-
-- Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
-
-- Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
-
-- Update part 23: implementation of the control plane Public IP orchestrator
-
-- Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection
-
-- Update part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function
-
-- Update part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
-
-- Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
-
-- Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
-
-- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator
-
-- Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
-
-- Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
-
-- Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
-
-- Update part 33 Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
-
 
 
 
@@ -97,7 +69,44 @@ Some features:
 - Manual registry tagging for scenario-specific traceability
 - Resurrection monitor logic with phase-tagged recovery attempts  
 - Cross-platform shell wrapper resilience with synthetic test injection 
+- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator
 - Adaptive orchestration logic with ML/LLM feedback hooks (planned)  
+
+
+
+
+
+## Latest milestone updates to refer to below:
+
+- Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
+
+- Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
+
+- Update part 23: implementation of the control plane Public IP orchestrator
+
+- Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection
+
+- Update part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function
+
+- Update part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard
+
+- Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
+
+- Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic anda general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes
+
+- Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator
+
+- Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff
+
+- Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
+
+- Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+
+- Update part 33 Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+
+
+
+
 
 
 
