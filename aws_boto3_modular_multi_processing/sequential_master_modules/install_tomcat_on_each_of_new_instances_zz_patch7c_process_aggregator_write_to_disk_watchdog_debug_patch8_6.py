@@ -2545,7 +2545,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-## Add flush at the end of the resurrection_monitor to help facilitate the logging to gitlab console configured above in patch7.
+    ## Add flush at the end of the resurrection_monitor to help facilitate the logging to gitlab console configured above in patch7.
     sys.stdout.flush()
 
 
