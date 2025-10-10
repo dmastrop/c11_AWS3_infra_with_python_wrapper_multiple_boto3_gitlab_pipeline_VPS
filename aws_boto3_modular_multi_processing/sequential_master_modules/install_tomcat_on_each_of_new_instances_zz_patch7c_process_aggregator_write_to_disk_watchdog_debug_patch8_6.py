@@ -2064,30 +2064,30 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
             log_debug(f"[{timestamp()}] Ghost candidate flagged ({reason}): {ip}")
 
 
-#            if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
-#                flagged[ip] = record
-#                log_debug(f"[{timestamp()}] Ghost candidate flagged (watchdog stall retry threshold): {ip}")  
-#
-#            if ip not in successful_registry_ips:
-#                # 👻 Potential ghost thread detected
-#                flagged[ip] = record
-#                log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
-#                
+            #if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+            #    flagged[ip] = record
+            #    log_debug(f"[{timestamp()}] Ghost candidate flagged (watchdog stall retry threshold): {ip}")  
+
+            #if ip not in successful_registry_ips:
+            #    # 👻 Potential ghost thread detected
+            #    flagged[ip] = record
+            #    log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
+                
 
 
 
-####### UPDATED PATCH 7b to address cross log corruption  ################
+        ####### UPDATED PATCH 7b to address cross log corruption  ################
 
-#- Prevents `Patch7 Summary` lines from leaking into:
-#- `benchmark_*.log` (PID logs)
-#- `benchmark_combined.log` (CI-generated artifact log)
-#-  Still generates `benchmark_combined_runtime.log` inside the container
-#-  Writes artifact logs for registry analysis (`*_artifact.log`)
-#-  Logs Patch7 summary to a **dedicated file**, not `stdout`
-#-  Fully isolates `patch7_logger` so it never touches shared streams
-#
+        #- Prevents `Patch7 Summary` lines from leaking into:
+        #- `benchmark_*.log` (PID logs)
+        #- `benchmark_combined.log` (CI-generated artifact log)
+        #-  Still generates `benchmark_combined_runtime.log` inside the container
+        #-  Writes artifact logs for registry analysis (`*_artifact.log`)
+        #-  Logs Patch7 summary to a **dedicated file**, not `stdout`
+        #-  Fully isolates `patch7_logger` so it never touches shared streams
+        #
 
-### Updated Patch7 Block 
+        ### Updated Patch7 Block 
 
 
 
@@ -2199,11 +2199,11 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-##### Begin comment out of old benchmark_ips  code.
-##### This is the old benchmark_ips generation code.This has been replaced by the global modular function above
-##### as part of patch 7d2, hydrate_benchmark_ips()
-##### All of this code needs to be commented out after adding the call to hydrate_benchmark_ips early in the 
-##### res mon function (see above)
+        ##### Begin comment out of old benchmark_ips  code.
+        ##### This is the old benchmark_ips generation code.This has been replaced by the global modular function above
+        ##### as part of patch 7d2, hydrate_benchmark_ips()
+        ##### All of this code needs to be commented out after adding the call to hydrate_benchmark_ips early in the 
+        ##### res mon function (see above)
 
 
         ## ------- Step 1: Combine runtime benchmark logs: filtered -------
@@ -2408,7 +2408,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-#### End of comment out of old benchmark_ips code ####
+        #### End of comment out of old benchmark_ips code ####
 
 
        
@@ -2446,18 +2446,18 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-# --- UPDATED RESURRECTION CANDIDATE JSON AND GHOST JSON PER PROCESS CODE. THIS REPLACED THE PATCH4 BLOCK ABOVE ---
-# PID_JSON_DUMPS is an env variable used by gitlab .gitlab-ci.yml file to turn this on and off if it creates too much
-# overhead during debugging hyper-scaling cases (where there can be a large number of registry threads in a failed, not successful
-# state, and/or ghost threads
+    # --- UPDATED RESURRECTION CANDIDATE JSON AND GHOST JSON PER PROCESS CODE. THIS REPLACED THE PATCH4 BLOCK ABOVE ---
+    # PID_JSON_DUMPS is an env variable used by gitlab .gitlab-ci.yml file to turn this on and off if it creates too much
+    # overhead during debugging hyper-scaling cases (where there can be a large number of registry threads in a failed, not successful
+    # state, and/or ghost threads
 
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
 
 
 
 
-# 🔒 Legacy ghost/candidate dump logic disabled — replaced by detect_ghosts() in Patch7d2
-# Commented out to prevent redundant artifact writes and confusion during modular refactor
+    # 🔒 Legacy ghost/candidate dump logic disabled — replaced by detect_ghosts() in Patch7d2
+    # Commented out to prevent redundant artifact writes and confusion during modular refactor
 
     ## only dump non-empty lists to avoid churn
     #if os.getenv("PID_JSON_DUMPS", "true").lower() in ("1","true"):
