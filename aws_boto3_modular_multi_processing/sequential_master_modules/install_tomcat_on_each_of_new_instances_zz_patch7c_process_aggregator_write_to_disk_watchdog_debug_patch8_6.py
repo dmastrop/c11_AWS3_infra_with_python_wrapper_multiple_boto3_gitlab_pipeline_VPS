@@ -2166,6 +2166,12 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
                 f.write(ip + "\n")
 
 
+
+
+
+
+
+
         ##  Move this block to here. This will be replaced by the detect_ghosts() helper function.
 
         ####################
@@ -2489,17 +2495,64 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-    # ✅ Print final status and resurrection monitor final verdict
-    if len(flagged) == 1 and "early_exit" in flagged:
-        print(f"⚠️ Resurrection Monitor: Early thread exit detected in process {pid}.")
-    elif flagged:
-        print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged in process {pid}.")
+
+    ##### Comment out this old code that used flagged and replace with the RESMON_8 code block below this.
+    ##### The determination of resurrection candidates will be made on the basis of the process_registry and 
+    ##### all registry_entry that != install_success (This will catch install_failed and stubs)
+    ##### The ghosts will be detected based upon the detect_ghosts helper function and comparing the process_registry list
+    ##### of ips compared to the golden list of ips (at the per process layer this is instance_info which is called
+    ##### assigned_ips within this resurreciton_monitor_patch8 function
+
+
+    ## ✅ Print final status and resurrection monitor final verdict
+    #if len(flagged) == 1 and "early_exit" in flagged:
+    #    print(f"⚠️ Resurrection Monitor: Early thread exit detected in process {pid}.")
+    #elif flagged:
+    #    print(f"🔍 Resurrection Monitor: {len(flagged)} thread(s) flagged in process {pid}.")
+    #else:
+    #    print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
+
+
+
+    # === RESMON_8 Resurrection Candidate Detection ===
+    resurrection_candidates = []
+
+    for thread_uuid, entry in process_registry.items():
+        status = entry.get("status")
+        if status and status != "install_success":
+            resurrection_candidates.append(entry)
+            print(f"[RESMON_8] Resurrection candidate detected: UUID {thread_uuid} | Status: {status}")
+
+    # Generate timestamp for consistent artifact naming
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+
+    # Write artifact only if there are candidates
+    if resurrection_candidates:
+        candidate_file = os.path.join(log_dir, f"resurrection_candidates_pid_{pid}_{ts}.json")
+        try:
+            with open(candidate_file, "w") as f:
+                json.dump(resurrection_candidates, f, indent=2)
+            print(f"[RESMON_8] Resurrection candidate file written: {candidate_file}")
+        except Exception as e:
+            print(f"[RESMON_8] Failed to write resurrection candidate file: {e}")
+
+    # Final verdict printout
+    if resurrection_candidates:
+        print(f"[RESMON_8] 🔍 Resurrection Monitor: {len(resurrection_candidates)} thread(s) flagged in process {pid}.")
     else:
-        print(f"✅ Resurrection Monitor: No thread failures in process {pid}.")
+        print(f"[RESMON_8] ✅ Resurrection Monitor: No thread failures in process {pid}.")
+
+
 
 
 ## Add flush at the end of the resurrection_monitor to help facilitate the logging to gitlab console configured above in patch7.
     sys.stdout.flush()
+
+
+
+
+
+
 
 
 ########## THIS IS THE END OF THE resurrection_monitor_patch8() function  ######################
