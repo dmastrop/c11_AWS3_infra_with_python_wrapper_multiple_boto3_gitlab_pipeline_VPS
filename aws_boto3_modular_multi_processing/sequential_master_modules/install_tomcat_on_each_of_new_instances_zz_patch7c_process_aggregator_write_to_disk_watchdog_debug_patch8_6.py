@@ -3293,7 +3293,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-#### Comment out this entire block including update_resurrection_registry for res mon 8_6 refactoring:
+#### Comment out this entire block including update_resurrection_registry for res mon RESMON_8 refactoring:
 #### The resurrection_registry has been replaced with the process_registry
 
 #resurrection_registry = {}
@@ -5712,7 +5712,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
 
-###### Comment out this block 4 for res mon 8_6 refactoring
+###### Comment out this block 4 for res mon RESMON_8 refactoring
 ###### The resurrection_registry has been replaced by the process_registry
 
 ###### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
