@@ -3295,9 +3295,9 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 #### Comment out this entire block including update_resurrection_registry for res mon RESMON_8 refactoring:
 #### The resurrection_registry has been replaced with the process_registry
-
-#resurrection_registry = {}
-#resurrection_registry_lock = threading.Lock()
+#### Leave in the lock for now but remove this later.
+resurrection_registry = {}
+resurrection_registry_lock = threading.Lock()
 #
 ## As part of phase2, add pid to the update_resurrection_registry for patch 6 fix and make sure to add pid=multiprocessing.current_process().pid to all the function call arguments using this function
 #
