@@ -5541,12 +5541,36 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "pid": pid,
                         "thread_id": threading.get_ident(),
                         "thread_uuid": failed_uuid,
-                        "public_ip": ip if 'ip' in locals() else "unknown",
-                        "private_ip": private_ip if 'private_ip' in locals() else "unknown",
+                        #"public_ip": ip if 'ip' in locals() else "unknown",
+                        #"private_ip": private_ip if 'private_ip' in locals() else "unknown",
+                        "public_ip": "unknown",
+                        "private_ip": "unknown",
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["install_failed", "future_exception", type(e).__name__]
                     }
-                    thread_registry[failed_uuid] = failed_entry
+                    #### insert the code to fix the "unknown" public and private ip in this registry entry
+                    #### this will now use the instance_info which is derived from the assigned_ips (chunk gold ip data)to
+                    #### replace the unknown with the actual ip address. This will help avoid this being classified as a
+                    #### ghost
+                    # 🔧 Attempt IP recovery from instance_info
+                    recovered_ip = None
+                    recovered_private_ip = None
+                    for ip_obj in instance_info:
+                        if ip_obj.get("InstanceId") == future._args[2]:  # instance_id passed to install_tomcat
+                            recovered_ip = ip_obj.get("PublicIpAddress")
+                            recovered_private_ip = ip_obj.get("PrivateIpAddress")
+                            break
+
+                    if recovered_ip:
+                        failed_entry["public_ip"] = recovered_ip
+                        failed_entry["private_ip"] = recovered_private_ip
+                        failed_entry["tags"].append("ip_recovered")
+                        print(f"[PATCH_IP_RECOVERY] Recovered IP for UUID {failed_uuid}: {recovered_ip}")
+                    else:
+                        failed_entry["tags"].append("ip_unhydrated") # use this to avoid classifying this as ghost in ghost code even if the ip address cannot be retrieved
+                        print(f"[PATCH_IP_RECOVERY] Could not recover IP for UUID {failed_uuid} — tagging as ip_unhydrated")
+
+                    thread_registry[failed_uuid] = failed_entry # create the registry_entry
                     logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
         
 
