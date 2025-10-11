@@ -271,9 +271,15 @@ def restart_ec_multiple_instances():
 
 
 
-##### THIS IS THE MODULE2 SCRIPT with code to for refactoring resurrection_monitor_patch8 RESMON_8 and getting rid of res reg lock
+###### THIS IS THE MODULE2 SCRIPT with code to for refactoring resurrection_monitor_patch8 RESMON_8 and getting rid of res reg lock
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_6b.py")
+
+
+##### THIS IS THE MODULE2 SCRIPT with code to for refactoring resurrection_monitor_patch8 RESMON_8 and fixing 512 install_failed misclassification
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_6b.py")
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_6c.py")
+
 
 
 ## modules 3-11:
