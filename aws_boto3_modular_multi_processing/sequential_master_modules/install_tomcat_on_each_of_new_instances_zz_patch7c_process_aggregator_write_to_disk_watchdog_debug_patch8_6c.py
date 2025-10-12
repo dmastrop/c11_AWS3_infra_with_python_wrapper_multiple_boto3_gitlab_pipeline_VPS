@@ -5551,7 +5551,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #### insert the code to fix the "unknown" public and private ip in this registry entry
                     #### this will now use the instance_info which is derived from the assigned_ips (chunk gold ip data)to
                     #### replace the unknown with the actual ip address. This will help avoid this being classified as a
-                    #### ghost
+                    #### ghost in addition to install_failed. It should only be install_failed. The ghost logic is not failing, but
+                    #### the "unknown" ip address is causing issues and being classificed as a missing ip address (ghost).
                     # 🔧 Attempt IP recovery from instance_info
                     recovered_ip = None
                     recovered_private_ip = None
