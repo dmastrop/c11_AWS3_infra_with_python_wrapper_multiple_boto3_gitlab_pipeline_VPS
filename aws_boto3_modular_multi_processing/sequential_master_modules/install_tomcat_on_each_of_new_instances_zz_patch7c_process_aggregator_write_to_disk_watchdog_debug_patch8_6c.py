@@ -2040,46 +2040,57 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     }
 
 
-
-    # ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
-    
     
 
-    ## We are now keying on thread_uuid. Keying on ip is causing problems. This is a small change as indicated below.
 
-    #for ip, record in process_registry.items():
-    #replace process_registry for resurrection_registry for patch7c    
-    #for ip, record in resurrection_registry.items():
-    
-    for thread_uuid, record in process_registry.items():
-        ip = record.get("public_ip")
-        if not ip:
-            continue  # Skip entries without a public IP
+    ###### This entire block is deprecated. The logic here is no longer correct for ghost detection. Ghost detection is not the same
+    ###### as instal_failed and ghost detection now goes through several checks based on a separate code block below (missing ips is
+    ###### one of the criteria)
+    ###### # Legacy ghost misclassification logic — deprecated #
 
+    ## ---------------- Begin Resurrection Registry Scan (patches 2 and 5) ----------------
+    #
+    #
 
-        # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
-        # seeing successful installations having resurrection logs created. Patch1, creating a registry
-        # fingerprint for successful installs at the end of install_tomcat() did not address this problem
-        # Patch1 is at the end of install_tomcat() with install_success fingerprint stamping.
-        if record.get("status") == "install_success":
-            continue
+    ### We are now keying on thread_uuid. Keying on ip is causing problems. This is a small change as indicated below.
 
-
-        reason = "watchdog stall retry threshold" if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD else "not in successful_registry_ips"
-        record["ghost_reason"] = reason
-        flagged[ip] = record
-        log_debug(f"[{timestamp()}] Ghost candidate flagged ({reason}): {ip}")
+    ##for ip, record in process_registry.items():
+    ##replace process_registry for resurrection_registry for patch7c    
+    ##for ip, record in resurrection_registry.items():
+    #
+    #for thread_uuid, record in process_registry.items():
+    #    ip = record.get("public_ip")
+    #    if not ip:
+    #        continue  # Skip entries without a public IP
 
 
-        #if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
-        #    flagged[ip] = record
-        #    log_debug(f"[{timestamp()}] Ghost candidate flagged (watchdog stall retry threshold): {ip}")  
+    #    # 🛑 Skip nodes that completed successfully. This is patch2 to address this issue where we are
+    #    # seeing successful installations having resurrection logs created. Patch1, creating a registry
+    #    # fingerprint for successful installs at the end of install_tomcat() did not address this problem
+    #    # Patch1 is at the end of install_tomcat() with install_success fingerprint stamping.
+    #    if record.get("status") == "install_success":
+    #        continue
 
-        #if ip not in successful_registry_ips:
-        #    # 👻 Potential ghost thread detected
-        #    flagged[ip] = record
-        #    log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
-                
+
+    #    reason = "watchdog stall retry threshold" if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD else "not in successful_registry_ips"
+    #    record["ghost_reason"] = reason
+    #    flagged[ip] = record
+    #    log_debug(f"[{timestamp()}] Ghost candidate flagged ({reason}): {ip}")
+
+
+    #    #if "timeout" in record["status"] or record["attempt"] >= STALL_RETRY_THRESHOLD:
+    #    #    flagged[ip] = record
+    #    #    log_debug(f"[{timestamp()}] Ghost candidate flagged (watchdog stall retry threshold): {ip}")  
+
+    #    #if ip not in successful_registry_ips:
+    #    #    # 👻 Potential ghost thread detected
+    #    #    flagged[ip] = record
+    #    #    log_debug(f"[{timestamp()}] Ghost candidate flagged (in total_registry_ips): {ip}")
+    #            
+
+
+
+
 
 
 
