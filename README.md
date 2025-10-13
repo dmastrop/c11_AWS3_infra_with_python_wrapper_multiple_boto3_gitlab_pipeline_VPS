@@ -109,6 +109,32 @@ Some features:
 
 
 
+## A note on the STATUS_TAGS:
+
+
+I added a STATUS_TAGS at the top of the module to track the taxonomy of the various status tags that can be used in 
+the registry_entry. All of the status tags below have not been put to use yet.(for example. gatekeeper_resurrection,
+watchdog_timeout, no_tags, ssh_initiated_failed).  The ssh_retry_failed, install_failed, install_success, and stub
+are currently in use. The registry_entry also has a "tags" field that can be used for other identifying and contextual
+information regarding the status. This can be used in forensics when troubleshooting mysterious threads that are not 
+behaving properly and can be used by the resurrection_gatekeeper filter logic heuristics when deciding whether or not
+a thread (candidate) is viable for actual resurrection.
+
+```
+## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
+## failure and stub code is added
+
+STATUS_TAGS = {
+    "install_success",
+    "install_failed",
+    "stub",
+    "gatekeeper_resurrect",
+    "watchdog_timeout",
+    "ssh_initiated_failed",
+    "ssh_retry_failed",
+    "no_tags"
+}
+```
 
 
 
@@ -221,32 +247,6 @@ if not all of the stubs (i.e., not install_success registry_entry threads)
 
 
 
-### A note on the STATUS_TAGS:
-
-
-I added a STATUS_TAGS at the top of the module to track the taxonomy of the various status tags that can be used in 
-the registry_entry. All of the status tags below have not been put to use yet.(for example. gatekeeper_resurrection,
-watchdog_timeout, no_tags, ssh_initiated_failed).  The ssh_retry_failed, install_failed, install_success, and stub
-are currently in use. The registry_entry also has a "tags" field that can be used for other identifying and contextual
-information regarding the status. This can be used in forensics when troubleshooting mysterious threads that are not 
-behaving properly and can be used by the resurrection_gatekeeper filter logic heuristics when deciding whether or not
-a thread (candidate) is viable for actual resurrection.
-
-```
-## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
-## failure and stub code is added
-
-STATUS_TAGS = {
-    "install_success",
-    "install_failed",
-    "stub",
-    "gatekeeper_resurrect",
-    "watchdog_timeout",
-    "ssh_initiated_failed",
-    "ssh_retry_failed",
-    "no_tags"
-}
-```
 
 
 
