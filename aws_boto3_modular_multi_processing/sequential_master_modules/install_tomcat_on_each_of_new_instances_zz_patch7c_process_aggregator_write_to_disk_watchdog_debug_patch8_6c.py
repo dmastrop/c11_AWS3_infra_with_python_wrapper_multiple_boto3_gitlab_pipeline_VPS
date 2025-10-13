@@ -5440,9 +5440,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             futures = [
                 executor.submit(
                     install_tomcat,
-                    ip['PublicIpAddress'],
-                    ip['PrivateIpAddress'],
-                    ip['InstanceId'],
+                    ip['PublicIpAddress'],   # _args[0]
+                    ip['PrivateIpAddress'],  # _args[1]
+                    ip['InstanceId'],        # _args[2]. 
+                    # Match on this args[2] when a crash occurs in futures and the ip address is missing in the registry_entry. 
+                    # This permits us to recover the ip for any thread(s) in the ips that are in this process chunk list 
+                    # (instance_info which is asigned_ips). See the logic below 
+
                     WATCHDOG_TIMEOUT  # ← added here
                 )
                 for ip in instance_info
@@ -5564,11 +5568,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #### replace the unknown with the actual ip address. This will help avoid this being classified as a
                     #### ghost in addition to install_failed. It should only be install_failed. The ghost logic is not failing, but
                     #### the "unknown" ip address is causing issues and being classificed as a missing ip address (ghost).
-                    # 🔧 Attempt IP recovery from instance_info
+
+                    # 🔧 Attempt IP recovery from instance_info (assigned_ips)
+                    # Note that InstanceId is available for this futures thread via future.args[2]. See the 
+                    # ThreadPoolExecutor block above. This permits us to correlate any missing ip in the thread's registry_entry
+                    # by using the InstanceId, at the thread level for any number of threads in the current process that 
+                    # threaded_install is working on.
+                    # So when a future crashes, we can still access its original `InstanceId` via `future._args[2]`, and use that to 
+                    # recover the IP from `instance_info`. 
+                    # This is what makes the recovery logic thread-safe and deterministic, even in the presence of multiple failures 
+                    # in the same process.
+                    
                     recovered_ip = None
                     recovered_private_ip = None
                     for ip_obj in instance_info:
-                        if ip_obj.get("InstanceId") == future._args[2]:  # instance_id passed to install_tomcat
+                        if ip_obj.get("InstanceId") == future._args[2]:  # instance_id was passed to install_tomcat ThreadPoolExecutor
                             recovered_ip = ip_obj.get("PublicIpAddress")
                             recovered_private_ip = ip_obj.get("PrivateIpAddress")
                             break
