@@ -1970,14 +1970,14 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-        ##### This helper function is for the refactored ghost detection logic (see below)
-        ##### make sure to import ipaddress
-        def is_valid_ip(ip):
-            try:
-                ipaddress.ip_address(ip)
-                return True
-            except Exception:
-                return False
+    ##### This helper function is for the refactored ghost detection logic (see below)
+    ##### make sure to import ipaddress
+    def is_valid_ip(ip):
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except Exception:
+            return False
 
 
 
