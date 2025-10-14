@@ -46,7 +46,11 @@ deploy:
     PID_JSON_DUMPS: "false"  
     # this is a gating env VAR for module2 if I need to disable the process level resurrection candidate
     # or ghost json artifact files during hyper-scalling
-  
+ 
+    FORCE_TOMCAT_FAIL: "1"  # ← Inject synthetic failure for testing (futures crash)
+
+
+
   before_script:
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
     - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
@@ -60,7 +64,7 @@ deploy:
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
     - echo 'PID_JSON_DUMPS='${PID_JSON_DUMPS} >> .env  # see above. Gating for the json ghost and res candidate files.  
-
+    - echo 'FORCE_TOMCAT_FAIL='${FORCE_TOMCAT_FAIL} >> .env # This is to inject a futures crash in install_tomcat
 
 
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
