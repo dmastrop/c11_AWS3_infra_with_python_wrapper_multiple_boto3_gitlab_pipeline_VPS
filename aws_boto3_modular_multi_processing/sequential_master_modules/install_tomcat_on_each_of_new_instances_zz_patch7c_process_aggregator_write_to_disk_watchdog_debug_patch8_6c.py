@@ -2026,23 +2026,28 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     #     if record.get("status") == "install_success"
     # }
 
-    # this syntax returns ips and not uuids. This is what we want.
-    total_registry_ips = {
-        entry.get("public_ip")
-        for entry in process_registry.values()
-        if entry.get("public_ip") is not None
-    }
 
-    successful_registry_ips = {
-        entry.get("public_ip")
-        for entry in process_registry.values()
-        if entry.get("status") == "install_success"
-    }
+    ###### Remove old code Block B.2
+    ###### This is done in main() at the aggregation level and if we do process level stats we can write fresh code uisng the 
+    ###### process_regsitry.values for that
+
+    ## this syntax returns ips and not uuids. This is what we want.
+    #total_registry_ips = {
+    #    entry.get("public_ip")
+    #    for entry in process_registry.values()
+    #    if entry.get("public_ip") is not None
+    #}
+
+    #successful_registry_ips = {
+    #    entry.get("public_ip")
+    #    for entry in process_registry.values()
+    #    if entry.get("status") == "install_success"
+    #}
 
 
     
 
-
+    ###### Remove old code Block B.1
     ###### This entire block is deprecated. The logic here is no longer correct for ghost detection. Ghost detection is not the same
     ###### as instal_failed and ghost detection now goes through several checks based on a separate code block below (missing ips is
     ###### one of the criteria)
