@@ -5661,43 +5661,54 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "public_ip": "unknown",
                         "private_ip": "unknown",
                         "timestamp": str(datetime.utcnow()),
-                        "tags": ["install_failed", "future_exception", type(e).__name__]
+                        #"tags": ["install_failed", "future_exception", type(e).__name__]
+                        "tags": ["install_failed", "future_exception", "ip_unhydrated", type(e).__name__]
                     }
-                    #### insert the code to fix the "unknown" public and private ip in this registry entry
-                    #### this will now use the instance_info which is derived from the assigned_ips (chunk gold ip data)to
-                    #### replace the unknown with the actual ip address. This will help avoid this being classified as a
-                    #### ghost in addition to install_failed. It should only be install_failed. The ghost logic is not failing, but
-                    #### the "unknown" ip address is causing issues and being classificed as a missing ip address (ghost).
 
-                    # 🔧 Attempt IP recovery from instance_info (assigned_ips)
-                    # Note that InstanceId is available for this futures thread via future.args[2]. See the 
-                    # ThreadPoolExecutor block above. This permits us to correlate any missing ip in the thread's registry_entry
-                    # by using the InstanceId, at the thread level for any number of threads in the current process that 
-                    # threaded_install is working on.
-                    # So when a future crashes, we can still access its original `InstanceId` via `future._args[2]`, and use that to 
-                    # recover the IP from `instance_info`. 
-                    # This is what makes the recovery logic thread-safe and deterministic, even in the presence of multiple failures 
-                    # in the same process.
-                    
-                    recovered_ip = None
-                    recovered_private_ip = None
-                    for ip_obj in instance_info:
-                        if ip_obj.get("InstanceId") == future._args[2]:  # instance_id was passed to install_tomcat ThreadPoolExecutor
-                            recovered_ip = ip_obj.get("PublicIpAddress")
-                            recovered_private_ip = ip_obj.get("PrivateIpAddress")
-                            break
 
-                    if recovered_ip:
-                        failed_entry["public_ip"] = recovered_ip
-                        failed_entry["private_ip"] = recovered_private_ip
-                        failed_entry["tags"].append("ip_recovered")
-                        print(f"[RESMON_8_PATCH_IP_RECOVERY] Recovered IP for UUID {failed_uuid}: {recovered_ip}")
-                    else:
-                        failed_entry["tags"].append("ip_unhydrated") # use this to avoid classifying this as ghost in ghost code even if the ip address cannot be retrieved
-                        print(f"[RESMON_8_PATCH_IP_RECOVERY] Could not recover IP for UUID {failed_uuid} — tagging as ip_unhydrated")
+                    ####### remove the recovery code below. The futures _args[2] is not working and causing an upstream crash in
+                    ####### the multiprocessing.Pool because _args[2] on a crashed thread is not recoverable
+                    ####### For now hardcode the ip as "unknown" as shown above and add the ip_unhydrated tag to show that this
+                    ####### ip is unrecoverable (even though it is in the golden chunk list of ips for the process). Correlating
+                    ####### the ip with the specific crash and registry_entry that is required for this ip recovery will require
+                    ####### another layer of instrumentation for a later phase.
 
-                    thread_registry[failed_uuid] = failed_entry # create the registry_entry
-                    logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
+
+                    ##### insert the code to fix the "unknown" public and private ip in this registry entry
+                    ##### this will now use the instance_info which is derived from the assigned_ips (chunk gold ip data)to
+                    ##### replace the unknown with the actual ip address. This will help avoid this being classified as a
+                    ##### ghost in addition to install_failed. It should only be install_failed. The ghost logic is not failing, but
+                    ##### the "unknown" ip address is causing issues and being classificed as a missing ip address (ghost).
+
+                    ## 🔧 Attempt IP recovery from instance_info (assigned_ips)
+                    ## Note that InstanceId is available for this futures thread via future.args[2]. See the 
+                    ## ThreadPoolExecutor block above. This permits us to correlate any missing ip in the thread's registry_entry
+                    ## by using the InstanceId, at the thread level for any number of threads in the current process that 
+                    ## threaded_install is working on.
+                    ## So when a future crashes, we can still access its original `InstanceId` via `future._args[2]`, and use that to 
+                    ## recover the IP from `instance_info`. 
+                    ## This is what makes the recovery logic thread-safe and deterministic, even in the presence of multiple failures 
+                    ## in the same process.
+                    #
+                    #recovered_ip = None
+                    #recovered_private_ip = None
+                    #for ip_obj in instance_info:
+                    #    if ip_obj.get("InstanceId") == future._args[2]:  # instance_id was passed to install_tomcat ThreadPoolExecutor
+                    #        recovered_ip = ip_obj.get("PublicIpAddress")
+                    #        recovered_private_ip = ip_obj.get("PrivateIpAddress")
+                    #        break
+
+                    #if recovered_ip:
+                    #    failed_entry["public_ip"] = recovered_ip
+                    #    failed_entry["private_ip"] = recovered_private_ip
+                    #    failed_entry["tags"].append("ip_recovered")
+                    #    print(f"[RESMON_8_PATCH_IP_RECOVERY] Recovered IP for UUID {failed_uuid}: {recovered_ip}")
+                    #else:
+                    #    failed_entry["tags"].append("ip_unhydrated") # use this to avoid classifying this as ghost in ghost code even if the ip address cannot be retrieved
+                    #    print(f"[RESMON_8_PATCH_IP_RECOVERY] Could not recover IP for UUID {failed_uuid} — tagging as ip_unhydrated")
+
+                    #thread_registry[failed_uuid] = failed_entry # create the registry_entry
+                    #logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
         
 
 
