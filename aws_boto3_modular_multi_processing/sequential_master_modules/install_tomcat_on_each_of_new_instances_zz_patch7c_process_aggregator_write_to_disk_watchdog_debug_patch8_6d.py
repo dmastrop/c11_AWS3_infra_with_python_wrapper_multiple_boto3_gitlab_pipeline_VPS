@@ -5727,8 +5727,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #    failed_entry["tags"].append("ip_unhydrated") # use this to avoid classifying this as ghost in ghost code even if the ip address cannot be retrieved
                     #    print(f"[RESMON_8_PATCH_IP_RECOVERY] Could not recover IP for UUID {failed_uuid} — tagging as ip_unhydrated")
 
-                    #thread_registry[failed_uuid] = failed_entry # create the registry_entry
-                    #logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
+
+
+
+                    thread_registry[failed_uuid] = failed_entry # create the registry_entry
+                    logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
         
 
 
