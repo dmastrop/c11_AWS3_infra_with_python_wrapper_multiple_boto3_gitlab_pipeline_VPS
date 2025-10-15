@@ -3800,8 +3800,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### with the tags indicating that it is a futures crash. The flag FORCE_TOMCAT_FAIL is set in .gitlab-ci.yml file and imported
         #### as in env variable. It will force all the processes/threads in the execution run to fail. There will be no install_success
         #### on any of the threads.
-        if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
-            raise RuntimeError("Synthetic failure for testing")
+        #if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+        #    raise RuntimeError("Synthetic failure for testing")
 
 
 
@@ -4315,6 +4315,26 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 ## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
 ## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
 ## The read_output_with_watchdog calls the update_resurrection_registry function
+
+
+
+
+        ##### This code below is a synthetic crash injection to test the futures thread crash code that has been added in the 
+        ##### resurrection_monitor_patch8.  The ghost detection logic and resurrection candidate logic is in that function.
+        ##### prior to the fix, the ghost detection logic was too aggressive, marking instalL_failed registry_entry as ghost.
+        #### Thus as an install_failed registry_entry it was double counted as failed ip and a ghost ip.  It is not a ghost ip.
+        #### The new code prevents install_failed and stub registry_entry from being added to ghost ip list, and also prevents 
+        #### regsitry_entry with unknown, missing or malformed ip addresses as public ip, as being counted as ghosts. None of these
+        #### should be counted as ghosts.  The crash simulation code below will incite a futures thread crash in install_tomcat that
+        #### will percolate up to the calling function threaded_install (ThreadPoolExecutor invokes install_tomcat from there).
+        #### This causes the except block in threaded_install to trigger and creates a registry_entry wih an unknown ip and install_failed
+        #### with the tags indicating that it is a futures crash. The flag FORCE_TOMCAT_FAIL is set in .gitlab-ci.yml file and imported
+        #### as in env variable. It will force all the processes/threads in the execution run to fail. There will be no install_success
+        #### on any of the threads.
+        if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure for testing")
+
+
 
 
         #### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
