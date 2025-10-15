@@ -5661,7 +5661,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "public_ip": "unknown",
                         "private_ip": "unknown",
                         "timestamp": str(datetime.utcnow()),
-                        #"tags": ["install_failed", "future_exception", type(e).__name__]
+                        #"tags": ["install_failed", "future_exception", type(e).__name__],
                         "tags": ["install_failed", "future_exception", "ip_unhydrated", type(e).__name__]
                     }
 
