@@ -5865,6 +5865,38 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ######## and all the other attribues of the thread are lost when it crashes.  Initially tried using _args[2] to
     ######## get the instance id of the crashed thread but this did not work due to this reason.
 
+    ######## Note3: It is best to do this rehydration as batch processing on the entire processs registry_entrys instead
+    ######## of doing it inside threaded_install exception block for ThreadPoolExector. This is because of the way that the 
+    ######## ip addresses are rehydrated. See comments above for the detail on how this is done.
+    #- Guarantees one-to-one mapping between missing IPs and unknown UUIDs  
+    #- Avoids race conditions and duplicate assignments  
+    #- Preserves semantic clarity and forensic traceability  
+    #- Keeps logs clean and upstream  ghost detection logic in the resurrection monitor (further below) deterministic
+
+
+    # ------------------ RESMON PATCH: Batch Rehydration ------------------
+    unknown_entries = {
+        uuid: entry for uuid, entry in process_registry.items()
+        if entry.get("public_ip") == "unknown"
+    }
+
+    seen_ips_unhydrated = {
+        entry["public_ip"]
+        for entry in process_registry.values()
+        if is_valid_ip(entry.get("public_ip"))
+    }
+
+    missing_ips_unhydrated = sorted(list(assigned_ip_set - seen_ips_unhydrated))
+
+    if len(unknown_entries) == len(missing_ips_unhydrated):
+        for uuid, ip in zip(unknown_entries.keys(), missing_ips_unhydrated):
+            process_registry[uuid]["public_ip"] = ip
+            process_registry[uuid]["tags"].append("ip_rehydrated")
+            print(f"[RESMON_8_PATCH] Rehydrated IP {ip} for UUID {uuid}")
+    else:
+        logging.warning(f"[RESMON_8_PATCH] Rehydration skipped for PID {pid}: ghost(missing ip) + unknown ip detected — cannot resolve IP ambiguity")
+        for uuid in unknown_entries:
+            process_registry[uuid]["tags"].append("ip_unhydrated")
 
 
 
