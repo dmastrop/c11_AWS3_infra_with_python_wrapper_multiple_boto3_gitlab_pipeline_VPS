@@ -47,7 +47,7 @@ deploy:
     # this is a gating env VAR for module2 if I need to disable the process level resurrection candidate
     # or ghost json artifact files during hyper-scalling
  
-    FORCE_TOMCAT_FAIL: "1"  # ← Inject synthetic failure for testing (futures crash)
+    FORCE_TOMCAT_FAIL: "1"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat
 
 
 
