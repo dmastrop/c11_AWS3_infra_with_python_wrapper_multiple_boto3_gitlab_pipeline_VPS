@@ -36,8 +36,9 @@ from datetime import datetime
 import psutil
 import re # this is absolutely required for all the stuff we are doing in the resurrection_monitor functino below!!!!!!
 import math # for math.ceil watchdog timeout adaptive code
-
-
+import ipaddress # used with the is_valid_ip helper function below. This function is used with the refactored ghost detection logic
+# in resurrection_monitor_patch8 and is also used in the tomcat_worker "unknown" ip address rehydration code  that occurs with thread
+# futures crashes.
 
 
 ## This is the whitelist code to be used in install_tomcat for categorizing the status of the registry_entry of the
@@ -297,8 +298,15 @@ retry_lock = threading.Lock()
 # when there are multiple threads per process updating the max_retry_observed for each process.
 
 
-
-
+##### This helper function is for the refactored ghost detection logic in resurrection_monitor_patch8 and also for the 
+##### rehydration ip logic in tomcat_worker for the unknown ip address if futures thread crashes.
+##### make sure to import ipaddress
+def is_valid_ip(ip):
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except Exception:
+        return False
 
 
 
@@ -1888,9 +1896,6 @@ from datetime import datetime
 #def resurrection_monitor_patch7d(process_registry, assigned_ips, log_dir="/aws_EC2/logs"):
 def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC2/logs"):
 
-    
-    import ipaddress # used with the is_valid_ip helper function below. This function is used with the refactored ghost detection logic
-
 
     pid = multiprocessing.current_process().pid
 
@@ -1967,21 +1972,6 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
                         patch7_logger.info(f"Skipped {fname}: {e}")
         patch7_logger.info(f"Combined runtime log written to: {benchmark_combined_path}")
         return benchmark_combined_path
-
-
-
-    ##### This helper function is for the refactored ghost detection logic (see below)
-    ##### make sure to import ipaddress
-    def is_valid_ip(ip):
-        try:
-            ipaddress.ip_address(ip)
-            return True
-        except Exception:
-            return False
-
-
-
-
 
 
 
