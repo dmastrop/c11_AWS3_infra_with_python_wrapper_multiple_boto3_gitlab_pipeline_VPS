@@ -5681,60 +5681,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "public_ip": "unknown",
                         "private_ip": "unknown",
                         "timestamp": str(datetime.utcnow()),
-                        #"tags": ["install_failed", "future_exception", type(e).__name__],
-                        "tags": ["install_failed", "future_exception", "ip_unhydrated", type(e).__name__]
+                        "tags": ["install_failed", "future_exception", type(e).__name__],
+                        #"tags": ["install_failed", "future_exception", "ip_unhydrated", type(e).__name__]
                     }
 
 
-                    ####### remove the recovery code below. The futures _args[2] is not working and causing an upstream crash in
-                    ####### the multiprocessing.Pool because _args[2] on a crashed thread is not recoverable
-                    ####### For now hardcode the ip as "unknown" as shown above and add the ip_unhydrated tag to show that this
-                    ####### ip is unrecoverable (even though it is in the golden chunk list of ips for the process). Correlating
-                    ####### the ip with the specific crash and registry_entry that is required for this ip recovery will require
-                    ####### another layer of instrumentation for a later phase.
 
-
-                    ##### insert the code to fix the "unknown" public and private ip in this registry entry
-                    ##### this will now use the instance_info which is derived from the assigned_ips (chunk gold ip data)to
-                    ##### replace the unknown with the actual ip address. This will help avoid this being classified as a
-                    ##### ghost in addition to install_failed. It should only be install_failed. The ghost logic is not failing, but
-                    ##### the "unknown" ip address is causing issues and being classificed as a missing ip address (ghost).
-
-                    ## 🔧 Attempt IP recovery from instance_info (assigned_ips)
-                    ## Note that InstanceId is available for this futures thread via future.args[2]. See the 
-                    ## ThreadPoolExecutor block above. This permits us to correlate any missing ip in the thread's registry_entry
-                    ## by using the InstanceId, at the thread level for any number of threads in the current process that 
-                    ## threaded_install is working on.
-                    ## So when a future crashes, we can still access its original `InstanceId` via `future._args[2]`, and use that to 
-                    ## recover the IP from `instance_info`. 
-                    ## This is what makes the recovery logic thread-safe and deterministic, even in the presence of multiple failures 
-                    ## in the same process.
-                    #
-                    #recovered_ip = None
-                    #recovered_private_ip = None
-                    #for ip_obj in instance_info:
-                    #    if ip_obj.get("InstanceId") == future._args[2]:  # instance_id was passed to install_tomcat ThreadPoolExecutor
-                    #        recovered_ip = ip_obj.get("PublicIpAddress")
-                    #        recovered_private_ip = ip_obj.get("PrivateIpAddress")
-                    #        break
-
-                    #if recovered_ip:
-                    #    failed_entry["public_ip"] = recovered_ip
-                    #    failed_entry["private_ip"] = recovered_private_ip
-                    #    failed_entry["tags"].append("ip_recovered")
-                    #    print(f"[RESMON_8_PATCH_IP_RECOVERY] Recovered IP for UUID {failed_uuid}: {recovered_ip}")
-                    #else:
-                    #    failed_entry["tags"].append("ip_unhydrated") # use this to avoid classifying this as ghost in ghost code even if the ip address cannot be retrieved
-                    #    print(f"[RESMON_8_PATCH_IP_RECOVERY] Could not recover IP for UUID {failed_uuid} — tagging as ip_unhydrated")
-
-
-
-
+                    ##### create the registry_entry and print the log  
                     thread_registry[failed_uuid] = failed_entry # create the registry_entry
                     logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
         
 
-
+                     ###### the unknown ip addresses in the crash thread case above will need to be rehydrated. This will be done in 
+                     ###### the tomcat_worker function (the calling function to this threaded_install function) right after
+                     ###### threaded_install returns the process_registry for this process. It is best to batch process the 
+                     ###### ip rehydration to avoid ip mis-assginment.
 
 
 
@@ -5863,6 +5824,48 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ##### Add the WATCHDOG_TIMEOUT (caclucated earlier in tomcat_worker) as an argument to run_test
     
     process_registry = run_test("Tomcat Installation Threaded", threaded_install, instance_info, max_workers, WATCHDOG_TIMEOUT=WATCHDOG_TIMEOUT)
+
+
+
+
+
+
+    ####### rehydration of the unknown ips in thread futures crash cases is absolutely necessary to preserve
+    ####### the integrity of the upstream logging. Otherwise a "unknown" will appear in the total ips and failure
+    ####### ips logs and futhermore the upstream ghost detection logic will not work with unknown in ip based
+    ####### variable lists.   
+
+    ####### The approach is: For a given process determine which registry_entrys have unknown in the ip fields
+    ####### This is called unknown_entries
+    ####### Once this is determined, compute the seen_ips_unhydrated, i.e. the seen ip addresses in the proces_registry
+    ####### for this process. Then determie the delta between this list and the assigned ips to this chunk (the golden
+    ####### list of ip addresses designated for this process to work on).  
+    ####### This gives a missing ip list prior to 
+    ####### rehydration (missing_ips_unhydrated).   This is the list of ips that will be used to rehydrate the 
+    ####### registry_entrys that have the unknown ips in them.   This uses a zip function so for example:
+    ####### thread_uuid 1 will get ip1 in the missing list, thread_uuid 2 will get ip2 in the missing list, and so on.
+    ####### thread_uuid 1 and 2 have already been identified as those registry_entrys in this process with unknown ips
+
+    ####### Prior to rehydration there needs to be a check to ensure that the NUMBER (len) of missing unhydrate ips 
+    ####### is exactly the same as the NUMBER (len) of unknown_entries (registry_entrys with unknown ips).  
+    ####### This is to guard against the very very unlikely case that there is a true ghost ip (completely unassigned
+    ####### to a thread, but present in the golden list) and these unknown threads.  If these two numbers are not the
+    ####### same then that means that there are true ghosts in the missing unhydrate ips and the code cannot 
+    ####### deterministically assign ip addreses to the regsitry_entrys with unknown ip addresses. In this case
+    ####### the registry_entrys will be tagged as ip_unhydrated and the "unknown" will appear in the logs, etc.
+    ####### This will be indicative that there are several ips that are unaccounted for (ghosts and some that are
+    ####### from thread crashes). Right now there is no way to deal with this highly unlikely scenario.
+
+    ######## Note that if there is a ghost in process 1 and an unknown in process 2 (two separate processes), this 
+    ######## case can be handles with the ghost being desiginated as missing ips in the logs and the unknown
+    ######## registry_entrys being rehydrated with the failed thread original ip address(es).
+
+    ######## Note2: the reason why this is so challenging ig because _args are not avaliable from the thread that
+    ######## crashes. This was attempted originally and results in a NameError in the python code. The instance id, 
+    ######## and all the other attribues of the thread are lost when it crashes.  Initially tried using _args[2] to
+    ######## get the instance id of the crashed thread but this did not work due to this reason.
+
+
 
 
     ## debug prints for run_test call to threaded_install which returns thread_registry which is assigned to process_registry
