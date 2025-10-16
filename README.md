@@ -61,7 +61,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 Some features: 
 
 - Thread level registry tagging of ghost threads, failures, stubs, successes 
-- Regsitry tagging for scenaro-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
+- Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
 - Aggregate and process level orchestration logging for host VPS CPU, swap, and thread level installation status, per process runtime
 - Aggregate and process level execution logging for registries, successful, faiure, missing, total, resurrection candidates (gitlab
 artifact logs per pipeline)
