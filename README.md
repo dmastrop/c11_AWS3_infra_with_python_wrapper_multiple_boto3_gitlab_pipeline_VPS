@@ -60,16 +60,22 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 Some features: 
 
-- Manual tagging of ghost PIDs  
-- Registry snapshots with thread_uuid lineage  
-- Synthetic edge case injection for wrapper brittleness  
+- Thread level registry tagging of ghost threads, failures, stubs, successes 
+- Regsitry tagging for scenaro-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
+- Aggregate and process level orchestration logging for host VPS CPU, swap, and thread level installation status, per process runtime
+- Aggregate and process level execution logging for registries, successful, faiure, missing, total, resurrection candidates (gitlab
+artifact logs per pipeline)
+- Aggregate gold ip list (AWS orchestration level) logging
+- Resurrection monitor logic that differentiates between install failures, stubs, crashes, and ghost threads (ghost detection logic)
+- Registry snapshots with thread_uuid lineage and tagging for forensics
+- Synthetic edge case injection for wrapper brittleness (bash and bash-like commands strace wrapper and injection into STDERR)
+- Extensible whitelist command agnostic package installation capability (apt, yum, dnf) with raw output data orchestrator (STDOUT/STDERR)
 - Explicit override logic for shell PID vs subprocess ambiguity  
 - Deterministic artifact lineage across chaotic shell flows
 - Forensic triage via non-whitelisted stderr detection 
-- Manual registry tagging for scenario-specific traceability
 - Resurrection monitor logic with phase-tagged recovery attempts  
-- Cross-platform shell wrapper resilience with synthetic test injection 
-- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator
+- Cross-platform shell wrapper (strace) resilience with synthetic test injection 
+- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level adaptive to AWS API congestion)
 - Adaptive orchestration logic with ML/LLM feedback hooks (planned)  
 
 
