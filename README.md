@@ -48,7 +48,7 @@ Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection 
 
 
 
-Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 450 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across hundreds of AWS instances as part of a broader infrastructure automation suite.
+Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 800 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across hundreds of AWS instances as part of a broader infrastructure automation suite.
 Testing is performed in a self-hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency. 
 
 •Phase 2 – Resurrection Logic : Integrated watchdog and retry-aware monitoring to detect silent thread stalls. Resurrection registry captures failure candidates for postmortem logging and sets the foundation for adaptive thread recovery.
@@ -63,20 +63,20 @@ Some features:
 - Thread level registry tagging of ghost threads, failures, stubs, successes 
 - Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
 - Aggregate and process level orchestration logging for host VPS CPU, swap, and thread level installation status, per process runtime
-- Aggregate and process level execution logging for registries, successful, faiure, missing, total, resurrection candidates (gitlab
+- Aggregate and process level execution logging for: registries, successful, failure, missing, total, resurrection candidates (Gitlab
 artifact logs per pipeline)
 - Aggregate gold ip list (AWS orchestration level) logging
 - Resurrection monitor logic that differentiates between install failures, stubs, crashes, and ghost threads (ghost detection logic)
 - Registry snapshots with thread_uuid lineage and tagging for forensics
-- Synthetic edge case injection for wrapper brittleness (bash and bash-like commands strace wrapper and injection into STDERR)
+- Synthetic edge case injection testing for wrapper brittleness (bash and bash-like commands strace wrapper and injection into STDERR)
 - Extensible whitelist command agnostic package installation capability (apt, yum, dnf) with raw output data orchestrator (STDOUT/STDERR)
-- Explicit override logic for shell PID vs subprocess ambiguity  
+- Intelligent strace wrapper  override logic for shell PID vs subprocess ambiguity  
 - Deterministic artifact lineage across chaotic shell flows
 - Forensic triage via non-whitelisted stderr detection 
 - Resurrection monitor logic with phase-tagged recovery attempts  
 - Cross-platform shell wrapper (strace) resilience with synthetic test injection 
-- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level adaptive to AWS API congestion)
-- Adaptive orchestration logic with ML/LLM feedback hooks (planned)  
+- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
+- Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
 
