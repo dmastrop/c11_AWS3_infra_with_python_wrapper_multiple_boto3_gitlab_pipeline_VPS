@@ -5684,16 +5684,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ##### get this "unknown" and it corrupts the benchmark combined runtime log and then the benchmark_ips_artifact.log
                     ##### Instead just print the Pre-rehydrated unknown and do the logging.info in tomcat_worker during the batch 
                     ##### rehydration for loop
+                    
                     #logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
         
 
-                     print(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Pre-rehydrated Public IP: {failed_entry['public_ip']} | Pre-rehydrated Private IP: {failed_entry['private_ip']}")
+                    print(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Pre-rehydrated Public IP: {failed_entry['public_ip']} | Pre-rehydrated Private IP: {failed_entry['private_ip']}")
 
 
-                     ###### the unknown ip addresses in the crash thread case above will need to be rehydrated. This will be done in 
-                     ###### the tomcat_worker function (the calling function to this threaded_install function) right after
-                     ###### threaded_install returns the process_registry for this process. It is best to batch process the 
-                     ###### ip rehydration to avoid ip mis-assginment.
+                    ###### the unknown ip addresses in the crash thread case above will need to be rehydrated. This will be done in 
+                    ###### the tomcat_worker function (the calling function to this threaded_install function) right after
+                    ###### threaded_install returns the process_registry for this process. It is best to batch process the 
+                    ###### ip rehydration to avoid ip mis-assginment.
 
 
 
