@@ -5679,8 +5679,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                     ##### create the registry_entry and print the log  
                     thread_registry[failed_uuid] = failed_entry # create the registry_entry
-                    logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
+                    
+                    ##### We no longer want to send the pre-rehydrated unknown address field to the logs. The benchmark pid log files
+                    ##### get this "unknown" and it corrupts the benchmark combined runtime log and then the benchmark_ips_artifact.log
+                    ##### Instead just print the Pre-rehydrated unknown and do the logging.info in tomcat_worker during the batch 
+                    ##### rehydration for loop
+                    #logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
         
+
+                     print(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Pre-rehydrated Public IP: {failed_entry['public_ip']} | Pre-rehydrated Private IP: {failed_entry['private_ip']}")
+
 
                      ###### the unknown ip addresses in the crash thread case above will need to be rehydrated. This will be done in 
                      ###### the tomcat_worker function (the calling function to this threaded_install function) right after
@@ -5896,7 +5904,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             process_registry[thread_uuid]["public_ip"] = ip
             process_registry[thread_uuid]["private_ip"] = public_to_private_ip.get(ip, "unknown")
             process_registry[thread_uuid]["tags"].append("ip_rehydrated")
+            
+            ##### insert the logging.info here to resolve the issue whereby the benchmark pid log file is getting "unknown" 
+            ##### Pre-rehydrated ip addresses when the futures thread crashes in threaded_install. Just do a print in threaded_install
+            ##### Do the logging here in tomcat worker for each thread in the rehydration batch processing that has an unknown.
+            ##### This way the benchmark pid log file will not be corrupted with unknowns and will have rehydrated ip addresses and
+            ##### benchmark combined runtime log will have rehydrated ips and finally benchmark_ips_artifact.log will have ip addresses
+            # RESMON PATCH: Log rehydrated IPs to benchmark PID log and console
+            
+            logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Future crashed | RE-hydrated Public IP: {process_registry[thread_uuid]['public_ip']} | RE-hydrated Private IP: {process_registry[thread_uuid]['private_ip']}")
+            print(f"[PID {pid}] [UUID {thread_uuid}] ❌ Future crashed | RE-hydrated Public IP: {process_registry[thread_uuid]['public_ip']} | RE-hydrated Private IP: {process_registry[thread_uuid]['private_ip']}")
+
             print(f"[RESMON_8_PATCH] Rehydrated IP {ip} for UUID {thread_uuid}")
+
     else:
         logging.warning(f"[RESMON_8_PATCH] Rehydration skipped for PID {pid}: ghost(missing ip) + unknown ip detected — cannot resolve IP ambiguity")
         for thread_uuid in unknown_entries:
