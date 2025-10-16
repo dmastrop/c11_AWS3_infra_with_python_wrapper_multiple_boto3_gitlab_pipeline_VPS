@@ -5820,7 +5820,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    ####### rehydration of the unknown ips in thread futures crash cases is absolutely necessary to preserve
+    ####### Rehydration of the unknown ips in thread futures crash cases is absolutely necessary to preserve
     ####### the integrity of the upstream logging. Otherwise a "unknown" will appear in the total ips and failure
     ####### ips logs and futhermore the upstream ghost detection logic will not work with unknown in ip based
     ####### variable lists.   
@@ -5864,31 +5864,43 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #- Keeps logs clean and upstream  ghost detection logic in the resurrection monitor (further below) deterministic
 
 
-    # ------------------ RESMON PATCH: Batch Rehydration ------------------
+    # ------------------ RESMON_8 PATCH: Batch Rehydration ------------------
     assigned_ip_set = {ip["PublicIpAddress"] for ip in instance_info} # note that instance_info is the same thing as assigned_ips that is used in resurrection_monitor_patch8. Assigned ips are the ips in the chunk list of ips that the process is working with.(golden list of ips)
 
+
+    # Build a mapping from public IP → private IP for full rehydration. This is so that we can rehydrate the private ip field as well.
+    public_to_private_ip = {
+        ip["PublicIpAddress"]: ip["PrivateIpAddress"]
+        for ip in instance_info
+    }
+
+    # Step 1: Identify registry entries with unknown public IPs
     unknown_entries = {
-        uuid: entry for uuid, entry in process_registry.items()
+        thread_uuid: entry for thread_uuid, entry in process_registry.items()
         if entry.get("public_ip") == "unknown"
     }
 
+    # Step 2: Compute seen IPs before rehydration
     seen_ips_unhydrated = {
         entry["public_ip"]
         for entry in process_registry.values()
         if is_valid_ip(entry.get("public_ip"))
     }
 
+    # Step 3: Compute missing IPs before rehydration
     missing_ips_unhydrated = sorted(list(assigned_ip_set - seen_ips_unhydrated))
 
+    # Step 4: Rehydrate if safe
     if len(unknown_entries) == len(missing_ips_unhydrated):
-        for uuid, ip in zip(unknown_entries.keys(), missing_ips_unhydrated):
-            process_registry[uuid]["public_ip"] = ip
-            process_registry[uuid]["tags"].append("ip_rehydrated")
-            print(f"[RESMON_8_PATCH] Rehydrated IP {ip} for UUID {uuid}")
+        for thread_uuid, ip in zip(unknown_entries.keys(), missing_ips_unhydrated):
+            process_registry[thread_uuid]["public_ip"] = ip
+            process_registry[thread_uuid]["private_ip"] = public_to_private_ip.get(ip, "unknown")
+            process_registry[thread_uuid]["tags"].append("ip_rehydrated")
+            print(f"[RESMON_8_PATCH] Rehydrated IP {ip} for UUID {thread_uuid}")
     else:
         logging.warning(f"[RESMON_8_PATCH] Rehydration skipped for PID {pid}: ghost(missing ip) + unknown ip detected — cannot resolve IP ambiguity")
-        for uuid in unknown_entries:
-            process_registry[uuid]["tags"].append("ip_unhydrated")
+        for thread_uuid in unknown_entries:
+            process_registry[thread_uuid]["tags"].append("ip_unhydrated")
 
 
 
@@ -5897,6 +5909,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     print(f"[TRACE][tomcat_worker] Process registry returned with {len(process_registry)} entries")
     for ip, data in process_registry.items():
         print(f"[TRACE][tomcat_worker] Registry entry [{ip}]: {data}")
+
 
 
 
