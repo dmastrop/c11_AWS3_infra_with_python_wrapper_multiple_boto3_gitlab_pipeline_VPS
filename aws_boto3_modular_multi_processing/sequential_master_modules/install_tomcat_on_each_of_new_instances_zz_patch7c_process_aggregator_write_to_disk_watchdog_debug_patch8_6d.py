@@ -3054,6 +3054,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     load_dotenv()
 
+    pid = multiprocessing.current_process().pid  ## need this for the logging.info and the print we are doing in the 
+    # rehydration loop for crashed threads.
 
     max_retry_observed = 0
     #### [[tomcat_worker]]
