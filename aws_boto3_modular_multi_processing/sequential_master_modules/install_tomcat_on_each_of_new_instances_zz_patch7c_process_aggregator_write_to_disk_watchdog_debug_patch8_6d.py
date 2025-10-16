@@ -5865,6 +5865,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
     # ------------------ RESMON PATCH: Batch Rehydration ------------------
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in instance_info} # note that instance_info is the same thing as assigned_ips that is used in resurrection_monitor_patch8. Assigned ips are the ips in the chunk list of ips that the process is working with.(golden list of ips)
+
     unknown_entries = {
         uuid: entry for uuid, entry in process_registry.items()
         if entry.get("public_ip") == "unknown"
