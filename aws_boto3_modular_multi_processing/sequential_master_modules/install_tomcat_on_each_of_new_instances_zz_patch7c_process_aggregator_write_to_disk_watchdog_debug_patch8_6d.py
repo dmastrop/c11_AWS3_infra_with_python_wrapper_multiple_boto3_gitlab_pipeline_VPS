@@ -2245,37 +2245,41 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     ###### review.  In theory these registry_entrys should not be included as ghosts because the thread_uuid is known and the failure
     ###### reason is usually included in the tags, but they do end  up in the missing (ghost) category as well.
 
+    ##### Get rid of Step1. This does not work. Ghost detection is IP based. This IP based exclusion set has no purpose and will not
+    ##### detect missing ips, it will merely identify registry_entrys without ip addresses. This is taken care of with BLOCK 2 logic.
+    ##### This exclusion_set mehtodology can not be used to resolve the ghost detection issue with registry_entrys that have a missing
+    ##### ip. These will be incorrectly listed as ghosts but teh BLOCk 2 untraceable json file will alert the user with the information
+    ##### for further investigatation on these types of threads.
+    ## Step 1: Build exclusion set — IPs that should NOT be ghosted even if missing. This includes the edge cases described above 
+    ## This uses the is_valid_ip helper function in case the ip addresses are malformed, etc.
+    #excluded_from_ghosting = set()
 
-    # Step 1: Build exclusion set — IPs that should NOT be ghosted even if missing. This includes the edge cases described above 
-    # This uses the is_valid_ip helper function in case the ip addresses are malformed, etc.
-    excluded_from_ghosting = set()
+    #for entry in process_registry.values():
+    #    ip = entry.get("public_ip", "")
+    #    status = entry.get("status", "")
+    #    tags = entry.get("tags", [])
 
-    for entry in process_registry.values():
-        ip = entry.get("public_ip", "")
-        status = entry.get("status", "")
-        tags = entry.get("tags", [])
+    #    if (
+    #        "ip_unhydrated" in tags or
+    #        (status in ["install_failed", "stub"] and (not ip or ip == "unknown" or not is_valid_ip(ip)))
+    #    ):
+    #        excluded_from_ghosting.add(ip)
+    #        print(f"[RESMON_8] Skipping ghost detection for IP (exclusion set): {ip} — Reason: {status} + tag(s): {tags}")
 
-        if (
-            "ip_unhydrated" in tags or
-            (status in ["install_failed", "stub"] and (not ip or ip == "unknown" or not is_valid_ip(ip)))
-        ):
-            excluded_from_ghosting.add(ip)
-            print(f"[RESMON_8] Skipping ghost detection for IP (exclusion set): {ip} — Reason: {status} + tag(s): {tags}")
-
-    # Step 2: Build seen IPs normally
+    # Step 1: Build seen IPs normally
     seen_ips = {
         entry["public_ip"]
         for entry in process_registry.values()
         if entry.get("public_ip") and is_valid_ip(entry["public_ip"])
     }
 
-    # Step 3: Build assigned IPs set from chunk
+    # Step 2: Build assigned IPs set from chunk
     assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
 
-    # Step 4: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
+    # Step 3: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
     ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
 
-    # Step 5: Log ghosts just as before the refactoring. These pid json files will be aggregated in main() for an aggregate json file.
+    # Step 4: Log ghosts just as before the refactoring. These pid json files will be aggregated in main() for an aggregate json file.
     for ip in ghosts:
         print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
 
