@@ -2277,8 +2277,10 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
 
     # Step 3: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
-    ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
-
+    #ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
+    ## removed exclusion block:
+    ghosts = sorted(assigned_ip_set - seen_ips)
+    
     # Step 4: Log ghosts just as before the refactoring. These pid json files will be aggregated in main() for an aggregate json file.
     for ip in ghosts:
         print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
