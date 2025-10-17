@@ -6955,6 +6955,20 @@ def main():
                 f.write(ip + "\n")
         print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_log_path}")
 
+        ##### This is the aggregated version of the resurrection_untraceable_registry_entries.json file. For more detail on this and 
+        ##### the two others (resurrection candidate and resurrection ghost) see the extensive comments in the resurrection_monitor
+        ##### function where the process versions of each of the files are created from the process_registry
+        # 11. Dump untraceable registry entries — entries with missing or invalid public IPs
+        untraceable_entries = [
+            entry
+            for entry in final_registry.values()
+            if not entry.get("public_ip") or not is_valid_ip(entry["public_ip"])
+        ]
+
+        untraceable_path = f"/aws_EC2/logs/resurrection_untraceable_registry_entries_{ts}.json"
+        with open(untraceable_path, "w") as f:
+            json.dump(untraceable_entries, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(untraceable_entries)} untraceable entries to {untraceable_path}")
 
 
 
