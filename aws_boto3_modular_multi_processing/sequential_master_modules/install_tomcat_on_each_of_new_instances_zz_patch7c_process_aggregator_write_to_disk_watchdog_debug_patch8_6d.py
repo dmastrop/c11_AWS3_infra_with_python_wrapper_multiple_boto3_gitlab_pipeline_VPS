@@ -2633,6 +2633,11 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
+
+
+    ##### BLOCK 3: Resurrection candidate code. The !=install_success status registry_entrys are included in this json as described
+    ##### earlier in the comments above. This includes install_failed and stub registry_entrys
+
     # === RESMON_8 Resurrection Candidate Detection ===
     resurrection_candidates = []
 
