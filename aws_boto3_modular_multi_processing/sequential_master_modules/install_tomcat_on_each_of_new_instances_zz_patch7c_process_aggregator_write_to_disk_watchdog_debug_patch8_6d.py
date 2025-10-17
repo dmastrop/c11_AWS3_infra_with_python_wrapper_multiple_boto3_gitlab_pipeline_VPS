@@ -2197,48 +2197,50 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-    ####### This original ghost detection logic has been refactored for Patch8. See below for the new code ########
-    ###  Move this block to here. This will be replaced by the detect_ghosts() helper function.
 
-    #####################
-    ### insert patch7d fixes:
-    ### This is early code for testing the refactor for ghost detection for 7d2 modularization. This is working well.
-    ## Extract seen IPs from the current process registry
-    #seen_ips = {entry["public_ip"] for entry in process_registry.values() if entry.get("public_ip")}
-    ## Build assigned IPs set from the chunk passed to this process
-    #assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
-    ## Detect ghosts — IPs assigned to this process but missing from registry
-    #ghosts = sorted(assigned_ip_set - seen_ips)
+
+    ###### 3 MAIN FILTERING BLOCKS FOR RESURRECITON MONITOR: Ghost detection, untraceable registry (missing ips) and 
+    ###### !=install_success registry entries
+
+    #1. **Ghost detection block**  
+    #   - Based on `assigned_ip_set - seen_ips`  
+    #   - Produces `resurrection_ghost_missing_{pid}_{ts}.json`
     #
-    ## log to console 
-    #for ip in ghosts:
-    #    print(f"[Patch7d] 👻 Ghost detected in process {pid}: {ip}")
+    #2. **Untraceable registry entries block**
+    #   - Captures registry entries with missing or invalid IPs  
+    #   - Produces `resurrection_untraceable_registry_entries_{pid}_{ts}.json`
+    #
+    #3. **Resurrection candidates block**  
+    #   - Based on `status != "install_success"`  
+    #   - Produces `resurrection_candidates_registry_{pid}_{ts}.json`
+    #
+    ####  Why this order works:
+    #- Ghost detection is IP-driven and must come first  
+    #- Untraceable entries are registry-driven and help explain ghost edge cases  
+    #- Resurrection candidates are broader and include both traceable and untraceable entries
 
-    ## log to the artifacts in gitlab
-    #if ghosts:
-    #    ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
-    #    with open(ghost_file, "w") as f:
-    #        json.dump(ghosts, f, indent=2)
-    # ####################
+    #| Artifact Filename Pattern                              | Contents                                  |
+    #|--------------------------------------------------------|-------------------------------------------|
+    #| `resurrection_candidates_registry_{ts}.json`           | All non-success registry entries          |
+    #| `resurrection_ghost_missing_{ts}.json`                 | IPs from chunk not seen in registry       |
+    #| `resurrection_untraceable_registry_entries_{ts}.json`  | Registry entries with missing/invalid IPs |
 
 
 
+
+    ###### BLOCK1: Ghost detection:
     ###### Refactoring the ghost detection logic. This will be modularized in a detect_ghosts() helper function at some point #######
     ###### The refactored code decouples the dependence on strictly ip address for the ghost detection. Now that the install_failed
     ###### and stub logic is much more robust and failure detection much more thorough, we need to pre-filter out several scenarios
     ###### that should not be ghosted even if the ip address is missing. For example a futures crash in a thread: the exception will
     ###### be caught and an install_failed registry_entry will be created. Often times there will be no ip address. There is now 
-    ###### ip address recovery code in the threaded_install logic where this registry_entry is created, but even if no ip address 
-    ###### can be recovered the thread should not be ghosted because a pid and the reason for the failure exist. 
-    ###### In this particular case with and address that cannot be recovered we tag the registry_entry with ip_unhydrated
-    ###### and that can be used to bypass the ghost logic. A ghost is 
-    ###### a thread that is completey missing in terms of forensic traceability.(ip address is usually in the golden list but not
-    ###### in the process_registry; that is a typical ghost; i.e. a missing ip)
-    ###### Other examples that should NOT be ghosted are stub registry_entry. There is now extensive stub logic in the install_tomcat
-    ###### function and if these do not have an ip address (for whatever reason; crash, etc) they should not be ghosted. Unlike a true
-    ###### ghost a stub has a pid in terms of traceablility and a registry_entry usually with a tag indicating the type of failure, can
-    ###### be created. The new logic below will bypass the ghost logic for these edge cases.
-    ###### new exception logic can be added as new test cases and scenarios are encountered
+    ###### ip address recovery code in the tomcat_worker which RE-hydrates the ip address if it is unknown or blank.
+    ###### This is required to be done prior to the ghost detection logic becasue ghost detection logic must be IP based.
+    ###### The IP address is the only immuatable lasting attribute of a node and potential thread from AWS. 
+    ###### If the ip address is missing in the registry_entry the untraceable entries in BLOCK2 will list these thread for further
+    ###### review.  In theory these registry_entrys should not be included as ghosts because the thread_uuid is known and the failure
+    ###### reason is usually included in the tags, but they do end  up in the missing (ghost) category as well.
+
 
     # Step 1: Build exclusion set — IPs that should NOT be ghosted even if missing. This includes the edge cases described above 
     # This uses the is_valid_ip helper function in case the ip addresses are malformed, etc.
@@ -2277,7 +2279,31 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
         ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
         with open(ghost_file, "w") as f:
             json.dump(ghosts, f, indent=2)
-    
+   
+
+    ##### BLOCK 2: Untraceable registry_entrys:
+    ##### As noted above these are usually install_failed or stub registry_entries with no ip address. This is a very rare occurrence yet
+    ##### to be seen. A thread futures crash can cause this but we are able to rehydrate the ip addreses to these registry_entrys
+    ##### Other cases may occur, but they have not been observed yet. In this case these install_failed and stub threads will unforunately
+    ##### be missing ips and in the ghost category. This json file for untraceable registry entries will track these very special and rare
+    ##### cases. Typically a real ghost will fail without a registry_entry or thread. This has been observed with ssh connection init issues
+    ##### where there is no response from the node from the initial attempt to establish an SSH connection. Such cases will be true ghosts
+    ##### and will not appear in this json file.
+    ##### This is the process level json file. An aggregate file will be created as well in main() for the entire execution run.
+   
+    untraceable_entries = [
+        entry for entry in process_registry.values()
+        if not entry.get("public_ip") or not is_valid_ip(entry["public_ip"])
+    ]
+
+    if untraceable_entries:
+        untraceable_file = os.path.join(log_dir, f"resurrection_untraceable_registry_entries_{pid}_{ts}.json")
+        with open(untraceable_file, "w") as f:
+            json.dump(untraceable_entries, f, indent=2)
+
+
+
+
 
 
 
