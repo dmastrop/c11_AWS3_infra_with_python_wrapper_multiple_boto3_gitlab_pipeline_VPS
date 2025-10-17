@@ -2225,6 +2225,10 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     #| `resurrection_ghost_missing_{ts}.json`                 | IPs from chunk not seen in registry       |
     #| `resurrection_untraceable_registry_entries_{ts}.json`  | Registry entries with missing/invalid IPs |
 
+    # aggregate counterparts (created in main())
+    #- `resurrection_ghost_missing_{ts}.json`
+    #- `resurrection_candidates_registry_{ts}.json`
+    #- `resurrection_untraceable_registry_entries_{ts}.json`
 
 
 
