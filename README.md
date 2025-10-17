@@ -172,7 +172,7 @@ A small block of code in the resurrection__monitor function was commented out wi
 This is part of the effort to continue to clean up the resurrection_monitor
 
 
-This block is commented out s well. This will be populated at the process level with another helper function (note
+This block is commented out as well. This will be populated at the process level with another helper function (note
 all of these are also calclated at the aggregate level in main()):
 
 
@@ -259,7 +259,10 @@ threaded_install functions.
 
 
 The order of these code blocks in the resurrection monitor is important, moving from most specific to most general in 
-nature.   
+nature.  
+
+
+ ```
     Ghost detection block 
        - Based on `assigned_ip_set - seen_ips`  
        - Produces `resurrection_ghost_missing_{pid}_{ts}.json`
@@ -276,6 +279,9 @@ nature.
     - Ghost detection is IP-driven and must come first  
     - Untraceable entries are registry-driven and help explain ghost edge cases  
     - Resurrection candidates are broader and include both traceable and untraceable entries
+```
+
+```
 
     | Artifact Filename Pattern                              | Contents                                  |
     |--------------------------------------------------------|-------------------------------------------|
@@ -283,11 +289,13 @@ nature.
     | `resurrection_ghost_missing_{ts}.json`                 | IPs from chunk not seen in registry       |
     | `resurrection_untraceable_registry_entries_{ts}.json`  | Registry entries with missing/invalid IPs |
 
+```
+```
      aggregate counterparts (created in main())
     - `resurrection_ghost_missing_{ts}.json`
     - `resurrection_candidates_registry_{ts}.json`
     - `resurrection_untraceable_registry_entries_{ts}.json`
-
+```
 
 
 These json files use a write-to-disk methodology for the aggregation, whereby each of the process level files are 
