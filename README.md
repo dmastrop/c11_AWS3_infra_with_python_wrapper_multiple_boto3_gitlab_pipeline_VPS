@@ -192,18 +192,218 @@ all of these are also calclated at the aggregate level in main()):
 
 
 
-## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8
+## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), 
 
 
 
 ### Introduction: 
 
-These are major updates to the code in the install_tomcat and resurrection_monitor to refine the resurrection code tagging 
-with all of the stub logic and failure registry_entry tagging done in the last update.
+These updates are focused on cleaning up and refactoring the resurrection monitor code.  
 
-The install_tomcat and resurrection_monitor still have a lot of legacy code that needs to be refactored.
 
-Here is a high level of the code changes required:
+#### resurrection_monitor_patch8 function changes:
+
+The resurrection monitor (currently function resurrection_monitor_patch8) is a function that screens the process_registry for each process for 3 basic types of resitry_entry
+anomalies. 
+
+The call to the resurrection_monitor_patch8 function is made from tomcat_worker after process_registry for a given process is returned
+from a call to run_test which calls threaded_install. There are all process level functions. 
+
+There are 3 code blocks in the resurrection_monitor that are dedicated to these 3 types of anomalies.
+1. A ghost detection block
+2. An untraceable registry_entry block (These can be mistaken for ghosts but are not ghosts; see "Ghost registry threads" below.
+3. A resurrection candidates block. These are all regsitry_entrys that are != install_success (not equal to install_success). This
+includes install_failed and stub registry_entrys created using extensive failure detection logis in install_tomcat and 
+threaded_install functions.
+
+
+The order of these code blocks in the resurrection monitor is important, moving from most specific to most general in 
+nature.   
+     **Ghost detection block**  
+    #   - Based on `assigned_ip_set - seen_ips`  
+    #   - Produces `resurrection_ghost_missing_{pid}_{ts}.json`
+    #
+    #2. **Untraceable registry entries block**
+    #   - Captures registry entries with missing or invalid IPs  
+    #   - Produces `resurrection_untraceable_registry_entries_{pid}_{ts}.json`
+    #
+    #3. **Resurrection candidates block**  
+    #   - Based on `status != "install_success"`  
+    #   - Produces `resurrection_candidates_registry_{pid}_{ts}.json`
+    #
+    ####  Why this order works:
+    #- Ghost detection is IP-driven and must come first  
+    #- Untraceable entries are registry-driven and help explain ghost edge cases  
+    #- Resurrection candidates are broader and include both traceable and untraceable entries
+
+    #| Artifact Filename Pattern                              | Contents                                  |
+    #|--------------------------------------------------------|-------------------------------------------|
+    #| `resurrection_candidates_registry_{ts}.json`           | All non-success registry entries          |
+    #| `resurrection_ghost_missing_{ts}.json`                 | IPs from chunk not seen in registry       |
+    #| `resurrection_untraceable_registry_entries_{ts}.json`  | Registry entries with missing/invalid IPs |
+
+    # aggregate counterparts (created in main())
+    #- `resurrection_ghost_missing_{ts}.json`
+    #- `resurrection_candidates_registry_{ts}.json`
+    #- `resurrection_untraceable_registry_entries_{ts}.json`
+
+These json files us a write-to-disk methodology for the aggregation, whereby each of the process level files are 
+The 3 types of registry anomalies detected by the resurrection monitor are:
+
+1. Ghost registry threads. Ghost threads are threads that are completely missing from the process_registry and thus the aggregate list
+of registry_entrys.   They show up in the missing_registry_ips_artifact.log file as a list of missing ip addresses. These are very
+rare occurrences. They are determined from an AWS golden list of ip addresses taken from chunk ip data that is fed into the 
+multiprocessing.Pool. A chunk is a list of ip addresses (EC2 instances or nodes) that the process is designated to work on.  Each process
+is multi-threaded and can have many threads running in it. A thread is always dedicated to a single node.  The chunk ip data serves as
+a golden list, and a seen_ips variable tracks the ip addresses that are actually seen in the registry_entrys of the process_registry
+(1 registry_entry per thread or node).   Any missing ips in the process_regsitry consititute a probable ghost.   Probable becasue:
+these are not alwaysghosts in the technical sense. 
+
+For example,so metimes a thread will have a missing ip address if the thread futures crashes (ThreadPoolWorker). In 
+cases like this, the ip address can usually be re-hyrdated, in other workds re-injected back into the affected registry_entry in the 
+process_registry, prior to ghost detection in the resurrection monitor. This avoids a ghost misc-classification (missing ip).  
+However, there may be instances still yet not observed whereby the ip address in the registry_entry is missing. 
+We know the cause (the cause will be in the registry_entry tag field), the thread will have a thread_uuid, and a PID, but no ip address. 
+So technically this is not a ghost, but it will be designated a ghost. This has not been observed yet in testing. Normally if an ip address is missing in the registry_entry itself, this means something catostrophic happened and the  thread and registry_entry are not created in 
+the process_registry.
+
+Regarding the thread ip re-hydration code. This will be reviewed in detail in this update further below.  A thread that crashes can be
+re-hydrated in almost all cases, except of there is a true ghost AND thread crash(es) in the SAME process. This is because the 
+threads can no longer be matched up to "missing" ips in that process if there are 1 or more true ghosts. If there are no true ghosts and
+the  number of crashed threads = the number of "missing" ips, the threads can be rehydrated deterministically with the "missing" ips.
+At that point the registry_entry (thread) is not longer mis-classified as a ghost and will be classified only as install_failed. It 
+should be noted that true ghost + thread futures crashes in the SAME process are extremely rare. If these are in separate processes, 
+the re-hydration can occur without any issues.
+
+The ghost detection code in the resurrection monitor is designated as BLOCK1: Ghost detection. This will be modularized into a helper function detect_ghosts.
+
+2. Untraceable registry_entrys.  This applies to a registry_entry that has no public or private ip address.  As noted above, this
+can happen but it has not been seen in actual testing, except for the thread futures crash, which has been patched with 
+ip re-hydration code. It is not known what other causes and cases may exist that may provoke this type of registry_entry.
+
+The untraceable registry_entry code is designated as BLOCk2: Untraceable registry_entrys
+
+
+3. Resurrection candidates. These are simply all the registry_entrys that are != install_success (not equal to install_success status)
+All of these are prime first order resurrection candidates that will try to be revived by the Phase 3 recovery code.
+
+The resurrection candidate code is designated as BLOCK3: Resurrection candidate code.
+
+
+
+#### cleanup of old code related to the resurrection_monitor code
+
+In addition to refactoring the function itself using the 3 blocks above, there was also a lot of cleanup in the supporting functions.
+
+There was old code in the resurrection_monitor itself that had to be removed.  The resurrection_registry has been replaced with the 
+process_registry.  
+
+install_tomcat, a thread level function, had calls to resurrection_gatekeeper which are no longer required.
+
+The resurrection_registry_lock had to be removed from the code as there is no longer a resurrection_registry. 
+
+Other legacy and deprecated code in the resurrection_monitor had to be commented out.
+
+
+
+##### The case for ip re-hydration
+
+While running some hyper-scaling testing with 512 nodes (512 concurrent processe), a thread futures crash was occuring fairly consistently
+The current code had an unknown public and private ip address in the install_failed registry_entry for each of these threads.
+The "unknown" was polluting the ip based process level and aggreagate level logs. In addtion these threads were being classified in the 
+ghost logs and the install_failed logs (double counted).   The "unknown" ip addreses had to be re-hyrdrated using the golden orchestration
+AWS level list of ips for the given pipeline run. This resolved all of the issues. 
+
+This code change was quite signficant. The re-hydration has to occur at the batch level in tomcat_worker rather than in threaded_install.
+The crash registry_entry is actually created in threaded_install with an "unknown" ip address initially. 
+Once the process completes, all of the "missing" ip addresses as described in the section above are detrministically assigned to the
+registry_entrys with "unknown". These only occur with the futures thread crash. They are no longer mis-classified as ghosts but rather
+only install_failed and they are flagged  by the BLOCK3 resurrection candidate code for phase3 resurrection.
+
+The section below on this will review all the code in detail.
+
+#### Collateral effects of the re-hydration
+
+The collateral effects of the re-hydration code were mostly positive. There was one issue where the logger for the process level
+benchmark process level logs were getting the "unknown" address simply because the logger was in the threaded_install function still, which
+is prior to the re-hydration that occurs in the tomcat_worker function. These both utilize the same python logger and so it was easy to 
+place the logger to teh benchmark process level logs inside the for loop of the re-hydration code in tomcat_worker. The rest of the logs
+built from the benchmark process level logs were self corrected, as they are built from the process level logs.
+
+For example prior to the fix the benchmark process level log looked like this even after the re-hydration code for the registry_entry
+(prior section above):
+```
+2025-10-16 01:09:58,819 - 15 - MainThread - Test log entry to ensure file is created.
+2025-10-16 01:10:05,658 - 15 - MainThread - [PID 15] START: Tomcat Installation Threaded
+2025-10-16 01:10:05,658 - 15 - MainThread - [PID 15] Initial swap usage: 2.30 GB
+2025-10-16 01:10:05,658 - 15 - MainThread - [PID 15] Initial CPU usage: 0.00%
+2025-10-16 01:12:07,798 - 15 - Thread-5 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-10-16 01:12:08,241 - 15 - Thread-5 - Authentication (publickey) successful!
+2025-10-16 01:12:08,243 - 15 - MainThread - [PID 15] [UUID c23f7f19] ❌ Future crashed | Public IP: unknown | Private IP: unknown
+2025-10-16 01:12:58,532 - 15 - Thread-8 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-10-16 01:12:58,959 - 15 - Thread-8 - Authentication (publickey) successful!
+2025-10-16 01:12:58,960 - 15 - MainThread - [PID 15] [UUID e857badf] ❌ Future crashed | Public IP: unknown | Private IP: unknown
+2025-10-16 01:12:59,962 - 15 - MainThread - [PID 15] END: Tomcat Installation Threaded
+2025-10-16 01:12:59,962 - 15 - MainThread - [PID 15] Final swap usage: 1.48 GB
+2025-10-16 01:12:59,962 - 15 - MainThread - [PID 15] Final CPU usage: 0.00%
+2025-10-16 01:12:59,962 - 15 - MainThread - [PID 15] Total runtime: 174.30 seconds
+```
+
+After the fix they logs look like this, fully re-hydrated: 
+
+```
+2025-10-16 23:47:20,938 - 13 - MainThread - Test log entry to ensure file is created.
+2025-10-16 23:47:28,858 - 13 - MainThread - [PID 13] START: Tomcat Installation Threaded
+2025-10-16 23:47:28,858 - 13 - MainThread - [PID 13] Initial swap usage: 1.19 GB
+2025-10-16 23:47:28,858 - 13 - MainThread - [PID 13] Initial CPU usage: 0.00%
+2025-10-16 23:50:01,383 - 13 - Thread-6 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-10-16 23:50:01,396 - 13 - Thread-7 - Connected (version 2.0, client OpenSSH_8.9p1)
+2025-10-16 23:50:01,815 - 13 - Thread-6 - Authentication (publickey) successful!
+2025-10-16 23:50:01,878 - 13 - Thread-7 - Authentication (publickey) successful!
+2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] END: Tomcat Installation Threaded
+2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] Final swap usage: 1.19 GB
+2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] Final CPU usage: 0.00%
+2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] Total runtime: 154.02 seconds
+
+2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] [UUID f7e01e12] ❌ Future crashed | RE-hydrated Public IP: 100.27.189.85 | RE-hydrated Private IP: 172.31.28.141
+2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] [UUID 08725a6d] ❌ Future crashed | RE-hydrated Public IP: 98.91.26.246 | RE-hydrated Private IP: 172.31.18.46
+```
+
+#### Synthetic thread futures crash code for testing
+
+Given that the futures crash requires hyper-scaling, to minimize AWS testing costs, a synthetic crash was used to do a quick series of
+unit tests on the re-hydration code. The code tested out very well.
+
+Since the re-hydration is done at the process level, all of the aggreagate level stats and logs that are assembled from the 
+process level registries (write-to-disk), self-corrected.
+
+The code will be used for further testing with strategic placment of the crash from within install_tomcat function. Right now the testing
+has the crash in between the SSH connection establishment and the for idx loop that iterates over the command execution set.
+
+The synthetic crash code review will be in the code review section below.
+
+
+
+
+
+#### Testing the simplified ghost detection logic with forced manual AWS console shutdown of instances
+
+
+
+#### resurrection_gateway function refactoring
+
+The resurrection_gateway is the final decision maker in what can be resurrected and what cannot be resurrected. It uses input from the
+3 blocks explained above in the resurrection_monitor.   It uses a combination of status, and the tags that are included in each 
+registry_entry (thread) (which often have detailed technical information on the reason for the failure).  This sets the stage for the
+Phase3 of this project whereby the threads will actually be resurrected and recovered and a fresh attempt at command set installation
+will be attempted.
+
+
+
+
+
+### Code Review of the fixes and refactoring:
+
 
 
 

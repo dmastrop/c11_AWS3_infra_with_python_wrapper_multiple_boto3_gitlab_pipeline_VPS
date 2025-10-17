@@ -2292,7 +2292,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
             json.dump(ghosts, f, indent=2)
    
 
-    ##### BLOCK 2: Untraceable registry_entrys:
+    ##### BLOCK2: Untraceable registry_entrys:
     ##### As noted above these are usually install_failed or stub registry_entries with no ip address. This is a very rare occurrence yet
     ##### to be seen. A thread futures crash can cause this but we are able to rehydrate the ip addreses to these registry_entrys
     ##### Other cases may occur, but they have not been observed yet. In this case these install_failed and stub threads will unforunately
@@ -2646,7 +2646,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-    ##### BLOCK 3: Resurrection candidate code. The !=install_success status registry_entrys are included in this json as described
+    ##### BLOCK3: Resurrection candidate code. The !=install_success status registry_entrys are included in this json as described
     ##### earlier in the comments above. This includes install_failed and stub registry_entrys
 
     # === RESMON_8 Resurrection Candidate Detection ===
