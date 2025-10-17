@@ -2278,6 +2278,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
     # Step 3: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
     #ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
+    
     ## removed exclusion block:
     ghosts = sorted(assigned_ip_set - seen_ips)
     
