@@ -194,9 +194,50 @@ all of these are also calclated at the aggregate level in main()):
 
 ## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), 
 
+### High level summary of proposed changes: 
+
+#### Stage1:
+Remove `update_resurrection_registry`. Resurrection tagging should be completely centralized
+- Refactor `read_output_with_watchdog` to return output and status only: `(stdout, stderr, status)` only
+- Move all resurrection tagging logic out of `install_tomcat`.
+- Let `resurrection_monitor_patch8` handle all resurrection logic based on `process_registry`
 
 
-### Introduction: 
+
+#### Stage2:
+Move Resurrection Candidate Logic to `resurrection_monitor_patch8` This will be a process level resurrection candidate json
+file. There is already an aggregate resurrection candidate json file artifact.
+
+This resurrection candidate process level file will be done from the process_registry:
+
+- Scan `process_registry` in real time for `status != "install_success"`.
+- Tag resurrection candidates based on process-level heuristics.
+- Eliminate `resurrection_registry` entirely.
+
+Inside `resurrection_monitor_patch8`, scan using the logic !=install_success tentatively (this will cover all stub and
+install_failed registry threads, etc.)
+
+
+```
+for thread_uuid, entry in process_registry.items():
+    if entry.get("status") != "install_success":
+        # Tag as resurrection candidate
+```
+
+This eliminates the need for a separate `resurrection_registry` and keeps all resurrection logic in one place.
+
+
+#### Stage3:
+Modularize Resurrection Gatekeeper (currently called from install_tomcat, but it needs to be called from resurrection_monitor)
+- Refactor `resurrection_gatekeeper()` to be reusable outside `install_tomcat`.
+- Use it in `resurrection_monitor_patch8` to decide which threads to resurrect. Bascially all of the install_failed and most
+if not all of the stubs (i.e., not install_success registry_entry threads)
+- Filter resurrection candidates
+- Decide whether to retry based on tags like `"install_failed"` or `"stub"`
+- This sets the stage for Phase3 of this project where the threads will be resurrected.
+
+
+### Introduction to implementation details: 
 
 These updates are focused on cleaning up and refactoring the resurrection monitor code.  
 
@@ -219,38 +260,42 @@ threaded_install functions.
 
 The order of these code blocks in the resurrection monitor is important, moving from most specific to most general in 
 nature.   
-     **Ghost detection block**  
-    #   - Based on `assigned_ip_set - seen_ips`  
-    #   - Produces `resurrection_ghost_missing_{pid}_{ts}.json`
-    #
-    #2. **Untraceable registry entries block**
-    #   - Captures registry entries with missing or invalid IPs  
-    #   - Produces `resurrection_untraceable_registry_entries_{pid}_{ts}.json`
-    #
-    #3. **Resurrection candidates block**  
-    #   - Based on `status != "install_success"`  
-    #   - Produces `resurrection_candidates_registry_{pid}_{ts}.json`
-    #
-    ####  Why this order works:
-    #- Ghost detection is IP-driven and must come first  
-    #- Untraceable entries are registry-driven and help explain ghost edge cases  
-    #- Resurrection candidates are broader and include both traceable and untraceable entries
+    Ghost detection block 
+       - Based on `assigned_ip_set - seen_ips`  
+       - Produces `resurrection_ghost_missing_{pid}_{ts}.json`
+    
+    Untraceable registry entries block
+       - Captures registry entries with missing or invalid IPs  
+       - Produces `resurrection_untraceable_registry_entries_{pid}_{ts}.json`
+    
+    Resurrection candidates block  
+       - Based on `status != "install_success"`  
+       - Produces `resurrection_candidates_registry_{pid}_{ts}.json`
+    
+     Why this order works:
+    - Ghost detection is IP-driven and must come first  
+    - Untraceable entries are registry-driven and help explain ghost edge cases  
+    - Resurrection candidates are broader and include both traceable and untraceable entries
 
-    #| Artifact Filename Pattern                              | Contents                                  |
-    #|--------------------------------------------------------|-------------------------------------------|
-    #| `resurrection_candidates_registry_{ts}.json`           | All non-success registry entries          |
-    #| `resurrection_ghost_missing_{ts}.json`                 | IPs from chunk not seen in registry       |
-    #| `resurrection_untraceable_registry_entries_{ts}.json`  | Registry entries with missing/invalid IPs |
+    | Artifact Filename Pattern                              | Contents                                  |
+    |--------------------------------------------------------|-------------------------------------------|
+    | `resurrection_candidates_registry_{ts}.json`           | All non-success registry entries          |
+    | `resurrection_ghost_missing_{ts}.json`                 | IPs from chunk not seen in registry       |
+    | `resurrection_untraceable_registry_entries_{ts}.json`  | Registry entries with missing/invalid IPs |
 
-    # aggregate counterparts (created in main())
-    #- `resurrection_ghost_missing_{ts}.json`
-    #- `resurrection_candidates_registry_{ts}.json`
-    #- `resurrection_untraceable_registry_entries_{ts}.json`
+     aggregate counterparts (created in main())
+    - `resurrection_ghost_missing_{ts}.json`
+    - `resurrection_candidates_registry_{ts}.json`
+    - `resurrection_untraceable_registry_entries_{ts}.json`
 
-These json files us a write-to-disk methodology for the aggregation, whereby each of the process level files are 
+
+
+These json files use a write-to-disk methodology for the aggregation, whereby each of the process level files are 
 The 3 types of registry anomalies detected by the resurrection monitor are:
 
-1. Ghost registry threads. Ghost threads are threads that are completely missing from the process_registry and thus the aggregate list
+
+
+1.Ghost registry threads. Ghost threads are threads that are completely missing from the process_registry and thus the aggregate list
 of registry_entrys.   They show up in the missing_registry_ips_artifact.log file as a list of missing ip addresses. These are very
 rare occurrences. They are determined from an AWS golden list of ip addresses taken from chunk ip data that is fed into the 
 multiprocessing.Pool. A chunk is a list of ip addresses (EC2 instances or nodes) that the process is designated to work on.  Each process
@@ -277,14 +322,14 @@ the re-hydration can occur without any issues.
 
 The ghost detection code in the resurrection monitor is designated as BLOCK1: Ghost detection. This will be modularized into a helper function detect_ghosts.
 
-2. Untraceable registry_entrys.  This applies to a registry_entry that has no public or private ip address.  As noted above, this
+2.Untraceable registry_entrys.  This applies to a registry_entry that has no public or private ip address.  As noted above, this
 can happen but it has not been seen in actual testing, except for the thread futures crash, which has been patched with 
 ip re-hydration code. It is not known what other causes and cases may exist that may provoke this type of registry_entry.
 
 The untraceable registry_entry code is designated as BLOCk2: Untraceable registry_entrys
 
 
-3. Resurrection candidates. These are simply all the registry_entrys that are != install_success (not equal to install_success status)
+3.Resurrection candidates. These are simply all the registry_entrys that are != install_success (not equal to install_success status)
 All of these are prime first order resurrection candidates that will try to be revived by the Phase 3 recovery code.
 
 The resurrection candidate code is designated as BLOCK3: Resurrection candidate code.
@@ -405,51 +450,6 @@ will be attempted.
 ### Code Review of the fixes and refactoring:
 
 
-
-
-
-
-#### Stage1:
-Remove `update_resurrection_registry`. Resurrection tagging should be completely centralized
-- Refactor `read_output_with_watchdog` to return output and status only: `(stdout, stderr, status)` only
-- Move all resurrection tagging logic out of `install_tomcat`.
-- Let `resurrection_monitor_patch8` handle all resurrection logic based on `process_registry`
-
-
-
-#### Stage2:
-Move Resurrection Candidate Logic to `resurrection_monitor_patch8` This will be a process level resurrection candidate json
-file. There is already an aggregate resurrection candidate json file artifact.
-
-This resurrection candidate process level file will be done from the process_registry:
-
-- Scan `process_registry` in real time for `status != "install_success"`.
-- Tag resurrection candidates based on process-level heuristics.
-- Eliminate `resurrection_registry` entirely.
-
-Inside `resurrection_monitor_patch8`, scan using the logic !=install_success tentatively (this will cover all stub and 
-install_failed registry threads, etc.)
-
-
-```
-for thread_uuid, entry in process_registry.items():
-    if entry.get("status") != "install_success":
-        # Tag as resurrection candidate
-```
-
-This eliminates the need for a separate `resurrection_registry` and keeps all resurrection logic in one place.
-
-
-
-
-#### Stage3:
-Modularize Resurrection Gatekeeper (currently called from install_tomcat, but it needs to be called from resurrection_monitor)
-- Refactor `resurrection_gatekeeper()` to be reusable outside `install_tomcat`.
-- Use it in `resurrection_monitor_patch8` to decide which threads to resurrect. Bascially all of the install_failed and most 
-if not all of the stubs (i.e., not install_success registry_entry threads)
-- Filter resurrection candidates
-- Decide whether to retry based on tags like `"install_failed"` or `"stub"`
-- This sets the stage for Phase3 of this project where the threads will be resurrected.
 
 
 
