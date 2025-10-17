@@ -466,7 +466,7 @@ def hydrate_benchmark_ips(log_dir):
             print(f"[RESMON_7d] Runtime log line count: {len(lines)}")
 
             public_ip_lines = [line for line in lines if "Public IP:" in line]
-            print(f"[RESMON_7d] Sample 'Public IP:' lines: {public_ip_lines[:3]}")
+            #print(f"[RESMON_7d] Sample 'Public IP:' lines: {public_ip_lines[:3]}")
 
             for i, line in enumerate(lines):
                 if "Public IP:" in line:
