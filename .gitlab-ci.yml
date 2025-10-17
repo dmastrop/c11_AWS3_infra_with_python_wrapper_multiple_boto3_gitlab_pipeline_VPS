@@ -130,6 +130,7 @@ deploy:
         # these are process level logs from the resurrection_montior_patch7c(). These are actual registry entries for resurrection candidates for phase3 implementation. Ghosts are missing when compared to GOLD standard and do not have standard failure tags  
       - logs/resurrection_candidates_registry_*.json
       - logs/resurrection_ghost_missing_*.json
+      - logs/resurrection_untraceable_registry_entries_*.json  
      
       # resurrection_monitor pid based snapshot for all registry values. This has been replaced with final_aggregate_execution_run_registry.json
       #- logs/resurrection_process_registry_snapshot_*.json
