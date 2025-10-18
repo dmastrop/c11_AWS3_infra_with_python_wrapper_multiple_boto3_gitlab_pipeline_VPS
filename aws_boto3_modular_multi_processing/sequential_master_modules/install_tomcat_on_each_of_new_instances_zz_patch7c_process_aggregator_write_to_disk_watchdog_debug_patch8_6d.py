@@ -4393,6 +4393,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
         ## be modified for any command installation type (any application)
 
+            ##### Synthetic thread futures crash injection at beginning of for idx loop
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true") and idx == 1:
+                raise RuntimeError("Synthetic failure injected at idx 1")
+
+
             ## Code for the conidtional registry entry if hit install error: First, Add a success flag before the attempt loop 
             ## set the command_succeeded flag to the default of False BEFORE the for attempt loop
             ## This flag is used to gate the install_failed registry_entry block after the for attempt loop IF
@@ -5362,6 +5367,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         transport = ssh.get_transport()
         if transport:
             transport.close()
+
+
+
+        # Synthetic crash after install loop but before registry commit
+        if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure injected after install loop")
+
 
 
 
