@@ -3898,6 +3898,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         registry_entry_created = False
         ssh_success = False  # temp flag to suppress stub
 
+
+
+
+        # Synthetic crash before SSH connect loop
+        if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure injected before SSH connect loop")
+        
+
+
         for attempt in range(5):
             try:
                 print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
@@ -4366,7 +4375,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### as in env variable. It will force all the processes/threads in the execution run to fail. There will be no install_success
         #### on any of the threads.
         if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
-            raise RuntimeError("Synthetic failure for testing")
+            raise RuntimeError("Synthetic failure injected between SSH and install loop")
 
 
 
