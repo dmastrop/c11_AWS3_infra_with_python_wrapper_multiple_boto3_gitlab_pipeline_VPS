@@ -296,9 +296,10 @@ nature.
     - `resurrection_candidates_registry_{ts}.json`
     - `resurrection_untraceable_registry_entries_{ts}.json`
 ```
+The aggreagation json files are assembled from a write-to-disk re-assembly of all the process_registry sets for all processes in the
+execution run. The aggregate registry listing can then be screened and filtered out accordingly by the criteria descirbe in detail
+below....
 
-
-These json files use a write-to-disk methodology for the aggregation, whereby each of the process level files are 
 The 3 types of registry anomalies detected by the resurrection monitor are:
 
 
