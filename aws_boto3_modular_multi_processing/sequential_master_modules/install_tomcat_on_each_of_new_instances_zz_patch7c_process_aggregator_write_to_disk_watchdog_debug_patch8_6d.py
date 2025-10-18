@@ -5970,7 +5970,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             process_registry[thread_uuid]["public_ip"] = ip
             process_registry[thread_uuid]["private_ip"] = public_to_private_ip.get(ip, "unknown")
             process_registry[thread_uuid]["tags"].append("ip_rehydrated")
+            ####### tagging for syntehtic injections ########
+            # Synthetic crash tagging
+            if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_pre_ssh")
+
+            if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_between_ssh_and_commands")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_idx_1")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
+
             
+
+
             ##### insert the logging.info here to resolve the issue whereby the benchmark pid log file is getting "unknown" 
             ##### Pre-rehydrated ip addresses when the futures thread crashes in threaded_install. Just do a print in threaded_install
             ##### Do the logging here in tomcat worker for each thread in the rehydration batch processing that has an unknown.
