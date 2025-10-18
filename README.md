@@ -437,7 +437,41 @@ has the crash in between the SSH connection establishment and the for idx loop t
 The synthetic crash code review will be in the code review section below.
 
 
+The injection sites inside of install_tomcat are varied: 
 
+From the .gitlab-ci.yml the sites can be changed very easily to expedite testing: 
+```
+deploy:
+  stage: deploy
+  variables:
+    PID_JSON_DUMPS: "false"
+    # this is a gating env VAR for module2 if I need to disable the process level resurrection candidate
+    # or ghost json artifact files during hyper-scalling
+
+    ##### Synthetic thread failures in install_tomcat ########
+    FORCE_TOMCAT_FAIL: "false"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat. Use "1" or "true" to inject and "false" or "0" to not inject. This one is right before the for idx.
+
+    FORCE_TOMCAT_FAIL_IDX1: "false"
+
+    FORCE_TOMCAT_FAIL_POSTINSTALL: "false"
+```
+
+
+The registry_entry will be tagged accordingly:
+```
+        # Synthetic crash tagging
+        if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+            process_registry[thread_uuid]["tags"].append("synthetic_crash_pre_ssh")
+
+        if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+            process_registry[thread_uuid]["tags"].append("synthetic_crash_between_ssh_and_commands")
+
+        if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true"):
+            process_registry[thread_uuid]["tags"].append("synthetic_crash_idx_1")
+
+        if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+            process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
+```
 
 
 #### Testing the simplified ghost detection logic with forced manual AWS console shutdown of instances
