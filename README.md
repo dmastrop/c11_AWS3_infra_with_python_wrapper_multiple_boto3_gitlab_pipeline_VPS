@@ -237,7 +237,7 @@ if not all of the stubs (i.e., not install_success registry_entry threads)
 - This sets the stage for Phase3 of this project where the threads will be resurrected.
 
 
-### Introduction to implementation details: 
+### Implementation summaries: 
 
 These updates are focused on cleaning up and refactoring the resurrection monitor code.  
 
@@ -381,8 +381,8 @@ The section below on this will review all the code in detail.
 The collateral effects of the re-hydration code were mostly positive. There was one issue where the logger for the process level
 benchmark process level logs were getting the "unknown" address simply because the logger was in the threaded_install function still, which
 is prior to the re-hydration that occurs in the tomcat_worker function. These both utilize the same python logger and so it was easy to 
-place the logger to teh benchmark process level logs inside the for loop of the re-hydration code in tomcat_worker. The rest of the logs
-built from the benchmark process level logs were self corrected, as they are built from the process level logs.
+place the logger line for the benchmark process level logs inside the for loop of the re-hydration code in tomcat_worker. 
+The rest of the logs built from the benchmark process level logs were self corrected, as they are built from the process level logs.
 
 For example prior to the fix the benchmark process level log looked like this even after the re-hydration code for the registry_entry
 (prior section above):
@@ -404,7 +404,7 @@ For example prior to the fix the benchmark process level log looked like this ev
 ```
 
 After the fix they logs look like this, fully re-hydrated: 
-
+(note RE-hyrdated ip addresses now)
 ```
 2025-10-16 23:47:20,938 - 13 - MainThread - Test log entry to ensure file is created.
 2025-10-16 23:47:28,858 - 13 - MainThread - [PID 13] START: Tomcat Installation Threaded
@@ -422,6 +422,10 @@ After the fix they logs look like this, fully re-hydrated:
 2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] [UUID f7e01e12] ❌ Future crashed | RE-hydrated Public IP: 100.27.189.85 | RE-hydrated Private IP: 172.31.28.141
 2025-10-16 23:50:02,881 - 13 - MainThread - [PID 13] [UUID 08725a6d] ❌ Future crashed | RE-hydrated Public IP: 98.91.26.246 | RE-hydrated Private IP: 172.31.18.46
 ```
+
+The Pre-rehydrated ip addrress Future crashed message now is just printed to the console rather than logged to the logger, so the 
+Pre-rehydrated ip address ("unknown") no longer appears in the logs, as shown above.
+
 
 #### Synthetic thread futures crash code for testing
 
@@ -453,8 +457,21 @@ deploy:
 
     FORCE_TOMCAT_FAIL_IDX1: "false"
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL: "false"
+    FORCE_TOMCAT_FAIL_POSTINSTALL: "false
+
+    FORCE_TOMCAT_FAIL_PRE_SSH: "false""
 ```
+FORCE_TOMCAT_FAIL, the original injection site, is between the SSH connection code and the for idx command loop block (after SSH connection
+is established, but before any commands are executed on the nodes through that SSH connection.
+
+FORCE_TOMCAT_FAIL_IDX1 is designed to fire off AFTER the first command is executed (idx==0). When idx hits 1 the code causes the thread
+to crash.
+
+FORCE_TOMCAT_FAIL_POSTINSALL causes a thread crash after ALL of the commands have executed on the node (successfully), and right before
+the install_success registry_entry is created
+
+FORCE_TOMCAT_FAIL_PRE_SSH causes a thread crash before the SSH connection to the node is initiated.
+
 
 
 The registry_entry will be tagged accordingly:
@@ -493,7 +510,18 @@ will be attempted.
 ### Code Review of the fixes and refactoring:
 
 
+#### Synthetic thread futures crash injection
 
+
+The code snippets of the code blocks are below. All of these crashes are strategically placed inside of the install_tomcat function.
+
+##### FORCE_TOMCAT_FAIL
+
+##### FORCE_TOMCAT_FAIL_IDX1
+
+#####FORCE_TOMCAT_FAIL_POSTINSALL
+
+##### FORCE_TOMCAT_FAIL_PRE_SSH
 
 
 
