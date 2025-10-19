@@ -48,9 +48,9 @@ deploy:
     # or ghost json artifact files during hyper-scalling
  
     ##### Synthetic thread failures in install_tomcat ########
-    FORCE_TOMCAT_FAIL: "1"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat. Use "1" or "true" to inject and "false" or "0" to not inject. This one is right before the for idx.
+    FORCE_TOMCAT_FAIL: "false"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat. Use "1" or "true" to inject and "false" or "0" to not inject. This one is right before the for idx.
 
-    FORCE_TOMCAT_FAIL_IDX1: "false"
+    FORCE_TOMCAT_FAIL_IDX1: "1"
 
     FORCE_TOMCAT_FAIL_POSTINSTALL: "false"
 
