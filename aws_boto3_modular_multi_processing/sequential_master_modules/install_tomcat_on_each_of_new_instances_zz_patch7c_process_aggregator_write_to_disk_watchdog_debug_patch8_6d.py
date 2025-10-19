@@ -4403,6 +4403,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         ## be modified for any command installation type (any application)
 
             ##### Synthetic thread futures crash injection at beginning of for idx loop
+            print(f"[DEBUG] idx={idx}, FORCE_TOMCAT_FAIL_IDX1={os.getenv('FORCE_TOMCAT_FAIL_IDX1')}")
+
+
+
             if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true") and idx == 1:
                 raise RuntimeError("Synthetic failure injected at idx 1")
 
