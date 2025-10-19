@@ -461,6 +461,29 @@ deploy:
 
     FORCE_TOMCAT_FAIL_PRE_SSH: "false""
 ```
+Also added the ENV vars to the before script, importing them into the .env vile
+
+```
+before_script:
+    - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
+    - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
+    - echo 'region_name=us-east-1' >> .env
+    - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
+    - echo 'instance_type=t2.micro' >> .env
+    - echo 'key_name=generic_keypair_for_python_testing' >> .env
+    - echo 'min_count=16' >> .env
+    - echo 'max_count=16' >> .env
+    - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
+    - echo 'DB_USERNAME='${DB_USERNAME} >> .env
+    - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
+    - echo 'PID_JSON_DUMPS='${PID_JSON_DUMPS} >> .env  # see above. Gating for the json ghost and res candidate files.  
+    - echo 'FORCE_TOMCAT_FAIL='${FORCE_TOMCAT_FAIL} >> .env # This is to inject a futures crash in install_tomcat
+    - echo 'FORCE_TOMCAT_FAIL_IDX1='${FORCE_TOMCAT_FAIL_IDX1} >> .env # futures crash after first command executes
+    - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL='${FORCE_TOMCAT_FAIL_POSTINSTALL} >> .env  # futures crash after installation
+    - echo 'FORCE_TOMCAT_FAIL_PRE_SSH='${FORCE_TOMCAT_FAIL_PRE_SSH} >> .env  # futures crash before SSH initiated
+```
+
+
 FORCE_TOMCAT_FAIL, the original injection site, is between the SSH connection code and the for idx command loop block (after SSH connection
 is established, but before any commands are executed on the nodes through that SSH connection.
 
