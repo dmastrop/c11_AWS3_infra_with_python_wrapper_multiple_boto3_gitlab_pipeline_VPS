@@ -542,7 +542,7 @@ The code snippets of the code blocks are below. All of these crashes are strateg
 
 ##### FORCE_TOMCAT_FAIL_IDX1
 
-#####FORCE_TOMCAT_FAIL_POSTINSALL
+##### FORCE_TOMCAT_FAIL_POSTINSALL
 
 ##### FORCE_TOMCAT_FAIL_PRE_SSH
 
