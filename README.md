@@ -497,21 +497,36 @@ FORCE_TOMCAT_FAIL_PRE_SSH causes a thread crash before the SSH connection to the
 
 
 
-The registry_entry will be tagged accordingly:
+The registry_entry will be tagged accordingly after RE-hydration:
+
+
+
 ```
-        # Synthetic crash tagging
-        if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
-            process_registry[thread_uuid]["tags"].append("synthetic_crash_pre_ssh")
 
-        if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
-            process_registry[thread_uuid]["tags"].append("synthetic_crash_between_ssh_and_commands")
+    # Step 4: Rehydrate if safe
+    if len(unknown_entries) == len(missing_ips_unhydrated):
+        for thread_uuid, ip in zip(unknown_entries.keys(), missing_ips_unhydrated):
+            process_registry[thread_uuid]["public_ip"] = ip
+            process_registry[thread_uuid]["private_ip"] = public_to_private_ip.get(ip, "unknown")
+            process_registry[thread_uuid]["tags"].append("ip_rehydrated")
+            ####### tagging for syntehtic injections ########
+            # Synthetic crash tagging
+            if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_pre_ssh")
 
-        if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true"):
-            process_registry[thread_uuid]["tags"].append("synthetic_crash_idx_1")
+            if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_between_ssh_and_commands")
 
-        if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
-            process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_idx_1")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
+
 ```
+
+
+
 
 
 #### Testing the simplified ghost detection logic with forced manual AWS console shutdown of instances
@@ -540,15 +555,131 @@ The code snippets of the code blocks are below. All of these crashes are strateg
 
 ##### FORCE_TOMCAT_FAIL
 
+```
+        <<< SSH Connection has been established for the thread/node >>>>
+
+        ##### This code below is a synthetic crash injection to test the futures thread crash code that has been added in the 
+        ##### resurrection_monitor_patch8.  The ghost detection logic and resurrection candidate logic is in that function.
+        ##### prior to the fix, the ghost detection logic was too aggressive, marking instalL_failed registry_entry as ghost.
+        #### Thus as an install_failed registry_entry it was double counted as failed ip and a ghost ip.  It is not a ghost ip.
+        #### The reason for this is because a futures thread crash will cause the thread ip to go into an unknown state.  As an 
+        #### ip "unknown" the ghost detection logic kicks in and counts it as a missing ip address, which is a ghost.
+        #### However, these types of thread failures are NOT ghosts. They have a thread_uuid and a registry_entry and their cause
+        #### of failure is known (thread futures crash).  The solution to this problem is to RE-hydrate the ip address from the 
+        #### so called "missing" ip(s) at a per process level. The missing ip(s) can easily be detected from a delta between the 
+        #### AWS golden list of ips (orchestration level ip address list) and the ips that are currently assigned to registry_entrys
+        #### for that process.  To test this, typically it is required to run a hyper-scaling test (512 node test is ideal). However,
+        #### to save on costs of running such tests, crash simulation code permits a full testing of the RE-hydration code for 
+        #### futhres thread crashes without have to run repeated hyper-scale tests.
+
+        #### The crash simulation code below will incite a futures thread crash in install_tomcat that
+        #### will percolate up to the calling function threaded_install (ThreadPoolExecutor invokes install_tomcat from there).
+        #### This causes the except block in threaded_install to trigger and creates a registry_entry wih an unknown ip and install_failed
+        #### with the tags indicating that it is a futures crash. The flag FORCE_TOMCAT_FAIL is set in .gitlab-ci.yml file and imported
+        #### as in env variable. It will force all the processes/threads in the execution run to fail. There will be no install_success
+        #### on any of the threads. This type of crash will cause the batch RE-hydration code in tomcat_worker (the calling function of
+        #### threaded_install) to execute and all of the code paths can thus be executed. These crashes have been strategically placed
+        #### throughout the install_tomcat function to ensure that the exception code handling and RE-hydration code are robust under
+        #### various thread failure points in install_tomcat. This one is placed in between the SSH code connect and the for idx 
+        #### command execution block. The others are placed pre-SSH, post-install, and after the first command executes (idx==1)
+        if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure injected between SSH and install loop")
+
+
+
+
+        #### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
+        #### The helper functions wrap_command and should_wrap and the native_commands list that is from the original commands list
+        #### are at the top of this module but later on will modularize the wrap command so that it can be used with other 
+        #### service installations like gitlab and mariadb, etc....
+
+        commands = [wrap_command(cmd) for cmd in native_commands]
+
+
+
+        #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
+        #NON-Negative testing use this: (and comment out the above)
+        for idx, command in enumerate(commands):
+```
+
+
 ##### FORCE_TOMCAT_FAIL_IDX1
+
+```
+        #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
+        #NON-Negative testing use this: (and comment out the above)
+        for idx, command in enumerate(commands):
+
+            ## Negative testing:
+            #if ip == target_ip and idx == 1:
+            #    command = 'sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat99'
+
+
+
+        ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
+        ## be modified for any command installation type (any application)
+
+            ##### Synthetic thread futures crash injection at beginning of for idx loop
+            print(f"[DEBUG] idx={idx}, FORCE_TOMCAT_FAIL_IDX1={os.getenv('FORCE_TOMCAT_FAIL_IDX1')}")
+
+
+
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true") and idx == 1:
+                raise RuntimeError("Synthetic failure injected at idx 1")
+
+```
+
+
 
 ##### FORCE_TOMCAT_FAIL_POSTINSALL
 
+
+```
+
+        # END of the for idx loop
+        # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
+
+        ssh.close()
+        transport = ssh.get_transport()
+        if transport:
+            transport.close()
+
+
+
+        # Synthetic crash after install loop but before registry commit
+        if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure injected after install loop")
+
+
+        #debug for patch7c
+        print(f"[TRACE][install_tomcat] Reached successful registry update step for {ip}")
+```
+
+
+
 ##### FORCE_TOMCAT_FAIL_PRE_SSH
 
+```
+
+        ssh_connected = False
+        status_tagged = False
+        registry_entry_created = False
+        ssh_success = False  # temp flag to suppress stub
 
 
 
+
+        # Synthetic crash before SSH connect loop
+        if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure injected before SSH connect loop")
+
+
+
+        for attempt in range(5):
+            try:
+                print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+
+```
 
 ## UPDATES part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
 
