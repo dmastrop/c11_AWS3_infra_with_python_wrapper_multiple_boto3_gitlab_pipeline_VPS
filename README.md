@@ -551,7 +551,7 @@ will be attempted.
 
 ### Code Review of the fixes and refactoring:
 
-##### resurrection_monitor_patch8 function changes
+#### resurrection_monitor_patch8 function changes
 
 As noted above in the Implementation summary above, this function and some supporting functions requires several changes during the
 refactoring. The original code was introduced prior to the registry_entry failure and stub logic being formalized, and so it was 
