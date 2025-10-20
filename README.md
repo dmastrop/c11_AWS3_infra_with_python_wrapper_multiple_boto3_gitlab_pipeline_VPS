@@ -345,22 +345,22 @@ The resurrection candidate code is designated as BLOCK3: Resurrection candidate 
 
 
 
-#### cleanup of old code related to the resurrection_monitor code
+#### Cleanup of old code related to the resurrection_monitor code
 
 In addition to refactoring the function itself using the 3 blocks above, there was also a lot of cleanup in the supporting functions.
 
-There was old code in the resurrection_monitor itself that had to be removed.  The resurrection_registry has been replaced with the 
+- There was old code in the resurrection_monitor itself that had to be removed.  The resurrection_registry has been replaced with the 
 process_registry.  
 
-install_tomcat, a thread level function, had calls to resurrection_gatekeeper which are no longer required.
+- install_tomcat, a thread level function, had calls to resurrection_gatekeeper which are no longer required.
 
-The resurrection_registry_lock had to be removed from the code as there is no longer a resurrection_registry. 
+- The resurrection_registry_lock had to be removed from the code as there is no longer a resurrection_registry. 
 
-Other legacy and deprecated code in the resurrection_monitor had to be commented out.
+- Other legacy and deprecated code in the resurrection_monitor had to be commented out.
 
 
 
-##### The case for ip re-hydration
+#### The case for ip re-hydration
 
 While running some hyper-scaling testing with 512 nodes (512 concurrent processe), a thread futures crash was occuring fairly consistently
 The current code had an unknown public and private ip address in the install_failed registry_entry for each of these threads.
@@ -386,6 +386,8 @@ The rest of the logs built from the benchmark process level logs were self corre
 
 For example prior to the fix the benchmark process level log looked like this even after the re-hydration code for the registry_entry
 (prior section above):
+
+
 ```
 2025-10-16 01:09:58,819 - 15 - MainThread - Test log entry to ensure file is created.
 2025-10-16 01:10:05,658 - 15 - MainThread - [PID 15] START: Tomcat Installation Threaded
@@ -405,6 +407,7 @@ For example prior to the fix the benchmark process level log looked like this ev
 
 After the fix they logs look like this, fully re-hydrated: 
 (note RE-hyrdated ip addresses now)
+
 ```
 2025-10-16 23:47:20,938 - 13 - MainThread - Test log entry to ensure file is created.
 2025-10-16 23:47:28,858 - 13 - MainThread - [PID 13] START: Tomcat Installation Threaded
@@ -444,6 +447,7 @@ The synthetic crash code review will be in the code review section below.
 The injection sites inside of install_tomcat are varied: 
 
 From the .gitlab-ci.yml the sites can be changed very easily to expedite testing: 
+
 ```
 deploy:
   stage: deploy
@@ -746,6 +750,37 @@ The tags can then be used retroactively by the resurrection_gatekeeper to decide
 
 The tags indicate that the installation is successful but the thread crashed. The resurrection_gatekeeper will use tags for one of its
 filtering criteria on whether or not to reque the thread for resurrection.
+
+The tagging is ideally done in the RE-hydration block of code in tomcat_worker as shown below. The logic is straightforward: 
+If and only if a  post install crash has been incited, then tag it with the last tag below:
+
+
+
+```
+    # Step 4: Rehydrate if safe
+    if len(unknown_entries) == len(missing_ips_unhydrated):
+        for thread_uuid, ip in zip(unknown_entries.keys(), missing_ips_unhydrated):
+            process_registry[thread_uuid]["public_ip"] = ip
+            process_registry[thread_uuid]["private_ip"] = public_to_private_ip.get(ip, "unknown")
+            process_registry[thread_uuid]["tags"].append("ip_rehydrated")
+            ####### tagging for syntehtic injections ########
+            # Synthetic crash tagging
+            if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_pre_ssh")
+
+            if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_between_ssh_and_commands")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_idx_1")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
+                process_registry[thread_uuid]["tags"].append("install_success_achieved_before_crash")
+                #the crash is positioned so that all commands are executed successfully. The crash will not be hit otherwise. It is basically an install_success but with a crash right before registry creation.
+
+```
+
 
 These are the gitlab console logs for this crash. Note that the command 5/5 is the last command to be executed on eacy node: 
 
