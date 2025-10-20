@@ -601,7 +601,27 @@ The code snippets of the code blocks are below. All of these crashes are strateg
         #NON-Negative testing use this: (and comment out the above)
         for idx, command in enumerate(commands):
 ```
+This is the registry_entry of a sample thread for this crash: 
 
+```
+"d8e8373e": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": 129715465186176,
+    "thread_uuid": "d8e8373e",
+    "public_ip": "3.80.85.194",
+    "private_ip": "172.31.26.119",
+    "timestamp": "2025-10-18 04:20:02.394657",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "synthetic_crash_between_ssh_and_commands"
+    ]
+  },
+```
 
 ##### FORCE_TOMCAT_FAIL_IDX1
 
@@ -629,7 +649,67 @@ The code snippets of the code blocks are below. All of these crashes are strateg
 
 ```
 
+These are the gitlab console logs for this crash:
 
+Note that the command 2/5 never starts becasue the crash code is positioned right at the beginning of the for idx loop. 
+Note also that the command 1/5 successfully completes.
+Finally, note that the registry_entry is successfully RE-hydrated as expected.
+
+
+
+
+```
+[DEBUG] idx=0, FORCE_TOMCAT_FAIL_IDX1=1
+[18.212.222.90] [2025-10-19 23:47:42.659291] Command 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+
+<< Command 2/5 loop starts but the command is never executed because the crash is positioned at the top of the for idx loop >>
+
+[DEBUG] idx=1, FORCE_TOMCAT_FAIL_IDX1=1
+[ERROR][threaded_install] Future failed: Synthetic failure injected at idx 1
+Traceback (most recent call last):
+  File "<string>", line 5676, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4411, in install_tomcat
+RuntimeError: Synthetic failure injected at idx 1
+[PID 12] [UUID 9ad83042] ❌ Future crashed | Pre-rehydrated Public IP: unknown | Pre-rehydrated Private IP: unknown
+
+<<Note the thread is subsequently rehydrated just fine. See the regsitry_entry sample below>>
+ 
+[PID 12] [UUID 9ad83042] ❌ Future crashed | RE-hydrated Public IP: 54.172.218.112 | RE-hydrated Private IP: 172.31.20.231
+[RESMON_8_PATCH] Rehydrated IP 54.172.218.112 for UUID 9ad83042
+```
+
+
+
+This is a sample registry_entry from the gitlab artifact logs:
+
+```
+  "a5abdc1b": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": 130184963406720,
+    "thread_uuid": "a5abdc1b",
+    "public_ip": "18.212.222.90",
+    "private_ip": "172.31.16.158",
+    "timestamp": "2025-10-19 23:48:19.987157",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "synthetic_crash_idx_1"
+    ]
+  },
+
+```
 
 ##### FORCE_TOMCAT_FAIL_POSTINSALL
 
