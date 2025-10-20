@@ -551,6 +551,180 @@ will be attempted.
 
 ### Code Review of the fixes and refactoring:
 
+##### resurrection_monitor_patch8 function changes
+
+As noted above in the Implementation summary above, this function and some supporting functions requires several changes during the
+refactoring. The original code was introduced prior to the registry_entry failure and stub logic being formalized, and so it was 
+incorrect. Several portions of the deprecated code had to be removed (see the next section on that).
+One important issue that surfaced while refactoring this code was that fact that a futures thread crash in install_tomcat caused the
+ip addresses (Both public and private) go into an "unknown" state for obvoius reasons. This caused a lot of issues with the ghost
+detection and resurrection_candidate detection logic, resulting in a double counting of the registry_entry in the missed ips (ghost) and
+in the falure ips (install_failed status).   The solution to this was to RE-hydrate the registry_entry public and private ip(s) by 
+determinstically pairing the thread_uuid of the thread with the so called "missing" ips (these IPs are obtained from the AWS golden list
+of IPs from the orchestration level).  Althought this is not resurrection_monitor code, it is deeply integrated with it and the code review
+will for this will be presented in a separate section furuther below.
+
+This section reviews the code changes required to implement the design detailed earlier. namely the new ghost detection logic,
+the untraceable registry code, and finally the resurrection candidate code. As noted above, an important part of this code is the logging
+at a process level and aggregate level (all the processes in the execution) of these registry_entrys or ip(s).  A ghost log entry is
+just an ip address whereas untraceable and resurrection candidate logs have full registry_entrys for forensic traceability. (see the 
+earlier section for details on the logging)
+
+NOTE: many of these blocks will be modularized into separate functions in the next major update.
+
+Also note that these are all performed at the process level on the current process_registry. These are later aggregated in the main()
+code from the aggregated registry.
+
+The order of these blocks is important.
+
+
+##### Ghost detection logic (BLOCK1)
+
+```
+    ###### BLOCK1: Ghost detection:
+    ###### Refactoring the ghost detection logic. This will be modularized in a detect_ghosts() helper function at some point #######
+    ###### The refactored code decouples the dependence on strictly ip address for the ghost detection. Now that the install_failed
+    ###### and stub logic is much more robust and failure detection much more thorough, we need to pre-filter out several scenarios
+    ###### that should not be ghosted even if the ip address is missing. For example a futures crash in a thread: the exception will
+    ###### be caught and an install_failed registry_entry will be created. Often times there will be no ip address. There is now 
+    ###### ip address recovery code in the tomcat_worker which RE-hydrates the ip address if it is unknown or blank.
+    ###### This is required to be done prior to the ghost detection logic becasue ghost detection logic must be IP based.
+    ###### The IP address is the only immuatable lasting attribute of a node and potential thread from AWS. 
+    ###### If the ip address is missing in the registry_entry the untraceable entries in BLOCK2 will list these thread for further
+    ###### review.  In theory these registry_entrys should not be included as ghosts because the thread_uuid is known and the failure
+    ###### reason is usually included in the tags, but they do end  up in the missing (ghost) category as well.
+
+    ##### Get rid of exluded_from_ghosting list (exclusion set). This does not work. Ghost detection is IP based.     ##### This IP based exclusion set has no purpose and will not
+    ##### detect missing ips, it will merely identify registry_entrys without ip addresses. This is taken care of with BLOCK 2 logic.
+    ##### This exclusion_set mehtodology can not be used to resolve the ghost detection issue with registry_entrys that have a missing
+    ##### ip. These will be incorrectly listed as ghosts but the BLOCk 2 untraceable json file will alert the user with the information
+    ##### for further investigatation on these types of threads.
+
+    ## Step 1: Build exclusion set — IPs that should NOT be ghosted even if missing. This includes the edge cases described above 
+    ## This uses the is_valid_ip helper function in case the ip addresses are malformed, etc.
+    #excluded_from_ghosting = set()
+
+    #for entry in process_registry.values():
+    #    ip = entry.get("public_ip", "")
+    #    status = entry.get("status", "")
+    #    tags = entry.get("tags", [])
+
+    #    if (
+    #        "ip_unhydrated" in tags or
+    #        (status in ["install_failed", "stub"] and (not ip or ip == "unknown" or not is_valid_ip(ip)))
+    #    ):
+    #        excluded_from_ghosting.add(ip)
+    #        print(f"[RESMON_8] Skipping ghost detection for IP (exclusion set): {ip} — Reason: {status} + tag(s): {tags}")
+
+
+    # Step 1: Build seen IPs normally
+    seen_ips = {
+        entry["public_ip"]
+        for entry in process_registry.values()
+        if entry.get("public_ip") and is_valid_ip(entry["public_ip"])
+    }
+
+    # Step 2: Build assigned IPs set from chunk
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+
+    # Step 3: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
+    #ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
+
+    ## removed exclusion block:
+    ghosts = sorted(assigned_ip_set - seen_ips)
+    
+    # Step 4: Log ghosts just as before the refactoring. These pid json files will be aggregated in main() for an aggregate json file.
+    for ip in ghosts:
+        print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
+
+    if ghosts:
+        ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+        with open(ghost_file, "w") as f:
+            json.dump(ghosts, f, indent=2)
+   
+```
+
+
+
+
+##### untraceable registry logic (BLOCK2)
+
+These are regsitry_entrys that have a missing public/private ip. These have not been seen yet in actual testing but if they do occur, 
+they will resemble a ghost and show up in the missing ips and ghost list and be detected by the ghost detection logic above. Thus, 
+the purpose of this json log file (untraceable) is to notify the user that this thread needs further investigation beyond being a 
+ghost.
+
+
+```
+
+    ##### BLOCK2: Untraceable registry_entrys:
+    ##### As noted above these are usually install_failed or stub registry_entries with no ip address. This is a very rare occurrence yet
+    ##### to be seen. A thread futures crash can cause this but we are able to rehydrate the ip addreses to these registry_entrys
+    ##### Other cases may occur, but they have not been observed yet. In this case these install_failed and stub threads will unforunately
+    ##### be missing ips and in the ghost category. This json file for untraceable registry entries will track these very special and rare
+    ##### cases. Typically a real ghost will fail without a registry_entry or thread. This has been observed with ssh connection init issues
+    ##### where there is no response from the node from the initial attempt to establish an SSH connection. Such cases will be true ghosts
+    ##### and will not appear in this json file.
+    ##### This is the process level json file. An aggregate file will be created as well in main() for the entire execution run.
+
+    untraceable_entries = [
+        entry for entry in process_registry.values()
+        if not entry.get("public_ip") or not is_valid_ip(entry["public_ip"])
+    ]
+
+    if untraceable_entries:
+        untraceable_file = os.path.join(log_dir, f"resurrection_untraceable_registry_entries_{pid}_{ts}.json")
+        with open(untraceable_file, "w") as f:
+            json.dump(untraceable_entries, f, indent=2)
+```
+
+
+
+
+
+
+##### resurrection candidate logic (BLOCK3)
+
+Any registry_entry in the process_registry that is not install_success status needs to be categorized as a POTENTIAL resurrection 
+candidate.The final determination on whether or not to reque the thread for resurrection will be made by the resurrection_gateway,
+a separate process level function that will make the decision based upon the registry_entry tags and other information.
+
+```
+    ##### BLOCK3: Resurrection candidate code. The !=install_success status registry_entrys are included in this json as described
+    ##### earlier in the comments above. This includes install_failed and stub registry_entrys
+
+    # === RESMON_8 Resurrection Candidate Detection ===
+    resurrection_candidates = []
+
+    for thread_uuid, entry in process_registry.items():
+        status = entry.get("status")
+        if status and status != "install_success":
+            resurrection_candidates.append(entry)
+            print(f"[RESMON_8] Resurrection candidate detected: UUID {thread_uuid} | Status: {status}")
+
+    # Generate timestamp for consistent artifact naming
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+
+    # Write artifact only if there are candidates
+    if resurrection_candidates:
+        candidate_file = os.path.join(log_dir, f"resurrection_candidates_pid_{pid}_{ts}.json")
+        try:
+            with open(candidate_file, "w") as f:
+                json.dump(resurrection_candidates, f, indent=2)
+            print(f"[RESMON_8] Resurrection candidate file written: {candidate_file}")
+        except Exception as e:
+            print(f"[RESMON_8] Failed to write resurrection candidate file: {e}")
+
+    # Final verdict printout
+    if resurrection_candidates:
+        print(f"[RESMON_8] 🔍 Resurrection Candidate Monitor: {len(resurrection_candidates)} thread(s) flagged in process {pid}.")
+    else:
+        print(f"[RESMON_8] ✅ Resurrection Candidate Monitor: No thread failures in process {pid}.")
+
+```
+
+
+
 
 #### Synthetic thread futures crash injection
 

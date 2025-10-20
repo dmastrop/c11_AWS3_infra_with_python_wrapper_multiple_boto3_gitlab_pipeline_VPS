@@ -2245,11 +2245,13 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     ###### review.  In theory these registry_entrys should not be included as ghosts because the thread_uuid is known and the failure
     ###### reason is usually included in the tags, but they do end  up in the missing (ghost) category as well.
 
-    ##### Get rid of Step1. This does not work. Ghost detection is IP based. This IP based exclusion set has no purpose and will not
+    ##### Get rid of exluded_from_ghosting list (exclusion set). This does not work. Ghost detection is IP based. 
+    ##### This IP based exclusion set has no purpose and will not
     ##### detect missing ips, it will merely identify registry_entrys without ip addresses. This is taken care of with BLOCK 2 logic.
     ##### This exclusion_set mehtodology can not be used to resolve the ghost detection issue with registry_entrys that have a missing
-    ##### ip. These will be incorrectly listed as ghosts but teh BLOCk 2 untraceable json file will alert the user with the information
+    ##### ip. These will be incorrectly listed as ghosts but the BLOCk 2 untraceable json file will alert the user with the information
     ##### for further investigatation on these types of threads.
+
     ## Step 1: Build exclusion set — IPs that should NOT be ghosted even if missing. This includes the edge cases described above 
     ## This uses the is_valid_ip helper function in case the ip addresses are malformed, etc.
     #excluded_from_ghosting = set()
@@ -2265,6 +2267,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     #    ):
     #        excluded_from_ghosting.add(ip)
     #        print(f"[RESMON_8] Skipping ghost detection for IP (exclusion set): {ip} — Reason: {status} + tag(s): {tags}")
+
 
     # Step 1: Build seen IPs normally
     seen_ips = {
