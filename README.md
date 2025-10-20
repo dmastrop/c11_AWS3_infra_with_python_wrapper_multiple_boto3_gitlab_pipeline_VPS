@@ -780,15 +780,15 @@ This is a sample registry_entry from this:
 Note the tag install_success_acheived_before_crash. This will help the resurrection_gatekeeper in terms of reque the thread or not.
 
 ```
-  "801fd798": {
+ "702b7be8": {
     "status": "install_failed",
     "attempt": -1,
-    "pid": 14,
+    "pid": 13,
     "thread_id": 132130459024256,
-    "thread_uuid": "801fd798",
-    "public_ip": "54.167.117.255",
-    "private_ip": "172.31.23.243",
-    "timestamp": "2025-10-20 03:02:34.491172",
+    "thread_uuid": "702b7be8",
+    "public_ip": "18.234.214.3",
+    "private_ip": "172.31.24.54",
+    "timestamp": "2025-10-20 03:02:18.598648",
     "tags": [
       "install_failed",
       "future_exception",
@@ -798,6 +798,7 @@ Note the tag install_success_acheived_before_crash. This will help the resurrect
       "install_success_achieved_before_crash"
     ]
   },
+
 ```
 
 
