@@ -5909,7 +5909,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+    ####### [tomcat_worker]
     ####### Rehydration of the unknown ips in thread futures crash cases is absolutely necessary to preserve
     ####### the integrity of the upstream logging. Otherwise a "unknown" will appear in the total ips and failure
     ####### ips logs and futhermore the upstream ghost detection logic will not work with unknown in ip based
@@ -5954,7 +5954,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #- Keeps logs clean and upstream  ghost detection logic in the resurrection monitor (further below) deterministic
 
 
-    # ------------------ RESMON_8 PATCH: Batch Rehydration ------------------
+    # ------------------ [tomcat_worker] RESMON_8 PATCH: Batch Rehydration ------------------
     assigned_ip_set = {ip["PublicIpAddress"] for ip in instance_info} # note that instance_info is the same thing as assigned_ips that is used in resurrection_monitor_patch8. Assigned ips are the ips in the chunk list of ips that the process is working with.(golden list of ips)
 
 
@@ -6013,10 +6013,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Future crashed | RE-hydrated Public IP: {process_registry[thread_uuid]['public_ip']} | RE-hydrated Private IP: {process_registry[thread_uuid]['private_ip']}")
             print(f"[PID {pid}] [UUID {thread_uuid}] ❌ Future crashed | RE-hydrated Public IP: {process_registry[thread_uuid]['public_ip']} | RE-hydrated Private IP: {process_registry[thread_uuid]['private_ip']}")
 
-            print(f"[RESMON_8_PATCH] Rehydrated IP {ip} for UUID {thread_uuid}")
+            print(f"[tomcat_worker RESMON_8_PATCH] Rehydrated IP {ip} for UUID {thread_uuid}")
 
     else:
-        logging.warning(f"[RESMON_8_PATCH] Rehydration skipped for PID {pid}: ghost(missing ip) + unknown ip detected — cannot resolve IP ambiguity")
+        logging.warning(f"[tomcat_worker RESMON_8_PATCH] Rehydration skipped for PID {pid}: ghost(missing ip) + unknown ip detected — cannot resolve IP ambiguity")
         for thread_uuid in unknown_entries:
             process_registry[thread_uuid]["tags"].append("ip_unhydrated")
 
