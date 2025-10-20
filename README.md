@@ -735,6 +735,70 @@ This is a sample registry_entry from the gitlab artifact logs:
         print(f"[TRACE][install_tomcat] Reached successful registry update step for {ip}")
 ```
 
+If the code executes this crash, the for idx loop has completed its iteration through all of the commands and it is safe to assume
+that the installation is succesful (the install_success registy_entry is create shortly after this).  Thus the tags will reflect this.
+The tags can then be used retroactively by the resurrection_gatekeeper to decide: 
+
+- Skip requeueing these nodes entirely (Do not attempt to resurrect the threads)
+- Requeue them for sanity checks or post-install audits
+- Flag them for deeper forensic review if other anomalies are present
+
+
+The tags indicate that the installation is successful but the thread crashed. The resurrection_gatekeeper will use tags for one of its
+filtering criteria on whether or not to reque the thread for resurrection.
+
+These are the gitlab console logs for this crash. Note that the command 5/5 is the last command to be executed on eacy node: 
+
+
+```
+[54.242.123.31] [2025-10-20 03:02:16.796035] Command 5/5: sudo systemctl enable tomcat9 (Attempt 1)
+[54.242.123.31] Reset command before mutation AND set to original_command: sudo systemctl enable tomcat9
+[54.242.123.31]  Wrapped processed command(strace debug): sudo systemctl enable tomcat9
+[TRACE1][54.242.123.31] [2025-10-20 03:02:16.796065] Command 5/5: sudo systemctl enable tomcat9 (Attempt 1) — About to invoke exec_command
+[TRACE][install_tomcat] Attempt loop exited for command 5/5: 'sudo systemctl enable tomcat9' on IP 54.226.208.72 — Success flag: True
+[ERROR][threaded_install] Future failed: Synthetic failure injected after install loop
+Traceback (most recent call last):
+  File "<string>", line 5688, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 5400, in install_tomcat
+RuntimeError: Synthetic failure injected after install loop
+[PID 13] [UUID 702b7be8] ❌ Future crashed | Pre-rehydrated Public IP: unknown | Pre-rehydrated Private IP: unknown
+
+<< Note that the thread is subsequently rehydrated just fine >>
+
+[PID 13] [UUID 702b7be8] ❌ Future crashed | RE-hydrated Public IP: 18.234.214.3 | RE-hydrated Private IP: 172.31.24.54
+
+```
+This is a sample registry_entry from this:
+Note the tag install_success_acheived_before_crash. This will help the resurrection_gatekeeper in terms of reque the thread or not.
+
+```
+  "801fd798": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 132130459024256,
+    "thread_uuid": "801fd798",
+    "public_ip": "54.167.117.255",
+    "private_ip": "172.31.23.243",
+    "timestamp": "2025-10-20 03:02:34.491172",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "synthetic_crash_post_install",
+      "install_success_achieved_before_crash"
+    ]
+  },
+```
 
 
 ##### FORCE_TOMCAT_FAIL_PRE_SSH
