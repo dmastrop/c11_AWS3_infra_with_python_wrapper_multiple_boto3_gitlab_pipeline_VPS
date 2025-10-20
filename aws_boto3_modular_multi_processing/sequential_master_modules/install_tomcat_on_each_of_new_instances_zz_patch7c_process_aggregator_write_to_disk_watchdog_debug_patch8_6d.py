@@ -5999,7 +5999,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
             if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
                 process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
-
+                process_registry[thread_uuid]["tags"].append("install_success_achieved_before_crash")#the crash is positioned so that all commands are executed successfully. The crash will not be hit otherwise. It is basically an install_success but with a crash right before registry creation.
             
 
 
