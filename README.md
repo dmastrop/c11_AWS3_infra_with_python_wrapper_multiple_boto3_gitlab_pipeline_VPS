@@ -778,6 +778,8 @@ RuntimeError: Synthetic failure injected after install loop
 ```
 This is a sample registry_entry from this:
 Note the tag install_success_acheived_before_crash. This will help the resurrection_gatekeeper in terms of reque the thread or not.
+The AWS instances were verified manually and in this case do actaully have a working version of the application running, so thhe
+tag is appropriate.
 
 ```
  "702b7be8": {
@@ -828,6 +830,48 @@ Note the tag install_success_acheived_before_crash. This will help the resurrect
 
 
 
+
+```
+[TRACE][install_tomcat] Beginning installation on 54.172.110.32
+[ERROR][threaded_install] Future failed: Synthetic failure injected before SSH connect loop
+[PID 14] [UUID afe32e77] ❌ Future crashed | Pre-rehydrated Public IP: unknown | Pre-rehydrated Private IP: unknown
+Traceback (most recent call last):
+  File "<string>", line 5688, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 3906, in install_tomcat
+RuntimeError: Synthetic failure injected before SSH connect loop
+
+[RESMON_7d] Raw line 49: '2025-10-20 04:10:10,766 - 14 - MainThread - [PID 14] [UUID afe32e77] ❌ Future crashed | RE-hydrated Public IP: 34.229.144.156 | RE-hydrated Private IP: 172.31.19.60\n'
+[RESMON_7d] Matched IPs: ['34.229.144.156', '172.31.19.60']
+
+```
+
+```
+ "afe32e77": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 132040951040896,
+    "thread_uuid": "afe32e77",
+    "public_ip": "34.229.144.156",
+    "private_ip": "172.31.19.60",
+    "timestamp": "2025-10-20 04:10:09.762610",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "synthetic_crash_pre_ssh"
+    ]
+  },
+```
 
 
 
