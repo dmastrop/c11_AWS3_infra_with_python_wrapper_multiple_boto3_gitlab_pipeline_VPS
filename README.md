@@ -724,6 +724,228 @@ a separate process level function that will make the decision based upon the reg
 ```
 
 
+#### Cleanup of old code related to the resurrection_monitor code
+
+
+There were several areas of legacy code that needed to be cleaned up. 
+
+The code is commented out in the module if review is required.
+
+1.Removal of BLOCK4 from install_tomcat. This code is no longer required and the logic is incorrect.
+
+2.Removal of the resurrection_registry, resurrection_registry_lock and update_resurrection_registry. This registry was replace by the
+process_registry.
+
+3.Several other deprecated and faulty logic code blocks in resurrection_monitor_patch8. These were commented out and produced no collateral
+effects.
+
+
+
+#### RE-hydration code in tomcat_worker for the install_tomcat/threaded_install futures crash
+
+The threaded_install function calls install_tomcat function for each thread through the ThreadPoolExecutor. A crash in the futures will
+cause an exception. The exception will occur in install_tomcat and percolate up to threaded_install. The install_failed registry is
+created in an except block to the ThreadPoolExecutor in threaded_install. 
+The public and private ip address are lost in this this process ("unknown")
+
+The registry_entry is created in this block of code in threaded_install:
+
+
+```
+                #### Add the debug except block for the traceback here: 
+                except Exception as e:
+                    import traceback
+                    print(f"[ERROR][threaded_install] Future failed: {e}")
+                    traceback.print_exc()
+
+                    # Patch: Tag future failure in registry. The stub is for None, but if futures throws an error this will
+                    # now catch it. This was found during a 512 hyper-scaling test.
+                    pid = multiprocessing.current_process().pid
+                    failed_uuid = uuid.uuid4().hex[:8]
+                    failed_entry = {
+                        "status": "install_failed",
+                        "attempt": -1,
+                        "pid": pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": failed_uuid,
+                        #"public_ip": ip if 'ip' in locals() else "unknown",
+                        #"private_ip": private_ip if 'private_ip' in locals() else "unknown",
+                        "public_ip": "unknown",
+                        "private_ip": "unknown",
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_failed", "future_exception", type(e).__name__],
+                        #"tags": ["install_failed", "future_exception", "ip_unhydrated", type(e).__name__]
+                    }
+
+                    ##### create the registry_entry and print the log  
+                    thread_registry[failed_uuid] = failed_entry # create the registry_entry
+                   
+
+                    ##### We no longer want to send the pre-rehydrated unknown address field to the logs. The benchmark pid log files
+                    ##### get this "unknown" and it corrupts the benchmark combined runtime log and then the benchmark_ips_artifact.log
+                    ##### Instead just print the Pre-rehydrated unknown and do the logging.info in tomcat_worker during the batch
+                    ##### rehydration for loop
+
+                    #logging.info(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Public IP: {failed_entry['public_ip']} | Private IP: {failed_entry['private_ip']}")
+
+
+                    print(f"[PID {pid}] [UUID {failed_uuid}] ❌ Future crashed | Pre-rehydrated Public IP: {failed_entry['public_ip']} | Pre-rehydrated Private IP: {failed_entry['private_ip']}")
+
+ 
+                    ###### the unknown ip addresses in the crash thread case above will need to be rehydrated. This will be done in 
+                    ###### the tomcat_worker function (the calling function to this threaded_install function) right after
+                    ###### threaded_install returns the process_registry for this process. It is best to batch process the 
+                    ###### ip rehydration to avoid ip mis-assiginment.
+```
+
+
+
+This unknown ip address needs to be RE-hydrated mainly because an "unknown" ip address in the ip based logs makes the 
+ghost detection and resurrection logic incorrectly assess status.
+
+The RE-hydration has to be done in tomcat_worker which is the calling function to threaded_install. The reason for this is 
+because the RE-hydration has to be done using the missing ip list of the process, and this is not known until the process is done
+completing processing all of the threads in the process. This is in tomcat_worker.
+
+Note that the logging.info logs to the logger which is configured to log to log_path = f'/aws_EC2/logs/benchmark_{pid}_{unique_id}.log'
+The logger is defined in tomcat_worker_wrapper and is inherited to tomcat_worker and then to this threaded_install.
+
+This also has to be fixed. If an "unknown" is logged to the benchmark pid log file, it will "corrupt" that process level log file.
+These process level logs are aggregated into the benchamrk_combined_runtime.log and bechmark_combined.log and the 
+benchmark_ips_artfiact.log collects the ip addresses from the benchmark_combined_runtime.log into a log file. 
+With "unknown" in the process level files, these ips will be completely lost and show up blank in the benchmark_ips_artifact.log file.
+
+The best way to fix this is to incorporate the logging.info message into the for loop of the RE-hydration code as shown below. This 
+RE-hydration code, as mentioned above, is in tomcat_worker. This permits a batch processing on the ip RE-hydration and also makes it 
+easy to log that Future crashed message to the logger using the RE-hydrated ip addreses of each thread in the process.
+
+
+The RE-hydration code is in the tomcat_worker:
+
+
+```
+    ####### [tomcat_worker]
+    ####### Rehydration of the unknown ips in thread futures crash cases is absolutely necessary to preserve
+    ####### the integrity of the upstream logging. Otherwise a "unknown" will appear in the total ips and failure
+    ####### ips logs and futhermore the upstream ghost detection logic will not work with unknown in ip based
+    ####### variable lists.   
+
+    ####### The approach is: For a given process determine which registry_entrys have unknown in the ip fields
+    ####### This is called unknown_entries
+    ####### Once this is determined, compute the seen_ips_unhydrated, i.e. the seen ip addresses in the proces_registry
+    ####### for this process. Then determie the delta between this list and the assigned ips to this chunk (the golden
+    ####### list of ip addresses designated for this process to work on).  
+    ####### This gives a missing ip list prior to 
+    ####### rehydration (missing_ips_unhydrated).   This is the list of ips that will be used to rehydrate the 
+    ####### registry_entrys that have the unknown ips in them.   This uses a zip function so for example:
+    ####### thread_uuid 1 will get ip1 in the missing list, thread_uuid 2 will get ip2 in the missing list, and so on.
+    ####### thread_uuid 1 and 2 have already been identified as those registry_entrys in this process with unknown ips
+
+    ####### Prior to rehydration there needs to be a check to ensure that the NUMBER (len) of missing unhydrate ips 
+    ####### is exactly the same as the NUMBER (len) of unknown_entries (registry_entrys with unknown ips).  
+    ####### This is to guard against the very very unlikely case that there is a true ghost ip (completely unassigned
+    ####### to a thread, but present in the golden list) and these unknown threads.  If these two numbers are not the
+    ####### same then that means that there are true ghosts in the missing unhydrate ips and the code cannot 
+    ####### deterministically assign ip addreses to the regsitry_entrys with unknown ip addresses. In this case
+    ####### the registry_entrys will be tagged as ip_unhydrated and the "unknown" will appear in the logs, etc.
+    ####### This will be indicative that there are several ips that are unaccounted for (ghosts and some that are
+    ####### from thread crashes). Right now there is no way to deal with this highly unlikely scenario.
+
+    ######## Note that if there is a ghost in process 1 and an unknown in process 2 (two separate processes), this 
+    ######## case can be handles with the ghost being desiginated as missing ips in the logs and the unknown
+    ######## registry_entrys being rehydrated with the failed thread original ip address(es).
+
+    ######## Note2: the reason why this is so challenging ig because _args are not avaliable from the thread that
+    ######## crashes. This was attempted originally and results in a NameError in the python code. The instance id, 
+    ######## and all the other attribues of the thread are lost when it crashes.  Initially tried using _args[2] to
+    ######## get the instance id of the crashed thread but this did not work due to this reason.
+
+    ######## Note3: It is best to do this rehydration as batch processing on the entire processs registry_entrys instead
+    ######## of doing it inside threaded_install exception block for ThreadPoolExector. This is because of the way that the 
+    ######## ip addresses are rehydrated. See comments above for the detail on how this is done.
+    #- Guarantees one-to-one mapping between missing IPs and unknown UUIDs  
+    #- Avoids race conditions and duplicate assignments  
+    #- Preserves semantic clarity and forensic traceability  
+    #- Keeps logs clean and upstream  ghost detection logic in the resurrection monitor (further below) deterministic
+
+
+    # ------------------ [tomcat_worker] RESMON_8 PATCH: Batch Rehydration ------------------
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in instance_info} # note that instance_info is the same thing as assigned_ips that is used in resurrection_monitor_patch8. Assigned ips are the ips in the chunk list of ips that the process is working with.(golden list of ips)
+
+
+    # Build a mapping from public IP → private IP for full rehydration. This is so that we can rehydrate the private ip field as well.
+    public_to_private_ip = {
+        ip["PublicIpAddress"]: ip["PrivateIpAddress"]
+        for ip in instance_info
+    }
+
+    # Step 1: Identify registry entries with unknown public IPs
+    unknown_entries = {
+        thread_uuid: entry for thread_uuid, entry in process_registry.items()
+        if entry.get("public_ip") == "unknown"
+    }
+
+    # Step 2: Compute seen IPs before rehydration
+    seen_ips_unhydrated = {
+        entry["public_ip"]
+        for entry in process_registry.values()
+        if is_valid_ip(entry.get("public_ip"))
+    }
+
+    # Step 3: Compute missing IPs before rehydration
+    missing_ips_unhydrated = sorted(list(assigned_ip_set - seen_ips_unhydrated))
+
+    # Step 4: Rehydrate if safe
+    if len(unknown_entries) == len(missing_ips_unhydrated):
+        for thread_uuid, ip in zip(unknown_entries.keys(), missing_ips_unhydrated):
+            process_registry[thread_uuid]["public_ip"] = ip
+            process_registry[thread_uuid]["private_ip"] = public_to_private_ip.get(ip, "unknown")
+            process_registry[thread_uuid]["tags"].append("ip_rehydrated")
+            ####### tagging for syntehtic injections ########
+
+            # Synthetic crash tagging
+            if os.getenv("FORCE_TOMCAT_FAIL_PRE_SSH", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_pre_ssh")
+
+            if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_between_ssh_and_commands")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_idx_1")
+
+            if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
+                process_registry[thread_uuid]["tags"].append("synthetic_crash_post_install")
+                process_registry[thread_uuid]["tags"].append("install_success_achieved_before_crash")
+                
+                #the crash is positioned so that all commands are executed successfully. The crash will not be hit otherwise. 
+                # It is basically an install_success but with a crash right before registry creation.
+
+
+
+            ##### insert the logging.info here to resolve the issue whereby the benchmark pid log file is getting "unknown" 
+            ##### Pre-rehydrated ip addresses when the futures thread crashes in threaded_install. Just do a print in threaded_install
+            ##### Do the logging here in tomcat worker for each thread in the rehydration batch processing that has an unknown.
+            ##### This way the benchmark pid log file will not be corrupted with unknowns and will have rehydrated ip addresses and
+            ##### benchmark combined runtime log will have rehydrated ips and finally benchmark_ips_artifact.log will have ip addresses
+            # RESMON PATCH: Log rehydrated IPs to benchmark PID log and console
+
+            logging.info(f"[PID {pid}] [UUID {thread_uuid}] ❌ Future crashed | RE-hydrated Public IP: {process_registry[thread_uuid]['public_ip']} | RE-hydrated Private IP: {process_registry[thread_uuid]['private_ip']}")
+            
+            print(f"[PID {pid}] [UUID {thread_uuid}] ❌ Future crashed | RE-hydrated Public IP: {process_registry[thread_uuid]['public_ip']} | RE-hydrated Private IP: {process_registry[thread_uuid]['private_ip']}")
+
+            print(f"[tomcat_worker RESMON_8_PATCH] Rehydrated IP {ip} for UUID {thread_uuid}")
+
+    else:
+        logging.warning(f"[tomcat_worker RESMON_8_PATCH] Rehydration skipped for PID {pid}: ghost(missing ip) + unknown ip detected — cannot resolve IP ambiguity")
+        for thread_uuid in unknown_entries:
+            process_registry[thread_uuid]["tags"].append("ip_unhydrated")
+
+```
+
+
+
+
+
 
 
 #### Synthetic thread futures crash injection
