@@ -729,7 +729,7 @@ a separate process level function that will make the decision based upon the reg
 
 There were several areas of legacy code that needed to be cleaned up. 
 
-The code is commented out in the module if review is required.
+The code is commented out in the module if a systemactic  review is required.
 
 1.Removal of BLOCK4 from install_tomcat. This code is no longer required and the logic is incorrect.
 
@@ -818,7 +818,8 @@ With "unknown" in the process level files, these ips will be completely lost and
 The best way to fix this is to incorporate the logging.info message into the for loop of the RE-hydration code as shown below. This 
 RE-hydration code, as mentioned above, is in tomcat_worker. This permits a batch processing on the ip RE-hydration and also makes it 
 easy to log that Future crashed message to the logger using the RE-hydrated ip addreses of each thread in the process.
-
+Resolving this issue at the process level will self correct all the other upper level logs like the aggregate benchmark logs and the
+benchmark ips list log that is extracted from the aggregate. 
 
 The RE-hydration code is in the tomcat_worker:
 
@@ -952,6 +953,8 @@ The RE-hydration code is in the tomcat_worker:
 
 
 The code snippets of the code blocks are below. All of these crashes are strategically placed inside of the install_tomcat function.
+The particular crash is a thread futures crash.  The regression testing with these in place went very well.
+
 
 ##### FORCE_TOMCAT_FAIL
 
