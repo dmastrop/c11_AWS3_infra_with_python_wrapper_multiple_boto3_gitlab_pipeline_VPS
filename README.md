@@ -1353,6 +1353,15 @@ after effect of the AWS outage when put under load)
 ```
 
 The aggregate logs from main() give an overall picture of the full context of what happened here: 
+Note that there is no accounting for the missing ips in the "Final registry summary" below because by definition missing ips are ghosts
+and do not have an associated registry_entry (no thread_uuid, pid, status, etc....)
+
+
+
+The root cause — an AWS failure in their **network load monitoring system** — explains this composite picture below of missing ips and 
+install_failed with variants of thread futures crashes.
+
+
 
 ```
 [TRACE][aggregator] Final registry summary:
@@ -1758,7 +1767,15 @@ Traceback (most recent call last):
 botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: https://ec2.us-east-1.amazonaws.com/
 ```
 
+In summary based upon the test above: 
 
+
+The system is doing the following: 
+
+- Detects silent failures AWS doesn’t surface
+- Flags true ghosts with no PID, no thread UUID, and no registry entry
+- Differentiates between swap-induced failures and cloud-side entropy
+- Tags synthetic crashes, rehydrated futures, and install success with forensic clarity
 
 
 
