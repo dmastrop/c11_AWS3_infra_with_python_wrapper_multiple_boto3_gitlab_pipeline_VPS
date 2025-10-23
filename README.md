@@ -1308,6 +1308,461 @@ RuntimeError: Synthetic failure injected before SSH connect loop
 ```
 
 
+### Hyperscaling processes test at 512, provoked ghost detection logic
+
+
+Following an AWS outage on 10/20/25, the hyperscaling test on 10/21 had one execution run that exhibited residual effects of the 
+issue AWS had with their network load monitoring system.
+
+The test exhibited the following which is consistent with a residual load based issue that they addressed:
+
+- Instances launched but not fully hydrated
+- No metadata service response
+- No SSH banner
+- No registry entry, no PID, no thread UUID — just silence
+
+This was a very transient issue. 
+
+The 512 node test that followed this test (an hour later) was 100% successful which is the normal case when the 
+VPS controller running the python processes is NOT under swap contentiion. thrashing or presssure. (~ 30GB of the 36GB of swap was
+in use).
+
+The logs were extremely interesting in the crash/ghost case; a very consistent and robust accounting of what happened:
+
+There were 512 EC2 nodes that were brought up successfully. Of the 512, 14 were completely lost with no other logs other than the 
+the sample shown below: 
+
+
+```
+TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:
+  100.24.47.94 
+  100.25.216.2 <<<< this is one of the 14 ghosts
+(output truncated as there are a total of 512 ip addresses)
+```
+
+And this, below: 
+
+(note this process number is just an index and not the actual PID. So the python multiprocessing.Pool did designate this chunk
+of 1 ip address, this missing ip address, to one of the 512 processes but it never actually resulted in an registry_entry because there
+are no further logs for this ip address. All 14 ghosts had this same signature indicating that there was a common cause (namely an
+after effect of the AWS outage when put under load)
+
+```
+[DEBUG] Process 190: chunk size = 1
+[DEBUG] Process 190: IPs = ['100.25.216.2']
+```
+
+The aggregate logs from main() give an overall picture of the full context of what happened here: 
+
+```
+[TRACE][aggregator] Final registry summary:
+  total: 498
+  install_success: 492
+  gatekeeper_resurrect: 0
+  watchdog_timeout: 0
+  ssh_initiated_failed: 0
+  ssh_retry_failed: 0
+  install_failed: 6
+  stub: 0
+  no_tags: 0
+[TRACE][aggregator] Wrote 498 IPs to /aws_EC2/logs/total_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 492 IPs to /aws_EC2/logs/successful_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 6 IPs to /aws_EC2/logs/failed_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 14 IPs to /aws_EC2/logs/missing_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 6 candidates to /aws_EC2/logs/resurrection_candidates_registry_1761086930.json
+[TRACE][aggregator] Wrote 14 ghosts to /aws_EC2/logs/resurrection_ghost_missing_1761086930.json
+[TRACE][aggregator] Wrote 14 ghosts to /aws_EC2/logs/aggregate_ghost_summary.log
+[TRACE][aggregator] Wrote 0 untraceable entries to /aws_EC2/logs/resurrection_untraceable_registry_entries_1761086930.json
+```
+
+There were 512 total nodes brought up during the AWS orchestration phase.   The benchmark logs which record the CPU and stats as well
+as the installation success or failure status of the node (thread), have no entires or logs for the 14 missing ghosts.
+
+The code that was exercised here was teh BLOCK1 ghost detection logic: 
+
+The assigned_ips is directly from the chunk data from the golden ip list that is created during AWS orchestration. (all 512 addresses)
+
+The seen_ips is the ip addreses for which registry_entry is created (i.e. a thread_uuid is designed for the thread to record the 
+installation success or failure of the node.
+
+
+The delta between these two consitutes a missing ip list (missing_registry_ips_artifact.log), which is a listing of all the ips in 
+the execution run that are missing (no thread_uuid, etc.). Sometimes these ghost are created when the SSH init gets absolutely no
+response from the node, but in this case there was nothing in the logs. (very rare and never seen before)
+
+```
+    # Step 1: Build seen IPs normally
+    seen_ips = {
+        entry["public_ip"]
+        for entry in process_registry.values()
+        if entry.get("public_ip") and is_valid_ip(entry["public_ip"])
+    }
+
+    # Step 2: Build assigned IPs set from chunk
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+
+    # Step 3: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
+    #ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
+
+    ## removed exclusion block:
+    ghosts = sorted(assigned_ip_set - seen_ips)
+
+    # Step 4: Log ghosts just as before the refactoring. These pid json files will be aggregated in main() for an aggregate json file.
+    for ip in ghosts:
+        print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
+
+    if ghosts:
+        ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+        with open(ghost_file, "w") as f:
+            json.dump(ghosts, f, indent=2)
+```
+
+In addition to these 14 ghosts there were 6 install_failed reigistry_entrys indicating that there was other instability in the 
+AWS network. The install_failed on these 6 threads consisted of a few different types of failuers as indicated below in their
+registry_entrys. There were all future_exceptions in the ThreadPoolExecutor (threaded_install and install_tomcat), and were all 
+successfully RE-hydrated by the new code.
+
+```
+"748cc5cd": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 116,
+    "thread_id": 125484197100416,
+    "thread_uuid": "748cc5cd",
+    "public_ip": "54.90.184.111",
+    "private_ip": "172.31.28.48",
+    "timestamp": "2025-10-21 22:22:41.199461",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated"
+    ]
+  },
+
+
+ "b965bb3c": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 45,
+    "thread_id": 125484197100416,
+    "thread_uuid": "b965bb3c",
+    "public_ip": "52.200.231.194",
+    "private_ip": "172.31.31.200",
+    "timestamp": "2025-10-21 22:22:52.155186",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated"
+    ]
+  },
+
+ "fc12286b": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 281,
+    "thread_id": 125484197100416,
+    "thread_uuid": "fc12286b",
+    "public_ip": "3.80.24.212",
+    "private_ip": "172.31.30.13",
+    "timestamp": "2025-10-21 22:22:34.112081",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated"
+    ]
+  },
+
+ "89e89ea6": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 215,
+    "thread_id": 125484197100416,
+    "thread_uuid": "89e89ea6",
+    "public_ip": "98.93.226.18",
+    "private_ip": "172.31.17.108",
+    "timestamp": "2025-10-21 22:22:40.563036",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated"
+    ]
+  },
+
+ "4b3d67a7": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 115,
+    "thread_id": 125484197100416,
+    "thread_uuid": "4b3d67a7",
+    "public_ip": "52.71.254.145",
+    "private_ip": "172.31.20.56",
+    "timestamp": "2025-10-21 22:22:51.306199",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "UnboundLocalError",
+      "ip_rehydrated"
+    ]
+  },
+
+
+ "1ec935e1": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 148,
+    "thread_id": 125484197100416,
+    "thread_uuid": "1ec935e1",
+    "public_ip": "44.223.23.125",
+    "private_ip": "172.31.20.238",
+    "timestamp": "2025-10-21 22:22:40.341129",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated"
+    ]
+  },
+
+```
+
+There were basically 3 types of future crashes: Error reading SSH protocol banner, encountered RSA key, expected OPENSSH key, and Failed to establish a new connection: [Errno -3] Temporary failure in name resolution (UnboundLocalError in the registry_entry above).
+
+```
+
+[ERROR][threaded_install] Future failed: Error reading SSH protocol banner
+Get:2 http://us-east-1.ec2.archivTraceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/paramiko/transport.py", line 2369, in _check_banner
+    buf = self.packetizer.readline(timeout)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/packet.py", line 395, in readline
+    buf += self._read_timeout(timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/packet.py", line 673, in _read_timeout
+    raise socket.timeout()
+TimeoutError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<string>", line 5691, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 3990, in install_tomcat
+  File "/usr/local/lib/python3.11/site-packages/paramiko/client.py", line 451, in connect
+    t.start_client(timeout=timeout)
+  File "/usr/local/lib/python3.11/site-packages/paramiko/transport.py", line 773, in start_client
+    raise e
+  File "/usr/local/lib/python3.11/site-packages/paramiko/transport.py", line 2185, in run
+    self._check_banner()
+  File "/usr/local/lib/python3.11/site-packages/paramiko/transport.py", line 2373, in _check_banner
+    raise SSHException(
+paramiko.ssh_exception.SSHException: Error reading SSH protocol banner
+e.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+
+```
+
+
+
+
+
+
+
+```
+[ERROR][threaded_install] Future failed: encountered RSA key, expected OPENSSH key
+Traceback (most recent call last):
+  File "<string>", line 5691, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 5322, in install_tomcat
+UnboundLocalError: cannot access local variable 'stdin' where it is not associated with a value
+  File "<string>", line 5691, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 3990, in install_tomcat
+  File "/usr/local/lib/python3.11/site-packages/paramiko/client.py", line 485, in connect
+    self._auth(
+  File "/usr/local/lib/python3.11/site-packages/paramiko/client.py", line 818, in _auth
+    raise saved_exception
+  File "/usr/local/lib/python3.11/site-packages/paramiko/client.py", line 730, in _auth
+    key = self._key_from_filepath(
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/client.py", line 638, in _key_from_filepath
+    key = klass.from_private_key_file(key_path, password)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/pkey.py", line 435, in from_private_key_file
+    key = cls(filename=filename, password=password)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/ed25519key.py", line 60, in __init__
+    pkformat, data = self._read_private_key("OPENSSH", f)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/paramiko/pkey.py", line 543, in _read_private_key
+    raise SSHException(
+paramiko.ssh_exception.SSHException: encountered RSA key, expected OPENSSH key
+
+```
+
+
+
+```
+multiprocessing.pool.RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connection.py", line 174, in _new_conn
+    conn = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/urllib3/util/connection.py", line 72, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/botocore/httpsession.py", line 464, in send
+    urllib_response = conn.urlopen(
+                      ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/urllib3/util/retry.py", line 525, in increment
+    raise six.reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/urllib3/packages/six.py", line 770, in reraise
+    raise value
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connectionpool.py", line 386, in _make_request
+    self._validate_conn(conn)
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1042, in _validate_conn
+    conn.connect()
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connection.py", line 358, in connect
+    self.sock = conn = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/urllib3/connection.py", line 186, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <botocore.awsrequest.AWSHTTPSConnection object at 0x72208ba19b50>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 125, in worker
+    result = (True, func(*args, **kwds))
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 51, in starmapstar
+    return list(itertools.starmap(args[0], args[1]))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1100, in tomcat_worker_wrapper
+  File "<string>", line 3723, in tomcat_worker
+  File "<string>", line 923, in retry_with_backoff
+  File "/usr/local/lib/python3.11/site-packages/botocore/client.py", line 570, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/context.py", line 124, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/client.py", line 1013, in _make_api_call
+    http, parsed_response = self._make_request(
+                            ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/client.py", line 1037, in _make_request
+    return self._endpoint.make_request(operation_model, request_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/endpoint.py", line 119, in make_request
+    return self._send_request(request_dict, operation_model)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/endpoint.py", line 200, in _send_request
+    while self._needs_retry(
+          ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/endpoint.py", line 360, in _needs_retry
+    responses = self._event_emitter.emit(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/hooks.py", line 412, in emit
+    return self._emitter.emit(aliased_event_name, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/hooks.py", line 256, in emit
+    return self._emit(event_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/hooks.py", line 239, in _emit
+    response = handler(**kwargs)
+               ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/retryhandler.py", line 207, in __call__
+    if self._checker(**checker_kwargs):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/retryhandler.py", line 284, in __call__
+    should_retry = self._should_retry(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/retryhandler.py", line 320, in _should_retry
+    return self._checker(attempt_number, response, caught_exception)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/retryhandler.py", line 363, in __call__
+    checker_response = checker(
+                       ^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/retryhandler.py", line 247, in __call__
+    return self._check_caught_exception(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/retryhandler.py", line 416, in _check_caught_exception
+    raise caught_exception
+  File "/usr/local/lib/python3.11/site-packages/botocore/endpoint.py", line 279, in _do_get_response
+    http_response = self._send(request)
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/endpoint.py", line 383, in _send
+    return self.http_session.send(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/botocore/httpsession.py", line 493, in send
+    raise EndpointConnectionError(endpoint_url=request.url, error=e)
+botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: "https://ec2.us-east-1.amazonaws.com/"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/usr/local/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/aws_EC2/master_script.py", line 286, in install_tomcat_on_instances
+    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_6d.py")
+  File "/aws_EC2/master_script.py", line 15, in run_module
+    exec(code, globals())
+  File "<string>", line 7091, in <module>
+  File "<string>", line 6884, in main
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 375, in starmap
+    return self._map_async(func, iterable, starmapstar, chunksize).get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/multiprocessing/pool.py", line 774, in get
+    raise self._value
+botocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: https://ec2.us-east-1.amazonaws.com/
+```
+
+
+
+
+
+
 
 
 ## UPDATES part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
