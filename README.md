@@ -194,6 +194,17 @@ all of these are also calclated at the aggregate level in main()):
 
 ## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing), resurrection_gatekeeper
 
+
+
+This large update consists of the following sections:
+
+- High level summary of proposed changes for the refactoring
+- Implementation strategies
+- Code review of the implemenation strategies
+- A 512 hyperscaling test with the new code im place following the AWS 10/20/25 outage that detects residual transient instablity at scale
+
+
+
 ### High level summary of proposed changes: 
 
 #### Stage1:
@@ -237,7 +248,7 @@ if not all of the stubs (i.e., not install_success registry_entry threads)
 - This sets the stage for Phase3 of this project where the threads will be resurrected.
 
 
-### Implementation summaries: 
+### Implementation strategies: 
 
 These updates are focused on cleaning up and refactoring the resurrection monitor code.  
 
