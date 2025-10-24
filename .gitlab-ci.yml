@@ -165,7 +165,11 @@ deploy:
 
       # These are the complete gitlab console logs from the docker run tee above. These will be used for post ghost analysis tagging.
       - logs/gitlab_full_run.log    
-    
+   
+      # module2b post ghost analysis artifact log file
+      - logs/aggregate_ghost_detail.json 
+
+
     expire_in: 1 week
 
   allow_failure: true
