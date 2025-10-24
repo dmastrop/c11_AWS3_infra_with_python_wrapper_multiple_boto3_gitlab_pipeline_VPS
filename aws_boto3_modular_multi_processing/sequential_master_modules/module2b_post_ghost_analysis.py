@@ -21,6 +21,14 @@
 
 
 #### Post ghost analysis with json file schema 
+#- Streams the console log line-by-line (no buffering)
+#- Tags ghosts based on absence of expected signals
+#-  Detects SSH attempts using `"Attempting to connect to"`
+#-  Extracts `process_index` from chunk assignment lines  (NOTE: process_index is not the same as the PID)
+#-  Avoids false tagging of stubs by relying on ghost IPs only, otherwise some stubs could be aggregated into this ghost detail json
+#-  Includes full error handling and final JSON writeout
+
+
 
 import json
 
