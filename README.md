@@ -546,6 +546,14 @@ The registry_entry will be tagged accordingly after RE-hydration:
 
 #### Testing the simplified ghost detection logic with forced manual AWS console shutdown of instances
 
+Early testing on this: The test revealed 3 SSH Exception install_failed threads and 2 futures crashes. The Futures crashes occurred
+on instances that were stalled and not passing status checks. They were restarted and encountered the futures crashes. This will 
+be investigated further during Phase3 whereby the problematic thread(s) will initiate a stop and then start of the affected node(s).
+
+
+
+
+
 
 
 #### resurrection_gateway function refactoring
