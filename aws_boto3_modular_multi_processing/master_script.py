@@ -286,6 +286,11 @@ def install_tomcat_on_instances():
     run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_6d.py")
 
 
+##### This is module2b for the post ghost analysis on the gitlab console logs
+def post_ghost_analysis()
+    run_module("/aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py")
+
+
 
 
 
@@ -331,6 +336,14 @@ def main():
     process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
     process2.start()
     process2.join()
+
+    process2b = multiprocessing.Process(target=post_ghost_analysis, name="Process2b: post_ghost_analysis")
+    process2b.start()
+    process2b.join()
+
+
+
+
 
 #    process3 = multiprocessing.Process(target=save_instance_ids_and_security_group_ids, name="Process3: save_instance_ids_and_security_group_ids")
 #    process3.start()
