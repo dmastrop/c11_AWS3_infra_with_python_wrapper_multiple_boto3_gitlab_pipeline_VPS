@@ -287,7 +287,7 @@ def install_tomcat_on_instances():
 
 
 ##### This is module2b for the post ghost analysis on the gitlab console logs
-def post_ghost_analysis()
+def post_ghost_analysis():
     run_module("/aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py")
 
 
