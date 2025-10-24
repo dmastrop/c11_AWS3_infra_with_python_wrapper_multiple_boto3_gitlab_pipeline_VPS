@@ -104,7 +104,9 @@ deploy:
       #
   script:
     - mkdir -p logs
-    - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+    #- docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+    # add the tee to get all the gitlab console output into a log file in the gitlab artfacts:
+    - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest | tee logs/gitlab_full_run.log  
     - echo "Contents of logs directory after container run:"
     - ls -l logs/
     - echo "Last 10 lines of MAIN logs:"
@@ -161,7 +163,9 @@ deploy:
 
       - logs/aggregate_ghost_summary.log  
 
-          
+      # These are the complete gitlab console logs from the docker run tee above. These will be used for post ghost analysis tagging.
+      - logs/gitlab_full_run.log    
+    
     expire_in: 1 week
 
   allow_failure: true
