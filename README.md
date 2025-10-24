@@ -110,7 +110,7 @@ artifact logs per pipeline)
 
 - Update part 33 Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
-
+- Update part 34 Phase 2r: Implemenation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment).
 
 
 
