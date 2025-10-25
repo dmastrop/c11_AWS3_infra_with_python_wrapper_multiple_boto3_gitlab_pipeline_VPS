@@ -6671,6 +6671,17 @@ def main():
     log_dir = "/aws_EC2/logs"
     aggregate_gold_ips = hydrate_aggregate_chunk_gold_ip_list(chunks, log_dir)
 
+
+    # Synthetic ghost injection (controlled by env var or flag). NOTE that this is right before the print to the gitlab console logs
+    # So module2b scan of the gitlab consolelogs will pick this 1.1.1.1 as a ghost. This has to be enabled in the flag below which is
+    # set in the .gitlab-ci.yml ENV variables.
+    import os
+    if os.getenv("INJECT_SYNTHETIC_GHOST", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.1"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+
     print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
     for ip in sorted(aggregate_gold_ips):
         print(f"  {ip}")
