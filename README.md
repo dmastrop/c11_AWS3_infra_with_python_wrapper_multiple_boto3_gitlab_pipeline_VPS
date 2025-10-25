@@ -253,12 +253,13 @@ def main():
     # Step 1: Parse ghost IPs from ghost summary
     try:
         with open(ghost_summary_path, "r") as f:
+     
             for line in f:
-                if "ghost" in line.lower():
-                    parts = line.strip().split()
-                    for part in parts:
-                        if part.count('.') == 3:
-                            ghost_ips.add(part)
+                parts = line.strip().split()
+                for part in parts:
+                    if part.count('.') == 3:
+                        ghost_ips.add(part)
+
     except FileNotFoundError:
         print(f"[ERROR] Ghost summary file not found: {ghost_summary_path}")
         return
