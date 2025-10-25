@@ -144,6 +144,194 @@ STATUS_TAGS = {
 
 
 
+## UPDATES part 34: Phase 2r: Post ghost analysis of gitlab console file
+
+### Introduction:
+
+The greatest challenge with the forensic analysis is in detecting ghosts and then finding out as much information on them as possible
+and reporting them in the gitlab artifact logs.
+
+Currently, the only information we have on ghosts is their ip addresses as it is calculated from the delta between the golden ip
+list of ips (During AWS orchestration layer) and the seen ips in the aggregate registry (those ips that have an actual thread_uuid
+and a PID assigned to them).  
+
+This section details an approach whereby the module2 gitlab console logs will be streamed to a module2b for post ghost analysis. 
+From the scan of the gitlab logs, the proces_index (assigned to the ip) and various other characteristics associated with the ip,
+can be ascertained from the complete scan.   For starters, the process_index will be identified and a tags field will also be 
+created to add other items that are associated with the ip like whether or not the SSH connection was attempted.
+
+The process_index associated with the chunk of data for each process might be useful in Phase3 to try to resurrect even these ghosts, 
+by finding out the PID of the process_index and reinitiating the thread from scratch using that designated PID.
+
+
+### Implementation details:
+
+The implemenation consists of the following:
+
+- Create a new python module file module2b_post_ghost_analysis.py
+
+- Add the new python module to the master_script.py file. All python modules are multi-processed as much as possible (modules that can
+be run in parallel can be configured to do so).
+
+- Given that the ghost analysis of the console logs occurs once the module2 logs are complete, the module2b has to be excuted sequentially
+rather than in parallel with module2.
+
+- Modify the .gitlab-ci.yml file accoringly to tee all the output of the docker run command to the file below (note the volumne 
+mount is already being used for the logging to the pipeline artifact logs):
+
+
+```
+  script:
+    - mkdir -p logs
+    #- docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
+    # add the tee to get all the gitlab console output into a log file in the gitlab artfacts:
+    - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest | tee logs/gitlab_full_run.log
+    - echo "Contents of logs directory after container run:"
+    - ls -l logs/
+    - echo "Last 10 lines of MAIN logs:"
+    - cat logs/main_*.log | tail -10
+```
+
+
+- Use the aggregate_ghost_summary.log, which has the missing ghost ips, as a substrate for the module2b analysis
+
+- In module2b analyze the gitlab_full_run.log that was teed from the docker run command, using streaming rather than buffering of the 
+file to read it in.  Grep it for the ips in the aggregate_ghost_summary.log for the post analysis
+
+- Publish the results of the analysis as a gitlab console log file aggregate_ghost_detail.log file
+
+
+### Code implementation:
+
+
+The code is all in module2b:
+
+The logic is straight forward.  Stream read the consle log created from the docuer run tee (see .gitlab-ci.yml excerpt above).
+Open the aggregate_ghost_summary.log from module2, and use this for the ghost ip grep of the streamed gitlab console logs
+While grepping for the ghost ips tag each ghost ip accoringly: ghost if found in the console logs, and whether or not the ssh connection
+was attempted. In the future there were be additional tags added as we discover more about the nature of the various ghosts.
+
+A typical ghost signature in the logs is that the ip address appears in only 2 parts as indicated below (this particlar ghost
+followed a day after AWS went down for several hours) 
+
+
+```
+TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:
+  100.24.47.94
+  100.25.216.2  <<<here is the ghost (1 of 14 of them)
+And so on....
+
+And you will see this: 
+In a long list of all 512 processes (this test has chunk size of 1 thread per process so 512 proceseses) 
+[DEBUG] Process 190: chunk size = 1
+[DEBUG] Process 190: IPs = ['100.25.216.2']
+``` 
+
+
+The module2b code:
+
+```
+#### Post ghost analysis with json file schema 
+#- Streams the console log line-by-line (no buffering)
+#- Tags ghosts based on absence of expected signals
+#-  Detects SSH attempts using `"Attempting to connect to"`
+#-  Extracts `process_index` from chunk assignment lines  (NOTE: process_index is not the same as the PID)
+#-  Avoids false tagging of stubs by relying on ghost IPs only, otherwise some stubs could be aggregated into this ghost detail json
+#-  Includes full error handling and final JSON writeout
+
+
+import json
+
+def main():
+    ghost_summary_path = "/aws_EC2/logs/aggregate_ghost_summary.log"
+    console_log_path = "/aws_EC2/logs/gitlab_full_run.log"
+    output_path = "/aws_EC2/logs/aggregate_ghost_detail.json"
+
+    ghost_entries = []
+    ghost_ips = set()
+
+    # Step 1: Parse ghost IPs from ghost summary
+    try:
+        with open(ghost_summary_path, "r") as f:
+            for line in f:
+                if "ghost" in line.lower():
+                    parts = line.strip().split()
+                    for part in parts:
+                        if part.count('.') == 3:
+                            ghost_ips.add(part)
+    except FileNotFoundError:
+        print(f"[ERROR] Ghost summary file not found: {ghost_summary_path}")
+        return
+
+    print(f"[TRACE] Found {len(ghost_ips)} ghost IPs")
+
+    # Step 2: Stream console log and tag each ghost IP
+    try:
+        for ip in ghost_ips:
+            match_count = 0
+            ssh_attempted = False
+            process_index = None
+
+            with open(console_log_path, "r") as f:
+                for line in f:
+                    if ip in line:
+                        match_count += 1
+
+                        if "Attempting to connect to" in line:
+                            ssh_attempted = True
+
+                        if "[DEBUG] Process" in line and "IPs =" in line:
+                            try:
+                                process_index = int(line.split("Process")[1].split(":")[0].strip())
+                            except:
+                                pass
+
+            tags = ["ghost"]
+            if ssh_attempted:
+                tags.append("ssh_attempted")
+            else:
+                tags.append("no_ssh_attempt")
+
+            if match_count <= 2:
+                tags.append("aws_outage_context")
+
+            ghost_entries.append({
+                "ip": ip,
+                "process_index": process_index,
+                "tags": tags
+            })
+
+    except FileNotFoundError:
+        print(f"[ERROR] Console log file not found: {console_log_path}")
+        return
+
+    # Step 3: Write to aggregate_ghost_detail.json
+    with open(output_path, "w") as f:
+        json.dump(ghost_entries, f, indent=2)
+
+    print(f"[TRACE] Ghost detail written to: {output_path}")
+
+
+
+
+# for master file indirection:
+if __name__ == "__main__":
+    main()
+
+```
+
+### Synthetic ghost ip injection:
+
+
+Since ghosts are extremely rare even with hyper-scaling testing (the above code was regression tested with 512 nodes and there was
+no ghosts, only an install_failed) synthetic ghost ip injection is required to test the code above to ensure that the 
+aggregate_ghost_detail.json file is created correctly.
+
+
+
+
+
+
 
 ## UPDATES part 33: Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
@@ -547,8 +735,9 @@ The registry_entry will be tagged accordingly after RE-hydration:
 #### Testing the simplified ghost detection logic with forced manual AWS console shutdown of instances
 
 Early testing on this: The test revealed 3 SSH Exception install_failed threads and 2 futures crashes. The Futures crashes occurred
-on instances that were stalled and not passing status checks. They were restarted and encountered the futures crashes. This will 
-be investigated further during Phase3 whereby the problematic thread(s) will initiate a stop and then start of the affected node(s).
+on instances that were stalled and not passing status checks. They were stopped and then started and encountered the futures crashes. 
+This will be investigated further during Phase3 whereby the problematic thread(s) will initiate a stop and then start of the 
+affected node(s).
 
 
 
