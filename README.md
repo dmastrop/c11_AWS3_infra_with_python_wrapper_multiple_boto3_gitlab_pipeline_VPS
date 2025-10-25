@@ -328,6 +328,79 @@ no ghosts, only an install_failed) synthetic ghost ip injection is required to t
 aggregate_ghost_detail.json file is created correctly.
 
 
+The ideal place to do the injection is in main() in module2.  The injection is made to the aggregate_gold_ips variable.
+This variable is used to print the gold list to the console. Any injection here will appear in the gitlab console logs.
+In addtion this is used to calculate missing ips, so the ip will show up in the missing ips log as well and it will
+generate a diff between the ghost list and the registry ip list (list of ips in the aggregate registry). Thus, it will
+show up in all the downstream gitlab artifact logs as well, providing for a robust test of the code.
+
+Module2b will pick up the ip address from the gitlab console log scan and thus it will create the appropriate entry in the
+aggregate_ghost_detail.json log. 
+
+```
+{
+  "ip": "1.1.1.1",
+  "process_index": null,
+  "tags": ["ghost", "no_ssh_attempt", "aws_outage_context"]
+}
+```
+
+There will be no process_index because the synthetic injection is not a real part of the chunk ip data thus a process_index is not
+allocated to it during the multiprocessing phase. But that is ok; it exercises all of the other post ghost analysis code in module2b.
+
+The code is added in main here:
+
+```
+
+    log_dir = "/aws_EC2/logs"
+    aggregate_gold_ips = hydrate_aggregate_chunk_gold_ip_list(chunks, log_dir)
+
+
+    # Synthetic ghost injection (controlled by env var or flag). NOTE that this is right before the print to the gitlab console logs
+    # So module2b scan of the gitlab consolelogs will pick this 1.1.1.1 as a ghost. This has to be enabled in the flag below which is
+    # set in the .gitlab-ci.yml ENV variables.
+
+    if os.getenv("INJECT_SYNTHETIC_GHOST", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.1"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+
+    print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
+    for ip in sorted(aggregate_gold_ips):
+        print(f"  {ip}")
+    print(f"[TRACE][aggregator] Total GOLD IPs: {len(aggregate_gold_ips)}")
+```
+
+This affects all of the downstream ghost logging and is a great injection point.
+
+The .gitlab-ci.yml needs this addtional ENV variable to set the code off during execution: 
+
+```
+    INJECT_SYNTHETIC_GHOST: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs
+
+
+  before_script:
+    - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
+    - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
+    - echo 'region_name=us-east-1' >> .env
+    - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
+    - echo 'instance_type=t2.micro' >> .env
+    - echo 'key_name=generic_keypair_for_python_testing' >> .env
+    - echo 'min_count=16' >> .env
+    - echo 'max_count=16' >> .env
+    - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
+    - echo 'DB_USERNAME='${DB_USERNAME} >> .env
+    - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
+    - echo 'PID_JSON_DUMPS='${PID_JSON_DUMPS} >> .env  # see above. Gating for the json ghost and res candidate files.  
+    - echo 'FORCE_TOMCAT_FAIL='${FORCE_TOMCAT_FAIL} >> .env # This is to inject a futures crash in install_tomcat
+    - echo 'FORCE_TOMCAT_FAIL_IDX1='${FORCE_TOMCAT_FAIL_IDX1} >> .env # futures crash after first command executes
+    - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL='${FORCE_TOMCAT_FAIL_POSTINSTALL} >> .env  # futures crash after installation
+    - echo 'FORCE_TOMCAT_FAIL_PRE_SSH='${FORCE_TOMCAT_FAIL_PRE_SSH} >> .env  # futures crash before SSH initiated
+    - echo 'INJECT_SYNTHETIC_GHOST='${INJECT_SYNTHETIC_GHOST} >> .env  # inject synthetic ghost into aggregate_gold_ips <<<<<<
+```
+
+
 
 
 
