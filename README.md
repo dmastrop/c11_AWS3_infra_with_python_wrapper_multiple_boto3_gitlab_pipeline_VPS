@@ -144,7 +144,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 34: Phase 2r: Post ghost analysis of gitlab console file
+## UPDATES part 34: Phase 2r: Implemenation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment)
 
 ### Introduction:
 
