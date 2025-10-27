@@ -25,14 +25,17 @@ The master_script.py is in this directory
 
 This has all the latest multi-threading and multi-processing code in the sequential_master_modules package(directory)
 
-The current 11 modules in the package sequential_master_modules are multi-processed in the master_script.py
+The current 13 modules in the package sequential_master_modules are multi-processed in the master_script.py
 
-The key module is the "install tomcat"  module (module2 in the master_script.py) in the following directory
+The key module is the "module2_install tomcat_*.py"  module (module2 in the master_script.py) in the following directory:
 aws_boto3_modular_multi_processing/sequential_master_modules
 Use the latest timestamp python file.
 
-This has all the latest optimizations for the multi-processing and multi-threading and the latest benchmark upates below
-pertain to the optmizations to this module.
+module2b has the gitlab console log post processor in it.
+
+module2c has the resurrection_gatekeeper code in it.
+
+The updates in this README pertain to module2* files.
 
 The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
 
