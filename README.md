@@ -80,7 +80,7 @@ artifact logs per pipeline)
 - Cross-platform shell wrapper (strace) resilience with synthetic test injection 
 - Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
 - Synthetic futures crash injection for testing ip artifact re-hydration code (as well as hyper-scaling testing to reproduce the same)
-- Post scanning of gitlab console log )module 2b) for ghost ip tag classication (used for resurrection_gateway intelligent decision making)
+- Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gateway intelligent decision making)
 - Synthetic ghost ip injection to test gitlab console log scaning 
 - Resurrection_gateway function for final intelligent decision making on thread resurrection (module 2c) using aggeregate registry and artifact ghost tagging (module 2b) as input
 - Adaptive orchestration logic with ML/LLM feedback hooks 
