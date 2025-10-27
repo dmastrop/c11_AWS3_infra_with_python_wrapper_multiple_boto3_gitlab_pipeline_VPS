@@ -3023,58 +3023,63 @@ def read_output_with_watchdog(stream, label, ip, timeout):
 
 
 
-
-
-# ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS GATEKEEPER ------------------
-## This has the resurrection_gatekeeper which will use the data from the read_output_with_watchdog function above to determine if the thread actually is
-## a resurrection candidate and prevent false postives for resurrection candidates.   We only want to resurrect truly dead threads
-## Later on in Phase3 will reinstall tomcat on these threads.
-## The saturation defense is required because there may be other corner cases whereby the thread is not successfully being resurrected 
-## (Phase3). For these threads we  need to flag them for further investigation. This could be for example with a flapping node or 
-## misclassified IP address, etc....
-
-def resurrection_gatekeeper(stderr_output, stdout_output, command_status, exit_code, runtime_seconds, pid=None, ip_address=None, resurrection_registry=None, logger=None):
-    """
-    Determines whether resurrection should occur based on watchdog output, stderr/stdout content, command status,
-    runtime heuristics, and optional registry tracking.
-
-    Returns: Boolean → True if resurrection should occur, False otherwise.
-    """
-
-    def log_decision(message):
-        if logger:
-            logger.info(f"[Gatekeeper] {message}")
-        else:
-            print(f"[Gatekeeper] {message}")
-
-    # 🧠 PRIMARY HEURISTIC
-    if command_status == "Command succeeded" and stderr_output.strip() == "":
-        log_decision("Healthy node: Command succeeded with empty STDERR. Block resurrection.")
-        return False
-
-    # 🔍 SECONDARY SIGNALS
-    if exit_code == 0 and stdout_output.strip() and stderr_output.strip() == "":
-        log_decision("Clean exit with STDOUT content. Block resurrection.")
-        return False
-
-    if runtime_seconds > 5 and stdout_output.strip():
-        log_decision(f"Runtime {runtime_seconds}s with STDOUT. Block resurrection.")
-        return False
-
-    # 🧯 Registry saturation defense
-    if resurrection_registry and ip_address:
-        count = resurrection_registry.get(ip_address, {}).get("resurrect_count", 0)
-        if count >= 3:
-            log_decision(f"IP {ip_address} hit resurrection limit. Quarantining further attempts.")
-            return False
-
-    if resurrection_registry and pid in resurrection_registry:
-        log_decision(f"PID {pid} already resurrected. Block repeated action.")
-        return False
-
-    # 🔁 Default: allow resurrection
-    log_decision("Resurrection allowed: no success heuristics matched.")
-    return True
+######## This resurrection_gatekeeper code has been decprecated. This code will be moved to module2c and will use the process_registry
+######## and aggregate registry of module2 and the logs created by module2b as input for intelligent decision making.
+######## Teh stdout and stderr output below is no longer required. That is now done at the thread level from read_output_with_watchdog
+######## which is called from install_tomcat.  This function below was originally called from install_tomcat as well and that has been
+######## removed (Code Block4 in install_tomcat).
+#
+#
+## ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS GATEKEEPER ------------------
+### This has the resurrection_gatekeeper which will use the data from the read_output_with_watchdog function above to determine if the thread actually is
+### a resurrection candidate and prevent false postives for resurrection candidates.   We only want to resurrect truly dead threads
+### Later on in Phase3 will reinstall tomcat on these threads.
+### The saturation defense is required because there may be other corner cases whereby the thread is not successfully being resurrected 
+### (Phase3). For these threads we  need to flag them for further investigation. This could be for example with a flapping node or 
+### misclassified IP address, etc....
+#
+#def resurrection_gatekeeper(stderr_output, stdout_output, command_status, exit_code, runtime_seconds, pid=None, ip_address=None, resurrection_registry=None, logger=None):
+#    """
+#    Determines whether resurrection should occur based on watchdog output, stderr/stdout content, command status,
+#    runtime heuristics, and optional registry tracking.
+#
+#    Returns: Boolean → True if resurrection should occur, False otherwise.
+#    """
+#
+#    def log_decision(message):
+#        if logger:
+#            logger.info(f"[Gatekeeper] {message}")
+#        else:
+#            print(f"[Gatekeeper] {message}")
+#
+#    # 🧠 PRIMARY HEURISTIC
+#    if command_status == "Command succeeded" and stderr_output.strip() == "":
+#        log_decision("Healthy node: Command succeeded with empty STDERR. Block resurrection.")
+#        return False
+#
+#    # 🔍 SECONDARY SIGNALS
+#    if exit_code == 0 and stdout_output.strip() and stderr_output.strip() == "":
+#        log_decision("Clean exit with STDOUT content. Block resurrection.")
+#        return False
+#
+#    if runtime_seconds > 5 and stdout_output.strip():
+#        log_decision(f"Runtime {runtime_seconds}s with STDOUT. Block resurrection.")
+#        return False
+#
+#    # 🧯 Registry saturation defense
+#    if resurrection_registry and ip_address:
+#        count = resurrection_registry.get(ip_address, {}).get("resurrect_count", 0)
+#        if count >= 3:
+#            log_decision(f"IP {ip_address} hit resurrection limit. Quarantining further attempts.")
+#            return False
+#
+#    if resurrection_registry and pid in resurrection_registry:
+#        log_decision(f"PID {pid} already resurrected. Block repeated action.")
+#        return False
+#
+#    # 🔁 Default: allow resurrection
+#    log_decision("Resurrection allowed: no success heuristics matched.")
+#    return True
 
 
 
@@ -5232,7 +5237,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             continue
 
 ###### Comment out this block 4 for res mon RESMON_8 refactoring
-###### The resurrection_registry has been replaced by the process_registry
+###### The resurrection_registry has been replaced by the process_registry and the resurrection_gatekeeper original function is
+###### deprecated and no longer valid with the process_registry. The resurrection_gatekeeper will be moved to a separate module2c
+###### and will use inputs from the logs created in modules 2 and 2b to make intelligent decisions
 
 ###### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
 #
