@@ -88,7 +88,7 @@ artifact logs per pipeline)
 - Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gatekeeper intelligent decision making)
 - Synthetic ghost ip injection to test gitlab console log scaning
 - Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) 
-- Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using aggeregate registry and artifact ghost tagging (module 2b) as input
+- Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
