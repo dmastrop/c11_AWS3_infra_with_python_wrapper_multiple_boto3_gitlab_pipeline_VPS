@@ -15,25 +15,30 @@ Dockerfile_python_multi_processing is for the latest development gitlab pipeline
 The .env file on the docker container is dynamically created at pipeline runtime during the deploy stage
 It only exists on the ephemeral docker python container instance that is running the master python script
 
-All python (mastser_script.py) run in self contained Docker container on the VPS
+All python (mastser_script.py) runs in self contained Docker container on the VPS
 
 The VPS also hosts a self-managed gitlab container from which the pipelines are run. This expedites the repetitive testing, 
 especially for benchmarking the module2 (below).
 
 Latest development work is in the aws_boto3_modular_multi_processing sub-directory
+
 The master_script.py is in this directory
 
 This has all the latest multi-threading and multi-processing code in the sequential_master_modules package(directory)
 
 The current 13 modules in the package sequential_master_modules are multi-processed in the master_script.py
+All execution is multi-processed as well, and threads in each process are multi-threaded
+The processes permit multi-processing pooling determined by the desirec_count in module2
 
 The key module is the "module2_install tomcat_*.py"  module (module2 in the master_script.py) in the following directory:
 aws_boto3_modular_multi_processing/sequential_master_modules
 Use the latest timestamp python file.
 
-module2b has the gitlab console log post processor in it.
+module2b has the gitlab console log post processor for ghost threads in it.
 
-module2c has the resurrection_gatekeeper code in it.
+module2c has the gitlab console log post processor for aggregate registry threads (non-ghost threads) in it.
+
+module2d has the resurrection_gatekeeper code in it.
 
 The updates in this README pertain to module2* files.
 
