@@ -80,9 +80,10 @@ artifact logs per pipeline)
 - Cross-platform shell wrapper (strace) resilience with synthetic test injection 
 - Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
 - Synthetic futures crash injection for testing ip artifact re-hydration code (as well as hyper-scaling testing to reproduce the same)
-- Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gateway intelligent decision making)
-- Synthetic ghost ip injection to test gitlab console log scaning 
-- Resurrection_gateway function for final intelligent decision making on thread resurrection (module 2c) using aggeregate registry and artifact ghost tagging (module 2b) as input
+- Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gatekeeper intelligent decision making)
+- Synthetic ghost ip injection to test gitlab console log scaning
+- Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) 
+- Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using aggeregate registry and artifact ghost tagging (module 2b) as input
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
@@ -944,9 +945,9 @@ affected node(s).
 
 
 
-#### resurrection_gateway function refactoring
+#### resurrection_gatekeeper function refactoring
 
-The resurrection_gateway is the final decision maker in what can be resurrected and what cannot be resurrected. It uses input from the
+The resurrection_gatekeeper is the final decision maker in what can be resurrected and what cannot be resurrected. It uses input from the
 3 blocks explained above in the resurrection_monitor.   It uses a combination of status, and the tags that are included in each 
 registry_entry (thread) (which often have detailed technical information on the reason for the failure).  This sets the stage for the
 Phase3 of this project whereby the threads will actually be resurrected and recovered and a fresh attempt at command set installation
@@ -1093,7 +1094,7 @@ ghost.
 ##### resurrection candidate logic (BLOCK3)
 
 Any registry_entry in the process_registry that is not install_success status needs to be categorized as a POTENTIAL resurrection 
-candidate.The final determination on whether or not to reque the thread for resurrection will be made by the resurrection_gateway,
+candidate.The final determination on whether or not to reque the thread for resurrection will be made by the resurrection_gatekeeper,
 a separate process level function that will make the decision based upon the registry_entry tags and other information.
 
 ```
@@ -10395,7 +10396,7 @@ def read_output_with_watchdog(stream, label, ip, attempt):
 
 
 
-### resurrection_gateway code
+### resurrection_gatekeeper code
 
 ```
 # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS GATEKEEPER ------------------
@@ -10457,7 +10458,7 @@ def resurrection_gatekeeper(stderr_output, stdout_output, command_status, exit_c
 
 
 
-### Integration with REFACTOR SSH 4 code block (resurrection_registry and resurrection_gateway function calls) and patch1 to install_tomcat():
+### Integration with REFACTOR SSH 4 code block (resurrection_registry and resurrection_gatekeeper function calls) and patch1 to install_tomcat():
 
 
 This code is in the large install_tomcat() function. Patch 1 is placed at the end of this install_tomcat() function to fingerprint
@@ -10614,7 +10615,7 @@ def resurrection_monitor(log_dir="/aws_EC2/logs"):
 
 ```
 ###### Call the resurrection monitor function. This is run per process. So if 5 threads in a process it the resurrection registry
-###### will have scanned for 5 EC2 instance installs and logged any that have met the resurrection_gateway criteria. 
+###### will have scanned for 5 EC2 instance installs and logged any that have met the resurrection_gatekeeper criteria. 
 ###### These are resurrection
 ###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
 ###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
