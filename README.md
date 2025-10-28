@@ -119,13 +119,15 @@ artifact logs per pipeline)
 
 - Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper
 
-- Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing), resurrection_gatekeeper
+- Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing)
 
 - Update part 33 Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
 
 - Update part 34 Phase 2r: Implemenation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing.
 
+- Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle)
 
+- UPdate part 36 Phase 2t: Implemenaton of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
 
 
 ## A note on the STATUS_TAGS:
@@ -156,6 +158,10 @@ STATUS_TAGS = {
 ```
 
 
+
+## UPDATES part 36: Phase 2t: Implemenaton of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
+
+## UPDATES part 35: Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle)
 
 ## UPDATES part 34: Phase 2r: Implementation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing
 
@@ -585,7 +591,7 @@ all of these are also calclated at the aggregate level in main()):
 
 
 
-## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing), resurrection_gatekeeper
+## UPDATES part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing)
 
 
 
