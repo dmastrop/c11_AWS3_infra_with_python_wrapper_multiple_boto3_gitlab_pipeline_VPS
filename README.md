@@ -607,6 +607,7 @@ This large update consists of the following sections:
 ### High level summary of proposed changes: 
 
 #### Stage1:
+
 Remove `update_resurrection_registry`. Resurrection tagging should be completely centralized
 - Refactor `read_output_with_watchdog` to return output and status only: `(stdout, stderr, status)` only
 - Move all resurrection tagging logic out of `install_tomcat`.
@@ -615,6 +616,7 @@ Remove `update_resurrection_registry`. Resurrection tagging should be completely
 
 
 #### Stage2:
+
 Move Resurrection Candidate Logic to `resurrection_monitor_patch8` This will be a process level resurrection candidate json
 file. There is already an aggregate resurrection candidate json file artifact.
 
@@ -637,7 +639,8 @@ for thread_uuid, entry in process_registry.items():
 This eliminates the need for a separate `resurrection_registry` and keeps all resurrection logic in one place.
 
 
-#### Stage3:
+#### Stage3: NOTE: this will be done in a later update (see later update above regarding module2d implemenation of the resurrection_gatekeeper
+
 Modularize Resurrection Gatekeeper (currently called from install_tomcat, but it needs to be called from resurrection_monitor)
 - Refactor `resurrection_gatekeeper()` to be reusable outside `install_tomcat`.
 - Use it in `resurrection_monitor_patch8` to decide which threads to resurrect. Bascially all of the install_failed and most
