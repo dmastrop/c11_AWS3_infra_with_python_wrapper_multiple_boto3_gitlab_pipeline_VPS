@@ -169,6 +169,8 @@ deploy:
       # module2b post ghost analysis artifact log file
       - logs/aggregate_ghost_detail.json 
 
+      # module2c post aggregate registry analysis artifact log file
+      - logs/final_aggregate_execution_run_registry_module2c.json
 
     expire_in: 1 week
 
