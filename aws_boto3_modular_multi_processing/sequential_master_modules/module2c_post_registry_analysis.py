@@ -78,7 +78,7 @@ def main():
 
 
 
-    # Step 5: Write updated registry (make sure this is created even if empty to be consistent with other aggregate logs)
+    # Step 5: Write updated registry (make sure this is created even if no changes,  to be consistent with other aggregate logs)
     ### 3. Registry Modification
     #The `registry` object is the full original registry loaded from `final_aggregate_execution_run_registry.json`
     #The code modifies only the entries that match the criteria and IPs
