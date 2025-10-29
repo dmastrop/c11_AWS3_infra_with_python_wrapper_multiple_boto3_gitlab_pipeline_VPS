@@ -78,18 +78,24 @@ def main():
 
 
 
-    # Step 5: Write updated registry
+    # Step 5: Write updated registry (make sure this is created even if empty to be consistent with other aggregate logs)
     ### 3. Registry Modification
     #The `registry` object is the full original registry loaded from `final_aggregate_execution_run_registry.json`
     #The code modifies only the entries that match the criteria and IPs
     #The output file (`final_aggregate_execution_run_registry_module2c.json`) contains the **entire registry**, with the modified entries tagged
     #If multiple entries qualify, all will be tagged accordingly
 
-
     with open(OUTPUT_PATH, "w") as f:
         json.dump(registry, f, indent=2)
 
-    print(f"[module2c] Updated registry written to: {OUTPUT_PATH}")
+    if modified_count == 0:
+        print(f"[module2c] No registry entries qualified for tagging. Output file still written for consistency.")
+    else:
+        print(f"[module2c] Updated registry written to: {OUTPUT_PATH}")
+
+
+
+
 
 # Entry point
 if __name__ == "__main__":
