@@ -295,8 +295,9 @@ def install_tomcat_on_instances():
 def post_ghost_analysis():
     run_module("/aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py")
 
-
-
+##### This is module2c for the post aggregate registry analysis on the gitlab console logs
+def post_aggregate_registry_analysis():
+    run_module("/aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py")
 
 
 ## modules 3-11:
@@ -346,8 +347,9 @@ def main():
     process2b.start()
     process2b.join()
 
-
-
+    process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
+    process2c.start()
+    process2c.join()
 
 
 #    process3 = multiprocessing.Process(target=save_instance_ids_and_security_group_ids, name="Process3: save_instance_ids_and_security_group_ids")
