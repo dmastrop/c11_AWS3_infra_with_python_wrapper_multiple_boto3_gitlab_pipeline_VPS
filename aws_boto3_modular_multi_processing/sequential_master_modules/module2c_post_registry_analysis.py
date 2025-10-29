@@ -38,42 +38,90 @@ def main():
 
 
 
-    # Step 3: Scan console log for installation success
-    #`matched_installation_succeeded_ips` (renamed from `successful_ips`)]
-    #It’s a set of IPs parsed from the GitLab console log line:Installation succeeded on the following IPs: ...
-    #These are IPs that successfully completed installation before crashing
+    ## Step 3: Scan console log for installation success
+    ##`matched_installation_succeeded_ips` (renamed from `successful_ips`)]
+    ##It’s a set of IPs parsed from the GitLab console log line:Installation succeeded on the following IPs: ...
+    ##These are IPs that successfully completed installation before crashing
 
 
-    matched_installation_succeeded_ips = set()
+    #matched_installation_succeeded_ips = set()
 
+    #try:
+    #    with open(CONSOLE_LOG_PATH, "r") as f:
+    #        for line in f:
+    #            if "Installation succeeded on the following IPs:" in line:
+    #                for ip in line.strip().split(":")[1].split(","):
+    #                    ip = ip.strip()
+    #                    if ip:
+    #                        matched_installation_succeeded_ips.add(ip)
+    #except FileNotFoundError:
+    #    print(f"[module2c] ERROR: Console log file not found: {CONSOLE_LOG_PATH}")
+    #    return
+
+    #print(f"[module2c] Found {len(matched_installation_succeeded_ips)} IPs with successful installation in console log")
+
+
+
+
+    ## Step 4: Tag matching registry entries
+    #modified_count = 0
+    #for uuid, ip in candidate_ips.items():
+    #    if ip in matched_installation_succeeded_ips:
+    #        registry[uuid]["tags"].append("install_success_achieved_before_crash")
+    #        print(f"[module2c] Tagged UUID {uuid} (IP: {ip}) with 'install_success_achieved_before_crash'")
+    #        modified_count += 1
+
+    #print(f"[module2c] Total registry entries tagged: {modified_count}")
+
+
+    # Step 3a: Extract expected command count from console log
+    expected_command_count = None
     try:
         with open(CONSOLE_LOG_PATH, "r") as f:
             for line in f:
-                if "Installation succeeded on the following IPs:" in line:
-                    for ip in line.strip().split(":")[1].split(","):
-                        ip = ip.strip()
-                        if ip:
-                            matched_installation_succeeded_ips.add(ip)
+                if "expected command count is :" in line:
+                    match = re.search(r"expected command count is\s*:\s*(\d+)", line)
+                    if match:
+                        expected_command_count = int(match.group(1))
+                        print(f"[module2c] Parsed expected command count: {expected_command_count}")
+                        break
     except FileNotFoundError:
         print(f"[module2c] ERROR: Console log file not found: {CONSOLE_LOG_PATH}")
         return
 
-    print(f"[module2c] Found {len(matched_installation_succeeded_ips)} IPs with successful installation in console log")
+    if expected_command_count is None:
+        print("[module2c] ERROR: Could not determine expected command count from logs.")
+        return
+
+    # Step 3b: Count successful commands per candidate IP
+    ip_command_success_counts = defaultdict(int)
+    try:
+        with open(CONSOLE_LOG_PATH, "r") as f:
+            for line in f:
+                if "✅ Command succeeded." in line:
+                    match = re.search(r"\[(\d{1,3}(?:\.\d{1,3}){3})\]", line)
+                    if match:
+                        ip = match.group(1)
+                        if ip in candidate_ips.values():
+                            ip_command_success_counts[ip] += 1
+    except FileNotFoundError:
+        print(f"[module2c] ERROR: Console log file not found during command success scan.")
+        return
+
+    print(f"[module2c] Found {len(ip_command_success_counts)} candidate IPs with command success entries")
 
 
 
 
-    # Step 4: Tag matching registry entries
+    # Step 4: Tag matching registry entries (exact match only)
     modified_count = 0
     for uuid, ip in candidate_ips.items():
-        if ip in matched_installation_succeeded_ips:
+        if ip_command_success_counts.get(ip, 0) == expected_command_count:
             registry[uuid]["tags"].append("install_success_achieved_before_crash")
             print(f"[module2c] Tagged UUID {uuid} (IP: {ip}) with 'install_success_achieved_before_crash'")
             modified_count += 1
 
     print(f"[module2c] Total registry entries tagged: {modified_count}")
-
-
 
 
 
