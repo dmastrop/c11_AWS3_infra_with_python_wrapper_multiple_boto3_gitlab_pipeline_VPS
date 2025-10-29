@@ -4407,6 +4407,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
         commands = [wrap_command(cmd) for cmd in native_commands]
 
+        # Emit expected command count for module2c
+        print(f"expected command count is : {len(commands)}")
 
 
         #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
