@@ -125,7 +125,7 @@ artifact logs per pipeline)
 
 - Update part 34 Phase 2r: Implemenation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing.
 
-- Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle)
+- Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing.
 
 - UPdate part 36 Phase 2t: Implemenaton of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
 
@@ -161,7 +161,7 @@ STATUS_TAGS = {
 
 ## UPDATES part 36: Phase 2t: Implemenaton of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
 
-## UPDATES part 35: Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle)
+## UPDATES part 35: Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing
 
 ## UPDATES part 34: Phase 2r: Implementation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing
 
