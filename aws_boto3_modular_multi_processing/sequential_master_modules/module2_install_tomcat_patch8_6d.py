@@ -5408,8 +5408,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # Synthetic crash after install loop but before registry commit
         if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL", "false").lower() in ("1", "true"):
             raise RuntimeError("Synthetic failure injected after install loop")
-
-
+  
+        # Synthetic crash after install loop but before registry commit, and this one is used to test real crash tagging code
+        # done in module2c
+        if os.getenv("FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG", "false").lower() in ("1", "true"):
+            raise RuntimeError("Synthetic failure injected after install loop with module2c real tagging")
 
 
 

@@ -58,6 +58,10 @@ deploy:
 
     INJECT_SYNTHETIC_GHOST: "false"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs
 
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c
+
+
+
 
   before_script:
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
@@ -77,6 +81,8 @@ deploy:
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL='${FORCE_TOMCAT_FAIL_POSTINSTALL} >> .env  # futures crash after installation
     - echo 'FORCE_TOMCAT_FAIL_PRE_SSH='${FORCE_TOMCAT_FAIL_PRE_SSH} >> .env  # futures crash before SSH initiated
     - echo 'INJECT_SYNTHETIC_GHOST='${INJECT_SYNTHETIC_GHOST} >> .env  # inject synthetic ghost into aggregate_gold_ips
+    - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
+
 
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
       ## Define `PID_JSON_DUMPS` with value `false` (masked/protected as needed).
