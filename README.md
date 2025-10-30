@@ -238,20 +238,6 @@ be a final resurrection
 
 
 
-
-
-
-framework for the resurreciton_gateway function and module2d is based 
-on the following logic: 
-
-
-
-
-
-
-
-
-
 ## UPDATES part 35: Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing
 
 
