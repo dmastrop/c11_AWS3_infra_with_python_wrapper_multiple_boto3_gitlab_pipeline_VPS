@@ -339,8 +339,9 @@ tags install_failed, future_exception and ip_rehydrated
 so that it can be fetched in this step3 from the gitlab console log.
 
 - Step3b: Once the expected command count is known, the main part of the module2c is executed where the successful command executions
-for each candidate ip is counted.   Remember, the candidate ip list is only the ips that have the future failed, ip_rehydrated and
-install_failed tags.  
+for each candidate ip is counted.   
+This is done by scanning the moudule2 gitlab console log. Remember, the candidate ip list has only the ips that have the future failed, 
+ip_rehydrated and install_failed tags.  
 
 - Step4: A comparison is then made for each candidate ip to determine if the command execution count for that candidate ip is the same
 as the expected command count. If it is, that means that that ip (thread) essentially experienced a futures crash after all of the 
