@@ -255,7 +255,8 @@ STATUS_TAGS = {
     "watchdog_timeout",
     "ssh_initiated_failed",
     "ssh_retry_failed",
-    "no_tags"
+    "no_tags",
+    "ghost" # add this for the module2d resurrection_gateway code
 }
 
 

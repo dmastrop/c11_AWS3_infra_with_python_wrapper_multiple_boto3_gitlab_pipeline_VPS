@@ -153,7 +153,8 @@ STATUS_TAGS = {
     "watchdog_timeout",
     "ssh_initiated_failed",
     "ssh_retry_failed",
-    "no_tags"
+    "no_tags",
+    "ghost" 
 }
 ```
 
@@ -178,7 +179,7 @@ how they failed. With all of this information, the gatekeeper's sole function no
 on whether or not to reque and resurrect the thread(s).
 
 
-With this updated architecture in place, the arguments that need to be passed to the resurrection_gateway function have completely 
+With this updated architecture in place, the arguments that need to be passed to the resurrection_gatekeeper function have completely 
 changed.   The `registry_entry` argument in the resurrection gatekeeper function was part of the **old design**, where resurrection 
 decisions were made inline during thread execution, using live `process_registry` entries. That approach worked when 
 resurrection tagging and decision-making were embedded inside `install_tomcat`, but it’s now **deprecated**. The 
@@ -225,7 +226,7 @@ anything. It just reads the registry and ghost files as a dictionary, applies he
 be a final resurrection
 
 
-#### Summary of the Resurrection Pipeline
+#### Summary of the Resurrection Pipeline:
 
 | Module | Purpose | Output |
 |--------|---------|--------|
@@ -234,6 +235,85 @@ be a final resurrection
 | `module2c` | Postmortem tagging of registry_entrys (for example, post install successful futures crash) | `final_aggregate_execution_run_registry_module2c.json` |
 | `module2d` | Resurrection gatekeeper | Uses either `module2c` or `module2` registry + ghost detail |
 
+
+### High level code design and the output of the resurrection gateway module2d:
+
+The output of the resurrection gateway will be a new json file that processes both the the module2c and module2b files above and tags
+them for resurrection (True or False), so that Phase3 can resurrect the appropriate threads.
+
+
+The ghost threads from module2b originally have a form like this: 
+
+
+```
+[
+  {
+    "ip": "1.1.1.1",
+    "process_index": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "aws_outage_context"
+    ]
+  }
+]
+```
+
+This is not aligned with the standardized format of the module2c and module2 aggregate registry_entrys which look somehting like this:
+```
+  "7d612e31": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": 127633859750784,
+    "thread_uuid": "7d612e31",
+    "public_ip": "107.20.24.29",
+    "private_ip": "172.31.26.54",
+    "timestamp": "2025-10-29 05:18:44.688785",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash"
+    ]
+  },
+```
+
+
+Thus, the ghost entries from the module2b need to be rewwritten in the standardized format so that the resurrection_gatekeeper function
+can process the entries and tag them accordingly.
+
+The code that supports the resurrection gateway in module2d will have to create synthetic registry_entrys for each ghost ip address
+in the module2b json file.  
+
+
+It will do this using this code block below: 
+
+
+        synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
+        synthetic_entry = {
+            "status": "ghost",
+            "attempt": -1,
+            "pid": None,
+            "thread_id": None,
+            "thread_uuid": synthetic_uuid,
+            "public_ip": ip,
+            "private_ip": "unknown",
+            "timestamp": None,
+            "tags": ghost_entry.get("tags", []) + ["gatekeeper_resurrect", "ghost_injected"],
+            "resurrection_reason": f"Ghost entry with tags: {ghost_entry.get('tags', [])}",
+            "process_index": ghost_entry.get("process_index")
+        }
+
+Note that a synthetic thread_uuid is created. This is so that the thread can easily be tracked and resurrected in Phase3.
+
+Once the ghost file has been standardized, both the module2c and this new standardized ghost registry file can be processed by the
+resurrection_gatekeeper (entries tagged for resurrection), and combined into one json registry file so that Phase3 can consume it 
+and reque the appropriate threads.
+
+
+### Code Implementation:
 
 
 
