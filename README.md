@@ -313,6 +313,21 @@ resurrection_gatekeeper (entries tagged for resurrection), and combined into one
 and reque the appropriate threads.
 
 
+The following file names will be used in the Code Implemenation section below.  
+In short, 3 module2d json files will be created and a synthetic ghost json file that has been standardized will also be created. A
+total of 4 new log files (all json) will be created.
+
+
+| File Name | Description | Source Module | Purpose |
+|-----------|-------------|----------------|---------|
+| `final_aggregate_execution_run_registry_module2c.json` | Enriched registry with postmortem tags | `module2c` | Input for resurrection gatekeeper in module2d |
+| `final_aggregate_execution_run_registry_module2d.json` | Tagged resurrection decisions for registry entries | `module2d` | Tracks resurrect/block decisions for real threads |
+| `aggregate_ghost_detail.json` | Raw ghost detection output | `module2b` | Input for ghost resurrection gatekeeper in module2d |
+| `aggregate_ghost_detail_synthetic_registry.json` | Reformatted ghost entries as registry-like objects | `module2d` | Enables ghost resurrection logic |
+| `aggregate_ghost_detail_module2d.json` | Tagged resurrection decisions for ghost entries | `module2d` | Tracks resurrect decisions for synthetic ghost threads |
+| `resurrection_gatekeeper_final_registry_module2d.json` | Unified registry with all resurrection decisions | `module2d` | Final output for Phase 3 requeing orchestration |
+
+
 ### Code Implementation:
 
 
