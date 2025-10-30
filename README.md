@@ -230,8 +230,8 @@ be a final resurrection
 | Module | Purpose | Output |
 |--------|---------|--------|
 | `module2` | Aggregate registry from all processes | `final_aggregate_execution_run_registry.json` |
-| `module2b` | Ghost detection from GitLab logs | `aggregate_ghost_detail.json` |
-| `module2c` | Postmortem tagging of real post-install crashes | `final_aggregate_execution_run_registry_module2c.json` |
+| `module2b` | Ghost tag enhancement from GitLab logs | `aggregate_ghost_detail.json` |
+| `module2c` | Postmortem tagging of registry_entrys (for example, post install successful futures crash) | `final_aggregate_execution_run_registry_module2c.json` |
 | `module2d` | Resurrection gatekeeper | Uses either `module2c` or `module2` registry + ghost detail |
 
 
