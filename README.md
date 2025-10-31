@@ -305,6 +305,9 @@ NOTE: The process_index is an orchestration level process index number that is a
 typically have this.Note that process_index is not a PID. As shown below that is None. A new pid will be created when the thread is 
 respawned in Phase3 code.
 
+NOTE: The status is also added as "ghost"  This clearly deliniates ghost entrys from install_failed and stub threads so that the 
+resurrection_gatekeeper can be properly applied to them.
+
 
 ```
         synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
@@ -317,11 +320,10 @@ respawned in Phase3 code.
             "public_ip": ip,
             "private_ip": "unknown",
             "timestamp": None,
-            "tags": tags + ["ghost_injected"],
+            "tags": tags,
             "process_index": process_index
         }
 ```
-
 
 Note that a synthetic thread_uuid is created. This is so that the thread can easily be tracked and resurrected in Phase3.
 
