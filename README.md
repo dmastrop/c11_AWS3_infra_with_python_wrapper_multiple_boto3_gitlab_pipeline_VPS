@@ -290,7 +290,7 @@ in the module2b json file.
 
 It will do this using this code block below: 
 
-
+```
         synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
         synthetic_entry = {
             "status": "ghost",
@@ -305,6 +305,9 @@ It will do this using this code block below:
             "resurrection_reason": f"Ghost entry with tags: {ghost_entry.get('tags', [])}",
             "process_index": ghost_entry.get("process_index")
         }
+```
+
+
 
 Note that a synthetic thread_uuid is created. This is so that the thread can easily be tracked and resurrected in Phase3.
 
@@ -330,6 +333,43 @@ total of 4 new log files (all json) will be created.
 
 ### Code Implementation:
 
+#### process insertion for module2d:
+
+The module2d needs to be inserted into the high level module multi-processing in master_script.py
+
+This module2d must be done sequentially after the module2b and module2c, because it requires output files from both of those modules.
+
+
+The master_script.py insertion using 'process2d':
+
+```
+#### This is module2d for the resurrection gatekeeper and supporing code
+def resurrection_gatekeeper():
+    run_module("/aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py")
+
+def main():
+    process1 = multiprocessing.Process(target=restart_ec_multiple_instances, name="Process1: restart_ec_multiple_instances")
+    process1.start()
+    process1.join()
+
+    process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
+    process2.start()
+    process2.join()
+
+    process2b = multiprocessing.Process(target=post_ghost_analysis, name="Process2b: post_ghost_analysis")
+    process2b.start()
+    process2b.join()
+
+    process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
+    process2c.start()
+    process2c.join()
+
+
+    process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
+    process2d.start()
+    process2d.join()
+
+```
 
 
 
