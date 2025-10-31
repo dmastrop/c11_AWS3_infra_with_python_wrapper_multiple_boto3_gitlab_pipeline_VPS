@@ -300,6 +300,12 @@ def post_aggregate_registry_analysis():
     run_module("/aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py")
 
 
+#### This is module2d for the resurrection gatekeeper and supporing code
+def resurrection_gatekeeper():
+    run_module("/aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py")
+
+
+
 ## modules 3-11:
 
 def save_instance_ids_and_security_group_ids():
@@ -350,6 +356,12 @@ def main():
     process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
     process2c.start()
     process2c.join()
+
+
+    process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
+    process2d.start()
+    process2d.join()
+
 
 
 #    process3 = multiprocessing.Process(target=save_instance_ids_and_security_group_ids, name="Process3: save_instance_ids_and_security_group_ids")
