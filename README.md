@@ -204,6 +204,13 @@ These files contain **all the registry entries** and ghost IPs(missing ips), alr
 - `module2b` (ghost tagging)
 - `module2c` (extended post-install crash tagging)
 
+Thus, although the resurrection_monitor_patch8 produces viable files, the resurrection_gateway will not be called from the 
+resurrection_monitor_patch8, because the resurrection_gateway requires that the files from the monitor be post-processed to 
+make the best decisions. 
+
+Instead the resurrection_gateway code will reside in a new module (module2d) that follows the module2b and module2c post-processor
+modules.
+
 
 ####  What This Means for `registry_entry` in relation to the resurrection_gatekeeper:
 
@@ -259,8 +266,10 @@ The ghost threads from module2b originally have a form like this:
   }
 ]
 ```
+These types of entrys need special processing (unlike the module2c registry_entrys)
 
-This is not aligned with the standardized format of the module2c and module2 aggregate registry_entrys which look something like this:
+The ghost entry above is not aligned with the standardized format of the module2c and module2 aggregate registry_entrys which 
+look something like this:
 ```
   "7d612e31": {
     "status": "install_failed",
@@ -288,17 +297,14 @@ thread's registry_entry can be tracked by the Phase3 requeing and resurrection c
 thread_uuid for thread lookup.  This is the case from the bottom up (thread level functions up to process level and main() 
 orchestration level function).
 
-A sample of the code that implements this in module2d will look something like that shown below:
-in the module2b json file.  
+A sample of the code that implements this ghost entry transform in module2d will look something like that shown below: 
 
-The resurrection_reason is a new registry_entry field that will be added for ghost and module2c registry_entrys. The process_index
-is an orchestration level process index number that is assigned to all threads in the control plane, so ghosts typically have this.
-Note that process_index is not a PID. As shown below that is None. A new pid will be created when the thread is respawned in Phase3
-code.
 
-The gatekeeper_resurrect is the analogue of gatekeeper_blocked. These will be added during the decision making engine of the 
-resurrection_gateway. Ghosts will always have a gatekeeper_resurrect, because they always have an ip address and thus a requeing can
-always be attempted (but it may not work for one reason or another).
+
+NOTE: The process_index is an orchestration level process index number that is assigned to all threads in the control plane, so ghosts 
+typically have this.Note that process_index is not a PID. As shown below that is None. A new pid will be created when the thread is 
+respawned in Phase3 code.
+
 
 ```
         synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
@@ -311,12 +317,10 @@ always be attempted (but it may not work for one reason or another).
             "public_ip": ip,
             "private_ip": "unknown",
             "timestamp": None,
-            "tags": ghost_entry.get("tags", []) + ["gatekeeper_resurrect", "ghost_injected"],
-            "resurrection_reason": f"Ghost entry with tags: {ghost_entry.get('tags', [])}",
-            "process_index": ghost_entry.get("process_index")
+            "tags": tags + ["ghost_injected"],
+            "process_index": process_index
         }
 ```
-
 
 
 Note that a synthetic thread_uuid is created. This is so that the thread can easily be tracked and resurrected in Phase3.
@@ -324,6 +328,14 @@ Note that a synthetic thread_uuid is created. This is so that the thread can eas
 Once the ghost file has been standardized, both the module2c and this new standardized ghost registry file can be processed by the
 resurrection_gatekeeper (entries tagged for resurrection), and combined into one json registry file so that Phase3 can consume it 
 and reque the appropriate threads.
+
+Once this type of standardized egistry_entry is processed by the resurrectino_gatekeeper a resurection_reason field will be added to it. 
+The resurrection_reason is a new registry_entry field that will be added for ghost and module2c registry_entrys. 
+
+Regarding tagging:
+The gatekeeper_resurrect is the analogue of gatekeeper_blocked. These will be added during the decision making engine of the 
+resurrection_gateway. Ghosts will always have a gatekeeper_resurrect, because they always have an ip address and thus a requeing can
+always be attempted (but it may not work for one reason or another).
 
 
 The following file names will be used in the Code Implemenation section below.  
