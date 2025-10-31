@@ -223,7 +223,8 @@ processed to provide additional information.
 
 As such, the resurrection gatekeeper is now a **pure decision engine** — it doesn’t tag, doesn’t parse stdout/stderr, and doesn’t mutate
 anything. It just reads the registry and ghost files as a dictionary, applies heuristics, and outputs a resurrection plan (this will
-be a final resurrection
+be a final resurrection_gatekeeper_final_registry_module2d.json file that can then be passed to Phase3 for thread requeing and 
+resurrection).
 
 
 #### Summary of the Resurrection Pipeline:
@@ -259,7 +260,7 @@ The ghost threads from module2b originally have a form like this:
 ]
 ```
 
-This is not aligned with the standardized format of the module2c and module2 aggregate registry_entrys which look somehting like this:
+This is not aligned with the standardized format of the module2c and module2 aggregate registry_entrys which look something like this:
 ```
   "7d612e31": {
     "status": "install_failed",
@@ -282,13 +283,22 @@ This is not aligned with the standardized format of the module2c and module2 agg
 
 
 Thus, the ghost entries from the module2b need to be rewwritten in the standardized format so that the resurrection_gatekeeper function
-can process the entries and tag them accordingly.
+can process the entries and tag them accordingly. This requires the use of a synthetically generated thread_uuid so that the 
+thread's registry_entry can be tracked by the Phase3 requeing and resurrection code.  All registry_entrys always use the key
+thread_uuid for thread lookup.  This is the case from the bottom up (thread level functions up to process level and main() 
+orchestration level function).
 
-The code that supports the resurrection gateway in module2d will have to create synthetic registry_entrys for each ghost ip address
+A sample of the code that implements this in module2d will look something like that shown below:
 in the module2b json file.  
 
+The resurrection_reason is a new registry_entry field that will be added for ghost and module2c registry_entrys. The process_index
+is an orchestration level process index number that is assigned to all threads in the control plane, so ghosts typically have this.
+Note that process_index is not a PID. As shown below that is None. A new pid will be created when the thread is respawned in Phase3
+code.
 
-It will do this using this code block below: 
+The gatekeeper_resurrect is the analogue of gatekeeper_blocked. These will be added during the decision making engine of the 
+resurrection_gateway. Ghosts will always have a gatekeeper_resurrect, because they always have an ip address and thus a requeing can
+always be attempted (but it may not work for one reason or another).
 
 ```
         synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
@@ -317,6 +327,7 @@ and reque the appropriate threads.
 
 
 The following file names will be used in the Code Implemenation section below.  
+
 In short, 3 module2d json files will be created and a synthetic ghost json file that has been standardized will also be created. A
 total of 4 new log files (all json) will be created.
 
@@ -371,6 +382,18 @@ def main():
 
 ```
 
+
+#### Code for processing final_aggregate_execution_run_registry_module2c.json non-ghost registry_entrys:
+
+
+
+#### Code for processing aggregate_ghost_detail.json ghost entrys (these need to be synthetically transformed into registry_entrys):
+
+
+
+#### Code for combining non-ghost and ghost registry_entrys that have been tagged with the resurrection_gateway decision:
+
+This combined json file will be used as an input into Phase3, the requeing and thread resurrection phase.
 
 
 
@@ -612,7 +635,13 @@ discovered by the module2c scan of the gitlab console logs), and the installatio
 #### synthetic ghost registry validation:
 
 The synethic ghost registry that is fabricated in module2d can be tested as it is fed into the resurrection_gatekeeper as well. This
-can utilize the synthetic ghost inject as well.  
+will  utilize a synthetic ghost injectioin that has been used in the past to test ghost related detection code. True ghosts are 
+extremely rare. Most threads fail in the categories of install_failed or stubs.  Ghosts were seen after the massive AWS outage
+in October 2025 (the day after) with a 512 node scale that stressed the backend AWS infrastructure prior to it being at full 
+capacity (this was detailed in an earlier update).  But that issue was quickly resolved by AWS within the hour. (A subsequent 512 node
+stress test confirmed this).
+
+  
 
 
 
