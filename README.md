@@ -26,7 +26,7 @@ The master_script.py is in this directory
 
 This has all the latest multi-threading and multi-processing code in the sequential_master_modules package(directory)
 
-The current 13 modules in the package sequential_master_modules are multi-processed in the master_script.py
+The current 14 modules in the package sequential_master_modules are multi-processed in the master_script.py
 All execution is multi-processed as well, and threads in each process are multi-threaded
 The processes permit multi-processing pooling determined by the desirec_count in module2
 
