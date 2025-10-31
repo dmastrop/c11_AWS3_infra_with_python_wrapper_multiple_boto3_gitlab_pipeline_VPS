@@ -646,7 +646,7 @@ discovered by the module2c scan of the gitlab console logs), and the installatio
 
 
 
-#### synthetic ghost registry validation:
+#### Synthetic ghost registry validation:
 
 The synethic ghost registry that is fabricated in module2d can be tested as it is fed into the resurrection_gatekeeper as well. This
 will  utilize a synthetic ghost injectioin that has been used in the past to test ghost related detection code. True ghosts are 
@@ -656,6 +656,16 @@ capacity (this was detailed in an earlier update).  But that issue was quickly r
 stress test confirmed this).
 
   
+The test matrix for this will test the futures crash with ghost threads synthetically:
+
+
+
+| Test # | Scenario | Input Conditions | Expected Resurrection Outcome | Notes |
+|--------|----------|------------------|-------------------------------|-------|
+| 1️⃣ | **Install Success Only** | All threads have `status: install_success` | All threads **blocked** | `resurrection_reason = "Install succeeded"` |
+| 2️⃣ | **Futures Post-Install Crash** | Threads have `status: install_failed` + `future_exception` + `install_success_achieved_before_crash` | All threads **blocked** | `resurrection_reason = "Crash occurred post-install: resurrection not needed"` |
+| 3️⃣ | **Single Ghost Injection + Futures Post-Install Crashes** | One ghost IP (e.g., `1.1.1.1`) + same futures crash threads as Test 2 | Ghost **resurrected**, others **blocked** | Ghost gets `status: ghost`, `gatekeeper_resurrect`, and reason `"Ghost entry — resurrection always attempted"` |
+| 4️⃣ | **Multiple Ghost Injections + Futures Post-Install Crashes** | Multiple ghost IPs (e.g., `1.1.1.1`, `1.1.1.2`, ...) + same futures crash threads | All ghosts **resurrected**, others **blocked** | Validates iteration and tagging across multiple ghost entries |
 
 
 
@@ -664,7 +674,7 @@ stress test confirmed this).
 
 
 
-#### test the final combined resurrection_gatekeeper registry file for  the appropriate registry tags and fields:
+#### Test the final combined resurrection_gatekeeper registry file for  the appropriate registry tags and fields:
 
 
 
