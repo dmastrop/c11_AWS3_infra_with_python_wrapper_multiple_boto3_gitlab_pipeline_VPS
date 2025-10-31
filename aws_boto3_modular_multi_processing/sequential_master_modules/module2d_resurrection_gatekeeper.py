@@ -9,13 +9,17 @@ def resurrection_gatekeeper_v4(registry_entry):
     if status == "install_success":
         return False, "Install succeeded"
 
-    if status in {"install_failed", "stub"}:
-        return True, f"Status = {status}"
-
+    ##### Make sure this block is BEFORE the install_failed/stub block below, otherwise this logic will never execute and that special
+    ##### case below will never get hit.
     if "future_exception" in tags:
         if "install_success_achieved_before_crash" in tags:
             return False, "Crash occurred post-install — resurrection not needed"
         return True, "Tagged with future_exception"
+    
+
+    if status in {"install_failed", "stub"}:
+        return True, f"Status = {status}"
+
 
     if resurrection_attempts >= 3:
         return False, "Resurrection attempts exceeded"
