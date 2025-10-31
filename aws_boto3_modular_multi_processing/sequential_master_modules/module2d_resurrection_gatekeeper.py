@@ -13,7 +13,7 @@ def resurrection_gatekeeper_v4(registry_entry):
     ##### case below will never get hit.
     if "future_exception" in tags:
         if "install_success_achieved_before_crash" in tags:
-            return False, "Crash occurred post-install — resurrection not needed"
+            return False, "Crash occurred post-install: resurrection not needed"
         return True, "Tagged with future_exception"
     
 
