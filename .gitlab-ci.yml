@@ -58,7 +58,7 @@ deploy:
 
     INJECT_SYNTHETIC_GHOST: "false"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c
 
 
 
