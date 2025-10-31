@@ -50,7 +50,7 @@ deploy:
     ##### Synthetic thread failures in install_tomcat ########
     FORCE_TOMCAT_FAIL: "false"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat. Use "1" or "true" to inject and "false" or "0" to not inject. This one is right before the for idx.
 
-    FORCE_TOMCAT_FAIL_IDX1: "false"
+    FORCE_TOMCAT_FAIL_IDX1: "true"
 
     FORCE_TOMCAT_FAIL_POSTINSTALL: "false"
 
