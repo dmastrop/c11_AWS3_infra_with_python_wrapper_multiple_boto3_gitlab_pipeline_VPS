@@ -373,6 +373,40 @@ def main():
 
 
 
+
+
+### Code validation:
+
+#### non-ghost registry validation:
+
+To validate futures crashes, in general we need to run the 512 node test under swap contention. However we do have synthetic futures
+crash injection and we can test both mid instal_tomcat thread execution and post command execution/installation successful 
+scenarios.  This is the most cost effective way to test the code. In addtion, testing the install_success test case to ensure that
+none of the threads are marked for resurrection. 
+
+
+The test matrix:
+
+| Scenario | Expected Status | Expected Tags | Expected `resurrection_reason` |
+|----------|------------------|----------------|-------------------------------|
+| **Positive test case** (clean install) | `install_success` | `gatekeeper_blocked` | `"Install succeeded"` |
+| **Mid-install futures crash** | `install_failed` + `"future_exception"` | `gatekeeper_resurrect` | `"Tagged with future_exception"` |
+| **Post-install futures crash** | `install_failed` + `"future_exception"` + `"install_success_achieved_before_crash"` | `gatekeeper_blocked` | `"Crash occurred post-install — resurrection not needed"` |
+
+
+
+#### synthetic ghost registry validation:
+
+The synethic ghost registry that is fabricated in module2d can be tested as it is fed into the resurrection_gatekeeper as well. This
+can utilize the synthetic ghost inject as well.  
+
+
+#### test the final combined resurrection_gatekeeper registry file for  the appropriate registry tags and fields:
+
+
+
+
+
 ## UPDATES part 35: Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing
 
 
