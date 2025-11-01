@@ -395,7 +395,7 @@ def main():
     process2d.join()
 
 ```
-#### Code for the resurrection_gatekeeperfunction:
+#### Code for the resurrection_gatekeeper function:
 
 
 
@@ -588,7 +588,7 @@ def process_ghost_registry():
 ```
 
 
-This is called from the main() function after the module2c registry is processed (see prior section above)
+This is run after the main() function after the module2c registry is processed (see prior section above)
 ```
 if __name__ == "__main__":
     main()
@@ -865,6 +865,20 @@ The test matrix for this will test the futures crash with ghost threads syntheti
 
 
 
+##### install_sucess regression
+
+
+
+##### post successful install future crash regression
+
+
+##### add 1 ghost (synthetic injection) + futures crash
+
+
+##### add multiple ghosts + futures crash
+
+
+
 
 
 
@@ -872,8 +886,7 @@ The test matrix for this will test the futures crash with ghost threads syntheti
 
 #### Test the final combined resurrection_gatekeeper registry file for  the appropriate registry tags and fields:
 
-
-
+This file is named resurrection_gatekeeper_final_registry_module2d.json
 
 
 
