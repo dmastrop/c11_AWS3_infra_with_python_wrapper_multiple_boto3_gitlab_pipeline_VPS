@@ -863,41 +863,63 @@ The test matrix for this will test the futures crash with ghost threads syntheti
 | 3️⃣ | **Single Ghost Injection + Futures Post-Install Crashes** | One ghost IP (e.g., `1.1.1.1`) + same futures crash threads as Test 2 | Ghost **resurrected**, others **blocked** | Ghost gets `status: ghost`, `gatekeeper_resurrect`, and reason `"Ghost entry — resurrection always attempted"` |
 | 4️⃣ | **Multiple Ghost Injections + Futures Post-Install Crashes** | Multiple ghost IPs (e.g., `1.1.1.1`, `1.1.1.2`, ...) + same futures crash threads | All ghosts **resurrected**, others **blocked** | Validates iteration and tagging across multiple ghost entries |
 
-Multiple ghost injections (up to 3) can be done with this code block in main() of module2:
+Multiple ghost injections (up to 10; and the loop index can be increased for more) can be done with this code block in main() of 
+module2:
 
 ```
     # Synthetic ghost injection (controlled by env var or flag). NOTE that this is right before the print to the gitlab console logs
     # So module2b scan of the gitlab consolelogs will pick this 1.1.1.1 as a ghost. This has to be enabled in the flag below which is
     # set in the .gitlab-ci.yml ENV variables.
 
-    if os.getenv("INJECT_SYNTHETIC_GHOST", "false").lower() in ["1", "true"]:
-        synthetic_ip = "1.1.1.1"
-        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-        aggregate_gold_ips.add(synthetic_ip)
-
-    if os.getenv("INJECT_SYNTHETIC_GHOST2", "false").lower() in ["1", "true"]:
-        synthetic_ip = "1.1.1.2"
-        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-        aggregate_gold_ips.add(synthetic_ip)
-
-
-    if os.getenv("INJECT_SYNTHETIC_GHOST3", "false").lower() in ["1", "true"]:
-        synthetic_ip = "1.1.1.3"
-        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-        aggregate_gold_ips.add(synthetic_ip)
+    # Synthetic ghost injection (controlled by ENV vars in .gitlab-ci.yml)
+    for i in range(1, 10):  # Adjust upper bound as needed
+        env_var = f"INJECT_SYNTHETIC_GHOST{i if i > 1 else ''}"
+        if os.getenv(env_var, "false").lower() in ["1", "true"]:
+            synthetic_ip = f"1.1.1.{i}"
+            print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+            aggregate_gold_ips.add(synthetic_ip)
 
 ```
 
 The .gitlab-ci.yml ENV vars are below:
-
+Setting them accordingly, the loop above will insert the ones that are set to True
 
 ```
     INJECT_SYNTHETIC_GHOST: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
 
     INJECT_SYNTHETIC_GHOST2: "false"  # 1.1.1.2
-
     INJECT_SYNTHETIC_GHOST3: "false"  # 1.1.1.3
+    INJECT_SYNTHETIC_GHOST4: "false"  # 1.1.1.4
+    INJECT_SYNTHETIC_GHOST5: "false"  # 1.1.1.5
+    INJECT_SYNTHETIC_GHOST6: "false"  # 1.1.1.6
+    INJECT_SYNTHETIC_GHOST7: "false"  # 1.1.1.7
+    INJECT_SYNTHETIC_GHOST8: "false"  # 1.1.1.8
+    INJECT_SYNTHETIC_GHOST9: "false"  # 1.1.1.9
+    INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
 
+
+<<< and the before script >>>
+
+
+    - echo 'INJECT_SYNTHETIC_GHOST='${INJECT_SYNTHETIC_GHOST} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST2='${INJECT_SYNTHETIC_GHOST2} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST3='${INJECT_SYNTHETIC_GHOST3} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST4='${INJECT_SYNTHETIC_GHOST4} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST5='${INJECT_SYNTHETIC_GHOST5} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST6='${INJECT_SYNTHETIC_GHOST6} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST7='${INJECT_SYNTHETIC_GHOST7} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST8='${INJECT_SYNTHETIC_GHOST8} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST9='${INJECT_SYNTHETIC_GHOST9} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST10='${INJECT_SYNTHETIC_GHOST10} >> .env  # inject synthetic ghost into aggregate_gold_ips
 ```
 
 
@@ -913,7 +935,7 @@ The .gitlab-ci.yml ENV vars are below:
 ##### add 1 ghost (synthetic injection) + futures crash
 
 
-##### add multiple ghosts + futures crash
+##### add multiple ghosts (10) + futures crash
 
 
 
