@@ -926,13 +926,335 @@ Setting them accordingly, the loop above will insert the ones that are set to Tr
 
 
 ##### install_sucess regression
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 0 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 5026691d (IP: 54.160.252.17) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ceaccc02 (IP: 34.224.37.178) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 129867c1 (IP: 18.207.143.170) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 8c2103c9 (IP: 3.85.190.182) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b04f732b (IP: 13.220.53.200) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6da66bbc (IP: 54.236.203.249) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID fcaa811c (IP: 54.227.48.154) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 01e9786b (IP: 3.80.23.35) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 16fb6b32 (IP: 34.236.145.87) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bff3a5ea (IP: 54.86.101.207) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 07d908e2 (IP: 54.226.114.181) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID c2f609c9 (IP: 54.90.185.179) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 3eb7ffbe (IP: 13.218.244.195) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 25a63985 (IP: 34.228.200.41) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 140a37f5 (IP: 54.163.217.144) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b3923185 (IP: 54.152.95.198) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 0
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 0
+[module2d.2b] Total blocked: 0
+
+```
+As expected the ghost json files are empty.
+
+
+The final_aggregate_exection_run_registry_module2d.json  tagged as resurrection_blocked as resurrection is not needed:
+```
+"5026691d": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-11-01 00:08:47.062265",
+    "pid": 12,
+    "thread_id": 138947204220608,
+    "thread_uuid": "5026691d",
+    "public_ip": "54.160.252.17",
+    "private_ip": "172.31.16.201",
+    "tags": [
+      "install_success",
+      "installation_completed",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Install succeeded"
+
+```
 
 
 
 ##### post successful install future crash regression
 
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 0 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 16 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 16 candidate IPs with command success entries
+[module2c] Tagged UUID 7340ee12 (IP: 52.204.185.57) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 9c13f83a (IP: 54.210.157.3) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID c56f0983 (IP: 54.172.187.226) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 0715e73e (IP: 54.89.191.16) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 9a13185c (IP: 18.232.170.170) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 07b63cd5 (IP: 52.90.97.78) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 7888792a (IP: 13.218.217.194) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 6dca88e9 (IP: 3.80.154.144) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID e2c004dd (IP: 23.22.148.70) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 34a4f8fc (IP: 3.90.180.202) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID ddf08b50 (IP: 3.93.181.173) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 2fdf3f71 (IP: 54.167.23.247) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 71c4f347 (IP: 13.221.23.73) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 9cc681db (IP: 3.87.76.16) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID bea373d7 (IP: 54.227.112.138) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID fe7325d7 (IP: 54.91.135.252) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 16
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 7340ee12 (IP: 52.204.185.57) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 9c13f83a (IP: 54.210.157.3) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID c56f0983 (IP: 54.172.187.226) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 0715e73e (IP: 54.89.191.16) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 9a13185c (IP: 18.232.170.170) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 07b63cd5 (IP: 52.90.97.78) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 7888792a (IP: 13.218.217.194) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 6dca88e9 (IP: 3.80.154.144) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID e2c004dd (IP: 23.22.148.70) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 34a4f8fc (IP: 3.90.180.202) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID ddf08b50 (IP: 3.93.181.173) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 2fdf3f71 (IP: 54.167.23.247) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 71c4f347 (IP: 13.221.23.73) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 9cc681db (IP: 3.87.76.16) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID bea373d7 (IP: 54.227.112.138) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID fe7325d7 (IP: 54.91.135.252) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 0
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 0
+[module2d.2b] Total blocked: 0
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+```
+The final_aggregate_exection_run_registry_module2d.json  Tagged with gatekeeper_blocked as resurrection is not needed.
+```
+  "7340ee12": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": 132829114805120,
+    "thread_uuid": "7340ee12",
+    "public_ip": "52.204.185.57",
+    "private_ip": "172.31.26.242",
+    "timestamp": "2025-11-01 00:51:46.753632",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+```
+
+
+
 
 ##### add 1 ghost (synthetic injection) + futures crash
+```
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.1
+
+
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 1 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 16 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 16 candidate IPs with command success entries
+[module2c] Tagged UUID 04354a2f (IP: 3.80.22.96) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID fe6e8ee5 (IP: 34.230.17.87) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 602ee367 (IP: 54.160.142.91) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID b88d5772 (IP: 98.81.149.158) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 93a274a0 (IP: 54.221.34.46) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 6f3c378a (IP: 54.235.55.214) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 5fe9874b (IP: 18.234.216.186) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 5c6510e4 (IP: 3.89.24.247) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 794ebdfe (IP: 3.87.155.127) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 7c69be8e (IP: 54.145.208.199) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 35e6c9f8 (IP: 34.236.143.167) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID d5f059cb (IP: 75.101.220.185) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID bdbdc2fa (IP: 44.223.30.23) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID b9e14ada (IP: 54.174.175.108) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID dd7f39e2 (IP: 54.242.106.55) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 0bcde6cf (IP: 54.242.214.239) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 16
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 04354a2f (IP: 3.80.22.96) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID fe6e8ee5 (IP: 34.230.17.87) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 602ee367 (IP: 54.160.142.91) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID b88d5772 (IP: 98.81.149.158) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 93a274a0 (IP: 54.221.34.46) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 6f3c378a (IP: 54.235.55.214) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 5fe9874b (IP: 18.234.216.186) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 5c6510e4 (IP: 3.89.24.247) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 794ebdfe (IP: 3.87.155.127) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 7c69be8e (IP: 54.145.208.199) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 35e6c9f8 (IP: 34.236.143.167) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID d5f059cb (IP: 75.101.220.185) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID bdbdc2fa (IP: 44.223.30.23) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID b9e14ada (IP: 54.174.175.108) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID dd7f39e2 (IP: 54.242.106.55) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 0bcde6cf (IP: 54.242.214.239) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 1
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_1 — Reason: Ghost entry — resurrection always attempted
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 1
+[module2d.2b] Total blocked: 0
+
+[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:
+  1.1.1.1
+  18.234.216.186
+  3.80.22.96
+  3.87.155.127
+  3.89.24.247
+  34.230.17.87
+  34.236.143.167
+  44.223.30.23
+  54.145.208.199
+  54.160.142.91
+  54.174.175.108
+  54.221.34.46
+  54.235.55.214
+  54.242.106.55
+  54.242.214.239
+  75.101.220.185
+  98.81.149.158
+[TRACE][aggregator] Total GOLD IPs: 17
+
+
+```
+Note that the futures crashes are post installation and so they do not need to be resurrected.
+Note that the 1 ghost ip thread is to be resurrected.
+
+Aggregate_ghost_detail.json
+```
+[
+  {
+    "ip": "1.1.1.1",
+    "process_index": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "aws_outage_context"
+    ]
+  }
+]
+```
+
+The transformed entry into standardized registry_entry format in aggregate_ghost_detail_synthetic_registry.json
+
+```
+{
+  "ghost_1_1_1_1": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": null,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_1_1",
+    "public_ip": "1.1.1.1",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "aws_outage_context"
+    ],
+    "process_index": null
+  }
+}
+```
+Aggregate_ghost_detail_module2d.json after resurrection_gatekeeper processing
+The ghost thread will be resurrected
+```
+{
+  "ghost_1_1_1_1": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": null,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_1_1",
+    "public_ip": "1.1.1.1",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "aws_outage_context",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry \u2014 resurrection always attempted"
+  }
+}
+```
+And the final_aggregate_execution_run_registry_module2d.json sample:
+These threads do not need to be resurrected.
+```
+{
+  "04354a2f": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 136912564185984,
+    "thread_uuid": "04354a2f",
+    "public_ip": "3.80.22.96",
+    "private_ip": "172.31.17.49",
+    "timestamp": "2025-11-01 01:24:21.400759",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+```
+
+
 
 
 ##### add multiple ghosts (10) + futures crash
