@@ -6711,7 +6711,7 @@ def main():
         if os.getenv(env_var, "false").lower() in ["1", "true"]:
             synthetic_ip = f"1.1.1.{i}"
             print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-            aggregate_gold_ips.add(synthetic_ip
+            aggregate_gold_ips.add(synthetic_ip)
 
 
     print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
