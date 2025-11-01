@@ -6706,12 +6706,12 @@ def main():
     #    aggregate_gold_ips.add(synthetic_ip)
 
     # Synthetic ghost injection (controlled by ENV vars in .gitlab-ci.yml)
-    for i in range(1, 10):  # Adjust upper bound as needed
-        env_var = f"INJECT_SYNTHETIC_GHOST{i if i > 1 else ''}"
+    for i in range(1, 11):  # Now includes 1.1.1.10
+        env_var = f"INJECT_SYNTHETIC_GHOST{i}"
         if os.getenv(env_var, "false").lower() in ["1", "true"]:
             synthetic_ip = f"1.1.1.{i}"
             print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-            aggregate_gold_ips.add(synthetic_ip)
+            aggregate_gold_ips.add(synthetic_ip
 
 
     print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
