@@ -863,6 +863,44 @@ The test matrix for this will test the futures crash with ghost threads syntheti
 | 3️⃣ | **Single Ghost Injection + Futures Post-Install Crashes** | One ghost IP (e.g., `1.1.1.1`) + same futures crash threads as Test 2 | Ghost **resurrected**, others **blocked** | Ghost gets `status: ghost`, `gatekeeper_resurrect`, and reason `"Ghost entry — resurrection always attempted"` |
 | 4️⃣ | **Multiple Ghost Injections + Futures Post-Install Crashes** | Multiple ghost IPs (e.g., `1.1.1.1`, `1.1.1.2`, ...) + same futures crash threads | All ghosts **resurrected**, others **blocked** | Validates iteration and tagging across multiple ghost entries |
 
+Multiple ghost injections (up to 3) can be done with this code block in main() of module2:
+
+```
+    # Synthetic ghost injection (controlled by env var or flag). NOTE that this is right before the print to the gitlab console logs
+    # So module2b scan of the gitlab consolelogs will pick this 1.1.1.1 as a ghost. This has to be enabled in the flag below which is
+    # set in the .gitlab-ci.yml ENV variables.
+
+    if os.getenv("INJECT_SYNTHETIC_GHOST", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.1"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+    if os.getenv("INJECT_SYNTHETIC_GHOST2", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.2"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+
+    if os.getenv("INJECT_SYNTHETIC_GHOST3", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.3"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+```
+
+The .gitlab-ci.yml ENV vars are below:
+
+
+```
+    INJECT_SYNTHETIC_GHOST: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
+
+    INJECT_SYNTHETIC_GHOST2: "false"  # 1.1.1.2
+
+    INJECT_SYNTHETIC_GHOST3: "false"  # 1.1.1.3
+
+```
+
+
 
 
 ##### install_sucess regression
