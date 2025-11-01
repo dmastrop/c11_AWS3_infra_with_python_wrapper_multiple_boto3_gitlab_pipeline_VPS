@@ -23,7 +23,7 @@ def resurrection_gatekeeper_v4(registry_entry):
     # add this ghost block for the process_ghost_registry function ghost processing. The status will be "ghost" and resurrection will 
     # always be attempted for these types of threads
     if status == "ghost":
-        return True, "Ghost entry — resurrection always attempted"
+        return True, "Ghost entry: resurrection always attempted"
 
 
     if resurrection_attempts >= 3:
