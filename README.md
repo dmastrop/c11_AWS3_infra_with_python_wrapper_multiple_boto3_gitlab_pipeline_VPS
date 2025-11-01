@@ -1258,7 +1258,135 @@ These threads do not need to be resurrected.
 
 ##### add multiple ghosts (10) + futures crash
 
+This testing looks very good as well. The gitlab logs are below: 
 
+```
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.1
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.2
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.3
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.4
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.5
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.6
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.7
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.8
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.9
+[SYNTHETIC_GHOST] Injecting synthetic ghost IP: 1.1.1.10
+[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:
+  1.1.1.1
+  1.1.1.10
+  1.1.1.2
+  1.1.1.3
+  1.1.1.4
+  1.1.1.5
+  1.1.1.6
+  1.1.1.7
+  1.1.1.8
+  1.1.1.9
+  13.217.197.201
+  13.220.254.178
+  18.215.145.190
+  18.215.164.72
+  34.203.224.99
+  50.19.49.155
+  52.91.176.203
+  54.197.135.110
+  54.221.168.41
+  54.221.31.104
+  54.234.207.25
+  54.237.214.119
+  54.242.191.153
+  54.86.169.213
+  98.81.173.10
+  98.84.187.54
+[TRACE][aggregator] Total GOLD IPs: 26
+
+
+
+
+[TRACE] Found 10 ghost IPs
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 16 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 16 candidate IPs with command success entries
+[module2c] Tagged UUID 8fd58228 (IP: 54.237.214.119) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID deff273f (IP: 98.81.173.10) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID a1171f97 (IP: 13.220.254.178) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID f0f3a03a (IP: 18.215.145.190) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 19d0db31 (IP: 52.91.176.203) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 21173edb (IP: 54.86.169.213) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 03ec925f (IP: 18.215.164.72) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID bce62654 (IP: 54.242.191.153) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID e69c556d (IP: 13.217.197.201) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 93e8d8e5 (IP: 50.19.49.155) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 0c025bec (IP: 34.203.224.99) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 611ded51 (IP: 54.197.135.110) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 255302a2 (IP: 54.221.168.41) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 35a824ee (IP: 54.234.207.25) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 7f69b2fb (IP: 54.221.31.104) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 8caba599 (IP: 98.84.187.54) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 16
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 8fd58228 (IP: 54.237.214.119) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID deff273f (IP: 98.81.173.10) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID a1171f97 (IP: 13.220.254.178) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID f0f3a03a (IP: 18.215.145.190) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 19d0db31 (IP: 52.91.176.203) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 21173edb (IP: 54.86.169.213) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 03ec925f (IP: 18.215.164.72) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID bce62654 (IP: 54.242.191.153) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID e69c556d (IP: 13.217.197.201) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 93e8d8e5 (IP: 50.19.49.155) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 0c025bec (IP: 34.203.224.99) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 611ded51 (IP: 54.197.135.110) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 255302a2 (IP: 54.221.168.41) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 35a824ee (IP: 54.234.207.25) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 7f69b2fb (IP: 54.221.31.104) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 8caba599 (IP: 98.84.187.54) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 10
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_3 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_2 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_8 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_6 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_1 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_9 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_10 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_5 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_7 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_1_4 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 10
+[module2d.2b] Total blocked: 0
+
+```
+
+
+
+All the .json artifact logs from the pipeline look good as well. The registry_entrys are the same as in the last section, except there
+are 10 of them in the ghost json file (and the 16 in the other aggregate registry json file).  The chart below summarizes the file
+results:
+
+
+Output Files Confirmed:
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `aggregate_ghost_detail.json` | Raw ghost IPs | ✅ 10 entries |
+| `aggregate_ghost_detail_synthetic_registry.json` | Synthetic registry format | ✅ 10 entries |
+| `aggregate_ghost_detail_module2d.json` | Gatekeeper-tagged ghost registry | ✅ 10 resurrected |
+| `final_aggregate_execution_run_registry_module2d.json` | Gatekeeper-tagged futures crash registry | ✅ 16 blocked |
 
 
 
