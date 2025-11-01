@@ -166,10 +166,10 @@ STATUS_TAGS = {
 
 ### Introduction:
 
-Following the succesful implementation and testing of module2b and module2c, the next step is to implement the resurrection gateway,
+Following the succesful implementation and testing of module2b and module2c, the next step is to implement the resurrection gatekeeper,
 the final decision maker for which threads can and will be requed for attempted resurrection.
 
-The older resurrection gateway code has been deprecated and commented out. It was formerly called from install_tomcat at the thread 
+The older resurrection gatekeeper code has been deprecated and commented out. It was formerly called from install_tomcat at the thread 
 level,but that required that it handle a lot more functionality, such as output STDOUT/STDERR analysis, and tagging. Since then
 the read_output_with_watchdog function that is called from install_tomcat completely handles the output STDOUT/STDERR and the 
 analysis of the output is done methodicially in both install_tomcat and threaded_install for complete falure and stub analysis as 
@@ -188,7 +188,7 @@ registry but they have no public ip address; very very rare), and resurrection c
 for each of these categories so that they are available for forensic analysis.
 
 While doing further testing, it was found that these resurrection candidate and ghost candidate json files, while very accurate,
-were not sufficient in terms of tags.   The resurrection gateway, in some corner cases, would need more information via the tags,
+were not sufficient in terms of tags.   The resurrection gatekeeper, in some corner cases, would need more information via the tags,
 to make the best decision.   This is when module2b and module2c came into the picture.
 
 The architecture has evolved to a **modular, postmortem architecture**, where resurrection decisions are made **after execution**, using
@@ -204,11 +204,11 @@ These files contain **all the registry entries** and ghost IPs(missing ips), alr
 - `module2b` (ghost tagging)
 - `module2c` (extended post-install crash tagging)
 
-Thus, although the resurrection_monitor_patch8 produces viable files, the resurrection_gateway will not be called from the 
-resurrection_monitor_patch8, because the resurrection_gateway requires that the files from the monitor be post-processed to 
+Thus, although the resurrection_monitor_patch8 produces viable files, the resurrection_gatekeeper will not be called from the 
+resurrection_monitor_patch8, because the resurrection_gatekeeper requires that the files from the monitor be post-processed to 
 make the best decisions. 
 
-Instead the resurrection_gateway code will reside in a new module (module2d) that follows the module2b and module2c post-processor
+Instead the resurrection_gatekeeper code will reside in a new module (module2d) that follows the module2b and module2c post-processor
 modules.
 
 
@@ -244,9 +244,9 @@ resurrection).
 | `module2d` | Resurrection gatekeeper | Uses either `module2c` or `module2` registry + ghost detail |
 
 
-### High level code design and the output of the resurrection gateway module2d:
+### High level code design and the output of the resurrection gatekeeper module2d:
 
-The output of the resurrection gateway will be a new json file that processes both the the module2c and module2b files above and tags
+The output of the resurrection gatekeeper will be a new json file that processes both the the module2c and module2b files above and tags
 them for resurrection (True or False), so that Phase3 can resurrect the appropriate threads.
 
 
@@ -336,7 +336,7 @@ The resurrection_reason is a new registry_entry field that will be added for gho
 
 Regarding tagging:
 The gatekeeper_resurrect is the analogue of gatekeeper_blocked. These will be added during the decision making engine of the 
-resurrection_gateway. Ghosts will always have a gatekeeper_resurrect, because they always have an ip address and thus a requeing can
+resurrection_gatekeeper. Ghosts will always have a gatekeeper_resurrect, because they always have an ip address and thus a requeing can
 always be attempted (but it may not work for one reason or another).
 
 
@@ -395,7 +395,7 @@ def main():
     process2d.join()
 
 ```
-#### Code for the resurrection_gateway function:
+#### Code for the resurrection_gatekeeperfunction:
 
 
 
@@ -436,7 +436,7 @@ def resurrection_gatekeeper_v4(registry_entry):
 
 #### Code for processing final_aggregate_execution_run_registry_module2c.json non-ghost registry_entrys:
 
-This code is below. The code is run from main() in module2d_resurrection_gateway.py module
+This code is below. The code is run from main() in module2d_resurrection_gatekeeper.py module
 ```
 def main():
     REGISTRY_PATH = "/aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json"
@@ -601,7 +601,7 @@ if __name__ == "__main__":
 
 
 
-#### Code for combining non-ghost and ghost registry_entrys that have been tagged with the resurrection_gateway decision:
+#### Code for combining non-ghost and ghost registry_entrys that have been tagged with the resurrection_gatekeeper decision:
 
 This combined json file will be used as an input into Phase3, the requeing and thread resurrection phase.
 
