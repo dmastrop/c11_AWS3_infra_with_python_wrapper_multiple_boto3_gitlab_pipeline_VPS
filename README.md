@@ -885,7 +885,7 @@ The .gitlab-ci.yml ENV vars are below:
 Setting them accordingly, the loop above will insert the ones that are set to True
 
 ```
-    INJECT_SYNTHETIC_GHOST: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
+    INJECT_SYNTHETIC_GHOST1: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
 
     INJECT_SYNTHETIC_GHOST2: "false"  # 1.1.1.2
     INJECT_SYNTHETIC_GHOST3: "false"  # 1.1.1.3
@@ -901,7 +901,7 @@ Setting them accordingly, the loop above will insert the ones that are set to Tr
 <<< and the before script >>>
 
 
-    - echo 'INJECT_SYNTHETIC_GHOST='${INJECT_SYNTHETIC_GHOST} >> .env  # inject synthetic ghost into aggregate_gold_ips
+    - echo 'INJECT_SYNTHETIC_GHOST1='${INJECT_SYNTHETIC_GHOST1} >> .env  # inject synthetic ghost into aggregate_gold_ips
 
     - echo 'INJECT_SYNTHETIC_GHOST2='${INJECT_SYNTHETIC_GHOST2} >> .env  # inject synthetic ghost into aggregate_gold_ips
 
