@@ -6694,6 +6694,18 @@ def main():
         print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
         aggregate_gold_ips.add(synthetic_ip)
 
+    if os.getenv("INJECT_SYNTHETIC_GHOST2", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.2"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+
+    if os.getenv("INJECT_SYNTHETIC_GHOST3", "false").lower() in ["1", "true"]:
+        synthetic_ip = "1.1.1.3"
+        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+        aggregate_gold_ips.add(synthetic_ip)
+
+
 
     print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
     for ip in sorted(aggregate_gold_ips):
