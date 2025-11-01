@@ -6689,22 +6689,29 @@ def main():
     # So module2b scan of the gitlab consolelogs will pick this 1.1.1.1 as a ghost. This has to be enabled in the flag below which is
     # set in the .gitlab-ci.yml ENV variables.
     
-    if os.getenv("INJECT_SYNTHETIC_GHOST", "false").lower() in ["1", "true"]:
-        synthetic_ip = "1.1.1.1"
-        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-        aggregate_gold_ips.add(synthetic_ip)
+    #if os.getenv("INJECT_SYNTHETIC_GHOST", "false").lower() in ["1", "true"]:
+    #    synthetic_ip = "1.1.1.1"
+    #    print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+    #    aggregate_gold_ips.add(synthetic_ip)
 
-    if os.getenv("INJECT_SYNTHETIC_GHOST2", "false").lower() in ["1", "true"]:
-        synthetic_ip = "1.1.1.2"
-        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-        aggregate_gold_ips.add(synthetic_ip)
+    #if os.getenv("INJECT_SYNTHETIC_GHOST2", "false").lower() in ["1", "true"]:
+    #    synthetic_ip = "1.1.1.2"
+    #    print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+    #    aggregate_gold_ips.add(synthetic_ip)
 
 
-    if os.getenv("INJECT_SYNTHETIC_GHOST3", "false").lower() in ["1", "true"]:
-        synthetic_ip = "1.1.1.3"
-        print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
-        aggregate_gold_ips.add(synthetic_ip)
+    #if os.getenv("INJECT_SYNTHETIC_GHOST3", "false").lower() in ["1", "true"]:
+    #    synthetic_ip = "1.1.1.3"
+    #    print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+    #    aggregate_gold_ips.add(synthetic_ip)
 
+    # Synthetic ghost injection (controlled by ENV vars in .gitlab-ci.yml)
+    for i in range(1, 10):  # Adjust upper bound as needed
+        env_var = f"INJECT_SYNTHETIC_GHOST{i if i > 1 else ''}"
+        if os.getenv(env_var, "false").lower() in ["1", "true"]:
+            synthetic_ip = f"1.1.1.{i}"
+            print(f"[SYNTHETIC_GHOST] Injecting synthetic ghost IP: {synthetic_ip}")
+            aggregate_gold_ips.add(synthetic_ip)
 
 
     print("[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:")
