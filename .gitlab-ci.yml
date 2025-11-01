@@ -59,8 +59,15 @@ deploy:
     INJECT_SYNTHETIC_GHOST: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
 
     INJECT_SYNTHETIC_GHOST2: "false"  # 1.1.1.2
-
     INJECT_SYNTHETIC_GHOST3: "false"  # 1.1.1.3
+    INJECT_SYNTHETIC_GHOST4: "false"  # 1.1.1.4
+    INJECT_SYNTHETIC_GHOST5: "false"  # 1.1.1.5
+    INJECT_SYNTHETIC_GHOST6: "false"  # 1.1.1.6
+    INJECT_SYNTHETIC_GHOST7: "false"  # 1.1.1.7
+    INJECT_SYNTHETIC_GHOST8: "false"  # 1.1.1.8
+    INJECT_SYNTHETIC_GHOST9: "false"  # 1.1.1.9
+    INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
+
 
     FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c
 
@@ -84,7 +91,30 @@ deploy:
     - echo 'FORCE_TOMCAT_FAIL_IDX1='${FORCE_TOMCAT_FAIL_IDX1} >> .env # futures crash after first command executes
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL='${FORCE_TOMCAT_FAIL_POSTINSTALL} >> .env  # futures crash after installation
     - echo 'FORCE_TOMCAT_FAIL_PRE_SSH='${FORCE_TOMCAT_FAIL_PRE_SSH} >> .env  # futures crash before SSH initiated
+    
     - echo 'INJECT_SYNTHETIC_GHOST='${INJECT_SYNTHETIC_GHOST} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST2='${INJECT_SYNTHETIC_GHOST2} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST3='${INJECT_SYNTHETIC_GHOST3} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST4='${INJECT_SYNTHETIC_GHOST4} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST5='${INJECT_SYNTHETIC_GHOST5} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST6='${INJECT_SYNTHETIC_GHOST6} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST7='${INJECT_SYNTHETIC_GHOST7} >> .env  # inject synthetic ghost into aggregate_gold_ips
+
+    - echo 'INJECT_SYNTHETIC_GHOST8='${INJECT_SYNTHETIC_GHOST8} >> .env  # inject synthetic ghost into aggregate_gold_ips
+    
+    - echo 'INJECT_SYNTHETIC_GHOST9='${INJECT_SYNTHETIC_GHOST9} >> .env  # inject synthetic ghost into aggregate_gold_ips
+    
+    - echo 'INJECT_SYNTHETIC_GHOST10='${INJECT_SYNTHETIC_GHOST10} >> .env  # inject synthetic ghost into aggregate_gold_ips
+    
+    
+    
+    
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
 
 
