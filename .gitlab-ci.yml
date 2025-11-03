@@ -212,6 +212,19 @@ deploy:
       # module2c post aggregate registry analysis artifact log file
       - logs/final_aggregate_execution_run_registry_module2c.json
 
+      # module2d post aggregate registry that has been processed by the resurrection_gatekeeper
+      - logs/final_aggregate_execution_run_registry_module2d.json
+
+      # module2d aggregate_ghost_detail that has been transformed into synthetic registry (for res gatekeeper processing)
+      - logs/aggregate_ghost_detail_synthetic_registry.json
+
+      # module2d post aggregate ghost detail that has been processed by the resurrection_gatekeeper    
+      - logs/aggregate_ghost_detail_module2d.json
+
+      # module2d consolildated aggregate_ghost_detail_module2d.jsn + final_aggregate_execution_run_registry_module2d.json for
+      # Phase3 resurrection and requeing code
+      - logs/resurrection_gatekeeper_final_registry_module2d.json   
+
     expire_in: 1 week
 
   allow_failure: true
