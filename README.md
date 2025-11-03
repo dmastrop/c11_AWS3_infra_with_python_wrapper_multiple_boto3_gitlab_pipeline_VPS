@@ -1073,7 +1073,7 @@ The final_aggregate_exection_run_registry_module2d.json  tagged as resurrection_
 
 
 
-##### post successful install future crash regression
+##### post successful install futures crash regression
 
 ```
 Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
@@ -1476,6 +1476,75 @@ Output Files Confirmed:
 #### Test the final combined resurrection_gatekeeper registry file for  the appropriate registry tags and fields:
 
 This file is named resurrection_gatekeeper_final_registry_module2d.json
+
+The testing in this area went fine.
+
+In all the tests below the consolidated file looked as expected.
+
+The code is now ready to pass off all the consolidated registry entrys to the Phase3
+requeing and resurrection code....
+
+
+
+##### install_success case
+
+```
+module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 16
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+```
+
+
+
+##### futures crash of all 16 threads
+
+```
+module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 16
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+```
+
+
+##### futures crash of all 16 threads + 1 ghost ip injected
+
+```
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 17
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+```
+
+##### futures crash of all 16 threads + 10 ghost ips injected
+
+```
+
+```
+Note that there are 26 registry_entrys as expected.
+
+
+The registry_entrys in the file are copied over properly.
+
+
+For example a thread futures crash thread registry_entry and a ghost synthetic registry etnry from the consolidated file:
+
+
+
+
+
+
+### Concluding remarks:
+
+The update part 36 was a massive rewrite of code. This code sets the stage for Phase3 of the project, whereby the threads are
+requed and resurrected based upon the resurrection_gateway tags.   
+
+Prior to doing this, I will go back to part 33 and finish off the modularization and process level statistics reporting done in the 
+resurrection_monitor_patch8. 
+
 
 
 
