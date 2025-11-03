@@ -605,6 +605,86 @@ if __name__ == "__main__":
 
 This combined json file will be used as an input into Phase3, the requeing and thread resurrection phase.
 
+A review of the artifact logs that are published by the pipleine is below:
+
+
+| File Name | Description | Source Module | Purpose |
+|-----------|-------------|----------------|---------|
+| `final_aggregate_execution_run_registry_module2c.json` | Enriched registry with postmortem tags | `module2c` | Input for resurrection gatekeeper in module2d |
+| `final_aggregate_execution_run_registry_module2d.json` | Tagged resurrection decisions for registry entries | `module2d` | Tracks resurrect/block decisions for real threads |
+| `aggregate_ghost_detail.json` | Raw ghost detection output | `module2b` | Input for ghost resurrection gatekeeper in module2d |
+| `aggregate_ghost_detail_synthetic_registry.json` | Reformatted ghost entries as registry-like objects | `module2d` | Enables ghost resurrection logic |
+| `aggregate_ghost_detail_module2d.json` | Tagged resurrection decisions for ghost entries | `module2d` | Tracks resurrect decisions for synthetic ghost threads |
+| `resurrection_gatekeeper_final_registry_module2d.json` | Unified registry with all resurrection decisions | `module2d` | Final output for Phase 3 requeing orchestration |
+
+This function will combine aggregate_ghost_detail_module2d.json and final_aggregate_execution_run_registry_module2d.jso, which are 
+the ghost registry and the aggregate registry after being processed by the resurrection_gatekeeper, into one consolidated file
+named resurrection_gatekeeper_final_registry_module2d.json that can be consumed by the Phase3 resurrection code for requeing of 
+the specified threads.
+
+
+```
+
+#### This function is to merge the 2 files that have been processed by the resurrection_gatekeeper and tagged accordingly.
+#### The function combines the following json log files:
+#| Source File | Description |
+#|-------------|-------------|
+#| `final_aggregate_execution_run_registry_module2d.json` | Threads from module2c, tagged by gatekeeper |
+#| `aggregate_ghost_detail_module2d.json` | Ghost threads, transformed and tagged by gatekeeper |
+#### The merged file is called resurrection_gatekeeper_final_registry_module2d.json
+#### These logs are tagged with [module2d.3] in the gitlab console logs.
+
+
+def merge_resurrection_registries():
+    REGISTRY_PATH = "/aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json"
+    GHOST_PATH = "/aws_EC2/logs/aggregate_ghost_detail_module2d.json"
+    MERGED_OUTPUT_PATH = "/aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json"
+
+    try:
+        with open(REGISTRY_PATH, "r") as f:
+            registry_entries = json.load(f)
+        print(f"[module2d.3] Loaded registry entries from: {REGISTRY_PATH}")
+    except FileNotFoundError:
+        print(f"[module2d.3] ERROR: Registry file not found.")
+        registry_entries = {}
+
+    try:
+        with open(GHOST_PATH, "r") as f:
+            ghost_entries = json.load(f)
+        print(f"[module2d.3] Loaded ghost entries from: {GHOST_PATH}")
+    except FileNotFoundError:
+        print(f"[module2d.3] ERROR: Ghost file not found.")
+        ghost_entries = {}
+
+    # Merge both dictionaries
+    merged_registry = {**registry_entries, **ghost_entries}
+
+    with open(MERGED_OUTPUT_PATH, "w") as f:
+        json.dump(merged_registry, f, indent=2)
+    print(f"[module2d.3] Final merged registry written to: {MERGED_OUTPUT_PATH}")
+    print(f"[module2d.3] Total entries in final registry: {len(merged_registry)}")
+```
+
+
+The function is run after main() and process_ghost_registry() functions, those used to process the aggregate registry and the 
+ghost registry respectively.
+
+```
+if __name__ == "__main__":
+    main()
+
+    process_ghost_registry()  # the process_ghost_registry requires special code to transform the original and then apply resurrection
+    # gatekeeper. See the function above. This is called after the module2d.1 processing.  The ghost processing is module2d.2a and 
+    # module2d.2b in the logs.
+
+    merge_resurrection_registries()  # this function merges the ghost registry and aggregate registry that has been processed by
+    # the resurrection_gatekeeper into one file so that the Phase3 resurrection code can consume it and reque the threads 
+    # accordingly.
+```
+
+
+
+
 
 
 
