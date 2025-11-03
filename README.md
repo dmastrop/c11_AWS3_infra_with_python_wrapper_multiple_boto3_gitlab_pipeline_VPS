@@ -1522,6 +1522,11 @@ Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential
 ##### futures crash of all 16 threads + 10 ghost ips injected
 
 ```
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 26
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
 
 ```
 Note that there are 26 registry_entrys as expected.
@@ -1530,8 +1535,47 @@ Note that there are 26 registry_entrys as expected.
 The registry_entrys in the file are copied over properly.
 
 
-For example a thread futures crash thread registry_entry and a ghost synthetic registry etnry from the consolidated file:
+For example, a thread futures crash thread registry_entry and a ghost synthetic registry etnry from the consolidated file:
 
+
+```
+ "2a54d63f": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 123771077540736,
+    "thread_uuid": "2a54d63f",
+    "public_ip": "50.19.163.250",
+    "private_ip": "172.31.29.25",
+    "timestamp": "2025-11-03 01:57:56.267991",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+  "ghost_1_1_1_3": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": null,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_1_3",
+    "public_ip": "1.1.1.3",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "aws_outage_context",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+```
 
 
 
