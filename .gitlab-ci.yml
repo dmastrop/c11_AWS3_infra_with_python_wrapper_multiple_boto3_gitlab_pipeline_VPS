@@ -56,20 +56,20 @@ deploy:
 
     FORCE_TOMCAT_FAIL_PRE_SSH: "false"
 
-    INJECT_SYNTHETIC_GHOST1: "true"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
+    INJECT_SYNTHETIC_GHOST1: "false"  # Inject a synthetic ghost into the aggregate_gold_ips list in main() in module 2. Module2b will pick this up in aggregate_ghost_summary.log  and find that there is a ghost that needs to be analyzed in the logs. 1.1.1.1
 
-    INJECT_SYNTHETIC_GHOST2: "true"  # 1.1.1.2
-    INJECT_SYNTHETIC_GHOST3: "true"  # 1.1.1.3
-    INJECT_SYNTHETIC_GHOST4: "true"  # 1.1.1.4
-    INJECT_SYNTHETIC_GHOST5: "true"  # 1.1.1.5
-    INJECT_SYNTHETIC_GHOST6: "true"  # 1.1.1.6
-    INJECT_SYNTHETIC_GHOST7: "true"  # 1.1.1.7
-    INJECT_SYNTHETIC_GHOST8: "true"  # 1.1.1.8
-    INJECT_SYNTHETIC_GHOST9: "true"  # 1.1.1.9
-    INJECT_SYNTHETIC_GHOST10: "true"  # 1.1.1.10
+    INJECT_SYNTHETIC_GHOST2: "false"  # 1.1.1.2
+    INJECT_SYNTHETIC_GHOST3: "false"  # 1.1.1.3
+    INJECT_SYNTHETIC_GHOST4: "false"  # 1.1.1.4
+    INJECT_SYNTHETIC_GHOST5: "false"  # 1.1.1.5
+    INJECT_SYNTHETIC_GHOST6: "false"  # 1.1.1.6
+    INJECT_SYNTHETIC_GHOST7: "false"  # 1.1.1.7
+    INJECT_SYNTHETIC_GHOST8: "false"  # 1.1.1.8
+    INJECT_SYNTHETIC_GHOST9: "false"  # 1.1.1.9
+    INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
 
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
 

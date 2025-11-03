@@ -286,9 +286,15 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/install_tomcat_on_each_of_new_instances_zz_patch7c_process_aggregator_write_to_disk_watchdog_debug_patch8_6d.py")
 
 
-##### THIS IS THE MODULE2 SCRIPT rename of the patch8_6d.py (it is the same file). This has synthetic ghost injection code 
+###### THIS IS THE MODULE2 SCRIPT rename of the patch8_6d.py (it is the same file). This has synthetic ghost injection code 
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_6d.py")
+
+
+##### THIS IS THE MODULE2 SCRIPT  patch8_7.py. This has the modularization using detect_ghosts function and another approach for ghost synthetic injection
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_6d.py")
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_7.py")
+
 
 
 ##### This is module2b for the post ghost analysis on the gitlab console logs
