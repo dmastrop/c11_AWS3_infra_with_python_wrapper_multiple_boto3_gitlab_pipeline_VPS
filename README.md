@@ -2378,21 +2378,37 @@ resurrected (Phase3 of the project) and a fresh SSH and installation can be made
 
 
 
-## UPDATES part 33: Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+## UPDATES part 33: Phase 2q: resurrection_monitor restructuring: Continue cleanup of the function and implement  PROCESS LEVEL ghost detection using chunk for process level GOLD list
 
 
 ### Introduction:
 
 Currently, the ghost detection code is inline in the module resurrection_monitor_patch8.  This simply moves out that code into
-a helper function similar to what was done for the hydrate_benmchmark_ips (deprecated now).    ALso add the PROCESS level 
-registry stats to the resurrection_monitor_patch8. This is a per process level statistics of the registry_entry status/tags
-for that specific process. This is already done at the aggregate level (post execution write-to-disk) in main() and getting 
-the process level stats is trivial (they are already available).
+a helper function similar to what was done for the hydrate_benmchmark_ips (deprecated now).    
 
+The resurrection_monitor_patch8 has evolved and there will be several forthcoming updates that will add modules to assist in 
+providing the resurrection_gatekeeper with the best information on which to make decisions about requeing and resurrecting 
+threads. 
+
+Given this, the resurrection monltor is being re-purposed as a centralized function for PROCESS level metrics and process level
+information. The resurrection_monitor_patch8 uses chunk level data as its main input. A chunk is the list of ips that have
+been assigned to the process  by the multiprocessing.Pool call to tomcat_worker_wrapper which calls tomcat_worker.
+At the most fundamental level, the most important aspect of a thread is its ip address, and the chunk is that golden list of
+ips designated to be worked on by the threads in eacy process, all in a parallel fashion.
+
+This short update simply modularizes the process level ghost detection logic that is inline in the resurrection_monitor_patch8, and
+externalizes it to a helper fuction def detect_ghosts. 
+
+In a fothcoming module, the resurrection monitor will be the hub for collating PROCESS level statastics of the registry_entrys
+stats/tags in the deisgnated process. This is already done very efficiently at the aggregate level (using post execution 
+write-to-disk) in main() and getting the process level stats is trivial given that amount of code already in the 
+resurrection_monitor_patch8
 
 
 
 ### Code changes:
+
+#### Continued code cleanup in resurrection_monitor_patch8
 
 
 A small block of code in the resurrection__monitor function was commented out with the followign comment:
@@ -2403,14 +2419,21 @@ A small block of code in the resurrection__monitor function was commented out wi
 ```
 
 This is part of the effort to continue to clean up the resurrection_monitor
+The detect_ghosts block of code has been refactored a few times and this will be modularized as a helper function that is called
+from the resurrection monitor.
 
 
-This block is commented out as well. This will be populated at the process level with another helper function (note
-all of these are also calclated at the aggregate level in main()):
 
+The block below is commented out as well. This will be populated at the process level with another helper function that will
+collect and collate the PROCESS level stats of the threads in the process
+(note all of these are also calculated at the aggregate level in main()):
+
+The code in resurrection_monitor, as of the previous update below, can detect ghosts, untraceable registry_entrys, and 
+install_failed and stub resurrection candidates. All of these are exported as artfacts into dedicates json files per gitlab
+pipeline. This information will be very useful when the process level stats code is implemented using the resurrection_monitor 
+function.
 
 ```
- # Summary conclusion: This block will be used with patch 7d2 for process level stats .
             #Patch7_logger.info("🧪 Patch7 reached summary block execution.")
             #Patch7_logger.info(f"Total registry IPs: {len(total_registry_ips)}")
             #Patch7_logger.info(f"Benchmark IPs: {len(benchmark_ips)}")
@@ -2420,6 +2443,120 @@ all of these are also calclated at the aggregate level in main()):
             #Patch7_logger.info(f"Composite alignment passed? {len(missing_registry_ips) + len(total_registry_ips) == len(benchmark_ips)}")
 
 ```
+
+#### detect_ghosts() helper function:
+
+
+To implement this change the following inline block was commented out:
+
+```
+    ## Comment out the code below(BLOCK1 Ghost detection code) and call the helper function above:
+    ## Step 1: Build seen IPs normally
+    #seen_ips = {
+    #    entry["public_ip"]
+    #    for entry in process_registry.values()
+    #    if entry.get("public_ip") and is_valid_ip(entry["public_ip"])
+    #}
+
+    ## Step 2: Build assigned IPs set from chunk
+    #assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+
+    ## Step 3: Detect ghosts — assigned IPs not seen AND not excluded. This will prevent all the edge cases from getting ghosted.
+    ##ghosts = sorted(assigned_ip_set - seen_ips - excluded_from_ghosting)
+    #
+    ### removed exclusion block:
+    #ghosts = sorted(assigned_ip_set - seen_ips)
+    #
+    ## Step 4: Log ghosts just as before the refactoring. These pid json files will be aggregated in main() for an aggregate json file.
+    #for ip in ghosts:
+    #    print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
+
+    #if ghosts:
+    #    ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+    #    with open(ghost_file, "w") as f:
+    #        json.dump(ghosts, f, indent=2)
+```
+
+
+This code was then modularized into a helper fuction called detect_ghosts(). detect_ghosts() is called from 
+resurrection_monitor_patch8 in the following manner:
+
+```
+    ###### BLOCK1: Ghost detection (detect_ghosts):
+    ###### Refactoring the ghost detection logic. This will be modularized in a detect_ghosts() helper function at some point #######
+    ###### The refactored code decouples the dependence on strictly ip address for the ghost detection. Now that the install_failed
+    ###### and stub logic is much more robust and failure detection much more thorough, we need to pre-filter out several scenarios
+    ###### that should not be ghosted even if the ip address is missing. For example a futures crash in a thread: the exception will
+    ###### be caught and an install_failed registry_entry will be created. Often times there will be no ip address. There is now 
+    ###### ip address recovery code in the tomcat_worker which RE-hydrates the ip address if it is unknown or blank.
+    ###### This is required to be done prior to the ghost detection logic becasue ghost detection logic must be IP based.
+    ###### The IP address is the only immuatable lasting attribute of a node and potential thread from AWS. 
+    ###### If the ip address is missing in the registry_entry the untraceable entries in BLOCK2 will list these thread for further
+    ###### review.  In theory these registry_entrys should not be included as ghosts because the thread_uuid is known and the failure
+    ###### reason is usually included in the tags, but they do end  up in the missing (ghost) category as well.
+
+
+    ##### This has been modularized using def detect_ghosts() helper function #####
+    ##### This replaces the block commented out below. ######
+    ghosts, seen_ips, assigned_ip_set = detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir)
+```
+
+
+
+The detect_ghosts() helper function is below:
+Note that the assigned_ips are the actual chunk ips assigned to this process, i.e. chunk or instance_info
+Resurrection_monitor, tomcat_worker, threaded_install are all process level functions
+The seen_ips are the ips that have registry_entrys in the process_registry and are therefore not missing.
+ghost ip addresses are considered missing when comparing golden AWS orchestration level ip list to the seen_ips in the 
+process_registry.
+
+
+```
+## RESMON PATCH8 UTILITY FUNCTION detect_ghosts that modularizes the ghost detection code that was inline in 
+## resurection_monitor_patch8
+
+def detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir):
+    """
+    Detects ghost IPs by comparing assigned IPs to those seen in the process registry.
+    Writes a per-process ghost JSON artifact if any are found.
+    Returns the list of ghost IPs.
+    """
+    # Step 1: Build seen IPs from process_registry (this is a per process function
+    seen_ips = {
+        entry["public_ip"]
+        for entry in process_registry.values()
+        if entry.get("public_ip") and is_valid_ip(entry["public_ip"])
+    }
+
+    # Step 2: Build assigned IPs from chunk passed to this current process
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+
+    # Step 3: Ghosts = assigned IPs not seen. These are IPs assigned to this prcess but missing from the registry (missing_ips)
+    ghosts = sorted(assigned_ip_set - seen_ips)
+
+    # Step 4: Log and write artifact
+    for ip in ghosts:
+        print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
+
+    if ghosts:
+        ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+        with open(ghost_file, "w") as f:
+            json.dump(ghosts, f, indent=2)
+
+    return ghosts, seen_ips, assigned_ip_set
+```
+
+### Testing
+
+Sanity testing was done just to ensure that there were no exceptions with the code insertion and modification.  That went fine.
+To adequately test this a real life ghost needs to be created using hyper-scaling and with swap contention on the VPS host OR
+another alternative is to use synthetic ghost injection at the PROCESS level. To minimize testing cost overhead, the later
+approach will be used. This will be done after the gatekeeper code and modules 2b, 2c and 2d are implemented (2b will use aggregate
+ghost injection code to verify that code).  The gatekeeper code and modules 2b, 2c, and 2d will make up the next 3 updates to 
+this README. Once that is done, a process level ghost injection will be created to test the detect_ghosts helper function in additon
+to PROCESS level stats reporting.
+
+
 
 
 
