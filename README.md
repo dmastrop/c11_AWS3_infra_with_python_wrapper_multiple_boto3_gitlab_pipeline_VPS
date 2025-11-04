@@ -89,7 +89,7 @@ artifact logs per pipeline)
 - Synthetic ghost ip injection to test gitlab console log scanning
 - Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) 
 - Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
-- Process level ghost ip injection to test process level ghost detection code
+- Process level synthetic ghost ip injection to test process level ghost detection code
 - Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
