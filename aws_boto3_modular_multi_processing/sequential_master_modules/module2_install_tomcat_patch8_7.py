@@ -2266,7 +2266,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-    ###### BLOCK1: Ghost detection:
+    ###### BLOCK1: Ghost detection (detect_ghosts):
     ###### Refactoring the ghost detection logic. This will be modularized in a detect_ghosts() helper function at some point #######
     ###### The refactored code decouples the dependence on strictly ip address for the ghost detection. Now that the install_failed
     ###### and stub logic is much more robust and failure detection much more thorough, we need to pre-filter out several scenarios
@@ -2304,12 +2304,12 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
-    ##### This has been modularized using def detect_ghosts() helper function
-    ##### This replaces the block commented out below.
+    ##### This has been modularized using def detect_ghosts() helper function #####
+    ##### This replaces the block commented out below. ######
     ghosts, seen_ips, assigned_ip_set = detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir)
 
 
-    ## Comment out the code below and call the hlper function above:
+    ## Comment out the code below and call the helper function above:
     ## Step 1: Build seen IPs normally
     #seen_ips = {
     #    entry["public_ip"]
