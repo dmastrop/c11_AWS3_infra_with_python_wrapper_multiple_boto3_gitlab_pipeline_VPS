@@ -2304,9 +2304,19 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
 
 
 
+
+
+
+
     ##### This has been modularized using def detect_ghosts() helper function #####
     ##### This replaces the block commented out below. ######
     ghosts, seen_ips, assigned_ip_set = detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir)
+
+
+
+
+
+
 
 
     ## Comment out the code below and call the helper function above:
