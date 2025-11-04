@@ -291,9 +291,15 @@ def restart_ec_multiple_instances():
 #    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_6d.py")
 
 
-##### THIS IS THE MODULE2 SCRIPT  patch8_7.py. This has the modularization using detect_ghosts function and another approach for ghost synthetic injection
+###### THIS IS THE MODULE2 SCRIPT  patch8_7.py. This has the modularization using detect_ghosts function
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_7.py")
+
+
+##### THIS IS THE MODULE2 SCRIPT  patch8_8.py. This has the process level ghost ip injection and the process level stats using res monitor function 
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_7.py")
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_8.py")
+
 
 
 
