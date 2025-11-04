@@ -86,9 +86,11 @@ artifact logs per pipeline)
 - Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
 - Synthetic futures crash injection for testing ip artifact re-hydration code (as well as hyper-scaling testing to reproduce the same)
 - Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gatekeeper intelligent decision making)
-- Synthetic ghost ip injection to test gitlab console log scaning
+- Synthetic ghost ip injection to test gitlab console log scanning
 - Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) 
 - Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
+- Process level ghost ip injection to test process level ghost detection code
+- Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
@@ -121,13 +123,17 @@ artifact logs per pipeline)
 
 - Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing)
 
-- Update part 33 Phase 2q: resurrection_monitor restructuring using helper functions: (1) PROCESS LEVEL ghost detection using chunk for process level GOLD list, and (2) PROCESS level registry stats generation
+- Update part 33 Phase 2q: The resurrection_monitor restructuring: Continue cleanup of the function and modularize the ghost detection code block into helper function detect_ghosts() at the PROCESS level
+
 
 - Update part 34 Phase 2r: Implemenation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing.
 
 - Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing.
 
-- UPdate part 36 Phase 2t: Implementation of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
+- Update part 36 Phase 2t: Implementation of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
+
+- Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost injection for testing and PROCESS level stats using the 
+resurrection_monitor_patch8
 
 
 ## A note on the STATUS_TAGS:
@@ -2378,7 +2384,7 @@ resurrected (Phase3 of the project) and a fresh SSH and installation can be made
 
 
 
-## UPDATES part 33: Phase 2q: resurrection_monitor restructuring: Continue cleanup of the function and implement  PROCESS LEVEL ghost detection using chunk for process level GOLD list
+## UPDATES part 33: Phase 2q: The resurrection_monitor restructuring: Continue cleanup of the function and modularize the ghost detection code block into helper function detect_ghosts() at the PROCESS level
 
 
 ### Introduction:
@@ -2406,7 +2412,7 @@ resurrection_monitor_patch8
 
 
 
-### Code changes:
+### Code changes and code implementation for detect_ghosts():
 
 #### Continued code cleanup in resurrection_monitor_patch8
 
