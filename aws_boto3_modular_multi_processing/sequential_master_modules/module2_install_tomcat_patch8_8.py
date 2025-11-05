@@ -6801,7 +6801,13 @@ def main():
 
         if os.getenv("INJECT_PROCESS_GHOSTS", "false").lower() in ["1", "true"]:
             synthetic_ip = f"1.1.1.{100 + i}"  # Unique per process
-            chunk.append({"PublicIpAddress": synthetic_ip, "PrivateIpAddress": "0.0.0.0"})
+            chunk.append({
+                "PublicIpAddress": synthetic_ip,
+                "PrivateIpAddress": "0.0.0.0",
+                "InstanceId": f"ghost-{i}"  # Unique dummy instance  ID per process. This is required for downstream code for the 
+                # sg_chunk builder below. The InstanceId will not collide with real InstanceIds.
+            })
+
             print(f"[SYNTHETIC_PROCESS_GHOST] Injected ghost IP {synthetic_ip} into chunk {i}")
   
             print(f"[SYNTHETIC_PROCESS_GHOST] Process {i}: chunk size with ghost inserted = {len(chunk)}")
