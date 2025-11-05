@@ -6794,6 +6794,18 @@ def main():
         print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
         print(f"[DEBUG] Process {i}: IPs = {[ip['PublicIpAddress'] for ip in chunk]}")
 
+
+
+    #### Synthetic process ghost injection at the chunk level
+    #### Comment this out. This does not work. The problem is that the synthetic InstanceId, which is required by code that follows 
+    #### this, causes a futures crash in install_tomcat and so the install_failed registry_entry is actually created rather than 
+    #### a ghost ip (with no registry_entry).  This is working as designed and provided a good test of the futures crash code
+    #### (ip was re-hydrated, etc), but this is not the objective.   The synthetic injection needs to be inserted in tomcat_worker
+    #### AFTER the call via run_test to threaded_install but before the call to resurrection_monitor_patch8. The ghost is to be injected
+    #### into instance_info which maps to assigned_ips inside resurrection_monitor_patch8. This will create a diff between the
+    #### process_registry ips (seen_ips) for that process and the "golden" ips (assigned_ips). The delta between the two is the 
+    #### missing_ips which are ghosts. This will then trigger all the downstream code including the detect_ghosts helper function.
+
     #for i, chunk in enumerate(chunks):
 
     #    print(f"[DEBUG] Process {i}: chunk size = {len(chunk)}")
