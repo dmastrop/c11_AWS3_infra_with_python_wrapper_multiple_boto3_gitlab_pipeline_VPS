@@ -6160,12 +6160,56 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+    ##### insert process level synthetic ghost injection code right here ########
+    # this injection is in tomcat_worker between the process_registry run_test call to
+      # threaded_install which establishes the process_registry for the process (seen_ips) and the call to
+      # resurrection_monitor_patch8. The instance_info variable is mutated in between the two with the ghost injection. This
+      # creates delta between seen_ips and golden ips which are missing_ips or ghosts, as evalluated by the helper fuction
+      # detect_ghosts. Once this happens detect_ghosts prints the PID and the ghost ip and module2b picks this up in the
+      # gitlab console log scan, and it can then create the aggregate_ghost_deteail.json ghost entry which will then be
+      # synthetically modified to registry_entry format in module2d so that it can be processed by the gatekeeper.
+      # This will provide a complete test of all the ghost detection code in resurrection_monitor and also help verify
+      # adding the PID to the ghost entry in module2b aggregate_ghost_deail.json file, from the gitlab console log scan.
+      
+    # This has to be after the re-hydration code. 
+      #- The rehydration logic depends on a **clean one-to-one mapping** between:
+      #- `unknown_entries` (threads with `"public_ip": "unknown"`)
+      #- `missing_ips_unhydrated` (assigned IPs not seen in registry)
+
+      #- If injectin a ghost IP **before** the rehydration block:
+      #- It artificially inflates `assigned_ip_set`
+      #- That breaks the cardinality match between `unknown_entries` and `missing_ips_unhydrated`
+      #- Rehydration fails or misassigns IPs, especially if a real thread crashed and needs recovery
+
+    # The previous implementation, injecting synthetic ghost at the chunk process level was not a good method for the reason
+    # below
+      #### Synthetic process ghost injection at the chunk level
+      #### Comment this out. This does not work. The problem is that the synthetic InstanceId, which is required by code that follows 
+      #### this, causes a futures crash in install_tomcat and so the install_failed registry_entry is actually created rather than 
+      #### a ghost ip (with no registry_entry).  This is working as designed and provided a good test of the futures crash code
+      #### (ip was re-hydrated, etc), but this is not the objective.   The synthetic injection needs to be inserted in tomcat_worker
+      #### AFTER the call via run_test to threaded_install but before the call to resurrection_monitor_patch8. The ghost is to be injected
+      #### into instance_info which maps to assigned_ips inside resurrection_monitor_patch8. This will create a diff between the
+      #### process_registry ips (seen_ips) for that process and the "golden" ips (assigned_ips). The delta between the two is the 
+      #### missing_ips which are ghosts. This will then trigger all the downstream code including the detect_ghosts helper function.      
+
+    if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
+        ghost_ip = f"1.1.1.{pid}"  # PID-based for traceability
+        instance_info.append({
+            "PublicIpAddress": ghost_ip,
+            "PrivateIpAddress": "0.0.0.0"
+        })
+        print(f"[POST_THREAD_GHOST] Injected ghost IP {ghost_ip} into assigned_ips for PID {pid}")
 
 
-###### Call the resurrection monitor function. This is run per process. So if 5 threads in a process it the resurrection registry
-###### will have scanned for 5 EC2 instance installs and logged any that have failed 2 watchdog attempts. These are resurrection
-###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
-###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
+
+
+
+
+    ###### Call the resurrection monitor function. This is run per process. So if 5 threads in a process it the resurrection registry
+    ###### will have scanned for 5 EC2 instance installs and logged any that have failed 2 watchdog attempts. These are resurrection
+    ###### candidates. The monitor will create the log for the process and list those threads. Thus for 450 processes with 1 thread each
+    ###### for example, there will be 450 of these log files. Will aggregate them later.  This is the end of the tomcat_worker() function:
            
 
     # resurrection_monitor()
