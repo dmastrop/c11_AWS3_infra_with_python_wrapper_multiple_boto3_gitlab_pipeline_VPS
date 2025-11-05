@@ -74,7 +74,9 @@ deploy:
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
 
 
-
+    INJECT_PROCESS_GHOSTS: "true" # this is injection of ghosts at the process chunk level which main() will then pass to all the
+      # downstream modules like tomcat_worker resurrection_monitor_patch8 threaded_install and install_tomcat so that detect_ghosts
+      # helper function can be tested. This is a more realistic ghost injection.
 
   before_script:
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
@@ -88,7 +90,9 @@ deploy:
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
+    
     - echo 'PID_JSON_DUMPS='${PID_JSON_DUMPS} >> .env  # see above. Gating for the json ghost and res candidate files.  
+    
     - echo 'FORCE_TOMCAT_FAIL='${FORCE_TOMCAT_FAIL} >> .env # This is to inject a futures crash in install_tomcat
     - echo 'FORCE_TOMCAT_FAIL_IDX1='${FORCE_TOMCAT_FAIL_IDX1} >> .env # futures crash after first command executes
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL='${FORCE_TOMCAT_FAIL_POSTINSTALL} >> .env  # futures crash after installation
@@ -113,13 +117,16 @@ deploy:
     - echo 'INJECT_SYNTHETIC_GHOST9='${INJECT_SYNTHETIC_GHOST9} >> .env  # inject synthetic ghost into aggregate_gold_ips
     
     - echo 'INJECT_SYNTHETIC_GHOST10='${INJECT_SYNTHETIC_GHOST10} >> .env  # inject synthetic ghost into aggregate_gold_ips
-    
-    
-    
+
+  
     
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
 
 
+    - echo 'INJECT_PROCESS_GHOSTS='${INJECT_PROCESS_GHOSTS} >> .env  # inject synthetic ghost at the process chunk level 
+      
+       
+       
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
       ## Define `PID_JSON_DUMPS` with value `false` (masked/protected as needed).
       ## This value will override the one above in this file. 
