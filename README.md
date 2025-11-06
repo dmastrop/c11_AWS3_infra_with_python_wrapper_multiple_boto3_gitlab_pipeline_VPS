@@ -132,8 +132,9 @@ artifact logs per pipeline)
 
 - Update part 36 Phase 2t: Implementation of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads
 
-- Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost injection for testing and PROCESS level stats using the 
-resurrection_monitor_patch8
+- Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips
+
+- Update part 38 Phase 2v: PROCESS level stats reporting using the resurrection_monitor_patch8 process level information
 
 
 ## A note on the STATUS_TAGS:
@@ -163,6 +164,166 @@ STATUS_TAGS = {
     "ghost" 
 }
 ```
+
+
+
+## UPDATES part 38: Phase 2v: PROCESS level stats reporting using the resurrection_monitor_patch8 process level information
+
+
+### Introduction
+
+
+
+
+
+
+
+## UPDATES part 37: Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips 
+
+### Introduction
+
+The previous synthetic ghost injection at the aggregate level was a good test for the upper level module2b gitlab console log 
+scanning code but did not test teh ghost detection of detect_ghosts() helper function that is called from the 
+resurrection_monnitor_patch8.   To do this type of ghost injection, the injection has to be made at a much lower process level 
+function. Initially this was tried at the process chunk level in main, but that required a synthetic InstanceId, and that 
+caused a futures thread crash that instigated the process_registry install_failed code and ip rehyrdation code. This was  great
+test for that area of the failure detection code, but not a good test of the process level ghost detection code in the detect_ghosts()
+helper function.
+
+
+To test the detect_ghosts() helper function from resurrection_monitor, the ghost ip inject must be done in tomcat_worker. 
+Recall that main() calls the tomcat_worker_wrapper through the multiprocessing.Pool, and tomcat_worker_wrapper calls 
+tomcat_worker which calls the threaded_install through a call to run_test to create the process registry_entrys in process_registry.
+
+The key to the ideal ghost code injection point is to inject the ghost in the process AFTER the process_registry call to 
+threaded_install so that the chunk based process registry_entrys have been created.   Adding the ghost ips after this can be
+done by mutating the instance_info variable (which essentially has the ips that the process is working on).  
+
+The other restraint is that the injection be made BEFORE the tomcat_worker call to the resurrection_monitor_patch8 for the reasons
+discsused futher below.
+
+Another important restraint is that the injection be made AFTER the re-hydration code in tomcat_worker, for the reasons in the 
+comments of the Code samples in the section below.  Adding the ghost ips prior to re-hydration will create a problem if there
+is a thread futures crash. The missing ips will make it impossible to deterministically rehyrate the futures crash threads with
+the ip address.
+
+In short, inside tomcat_worker:
+```
+process_registry call to run_test which calls threaded_install which returns the process_registry to tomcat_worker
+rehydration code
+<<<< INSERT GHOST INJECTION HERE >>>>
+Call to resurrection_monitor_patch8 which will then call detect_ghosts()
+
+```
+
+
+### Code Implemenation strategy
+
+The variable instance_info that has the chunk ips that the process is working on, can easily be injected with ghost ips.
+Once this mutation is done the resurrection_monitor_patch8 is then called from tomcat_worker (after the process_registry
+registry_entrys have been created). The resurrection_monitor_patch8 uses the instance_info (now injected with ghost ips) as
+one of its arguments.   Thus the resurrection_monitor will get the original chunk ips for the process plus the addition ghost
+ips that have been injected.   
+
+The instance_infor maps to assigned_ips inside the resurrection_monitor_patch8
+resurrection_montor_patch8 then calls the helper function detect_ghosts(), and this assigned_ips is the central ip list that the
+detect_ghosts() uses in which to detect ghosts.
+```
+def detect_ghosts(process_registry, assigned_ips, pid, ts, log_dir):
+
+   """
+    Detects ghost IPs by comparing assigned IPs to those seen in the process registry.
+    Writes a per-process ghost JSON artifact if any are found.
+    Returns the list of ghost IPs.
+    """
+    # Step 1: Build seen IPs from process_registry (this is a per process function
+    seen_ips = {
+        entry["public_ip"]
+        for entry in process_registry.values()
+        if entry.get("public_ip") and is_valid_ip(entry["public_ip"])
+    }
+
+    # Step 2: Build assigned IPs from chunk passed to this current process
+    assigned_ip_set = {ip["PublicIpAddress"] for ip in assigned_ips}
+
+    # Step 3: Ghosts = assigned IPs not seen. These are IPs assigned to this prcess but missing from the registry (missing_ips)
+    ghosts = sorted(assigned_ip_set - seen_ips)
+
+    # Step 4: Log and write artifact
+    for ip in ghosts:
+        print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
+
+    if ghosts:
+        ghost_file = os.path.join(log_dir, f"resurrection_ghost_missing_{pid}_{ts}.json")
+        with open(ghost_file, "w") as f:
+            json.dump(ghosts, f, indent=2)
+
+    return ghosts, seen_ips, assigned_ip_set
+```
+
+Because the process_registry has not been mutated (not injected with ghost ip data) and because assigned_ips has been injected with 
+ghost ip data, this creates the delta between the two such that there are "missing_ips" which are ghosts. (this is done by
+assigned_ip_set - seens_ips, where seen_ips are the ips in the process_registry)
+
+The ghosts are then printed to the gitlab console logs as 
+```
+        print(f"[RESMON_8] 👻 Ghost detected in process {pid}: {ip}")
+```
+
+This is important because module2b does a gitlab log console scan on the list of ghost ips for forensic data, and it will find
+this print log in the gitlab console to add to the data that it can attach to the ghost ip (namely, in this case the original
+pid that was assigned to the ghost ip thread).
+
+The code implemenation above is in tomcat_worker. 
+
+However, to do the gitlab console log scan,  module2b reads from an aggregated list of ghost ips that is created in main(). 
+This list of ghost ips is in the log file named aggregate_ghost_summary.log. This log file is created in main()
+
+In order to get these ghost ips in each process to main(), the process level code in tomcat_worker has to write the ghost ips
+to disk (write-to-disk), so that main() can assemble the full list of synthetic ghosts. This would normally not require a write
+to disk in organic ghost occurrences, but is required here. So there is a second block of code required in main(). Once this 
+aggregate_ghost_summary.log is created with the ghosts module2b scanning can be done.
+
+Thus module2b scanning is tested as well. The aggregate_ghost_detail.json file is the output from the module2b ghost detection 
+module. This aggregate_ghost_detail.json file is used as input into the module2d gatekeeper module.
+This module uses this primiative list of ghost entires to fabricate a registry_entry compliant formatted list of ghost ips, a
+synthetic ghost registry_entry file named aggregate_ghost_detail_synthetic_registry.json, 
+with all the proper registry fields. 
+
+This file can finally be passed to the resurrection_gatekeeper function in the module2b
+so that the proper gateway tags can be added to the ghost registry_entrys. This file is named 
+aggregate_ghost_detail_module2d.json. This file along with the process_registry aggregate file that has also been processed by the 
+resurrection gatekeeper, can both be combined to a final resurrection gatekeeper file named
+resurrection_gatekeeper_final_registry_module2d.json.
+
+This file, with all the registry_entrys tagged with a gatekeeper decisions can finally be passed to Phase3 for requeiing and 
+resurrection of gatekeeper_resurrect tagged  threads.
+
+So the injection point tests almost the entire logging and decision making code path. 
+
+Most of the code is implemented in tomcat_worker, with a small additional block in main() to reassemble the ghost ips into
+and aggregated list that module2b can consume.
+
+All of these files were reviewed in an earlier UPDATE in detail when the gatekeeper code was implemenated.
+
+
+
+
+
+
+### Code implementation
+
+#### tomcat_worker code to inject the per process ghost
+
+
+
+
+#### main() code to reassemble the process level ghost ips into an aggregate_ghost_summary.log for module2b consumption
+
+
+
+
+
 
 
 
