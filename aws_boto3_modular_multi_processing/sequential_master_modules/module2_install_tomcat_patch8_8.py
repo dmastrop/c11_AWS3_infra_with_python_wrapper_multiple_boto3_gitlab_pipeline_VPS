@@ -6193,14 +6193,33 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
       #### process_registry ips (seen_ips) for that process and the "golden" ips (assigned_ips). The delta between the two is the 
       #### missing_ips which are ghosts. This will then trigger all the downstream code including the detect_ghosts helper function.      
 
+    #if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
+    #    ghost_ip = f"1.1.1.{pid}"  # PID-based for traceability
+    #    instance_info.append({
+    #        "PublicIpAddress": ghost_ip,
+    #        "PrivateIpAddress": "0.0.0.0"
+    #    })
+    #    print(f"[POST_THREAD_GHOST] Injected ghost IP {ghost_ip} into assigned_ips for PID {pid}")
+
+
+    # With pool processing, pid can get reused so add to the syntax for the ip address to make the ghost unique. Cannot have
+    # duplicate ghost ips even if they are synthetics, as the downstream code will get messed up.
+    # Need to write-to-disk the ghosts and recover them in main so that main() can add them to aggregate_gold_ips
+    # This will then populate the aggregate_ghost_detail.json which is required for module2b gitlab console log scanning.
+    # Note this code only runs if the synthetic injection ENV variable is true in .gitlab-ci.yml. This is not in the normal
+    # code flow and is just used for testing purposes.
     if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
-        ghost_ip = f"1.1.1.{pid}"  # PID-based for traceability
+        ghost_ip = f"1.1.{pid}.{random.randint(1, 255)}"  # Unique per process
         instance_info.append({
             "PublicIpAddress": ghost_ip,
             "PrivateIpAddress": "0.0.0.0"
         })
         print(f"[POST_THREAD_GHOST] Injected ghost IP {ghost_ip} into assigned_ips for PID {pid}")
 
+        # Write ghost IP to disk for main() to pick up
+        ghost_ip_path = os.path.join("/aws_EC2/logs", f"synthetic_process_ghost_ip_pid_{pid}.log")
+        with open(ghost_ip_path, "w") as f:
+            f.write(ghost_ip + "\n")
 
 
 
@@ -7129,6 +7148,27 @@ def main():
         #        ip = line.strip()
         #        if ip:
         #            benchmark_ips.add(ip)
+
+
+        # 5.5. The code block below 5.5 is used for process level synthetic ghost ip injection (the code is in tomcat_worker).
+        # The ghost ips injected in tomcat_worker are write-to-disk and here in main() they are recovered and then injected 
+        # into aggregate_gold_ips so that missing_ips (step6 below) populates. This is required so that ghosts variable in
+        # step 8 is populated. ghosts variable is then used to populate the aggregate_ghost_summary.log which is used by 
+        # module2b to do the gitlab console log scan for the ghosts. This permits the rest of the code path to be verified.
+        # This code path is only enabled if the INJECT_POST_THREAD_GHOSTS ENV variable flag is set to true in .gitlab-ci.yml file.
+        if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
+            ghost_dir = "/aws_EC2/logs"
+            for fname in os.listdir(ghost_dir):
+                if fname.startswith("synthetic_process_ghost_ip_pid_") and fname.endswith(".log"):
+                    with open(os.path.join(ghost_dir, fname), "r") as f:
+                        for line in f:
+                            ip = line.strip()
+                            if ip:
+                                aggregate_gold_ips.add(ip)
+            print(f"[POST_THREAD_GHOST] Injected ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
+
+
+
 
         # 6. Build IP sets from final_registry statuses (final registry is the aggregate runtime list of all the threads with ip addresses)
         # Get the success_ips from the tag(status), get failed as total - success and get missing as benchmark_ips(gold) - total_ips

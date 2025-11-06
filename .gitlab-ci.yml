@@ -251,6 +251,11 @@ deploy:
       # Phase3 resurrection and requeing code
       - logs/resurrection_gatekeeper_final_registry_module2d.json   
 
+
+      # These logs are for the process level synthetic ghost injection and are not normally seen. Only seen when the
+      # INJECT_POST_THREAD_GHOST ENV variable is enabled
+      - logs/synthetic_process_ghost_ip_pid_*.log
+        
     expire_in: 1 week
 
   allow_failure: true
