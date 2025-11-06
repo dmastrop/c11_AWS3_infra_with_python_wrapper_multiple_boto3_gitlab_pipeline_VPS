@@ -48,7 +48,7 @@ deploy:
     # or ghost json artifact files during hyper-scalling
  
     ##### Synthetic thread failures in install_tomcat ########
-    FORCE_TOMCAT_FAIL: "false"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat. Use "1" or "true" to inject and "false" or "0" to not inject. This one is right before the for idx.
+    FORCE_TOMCAT_FAIL: "false"  # ← Inject synthetic failure for testing (futures crash). The synthetic futures crash code is in instalL_tomcat. Use "1" or "true" to inject and "false" or "0" to not inject. This one is right before the for idx.  These FORCE_TOMCAT crashes do not exercise actual module2c scanning code. See below for that ENV variable.
 
     FORCE_TOMCAT_FAIL_IDX1: "false"
 
@@ -69,7 +69,7 @@ deploy:
     INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
 
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
 
@@ -134,8 +134,7 @@ deploy:
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
 
 
-    - echo 'INJECT_PROCESS_GHOSTS='${INJECT_PROCESS_GHOSTS} >> .env  # inject synthetic ghost at the process chunk level 
-
+    - echo 'INJECT_PROCESS_GHOSTS='${INJECT_PROCESS_GHOSTS} >> .env  # inject synthetic ghost at the process chunk level. This code does not work well as noted above.
 
 
     - echo 'INJECT_POST_THREAD_GHOSTS='${INJECT_POST_THREAD_GHOSTS} >> .env  # inject synthetic ghost at the process level in tomcat_worker between the call to run_test/threaded_install for the process_registry AND the call to the resurrection_monitor_patch8. Mutate theinstance_info variable which maps to assigned_ips in the resurrection_monitor function.
