@@ -6159,7 +6159,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+    ##### [tomcat_worker]
     ##### insert process level synthetic ghost injection code right here ########
     # this injection is in tomcat_worker between the process_registry run_test call to
       # threaded_install which establishes the process_registry for the process (seen_ips) and the call to
@@ -6193,15 +6193,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
       #### process_registry ips (seen_ips) for that process and the "golden" ips (assigned_ips). The delta between the two is the 
       #### missing_ips which are ghosts. This will then trigger all the downstream code including the detect_ghosts helper function.      
 
-    #if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
-    #    ghost_ip = f"1.1.1.{pid}"  # PID-based for traceability
-    #    instance_info.append({
-    #        "PublicIpAddress": ghost_ip,
-    #        "PrivateIpAddress": "0.0.0.0"
-    #    })
-    #    print(f"[POST_THREAD_GHOST] Injected ghost IP {ghost_ip} into assigned_ips for PID {pid}")
-
-
     # With pool processing, pid can get reused so add to the syntax for the ip address to make the ghost unique. Cannot have
     # duplicate ghost ips even if they are synthetics, as the downstream code will get messed up.
     # Need to write-to-disk the ghosts and recover them in main so that main() can add them to aggregate_gold_ips
@@ -6216,11 +6207,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         })
         print(f"[POST_THREAD_GHOST] Injected ghost IP {ghost_ip} into assigned_ips for PID {pid}")
 
-        # Write ghost IP to disk for main() to pick up
-        ghost_ip_path = os.path.join("/aws_EC2/logs", f"synthetic_process_ghost_ip_pid_{pid}.log")
+        # Write ghost IP to disk for main() to pick up — include timestamp to avoid PID reuse collisions. 
+        # So ip address and filename will both be unique even with pooled processes during multi-processing due to pid reuse.
+        ts = int(time.time())
+        ghost_ip_path = os.path.join("/aws_EC2/logs", f"synthetic_process_ghost_ip_pid_{pid}_{ts}.log")
         with open(ghost_ip_path, "w") as f:
             f.write(ghost_ip + "\n")
-
 
 
 
