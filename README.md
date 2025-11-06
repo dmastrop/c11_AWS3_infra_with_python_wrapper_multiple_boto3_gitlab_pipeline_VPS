@@ -279,6 +279,12 @@ The code implemenation above is in tomcat_worker.
 However, to do the gitlab console log scan,  module2b reads from an aggregated list of ghost ips that is created in main(). 
 This list of ghost ips is in the log file named aggregate_ghost_summary.log. This log file is created in main()
 
+
+
+
+#### Additional code required in main()
+
+
 In order to get these ghost ips in each process to main(), the process level code in tomcat_worker has to write the ghost ips
 to disk (write-to-disk), so that main() can assemble the full list of synthetic ghosts. This would normally not require a write
 to disk in organic ghost occurrences, but is required here. So there is a second block of code required in main(). Once this 
@@ -298,6 +304,11 @@ resurrection_gatekeeper_final_registry_module2d.json.
 
 This file, with all the registry_entrys tagged with a gatekeeper decisions can finally be passed to Phase3 for requeiing and 
 resurrection of gatekeeper_resurrect tagged  threads.
+
+
+
+#### Summary of code implemenation strategy
+
 
 So the injection point tests almost the entire logging and decision making code path. 
 
@@ -321,6 +332,16 @@ All of these files were reviewed in an earlier UPDATE in detail when the gatekee
 #### main() code to reassemble the process level ghost ips into an aggregate_ghost_summary.log for module2b consumption
 
 
+
+
+### Additional code implemenation in module2b
+
+
+The pid and the process_index need to be populated in the aggregate_ghost_detail.json file that is created by module2b.
+Once the pid and process_index are incorproated into the primiative ghost entrys of module2b, module2d will inherit these
+fields because it uses the aggregate_ghost_detail.json file as an input.
+
+The module2b already scans the gitlab console logs, so this is very easy to do.
 
 
 
