@@ -356,13 +356,87 @@ From the .gitlab-ci.yml file:
 
 
 #### tomcat_worker code to inject the per process ghost
+```
+    ##### [tomcat_worker]
+    ##### insert process level synthetic ghost injection code right here ########
+    # this injection is in tomcat_worker between the process_registry run_test call to
+      # threaded_install which establishes the process_registry for the process (seen_ips) and the call to
+      # resurrection_monitor_patch8. The instance_info variable is mutated in between the two with the ghost injection. This
+      # creates delta between seen_ips and golden ips which are missing_ips or ghosts, as evalluated by the helper fuction
+      # detect_ghosts. Once this happens detect_ghosts prints the PID and the ghost ip and module2b picks this up in the
+      # gitlab console log scan, and it can then create the aggregate_ghost_deteail.json ghost entry which will then be
+      # synthetically modified to registry_entry format in module2d so that it can be processed by the gatekeeper.
+      # This will provide a complete test of all the ghost detection code in resurrection_monitor and also help verify
+      # adding the PID to the ghost entry in module2b aggregate_ghost_deail.json file, from the gitlab console log scan.
 
+    # This has to be after the re-hydration code. 
+      #- The rehydration logic depends on a **clean one-to-one mapping** between:
+      #- `unknown_entries` (threads with `"public_ip": "unknown"`)
+      #- `missing_ips_unhydrated` (assigned IPs not seen in registry)
+
+      #- If injectin a ghost IP **before** the rehydration block:
+      #- It artificially inflates `assigned_ip_set`
+      #- That breaks the cardinality match between `unknown_entries` and `missing_ips_unhydrated`
+      #- Rehydration fails or misassigns IPs, especially if a real thread crashed and needs recovery
+
+    # The previous implementation, injecting synthetic ghost at the chunk process level was not a good method for the reason
+    # below
+      #### Synthetic process ghost injection at the chunk level
+      #### Comment this out. This does not work. The problem is that the synthetic InstanceId, which is required by code that follows 
+      #### this, causes a futures crash in install_tomcat and so the install_failed registry_entry is actually created rather than 
+      #### a ghost ip (with no registry_entry).  This is working as designed and provided a good test of the futures crash code
+      #### (ip was re-hydrated, etc), but this is not the objective.   The synthetic injection needs to be inserted in tomcat_worker
+      #### AFTER the call via run_test to threaded_install but before the call to resurrection_monitor_patch8. The ghost is to be injected
+      #### into instance_info which maps to assigned_ips inside resurrection_monitor_patch8. This will create a diff between the
+      #### process_registry ips (seen_ips) for that process and the "golden" ips (assigned_ips). The delta between the two is the 
+      #### missing_ips which are ghosts. This will then trigger all the downstream code including the detect_ghosts helper function.      
+
+    # With pool processing, pid can get reused so add to the syntax for the ip address to make the ghost unique. Cannot have
+    # duplicate ghost ips even if they are synthetics, as the downstream code will get messed up.
+    # Need to write-to-disk the ghosts and recover them in main so that main() can add them to aggregate_gold_ips
+    # This will then populate the aggregate_ghost_detail.json which is required for module2b gitlab console log scanning.
+    # Note this code only runs if the synthetic injection ENV variable is true in .gitlab-ci.yml. This is not in the normal
+    # code flow and is just used for testing purposes.
+   
+    if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
+        ghost_ip = f"1.1.{pid}.{random.randint(1, 255)}"  # Unique per process
+        instance_info.append({
+            "PublicIpAddress": ghost_ip,
+            "PrivateIpAddress": "0.0.0.0"
+        })
+        print(f"[POST_THREAD_GHOST] Injected ghost IP {ghost_ip} into assigned_ips for PID {pid}")
+
+        # Write ghost IP to disk for main() to pick up — include timestamp to avoid PID reuse collisions. 
+        # So ip address and filename will both be unique even with pooled processes during multi-processing due to pid reuse.
+        ts = int(time.time())
+        ghost_ip_path = os.path.join("/aws_EC2/logs", f"synthetic_process_ghost_ip_pid_{pid}_{ts}.log")
+        with open(ghost_ip_path, "w") as f:
+            f.write(ghost_ip + "\n")
+```
 
 
 
 #### main() code to reassemble the process level ghost ips into an aggregate_ghost_summary.log for module2b consumption
 
-
+```
+        ## [main] ##
+        # 5.5. The code block below 5.5 is used for process level synthetic ghost ip injection (the code is in tomcat_worker).
+        # The ghost ips injected in tomcat_worker are write-to-disk and here in main() they are recovered and then injected 
+        # into aggregate_gold_ips so that missing_ips (step6 below) populates. This is required so that ghosts variable in
+        # step 8 is populated. ghosts variable is then used to populate the aggregate_ghost_summary.log which is used by 
+        # module2b to do the gitlab console log scan for the ghosts. This permits the rest of the code path to be verified.
+        # This code path is only enabled if the INJECT_POST_THREAD_GHOSTS ENV variable flag is set to true in .gitlab-ci.yml file.
+        if os.getenv("INJECT_POST_THREAD_GHOSTS", "false").lower() in ["1", "true"]:
+            ghost_dir = "/aws_EC2/logs"
+            for fname in os.listdir(ghost_dir):
+                if fname.startswith("synthetic_process_ghost_ip_pid_") and fname.endswith(".log"):
+                    with open(os.path.join(ghost_dir, fname), "r") as f:
+                        for line in f:
+                            ip = line.strip()
+                            if ip:
+                                aggregate_gold_ips.add(ip)
+            print(f"[POST_THREAD_GHOST] Injected ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
+```
 
 
 #### Additional code implemenation in module2b and the synthetic code block in module2d
@@ -376,13 +450,162 @@ file for the ghosts and will also require a minor change to accept these pid and
 ##### module2b:
 
 The module2b already scans the gitlab console logs, so this is very easy to do.
+```
+#### Post ghost analysis with json file schema 
+#- Streams the console log line-by-line (no buffering)
+#- Tags ghosts based on absence of expected signals
+#-  Detects SSH attempts using `"Attempting to connect to"`
+#-  Extracts `process_index` from chunk assignment lines  (NOTE: process_index is not the same as the PID)
+#-  Avoids false tagging of stubs by relying on ghost IPs only, otherwise some stubs could be aggregated into this ghost detail json
+#-  Includes full error handling and final JSON writeout
+
+
+
+import json
+
+def main():
+    ghost_summary_path = "/aws_EC2/logs/aggregate_ghost_summary.log"
+    console_log_path = "/aws_EC2/logs/gitlab_full_run.log"
+    output_path = "/aws_EC2/logs/aggregate_ghost_detail.json"
+
+    ghost_entries = []
+    ghost_ips = set()
+
+    # Step 1: Parse ghost IPs from ghost summary
+    try:
+        
+        with open(ghost_summary_path, "r") as f:
+            for line in f:
+                parts = line.strip().split()
+                for part in parts:
+                    if part.count('.') == 3:
+                        ghost_ips.add(part)
+
+
+    except FileNotFoundError:
+        print(f"[ERROR] Ghost summary file not found: {ghost_summary_path}")
+        return
+
+    print(f"[TRACE] Found {len(ghost_ips)} ghost IPs")
+
+    
+
+
+    # Step 2: Stream console log and tag each ghost IP
+    try:
+        for ip in ghost_ips:
+            match_count = 0
+            ssh_attempted = False
+            process_index = None
+            pid = None  <<<<<<<<<<< add this to initialize the pid variable
+
+            with open(console_log_path, "r") as f:
+                for line in f:
+                    if ip in line:
+                        match_count += 1
+
+                        if "Attempting to connect to" in line:
+                            ssh_attempted = True
+
+                        if "[DEBUG] Process" in line and "IPs =" in line:  <<<< this block gets the process_index
+                            try:
+                                process_index = int(line.split("Process")[1].split(":")[0].strip())
+                            except:
+                                pass
+                        
+                        if f"👻 Ghost detected in process" in line and ip in line:  <<<< add this block to parse out the pid
+                            try:
+                                pid = int(line.split("process")[1].split(":")[0].strip())
+                            except:
+                                pass
+
+
+
+            tags = ["ghost"]
+            
+            if ssh_attempted:
+                tags.append("ssh_attempted")
+            else:
+                tags.append("no_ssh_attempt")
+
+            if match_count <= 2:
+                tags.append("aws_outage_context")
+
+            ghost_entries.append({
+                "ip": ip,
+                "pid": pid,    <<<<<<<<<<<< the primitive ghost entry will now have the pid and this will be present for module2d processing
+                "process_index": process_index,  <<<<<< primitive ghost entry has the process_index
+                "tags": tags
+            })
+
+    except FileNotFoundError:
+        print(f"[ERROR] Console log file not found: {console_log_path}")
+        return
+
+    
+
+
+    # Step 3: Write to aggregate_ghost_detail.json
+    with open(output_path, "w") as f:
+        json.dump(ghost_entries, f, indent=2)
+
+    print(f"[TRACE] Ghost detail written to: {output_path}")
+
+
+
+# for master file indirection:
+if __name__ == "__main__":
+    main()
+```
+
+
 
 ##### module2d synthetic code block:
+```
+def process_ghost_registry():
+    INPUT_PATH = "/aws_EC2/logs/aggregate_ghost_detail.json"
+    SYNTHETIC_OUTPUT_PATH = "/aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json"
+    FINAL_OUTPUT_PATH = "/aws_EC2/logs/aggregate_ghost_detail_module2d.json"
+
+    try:
+        with open(INPUT_PATH, "r") as f:
+            ghost_entries = json.load(f)
+        print(f"[module2d.2a] Loaded ghost entries from: {INPUT_PATH}")
+    except FileNotFoundError:
+        print(f"[module2d.2a] ERROR: Ghost file not found.")
+        return
+
+    synthetic_registry = {}
+
+    # Step 2a: Convert to synthetic registry format
+    for ghost_entry in ghost_entries:
+        ip = ghost_entry.get("ip")
+        process_index = ghost_entry.get("process_index") <<<<<<<<<<<<<<<
+        tags = ghost_entry.get("tags", [])
+        pid = ghost_entry.get("pid") # get the pid from the ghost_entry that is from module2b <<<<<<<<<<<<<<<<<
 
 
+        synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
+        synthetic_entry = {
+            "status": "ghost",
+            "attempt": -1,
+            "pid": pid, # get the pid from the ghost_entry that is from module2b  <<<<<<<<<<<<<
+            "thread_id": None,
+            "thread_uuid": synthetic_uuid,
+            "public_ip": ip,
+            "private_ip": "unknown",
+            "timestamp": None,
+            "tags": tags,
+            "process_index": process_index <<<<<<<<<<<<<<<<<<<<<
+        }
 
+        synthetic_registry[synthetic_uuid] = synthetic_entry
 
-
+    with open(SYNTHETIC_OUTPUT_PATH, "w") as f:
+        json.dump(synthetic_registry, f, indent=2)
+    print(f"[module2d.2a] Synthetic ghost registry written to: {SYNTHETIC_OUTPUT_PATH}")
+    print(f"[module2d.2a] Total entries synthesized: {len(synthetic_registry)}")
+```
 
 
 
