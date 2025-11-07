@@ -57,12 +57,16 @@ def main():
 
     print(f"[TRACE] Found {len(ghost_ips)} ghost IPs")
 
+    
+
+
     # Step 2: Stream console log and tag each ghost IP
     try:
         for ip in ghost_ips:
             match_count = 0
             ssh_attempted = False
             process_index = None
+            pid = None
 
             with open(console_log_path, "r") as f:
                 for line in f:
@@ -77,8 +81,17 @@ def main():
                                 process_index = int(line.split("Process")[1].split(":")[0].strip())
                             except:
                                 pass
+                        
+                        if f"👻 Ghost detected in process" in line and ip in line:
+                            try:
+                                pid = int(line.split("process")[1].split(":")[0].strip())
+                            except:
+                                pass
+
+
 
             tags = ["ghost"]
+            
             if ssh_attempted:
                 tags.append("ssh_attempted")
             else:
@@ -89,6 +102,7 @@ def main():
 
             ghost_entries.append({
                 "ip": ip,
+                "pid": pid,
                 "process_index": process_index,
                 "tags": tags
             })
@@ -96,6 +110,9 @@ def main():
     except FileNotFoundError:
         print(f"[ERROR] Console log file not found: {console_log_path}")
         return
+
+    
+
 
     # Step 3: Write to aggregate_ghost_detail.json
     with open(output_path, "w") as f:
