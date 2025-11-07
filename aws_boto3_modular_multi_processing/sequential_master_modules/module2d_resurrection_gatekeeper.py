@@ -66,12 +66,14 @@ def process_ghost_registry():
         ip = ghost_entry.get("ip")
         process_index = ghost_entry.get("process_index")
         tags = ghost_entry.get("tags", [])
+        pid = ghost_entry.get("pid") # get the pid from the ghost_entry that is from module2b
+        
 
         synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
         synthetic_entry = {
             "status": "ghost",
             "attempt": -1,
-            "pid": None,
+            "pid": pid, # get the pid from the ghost_entry that is from module2b
             "thread_id": None,
             "thread_uuid": synthetic_uuid,
             "public_ip": ip,
