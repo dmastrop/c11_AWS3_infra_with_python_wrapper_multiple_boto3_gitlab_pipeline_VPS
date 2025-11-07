@@ -365,14 +365,24 @@ From the .gitlab-ci.yml file:
 
 
 
-#### Additional code implemenation in module2b
+#### Additional code implemenation in module2b and the synthetic code block in module2d
 
 
 The pid and the process_index need to be populated in the aggregate_ghost_detail.json file that is created by module2b.
 Once the pid and process_index are incorproated into the primiative ghost entrys of module2b, module2d will inherit these
-fields because it uses the aggregate_ghost_detail.json file as an input.
+fields because it uses the aggregate_ghost_detail.json file as an input. Module2d creates a synthetic registry_entry complaint
+file for the ghosts and will also require a minor change to accept these pid and proxy_index values 
+
+##### module2b:
 
 The module2b already scans the gitlab console logs, so this is very easy to do.
+
+##### module2d synthetic code block:
+
+
+
+
+
 
 
 
