@@ -315,7 +315,7 @@ So the injection point tests almost the entire logging and decision making code 
 Most of the code is implemented in tomcat_worker, with a small additional block in main() to reassemble the ghost ips into
 and aggregated list that module2b can consume.
 
-All of these files were reviewed in an earlier UPDATE in detail when the gatekeeper code was implemenated.
+All of these log files were reviewed in an earlier UPDATE in detail when the gatekeeper code was implemenated.
 
 
 
@@ -323,6 +323,37 @@ All of these files were reviewed in an earlier UPDATE in detail when the gatekee
 
 
 ### Code implementation
+
+
+### Add the ENV variable in .gitlab-ci.yml file to enable the code in the module2
+
+
+The ENV variable is INJECT_POST_THREAD_GHOSTS. This will create 1 injected ghost per process and will test the module2b gitlab console
+log scanning as well
+
+In addition the FORCE_TOMCAT_FAIL_POSTINSALL_REAL_TAG will be used to test module2c scanning in conjunction with the module2b scanning
+that occurs with the ghosts.
+
+
+
+From the .gitlab-ci.yml file:
+
+```
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
+      # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
+      # successfully. In this case an additional tag has to be added that indicates that installation is successful.
+
+
+    INJECT_POST_THREAD_GHOSTS: "true"  # this injection is in tomcat_worker between the process_registry run_test call to 
+      # threaded_install which establishes the process_registry for the process (seen_ips) and the call to 
+      # resurrection_monitor_patch8. The instance_info variable is mutated in between the two with the ghost injection. This 
+      # creates delta between seen_ips and golden ips which are missing_ips or ghosts, as evalluated by the helper fuction 
+      # detect_ghosts. Once this happens detect_ghosts prints the PID and the ghost ip and module2b picks this up in the 
+      # gitlab console log scan, and it can then create the aggregate_ghost_deteail.json ghost entry which will then be 
+      # synthetically modified to registry_entry format in module2d so that it can be processed by the gatekeeper.
+```
+
+
 
 #### tomcat_worker code to inject the per process ghost
 
@@ -334,7 +365,7 @@ All of these files were reviewed in an earlier UPDATE in detail when the gatekee
 
 
 
-### Additional code implemenation in module2b
+#### Additional code implemenation in module2b
 
 
 The pid and the process_index need to be populated in the aggregate_ghost_detail.json file that is created by module2b.
@@ -345,7 +376,11 @@ The module2b already scans the gitlab console logs, so this is very easy to do.
 
 
 
+### Code validation
 
+There were several iterations of code validation for this code implemenation. The last one is shown below in great detail. The
+process ghost injection point is the perfect place to inject the ghosts. The entire code flow is excercised, as well as the artifact
+logs that are published in the gitlab pipeline. All of this is shown below.
 
 
 
