@@ -589,7 +589,7 @@ def process_ghost_registry():
         synthetic_entry = {
             "status": "ghost",
             "attempt": -1,
-            "pid": pid, # get the pid from the ghost_entry that is from module2b  <<<<<<<<<<<<<
+            "pid": pid, # <<<<<<<<<<<<< get the pid from the ghost_entry that is from module2b  <<<<<<<<<<<<<
             "thread_id": None,
             "thread_uuid": synthetic_uuid,
             "public_ip": ip,
