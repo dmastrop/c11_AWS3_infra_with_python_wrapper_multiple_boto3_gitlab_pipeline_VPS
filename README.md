@@ -315,8 +315,8 @@ So the injection point tests almost the entire logging and decision making code 
 Most of the code is implemented in tomcat_worker, with a small additional block in main() to reassemble the ghost ips into
 and aggregated list that module2b can consume.
 
-All of these log files were reviewed in an earlier UPDATE in detail when the gatekeeper code was implemenated.
-
+All of these log file names were reviewed in an earlier UPDATE in detail when the gatekeeper code was implemenated.
+Please refer to them for more information about the data that they contain.
 
 
 
@@ -391,6 +391,564 @@ The module2b already scans the gitlab console logs, so this is very easy to do.
 There were several iterations of code validation for this code implemenation. The last one is shown below in great detail. The
 process ghost injection point is the perfect place to inject the ghosts. The entire code flow is excercised, as well as the artifact
 logs that are published in the gitlab pipeline. All of this is shown below.
+
+The test below has a synthetic thread futures crash after all the commands succeed. Module2c will discern that the thread does not 
+need to be resurrected even though it failed. All other install_failed thread cases would requirue requeing and resurrection in Phase3.
+There are 16 threads and all of them are intentionally failed.
+
+The test below also includes the 1 per process ghost injection per the design in this update section, using the code above.
+Module2b will extract out the pid of the ghost thread and insert it into the ghost entry of aggregate_ghost_detail.json.
+Module2d will synthetically modify the ghost entrys (8 of them in the file) and insert that pid in there.
+Note that the process_index will still be null. This is becasue the ghost injection site is after the AWS orchestration layer, where
+the process_index for all the golden ips is printed to the gitlab console logs. This is fine. The logic in module2b is present, so
+a real life ghost will generate the proper process_index gitlab console log line and module2b will insert it into the ghost entry.
+It will then be inherited into the module2d synthetic ghost registry file.
+
+Such process_index gitlab log console lines look like the following:
+```
+[DEBUG] Process 0: chunk size = 2
+[DEBUG] Process 0: IPs = ['50.19.160.19', '54.147.178.94']
+[DEBUG] Process 1: chunk size = 2
+[DEBUG] Process 1: IPs = ['50.19.41.184', '54.166.206.44']
+[DEBUG] Process 2: chunk size = 2
+[DEBUG] Process 2: IPs = ['54.92.198.30', '98.84.180.108']
+[DEBUG] Process 3: chunk size = 2
+[DEBUG] Process 3: IPs = ['54.160.213.117', '34.229.203.222']
+[DEBUG] Process 4: chunk size = 2
+[DEBUG] Process 4: IPs = ['54.81.25.17', '54.237.216.110']
+[DEBUG] Process 5: chunk size = 2
+[DEBUG] Process 5: IPs = ['98.93.46.105', '34.230.92.173']
+[DEBUG] Process 6: chunk size = 2
+[DEBUG] Process 6: IPs = ['50.19.143.94', '54.90.146.45']
+[DEBUG] Process 7: chunk size = 2
+[DEBUG] Process 7: IPs = ['18.212.213.119', '98.81.175.85']
+```
+
+
+The test below will validate the following items in the logs:
+
+
+In `aggregate_ghost_detail.json`
+- Each ghost entry should now include a real `pid` (extracted from `[RESMON_8]` logs)
+- `process_index` will remain `null` (as expected in synthetic tests)
+
+In `aggregate_ghost_detail_synthetic_registry.json`
+- Each synthetic registry entry should carry the correct `pid`
+- `thread_uuid` will still be `ghost_{ip}` (as designed)
+- `process_index` will remain `null`
+
+In `aggregate_ghost_detail_module2d.json`
+- Gatekeeper should tag each ghost with `gatekeeper_resurrect`
+- `resurrection_reason` should be `"Ghost entry: resurrection always attempted"`
+
+In `resurrection_gatekeeper_final_registry_module2d.json`
+- All 8 ghost entries should appear with their `pid` populated
+- Any duplicate `pid` values due to process pooling are expected and valid
+- All 16 install_failed entries should be blocked
+- Final registry should contain 24 entries: 16 blocked + 8 resurrected
+
+---
+
+Post-Test Validation Checklist
+
+Once the test completes, you can confirm:
+- PID presence in `aggregate_ghost_detail.json`
+- PID propagation through all module2d outputs
+- No missing ghost entries
+- No resurrection of install_failed threads
+- No duplicate ghost IPs
+
+In addition there will be the process_index counterpart log files for the install_failed entries along with the module2c log file
+that inserts tags after scanning the gitlab logs for the registry_entry ips (in the same way module2b scans the gitlab console logs
+for the ghost ips)
+
+#### Inital module2 gitlab console log file validation:
+```
+[POST_THREAD_GHOST] Injected ghost IP 1.1.17.73 into assigned_ips for PID 17
+[POST_THREAD_GHOST] Injected ghost IP 1.1.12.49 into assigned_ips for PID 12
+[POST_THREAD_GHOST] Injected ghost IP 1.1.15.235 into assigned_ips for PID 15
+[POST_THREAD_GHOST] Injected ghost IP 1.1.14.75 into assigned_ips for PID 14
+[POST_THREAD_GHOST] Injected ghost IP 1.1.16.99 into assigned_ips for PID 16
+[POST_THREAD_GHOST] Injected ghost IP 1.1.13.123 into assigned_ips for PID 13
+[POST_THREAD_GHOST] Injected ghost IP 1.1.17.84 into assigned_ips for PID 17 << pid reuse from pooled process
+[POST_THREAD_GHOST] Injected ghost IP 1.1.12.124 into assigned_ips for PID 12 << pid reuse from pooled process
+```
+
+The reuse of the pid for the pooled processes (process pooling is enabled on the test) will not cause any issues or collisions. The code is written to accommodate pid reuse.
+
+detect_ghosts(), called from resurrection_monitor_patch8, detects the ghosts that will need to be processed further by module2b,  and the resurrection_monitor_patch8 detects the process_registry install_failed resurrection_candidates that will need to be processed further by module2c. This is done at a per process level for each process in the execution run for each of the threads in each of the processes.
+```
+[RESMON_8] 👻 Ghost detected in process 17: 1.1.17.73
+[RESMON_8] Resurrection candidate detected: UUID 6df79b7d | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID d3d982e4 | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_17_20251107T021819Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 17.
+
+
+
+[RESMON_8] 👻 Ghost detected in process 12: 1.1.12.49
+[RESMON_8] Resurrection candidate detected: UUID 72ae0815 | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID f2cf5a38 | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_12_20251107T021837Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 12.
+
+[RESMON_8] 👻 Ghost detected in process 15: 1.1.15.235
+[RESMON_8] Resurrection candidate detected: UUID 9e99a679 | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID 7c7dfbf2 | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_15_20251107T021838Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 15.
+
+
+
+
+[RESMON_8] 👻 Ghost detected in process 14: 1.1.14.75
+[RESMON_8] Resurrection candidate detected: UUID 2ac8fd24 | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID 974e520c | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_14_20251107T021847Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 14.
+
+
+
+[RESMON_8] 👻 Ghost detected in process 16: 1.1.16.99
+[RESMON_8] Resurrection candidate detected: UUID 21543e0e | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID 468a82b9 | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_16_20251107T021857Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 16.
+
+
+
+[RESMON_8] 👻 Ghost detected in process 13: 1.1.13.123
+[RESMON_8] Resurrection candidate detected: UUID 9d5302c0 | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID f3a532df | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_13_20251107T021956Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 13.
+
+
+
+[RESMON_8] 👻 Ghost detected in process 17: 1.1.17.84
+[RESMON_8] Resurrection candidate detected: UUID 123a2839 | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID 56020a95 | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_17_20251107T022357Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 17.
+
+
+
+[RESMON_8] 👻 Ghost detected in process 12: 1.1.12.124
+[RESMON_8] Resurrection candidate detected: UUID a7d1d070 | Status: install_failed
+[RESMON_8] Resurrection candidate detected: UUID 12a5e078 | Status: install_failed
+[RESMON_8] Resurrection candidate file written: /aws_EC2/logs/resurrection_candidates_pid_12_20251107T022418Z.json
+[RESMON_8] 🔍 Resurrection Candidate Monitor: 2 thread(s) flagged in process 12.
+
+```
+
+
+
+The ghost ips are injected into the aggregate_gold_ips variable list, so that missing_ips can be calculated in main() and so that aggregate_ghost_summary.log file can be populated with the ghosts. Module2b needs this log file to grep through the gitlab console log using each ghost ip.  In real life ghost occurrences these will naturally appear in the aggregate_gold_ips list based upon the orchestration chunk level data.
+```
+[POST_THREAD_GHOST] Injected ghost IPs into aggregate_gold_ips: ['1.1.12.124', '1.1.12.49', '1.1.13.123', '1.1.14.75', '1.1.15.235', '1.1.16.99', '1.1.17.73', '1.1.17.84', '18.212.213.119', '34.229.203.222', '34.230.92.173', '50.19.143.94', '50.19.160.19', '50.19.41.184', '54.147.178.94', '54.160.213.117', '54.166.206.44', '54.237.216.110', '54.81.25.17', '54.90.146.45', '54.92.198.30', '98.81.175.85', '98.84.180.108', '98.93.46.105']
+```
+
+
+
+All the aggregate log files are populated correctly
+```
+[TRACE][aggregator] Wrote 16 IPs to /aws_EC2/logs/total_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 0 IPs to /aws_EC2/logs/successful_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 16 IPs to /aws_EC2/logs/failed_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 8 IPs to /aws_EC2/logs/missing_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 16 candidates to /aws_EC2/logs/resurrection_candidates_registry_1762482258.json
+[TRACE][aggregator] Wrote 8 ghosts to /aws_EC2/logs/resurrection_ghost_missing_1762482258.json
+[TRACE][aggregator] Wrote 8 ghosts to /aws_EC2/logs/aggregate_ghost_summary.log
+[TRACE][aggregator] Wrote 0 untraceable entries to /aws_EC2/logs/resurrection_untraceable_registry_entries_1762482258.json
+```
+There are also process level logs for the resurrection_candidates and resurrection_ghost_missing ips, 1 per process.
+
+
+##### Module2 post processing by modules 2b, 2c, and 2d
+
+
+The module2 post processing by module2b and 2c and 2d is below: 
+
+
+
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 16 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 16 candidate IPs with command success entries
+[module2c] Tagged UUID 9e99a679 (IP: 34.229.203.222) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 7c7dfbf2 (IP: 54.160.213.117) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID a7d1d070 (IP: 18.212.213.119) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 12a5e078 (IP: 98.81.175.85) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 72ae0815 (IP: 50.19.160.19) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID f2cf5a38 (IP: 54.147.178.94) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 6df79b7d (IP: 34.230.92.173) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID d3d982e4 (IP: 98.93.46.105) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 2ac8fd24 (IP: 54.92.198.30) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 974e520c (IP: 98.84.180.108) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 123a2839 (IP: 50.19.143.94) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 56020a95 (IP: 54.90.146.45) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 21543e0e (IP: 54.237.216.110) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 468a82b9 (IP: 54.81.25.17) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 9d5302c0 (IP: 50.19.41.184) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID f3a532df (IP: 54.166.206.44) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 16
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 9e99a679 (IP: 34.229.203.222) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 7c7dfbf2 (IP: 54.160.213.117) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID a7d1d070 (IP: 18.212.213.119) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 12a5e078 (IP: 98.81.175.85) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 72ae0815 (IP: 50.19.160.19) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID f2cf5a38 (IP: 54.147.178.94) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 6df79b7d (IP: 34.230.92.173) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID d3d982e4 (IP: 98.93.46.105) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 2ac8fd24 (IP: 54.92.198.30) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 974e520c (IP: 98.84.180.108) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 123a2839 (IP: 50.19.143.94) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 56020a95 (IP: 54.90.146.45) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 21543e0e (IP: 54.237.216.110) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 468a82b9 (IP: 54.81.25.17) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 9d5302c0 (IP: 50.19.41.184) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID f3a532df (IP: 54.166.206.44) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_235 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_124 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_73 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_75 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_123 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_84 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_99 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_49 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+```
+
+
+##### Log content validation of registry_entrys and ip addresses:
+
+
+All of the json files are created and populated correctly.
+
+Here are some sample contents from a few of the files:
+
+
+Missing_registry_ips_artifact.log(the ghost ips)
+
+```
+1.1.12.124
+1.1.12.49
+1.1.13.123
+1.1.14.75
+1.1.15.235
+1.1.16.99
+1.1.17.73
+1.1.17.84
+```
+Aggregate_ghost_summary.log that is used by module2b to grep through the gitlab console log
+
+
+
+```
+1.1.12.124
+1.1.12.49
+1.1.13.123
+1.1.14.75
+1.1.15.235
+1.1.16.99
+1.1.17.73
+1.1.17.84
+```
+
+
+
+Aggregate_ghost_detail.json. Note that the pid has been correctly extracted from the gitlab console logs by module2b. This is a sample 1 of 8:
+```
+
+  {
+    "ip": "1.1.15.235",
+    "pid": 15,
+    "process_index": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt"
+    ]
+  },
+```
+
+
+Aggregate_ghost_detail_synthetic_registry.json registry_entry sample:
+
+```
+  "ghost_1_1_15_235": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_15_235",
+    "public_ip": "1.1.15.235",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt"
+    ],
+    "process_index": null
+```
+
+
+
+Aggregate_ghost_detail_module2d.json sample ghost registry_entry after gatekeeper processing:
+
+
+```
+  "ghost_1_1_15_235": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_15_235",
+    "public_ip": "1.1.15.235",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"  <<<< gatekeeper resurrection decision
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+```
+Failed_registry_ips_artifact.log pertain to the install_failed threads.  Module2c parses the gitlab console logs to get more information on these particular threads.
+
+```
+18.212.213.119
+34.229.203.222
+34.230.92.173
+50.19.143.94
+50.19.160.19
+50.19.41.184
+54.147.178.94
+54.160.213.117
+54.166.206.44
+54.237.216.110
+54.81.25.17
+54.90.146.45
+54.92.198.30
+98.81.175.85
+98.84.180.108
+98.93.46.105
+```
+
+
+Final_aggregate_execution_run_registry.json file sample registry_entry:
+
+```
+  "9e99a679": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": 134596563667840,
+    "thread_uuid": "9e99a679",
+    "public_ip": "34.229.203.222",
+    "private_ip": "172.31.31.121",
+    "timestamp": "2025-11-07 02:18:18.023298",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated"<<<<<<< rehydration of the ip
+    ]
+  },
+```
+
+
+Final_aggregate_execution_run_registry_module2c.json file after the gitlab console log scan, sample registry_entry:
+
+```
+  "9e99a679": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": 134596563667840,
+    "thread_uuid": "9e99a679",
+    "public_ip": "34.229.203.222",
+    "private_ip": "172.31.31.121",
+    "timestamp": "2025-11-07 02:18:18.023298",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash" module2c post processing from gitlab console log scan for the ip address
+    ]
+  },
+```
+Final_aggregate_execution_run_registry_module2d.json file after the resurrection_gatekeeper processing, sample registry_entry:
+```
+  "9e99a679": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": 134596563667840,
+    "thread_uuid": "9e99a679",
+    "public_ip": "34.229.203.222",
+    "private_ip": "172.31.31.121",
+    "timestamp": "2025-11-07 02:18:18.023298",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"   <<<< gatekeeper resurrection decison
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+```
+
+Resurrection_gatekeeper_final_registry_module2d.json has the combined module2d json files for both the process_registry and the ghost ips. A sample of 2 of the 16 + 8 ghosts = 24 entries, is below:
+
+```
+  "f3a532df": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": 134596563667840,
+    "thread_uuid": "f3a532df",
+    "public_ip": "54.166.206.44",
+    "private_ip": "172.31.29.135",
+    "timestamp": "2025-11-07 02:19:55.477209",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+  "ghost_1_1_15_235": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_15_235",
+    "public_ip": "1.1.15.235",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+
+```
+
+
+The complete listing of all the aggregate and process level module2, 2b, 2c and 2d logs are listed below from the gitlab console log ouput. These logs provide a tremendous amount of forensic insight into the nature of the entire execution run. The benchmark files will be revisited when the benchmark hyper-scaling testing is reinitiated after during Phase3 of the project. 
+
+
+
+```
+-rw-r--r-- 1 root          root             219 Nov  7 02:10 aggregate_chunk_gold_ip_list.log
+-rw-r--r-- 1 root          root            1061 Nov  7 02:24 aggregate_ghost_detail.json
+-rw-r--r-- 1 root          root            3339 Nov  7 02:24 aggregate_ghost_detail_module2d.json
+-rw-r--r-- 1 root          root            2515 Nov  7 02:24 aggregate_ghost_detail_synthetic_registry.json
+-rw-r--r-- 1 root          root              83 Nov  7 02:24 aggregate_ghost_summary.log
+-rw-r--r-- 1 root          root            1329 Nov  7 02:18 benchmark_12_3996d28a.log
+-rw-r--r-- 1 root          root            1336 Nov  7 02:24 benchmark_12_ead3ca91.log
+-rw-r--r-- 1 root          root            1593 Nov  7 02:19 benchmark_13_f7b41a65.log
+-rw-r--r-- 1 root          root            1329 Nov  7 02:18 benchmark_14_0a774c42.log
+-rw-r--r-- 1 root          root            1334 Nov  7 02:18 benchmark_15_68f55e69.log
+-rw-r--r-- 1 root          root            1329 Nov  7 02:18 benchmark_16_bc63d505.log
+-rw-r--r-- 1 root          root            1334 Nov  7 02:23 benchmark_17_6eaec880.log
+-rw-r--r-- 1 root          root            1330 Nov  7 02:18 benchmark_17_cfe880fd.log
+-rw-r--r-- 1 root          root           11226 Nov  7 02:24 benchmark_combined_runtime.log
+-rw-r--r-- 1 root          root             219 Nov  7 02:24 benchmark_ips_artifact.log
+-rw-r--r-- 1 root          root             219 Nov  7 02:24 failed_registry_ips_artifact.log
+-rw-r--r-- 1 root          root            6102 Nov  7 02:24 final_aggregate_execution_run_registry.json
+-rw-r--r-- 1 root          root            6854 Nov  7 02:24 final_aggregate_execution_run_registry_module2c.json
+-rw-r--r-- 1 root          root            8630 Nov  7 02:24 final_aggregate_execution_run_registry_module2d.json
+-rw-r--r-- 1 gitlab-runner gitlab-runner 469536 Nov  7 02:24 gitlab_full_run.log
+-rw-r--r-- 1 root          root            3813 Nov  7 02:24 main_8.log
+-rw-r--r-- 1 root          root              83 Nov  7 02:24 missing_registry_ips_artifact.log
+-rw-r--r-- 1 root          root             354 Nov  7 02:24 patch7_summary_12_20251107T021837Z.log
+-rw-r--r-- 1 root          root             177 Nov  7 02:24 patch7_summary_12_20251107T022418Z.log
+-rw-r--r-- 1 root          root             177 Nov  7 02:19 patch7_summary_13_20251107T021956Z.log
+-rw-r--r-- 1 root          root             177 Nov  7 02:18 patch7_summary_14_20251107T021847Z.log
+-rw-r--r-- 1 root          root             177 Nov  7 02:18 patch7_summary_15_20251107T021838Z.log
+-rw-r--r-- 1 root          root             177 Nov  7 02:18 patch7_summary_16_20251107T021857Z.log
+-rw-r--r-- 1 root          root             354 Nov  7 02:23 patch7_summary_17_20251107T021819Z.log
+-rw-r--r-- 1 root          root             177 Nov  7 02:23 patch7_summary_17_20251107T022357Z.log
+-rw-r--r-- 1 root          root             763 Nov  7 02:18 process_registry_12_7ad9c9be.json
+-rw-r--r-- 1 root          root             766 Nov  7 02:24 process_registry_12_8bb3e556.json
+-rw-r--r-- 1 root          root             765 Nov  7 02:19 process_registry_13_9a3adb78.json
+-rw-r--r-- 1 root          root             763 Nov  7 02:18 process_registry_14_6d7b9e33.json
+-rw-r--r-- 1 root          root             768 Nov  7 02:18 process_registry_15_0306af31.json
+-rw-r--r-- 1 root          root             763 Nov  7 02:18 process_registry_16_223053da.json
+-rw-r--r-- 1 root          root             764 Nov  7 02:18 process_registry_17_211cd8d8.json
+-rw-r--r-- 1 root          root             764 Nov  7 02:23 process_registry_17_bb768ca4.json
+-rw-r--r-- 1 root          root             739 Nov  7 02:18 resurrection_candidates_pid_12_20251107T021837Z.json
+-rw-r--r-- 1 root          root             742 Nov  7 02:24 resurrection_candidates_pid_12_20251107T022418Z.json
+-rw-r--r-- 1 root          root             741 Nov  7 02:19 resurrection_candidates_pid_13_20251107T021956Z.json
+-rw-r--r-- 1 root          root             739 Nov  7 02:18 resurrection_candidates_pid_14_20251107T021847Z.json
+-rw-r--r-- 1 root          root             744 Nov  7 02:18 resurrection_candidates_pid_15_20251107T021838Z.json
+-rw-r--r-- 1 root          root             739 Nov  7 02:18 resurrection_candidates_pid_16_20251107T021857Z.json
+-rw-r--r-- 1 root          root             740 Nov  7 02:18 resurrection_candidates_pid_17_20251107T021819Z.json
+-rw-r--r-- 1 root          root             740 Nov  7 02:23 resurrection_candidates_pid_17_20251107T022357Z.json
+-rw-r--r-- 1 root          root            5910 Nov  7 02:24 resurrection_candidates_registry_1762482258.json
+-rw-r--r-- 1 root          root           11967 Nov  7 02:24 resurrection_gatekeeper_final_registry_module2d.json
+-rw-r--r-- 1 root          root              17 Nov  7 02:18 resurrection_ghost_missing_12_20251107T021837Z.json
+-rw-r--r-- 1 root          root              18 Nov  7 02:24 resurrection_ghost_missing_12_20251107T022418Z.json
+-rw-r--r-- 1 root          root              18 Nov  7 02:19 resurrection_ghost_missing_13_20251107T021956Z.json
+-rw-r--r-- 1 root          root              17 Nov  7 02:18 resurrection_ghost_missing_14_20251107T021847Z.json
+-rw-r--r-- 1 root          root              18 Nov  7 02:18 resurrection_ghost_missing_15_20251107T021838Z.json
+-rw-r--r-- 1 root          root              17 Nov  7 02:18 resurrection_ghost_missing_16_20251107T021857Z.json
+-rw-r--r-- 1 root          root              17 Nov  7 02:18 resurrection_ghost_missing_17_20251107T021819Z.json
+-rw-r--r-- 1 root          root              17 Nov  7 02:23 resurrection_ghost_missing_17_20251107T022357Z.json
+-rw-r--r-- 1 root          root             125 Nov  7 02:24 resurrection_ghost_missing_1762482258.json
+-rw-r--r-- 1 root          root               2 Nov  7 02:24 resurrection_untraceable_registry_entries_1762482258.json
+-rw-r--r-- 1 root          root               0 Nov  7 02:24 successful_registry_ips_artifact.log
+-rw-r--r-- 1 root          root              10 Nov  7 02:18 synthetic_process_ghost_ip_pid_12_1762481917.log
+-rw-r--r-- 1 root          root              11 Nov  7 02:24 synthetic_process_ghost_ip_pid_12_1762482258.log
+-rw-r--r-- 1 root          root              11 Nov  7 02:19 synthetic_process_ghost_ip_pid_13_1762481996.log
+-rw-r--r-- 1 root          root              10 Nov  7 02:18 synthetic_process_ghost_ip_pid_14_1762481927.log
+-rw-r--r-- 1 root          root              11 Nov  7 02:18 synthetic_process_ghost_ip_pid_15_1762481918.log
+-rw-r--r-- 1 root          root              10 Nov  7 02:18 synthetic_process_ghost_ip_pid_16_1762481937.log
+-rw-r--r-- 1 root          root              10 Nov  7 02:18 synthetic_process_ghost_ip_pid_17_1762481899.log
+-rw-r--r-- 1 root          root              10 Nov  7 02:23 synthetic_process_ghost_ip_pid_17_1762482237.log
+-rw-r--r-- 1 root          root             219 Nov  7 02:24 total_registry_ips_artifact.log
+```
+
+
+
+
+
+
 
 
 
