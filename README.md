@@ -95,6 +95,16 @@ artifact logs per pipeline)
 
 
 
+## Note: for full README contents view the README file itself if it does not fully render in the browser
+
+The README on github is truncated in the browser to 500KB
+https://github.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/tree/main
+
+The README on gitlab is not truncated in the browser: see the following URL below
+https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS
+
+
+
 
 
 ## Latest milestone updates to refer to below:
