@@ -6343,6 +6343,8 @@ def main():
     #### pipeline execution run
     #### This function is called at the very end of main() after all logging, etc is complete.
     def aggregate_process_stats(log_dir="/aws_EC2/logs"):
+        
+        ### Step 1: Locate All `process_stats_*.json` Files
         stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
         all_stats = []
 
@@ -6354,6 +6356,7 @@ def main():
             except Exception as e:
                 print(f"[AGGREGATOR_STATS] Failed to load {path}: {e}")
 
+        ### Step 2: Initialize Aggregation Counters
         summary = {
             "total_processes": len(all_stats),
             "total_threads": 0,
@@ -6366,6 +6369,7 @@ def main():
             "unique_missing_ips_ghosts": set()
         }
 
+        ### Step 3: Aggregate Metrics
         for stat in all_stats:
             summary["total_threads"] += stat.get("process_total", 0)
             summary["total_success"] += stat.get("process_success", 0)
@@ -6377,6 +6381,7 @@ def main():
             summary["unique_assigned_ips_golden"].update(stat.get("assigned_ips_golden", []))
             summary["unique_missing_ips_ghosts"].update(stat.get("missing_ips_ghosts", []))
 
+        ### Step 4: Finalize and Write Output
         summary["unique_seen_ips"] = sorted(summary["unique_seen_ips"])
         summary["unique_assigned_ips_golden"] = sorted(summary["unique_assigned_ips_golden"])
         summary["unique_missing_ips_ghosts"] = sorted(summary["unique_missing_ips_ghosts"])
