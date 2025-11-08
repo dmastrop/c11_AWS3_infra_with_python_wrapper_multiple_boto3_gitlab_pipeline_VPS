@@ -655,18 +655,82 @@ This test went well.
 
 This validation will consist of the following tests
 
-install_success + ghosts: Only the 8 ghosts should be included in the gatekeeper resurrect count.
+- install_success + ghosts: Only the 8 ghosts should be included in the gatekeeper resurrect count.
 
-install_failed with a futures crash after installation has completed + ghosts: The module2c will tag these so that the gatekeeper
+- install_failed with a futures crash after installation has completed + ghosts: The module2c will tag these so that the gatekeeper
 can bypass resurrecting these install_failed candidates and the gatekeeper count should reflect this accordingly. The ghosts
 will be resurrected so the total count will be 8 ghosts. This uses the FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG ENV variable
 in .gitlab-ci.yml to inject the synthetic futures crash.
 
-install_failed with a futures crash before installatoin has completed + ghosts: The module2c will not tag these so the gatekeeper
+```
+  "b68979d9": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": 139244670028672,
+    "thread_uuid": "b68979d9",
+    "public_ip": "13.222.176.240",
+    "private_ip": "172.31.21.90",
+    "timestamp": "2025-11-08 02:39:20.438937",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+
+```
+
+- install_failed with a futures crash before installation has completed + ghosts: The module2c will not tag these so the gatekeeper
 will tag these install_failed for resurrection and the gatekeeper count should reflect this accordingly. The ghosts will be
 resurrected so the total count will be 8 ghosts + 16 install_failed threads = 24 total threads that will be tagged for 
 resurrection. This uses the FORCE_TOMCAT_FAIL_IDX1_REAL_TAG ENV variable in .gitlab-ci.yml to inject the synthetic futures 
 crash.
+
+```
+  "b0cc0e82": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": 126815171337088,
+    "thread_uuid": "b0cc0e82",
+    "public_ip": "34.224.167.76",
+    "private_ip": "172.31.22.9",
+    "timestamp": "2025-11-08 04:09:18.023914",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+
+```
+
+#### install_success + ghosts
+
+gatekeeper resurrect count should be 8
+
+
+#### install_failed but installation commands successful + ghosts
+
+gatekeeper resurrect count should be 8
+
+#### install_failed but not all commands successful + ghosts
+
+gatekeeper resurrect count should be 24
+
+
+
+
+
+
 
 
 
