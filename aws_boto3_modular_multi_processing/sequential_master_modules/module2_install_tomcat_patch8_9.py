@@ -4344,6 +4344,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 raise RuntimeError("Synthetic failure injected at idx 1")
 
 
+            if os.getenv("FORCE_TOMCAT_FAIL_IDX1_REAL_TAG", "false").lower() in ("1", "true") and idx == 1:
+                raise RuntimeError("Synthetic failure injected at idx 1 with module2c real no tagging")
+
+
             ## Code for the conidtional registry entry if hit install error: First, Add a success flag before the attempt loop 
             ## set the command_succeeded flag to the default of False BEFORE the for attempt loop
             ## This flag is used to gate the install_failed registry_entry block after the for attempt loop IF
