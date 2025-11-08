@@ -200,7 +200,7 @@ be appended to the aggregate main() stats file. A percentage can be calculated f
 
 
 
-### Process level code in resurrection_monitor_patch8()
+### Process level code in resurrection_monitor_patch8() of module2
 
 
 This code is placed at the very end of the resurrection_monitor_patch8() function.
@@ -265,9 +265,86 @@ This code is placed at the very end of the resurrection_monitor_patch8() functio
 
 
 
-### Aggregation stats code in main()
+### Aggregation stats code in main() of module2
+
+The function below is placed in main()
+```
+    #### This is the function to aggregate the process stats. This uses write-to-disk. Each process stat json file has been written
+    #### to disk in the resurrection_monitor_patch8() function (see the last part of the function)
+    #### This function below parses it and aggregates all the process level stats to an aggregate json file for the entire 
+    #### pipeline execution run
+    #### This function is called at the very end of main() after all logging, etc is complete.
+    def aggregate_process_stats(log_dir="/aws_EC2/logs"):
+
+        ### Step 1: Locate All `process_stats_*.json` Files
+        stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+        all_stats = []
+
+        for path in stats_files:
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                    all_stats.append(data)
+            except Exception as e:
+                print(f"[AGGREGATOR_STATS] Failed to load {path}: {e}")
+
+        ### Step 2: Initialize Aggregation Counters
+        summary = {
+            "total_processes": len(all_stats),
+            "total_threads": 0,
+            "total_success": 0,
+            "total_failed_and_stubs": 0,
+            "total_resurrection_candidates": 0,
+            "total_resurrection_ghost_candidates": 0,
+            "unique_seen_ips": set(),
+            "unique_assigned_ips_golden": set(),
+            "unique_missing_ips_ghosts": set()
+        }
+
+        ### Step 3: Aggregate Metrics
+        for stat in all_stats:
+            summary["total_threads"] += stat.get("process_total", 0)
+            summary["total_success"] += stat.get("process_success", 0)
+            summary["total_failed_and_stubs"] += stat.get("process_failed_and_stubs", 0)
+            summary["total_resurrection_candidates"] += stat.get("num_resurrection_candidates", 0)
+            summary["total_resurrection_ghost_candidates"] += stat.get("num_resurrection_ghost_candidates", 0)
+
+            summary["unique_seen_ips"].update(stat.get("seen_ips", []))
+            summary["unique_assigned_ips_golden"].update(stat.get("assigned_ips_golden", []))
+            summary["unique_missing_ips_ghosts"].update(stat.get("missing_ips_ghosts", []))
+
+        ### Step 4: Finalize and Write Output
+        summary["unique_seen_ips"] = sorted(summary["unique_seen_ips"])
+        summary["unique_assigned_ips_golden"] = sorted(summary["unique_assigned_ips_golden"])
+        summary["unique_missing_ips_ghosts"] = sorted(summary["unique_missing_ips_ghosts"])
+
+        output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        with open(output_path, "w") as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"[AGGREGATOR_STATS] Aggregate process stats written to: {output_path}")
+```
 
 
+
+The function is called at the very end of main()
+```
+    ####### This is the code to aggregate the process level stats. This calls the function below. The function in in main(). 
+    ####### See top of main() for the function
+
+    aggregate_process_stats()
+
+
+
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+###### END main() #########
+```
 
 
 
@@ -411,6 +488,11 @@ resurrection at this point in time.
 
 
 ### Validation of aggregate stats code in main()
+
+
+
+
+### Validation of the aggregate gatekeeper stats in module2d
 
 
 
