@@ -254,7 +254,11 @@ deploy:
       # These logs are for the process level synthetic ghost injection and are not normally seen. Only seen when the
       # INJECT_POST_THREAD_GHOST ENV variable is enabled
       - logs/synthetic_process_ghost_ip_pid_*.log
-        
+       
+      # These are for the process level stats that are generated from resurrection monitor function in module2
+      - logs/process_stats_*.json
+
+
     expire_in: 1 week
 
   allow_failure: true
