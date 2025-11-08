@@ -182,7 +182,25 @@ STATUS_TAGS = {
 
 ### Introduction
 
+Process level stats are very important in forensic traceability.  This latest immplemenation adds this functionality and exports
+a process stat report (a json file that is exported with the other gitlab pipeline artifacts) for each process in the execution
+run. The code is entirely in resurrection_onitor_patch8 (in module2). As a process level function, this function contains all of the
+information required to create the report. The files will be write-to-disk so that all the process level stat report files can be
+aggregated in main().
 
+
+### Process level code in resurrection_monitor_patch8()
+
+
+This code is placed at the very end of the resurrection_monitor_patch8() function.
+
+
+
+
+
+
+
+### Aggregation code in main()
 
 
 

@@ -2588,7 +2588,7 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
         "num_resurrection_ghost_candidates": len(missing_ips),
         "seen_ips": sorted(seen_ips),
         "assigned_ips_golden": sorted(assigned_ip_set),
-        "missing_ips": sorted(missing_ips)
+        "missing_ips_ghosts": sorted(missing_ips)
     }
 
     stats_path = os.path.join(log_dir, f"process_stats_{pid}_{ts}.json")

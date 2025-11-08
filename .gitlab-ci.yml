@@ -69,7 +69,7 @@ deploy:
     INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
 
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
 
