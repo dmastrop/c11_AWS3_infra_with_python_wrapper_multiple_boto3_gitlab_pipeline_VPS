@@ -653,18 +653,20 @@ This test went well.
 
 ### Validation of the aggregate gatekeeper stats in module2d
 
-This validation will consist of the following test
+This validation will consist of the following tests
 
-install_success + ghosts
+install_success + ghosts: Only the 8 ghosts should be included in the gatekeeper resurrect count.
 
 install_failed with a futures crash after installation has completed + ghosts: The module2c will tag these so that the gatekeeper
 can bypass resurrecting these install_failed candidates and the gatekeeper count should reflect this accordingly. The ghosts
-will be resurrected so the total count will be 8 ghosts
+will be resurrected so the total count will be 8 ghosts. This uses the FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG ENV variable
+in .gitlab-ci.yml to inject the synthetic futures crash.
 
 install_failed with a futures crash before installatoin has completed + ghosts: The module2c will not tag these so the gatekeeper
 will tag these install_failed for resurrection and the gatekeeper count should reflect this accordingly. The ghosts will be
 resurrected so the total count will be 8 ghosts + 16 install_failed threads = 24 total threads that will be tagged for 
-resurrection.
+resurrection. This uses the FORCE_TOMCAT_FAIL_IDX1_REAL_TAG ENV variable in .gitlab-ci.yml to inject the synthetic futures 
+crash.
 
 
 
