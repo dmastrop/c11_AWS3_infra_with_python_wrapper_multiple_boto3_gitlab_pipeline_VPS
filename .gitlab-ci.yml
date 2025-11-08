@@ -138,7 +138,7 @@ deploy:
     
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
 
-    - echo 'FORCE_TOMCAT_FAIL_IDX1_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after first command and module2c will not insert the addtional tag
+    - echo 'FORCE_TOMCAT_FAIL_IDX1_REAL_TAG='${FORCE_TOMCAT_FAIL_IDX1_REAL_TAG} >> .env  # futures crash after first command and module2c will not insert the addtional tag
 
     - echo 'INJECT_PROCESS_GHOSTS='${INJECT_PROCESS_GHOSTS} >> .env  # inject synthetic ghost at the process chunk level. This code does not work well as noted above.
 
