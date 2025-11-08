@@ -39,6 +39,11 @@ import math # for math.ceil watchdog timeout adaptive code
 import ipaddress # used with the is_valid_ip helper function below. This function is used with the refactored ghost detection logic
 # in resurrection_monitor_patch8 and is also used in the tomcat_worker "unknown" ip address rehydration code  that occurs with thread
 # futures crashes.
+import glob # need this for the aggregate stats function aggregate_process_stats in main()
+
+
+
+
 
 
 ## This is the whitelist code to be used in install_tomcat for categorizing the status of the registry_entry of the
@@ -6326,14 +6331,71 @@ def main():
     load_dotenv()
 
 
-# The helper function setup_main_logging for the logging at the process orchestration level, see below
-# Pass this logger into the inter-test helper function call below sample_inter_test_metrics 
+    # The helper function setup_main_logging for the logging at the process orchestration level, see below
+    # Pass this logger into the inter-test helper function call below sample_inter_test_metrics 
     logger = setup_main_logging()
 
 
-# Define the total_estimated_runtime as global so that it can be used in the call to start_inter_test_logging
-# call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer and static points on this total_estimated_value 
-# in which to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
+
+    #### This is the function to aggregate the process stats. This uses write-to-disk. Each process stat json file has been written
+    #### to disk in the resurrection_monitor_patch8() function (see the last part of the function)
+    #### This function below parses it and aggregates all the process level stats to an aggregate json file for the entire 
+    #### pipeline execution run
+    #### This function is called at the very end of main() after all logging, etc is complete.
+    def aggregate_process_stats(log_dir="/aws_EC2/logs"):
+        stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+        all_stats = []
+
+        for path in stats_files:
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                    all_stats.append(data)
+            except Exception as e:
+                print(f"[AGGREGATOR_STATS] Failed to load {path}: {e}")
+
+        summary = {
+            "total_processes": len(all_stats),
+            "total_threads": 0,
+            "total_success": 0,
+            "total_failed_and_stubs": 0,
+            "total_resurrection_candidates": 0,
+            "total_resurrection_ghost_candidates": 0,
+            "unique_seen_ips": set(),
+            "unique_assigned_ips_golden": set(),
+            "unique_missing_ips_ghosts": set()
+        }
+
+        for stat in all_stats:
+            summary["total_threads"] += stat.get("process_total", 0)
+            summary["total_success"] += stat.get("process_success", 0)
+            summary["total_failed_and_stubs"] += stat.get("process_failed_and_stubs", 0)
+            summary["total_resurrection_candidates"] += stat.get("num_resurrection_candidates", 0)
+            summary["total_resurrection_ghost_candidates"] += stat.get("num_resurrection_ghost_candidates", 0)
+
+            summary["unique_seen_ips"].update(stat.get("seen_ips", []))
+            summary["unique_assigned_ips_golden"].update(stat.get("assigned_ips_golden", []))
+            summary["unique_missing_ips_ghosts"].update(stat.get("missing_ips_ghosts", []))
+
+        summary["unique_seen_ips"] = sorted(summary["unique_seen_ips"])
+        summary["unique_assigned_ips_golden"] = sorted(summary["unique_assigned_ips_golden"])
+        summary["unique_missing_ips_ghosts"] = sorted(summary["unique_missing_ips_ghosts"])
+
+        output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        with open(output_path, "w") as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"[AGGREGATOR_STATS] Aggregate process stats written to: {output_path}")
+
+
+
+
+
+
+
+    # Define the total_estimated_runtime as global so that it can be used in the call to start_inter_test_logging
+    # call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer and static points on this total_estimated_value 
+    # in which to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
     global total_estimated_runtime
     total_estimated_runtime = 600  # Adjust based on previous test execution times
 
@@ -6858,10 +6920,10 @@ def main():
 #
 
 
-# The above still not working with execution time in the main log file. Try doing explicit flush and exit
-# on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
-# This fixed the issue. 
-# Capture memory stats at the start of execution
+    # The above still not working with execution time in the main log file. Try doing explicit flush and exit
+    # on the handler, and make sure do execution time log message after multiprocessing pool call and before the flush
+    # This fixed the issue. 
+    # Capture memory stats at the start of execution
     logger = logging.getLogger("main_logger")  # Explicitly name it to avoid conflicts
     logger.setLevel(logging.INFO)
     
@@ -7141,12 +7203,23 @@ def main():
 
 
 
+
+
+    ####### This is the code to aggregate the process level stats. This calls the function below. The function in in main(). 
+    ####### See top of main() for the function
+
+    aggregate_process_stats()
+
+
+
+
+
 if __name__ == "__main__":
     main()
 
 
 
-
+###### END main() #########
 
 
 
