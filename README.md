@@ -489,6 +489,98 @@ resurrection at this point in time.
 
 ### Validation of aggregate stats code in main()
 
+#### install_failed + ghosts case
+
+
+This aggregates all the process stats into a cummulative aggregate json stat file. This test was performed with 8 processes and 
+2 threads each. There were 8 ghosts synthetically injected into the aggregate gold ips list (The 1.1.x.x addresses below). 
+Note that by definition, ghosts do not create process_registry entrys (they do not create a thread). So the thread count is 16 even
+though there were 3 ip addresses originally designated for each process based upon the aggregate gold ips (This is the AWS 
+orchestration layer). The stats below are what would be seen if a real life ghost had occurred.
+
+```
+"total_processes": 8,
+  "total_threads": 16,
+  "total_success": 0,
+  "total_failed_and_stubs": 16,
+  "total_resurrection_candidates": 16,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "13.222.176.240",
+    "3.85.210.191",
+    "3.85.210.229",
+    "3.92.21.137",
+    "3.93.162.39",
+    "34.228.44.235",
+    "34.229.90.84",
+    "54.147.41.191",
+    "54.167.66.11",
+    "54.173.31.118",
+    "54.197.37.70",
+    "54.226.179.29",
+    "54.227.86.241",
+    "54.234.251.192",
+    "54.82.93.247",
+    "98.88.80.251"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.122",
+    "1.1.12.236",
+    "1.1.13.167",
+    "1.1.14.122",
+    "1.1.15.225",
+    "1.1.16.79",
+    "1.1.17.107",
+    "1.1.17.196",
+    "13.222.176.240",
+    "3.85.210.191",
+    "3.85.210.229",
+    "3.92.21.137",
+    "3.93.162.39",
+    "34.228.44.235",
+    "34.229.90.84",
+    "54.147.41.191",
+    "54.167.66.11",
+    "54.173.31.118",
+    "54.197.37.70",
+    "54.226.179.29",
+    "54.227.86.241",
+    "54.234.251.192",
+    "54.82.93.247",
+    "98.88.80.251"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.122",
+    "1.1.12.236",
+    "1.1.13.167",
+    "1.1.14.122",
+    "1.1.15.225",
+    "1.1.16.79",
+    "1.1.17.107",
+    "1.1.17.196"
+  ]
+}
+```
+Note that there are 16 resurrection candidates because of the 16 failed threads (futures crash in the ThreadPoolExecutor is 
+synthetically injected). These are candidates and will be confirmed for resurrection by module2d after a post module2 gitlab
+console log scan.
+
+In this particular case, the futures crash was placed after installation was successful, so the module2c gitlab console scan
+will discern this, tag the registry_entrys and the gatekeeper code in module2d will decide that these threads do not have to be
+requed and resurrected after all.  This is definitly not always the case. In fact, the more common scenario is a futures crash
+earlier on whereby the installation fails. These threads will be marked for resurrection by the gatekeeper.
+
+
+
+
+
+
+#### install_success + ghosts case
+
+
+
+
+
 
 
 
