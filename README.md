@@ -350,7 +350,10 @@ if __name__ == "__main__":
 
 ### module2d aggregate gatekeeper stats from the final_aggregate_execution_run_registry_module2d.json
 
-
+As noted above: This is very simple to do. By the time module2d runs, the registry_entrys (both process_registry and ghost synthetic registrys) have
+been processed by modules 2b and 2c and module2d has made a resurrection gatekeeper deicsion based upon the tags.   The gatekeeper
+tags can be parsed in the final_aggregate_execution_run_registry_module2d.json, and a count of how many threads will be resurrected can
+be appended to the aggregate main() stats file. A percentage can be calculated for (resurrected threads)/(total+ghosts)
 
 
 
@@ -577,7 +580,71 @@ earlier on whereby the installation fails. These threads will be marked for resu
 
 #### install_success + ghosts case
 
-
+This test went well.
+```
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "13.220.101.125",
+    "13.222.189.200",
+    "18.215.151.147",
+    "3.91.32.187",
+    "3.91.71.156",
+    "3.92.27.253",
+    "3.94.146.171",
+    "34.227.48.195",
+    "34.228.43.162",
+    "34.228.7.227",
+    "52.91.225.243",
+    "54.160.236.31",
+    "54.89.155.43",
+    "98.80.123.16",
+    "98.84.112.23",
+    "98.94.6.105"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.252",
+    "1.1.12.61",
+    "1.1.13.191",
+    "1.1.14.238",
+    "1.1.15.172",
+    "1.1.16.26",
+    "1.1.17.139",
+    "1.1.17.41",
+    "13.220.101.125",
+    "13.222.189.200",
+    "18.215.151.147",
+    "3.91.32.187",
+    "3.91.71.156",
+    "3.92.27.253",
+    "3.94.146.171",
+    "34.227.48.195",
+    "34.228.43.162",
+    "34.228.7.227",
+    "52.91.225.243",
+    "54.160.236.31",
+    "54.89.155.43",
+    "98.80.123.16",
+    "98.84.112.23",
+    "98.94.6.105"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.252",
+    "1.1.12.61",
+    "1.1.13.191",
+    "1.1.14.238",
+    "1.1.15.172",
+    "1.1.16.26",
+    "1.1.17.139",
+    "1.1.17.41"
+  ]
+}
+```
 
 
 
@@ -585,6 +652,23 @@ earlier on whereby the installation fails. These threads will be marked for resu
 
 
 ### Validation of the aggregate gatekeeper stats in module2d
+
+This validation will consist of the following test
+
+install_success + ghosts
+
+install_failed with a futures crash after installation has completed + ghosts: The module2c will tag these so that the gatekeeper
+can bypass resurrecting these install_failed candidates and the gatekeeper count should reflect this accordingly. The ghosts
+will be resurrected so the total count will be 8 ghosts
+
+install_failed with a futures crash before installatoin has completed + ghosts: The module2c will not tag these so the gatekeeper
+will tag these install_failed for resurrection and the gatekeeper count should reflect this accordingly. The ghosts will be
+resurrected so the total count will be 8 ghosts + 16 install_failed threads = 24 total threads that will be tagged for 
+resurrection.
+
+
+
+
 
 
 
