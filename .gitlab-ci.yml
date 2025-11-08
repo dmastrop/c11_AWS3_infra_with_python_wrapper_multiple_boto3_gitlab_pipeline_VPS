@@ -72,9 +72,14 @@ deploy:
     FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
+      # The gatekeeper will bypass resurrecting this thread.
 
 
-    INJECT_PROCESS_GHOSTS: "false" # this is injection of ghosts at the process chunk level which main() will then pass to all the
+
+    FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "true"   # this futures crash will hit the module2c scan but an additional tag should not be 
+      # inserted. The gatekeeper will try to resurrect this thread.      
+
+    #INJECT_PROCESS_GHOSTS: "false" # this is injection of ghosts at the process chunk level which main() will then pass to all the
       # downstream modules like tomcat_worker resurrection_monitor_patch8 threaded_install and install_tomcat so that detect_ghosts
       # helper function can be tested. This is a more realistic ghost injection. This does not work because it requires a synthetic
       # InstanceId as well for downstream code, and that synthetic InstanceId causes a futures crash (install_failed) instead of a
@@ -133,6 +138,7 @@ deploy:
     
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
 
+    - echo 'FORCE_TOMCAT_FAIL_IDX1_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after first command and module2c will not insert the addtional tag
 
     - echo 'INJECT_PROCESS_GHOSTS='${INJECT_PROCESS_GHOSTS} >> .env  # inject synthetic ghost at the process chunk level. This code does not work well as noted above.
 
