@@ -194,9 +194,66 @@ aggregated in main().
 
 This code is placed at the very end of the resurrection_monitor_patch8() function.
 
+```
+    # [resurrection_monitor_patch8]
+    ######## Process level stats ##########
+    # This has the code to compile process level stats. This is a work in progress. Each process will have a dedicated log file: 
+    # process_stats_{pid}_{ts}.json. The timestamp is required because multi-processing pooling (pooled processes) can and do re-use
+    # the first wave process pids. It is very common and always occurs.
+
+    ### **Step 1: Capture Ghosts and Registry Visibility**
+    ### After calling `detect_ghosts()`, assign the returned values below. ghosts is returned by detect_ghosts()
+    missing_ips = ghosts  # Ghosts are IPs assigned but not seen in registry
+
+
+    ### **Step 2: Compute process Registry-Level Metrics** (non--ghost registry_entrys from the process_registry)
+    # Use the `process_registry` to derive install success, failure/stub, and total counts per process:
+    process_success = sum(
+    1 for entry in process_registry.values()
+    if entry.get("status") == "install_success"
+    )
+
+    process_failed_and_stubs = sum(
+        1 for entry in process_registry.values()
+        if entry.get("status") and entry.get("status") != "install_success"
+        # this covers install_failed and stubs and future non-success statuses that might be added
+    )
+
+    process_total = len(process_registry)
+
+
+    ### **Step 3: Count Resurrection Candidates**
+    # Use the resurrection candidate list already built in patch8: see above, this is resurrection_candidates
+    num_resurrection_candidates = len(resurrection_candidates)
+    # note that these are candidates. The final decision for these candidates is based on a post module2 gitlab console scan done in 
+    # module2c. The tags are then processed by module2d gatekeeper function for the final decision.
+
+
+    ### **Step 4: Write `process_stats.json`**
+    # This is write-to-disk. These pid level json files will be aggregated in main() for an aggregate stats json file.
+    stats = {
+        "pid": pid,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "process_total": process_total,
+        "process_success": process_success,
+        "process_failed_and_stubs": process_failed_and_stubs,
+        "num_resurrection_candidates": num_resurrection_candidates,
+        "num_resurrection_ghost_candidates": len(missing_ips),
+        "seen_ips": sorted(seen_ips),
+        "assigned_ips_golden": sorted(assigned_ip_set),
+        "missing_ips_ghosts": sorted(missing_ips)
+    }
+
+    stats_path = os.path.join(log_dir, f"process_stats_{pid}_{ts}.json")
+    with open(stats_path, "w") as f:
+        json.dump(stats, f, indent=2)
+    print(f"[RESMON_8] Process stats written to: {stats_path}")
 
 
 
+
+########## THIS IS THE END OF THE resurrection_monitor_patch8() function  ######################
+```
 
 
 
