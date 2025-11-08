@@ -188,6 +188,17 @@ run. The code is entirely in resurrection_onitor_patch8 (in module2). As a proce
 information required to create the report. The files will be write-to-disk so that all the process level stat report files can be
 aggregated in main().
 
+It is important to note that this process level stats code is in module2 prior to the post processing in module2b and 2c that scans the
+gitlab console logs for more information.  So the threads are only candidates for resurrection at this pont. The gatekeeper logic is
+applied after module2b and 2c, and at that point the threads can either be confirmed for requeing and resurrection or not confirmed. 
+
+Finally, the gatekeeper decision stats can be done in aggregate in module2d
+This is very simple to do. By the time module2d runs, the registry_entrys (both process_registry and ghost synthetic registrys) have
+been processed by modules 2b and 2c and module2d has made a resurrection gatekeeper deicsion based upon the tags.   The gatekeeper
+tags can be parsed in the final_aggregate_execution_run_registry_module2d.json, and a count of how many threads will be resurrected can
+be appended to the aggregate main() stats file. A percentage can be calculated for (resurrected threads)/(total+ghosts)
+
+
 
 ### Process level code in resurrection_monitor_patch8()
 
@@ -249,16 +260,157 @@ This code is placed at the very end of the resurrection_monitor_patch8() functio
         json.dump(stats, f, indent=2)
     print(f"[RESMON_8] Process stats written to: {stats_path}")
 
-
-
-
 ########## THIS IS THE END OF THE resurrection_monitor_patch8() function  ######################
 ```
 
 
 
-### Aggregation code in main()
+### Aggregation stats code in main()
 
+
+
+
+
+### module2d aggregate gatekeeper stats from the final_aggregate_execution_run_registry_module2d.json
+
+
+
+
+
+
+
+
+
+
+### Validation of process stats in resurrection_monitor_patch8()
+
+#### install_success + ghost case
+
+Here are a few samples from the process json files. I chose the pooled process and that is why the pid is the same
+```
+{
+  "pid": 16,
+  "timestamp": "2025-11-08T00:19:21.964026Z",
+  "process_total": 2,
+  "process_success": 2,
+  "process_failed_and_stubs": 0,
+  "num_resurrection_candidates": 0,
+  "num_resurrection_ghost_candidates": 1,
+  "seen_ips": [
+    "3.87.82.246",
+    "98.93.198.193"
+  ],
+  "assigned_ips_golden": [
+    "1.1.16.194",
+    "3.87.82.246",
+    "98.93.198.193"
+  ],
+  "missing_ips": [
+    "1.1.16.194"
+  ]
+}
+
+{
+  "pid": 16,
+  "timestamp": "2025-11-08T00:25:11.550033Z",
+  "process_total": 2,
+  "process_success": 2,
+  "process_failed_and_stubs": 0,
+  "num_resurrection_candidates": 0,
+  "num_resurrection_ghost_candidates": 1,
+  "seen_ips": [
+    "52.90.3.61",
+    "54.209.249.175"
+  ],
+  "assigned_ips_golden": [
+    "1.1.16.34",
+    "52.90.3.61",
+    "54.209.249.175"
+  ],
+  "missing_ips": [
+    "1.1.16.34"
+  ]
+}
+
+```
+
+
+#### instalL_failed (post install success futures crash)  + ghost case
+
+Here are a few samples from the process json files.  I chose the pooled process and that is why the pid is the same
+
+In the gitlab console logs these are install_failed
+
+```
+[TRACE][aggregator] Final registry summary:
+  total: 16
+  install_success: 0
+  gatekeeper_resurrect: 0
+  watchdog_timeout: 0
+  ssh_initiated_failed: 0
+  ssh_retry_failed: 0
+  install_failed: 16
+  stub: 0
+  no_tags: 0
+
+```
+
+```
+{
+  "pid": 13,
+  "timestamp": "2025-11-08T00:51:38.740533Z",
+  "process_total": 2,
+  "process_success": 0,
+  "process_failed_and_stubs": 2,
+  "num_resurrection_candidates": 2,
+  "num_resurrection_ghost_candidates": 1,
+  "seen_ips": [
+    "3.91.253.90",
+    "35.175.189.203"
+  ],
+  "assigned_ips_golden": [
+    "1.1.13.135",
+    "3.91.253.90",
+    "35.175.189.203"
+  ],
+  "missing_ips_ghosts": [
+    "1.1.13.135"
+  ]
+}
+
+{
+  "pid": 13,
+  "timestamp": "2025-11-08T00:57:21.782147Z",
+  "process_total": 2,
+  "process_success": 0,
+  "process_failed_and_stubs": 2,
+  "num_resurrection_candidates": 2,
+  "num_resurrection_ghost_candidates": 1,
+  "seen_ips": [
+    "18.206.199.130",
+    "98.93.81.64"
+  ],
+  "assigned_ips_golden": [
+    "1.1.13.72",
+    "18.206.199.130",
+    "98.93.81.64"
+  ],
+  "missing_ips_ghosts": [
+    "1.1.13.72"
+  ]
+}
+```
+
+Note that these are install_failed, but when the module2c scans the gitlab console logs these will get a tag indicating that the 
+installation succeeded, and the gatekeeper will not tag them for resurrection in module2d.  But from the vantage point of the 
+resurrection_monitor_patch8 in module2, the post processing has not occurred yet and these are candidates and not confirmed for 
+resurrection at this point in time.
+
+
+
+
+
+### Validation of aggregate stats code in main()
 
 
 
