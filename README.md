@@ -255,10 +255,20 @@ This code is placed at the very end of the resurrection_monitor_patch8() functio
         "missing_ips_ghosts": sorted(missing_ips)
     }
 
-    stats_path = os.path.join(log_dir, f"process_stats_{pid}_{ts}.json")
+    #stats_path = os.path.join(log_dir, f"process_stats_{pid}_{ts}.json")
+    #with open(stats_path, "w") as f:
+    #    json.dump(stats, f, indent=2)
+    #print(f"[RESMON_8] Process stats written to: {stats_path}")
+
+    stats_subdir = os.path.join(log_dir, "statistics")
+    os.makedirs(stats_subdir, exist_ok=True)
+
+    stats_path = os.path.join(stats_subdir, f"process_stats_{pid}_{ts}.json")
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
+
     print(f"[RESMON_8] Process stats written to: {stats_path}")
+
 
 ########## THIS IS THE END OF THE resurrection_monitor_patch8() function  ######################
 ```
@@ -277,7 +287,11 @@ The function below is placed in main()
     def aggregate_process_stats(log_dir="/aws_EC2/logs"):
 
         ### Step 1: Locate All `process_stats_*.json` Files
-        stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+        #stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+
+        stats_subdir = os.path.join(log_dir, "statistics")
+        stats_files = glob.glob(os.path.join(stats_subdir, "process_stats_*.json"))
+
         all_stats = []
 
         for path in stats_files:
@@ -318,7 +332,11 @@ The function below is placed in main()
         summary["unique_assigned_ips_golden"] = sorted(summary["unique_assigned_ips_golden"])
         summary["unique_missing_ips_ghosts"] = sorted(summary["unique_missing_ips_ghosts"])
 
-        output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        #output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        #with open(output_path, "w") as f:
+        #    json.dump(summary, f, indent=2)
+
+        output_path = os.path.join(stats_subdir, "aggregate_process_stats.json")
         with open(output_path, "w") as f:
             json.dump(summary, f, indent=2)
 
@@ -350,10 +368,20 @@ if __name__ == "__main__":
 
 ### module2d aggregate gatekeeper stats from the final_aggregate_execution_run_registry_module2d.json
 
-As noted above: This is very simple to do. By the time module2d runs, the registry_entrys (both process_registry and ghost synthetic registrys) have
-been processed by modules 2b and 2c and module2d has made a resurrection gatekeeper deicsion based upon the tags.   The gatekeeper
-tags can be parsed in the final_aggregate_execution_run_registry_module2d.json, and a count of how many threads will be resurrected can
-be appended to the aggregate main() stats file. A percentage can be calculated for (resurrected threads)/(total+ghosts)
+As noted above: This is very simple to do. By the time module2d runs, the registry_entrys (both process_registry and ghost synthetic registrys) have been processed by modules 2b and 2c, and module2d has made a resurrection gatekeeper deicsion based upon the tags.   
+
+The gatekeeper tags can be parsed in the final_aggregate_execution_run_registry_module2d.json, and a count of how many threads will 
+be resurrected can be appended to the aggregate main() stats file, aggregate_process_stats.json
+
+A percentage can be calculated for (gatekeeper resurrected threads)/(total+ghosts). This can be calculated once the count of how many 
+threads will be resurrected is appended to the aggregate_process_stats.json
+
+The number of ghosts can be ascertained from the aggregate_process_stats.json file using either the total_resurrection_ghost_candidates
+stat or the number of ips in the unique_missing_ips_ghosts list of ips
+
+So the input files are final_aggregate_execution_run_registry_moudle2d.json and the aggregate_process_stats.json
+
+This final file with aggregate main() stats + gatekeeper stats  is named aggregate_process_stats_gatekeeper_module2d.json 
 
 
 

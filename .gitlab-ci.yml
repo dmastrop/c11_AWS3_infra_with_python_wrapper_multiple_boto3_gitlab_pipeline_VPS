@@ -262,10 +262,10 @@ deploy:
       - logs/synthetic_process_ghost_ip_pid_*.log
        
       # These are for the process level stats that are generated from resurrection monitor function in module2
-      - logs/process_stats_*.json
+      - logs/statistics/process_stats_*.json
 
       # These are the aggregate main level stats that are derived from the process level stats
-      - logs/aggregate_process_stats.json
+      - logs/statistics/aggregate_process_stats.json
 
 
 

@@ -2596,11 +2596,19 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
         "missing_ips_ghosts": sorted(missing_ips)
     }
 
-    stats_path = os.path.join(log_dir, f"process_stats_{pid}_{ts}.json")
+    #stats_path = os.path.join(log_dir, f"process_stats_{pid}_{ts}.json")
+    #with open(stats_path, "w") as f:
+    #    json.dump(stats, f, indent=2)
+    #print(f"[RESMON_8] Process stats written to: {stats_path}")
+
+    stats_subdir = os.path.join(log_dir, "statistics")
+    os.makedirs(stats_subdir, exist_ok=True)
+
+    stats_path = os.path.join(stats_subdir, f"process_stats_{pid}_{ts}.json")
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
-    print(f"[RESMON_8] Process stats written to: {stats_path}")
 
+    print(f"[RESMON_8] Process stats written to: {stats_path}")
 
 
 
@@ -6349,7 +6357,11 @@ def main():
     def aggregate_process_stats(log_dir="/aws_EC2/logs"):
         
         ### Step 1: Locate All `process_stats_*.json` Files
-        stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+        #stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+        
+        stats_subdir = os.path.join(log_dir, "statistics")
+        stats_files = glob.glob(os.path.join(stats_subdir, "process_stats_*.json"))
+
         all_stats = []
 
         for path in stats_files:
@@ -6390,7 +6402,11 @@ def main():
         summary["unique_assigned_ips_golden"] = sorted(summary["unique_assigned_ips_golden"])
         summary["unique_missing_ips_ghosts"] = sorted(summary["unique_missing_ips_ghosts"])
 
-        output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        #output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        #with open(output_path, "w") as f:
+        #    json.dump(summary, f, indent=2)
+
+        output_path = os.path.join(stats_subdir, "aggregate_process_stats.json")
         with open(output_path, "w") as f:
             json.dump(summary, f, indent=2)
 
