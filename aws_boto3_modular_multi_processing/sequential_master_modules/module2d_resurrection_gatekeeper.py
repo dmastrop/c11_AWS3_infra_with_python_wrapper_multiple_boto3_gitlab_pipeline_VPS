@@ -156,6 +156,81 @@ def merge_resurrection_registries():
     print(f"[module2d.3] Total entries in final registry: {len(merged_registry)}")
 
 
+#### This function is to compile the gatekeeper stats.   This file uses the merged process threads + ghosts gatekeeper processed
+#### file: resurrection_gatekeeper_final_registry_module2d.json AND the aggregate_process_stats.json file from module2's main(),
+#### and appends the resurrection gatekeeper stats to the aggregate_process__stats.json file.  The final filename is called
+#### aggregate_process_stats_gatekeeper_module2d.json")
+#### This function executes after the main() code and after all of the above functions
+def aggregate_gatekeeper_stats():
+    import os
+    import json
+
+    STATS_DIR = "/aws_EC2/logs/statistics"
+    FINAL_REGISTRY_PATH = "/aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json"
+    AGGREGATE_STATS_PATH = os.path.join(STATS_DIR, "aggregate_process_stats.json")
+    OUTPUT_PATH = os.path.join(STATS_DIR, "aggregate_process_stats_gatekeeper_module2d.json")
+
+    try:
+        with open(FINAL_REGISTRY_PATH, "r") as f:
+            final_registry = json.load(f)
+        print(f"[module2d.4] Loaded final registry from: {FINAL_REGISTRY_PATH}")
+    except FileNotFoundError:
+        print(f"[module2d.4] ERROR: Final registry file not found.")
+        return
+
+    try:
+        with open(AGGREGATE_STATS_PATH, "r") as f:
+            aggregate_stats = json.load(f)
+        print(f"[module2d.4] Loaded aggregate stats from: {AGGREGATE_STATS_PATH}")
+    except FileNotFoundError:
+        print(f"[module2d.4] ERROR: Aggregate stats file not found.")
+        return
+
+    # Count gatekeeper decisions
+    resurrected = 0
+    blocked = 0
+
+    for entry in final_registry.values():
+        tags = entry.get("tags", [])
+        if "gatekeeper_resurrect" in tags:
+            resurrected += 1
+        elif "gatekeeper_blocked" in tags:
+            blocked += 1
+
+    # Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+    total_res_candidates = aggregate_stats.get("total_resurrection_candidates", 0)
+    total_ghost_candidates = aggregate_stats.get("total_resurrection_ghost_candidates", 0)
+    resurrection_denominator = total_res_candidates + total_ghost_candidates
+    resurrection_rate = (
+        (resurrected / resurrection_denominator) * 100 if resurrection_denominator > 0 else 0.0
+    )
+
+    # Gatekeeper rate = resurrected / (total threads + ghost IPs)
+    total_threads = aggregate_stats.get("total_threads", 0)
+    ghost_ips = aggregate_stats.get("unique_missing_ips_ghosts", [])
+    gatekeeper_denominator = total_threads + len(ghost_ips)
+    gatekeeper_rate = (
+        (resurrected / gatekeeper_denominator) * 100 if gatekeeper_denominator > 0 else 0.0
+    )
+
+    # Append gatekeeper stats
+    aggregate_stats["gatekeeper_resurrected"] = resurrected
+    aggregate_stats["gatekeeper_blocked"] = blocked
+    aggregate_stats["gatekeeper_total"] = resurrected + blocked
+    aggregate_stats["gatekeeper_resurrection_rate_percent"] = round(resurrection_rate, 2)
+    aggregate_stats["gatekeeper_rate_percent"] = round(gatekeeper_rate, 2)
+
+    with open(OUTPUT_PATH, "w") as f:
+        json.dump(aggregate_stats, f, indent=2)
+
+    print(f"[module2d.4] Gatekeeper stats appended and written to: {OUTPUT_PATH}")
+    print(f"[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)")
+    print(f"[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)")
+    print(f"[module2d.4] Resurrected: {resurrected}, Blocked: {blocked}, Total: {resurrected + blocked}")
+    print(f"[module2d.4] Resurrection Rate: {resurrection_rate:.2f}%")
+    print(f"[module2d.4] Gatekeeper Rate: {gatekeeper_rate:.2f}%")
+
+
 
 
 def main():
@@ -220,3 +295,7 @@ if __name__ == "__main__":
     merge_resurrection_registries()  # this function merges the ghost registry and aggregate registry that has been processed by
     # the resurrection_gatekeeper into one file so that the Phase3 resurrection code can consume it and reque the threads 
     # accordingly.
+
+    aggregate_gatekeeper_stats()  # this function has inputs of the module2 main() aggregate stats json file and  the 
+    # final_aggregate_execution_run_registry_module2d.json that has all the gateway decisions (in the tags of the regisry_entrys
+    # This function has to run at the very end of this module2d.
