@@ -193,6 +193,10 @@ deploy:
         echo "" >> logs/benchmark_combined.log
       done
 
+  after_script:
+    - sudo chown -R $(id -u):$(id -g) logs/statistics || true
+  
+
 
   artifacts:
     paths:
