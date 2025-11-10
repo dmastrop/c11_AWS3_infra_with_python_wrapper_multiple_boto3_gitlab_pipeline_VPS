@@ -2602,7 +2602,8 @@ def resurrection_monitor_patch8(process_registry, assigned_ips, log_dir="/aws_EC
     #print(f"[RESMON_8] Process stats written to: {stats_path}")
 
     stats_subdir = os.path.join(log_dir, "statistics")
-    os.makedirs(stats_subdir, exist_ok=True)
+    #os.makedirs(stats_subdir, exist_ok=True)  ## Get rid of this. Create the directory in .gitlab-ci.yml so that it gets proper
+    ## ownership of gitlab-runner so that the files in it can be cleaned up by the gitlab pipeline during cleanup stage.
 
     stats_path = os.path.join(stats_subdir, f"process_stats_{pid}_{ts}.json")
     with open(stats_path, "w") as f:

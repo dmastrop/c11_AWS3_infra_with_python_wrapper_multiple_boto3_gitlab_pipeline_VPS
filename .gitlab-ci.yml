@@ -175,6 +175,7 @@ deploy:
       #
   script:
     - mkdir -p logs
+    - mkdir -p logs/statistics  # this is required so that the statistics directory has gitlab-runner as owner.
     #- docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest
     # add the tee to get all the gitlab console output into a log file in the gitlab artfacts:
     - docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest | tee logs/gitlab_full_run.log  
