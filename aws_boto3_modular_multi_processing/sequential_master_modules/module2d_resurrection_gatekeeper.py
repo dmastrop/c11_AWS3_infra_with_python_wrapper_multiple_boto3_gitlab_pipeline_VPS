@@ -217,8 +217,8 @@ def aggregate_gatekeeper_stats():
     aggregate_stats["gatekeeper_resurrected"] = resurrected
     aggregate_stats["gatekeeper_blocked"] = blocked
     aggregate_stats["gatekeeper_total"] = resurrected + blocked
-    aggregate_stats["gatekeeper_resurrection_rate_percent"] = round(resurrection_rate, 2)
-    aggregate_stats["gatekeeper_rate_percent"] = round(gatekeeper_rate, 2)
+    aggregate_stats["gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))"] = round(resurrection_rate, 2)
+    aggregate_stats["gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))"] = round(gatekeeper_rate, 2)
 
     with open(OUTPUT_PATH, "w") as f:
         json.dump(aggregate_stats, f, indent=2)

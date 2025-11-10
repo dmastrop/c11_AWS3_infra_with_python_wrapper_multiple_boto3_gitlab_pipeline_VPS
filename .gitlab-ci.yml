@@ -69,14 +69,14 @@ deploy:
     INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
 
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
       # The gatekeeper will bypass resurrecting this thread.
 
 
 
-    FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "true"   # this futures crash will hit the module2c scan but an additional tag should not be 
+    FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "false"   # this futures crash will hit the module2c scan but an additional tag should not be 
       # inserted. The gatekeeper will try to resurrect this thread.      
 
     #INJECT_PROCESS_GHOSTS: "false" # this is injection of ghosts at the process chunk level which main() will then pass to all the
