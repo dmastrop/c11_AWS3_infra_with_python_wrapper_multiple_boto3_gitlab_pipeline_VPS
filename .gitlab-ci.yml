@@ -69,15 +69,26 @@ deploy:
     INJECT_SYNTHETIC_GHOST10: "false"  # 1.1.1.10
 
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
+
+
+
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
       # The gatekeeper will bypass resurrecting this thread.
 
 
-
     FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "false"   # this futures crash will hit the module2c scan but an additional tag should not be 
       # inserted. The gatekeeper will try to resurrect this thread.      
+
+    FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH: "true"  # this uses the pid which is somewhat deterministic in a 16 node test to 
+      # activate half of the processes with a futures crash after the first command and the other half of the processes with a futures
+      # crash after all the commands have succeeded. This tests the gatekeeper stats code implemenented in module2d. This 
+      # activates FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG crash for half of the processes and activates 
+      # FORCE_TOMCAT_FAIL_IDX1_REAL_TAG for the other half of the processes. If this is used with the 512 node test only a few of 
+      # the processes will get futures crashes which is also a good partial test. This is true with any test that uses > 16 nodes.
+
+
 
     #INJECT_PROCESS_GHOSTS: "false" # this is injection of ghosts at the process chunk level which main() will then pass to all the
       # downstream modules like tomcat_worker resurrection_monitor_patch8 threaded_install and install_tomcat so that detect_ghosts
@@ -139,6 +150,11 @@ deploy:
     - echo 'FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG='${FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG} >> .env  # futures crash after installation with real tagging using module2c
 
     - echo 'FORCE_TOMCAT_FAIL_IDX1_REAL_TAG='${FORCE_TOMCAT_FAIL_IDX1_REAL_TAG} >> .env  # futures crash after first command and module2c will not insert the addtional tag
+
+
+    - echo 'FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH='${FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH} >> .env  # futures crash with mix of FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG in half of the processes, and FORCE_TOMCAT_FAIL_IDX1_REAL_TAG in the other half of the processes.
+
+
 
     - echo 'INJECT_PROCESS_GHOSTS='${INJECT_PROCESS_GHOSTS} >> .env  # inject synthetic ghost at the process chunk level. This code does not work well as noted above.
 

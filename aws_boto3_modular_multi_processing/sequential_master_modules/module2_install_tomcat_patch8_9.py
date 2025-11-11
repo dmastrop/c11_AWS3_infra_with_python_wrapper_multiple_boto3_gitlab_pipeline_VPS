@@ -4331,6 +4331,30 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         print(f"expected command count is : {len(commands)}")
 
 
+
+        ##### This is for a hybrid crash with half of the processes getting a futures crash after the first command and the
+        ##### other half of the processes getting the futures crash after all of the commands have executed successfully.
+        ##### This is used to test the gatekeeper stats code in module2d
+        ##### Set the FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH to true in the .gitlab-ci.yml file to activate this.
+
+
+        pid = multiprocessing.current_process().pid
+
+
+        # Activate hybrid crash simulation only if explicitly enabled
+        if os.getenv("FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH", "false").lower() in ("1", "true"):
+            if pid in [12, 13, 14]:
+                # Simulate IDX1 crash — early failure, no post-install success tag
+                os.environ["FORCE_TOMCAT_FAIL_IDX1_REAL_TAG"] = "true"
+                os.environ["FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG"] = "false"
+
+            elif pid in [15, 16, 17]:
+                # Simulate post-install crash — all commands succeed, tag inserted
+                os.environ["FORCE_TOMCAT_FAIL_IDX1_REAL_TAG"] = "false"
+                os.environ["FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG"] = "true"
+
+
+
         #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
         #NON-Negative testing use this: (and comment out the above)
         for idx, command in enumerate(commands):
