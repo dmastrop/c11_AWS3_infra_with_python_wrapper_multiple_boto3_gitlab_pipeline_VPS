@@ -930,11 +930,264 @@ crash.
 
 The gatekeeper resurrect count should be 0
 
+This is the gitlab console logs:
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 0 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID e573142d (IP: 54.164.45.245) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 7cf6718e (IP: 204.236.242.126) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID fcb82553 (IP: 13.218.107.221) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ef6a7bc3 (IP: 18.234.133.4) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d5ab6745 (IP: 3.208.23.93) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 8e3af20d (IP: 98.91.23.188) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID fcdfa398 (IP: 54.196.169.22) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 636b8574 (IP: 34.233.136.39) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6d03d9e1 (IP: 54.164.76.189) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 83ffd479 (IP: 3.90.215.252) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d006e265 (IP: 54.174.204.53) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ad0513de (IP: 98.90.199.36) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 15dc327a (IP: 34.230.36.248) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 9821985d (IP: 54.162.132.10) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 1d56cdb1 (IP: 52.203.230.5) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID dc8cab19 (IP: 3.92.79.32) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 0
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 0
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 16
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 0, Blocked: 16, Total: 16
+[module2d.4] Resurrection Rate: 0.00%
+[module2d.4] Gatekeeper Rate: 0.00%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+```
+
+
+
+
+
+This is the aggregate_process_stats_gatekeeper_module2d.json:
+```
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 0,
+  "unique_seen_ips": [
+    "13.218.107.221",
+    "18.234.133.4",
+    "204.236.242.126",
+    "3.208.23.93",
+    "3.90.215.252",
+    "3.92.79.32",
+    "34.230.36.248",
+    "34.233.136.39",
+    "52.203.230.5",
+    "54.162.132.10",
+    "54.164.45.245",
+    "54.164.76.189",
+    "54.174.204.53",
+    "54.196.169.22",
+    "98.90.199.36",
+    "98.91.23.188"
+  ],
+  "unique_assigned_ips_golden": [
+    "13.218.107.221",
+    "18.234.133.4",
+    "204.236.242.126",
+    "3.208.23.93",
+    "3.90.215.252",
+    "3.92.79.32",
+    "34.230.36.248",
+    "34.233.136.39",
+    "52.203.230.5",
+    "54.162.132.10",
+    "54.164.45.245",
+    "54.164.76.189",
+    "54.174.204.53",
+    "54.196.169.22",
+    "98.90.199.36",
+    "98.91.23.188"
+  ],
+  "unique_missing_ips_ghosts": [],
+  "gatekeeper_resurrected": 0,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 16,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 0.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 0.0
+}
+```
+
 
 #### install_success + ghosts
 
 With the 16 node, 8 process test, and 1 ghost per process, the gatekeeper resurrect count should be 8
 
+This is the gitlab console logs:
+
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 2994b731 (IP: 54.146.247.240) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 0b8e50dc (IP: 98.90.200.101) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 9869fc9b (IP: 54.227.86.165) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 7eca6997 (IP: 54.85.89.23) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b6d1e139 (IP: 13.221.110.48) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 8f4c0e43 (IP: 54.163.217.25) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bb8f4d12 (IP: 52.90.221.137) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d57a9194 (IP: 3.208.8.219) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 05b2895b (IP: 3.85.193.59) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 048a0a9c (IP: 98.81.233.255) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 96bcae83 (IP: 54.242.2.96) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 29731a9b (IP: 54.175.192.237) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e5245981 (IP: 50.19.22.219) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID efe9cd74 (IP: 54.146.238.173) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 69e99c9c (IP: 3.80.25.10) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID cf643c45 (IP: 3.89.49.199) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_184 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_184 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_83 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_60 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_181 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_51 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_243 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_138 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+```
+
+
+
+This is the aggregate_process_stats_gatekeeper_module2d.json:
+```
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "13.221.110.48",
+    "3.208.8.219",
+    "3.80.25.10",
+    "3.85.193.59",
+    "3.89.49.199",
+    "50.19.22.219",
+    "52.90.221.137",
+    "54.146.238.173",
+    "54.146.247.240",
+    "54.163.217.25",
+    "54.175.192.237",
+    "54.227.86.165",
+    "54.242.2.96",
+    "54.85.89.23",
+    "98.81.233.255",
+    "98.90.200.101"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.243",
+    "1.1.13.138",
+    "1.1.13.184",
+    "1.1.14.184",
+    "1.1.15.181",
+    "1.1.16.60",
+    "1.1.16.83",
+    "1.1.17.51",
+    "13.221.110.48",
+    "3.208.8.219",
+    "3.80.25.10",
+    "3.85.193.59",
+    "3.89.49.199",
+    "50.19.22.219",
+    "52.90.221.137",
+    "54.146.238.173",
+    "54.146.247.240",
+    "54.163.217.25",
+    "54.175.192.237",
+    "54.227.86.165",
+    "54.242.2.96",
+    "54.85.89.23",
+    "98.81.233.255",
+    "98.90.200.101"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.243",
+    "1.1.13.138",
+    "1.1.13.184",
+    "1.1.14.184",
+    "1.1.15.181",
+    "1.1.16.60",
+    "1.1.16.83",
+    "1.1.17.51"
+  ],
+  "gatekeeper_resurrected": 8,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 100.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
+}
+```
 
 
 
@@ -942,12 +1195,172 @@ With the 16 node, 8 process test, and 1 ghost per process, the gatekeeper resurr
 
 gatekeeper resurrect count should be 8
 
+This is the gitlab console logs:
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 16 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 16 candidate IPs with command success entries
+[module2c] Tagged UUID d19e507f (IP: 3.91.97.84) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 01dac323 (IP: 54.234.131.163) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 6ddba220 (IP: 50.17.7.25) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 47d465a0 (IP: 54.221.3.20) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 78eedefb (IP: 13.218.221.76) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 1246ffce (IP: 54.209.6.127) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID c6b048ef (IP: 3.88.106.108) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 8ecf2abc (IP: 54.164.141.228) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 9a967bae (IP: 54.167.73.241) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID cf05a661 (IP: 54.173.251.73) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID a0734efa (IP: 44.223.61.192) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 0cb75544 (IP: 54.227.91.38) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID a0b9dbf8 (IP: 13.221.126.43) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 3bfe91c0 (IP: 98.81.140.161) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 6eeca10a (IP: 107.20.27.175) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID f5edeaaf (IP: 3.93.68.129) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 16
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID d19e507f (IP: 3.91.97.84) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 01dac323 (IP: 54.234.131.163) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 6ddba220 (IP: 50.17.7.25) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 47d465a0 (IP: 54.221.3.20) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 78eedefb (IP: 13.218.221.76) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 1246ffce (IP: 54.209.6.127) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID c6b048ef (IP: 3.88.106.108) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 8ecf2abc (IP: 54.164.141.228) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 9a967bae (IP: 54.167.73.241) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID cf05a661 (IP: 54.173.251.73) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID a0734efa (IP: 44.223.61.192) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 0cb75544 (IP: 54.227.91.38) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID a0b9dbf8 (IP: 13.221.126.43) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 3bfe91c0 (IP: 98.81.140.161) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 6eeca10a (IP: 107.20.27.175) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID f5edeaaf (IP: 3.93.68.129) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_108 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_198 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_11 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_28 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_181 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_89 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_158 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_41 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 33.33%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[32;1m$ echo "Contents of logs directory after container run:"[0;m
+```
 
+
+This is the aggregate_process_stats_gatekeeper_module2d.json:
+
+```
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 0,
+  "total_failed_and_stubs": 16,
+  "total_resurrection_candidates": 16,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "107.20.27.175",
+    "13.218.221.76",
+    "13.221.126.43",
+    "3.88.106.108",
+    "3.91.97.84",
+    "3.93.68.129",
+    "44.223.61.192",
+    "50.17.7.25",
+    "54.164.141.228",
+    "54.167.73.241",
+    "54.173.251.73",
+    "54.209.6.127",
+    "54.221.3.20",
+    "54.227.91.38",
+    "54.234.131.163",
+    "98.81.140.161"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.11",
+    "1.1.13.108",
+    "1.1.14.41",
+    "1.1.14.89",
+    "1.1.15.158",
+    "1.1.16.28",
+    "1.1.17.181",
+    "1.1.17.198",
+    "107.20.27.175",
+    "13.218.221.76",
+    "13.221.126.43",
+    "3.88.106.108",
+    "3.91.97.84",
+    "3.93.68.129",
+    "44.223.61.192",
+    "50.17.7.25",
+    "54.164.141.228",
+    "54.167.73.241",
+    "54.173.251.73",
+    "54.209.6.127",
+    "54.221.3.20",
+    "54.227.91.38",
+    "54.234.131.163",
+    "98.81.140.161"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.11",
+    "1.1.13.108",
+    "1.1.14.41",
+    "1.1.14.89",
+    "1.1.15.158",
+    "1.1.16.28",
+    "1.1.17.181",
+    "1.1.17.198"
+  ],
+  "gatekeeper_resurrected": 8,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 33.33,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
+
+}
+
+```
 
 
 #### install_failed but not all commands successful + ghosts
 
 gatekeeper resurrect count should be 24
+This is the gitlab console logs:
+This is the aggregate_process_stats_gatekeeper_module2d.json:
+
+
+
+
 
 
 #### install_failed mixed HYBRID futures crash with about half with installation commands successful and other half crash after first command + ghosts
@@ -1015,6 +1428,12 @@ differences in the decisions between the two different types of crashes (one to 
 
 ```
 
+This is the gitlab console logs:
+This is the aggregate_process_stats_gatekeeper_module2d.json:
+
+
+
+
 
 
 #### The same HYBRID crash + ghosts test as above, but with 50 nodes. 
@@ -1024,6 +1443,11 @@ after the first command, and also 25 ghost ips.
 
 The 50 node test consists of 20 first wave processes, and 5 pooled processes, 2 threads each. So 25 total processes with 1 ghost ip
 per process, so that there are 25 ghost ips over the execution run.
+
+
+This is the gitlab console logs:
+
+This is the aggregate_process_stats_gatekeeper_module2d.json:
 
 
 
