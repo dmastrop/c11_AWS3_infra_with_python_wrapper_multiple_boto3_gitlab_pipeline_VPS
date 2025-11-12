@@ -1765,18 +1765,19 @@ per process, so that there are 25 ghost ips over the execution run.
 This simulates a real life occurrence very well. The hybrid crash in processes 12-14 and 15-17 cause a total of 22 install_failed threads due to both types of futures crashes.    
 
 In looking at the logs there are 
-3 processes with pid 12
-3 processes with pid 13
-2 processes with pid 14
+- 3 processes with pid 12
+- 3 processes with pid 13
+- 2 processes with pid 14
 
-1 process with pid 15
-1 process with pid 16
-1 process with pid 17
+- 1 process with pid 15
+- 1 process with pid 16
+- 1 process with pid 17
 
-Each process has 2 threads, so 
-So that creates 8 *2 = 16 IDX1 futures crashes that will be resurrected
-There are 3 * 2 = 6 futures crashes with installation successful that will not be resurrected.
-16 + 6 = 22 total resurrection candidates
+Each process has 2 threads:
+
+- So that creates 8 *2 = 16 IDX1 futures crashes that will be resurrected
+- There are 3 * 2 = 6 futures crashes with installation successful that will not be resurrected.
+- 16 + 6 = 22 total resurrection candidates
 
 There are a total of 25 ghost ips that will be resurrected
 
