@@ -203,10 +203,9 @@ offload some of the worload from the gatekeeper logic.
 
 ### Resurrection Rate
 **Definition:**  
+
 ```
-\[
-\text{Resurrection Rate} = \frac{\text{Resurrected}}{\text{Resurrection Candidates + Ghost Candidates}} \times 100
-\]
+Resurrection Rate = (Resurrected / (Resurrection Candidates + Ghost Candidates)) × 100
 ```
 
 
@@ -226,14 +225,16 @@ offload some of the worload from the gatekeeper logic.
 
 - **Edge Case Handling:** If denominator = 0 (no candidates, no ghosts), the rate defaults to `0.0%` to avoid division errors.
 
+- Note: post‑install futures crashes are technically install_failed and counted as candidates, but gatekeeper blocks them because all commands executed successfully. This distinction is important for future ML tuning.
+
+
 ---
 
 ### Gatekeeper Rate
-**Definition:**  
+**Definition:**
+  
 ```
-\[
-\text{Gatekeeper Rate} = \frac{\text{Resurrected}}{\text{Total Threads + Ghost IPs}} \times 100
-\]
+Gatekeeper Rate   = (Resurrected / (Total Process Threads + Ghost IPs)) × 100
 ```
 
 
@@ -246,6 +247,9 @@ offload some of the worload from the gatekeeper logic.
   - **Low** → Most nodes succeeded outright; system is stable and resilient.  
 
 - **Complementary Role:** While Resurrection Rate measures *candidate pool quality*, Gatekeeper Rate measures *execution robustness*.
+
+
+Resurrection Rate measures precision of candidate selection, while Gatekeeper Rate measures overall system resilience.”
 
 ---
 
@@ -270,10 +274,10 @@ Together, they provide a dual view:
 - If the failures are due to systemic instability (high gatekeeper rate), the ML will be aware of this co-condition and can attribute
 the nature of the gitlab log console scan to that, and tune the resurrection rate accordingly.
 
-- In addtion there are benchmark CPU and memory statistics available at the process and orchestration layers that the ML will have 
+- In addition there are benchmark CPU and memory statistics available at the process and orchestration layers that the ML will have 
 access to correlate with the gatekeeper rate fluctuations from different execution run variants.  
 
-
+- By correlating gatekeeper rate fluctuations with CPU/memory benchmarks, ML can distinguish between code‑level tagging issues and systemic infrastructure instability.
 
 
 
