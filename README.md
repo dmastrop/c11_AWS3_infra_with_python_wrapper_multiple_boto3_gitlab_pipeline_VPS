@@ -1760,11 +1760,335 @@ The 50 node test consists of 20 first wave processes, and 5 pooled processes, 2 
 per process, so that there are 25 ghost ips over the execution run.
 
 
+##### Abstract of what happened:
+
+This simulates a real life occurrence very well. The hybrid crash in processes 12-14 and 15-17 cause a total of 22 install_failed threads due to both types of futures crashes.    
+
+In looking at the logs there are 
+3 processes with pid 12
+3 processes with pid 13
+2 processes with pid 14
+
+1 process with pid 15
+1 process with pid 16
+1 process with pid 17
+
+Each process has 2 threads, so 
+So that creates 8 *2 = 16 IDX1 futures crashes that will be resurrected
+There are 3 * 2 = 6 futures crashes with installation successful that will not be resurrected.
+16 + 6 = 22 total resurrection candidates
+
+There are a total of 25 ghost ips that will be resurrected
+
+So the total gatekeeper resurrects will be 25 ghosts + 16 IDX1 futures crashes = 41
+
+Total candidates is 22 + 25 = 47
+
+
+
+##### The logs:
+
+
+
 This is the gitlab console logs:
 
+```
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 25 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 22 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 22 candidate IPs with command success entries
+[module2c] Tagged UUID bc8941b2 (IP: 54.162.177.255) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 99cd754c (IP: 54.91.138.192) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 215d8fcd (IP: 3.90.232.205) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID f4a6b601 (IP: 54.221.101.193) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 95e0ce2b (IP: 54.164.54.28) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID e7a0ef27 (IP: 54.173.241.174) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 6
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID b11f19c8 (IP: 52.23.235.24) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID edf0153e (IP: 107.21.177.188) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 8b9523f4 (IP: 3.87.86.110) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 1ba6546b (IP: 54.160.132.218) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID e7379cfd (IP: 3.90.200.181) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 687d2001 (IP: 54.173.152.134) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 6dfcdc4c (IP: 100.24.26.38) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 5f8db59b (IP: 34.228.170.113) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 788669ad (IP: 54.157.238.172) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID c2efb857 (IP: 3.91.16.181) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID ddb3e2b1 (IP: 34.227.9.101) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 6f9c8b93 (IP: 54.234.87.133) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID d9ce9517 (IP: 107.21.138.246) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 857957e7 (IP: 54.197.221.239) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 2be32fd3 (IP: 34.228.165.142) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6e3e436f (IP: 52.91.219.109) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 39085f74 (IP: 54.210.209.40) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 9006e49d (IP: 18.209.17.194) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 22ab161a (IP: 52.201.248.40) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID c38dbf26 (IP: 54.196.162.35) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 4fc7ca3d (IP: 54.160.159.147) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 670c9f2f (IP: 44.222.207.100) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e70f3e06 (IP: 34.207.209.76) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 06959641 (IP: 34.228.153.89) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bcc26b15 (IP: 13.218.246.67) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6ba9c268 (IP: 18.209.21.134) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bc8941b2 (IP: 54.162.177.255) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 99cd754c (IP: 54.91.138.192) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID b095fca6 (IP: 3.91.157.33) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bb124d89 (IP: 54.174.88.41) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 39ff3af5 (IP: 18.208.217.123) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 855b66f5 (IP: 54.160.250.160) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 447de78a (IP: 54.173.14.179) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID feb38083 (IP: 54.172.228.147) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID a5f27da7 (IP: 44.220.148.36) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 7c60f018 (IP: 54.145.10.45) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID e1a004b2 (IP: 34.235.87.158) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 8928a95e (IP: 54.234.22.41) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 215d8fcd (IP: 3.90.232.205) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID f4a6b601 (IP: 54.221.101.193) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 5822a15c (IP: 54.234.35.201) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 54fa095a (IP: 3.88.107.123) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID adcdbb08 (IP: 18.234.85.241) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID f88d3fd9 (IP: 54.227.227.25) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e738909b (IP: 54.205.55.179) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b9e76880 (IP: 52.73.69.98) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 95e0ce2b (IP: 54.164.54.28) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID e7a0ef27 (IP: 54.173.241.174) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID aba1c779 (IP: 54.226.70.6) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID a13c387b (IP: 54.210.122.123) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 16
+[module2d.1] Total blocked: 34
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 25
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_169 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_127 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_25_85 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_94 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_158 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_20_78 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_143 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_23_224 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_173 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_29_216 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_22_124 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_28_253 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_24_213 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_210 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_137 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_30_225 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_27_132 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_13 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_10 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_216 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_26_76 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_19_246 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_21_206 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_18_205 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_31_51 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 25
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 75
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 41, Blocked: 34, Total: 75
+[module2d.4] Resurrection Rate: 87.23%
+[module2d.4] Gatekeeper Rate: 54.67%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+```
+
+
+
+
 This is the aggregate_process_stats_gatekeeper_module2d.json:
+```
+{
+  "total_processes": 25,
+  "total_threads": 50,
+  "total_success": 28,
+  "total_failed_and_stubs": 22,
+  "total_resurrection_candidates": 22,
+  "total_resurrection_ghost_candidates": 25,
+  "unique_seen_ips": [
+    "100.24.26.38",
+    "107.21.138.246",
+    "107.21.177.188",
+    "13.218.246.67",
+    "18.208.217.123",
+    "18.209.17.194",
+    "18.209.21.134",
+    "18.234.85.241",
+    "3.87.86.110",
+    "3.88.107.123",
+    "3.90.200.181",
+    "3.90.232.205",
+    "3.91.157.33",
+    "3.91.16.181",
+    "34.207.209.76",
+    "34.227.9.101",
+    "34.228.153.89",
+    "34.228.165.142",
+    "34.228.170.113",
+    "34.235.87.158",
+    "44.220.148.36",
+    "44.222.207.100",
+    "52.201.248.40",
+    "52.23.235.24",
+    "52.73.69.98",
+    "52.91.219.109",
+    "54.145.10.45",
+    "54.157.238.172",
+    "54.160.132.218",
+    "54.160.159.147",
+    "54.160.250.160",
+    "54.162.177.255",
+    "54.164.54.28",
+    "54.172.228.147",
+    "54.173.14.179",
+    "54.173.152.134",
+    "54.173.241.174",
+    "54.174.88.41",
+    "54.196.162.35",
+    "54.197.221.239",
+    "54.205.55.179",
+    "54.210.122.123",
+    "54.210.209.40",
+    "54.221.101.193",
+    "54.226.70.6",
+    "54.227.227.25",
+    "54.234.22.41",
+    "54.234.35.201",
+    "54.234.87.133",
+    "54.91.138.192"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.127",
+    "1.1.12.13",
+    "1.1.12.137",
+    "1.1.13.173",
+    "1.1.13.210",
+    "1.1.13.94",
+    "1.1.14.143",
+    "1.1.14.216",
+    "1.1.15.158",
+    "1.1.16.10",
+    "1.1.17.169",
+    "1.1.18.205",
+    "1.1.19.246",
+    "1.1.20.78",
+    "1.1.21.206",
+    "1.1.22.124",
+    "1.1.23.224",
+    "1.1.24.213",
+    "1.1.25.85",
+    "1.1.26.76",
+    "1.1.27.132",
+    "1.1.28.253",
+    "1.1.29.216",
+    "1.1.30.225",
+    "1.1.31.51",
+    "100.24.26.38",
+    "107.21.138.246",
+    "107.21.177.188",
+    "13.218.246.67",
+    "18.208.217.123",
+    "18.209.17.194",
+    "18.209.21.134",
+    "18.234.85.241",
+    "3.87.86.110",
+    "3.88.107.123",
+    "3.90.200.181",
+    "3.90.232.205",
+    "3.91.157.33",
+    "3.91.16.181",
+    "34.207.209.76",
+    "34.227.9.101",
+    "34.228.153.89",
+    "34.228.165.142",
+    "34.228.170.113",
+    "34.235.87.158",
+    "44.220.148.36",
+    "44.222.207.100",
+    "52.201.248.40",
+    "52.23.235.24",
+    "52.73.69.98",
+    "52.91.219.109",
+    "54.145.10.45",
+    "54.157.238.172",
+    "54.160.132.218",
+    "54.160.159.147",
+    "54.160.250.160",
+    "54.162.177.255",
+    "54.164.54.28",
+    "54.172.228.147",
+    "54.173.14.179",
+    "54.173.152.134",
+    "54.173.241.174",
+    "54.174.88.41",
+    "54.196.162.35",
+    "54.197.221.239",
+    "54.205.55.179",
+    "54.210.122.123",
+    "54.210.209.40",
+    "54.221.101.193",
+    "54.226.70.6",
+    "54.227.227.25",
+    "54.234.22.41",
+    "54.234.35.201",
+    "54.234.87.133",
+    "54.91.138.192"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.127",
+    "1.1.12.13",
+    "1.1.12.137",
+    "1.1.13.173",
+    "1.1.13.210",
+    "1.1.13.94",
+    "1.1.14.143",
+    "1.1.14.216",
+    "1.1.15.158",
+    "1.1.16.10",
+    "1.1.17.169",
+    "1.1.18.205",
+    "1.1.19.246",
+    "1.1.20.78",
+    "1.1.21.206",
+    "1.1.22.124",
+    "1.1.23.224",
+    "1.1.24.213",
+    "1.1.25.85",
+    "1.1.26.76",
+    "1.1.27.132",
+    "1.1.28.253",
+    "1.1.29.216",
+    "1.1.30.225",
+    "1.1.31.51"
+  ],
+  "gatekeeper_resurrected": 41,
+  "gatekeeper_blocked": 34,
+  "gatekeeper_total": 75,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 87.23,  <<< 41/47
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 54.67  <<< 41/75 
+}
 
-
+```
 
 
 
