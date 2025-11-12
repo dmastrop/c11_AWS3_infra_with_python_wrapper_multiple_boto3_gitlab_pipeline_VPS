@@ -72,7 +72,7 @@ deploy:
 
 
 
-    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "false"  # post install futures crash with real tagging of module2c. This actually uses the
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
       # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
       # successfully. In this case an additional tag has to be added that indicates that installation is successful.
       # The gatekeeper will bypass resurrecting this thread.
@@ -97,7 +97,7 @@ deploy:
       # InstanceId as well for downstream code, and that synthetic InstanceId causes a futures crash (install_failed) instead of a
       # ghost.  The code for this has been commented out.   Use the flag below
       
-    INJECT_POST_THREAD_GHOSTS: "false"  # this injection is in tomcat_worker between the process_registry run_test call to 
+    INJECT_POST_THREAD_GHOSTS: "true"  # this injection is in tomcat_worker between the process_registry run_test call to 
       # threaded_install which establishes the process_registry for the process (seen_ips) and the call to 
       # resurrection_monitor_patch8. The instance_info variable is mutated in between the two with the ghost injection. This 
       # creates delta between seen_ips and golden ips which are missing_ips or ghosts, as evalluated by the helper fuction 
@@ -113,8 +113,8 @@ deploy:
     - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
     - echo 'instance_type=t2.micro' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
-    - echo 'min_count=16' >> .env
-    - echo 'max_count=16' >> .env
+    - echo 'min_count=50' >> .env
+    - echo 'max_count=50' >> .env
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
