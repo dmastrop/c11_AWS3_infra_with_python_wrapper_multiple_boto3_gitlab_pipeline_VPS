@@ -203,9 +203,12 @@ offload some of the worload from the gatekeeper logic.
 
 ### Resurrection Rate
 **Definition:**  
+```
 \[
 \text{Resurrection Rate} = \frac{\text{Resurrected}}{\text{Resurrection Candidates + Ghost Candidates}} \times 100
 \]
+```
+
 
 - **Scope:** Limited to *candidates only* — threads that failed and were eligible for resurrection, plus ghost IPs.  
 
@@ -227,9 +230,12 @@ offload some of the worload from the gatekeeper logic.
 
 ### Gatekeeper Rate
 **Definition:**  
+```
 \[
 \text{Gatekeeper Rate} = \frac{\text{Resurrected}}{\text{Total Threads + Ghost IPs}} \times 100
 \]
+```
+
 
 - **Scope:** All threads and ghosts — includes successful installs, blocked post‑install crashes, and ghosts.  
 
@@ -265,7 +271,7 @@ Together, they provide a dual view:
 the nature of the gitlab log console scan to that, and tune the resurrection rate accordingly.
 
 - In addtion there are benchmark CPU and memory statistics available at the process and orchestration layers that the ML will have 
-access to to correlate with the gatekeeper rate fluctuations from different execution run variants.  
+access to correlate with the gatekeeper rate fluctuations from different execution run variants.  
 
 
 
