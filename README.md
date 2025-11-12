@@ -200,7 +200,7 @@ be appended to the aggregate main() stats file. A percentage can be calculated f
 
 
 
-### Process level code in resurrection_monitor_patch8() of module2
+### Code PART1: Process level code in resurrection_monitor_patch8() of module2
 
 
 This code is placed at the very end of the resurrection_monitor_patch8() function.
@@ -276,7 +276,7 @@ This code is placed at the very end of the resurrection_monitor_patch8() functio
 
 
 
-### Aggregation stats code in main() of module2
+### Code PART2: Aggregation stats code in main() of module2
 
 The function below is placed in main()
 ```
@@ -367,7 +367,7 @@ if __name__ == "__main__":
 
 
 
-### module2d aggregate gatekeeper stats from the final_aggregate_execution_run_registry_module2d.json
+### Code PART3: module2d aggregate gatekeeper stats from the final_aggregate_execution_run_registry_module2d.json
 
 
 As noted above: This is very simple to do. By the time module2d runs, the registry_entrys (both process_registry and ghost synthetic
@@ -443,7 +443,7 @@ The code is placed in module2d and is to be executed at the very end for obvious
 complete):
 
 
-A new function is created, making this all very modular:
+A new function is created in module2d, making this all very modular:
 
 
 ```
@@ -525,8 +525,36 @@ def aggregate_gatekeeper_stats():
 
 This function is intentionally executed after all of the functions in module2d:
 
+The function is named aggregate_gatekeeper_stats() as shown above.
 
+Just to recap in module2d:
 
+- main() adds the gatekeeper tags to the process_registry [module2d.1]
+
+- process_ghost_registry() does the transform on the ghost entries file to standarized registry_entry format and then tags with gatekeeper 
+decisions [module2d.2a and module2d.2b]
+
+- merge_resurrection_registries() merges the process_registry with the ghost registry files (both have gatekeeper tags) [module2d.3]
+
+- aggregate_gatekeeper_stats() extracts out the gatekeeper stats from the merge and compiles gatekeeper stats as shown earlier (validation
+section will have more examples of this). [module2d.4]
+
+```
+if __name__ == "__main__":
+    main()
+
+    process_ghost_registry()  # the process_ghost_registry requires special code to transform the original and then apply resurrection
+    # gatekeeper. See the function above. This is called after the module2d.1 processing.  The ghost processing is module2d.2a and 
+    # module2d.2b in the logs.
+
+    merge_resurrection_registries()  # this function merges the ghost registry and aggregate registry that has been processed by
+    # the resurrection_gatekeeper into one file so that the Phase3 resurrection code can consume it and reque the threads 
+    # accordingly.
+
+    aggregate_gatekeeper_stats()  # this function has inputs of the module2 main() aggregate stats json file and  the 
+    # final_aggregate_execution_run_registry_module2d.json that has all the gateway decisions (in the tags of the regisry_entrys
+    # This function has to run at the very end of this module2d.
+```
 
 
 
@@ -831,9 +859,15 @@ This test went well.
 
 ### Validation of the aggregate gatekeeper stats in module2d
 
+
+#### Introduction
+
+
 This validation will consist of the following tests
 
-- install_success + ghosts: Only the 8 ghosts should be included in the gatekeeper resurrect count.
+- install_success + no ghosts: There will be no resurrection candidates and the gatekeeper resurrection count is 0.
+
+- install_success + ghosts: Only the 8 ghosts should be included in the gatekeeper resurrection count.
 
 - install_failed with a futures crash after installation has completed + ghosts: The module2c will tag these so that the gatekeeper
 can bypass resurrecting these install_failed candidates and the gatekeeper count should reflect this accordingly. The ghosts
@@ -889,28 +923,107 @@ crash.
     "resurrection_reason": "Tagged with future_exception"
   },
 
+
 ```
+
+#### install_success + no ghosts
+
+The gatekeeper resurrect count should be 0
+
 
 #### install_success + ghosts
 
-gatekeeper resurrect count should be 8
+With the 16 node, 8 process test, and 1 ghost per process, the gatekeeper resurrect count should be 8
+
+
 
 
 #### install_failed but installation commands successful + ghosts
 
 gatekeeper resurrect count should be 8
 
+
+
+
 #### install_failed but not all commands successful + ghosts
 
 gatekeeper resurrect count should be 24
 
 
+#### install_failed mixed HYBRID futures crash with about half with installation commands successful and other half crash after first command + ghosts
+
+The synthetic crash code logic for this was added to .gitlab-ci.yml as ENV variable as shown below (from .gitlab-ci.yml file):
+
+FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH
+
+```
+    FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG: "true"  # post install futures crash with real tagging of module2c. This actually uses the
+      # post gitlab console logs sanning of module2c to determine if there is a futures crash that had all commands executed 
+      # successfully. In this case an additional tag has to be added that indicates that installation is successful.
+      # The gatekeeper will bypass resurrecting this thread.
+
+
+    FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "false"   # this futures crash will hit the module2c scan but an additional tag should not be 
+      # inserted. The gatekeeper will try to resurrect this thread.      
+
+    FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH: "false"  # this uses the pid which is somewhat deterministic in a 16 node test to 
+      # activate half of the processes with a futures crash after the first command and the other half of the processes with a futures
+      # crash after all the commands have succeeded. This tests the gatekeeper stats code implemenented in module2d. This 
+      # activates FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG crash for half of the processes and activates 
+      # FORCE_TOMCAT_FAIL_IDX1_REAL_TAG for the other half of the processes. If this is used with the 512 node test only a few of 
+      # the processes will get futures crashes which is also a good partial test. This is true with any test that uses > 16 nodes.
+      # NOTE: If setting HYBRID above to true, best to set the other 2 (IDX1 and POSTINSTALL) to false.
+```
+
+
+The code used to do a hybrid futures crash is the following right before the for idx loop in install_tomcat of module2:
+The pids are deterministic for the 16 node test as shown below, and so the code will create roughly half of the futures crashes
+with a postinstall successful crash and the other half with a crash right after the first command executes. It won't be exactly
+50/50 because the pooled process pids are not deterministic and can be either in 12-14 range or 15-17 range depending on when the 
+first wave processes complete. But this code provides a good hybrid crash test and the gatekeeper results reflect the proper 
+differences in the decisions between the two different types of crashes (one to be resurrected and the other not to be resurrected)
+
+
+```
+
+        ##### This is for a hybrid crash with half of the processes getting a futures crash after the first command and the
+        ##### other half of the processes getting the futures crash after all of the commands have executed successfully.
+        ##### This is used to test the gatekeeper stats code in module2d
+        ##### Set the FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH to true in the .gitlab-ci.yml file to activate this.
+
+
+        pid = multiprocessing.current_process().pid
+
+
+        # Activate hybrid crash simulation only if explicitly enabled
+        if os.getenv("FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH", "false").lower() in ("1", "true"):
+            if pid in [12, 13, 14]:
+                # Simulate IDX1 crash — early failure, no post-install success tag
+                os.environ["FORCE_TOMCAT_FAIL_IDX1_REAL_TAG"] = "true"
+                os.environ["FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG"] = "false"
+
+            elif pid in [15, 16, 17]:
+                # Simulate post-install crash — all commands succeed, tag inserted
+                os.environ["FORCE_TOMCAT_FAIL_IDX1_REAL_TAG"] = "false"
+                os.environ["FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG"] = "true"
 
 
 
+        #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
+        #NON-Negative testing use this: (and comment out the above)
+        for idx, command in enumerate(commands):
+
+```
 
 
 
+#### The same HYBRID crash + ghosts test as above, but with 50 nodes. 
+
+In this case there will be a small portion of install successful futures crashes (about 3-6) and a small number of futures crashes 
+after the first command, and also 25 ghost ips. 
+
+The 50 node test consists of 20 first wave processes, and 5 pooled processes, 2 threads each. So 25 total processes with 1 ghost ip
+per process, so that there are 25 ghost ips over the execution run.
 
 
 
