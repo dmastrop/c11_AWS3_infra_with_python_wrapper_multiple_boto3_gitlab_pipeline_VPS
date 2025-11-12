@@ -1775,8 +1775,8 @@ In looking at the logs there are
 
 Each process has 2 threads:
 
-- So that creates 8 *2 = 16 IDX1 futures crashes that will be resurrected
-- There are 3 * 2 = 6 futures crashes with installation successful that will not be resurrected.
+- So that creates 8 *2 = 16 IDX1 futures crashes that will be resurrected (thread crashes in pids 12-14)
+- There are 3 * 2 = 6 futures crashes with installation successful that will not be resurrected. (thread crashes in pids 15-17)
 - 16 + 6 = 22 total resurrection candidates
 
 There are a total of 25 ghost ips that will be resurrected
