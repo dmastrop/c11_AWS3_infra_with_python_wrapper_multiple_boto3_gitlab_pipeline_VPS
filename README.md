@@ -249,7 +249,7 @@ Gatekeeper Rate   = (Resurrected / (Total Process Threads + Ghost IPs)) × 100
 - **Complementary Role:** While Resurrection Rate measures *candidate pool quality*, Gatekeeper Rate measures *execution robustness*.
 
 
-Resurrection Rate measures precision of candidate selection, while Gatekeeper Rate measures overall system resilience.”
+Resurrection Rate measures precision of candidate selection, while Gatekeeper Rate measures overall system resilience.
 
 ---
 
