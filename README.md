@@ -924,6 +924,17 @@ crash.
   },
 
 
+- To further the integrity of the validation of the code a synthetic HYBRID crash, mixing the two crashes above, along with synthetic
+ghost ips will be added to the testing. 
+
+In addtion to the 16 node test, a 50 node and 512 hyper-scaling stress test will be done. The value of the 50 and 512 tests is that
+they will mix in install_success threads as well, so that a full combination of ghosts, install_failed variants, and install_success
+can test the logic of the gatekeeper code and gatekeeper stats. Once this is verified the next phase is Phase3 whereby the 
+gatekeeper_resurrecct threads will be requed and a resurrection of the threads will be attempted. Following that the gitlab console 
+scans of module2b and 2c will be fed into ML algorithms to increase the intellegence of the failure, stub and ghost detection both
+adaptively and dynamically based upon the variants of the commands being executed, the STDOUT/STDERR output, and patterns that 
+would be toot difficult to detect manaully (especially with ghost failures on the hyper-scaling test cases of over 512 nodes).
+
 ```
 
 #### install_success + no ghosts
