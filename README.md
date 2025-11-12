@@ -264,7 +264,8 @@ Together, they provide a dual view:
 - If the failures are due to systemic instability (high gatekeeper rate), the ML will be aware of this co-condition and can attribute
 the nature of the gitlab log console scan to that, and tune the resurrection rate accordingly.
 
-
+- In addtion there are benchmark CPU and memory statistics available at the process and orchestration layers that the ML will have 
+access to to correlate with the gatekeeper rate fluctuations from different execution run variants.  
 
 
 
