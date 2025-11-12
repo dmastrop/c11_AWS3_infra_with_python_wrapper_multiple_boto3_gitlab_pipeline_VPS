@@ -144,7 +144,7 @@ https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gi
 
 - Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips
 
-- Update part 38 Phase 2v: PROCESS level stats reporting using the resurrection_monitor_patch8 process level information
+- Update part 38 Phase 2v: PROCESS level, aggregate level, and gatekeeper stats reporting using the resurrection_monitor_patch8 process level information, module2 main(), and module2d
 
 
 ## A note on the STATUS_TAGS:
@@ -177,7 +177,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 38: Phase 2v: PROCESS level stats reporting using the resurrection_monitor_patch8 process level information
+## UPDATES part 38: Phase 2v:PROCESS level, aggregate level, and gatekeeper stats reporting using the resurrection_monitor_patch8 process level information, module2 main(), and module2d
 
 
 ### Introduction
