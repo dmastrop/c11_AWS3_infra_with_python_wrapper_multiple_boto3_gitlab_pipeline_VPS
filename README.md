@@ -2422,12 +2422,12 @@ Module2d synthetic ghost registry sample
 ```
 31 install_failed failures
 
-23 of these are the synthetic IDX1 futures crash
+- 23 of these are the synthetic IDX1 futures crash
 
-Pid12  8 of them (reused a lot since it is an early pid, same with pid13 and 14)
-Pid 13 6 of them
-Pid 14 9 of them
-TOTAL of 23 IDX1 futures crashes
+- Pid12  8 of them (reused a lot since it is an early pid, same with pid13 and 14)
+- Pid 13 6 of them
+- Pid 14 9 of them
+- TOTAL of 23 IDX1 futures crashes
 
 ```
 "de1809b7": {
@@ -2451,12 +2451,12 @@ TOTAL of 23 IDX1 futures crashes
 
 ```
 
-3 install sucess futures crashes
+- 3 install sucess futures crashes
 
-Pid 15 1 of them
-Pid 16 1 of them
-Pid 17 1 of them
-TOTAL of 3 install success futures crashes that do not need to be resurrected
+- Pid 15 1 of them
+- Pid 16 1 of them
+- Pid 17 1 of them
+- TOTAL of 3 install success futures crashes that do not need to be resurrected
 
 Sample
 ```
@@ -2482,13 +2482,10 @@ Sample
 ```
 
 
-5 total real crashes:
+- 5 total real crashes:
+- These are all SSHException types of install_failed threads
 
 
-
-
-REAL CRASHES
-5 real crashes
 ```
 "9cbb0424": {
     "status": "install_failed",
@@ -2602,7 +2599,7 @@ A total of 5+23+3 = 31 total install_failed candidates + 512 ghosts = 543 total 
 Of the 31, 28 gatekeeper_resurrect + 512 ghosts = 540 resurrected threads
 
 
-540/543 = 99.45% = resurrected rate. Only 3 of the candidates did not need to be resurrected after all. 5 of these are real install_failed with SSH failures 
+540/543 = 99.45% = resurrection rate. Only 3 of the candidates did not need to be resurrected after all. 5 of these are real install_failed with SSH failures 
 
 Total threads are 512 + 512 ghosts = 1024 total
 
