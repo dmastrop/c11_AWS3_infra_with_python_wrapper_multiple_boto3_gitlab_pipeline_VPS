@@ -2267,6 +2267,420 @@ This is the aggregate_process_stats_gatekeeper_module2d.json:
 ```
 
 
+#### The same HYBRID crash + ghosts test as above, but with 512  node hyper-scaling
+
+
+This test introduced some real life install_failed threads, namely those that occur with the intial SSH connect where the node
+does not respond back at all. This usually happens under high VPS host swap utilization. These types of threads are ideal for
+Phase3 resurrection. As shown below, the code identified all of the synthetic futures crashes and ghost ips and also identified
+these real life thread failures. All of these were differentiated by the tags. Samples of the different tags are below.
+
+##### Sample of some of the gitlab console logs
+
+The logs are massive for this scale, but the logs below demonstrate some of the variable gatekeeper tagging logic that 
+occurs during the pipeline execution and some of the final gatekeeper stats:
+
+
+
+```
+
+
+
+Excerpt:
+
+RESMON_7d] Matched IPs: ['34.201.71.177', '172.31.22.45']
+[RESMON_7d] Raw line 2910: '2025-11-12 23:28:52,484 - 318 - MainThread - [PID 318] [UUID 146a61df] ✅ Install succeeded | Public IP: 98.84.186.120 | Private IP: 172.31.18.60\n'
+[RESMON_7d] Matched IPs: ['98.84.186.120', '172.31.18.60']
+[RESMON_7d] Raw line 2966: '2025-11-12 23:30:36,407 - 323 - MainThread - [PID 323] [UUID 4d4a9f03] ✅ Install succeeded | Public IP: 34.229.215.161 | Private IP: 172.31.26.45\n'
+[RESMON_7d] Matched IPs: ['34.229.215.161', '172.31.26.45']
+[RESMON_7d] Raw line 3011: '2025-11-12 23:15:39,706 - 326 - MainThread - [PID 326] [UUID 0c6013d8] ❌ Future crashed | RE-hydrated Public IP: 54.89.74.194 | RE-hydrated Private IP: 172.31.22.38\n'
+[RESMON_7d] Matched IPs: ['54.89.74.194', '172.31.22.38']
+
+
+
+[RESMON_7d] Matched IPs: ['3.94.162.221', '172.31.16.185']
+[RESMON_7d] Raw line 325: '2025-11-12 23:30:29,984 - 129 - MainThread - [PID 129] [UUID 005a6ab0] ✅ Install succeeded | Public IP: 34.201.101.104 | Private IP: 172.31.24.176\n'
+[RESMON_7d] Matched IPs: ['34.201.101.104', '172.31.24.176']
+[RESMON_7d] Raw line 344: '2025-11-12 23:18:26,518 - 12 - MainThread - [PID 12] [UUID 00433b1a] ❌ Future crashed | RE-hydrated Public IP: 52.23.199.48 | RE-hydrated Private IP: 172.31.31.165\n'
+[RESMON_7d] Matched IPs: ['52.23.199.48', '172.31.31.165']
+[RESMON_7d] Raw line 358: '2025-11-12 23:23:02,106 - 12 - MainThread - [PID 12] [UUID 2d0ca374] ❌ Future crashed | RE-hydrated Public IP: 54.85.169.36 | RE-hydrated Private IP: 172.31.19.212\n'
+[RESMON_7d] Matched IPs: ['54.85.169.36', '172.31.19.212']
+[RESMON_7d] Raw line 372: '2025-11-12 23:16:12,974 - 12 - MainThread - [PID 12] [UUID 4cbc08e3] ❌ Future crashed | RE-hydrated Public IP: 54.197.36.196 | RE-hydrated Private IP: 172.31.28.21\n'
+[RESMON_7d] Matched IPs: ['54.197.36.196', '172.31.28.21']
+[RESMON_7d] Raw line 386: '2025-11-12 23:20:50,472 - 12 - MainThread - [PID 12] [UUID b95a2cbe] ❌ Future crashed | RE-hydrated Public IP: 13.220.133.87 | RE-hydrated Private IP: 172.31.31.221\n'
+[RESMON_7d] Matched IPs: ['13.220.133.87', '172.31.31.221']
+[RESMON_7d] Raw line 400: '2025-11-12 23:19:44,901 - 12 - MainThread - [PID 12] [UUID 96596b15] ❌ Future crashed | RE-hydrated Public IP: 98.93.245.178 | RE-hydrated Private IP: 172.31.27.161\n'
+[RESMON_7d] Matched IPs: ['98.93.245.178', '172.31.27.161']
+[RESMON_7d] Raw line 414: '2025-11-12 23:21:55,126 - 12 - MainThread - [PID 12] [UUID e4ade557] ❌ Future crashed | RE-hydrated Public IP: 54.164.156.65 | RE-hydrated Private IP: 172.31.31.161\n'
+[RESMON_7d] Matched IPs: ['54.164.156.65', '172.31.31.161']
+[RESMON_7d] Raw line 428: '2025-11-12 23:24:51,475 - 12 - MainThread - [PID 12] [UUID 4eb92b04] ❌ Future crashed | RE-hydrated Public IP: 54.86.102.16 | RE-hydrated Private IP: 172.31.19.196\n'
+[RESMON_7d] Matched IPs: ['54.86.102.16', '172.31.19.196']
+[RESMON_7d] Raw line 442: '2025-11-12 23:23:48,754 - 12 - MainThread - [PID 12] [UUID de1809b7] ❌ Future crashed | RE-hydrated Public IP: 50.16.130.67 | RE-hydrated Private IP: 172.31.19.252\n'
+[RESMON_7d] Matched IPs: ['50.16.130.67', '172.31.19.252']
+
+
+Excerpt:
+
+
+[module2d.1] ⛔ Blocking UUID f2a7f5c7 (IP: 3.93.184.203) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 171e3cec (IP: 100.24.8.45) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 71d83f36 (IP: 54.146.205.254) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 5e148d6f (IP: 54.210.211.198) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID b69b01b9 (IP: 98.84.139.79) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 3bcb568c (IP: 54.221.68.238) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID a5ef79cf (IP: 98.89.46.62) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 0876d846 (IP: 18.212.89.89) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 304a79c1 (IP: 18.234.170.219) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID aae70df0 (IP: 34.224.67.158) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6a0decfc (IP: 34.228.75.254) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4a4d90d7 (IP: 18.212.212.254) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 11b6354c (IP: 3.84.111.246) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID fbf9cc91 (IP: 3.82.38.98) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 5cdbcf1c (IP: 98.81.210.16) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 0541684c (IP: 54.224.172.242) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bcd91528 (IP: 34.230.84.214) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 70dd077a (IP: 54.159.29.72) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 63073ac0 (IP: 34.227.8.40) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 5977a828 (IP: 107.20.95.224) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 2e912f8f (IP: 18.207.114.157) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID f4e867f9 (IP: 54.242.14.115) — Reason: Install succeeded
+
+
+
+
+Excerpt:
+
+
+[module2d.1] ✅ Resurrecting UUID 2d0ca374 (IP: 54.85.169.36) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 04e8520a (IP: 3.89.100.115) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 64ead41b (IP: 3.89.24.196) — Reason: Tagged with future_exception
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 28
+[module2d.1] Total blocked: 484
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 512
+
+
+
+Excerpt:
+
+
+
+module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_322_123 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_261_196 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_158_30 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_203_13 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_415_251 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 512
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 1024
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 540, Blocked: 484, Total: 1024
+[module2d.4] Resurrection Rate: 99.45%
+[module2d.4] Gatekeeper Rate: 52.73%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+Contents of logs directory after container run:
+ [32;1m$ ls -l logs/ [0;m
+
+```
+##### Registry samples:
+
+
+
+Module2d synthetic ghost registry sample
+
+```
+{
+  "ghost_1_1_147_15": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 147,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_147_15",
+    "public_ip": "1.1.147.15",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+```
+31 install_failed failures
+
+23 of these are the synthetic IDX1 futures crash
+
+Pid12  8 of them (reused a lot since it is an early pid, same with pid13 and 14)
+Pid 13 6 of them
+Pid 14 9 of them
+TOTAL of 23 IDX1 futures crashes
+
+```
+"de1809b7": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 138932192234368,
+    "thread_uuid": "de1809b7",
+    "public_ip": "50.16.130.67",
+    "private_ip": "172.31.19.252",
+    "timestamp": "2025-11-12 23:23:47.753044",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+
+```
+
+3 install sucess futures crashes
+
+Pid 15 1 of them
+Pid 16 1 of them
+Pid 17 1 of them
+TOTAL of 3 install success futures crashes that do not need to be resurrected
+
+Sample
+```
+"acc21d1f": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": 138932192234368,
+    "thread_uuid": "acc21d1f",
+    "public_ip": "18.205.25.143",
+    "private_ip": "172.31.20.31",
+    "timestamp": "2025-11-12 23:31:09.320071",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+```
+
+
+5 total real crashes:
+
+
+
+
+REAL CRASHES
+5 real crashes
+```
+"9cbb0424": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 18,
+    "thread_id": 138932192234368,
+    "thread_uuid": "9cbb0424",
+    "public_ip": "174.129.82.11",
+    "private_ip": "172.31.16.17",
+    "timestamp": "2025-11-12 23:15:45.964147",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",  <<<< NOTE THAT THIS IS NOT IN SYNTHETIC FUTURES CRASHES ABOVE> this is a real SSH crash at SSH
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+
+
+
+"f6b47529": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 237,
+    "thread_id": 138932192234368,
+    "thread_uuid": "f6b47529",
+    "public_ip": "54.84.207.221",
+    "private_ip": "172.31.18.20",
+    "timestamp": "2025-11-12 23:15:40.928070",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+
+
+
+"0c6013d8": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 326,
+    "thread_id": 138932192234368,
+    "thread_uuid": "0c6013d8",
+    "public_ip": "54.89.74.194",
+    "private_ip": "172.31.22.38",
+    "timestamp": "2025-11-12 23:15:38.612227",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+   "resurrection_reason": "Tagged with future_exception"
+
+
+"199a381c": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 144,
+    "thread_id": 138932192234368,
+    "thread_uuid": "199a381c",
+    "public_ip": "23.22.127.31",
+    "private_ip": "172.31.16.210",
+    "timestamp": "2025-11-12 23:15:37.558642",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+
+
+
+"64ead41b": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 243,
+    "thread_id": 138932192234368,
+    "thread_uuid": "64ead41b",
+    "public_ip": "3.89.24.196",
+    "private_ip": "172.31.18.19",
+    "timestamp": "2025-11-12 23:15:40.574073",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "SSHException",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  }
+}
+```
+
+
+
+##### Resurrection mathematics
+
+
+A total of 5+23+3 = 31 total install_failed candidates + 512 ghosts = 543 total candidates
+
+Of the 31, 28 gatekeeper_resurrect + 512 ghosts = 540 resurrected threads
+
+
+540/543 = 99.45% = resurrected rate. Only 3 of the candidates did not need to be resurrected after all. 5 of these are real install_failed with SSH failures 
+
+Total threads are 512 + 512 ghosts = 1024 total
+
+Resurrected/total = 540/1024 = 52.73% =gatekeeper rate
+
+
+I did look at the gitlab console logs at these real crashes and they are typical of the SSH type of crash seen at hyper-scaling levels.
+An SSH connecction is initiated without any type of response from the  node, even though the node has passed all status health checks
+in the AWS orchestration layer.
+
+```
+
+>>>> Process_index is 231
+
+[DEBUG] Process 231: chunk size = 1
+[DEBUG] Process 231: IPs = ['3.89.24.196']
+
+[TRACE][install_tomcat] Beginning installation on 3.89.24.196
+Attempting to connect to 3.89.24.196 (Attempt 1)
+
+>>>>>I don't see anything else just this next:
+
+[PID 243] [UUID 64ead41b] ❌ Future crashed | RE-hydrated Public IP: 3.89.24.196 | RE-hydrated Private IP: 172.31.18.19
+[tomcat_worker RESMON_8_PATCH] Rehydrated IP 3.89.24.196 for UUID 64ead41b
+
+[TRACE][tomcat_worker] Registry entry [64ead41b]: {'status': 'install_failed', 'attempt': -1, 'pid': 243, 'thread_id': 138932192234368, 'thread_uuid': '64ead41b', 'public_ip': '3.89.24.196', 'private_ip': '172.31.18.19', 'timestamp': '2025-11-12 23:15:40.574073', 'tags': ['install_failed', 'future_exception', 'SSHException', 'ip_rehydrated']}
+
+```
+
+
+##### Final summary
+
+
+```
+  ],
+  "gatekeeper_resurrected": 540,
+  "gatekeeper_blocked": 484,
+  "gatekeeper_total": 1024,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 99.45,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 52.73
+}
+
+```
+
+
+Key Results
+- **Total processes:** 512  
+- **Install successes:** 481  
+- **Install_failed candidates:** 31  
+  - 23 synthetic IDX1 futures crashes (pids 12–14)  
+  - 3 post‑install futures crashes (pids 15–17, correctly blocked by gatekeeper)  
+  - 5 *real* SSH crashes (pids 18, 144, 237, 243, 326)  
+- **Ghost candidates:** 512 (1 per process)  
+- **Total candidates:** 543 (31 + 512)  
+- **Resurrected:** 540 (28 install_failed + 512 ghosts)  
+- **Blocked:** 484 (mostly install_success and the 3 post‑install crashes)  
+- **Final registry size:** 1024 (512 threads + 512 ghosts)  
+
+---
+
+Metrics
+- **Resurrection Rate**  
+  540/543 x 100 = 99.45%
+  → Candidate pool tagging is precise. Only the 3 post‑install crashes were correctly blocked.
+
+- **Gatekeeper Rate**  
+  540/1024 x 100 = 52.73%
+  → About half of all threads+ghosts required resurrection. This reflects the synthetic chaos design, not systemic instability.
+
+
+
+
+
+
+
+
+
+
 
 
 ## UPDATES part 37: Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips 
