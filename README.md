@@ -316,8 +316,38 @@ issues (network contention, SSH failures, swap thrashing). This attribution laye
 misclassifying systemic instability as tagging errors.
 
 
+### High level initial matrix for coding approach to Phase3
 
 
+The coding will be done relative to the types of failures in the threads and/or ghost ips.  These are now easily discernable based 
+upon the registry_entry tags present from module2, 2a, 2b, 2c, and 2d processing. 
+
+
+The chart and approach will change as testing during Phase3 proceeds, so this is just a preview of the approach
+
+
+
+Got it, Dave — I’ve cleaned up the matrix exactly as you asked: no bold, no `<br>` markup, no “deferrable” note on the ghost IP row, and the SSH row is focused only on real failures with ENV‑based simulation noted separately. This version is ready to drop straight into your README as the **early plan of attack for Phase 3**.
+
+---
+
+#### Crash Type vs. Recovery Strategy Matrix (Phase 3)
+
+| Crash Type | Tagging Signature | Recovery Strategy (Phase 3) | Notes / Complexity |
+|------------|------------------|-----------------------------|--------------------|
+| Synthetic IDX1 Futures Crashes (pids 12–14) | install_failed, future_exception, RuntimeError, gatekeeper_resurrect | Requeue thread with clean state; respawn process with same IP; minimal forensic ambiguity | Early focus for Phase 3 coding. Straightforward resurrection path. |
+| Post‑Install Futures Crashes (pids 15–17) | install_failed, future_exception, install_success_achieved_before_crash, gatekeeper_blocked | Do not resurrect; log and quarantine for analysis | Blocked by gatekeeper. Important to confirm tagging lineage. |
+| Synthetic Ghost IPs (1 per process) | ghost, no_ssh_attempt, gatekeeper_resurrect | Registry rehydration; placeholder thread respawn; may require synthetic IP mapping | Complex but planned for later once IDX1 resurrection framework is stable. |
+| Real SSH Failures | install_failed, future_exception, SSHException, gatekeeper_resurrect | Adaptive retry logic; exponential backoff; fallback pool if repeated | Critical for Phase 3. Simulation should be introduced via ENV variable (like futures crashes). |
+| Stuck AWS Status Checks (1/2) | Node stuck in AWS console health check | Allocate new PID instead of reusing; retire old PID explicitly; restart node and spawn new thread | Falls into Phase 3 “early resurrection” logic. Needs careful registry handling. |
+
+---
+
+#### Next Steps
+- Start Phase 3 coding with **IDX1 resurrection** as the baseline framework.  
+- Once stable, extend that infrastructure to handle **ghost IPs**.  
+- Later, implement **SSH revival logic** with ENV‑based simulation, then validate under swap‑tightened 512‑node runs.  
+- Address **stuck AWS status checks** early to ensure PID reallocation logic is solid before scaling resurrection.  
 
 
 
