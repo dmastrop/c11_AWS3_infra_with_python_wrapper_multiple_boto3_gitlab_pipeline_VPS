@@ -6584,10 +6584,20 @@ def main():
     null_ips = [ip for ip in instance_ips if 'PublicIpAddress' not in ip or not ip['PublicIpAddress']]
     print(f"[DEBUG] Null or missing IPs: {null_ips}")
 
-    expected_count = len(instance_ids)
+
+    ## The instance_ids, defined above, uses the reservation type AWS API and this does not scale well with higher node coount
+    ## tests. It zeroes out when using a 512 node test for example.  This is replaced with the instance_ips which is based on 
+    ## orchestration logic (see orchestrate_instance_launch_and_ip_polling function) using AWS API batch style processing.
+    ## This is scaling really well in the testing. 
+
+    #expected_count = len(instance_ids)
+    reservation_API_node_count = len(instance_ids)
     actual_count = len(instance_ips)
-    if actual_count != expected_count:
-        print(f"[WARNING] Expected {expected_count} IPs but got {actual_count}")
+    if actual_count != reservation_API_node_count: ## This will only be true when using high node testing. With lower node testing this will be false and the WARNING message below will not print out. 
+        print(f"[WARNING] Reservation API node count = {reservation_API_node_count}, "
+          f"but batch API returned {actual_count}. "
+          f"High node testing requires batch AWS API methods. "
+          f"Reservation API is deprecated; batch count {actual_count} is correct.") 
 
     if not any(ip['PublicIpAddress'] for ip in instance_ips):
         print("No public IPs found. Exiting.")
