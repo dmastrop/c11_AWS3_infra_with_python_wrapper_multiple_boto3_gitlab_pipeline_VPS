@@ -6,6 +6,16 @@
 ```
 
 
+## Note: for full README contents view the README file itself if it does not fully render in the browser
+
+The README on github is truncated in the browser to 500KB
+https://github.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/tree/main
+
+The README on gitlab is not truncated in the browser: see the following URL below
+https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS
+
+
+
 ## Current and latest development work
 
 
@@ -92,16 +102,6 @@ artifact logs per pipeline)
 - Process level synthetic ghost ip injection to test process level ghost detection code
 - Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
 - Adaptive orchestration logic with ML/LLM feedback hooks 
-
-
-
-## Note: for full README contents view the README file itself if it does not fully render in the browser
-
-The README on github is truncated in the browser to 500KB
-https://github.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/tree/main
-
-The README on gitlab is not truncated in the browser: see the following URL below
-https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS
 
 
 
