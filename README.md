@@ -335,11 +335,20 @@ Got it, Dave — I’ve cleaned up the matrix exactly as you asked: no bold, no 
 
 | Crash Type | Tagging Signature | Recovery Strategy (Phase 3) | Notes / Complexity |
 |------------|------------------|-----------------------------|--------------------|
-| Synthetic IDX1 Futures Crashes (pids 12–14) | install_failed, future_exception, RuntimeError, gatekeeper_resurrect | Requeue thread with clean state; respawn process with same IP; minimal forensic ambiguity | Early focus for Phase 3 coding. Straightforward resurrection path. |
-| Post‑Install Futures Crashes (pids 15–17) | install_failed, future_exception, install_success_achieved_before_crash, gatekeeper_blocked | Do not resurrect; log and quarantine for analysis | Blocked by gatekeeper. Important to confirm tagging lineage. |
-| Synthetic Ghost IPs (1 per process) | ghost, no_ssh_attempt, gatekeeper_resurrect | Registry rehydration; placeholder thread respawn; may require synthetic IP mapping | Complex but planned for later once IDX1 resurrection framework is stable. |
-| Real SSH Failures | install_failed, future_exception, SSHException, gatekeeper_resurrect | Adaptive retry logic; exponential backoff; fallback pool if repeated | Critical for Phase 3. Simulation should be introduced via ENV variable (like futures crashes). |
-| Stuck AWS Status Checks (1/2) | Node stuck in AWS console health check | Allocate new PID instead of reusing; retire old PID explicitly; restart node and spawn new thread | Falls into Phase 3 “early resurrection” logic. Needs careful registry handling. |
+| Synthetic IDX1 Futures Crashes (pids 12–14) | **install_failed** + future_exception, RuntimeError, gatekeeper_resurrect | Requeue thread with clean state; respawn process with same IP | Baseline resurrection path. |
+| Post‑Install Futures Crashes (pids 15–17) | **install_failed** + future_exception, install_success_achieved_before_crash, gatekeeper_blocked | Do not resurrect; log and quarantine | Blocked by gatekeeper. |
+| Synthetic Ghost IPs (1 per process) | **ghost** + no_ssh_attempt, gatekeeper_resurrect | Registry rehydration; placeholder thread respawn; may require synthetic IP mapping | Complex, but planned after IDX1 framework is stable. |
+| Real SSH Failures | **install_failed** + future_exception, SSHException, gatekeeper_resurrect | Adaptive retry logic; exponential backoff; fallback pool if repeated | Critical for Phase 3. Simulation via ENV variable for controlled testing. |
+| Stuck AWS Status Checks (1/2) | Node stuck in AWS console health check | Allocate new PID instead of reusing; retire old PID explicitly; restart node and spawn new thread | Early resurrection logic. Needs registry handling. |
+| Stub: Missing Package / Apt “Unable to locate” | **stub** + apt error | Retry with corrected package name; fallback to alternate repo; requeue thread | Stub classification — no valid install, trivial resurrection once IDX1 path is working. |
+| Stub: Collapsed Streams / Non‑whitelisted STDERR | **stub** + non_whitelisted_stderr | Requeue thread; ensure STDERR parsing logic is corrected; retry command | Stub classification — parsing fix, resurrection trivial once IDX1 path is working. |
+| Stub: Permission Denied (e.g., sudo touch /root/testfile) | **stub** + RuntimeError | Retry with corrected permissions; fallback pool if repeated | Stub classification — resurrection trivial once IDX1 path is working. |
+| Stub: Nonexistent Command | **stub** + command_not_found | Requeue with corrected command; log anomaly | Stub classification — simple resurrection variant. |
+| Stub: Script Exit with STDERR + Exit 1 | **stub** + stderr_output, exit_code=1 | Retry script; requeue thread; fallback pool if repeated | Stub classification — resurrection path same as IDX1, but triggered by script. |
+| Install_Failed: Exit Code 0 + Non‑whitelisted STDERR (BLOCK3) | **install_failed** + exit_code=0, non_whitelisted_stderr | Requeue thread; retry command; ensure whitelist updated | Install_failed classification — subtle case found in 512‑node runs. |
+
+
+
 
 ---
 
@@ -348,6 +357,55 @@ Got it, Dave — I’ve cleaned up the matrix exactly as you asked: no bold, no 
 - Once stable, extend that infrastructure to handle **ghost IPs**.  
 - Later, implement **SSH revival logic** with ENV‑based simulation, then validate under swap‑tightened 512‑node runs.  
 - Address **stuck AWS status checks** early to ensure PID reallocation logic is solid before scaling resurrection.  
+
+
+### Stub Taxonomy Summary (Phase 2 → Phase 3)
+
+1. **APT / Package Manager Stubs**
+- **Missing package**: e.g., `apt install tomcat99` → “Unable to locate package.”  
+- **Already installed / no changes**: benign output, no real execution.  
+- **Cache lock / deferred config**: apt lock contention or delayed package configuration.  
+- **Classification**: `stub`  
+- **Revival Approach**: retry with corrected package name or alternate repo; trivial once IDX1 resurrection is working.
+
+---
+
+2. **Strace‑Related Stubs**
+- **Collapsed streams / non‑whitelisted STDERR**: exit code 0 but injected stderr not in whitelist.  
+- **Permission denied (sudo touch /root/testfile)**: exit code 0, no stderr, but strace reveals failure.  
+- **Nonexistent command**: exit 127, strace output confirms.  
+- **Script exit with STDERR + exit 1**: explicit stderr injection, tagged as stub.  
+- **Exit code 0 + non‑whitelisted stderr (BLOCK3)**: subtle case, sometimes tagged as `install_failed` depending on logic.  
+- **Classification**: mostly `stub`, except BLOCK3 which is `install_failed`.  
+- **Revival Approach**: requeue thread, ensure whitelist regex updated; resurrection trivial once IDX1 path is working.
+
+---
+
+3. **Runtime / Shell Stubs**
+- **Chained commands**: success masked by later `exit 1`.  
+- **Subshells**: parent shell success hides subshell failure.  
+- **Background jobs**: foreground shell exit overridden by background completion.  
+- **Pipes**: pipe success masks final exit code.  
+- **Classification**: `stub`  
+- **Revival Approach**: requeue thread, retry with corrected shell syntax; resurrection path same as IDX1.
+
+---
+
+4. **Future Variants (YUM / DNF)**
+- **YUM/DNF transaction noise**: benign dependency resolution, plugin messages, GPG key imports.  
+- **Already installed / nothing to do**: benign, no execution.  
+- **Classification**: `stub`  
+- **Revival Approach**: Phase 4 ML expected to auto‑learn these new syntaxes, reducing manual whitelist updates.
+
+---
+
+- **Most stubs are strace‑related anomalies**: exit code 0 + stderr mismatches, permission issues, or synthetic command failures.  
+- **APT stubs** are simpler (missing packages, cache locks).  
+- **Shell stubs** are edge cases where command chaining masks failures.  
+- **YUM/DNF stubs** will expand the taxonomy later, but ML in Phase 4 should handle them automatically.  
+
+
+
 
 
 
