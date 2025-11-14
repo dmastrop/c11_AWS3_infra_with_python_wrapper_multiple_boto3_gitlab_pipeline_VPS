@@ -3708,8 +3708,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     def wait_for_instance_running(instance_id, ec2_client):
        
         elapsed = 0
-        #MAX_WAIT_SECONDS = 1200  # 20 minutes
-        MAX_WAIT_SECONDS = 1   # force stop/start quickly for test run; revert back to 1200 for normal usage
+        MAX_WAIT_SECONDS = 1200  # 20 minutes
+        #MAX_WAIT_SECONDS = 1   # force stop/start quickly for test run; revert back to 1200 for normal usage
         stop_start_attempts = 0
 
         while True:
