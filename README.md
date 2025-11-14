@@ -6,7 +6,7 @@
 ```
 
 
-## Note: for full README contents view the README file itself if it does not fully render in the browser
+## NOTE: for full README contents
 
 The README on github is truncated in the browser to 500KB
 https://github.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/tree/main
