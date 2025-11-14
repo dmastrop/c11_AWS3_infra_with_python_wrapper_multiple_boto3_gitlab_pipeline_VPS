@@ -3732,7 +3732,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             elapsed += 10
 
             if elapsed >= MAX_WAIT_SECONDS:   # stop and start the node if it is stuck in status 1/2 passed. Needs more work.
-                print(f"[AWS-ISSUE-NODE-REQUIRED-STOP-AND-START] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
+                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
 
                 ec2_client.stop_instances(InstanceIds=[instance_id])
                 time.sleep(30)
