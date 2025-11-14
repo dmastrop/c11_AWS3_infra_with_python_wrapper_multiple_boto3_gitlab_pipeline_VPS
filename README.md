@@ -148,7 +148,7 @@ artifact logs per pipeline)
 
 - Update part 39 Phase3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning
 
-
+- Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
 
 
 
@@ -172,14 +172,19 @@ STATUS_TAGS = {
     "install_success",
     "install_failed",
     "stub",
-    "gatekeeper_resurrect",
-    "watchdog_timeout",
-    "ssh_initiated_failed",
-    "ssh_retry_failed",
     "no_tags",
     "ghost" 
 }
 ```
+
+## UPDATES part 40: Phase 3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
+
+### Introduction
+
+
+
+
+
 
 ## UPDATES part 39: Phase 3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning
 
@@ -339,7 +344,7 @@ Got it, Dave — I’ve cleaned up the matrix exactly as you asked: no bold, no 
 | Post‑Install Futures Crashes (pids 15–17) | **install_failed** + future_exception, install_success_achieved_before_crash, gatekeeper_blocked | Do not resurrect; log and quarantine | Blocked by gatekeeper. |
 | Synthetic Ghost IPs (1 per process) | **ghost** + no_ssh_attempt, gatekeeper_resurrect | Registry rehydration; placeholder thread respawn; may require synthetic IP mapping | Complex, but planned after IDX1 framework is stable. |
 | Real SSH Failures | **install_failed** + future_exception, SSHException, gatekeeper_resurrect | Adaptive retry logic; exponential backoff; fallback pool if repeated | Critical for Phase 3. Simulation via ENV variable for controlled testing. |
-| Stuck AWS Status Checks (1/2) | Node stuck in AWS console health check | Allocate new PID instead of reusing; retire old PID explicitly; restart node and spawn new thread | Early resurrection logic. Needs registry handling. |
+| Stuck AWS Status Checks (1/2) | Node stuck in AWS console health check | Stop node, start node, then ip registry rehydration to deal with new ip address, then respawn the thread | Early resurrection logic. Needs registry handling. |
 | Stub: Missing Package / Apt “Unable to locate” | **stub** + apt error | Retry with corrected package name; fallback to alternate repo; requeue thread | Stub classification — no valid install, trivial resurrection once IDX1 path is working. |
 | Stub: Collapsed Streams / Non‑whitelisted STDERR | **stub** + non_whitelisted_stderr | Requeue thread; ensure STDERR parsing logic is corrected; retry command | Stub classification — parsing fix, resurrection trivial once IDX1 path is working. |
 | Stub: Permission Denied (e.g., sudo touch /root/testfile) | **stub** + RuntimeError | Retry with corrected permissions; fallback pool if repeated | Stub classification — resurrection trivial once IDX1 path is working. |
