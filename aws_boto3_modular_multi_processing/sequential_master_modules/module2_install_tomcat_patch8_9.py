@@ -3705,69 +3705,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    #def wait_for_instance_running(instance_id, ec2_client):
-    #   
-    #    elapsed = 0
-    #    #MAX_WAIT_SECONDS = 1200  # 20 minutes
-    #    MAX_WAIT_SECONDS = 100   # force stop/start quickly for test run; revert back to 1200 for normal usage
-    #    # This is too short and causes problems in AWS orchestration plane.  Best way to simulate stop/start
-    #    # futures crash is to experiment empirically with different time intervals. First observe the baseline for
-    #    # an instance to get into running and then decrease interval slightly and re-run the test.
-    #    stop_start_attempts = 0
-
-    #    while True:
-    #        
-    #        instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
-    #        statuses = instance_status.get('InstanceStatuses', [])
-
-    #        if statuses:
-    #            state = statuses[0]['InstanceState']['Name']
-    #            system_status = statuses[0]['SystemStatus']['Status']
-    #            instance_status_check = statuses[0]['InstanceStatus']['Status']
-
-    #            if state == 'running' and system_status == 'ok' and instance_status_check == 'ok':
-    #                break
-    #        else:
-    #            print(f"No status yet for instance {instance_id}. Waiting...")
-
-    #        print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
-    #        
-    #        time.sleep(10)
-
-    #        elapsed += 10
-
-    #        if elapsed >= MAX_WAIT_SECONDS and stop_start_attempts == 0:   
-    #        # stop and start the node if it is stuck in status 1/2 passed. Only do this one time. Retrying it makes no sense.
-    #        # AWS should be able to stop and start a problematic node the first time. We don't want to get stuck in a loop here.
-    #        # The node will get a new ip address and the registry_entry ip will need to be rehydrated.
-    #            print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
-
-    #            ec2_client.stop_instances(InstanceIds=[instance_id])
-    #            time.sleep(30)
-    #            ec2_client.start_instances(InstanceIds=[instance_id])
-
-    #            elapsed = 0  # reset watchdog after restart
-    #            stop_start_attempts += 1   # this ensures that the loop will not keep stopping and starting the node over and over again
-
-
-
-
-
-    ##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
-    ##### NOTE: use max_wait of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
-    #### for testing purposes
-
-    def wait_for_instance_running(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
-        """
-        Waits for an EC2 instance to reach 'running' state and pass both system/instance status checks.
-        If the watchdog timeout is hit, forces a stop/start cycle once, then rehydrates IPs.
-        Always returns the current public/private IPs for the instance.
-        """
-
+    def wait_for_instance_running(instance_id, ec2_client):
+       
         elapsed = 0
+        #MAX_WAIT_SECONDS = 1200  # 20 minutes
+        MAX_WAIT_SECONDS = 100   # force stop/start quickly for test run; revert back to 1200 for normal usage
+        # This is too short and causes problems in AWS orchestration plane.  Best way to simulate stop/start
+        # futures crash is to experiment empirically with different time intervals. First observe the baseline for
+        # an instance to get into running and then decrease interval slightly and re-run the test.
         stop_start_attempts = 0
 
         while True:
+            
             instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
             statuses = instance_status.get('InstanceStatuses', [])
 
@@ -3777,41 +3726,92 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 instance_status_check = statuses[0]['InstanceStatus']['Status']
 
                 if state == 'running' and system_status == 'ok' and instance_status_check == 'ok':
-                    # ✅ Always fetch current IPs before returning
-                    desc = ec2_client.describe_instances(InstanceIds=[instance_id])
-                    for reservation in desc['Reservations']:
-                        for inst in reservation['Instances']:
-                            if inst['InstanceId'] == instance_id:
-                                public_ip = inst.get('PublicIpAddress')
-                                private_ip = inst['PrivateIpAddress']
-                                print(f"[WAIT] Instance {instance_id} ready → Public IP: {public_ip}, Private IP: {private_ip}")
-                                return public_ip, private_ip   
+                    break
             else:
                 print(f"No status yet for instance {instance_id}. Waiting...")
 
+            print(f"Waiting for instance {instance_id} to be in running state and pass status checks...")
+            
             time.sleep(10)
+
             elapsed += 10
 
-            if elapsed >= max_wait and stop_start_attempts == 0:
-                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
+            if elapsed >= MAX_WAIT_SECONDS and stop_start_attempts == 0:   
+            # stop and start the node if it is stuck in status 1/2 passed. Only do this one time. Retrying it makes no sense.
+            # AWS should be able to stop and start a problematic node the first time. We don't want to get stuck in a loop here.
+            # The node will get a new ip address and the registry_entry ip will need to be rehydrated.
+                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
 
                 ec2_client.stop_instances(InstanceIds=[instance_id])
                 time.sleep(30)
                 ec2_client.start_instances(InstanceIds=[instance_id])
 
-                # 🔄 Rehydrate IPs after restart. Note that the private ip will be the same, but the public ip will change after stop/start
-                time.sleep(20)  # give AWS time to assign new IP
-                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
-                for reservation in desc['Reservations']:
-                    for inst in reservation['Instances']:
-                        if inst['InstanceId'] == instance_id:
-                            public_ip = inst.get('PublicIpAddress')
-                            private_ip = inst['PrivateIpAddress']
-                            print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
-                            return public_ip, private_ip
+                elapsed = 0  # reset watchdog after restart
+                stop_start_attempts += 1   # this ensures that the loop will not keep stopping and starting the node over and over again
 
-                stop_start_attempts += 1    # this ensures that the loop will not keep stopping and starting the node over and over again
-                elapsed = 0   # reset watchdog after restart
+
+
+
+
+    ###### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
+    ###### NOTE: use max_wait of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
+    ##### for testing purposes
+
+    #def wait_for_instance_running(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
+    #    """
+    #    Waits for an EC2 instance to reach 'running' state and pass both system/instance status checks.
+    #    If the watchdog timeout is hit, forces a stop/start cycle once, then rehydrates IPs.
+    #    Always returns the current public/private IPs for the instance.
+    #    """
+
+    #    elapsed = 0
+    #    stop_start_attempts = 0
+
+    #    while True:
+    #        instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
+    #        statuses = instance_status.get('InstanceStatuses', [])
+
+    #        if statuses:
+    #            state = statuses[0]['InstanceState']['Name']
+    #            system_status = statuses[0]['SystemStatus']['Status']
+    #            instance_status_check = statuses[0]['InstanceStatus']['Status']
+
+    #            if state == 'running' and system_status == 'ok' and instance_status_check == 'ok':
+    #                # ✅ Always fetch current IPs before returning
+    #                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
+    #                for reservation in desc['Reservations']:
+    #                    for inst in reservation['Instances']:
+    #                        if inst['InstanceId'] == instance_id:
+    #                            public_ip = inst.get('PublicIpAddress')
+    #                            private_ip = inst['PrivateIpAddress']
+    #                            print(f"[WAIT] Instance {instance_id} ready → Public IP: {public_ip}, Private IP: {private_ip}")
+    #                            return public_ip, private_ip   
+    #        else:
+    #            print(f"No status yet for instance {instance_id}. Waiting...")
+
+    #        time.sleep(10)
+    #        elapsed += 10
+
+    #        if elapsed >= max_wait and stop_start_attempts == 0:
+    #            print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
+
+    #            ec2_client.stop_instances(InstanceIds=[instance_id])
+    #            time.sleep(30)
+    #            ec2_client.start_instances(InstanceIds=[instance_id])
+
+    #            # 🔄 Rehydrate IPs after restart. Note that the private ip will be the same, but the public ip will change after stop/start
+    #            time.sleep(20)  # give AWS time to assign new IP
+    #            desc = ec2_client.describe_instances(InstanceIds=[instance_id])
+    #            for reservation in desc['Reservations']:
+    #                for inst in reservation['Instances']:
+    #                    if inst['InstanceId'] == instance_id:
+    #                        public_ip = inst.get('PublicIpAddress')
+    #                        private_ip = inst['PrivateIpAddress']
+    #                        print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
+    #                        return public_ip, private_ip
+
+    #            stop_start_attempts += 1    # this ensures that the loop will not keep stopping and starting the node over and over again
+    #            elapsed = 0   # reset watchdog after restart
 
 
 
@@ -3868,12 +3868,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### (see below). The install_tomcat uses "ip" so reassign ip to the "public_ip" rehydrated ip address that 
         #### wait_for_instance_running returns to install_tomcat.
 
-        #wait_for_instance_running(instance_id, my_ec2)
+        wait_for_instance_running(instance_id, my_ec2)
         # Phase 3: call wait_for_instance_running before SSH
-        public_ip, private_ip = wait_for_instance_running(instance_id, my_ec2)
+        #public_ip, private_ip = wait_for_instance_running(instance_id, my_ec2)
 
         # Reuse the same variable names install_tomcat already expects, so the ssh.connect later below does not need to be edited.
-        ip = public_ip
+        #ip = public_ip
 
 
 
