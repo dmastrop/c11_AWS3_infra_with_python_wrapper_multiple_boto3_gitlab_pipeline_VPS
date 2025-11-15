@@ -3757,7 +3757,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ##### NOTE: use max_wait of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
     #### for testing purposes
 
-    def wait_for_instance_running(instance_id, ec2_client, max_wait=100):  # 100 to instigate stop/start and 1200 default
+    def wait_for_instance_running(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
         """
         Waits for an EC2 instance to reach 'running' state and pass both system/instance status checks.
         If the watchdog timeout is hit, forces a stop/start cycle once, then rehydrates IPs.
