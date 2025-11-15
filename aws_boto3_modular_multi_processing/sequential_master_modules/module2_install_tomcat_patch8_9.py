@@ -3860,7 +3860,24 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #try:
 
 
-        wait_for_instance_running(instance_id, my_ec2)
+
+        #### The wait_for_instance_running is modified in Phase3 to support resurrection of threads that get stuck in AWS status1/2
+        #### passed.  The code will now stop and start the affected nodes and then rehydrate the registry_entry for that thread
+        #### with the new IP. So now the wait_for_instance_running always returns the public_ip and private_ip of the instance_id
+        #### that it is working on. If the public_ip is rehydrated that will be used later in this function for the ssh.connect
+        #### (see below). The install_tomcat uses "ip" so reassign ip to the "public_ip" rehydrated ip address that 
+        #### wait_for_instance_running returns to install_tomcat.
+
+        #wait_for_instance_running(instance_id, my_ec2)
+        # Phase 3: call wait_for_instance_running before SSH
+        public_ip, private_ip = wait_for_instance_running(instance_id, my_ec2)
+
+        # Reuse the same variable names install_tomcat already expects, so the ssh.connect later below does not need to be edited.
+        ip = public_ip
+
+
+
+
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
@@ -3986,7 +4003,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 threading.Thread(target=watchdog, daemon=True).start()
                 ####### end of watchdog code ##########
 
+
+
                 ssh.connect(ip, port, username, key_filename=key_path)
+               
                 ssh_connected = True
                 ssh_success = True  # suppress stub
                 break  # break out of the for attempt(5) loop
