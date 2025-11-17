@@ -3805,20 +3805,36 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 ec2_client.stop_instances(InstanceIds=[instance_id])
                 time.sleep(30)
                 ec2_client.start_instances(InstanceIds=[instance_id])
-
-                # 🔄 Rehydrate IPs after restart. Note that the private ip will be the same, but the public ip will change after stop/start
-                time.sleep(20)  # give AWS time to assign new IP
-                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
-                for reservation in desc['Reservations']:
-                    for inst in reservation['Instances']:
-                        if inst['InstanceId'] == instance_id:
-                            public_ip = inst.get('PublicIpAddress')
-                            private_ip = inst['PrivateIpAddress']
-                            print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
-                            return public_ip, private_ip
-
+                
                 stop_start_attempts += 1    # this ensures that the loop will not keep stopping and starting the node over and over again
                 elapsed = 0   # reset watchdog after restart
+                
+                # 🔄 Rehydrate IPs after restart. Note that the private ip will be the same, but the public ip will change after stop/start
+                
+                # Wait until AWS assigns new IP
+                while True:
+                    time.sleep(10)
+                    desc = ec2_client.describe_instances(InstanceIds=[instance_id])
+                    for reservation in desc['Reservations']:
+                        for inst in reservation['Instances']:
+                            if inst['InstanceId'] == instance_id:
+                                public_ip = inst.get('PublicIpAddress')
+                                private_ip = inst['PrivateIpAddress']
+                                if public_ip:
+                                    print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
+                                    return public_ip, private_ip
+
+
+
+                #time.sleep(20)  # give AWS time to assign new IP
+                #desc = ec2_client.describe_instances(InstanceIds=[instance_id])
+                #for reservation in desc['Reservations']:
+                #    for inst in reservation['Instances']:
+                #        if inst['InstanceId'] == instance_id:
+                #            public_ip = inst.get('PublicIpAddress')
+                #            private_ip = inst['PrivateIpAddress']
+                #            print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
+                #            return public_ip, private_ip
 
 
 
