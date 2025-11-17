@@ -300,9 +300,15 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_8.py")
 
-##### THIS IS THE MODULE2 SCRIPT  patch8_9.py. This has the process level stats implementation using res monitor function 
+###### THIS IS THE MODULE2 SCRIPT  patch8_9.py. This has the process level stats implementation using res monitor function 
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_9.py")
+
+##### THIS IS THE MODULE2 SCRIPT  patch8_91.py. This has the code changes for AWS stop and start to recover status1/2 in Phase3 code
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_9.py")
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_91.py")
+
+
 
 
 ##### This is module2b for the post ghost analysis on the gitlab console logs
