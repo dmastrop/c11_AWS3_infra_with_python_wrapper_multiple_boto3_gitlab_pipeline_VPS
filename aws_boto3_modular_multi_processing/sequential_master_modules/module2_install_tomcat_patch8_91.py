@@ -3745,7 +3745,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             # stop and start the node if it is stuck in status 1/2 passed. Only do this one time. Retrying it makes no sense.
             # AWS should be able to stop and start a problematic node the first time. We don't want to get stuck in a loop here.
             # The node will get a new ip address and the registry_entry ip will need to be rehydrated.
-                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
+                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_install_tomcat] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
 
                 ec2_client.stop_instances(InstanceIds=[instance_id])
                 time.sleep(30)
@@ -3800,7 +3800,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             elapsed += 10
 
             if elapsed >= max_wait and stop_start_attempts == 0:
-                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
+                print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
 
                 ec2_client.stop_instances(InstanceIds=[instance_id])
                 time.sleep(30)
