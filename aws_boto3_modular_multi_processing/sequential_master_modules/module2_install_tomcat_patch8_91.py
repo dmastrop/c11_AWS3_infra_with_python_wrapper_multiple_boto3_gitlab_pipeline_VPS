@@ -3704,7 +3704,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+    #### This is the original wait_for_instance_running that is called from install_tomcat. Do not do the ip rehydration here as
+    #### it is too late in the execution thread.  Instead this is kept for double verification fallback, but the nodes by this time
+    #### will almost always be status2/2 passed because this function along with ip rehydration will now be called from 
+    #### orchestrate_instance_launch_and_ip_polling early on in AWS orchestration layer. This new function is called
+    #### wait_for_instance_running_rehydrate and is called from the orchestrate function in main() prior to the chunks being 
+    #### defined. The call here is optional.
     def wait_for_instance_running(instance_id, ec2_client):
        
         elapsed = 0
@@ -3752,12 +3757,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    ##### This 
+    ##### This is the new wait_for_instance_running to be incorporated into the orchestrate_instance_launch_and_ip_polling function
+    ##### that is called from main() early on during AWS orchestration. The new function is renamed wait_for_instance_running_rehydrate
+
     ##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
     ##### NOTE: use max_wait of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
     #### for testing purposes
 
-    def wait_for_instance_running(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
+    def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
         """
         Waits for an EC2 instance to reach 'running' state and pass both system/instance status checks.
         If the watchdog timeout is hit, forces a stop/start cycle once, then rehydrates IPs.
@@ -3859,7 +3866,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # the try block is causing very serious issues. Remove it and retest.
         #try:
 
-
+        #### [install_tomcat]
         #### This is the original wait_for_instance_running without resurrection and ip rehydration.   The same function but with 
         #### ip rehydration for Phase3 resurrection will be called from orchestarte_instance_launch_and_ip_polling as the 
         #### function wait_for_instance_running_rehydrate to handle the resurrection of status1/2 failed nodes
