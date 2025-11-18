@@ -1834,7 +1834,7 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
         # This is the existing wait_for_instance_running logic but with added rehydration logic that can be safely done in orchestration layer        # This new function is wait_for_instance_running_rehydrate (see above, global function). The original wait_for_instance_running
         # does not have ip rehydration and is called from install_tomcat and is left there just for double validation to ensure that the 
         # nodes are fully operational and status2/2 passed. Note that iid is each instance_id 
-        wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=100)
+        wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=1200)
 
 
     # Step 3: Wait for all public IPs

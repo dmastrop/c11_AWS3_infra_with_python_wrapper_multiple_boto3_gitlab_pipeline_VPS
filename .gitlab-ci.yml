@@ -293,7 +293,9 @@ deploy:
       # These are the aggregate main level stats that are derived from the process level stats
       - logs/statistics/aggregate_process_stats.json
 
-
+      # These are the nodes that get stuck at AWS orchestration layer (for example, status1/2) and are stopped and started and still 
+      # do not come up. These are not included in the golden ip list and will not show up even as ghosts.
+      - logs/orchestration_layer_rehydration_failed_nodes.json
 
     expire_in: 1 week
 
