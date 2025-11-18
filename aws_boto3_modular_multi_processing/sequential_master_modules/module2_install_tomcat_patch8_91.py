@@ -1747,19 +1747,46 @@ def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):
                             private_ip = inst['PrivateIpAddress']
                             if public_ip:
                                 print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
-                                return public_ip, private_ip
+                                 #### Before returning the public_ip and private_ip make sure that the rebotted node's status health checks
+                                 #### are ok, so that downstream thread code does not get hung up and crash. The latency added for stop and
+                                 #### start is signficant and these nodes will lag behind the rest of the pack of nodes in the execution run
+                                 # <<< NEW WAIT: ensure status checks are 2/2 before releasing >>>
+                                 # This code block ensures that if the node cannot be revived, that it will not crash the entire 
+                                 # orchestrate calling function and the rest of the golden ips will still be included in the instance_ips
+                                 # This code also logs to a new .json artifact log in the gitlab pipeline to indicate these very rare
+                                 # occurrences by the instance_id and ip.
+                                while True:
+                                    resp = ec2_client.describe_instance_status(
+                                        InstanceIds=[instance_id],
+                                        IncludeAllInstances=True
+                                    )
+                                    statuses = resp.get('InstanceStatuses', [])
+                                    if statuses:
+                                        state = statuses[0]['InstanceState']['Name']
+                                        sys_status = statuses[0]['SystemStatus']['Status']
+                                        inst_status = statuses[0]['InstanceStatus']['Status']
+                                        if state == 'running' and sys_status == 'ok' and inst_status == 'ok':
+                                            return public_ip, private_ip #only now return the ip for thread processing in lower layers
+                                    time.sleep(10)
 
+                                # If we somehow never reach ok/ok, bail out
+                                print(f"[AWS_ISSUE_REHYDRATION_FAILED] Instance {instance_id} did not recover after the rehydration attempt")
 
+                                # Export to JSON log file in artifact path
+                                log_entry = {
+                                    "instance_id": instance_id,
+                                    "public_ip": public_ip,
+                                    "private_ip": private_ip,
+                                    "status": "rehydration_failed",
+                                    "timestamp": datetime.utcnow().isoformat(),
+                                    "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
+                                }
+                                os.makedirs("/aws_EC2/logs", exist_ok=True)
+                                with open("/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json", "a") as f:
+                                    f.write(json.dumps(log_entry) + "\n")
 
-            #time.sleep(20)  # give AWS time to assign new IP
-            #desc = ec2_client.describe_instances(InstanceIds=[instance_id])
-            #for reservation in desc['Reservations']:
-            #    for inst in reservation['Instances']:
-            #        if inst['InstanceId'] == instance_id:
-            #            public_ip = inst.get('PublicIpAddress')
-            #            private_ip = inst['PrivateIpAddress']
-            #            print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
-            #            return public_ip, private_ip
+                                return None, None
+
 
 
 
