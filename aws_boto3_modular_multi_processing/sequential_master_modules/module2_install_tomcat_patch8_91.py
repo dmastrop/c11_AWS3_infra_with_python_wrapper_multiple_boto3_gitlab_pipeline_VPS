@@ -1781,11 +1781,35 @@ def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):
                                     "timestamp": datetime.utcnow().isoformat(),
                                     "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
                                 }
+                                
+
                                 os.makedirs("/aws_EC2/logs", exist_ok=True)
-                                with open("/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json", "a") as f:
-                                    f.write(json.dumps(log_entry) + "\n")
+                                log_path = "/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json"
+
+                                # Ensure the file exists — if empty, initialize with []
+                                if not os.path.exists(log_path):
+                                    with open(log_path, "w") as f:
+                                        json.dump([], f)
+
+                                # Append this entry to the JSON array
+                                with open(log_path, "r+") as f:
+                                    try:
+                                        data = json.load(f)
+                                    except json.JSONDecodeError:
+                                        data = []
+                                    data.append(log_entry)
+                                    f.seek(0)
+                                    json.dump(data, f, indent=2)
+                                    f.truncate()
 
                                 return None, None
+
+                                
+                                #os.makedirs("/aws_EC2/logs", exist_ok=True)
+                                #with open("/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json", "a") as f:
+                                #    f.write(json.dumps(log_entry) + "\n")
+
+                                #return None, None
 
 
 
@@ -1834,7 +1858,7 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
         # This is the existing wait_for_instance_running logic but with added rehydration logic that can be safely done in orchestration layer        # This new function is wait_for_instance_running_rehydrate (see above, global function). The original wait_for_instance_running
         # does not have ip rehydration and is called from install_tomcat and is left there just for double validation to ensure that the 
         # nodes are fully operational and status2/2 passed. Note that iid is each instance_id 
-        wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=1200)
+        wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=10)
 
 
     # Step 3: Wait for all public IPs
