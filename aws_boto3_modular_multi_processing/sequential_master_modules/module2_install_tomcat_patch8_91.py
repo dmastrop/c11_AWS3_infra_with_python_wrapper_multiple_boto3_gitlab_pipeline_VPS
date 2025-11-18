@@ -3824,7 +3824,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
        
         elapsed = 0
         #MAX_WAIT_SECONDS = 1200  # 20 minutes
-        MAX_WAIT_SECONDS = 100   # force stop/start quickly for test run; revert back to 1200 for normal usage
+        MAX_WAIT_SECONDS = 10   # force stop/start quickly for test run; revert back to 1200 for normal usage
         # This is too short and causes problems in AWS orchestration plane.  Best way to simulate stop/start
         # futures crash is to experiment empirically with different time intervals. First observe the baseline for
         # an instance to get into running and then decrease interval slightly and re-run the test.
@@ -3858,7 +3858,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_install_tomcat] Instance {instance_id} failed to pass status checks after {MAX_WAIT_SECONDS} seconds. Forcing stop/start cycle...")
 
                 ec2_client.stop_instances(InstanceIds=[instance_id])
-                time.sleep(30)
+                
+                #time.sleep(30)
+                # Wait until the instance is fully stopped before starting
+                while True:
+                    resp = ec2_client.describe_instance_status(
+                        InstanceIds=[instance_id],
+                        IncludeAllInstances=True
+                    )
+                    statuses = resp.get('InstanceStatuses', [])
+                    if statuses and statuses[0]['InstanceState']['Name'] == 'stopped':
+                        break
+                    time.sleep(10)
+
+
+                # Now ready to start
                 ec2_client.start_instances(InstanceIds=[instance_id])
 
                 elapsed = 0  # reset watchdog after restart
