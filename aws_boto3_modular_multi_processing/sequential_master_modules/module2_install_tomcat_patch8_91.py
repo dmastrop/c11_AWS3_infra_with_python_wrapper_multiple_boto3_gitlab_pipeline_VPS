@@ -1715,7 +1715,20 @@ def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):
             print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
 
             ec2_client.stop_instances(InstanceIds=[instance_id])
-            time.sleep(30)
+            
+            #time.sleep(30)
+            # Wait until the instance is fully stopped
+            while True:
+                resp = ec2_client.describe_instance_status(
+                    InstanceIds=[instance_id],
+                    IncludeAllInstances=True
+                )
+                statuses = resp.get('InstanceStatuses', [])
+                if statuses and statuses[0]['InstanceState']['Name'] == 'stopped':
+                    break
+                time.sleep(10)
+        
+            # Now it is safe to start 
             ec2_client.start_instances(InstanceIds=[instance_id])
             
             stop_start_attempts += 1    # this ensures that the loop will not keep stopping and starting the node over and over again
