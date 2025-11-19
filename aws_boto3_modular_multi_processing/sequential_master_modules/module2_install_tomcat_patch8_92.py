@@ -2017,7 +2017,7 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
     #### for testing purposes
 
     start_ts = time.time()
-    max_watchdog = 1200  # or 10/100 depending on your test
+    max_watchdog = 100  # or 10/100 depending on your test
 
     while True:
         all_ok = True
