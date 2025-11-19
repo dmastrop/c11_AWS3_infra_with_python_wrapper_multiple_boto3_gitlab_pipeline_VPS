@@ -1813,6 +1813,150 @@ def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):
 
 
 
+[global functions used for the orchestrate_instance_launch_and_ip_polling step 2.5]
+def AWS_ISSUE_ensure_empty_failure_artifact():
+    os.makedirs("/aws_EC2/logs", exist_ok=True)
+    log_path = "/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json"
+    if not os.path.exists(log_path):
+        with open(log_path, "w") as f:
+            json.dump([], f)
+    return log_path
+
+def AWS_ISSUE_append_failure(log_path, entry):
+    try:
+        with open(log_path, "r+") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = []
+            data.append(entry)
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+    except Exception as e:
+        print(f"[AWS_ISSUE_REHYDRATION_LOG_WRITE_FAILED] {entry.get('instance_id')} → {e}")
+
+def AWS_ISSUE_get_status(ec2_client, iid):
+    resp = ec2_client.describe_instance_status(InstanceIds=[iid], IncludeAllInstances=True)
+    st = resp.get("InstanceStatuses", [])
+    if not st:
+        return None
+    s = st[0]
+    return {
+        "state": s["InstanceState"]["Name"],
+        "sys_ok": (s["SystemStatus"]["Status"] == "ok"),
+        "inst_ok": (s["InstanceStatus"]["Status"] == "ok")
+    }
+
+def AWS_ISSUE_get_ips(ec2_client, iid):
+    desc = ec2_client.describe_instances(InstanceIds=[iid])
+    for r in desc["Reservations"]:
+        for inst in r["Instances"]:
+            if inst["InstanceId"] == iid:
+                return inst.get("PublicIpAddress"), inst.get("PrivateIpAddress")
+    return None, None
+```
+
+---
+
+### Batch rehydration function
+
+```python
+def AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids, ip_wait_limit=600, checks_wait_limit=600):
+    # 1) Identify laggards at cutoff
+    laggards = []
+    for iid in instance_ids:
+        st = AWS_ISSUE_get_status(ec2_client, iid)
+        if not st or not (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+            laggards.append(iid)
+    print(f"[AWS_ISSUE_REHYDRATION_DIAG] Laggards at watchdog cutoff: {laggards}")
+
+    if not laggards:
+        print("[AWS_ISSUE_REHYDRATION_DIAG] No laggards detected at cutoff; batch rehydration skipped.")
+        return {}
+
+    # 2) One stop/start for the whole laggard set
+    print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Forcing stop/start on {len(laggards)}: {laggards}")
+    ec2_client.stop_instances(InstanceIds=laggards)
+
+    # Wait until all are stopped
+    while True:
+        stopped = 0
+        for iid in laggards:
+            desc = ec2_client.describe_instances(InstanceIds=[iid])
+            state = None
+            for r in desc["Reservations"]:
+                for inst in r["Instances"]:
+                    if inst["InstanceId"] == iid:
+                        state = inst["State"]["Name"]
+            if state == "stopped":
+                stopped += 1
+        if stopped == len(laggards):
+            break
+        time.sleep(10)
+
+    ec2_client.start_instances(InstanceIds=laggards)
+
+    # 3) Per-laggard bounded waits for IP and 2/2
+    results = {}
+    log_path = AWS_ISSUE_ensure_empty_failure_artifact()
+
+    for iid in laggards:
+        public_ip, private_ip = None, None
+
+        # IP assignment wait (bounded)
+        ip_elapsed = 0
+        print(f"[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… {iid}")
+        while ip_elapsed <= ip_wait_limit:
+            time.sleep(10)
+            ip_elapsed += 10
+            public_ip, private_ip = AWS_ISSUE_get_ips(ec2_client, iid)
+            if public_ip:
+                print(f"[AWS_ISSUE_REHYDRATION] {iid} reassigned → Public IP: {public_ip}, Private IP: {private_ip}")
+                break
+
+        if not public_ip:
+            print(f"[AWS_ISSUE_REHYDRATION_FAILED] {iid} did not get a public IP after stop/start")
+            AWS_ISSUE_append_failure(log_path, {
+                "instance_id": iid,
+                "public_ip": None,
+                "private_ip": private_ip,
+                "status": "rehydration_failed_no_public_ip",
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
+            })
+            results[iid] = (None, None)
+            continue
+
+        # 2/2 check wait (bounded)
+        checks_elapsed = 0
+        print(f"[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… {iid}")
+        while checks_elapsed <= checks_wait_limit:
+            st = AWS_ISSUE_get_status(ec2_client, iid)
+            if st and (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+                print(f"[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → {iid}")
+                results[iid] = (public_ip, private_ip)
+                break
+            time.sleep(10)
+            checks_elapsed += 10
+
+        if iid not in results:
+            print(f"[AWS_ISSUE_REHYDRATION_FAILED] {iid} did not reach 2/2 after stop/start")
+            AWS_ISSUE_append_failure(log_path, {
+                "instance_id": iid,
+                "public_ip": public_ip,
+                "private_ip": private_ip,
+                "status": "rehydration_failed",
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
+            })
+            results[iid] = (None, None)
+
+    return results
+
+
+
+
 
 # === orchestrate_instance_launch_and_ip_polling ===
 # High-level wrapper that:
@@ -1853,12 +1997,39 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
         instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
 
 
-    # Step 2.5: Ensure all instances are truly running and pass checks
-    for iid in instance_ids:
-        # This is the existing wait_for_instance_running logic but with added rehydration logic that can be safely done in orchestration layer        # This new function is wait_for_instance_running_rehydrate (see above, global function). The original wait_for_instance_running
-        # does not have ip rehydration and is called from install_tomcat and is left there just for double validation to ensure that the 
-        # nodes are fully operational and status2/2 passed. Note that iid is each instance_id 
-        wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=10)
+    ## Step 2.5: Ensure all instances are truly running and pass checks
+    #for iid in instance_ids:
+    #    # This is the existing wait_for_instance_running logic but with added rehydration logic that can be safely done in orchestration layer        # This new function is wait_for_instance_running_rehydrate (see above, global function). The original wait_for_instance_running
+    #    # does not have ip rehydration and is called from install_tomcat and is left there just for double validation to ensure that the 
+    #    # nodes are fully operational and status2/2 passed. Note that iid is each instance_id 
+    #    wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=10)
+
+
+
+    # Step 2.5: wait for fleet health or trigger batch. Use batch processing. The serial processing above is not a good approach.
+    start_ts = time.time()
+    max_watchdog = 1200  # or 10/100 depending on your test
+
+    while True:
+        all_ok = True
+        for iid in instance_ids:
+            st = AWS_ISSUE_get_status(ec2_client, iid)
+            if not st or not (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+                all_ok = False
+                break
+        if all_ok:
+            print("[AWS_ISSUE_REHYDRATION_DIAG] All instances passed 2/2 within watchdog; no rehydration needed.")
+            break
+        if time.time() - start_ts >= max_watchdog:
+            print("[AWS_ISSUE_REHYDRATION_DIAG] Watchdog exceeded; initiating batch rehydration for laggards.")
+            rehydrated = AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+            break
+        time.sleep(10)
+
+    # Ensure the aggregate file exists (empty) before proceeding
+    AWS_ISSUE_ensure_empty_failure_artifact()
+
+
 
 
     # Step 3: Wait for all public IPs
