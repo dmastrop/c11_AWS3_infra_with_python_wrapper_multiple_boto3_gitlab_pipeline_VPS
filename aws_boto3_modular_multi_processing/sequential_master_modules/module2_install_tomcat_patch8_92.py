@@ -1856,13 +1856,16 @@ def AWS_ISSUE_get_ips(ec2_client, iid):
             if inst["InstanceId"] == iid:
                 return inst.get("PublicIpAddress"), inst.get("PrivateIpAddress")
     return None, None
-```
 
----
+
+
+
 
 ### Batch rehydration function
+##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
 
-```python
+
+
 def AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids, ip_wait_limit=600, checks_wait_limit=600):
     # 1) Identify laggards at cutoff
     laggards = []
@@ -2008,6 +2011,11 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
 
 
     # Step 2.5: wait for fleet health or trigger batch. Use batch processing. The serial processing above is not a good approach.
+
+    ##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
+    ##### NOTE: use max_watchdog of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
+    #### for testing purposes
+
     start_ts = time.time()
     max_watchdog = 1200  # or 10/100 depending on your test
 
