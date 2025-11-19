@@ -1813,7 +1813,8 @@ def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):
 
 
 
-[global functions used for the orchestrate_instance_launch_and_ip_polling step 2.5]
+########## [global functions used for the orchestrate_instance_launch_and_ip_polling step 2.5]
+
 def AWS_ISSUE_ensure_empty_failure_artifact():
     os.makedirs("/aws_EC2/logs", exist_ok=True)
     log_path = "/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json"
