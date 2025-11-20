@@ -201,8 +201,180 @@ execution runs.   But if the nodes are not stopped and started and the code does
 address(es), the threads will encounter a futures crash during the SSH connect, because the old public ip for the node is no
 longer being used. This represents a terminal node. So these must be addressed.
 
+In the AWS console this process of stopping and starting is very transparent.  If one views All States, one will see the node(s) 
+stopped and then started and then they will be in the standard Status checks Initializing state.    If the node still does not 
+come up after the stop and start an error message will be thrown and the current node ip address will be logged into an artifact
+json file that can be exporeted at the completion of the gitlab pipeline. Given how rare Status 0/2 and 1/2 stuck nodes are, a
+stop/start node that still does not come up is an even more rare occurrence.
+
+During the extensive validation of the code for this, wherein entire fleets of 16 nodes were "forced" to stop/start by squeezing
+down the watchdog timeout, I never saw a node stop/start fail to come up. The validation scenarios will be presented after the
+Code implemenation design and code is presented (see below).
 
 
+
+### Code Implemenation Design
+
+
+The code was intitially designed to serially stop and start the nodes, but this obviously does not scale well, in particular
+when hyperscaling with 512+ nodes.   The testing was extreme and would never occur in real life (the entire fleet was forced to
+timeout and stop/start), but the code needs to be adaptable to worst case scenarios.
+
+Given the above, a batch processing design was done.  Another alternative would have been to use the ThreadPoolExecutor and
+designate a thread to each stop start node execution, but this was deemed to complicated and risky for code that is run 
+early during the AWS orchestration process. If a thread were to fail (futures crash), the error detection would have to be
+implemenated to detect this, the thread itself would have to be resurrected, etc.  Too complicated. With the batch processing
+approach the laggards are all identified and then stop/started with the appropriate AWS boto3 method in parallel.  Testing 
+with this resulted in a pretty good execution time for the complete stop and start and wait to get public ip process with the
+most extreme case, the entire fleet having to be stopped and started. A single node typically takes about 2-3 minutes to be 
+stopped, started and then up with status checks 2/2 and with a new public ip.  In testing a 16 node execution with all 16 nodes
+having to go through this process, due to the batch and parallelization of the stop/start process, all 16 nodes would only add
+about 6 minutes to the entire execution run in the gitlab deploy phase of the pipeine. This is considerably less thatn the 
+expected 32 minutes+ that it would take if the process were serialized.   
+
+
+<< TO BE COMPLETED >>>
+
+
+
+### Code Review
+
+#### The orchestrator function orchestrate_instance_launch_and_ip_polling
+
+
+The new code is step 2.5 which was transparently inserted between steps 2 and 3
+
+Note the call to the function AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+This is where the main part of the new code logic resides.
+
+This function is in the secction further below.
+
+
+```
+# === orchestrate_instance_launch_and_ip_polling ===
+# High-level wrapper that:
+# 1. Waits for all EC2 instances to be visible
+# 2. Excludes the controller node if provided
+# 2.5 Batch stop and start with rehydration if status check fails over watchdog timeout
+# 3. Polls for public IPs using wait_for_all_public_ips()
+# Returns structured IP data for all worker instances.
+def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
+    # Load AWS credentials and region from .env
+    aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    region_name = os.getenv("region_name")
+
+    # Create a session and EC2 client
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=region_name
+    )
+    ec2_client = session.client('ec2')
+
+
+
+
+    # Pull node count from .env
+    node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
+    logging.info(f"[orchestrator] Launching with node_count={node_count}")
+
+    # Tag used to identify launched instances
+    tag_key = 'BatchID'
+    tag_value = 'test-2025-08-13'
+
+    # Step 1: Wait for all instances to be visible
+    instance_ids = wait_for_instance_visibility(ec2_client, node_count, tag_key, tag_value)
+
+    # Step 2: Exclude controller if needed
+    if exclude_instance_id:
+        instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
+
+
+    ## Step 2.5: Ensure all instances are truly running and pass checks
+    #for iid in instance_ids:
+    #    # This is the existing wait_for_instance_running logic but with added rehydration logic that can be safely done in orchestration layer        # This new function is wait_for_instance_running_rehydrate (see above, global function). The original wait_for_instance_running
+    #    # does not have ip rehydration and is called from install_tomcat and is left there just for double validation to ensure that the 
+    #    # nodes are fully operational and status2/2 passed. Note that iid is each instance_id 
+    #    wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=10)
+
+
+
+    # Step 2.5: wait for fleet health or trigger batch. Use batch processing. The serial processing above is not a good approach.
+
+    ##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
+    ##### NOTE: use max_watchdog of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
+    #### for testing purposes
+
+    start_ts = time.time()
+    max_watchdog = 100  # or 10/100 depending on your test
+
+    while True:
+        all_ok = True
+        for iid in instance_ids:
+            st = AWS_ISSUE_get_status(ec2_client, iid)
+            if not st or not (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+                all_ok = False
+                break
+        if all_ok:
+            print("[AWS_ISSUE_REHYDRATION_DIAG] All instances passed 2/2 within watchdog; no rehydration needed.")
+            break
+        if time.time() - start_ts >= max_watchdog:
+            print("[AWS_ISSUE_REHYDRATION_DIAG] Watchdog exceeded; initiating batch rehydration for laggards.")
+            rehydrated = AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+            break
+        time.sleep(10)
+
+    # Ensure the aggregate file exists (empty) before proceeding
+    AWS_ISSUE_ensure_empty_failure_artifact()
+
+
+
+    # Step 3: Wait for all public IPs
+    instance_ip_data = wait_for_all_public_ips(ec2_client, instance_ids)
+
+    return instance_ip_data
+```
+
+
+
+#### Orchestrator function call from module2 main()
+
+The orchestrator function is called from main() prior to the chunks being defined. 
+
+It returns all the instance ips spawned by AWS (the golden ip list)
+```
+    try:
+        # make sure to change timeout 120 to 180 for t2.micro when using high process count (i.e, like 512)
+
+        #instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
+
+
+        # The new wrapper around wait_for_all_public_ips as AWS is doing batch processing on large EC2 instance launches and
+        # the code needs to wait for all the instances to be present and then poll and loop for all public ips to be present
+        # the new functions are orchestarte_instance_launch_and_ip_polling and wait_for_instance_visiblilty (default timeout is
+        # 180 seconds)
+        instance_ips = orchestrate_instance_launch_and_ip_polling(exclude_instance_id=exclude_instance_id)
+```
+
+
+
+
+#### Helper functions
+
+
+The following helper functions are used in AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+
+
+
+
+
+
+#### AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+
+This is where the main logic for the new code resides. This performs the stop and start of the instance and the ip rehydration of the
+node's new public ip address so that the instance_ips that is returned (the ip golden list) gets updated prior to thread and process
+pool initiation.
 
 
 

@@ -1966,6 +1966,7 @@ def AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids, ip_wait_l
 # High-level wrapper that:
 # 1. Waits for all EC2 instances to be visible
 # 2. Excludes the controller node if provided
+# 2.5 Batch stop and start with rehydration if status check fails over watchdog timeout
 # 3. Polls for public IPs using wait_for_all_public_ips()
 # Returns structured IP data for all worker instances.
 def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
