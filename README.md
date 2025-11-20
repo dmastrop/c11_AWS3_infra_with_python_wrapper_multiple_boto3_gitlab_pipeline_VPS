@@ -181,6 +181,31 @@ STATUS_TAGS = {
 
 ### Introduction
 
+The major objective of Phase3 implemenation is for the code to resurrect problematic threads that have crashed, have been stubbed,
+or node ips that have been ghosted (no registry_entry created for the ip address).   However, outside of this objective there are
+a few very rare circumstances where the failure occurs very early during the AWS orchestration layer. The AWS orchestration layer
+is when the boto3 client is established and the nodes are instantiated and booting up, gain visibilty, system status checks
+pass, and instance status checks pass and the publicip is assigned to the node.(it also includes the application of the 
+security group rules to the node based upon the security group(s) attached to the node).
+
+Any failure during this orchestration phase can lead to a status check of 0/2 or 1/2 passed, whereby the node essentially gets
+stuck in an unresponsive state.   The node has to be stopped and started (not just restarted) and so an new pubilc (not private)
+address is assigned to the node. This reassignment of a new ip address has to be addressed by the python code such that the 
+new ip address(es) replace teh former ip address(es) so that the golden ip list has the final public ip list prior to the 
+process chunk data being defined.   If the instances are stopped and started at this early stage, all the rest of the downnstream
+log files and thread processing and process_registry creation will use these new ip address(es).   This is the only way to handle
+such issues: early during the  orchestration phase.
+
+These occurrences are very very rare. In a 512 or higher node execution run, a status 1/2 node will be seen perhaps ever 10-15
+execution runs.   But if the nodes are not stopped and started and the code does not rehydrate the lists and logs with the new
+address(es), the threads will encounter a futures crash during the SSH connect, because the old public ip for the node is no
+longer being used. This represents a terminal node. So these must be addressed.
+
+
+
+
+
+
 
 
 
