@@ -950,10 +950,9 @@ failed.
     ],
     "resurrection_reason": "Tagged with future_exception"
   },
-  "ba98b1e3": {
 ```
 
-
+The aggregate stats are below. All the threads are install_failed but only a subset of them will be Phase3 resurrected (see futher below)
 
 ```
 [TRACE][aggregator] Final registry summary:
@@ -1008,7 +1007,9 @@ node after the stop and start AWS_ISSUE).
 
 The other 8 resurrection nodes are from the 8 ghosts.
 
-These registry_entrys are synthetically created (see earlier UPDATES below on how this is done): 
+These registry_entrys are synthetically created (see earlier UPDATES below on how this is done). These are always tagged for resurrection
+by the gatekeeper: 
+
 ```
   "ghost_1_1_17_62": {
     "status": "ghost",
@@ -1029,6 +1030,7 @@ These registry_entrys are synthetically created (see earlier UPDATES below on ho
   },
 
 ```
+
 This last test case provides a good test for the code when there are multiple types of failures in the execution run and is a good
 simulation of real life execution dynamics.
 
