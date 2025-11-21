@@ -223,21 +223,78 @@ timeout and stop/start), but the code needs to be adaptable to worst case scenar
 Given the above, a batch processing design was done.  Another alternative would have been to use the ThreadPoolExecutor and
 designate a thread to each stop start node execution, but this was deemed to complicated and risky for code that is run 
 early during the AWS orchestration process. If a thread were to fail (futures crash), the error detection would have to be
-implemenated to detect this, the thread itself would have to be resurrected, etc.  Too complicated. With the batch processing
-approach the laggards are all identified and then stop/started with the appropriate AWS boto3 method in parallel.  Testing 
-with this resulted in a pretty good execution time for the complete stop and start and wait to get public ip process with the
-most extreme case, the entire fleet having to be stopped and started. A single node typically takes about 2-3 minutes to be 
-stopped, started and then up with status checks 2/2 and with a new public ip.  In testing a 16 node execution with all 16 nodes
-having to go through this process, due to the batch and parallelization of the stop/start process, all 16 nodes would only add
-about 6 minutes to the entire execution run in the gitlab deploy phase of the pipeine. This is considerably less thatn the 
-expected 32 minutes+ that it would take if the process were serialized.   
+implemented to detect this, the thread itself would have to be resurrected, etc.  Too complicated. 
 
+With the batch processing approach the laggards are all identified and then stop/started with the appropriate AWS boto3 method in parallel.  
+Testing  with this resulted in a pretty good execution time for the complete stop and start and wait to get public ip process with the
+most extreme case, the entire fleet having to be stopped and started. 
 
-<< TO BE COMPLETED >>>
+A single node typically takes about 2-3 minutes to be stopped, started and then up with status checks 2/2 and with a new public ip.  
+In testing a 16 node execution with all 16 nodes having to go through this process, due to the batch and parallelization of the stop/start 
+process, all 16 nodes would only add about 6 minutes to the entire execution run in the gitlab deploy phase of the pipeine. 
+This is considerably less than the expected 32 minutes+ that it would take if the process were serialized.   
 
+The 6 miniutes is the slowest stop/start node in the entire fleet.
+
+The code design in general consists of 
+
+- Keeping the same call to the orchestrator function orchestrate_instance_launch_and_ip_polling in main() that returns a list of
+instance_ips of the entire fleet for the execution run. This call to the orchestrator function is done prior to the assignment 
+of the ip list to the golden ip list variable that will be used as the foundation for the logging files and statistics.  Any stop and
+starting of the node must be done within this function and prior to the chunks of chunk data being defined in main().
+
+- Inserting a step 2.5 into the orchestrator function orchestrate_instance_launch_and_ip_polling.
+This follows the call to the wait_for_instance_visibility function and precedes the call to the wait_for_all_public_ips.
+This step 2.5 simply checks if all the instances are running with instance and state status as ok for each node ip address in 
+instance_ids list. This is a serial iteration through the list every 10 seconds. 
+
+After max_watchdog timeout seconds, if there are any nodes that are not running with status ok, the code calls the function
+AWS_ISSUE_batch_rehydrate_after_watchdog function and stops/starts. These nodes are identified as laggards.
+
+- AWS_ISSUE_batch_rehydrate_after_watchdog function iterates through the list of laggard ip addresses and stops and starts them 
+and then gets the new ip address of each of these nodes (ip rehydration) and returns them to the calling function 
+orchestrate_instance_launch_and_ip_polling.
+
+- The list of laggard ip addresses (rehydrated) is returned as variable "rehydrated". This can be used directly but instead is
+used implictly in step 3 of the orchestrate_instance_launch_and_ip_polling, with the wati_for_all_public_ips function call.
+This returns the entire fleet ip addresses that are all updated for the nodes (which are all running and in instance and state status
+checks passed)
+
+- Once wait_for_all_public_ips function is called and returns, the entire fleet is running and status checks (instance and state) are
+ok, and the entire fleet of node ip addresses can then be passed to chunk data processing that will be used in the thread processes.
 
 
 ### Code Review
+
+
+
+#### main() function call to the orchestrator_instance_launch_and_ip_polling function
+
+```
+    try:
+        # make sure to change timeout 120 to 180 for t2.micro when using high process count (i.e, like 512)
+
+        #instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
+
+
+        # The new wrapper around wait_for_all_public_ips as AWS is doing batch processing on large EC2 instance launches and
+        # the code needs to wait for all the instances to be present and then poll and loop for all public ips to be present
+        # the new functions are orchestarte_instance_launch_and_ip_polling and wait_for_instance_visiblilty (default timeout is
+        # 180 seconds)
+        instance_ips = orchestrate_instance_launch_and_ip_polling(exclude_instance_id=exclude_instance_id)
+```
+
+
+This function is called prior to the chunk data in chunks being defined in main(). Any stopping and starting of the nodes must be
+done prior to chunking so that the golden ip list of nodes is accurate and up to date. If a stop and start is done after the golden
+ip list is defined it will cause issues with the log files and many downstream thread and process operations as the ip addreses will 
+have been changed and the golden ip list will not be accurate.  The code implemenation is designed to rehydrate the ip address
+prior to chunking. When instance_ips gets the ip list from orchestrate_instance_launch_and_ip_polling, the list will have already 
+been updated by the code in the functions below.
+
+
+
+
 
 #### The orchestrator function orchestrate_instance_launch_and_ip_polling
 
@@ -245,9 +302,8 @@ expected 32 minutes+ that it would take if the process were serialized.
 The new code is step 2.5 which was transparently inserted between steps 2 and 3
 
 Note the call to the function AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
-This is where the main part of the new code logic resides.
 
-This function is in the secction further below.
+This is where the main part of the new code logic resides per the Code implemenation design section above.
 
 
 ```
@@ -291,14 +347,6 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
         instance_ids = [iid for iid in instance_ids if iid != exclude_instance_id]
 
 
-    ## Step 2.5: Ensure all instances are truly running and pass checks
-    #for iid in instance_ids:
-    #    # This is the existing wait_for_instance_running logic but with added rehydration logic that can be safely done in orchestration layer        # This new function is wait_for_instance_running_rehydrate (see above, global function). The original wait_for_instance_running
-    #    # does not have ip rehydration and is called from install_tomcat and is left there just for double validation to ensure that the 
-    #    # nodes are fully operational and status2/2 passed. Note that iid is each instance_id 
-    #    wait_for_instance_running_rehydrate(iid, ec2_client, max_wait=10)
-
-
 
     # Step 2.5: wait for fleet health or trigger batch. Use batch processing. The serial processing above is not a good approach.
 
@@ -338,49 +386,172 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
 
 
 
-#### Orchestrator function call from module2 main()
-
-The orchestrator function is called from main() prior to the chunks being defined. 
-
-It returns all the instance ips spawned by AWS (the golden ip list)
-```
-    try:
-        # make sure to change timeout 120 to 180 for t2.micro when using high process count (i.e, like 512)
-
-        #instance_ips = wait_for_all_public_ips(my_ec2, instance_ids, exclude_instance_id=exclude_instance_id, timeout=180)
-
-
-        # The new wrapper around wait_for_all_public_ips as AWS is doing batch processing on large EC2 instance launches and
-        # the code needs to wait for all the instances to be present and then poll and loop for all public ips to be present
-        # the new functions are orchestarte_instance_launch_and_ip_polling and wait_for_instance_visiblilty (default timeout is
-        # 180 seconds)
-        instance_ips = orchestrate_instance_launch_and_ip_polling(exclude_instance_id=exclude_instance_id)
-```
-
-
 
 
 #### Helper functions
 
 
-The following helper functions are used in AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+The following helper functions are used in AWS_ISSUE_batch_rehydrate_after_watchdog
 
 
+```
+########## [global functions used for the AWS_ISSUE_batch_rehydrate_after_watchdog function]
+
+def AWS_ISSUE_ensure_empty_failure_artifact():
+    os.makedirs("/aws_EC2/logs", exist_ok=True)
+    log_path = "/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json"
+    if not os.path.exists(log_path):
+        with open(log_path, "w") as f:
+            json.dump([], f)
+    return log_path
+
+def AWS_ISSUE_append_failure(log_path, entry):
+    try:
+        with open(log_path, "r+") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = []
+            data.append(entry)
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+    except Exception as e:
+        print(f"[AWS_ISSUE_REHYDRATION_LOG_WRITE_FAILED] {entry.get('instance_id')} → {e}")
+
+def AWS_ISSUE_get_status(ec2_client, iid):
+    resp = ec2_client.describe_instance_status(InstanceIds=[iid], IncludeAllInstances=True)
+    st = resp.get("InstanceStatuses", [])
+    if not st:
+        return None
+    s = st[0]
+    return {
+        "state": s["InstanceState"]["Name"],
+        "sys_ok": (s["SystemStatus"]["Status"] == "ok"),
+        "inst_ok": (s["InstanceStatus"]["Status"] == "ok")
+    }
+
+def AWS_ISSUE_get_ips(ec2_client, iid):
+    desc = ec2_client.describe_instances(InstanceIds=[iid])
+    for r in desc["Reservations"]:
+        for inst in r["Instances"]:
+            if inst["InstanceId"] == iid:
+                return inst.get("PublicIpAddress"), inst.get("PrivateIpAddress")
+    return None, None
+```
 
 
 
 
 #### AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
 
-This is where the main logic for the new code resides. This performs the stop and start of the instance and the ip rehydration of the
-node's new public ip address so that the instance_ips that is returned (the ip golden list) gets updated prior to thread and process
-pool initiation.
+This is where the main logic for the new code resides. This function is called from the orchestrate_instance_launch_and_ip_polling, 
+step 2.5 when any node(s) in the instance_ids are not running with state and instance status checks ok after the watchdog timeout 
+is reached. This function below will identify all the laggards in the instance_ids list and then do a parallel stop and start for the
+entire laggard list of ips, and then once the laggard ips are up get the new ip address for each node in the laggards list (ip rehydration)
+and return the list of rehydrated laggards ips to the calling function orchestrate_instance_launch_and_ip_polling.  As stated in the 
+Code implementation design section above, the variable "rehydrated" can be used directly, but step 3 of the orchestrator function simply
+calls the wait_for_all_public_ips to gather up all the updated ips of the entire fleet of nodes and returns this to main(), the calling 
+function so that it can be used in the chunk data which is used in the thread processes.
+
+Note that this function is working on just the laggards list of nodes/ip addresses in the fleet.
 
 
 
+```
+def AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids, ip_wait_limit=600, checks_wait_limit=600):
+    # 1) Identify laggards at cutoff
+    laggards = []
+    for iid in instance_ids:
+        st = AWS_ISSUE_get_status(ec2_client, iid)
+        if not st or not (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+            laggards.append(iid)
+    print(f"[AWS_ISSUE_REHYDRATION_DIAG] Laggards at watchdog cutoff: {laggards}")
 
+    if not laggards:
+        print("[AWS_ISSUE_REHYDRATION_DIAG] No laggards detected at cutoff; batch rehydration skipped.")
+        return {}
 
+    # 2) One stop/start for the whole laggard set
+    print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Forcing stop/start on {len(laggards)}: {laggards}")
+    ec2_client.stop_instances(InstanceIds=laggards)
 
+    # Wait until all are stopped
+    while True:
+        stopped = 0
+        for iid in laggards:
+            desc = ec2_client.describe_instances(InstanceIds=[iid])
+            state = None
+            for r in desc["Reservations"]:
+                for inst in r["Instances"]:
+                    if inst["InstanceId"] == iid:
+                        state = inst["State"]["Name"]
+            if state == "stopped":
+                stopped += 1
+        if stopped == len(laggards):
+            break
+        time.sleep(10)
+
+    ec2_client.start_instances(InstanceIds=laggards)
+
+    # 3) Per-laggard bounded waits for IP and 2/2
+    results = {}
+    log_path = AWS_ISSUE_ensure_empty_failure_artifact()
+
+    for iid in laggards:
+        public_ip, private_ip = None, None
+
+        # IP assignment wait (bounded)
+        ip_elapsed = 0
+        print(f"[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… {iid}")
+        while ip_elapsed <= ip_wait_limit:
+            time.sleep(10)
+            ip_elapsed += 10
+            public_ip, private_ip = AWS_ISSUE_get_ips(ec2_client, iid)
+            if public_ip:
+                print(f"[AWS_ISSUE_REHYDRATION] {iid} reassigned → Public IP: {public_ip}, Private IP: {private_ip}")
+                break
+
+        if not public_ip:
+            print(f"[AWS_ISSUE_REHYDRATION_FAILED] {iid} did not get a public IP after stop/start")
+            AWS_ISSUE_append_failure(log_path, {
+                "instance_id": iid,
+                "public_ip": None,
+                "private_ip": private_ip,
+                "status": "rehydration_failed_no_public_ip",
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
+            })
+            results[iid] = (None, None)
+            continue
+
+        # 2/2 check wait (bounded)
+        checks_elapsed = 0
+        print(f"[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… {iid}")
+        while checks_elapsed <= checks_wait_limit:
+            st = AWS_ISSUE_get_status(ec2_client, iid)
+            if st and (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+                print(f"[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → {iid}")
+                results[iid] = (public_ip, private_ip)
+                break
+            time.sleep(10)
+            checks_elapsed += 10
+
+        if iid not in results:
+            print(f"[AWS_ISSUE_REHYDRATION_FAILED] {iid} did not reach 2/2 after stop/start")
+            AWS_ISSUE_append_failure(log_path, {
+                "instance_id": iid,
+                "public_ip": public_ip,
+                "private_ip": private_ip,
+                "status": "rehydration_failed",
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
+            })
+            results[iid] = (None, None)
+
+    return results
+
+```
 
 
 ## UPDATES part 39: Phase 3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning
