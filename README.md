@@ -639,10 +639,226 @@ registry_entry thread. I also verified a few of these nodes manually with an SSH
 node was successful (systemctl status on the shell).
 
 
-##### 16 node test case
+##### 16 node test case with 100 second forced watchdog timeout
+
+As stated above this causes all 16 nodes to be identified as laggards (this would happen in real life if they were stuck in status 1/2)
+
+The gitlab console logs are below. As noted above the delay after the first ip rehydration is expected:
+
+
+```
+: initializing, InstanceStatus: initializing
+[VISIBILITY] Attempt 1: Checking for 16 instances with tag BatchID=test-2025-08-13
+[VISIBILITY] Found 16 instances
+[VISIBILITY] All expected instances are visible
+[AWS_ISSUE_REHYDRATION_DIAG] Watchdog exceeded; initiating batch rehydration for laggards.
+[AWS_ISSUE_REHYDRATION_DIAG] Laggards at watchdog cutoff: ['i-01eef8e06640e39b0', 'i-068771c887738eb53', 'i-006f4f2f5e03e9b12', 'i-05033115d9f3001f7', 'i-07ddf0a9d4ac9768e', 'i-0e5ec8720a169d9e9', 'i-0b0906a4ff58b43be', 'i-0423ff8528d681fbf', 'i-0c2ed096559d3ec62', 'i-0e95a4c9dab871fb2', 'i-07dfdb901123cddf2', 'i-0673e8da739f0672f', 'i-0f9fceea575ddcf85', 'i-07c9eba22311e392e', 'i-047aa36d8682a38c9', 'i-08d532e3ffb9fab70']
+[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Forcing stop/start on 16: ['i-01eef8e06640e39b0', 'i-068771c887738eb53', 'i-006f4f2f5e03e9b12', 'i-05033115d9f3001f7', 'i-07ddf0a9d4ac9768e', 'i-0e5ec8720a169d9e9', 'i-0b0906a4ff58b43be', 'i-0423ff8528d681fbf', 'i-0c2ed096559d3ec62', 'i-0e95a4c9dab871fb2', 'i-07dfdb901123cddf2', 'i-0673e8da739f0672f', 'i-0f9fceea575ddcf85', 'i-07c9eba22311e392e', 'i-047aa36d8682a38c9', 'i-08d532e3ffb9fab70']
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-01eef8e06640e39b0
+[AWS_ISSUE_REHYDRATION] i-01eef8e06640e39b0 reassigned → Public IP: 54.90.14.50, Private IP: 172.31.28.136
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-01eef8e06640e39b0. <<< it is stuck here for about 2 minutes
+
+
+Then these start coming in
+
+
+AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-01eef8e06640e39b0
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-068771c887738eb53
+[AWS_ISSUE_REHYDRATION] i-068771c887738eb53 reassigned → Public IP: 100.26.110.83, Private IP: 172.31.27.74
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-068771c887738eb53
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-068771c887738eb53
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-006f4f2f5e03e9b12
+[AWS_ISSUE_REHYDRATION] i-006f4f2f5e03e9b12 reassigned → Public IP: 34.229.162.183, Private IP: 172.31.16.167
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-006f4f2f5e03e9b12
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-006f4f2f5e03e9b12
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-05033115d9f3001f7
+[AWS_ISSUE_REHYDRATION] i-05033115d9f3001f7 reassigned → Public IP: 54.89.171.139, Private IP: 172.31.21.200
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-05033115d9f3001f7
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-05033115d9f3001f7
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-07ddf0a9d4ac9768e
+[AWS_ISSUE_REHYDRATION] i-07ddf0a9d4ac9768e reassigned → Public IP: 3.89.66.86, Private IP: 172.31.19.69
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-07ddf0a9d4ac9768e
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-07ddf0a9d4ac9768e
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0e5ec8720a169d9e9
+[AWS_ISSUE_REHYDRATION] i-0e5ec8720a169d9e9 reassigned → Public IP: 54.197.178.209, Private IP: 172.31.24.199
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0e5ec8720a169d9e9
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0e5ec8720a169d9e9
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0b0906a4ff58b43be
+[AWS_ISSUE_REHYDRATION] i-0b0906a4ff58b43be reassigned → Public IP: 100.27.209.98, Private IP: 172.31.29.243
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0b0906a4ff58b43be
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0b0906a4ff58b43be
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0423ff8528d681fbf
+[AWS_ISSUE_REHYDRATION] i-0423ff8528d681fbf reassigned → Public IP: 34.228.24.187, Private IP: 172.31.23.20
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0423ff8528d681fbf
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0423ff8528d681fbf
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0c2ed096559d3ec62
+[AWS_ISSUE_REHYDRATION] i-0c2ed096559d3ec62 reassigned → Public IP: 54.237.202.191, Private IP: 172.31.22.177
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0c2ed096559d3ec62
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0c2ed096559d3ec62
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0e95a4c9dab871fb2
+[AWS_ISSUE_REHYDRATION] i-0e95a4c9dab871fb2 reassigned → Public IP: 98.88.26.42, Private IP: 172.31.21.147
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0e95a4c9dab871fb2
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0e95a4c9dab871fb2
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-07dfdb901123cddf2
+[AWS_ISSUE_REHYDRATION] i-07dfdb901123cddf2 reassigned → Public IP: 98.93.214.148, Private IP: 172.31.21.144
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-07dfdb901123cddf2
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-07dfdb901123cddf2
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0673e8da739f0672f
+[AWS_ISSUE_REHYDRATION] i-0673e8da739f0672f reassigned → Public IP: 54.242.206.161, Private IP: 172.31.25.113
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0673e8da739f0672f
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0673e8da739f0672f
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0f9fceea575ddcf85
+[AWS_ISSUE_REHYDRATION] i-0f9fceea575ddcf85 reassigned → Public IP: 54.235.55.218, Private IP: 172.31.23.203
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0f9fceea575ddcf85
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0f9fceea575ddcf85
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-07c9eba22311e392e
+[AWS_ISSUE_REHYDRATION] i-07c9eba22311e392e reassigned → Public IP: 34.224.22.250, Private IP: 172.31.16.48
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-07c9eba22311e392e
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-07c9eba22311e392e
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-047aa36d8682a38c9
+[AWS_ISSUE_REHYDRATION] i-047aa36d8682a38c9 reassigned → Public IP: 13.222.174.199, Private IP: 172.31.27.182
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-047aa36d8682a38c9
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-047aa36d8682a38c9
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-08d532e3ffb9fab70
+[AWS_ISSUE_REHYDRATION] i-08d532e3ffb9fab70 reassigned → Public IP: 18.207.123.84, Private IP: 172.31.27.60
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-08d532e3ffb9fab70
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-08d532e3ffb9fab70
+[DEBUG ENTRY1] wait_for_all_public_ips
+    raw instance_ids:         ['i-01eef8e06640e39b0', 'i-068771c887738eb53', 'i-006f4f2f5e03e9b12', 'i-05033115d9f3001f7', 'i-07ddf0a9d4ac9768e', 'i-0e5ec8720a169d9e9', 'i-0b0906a4ff58b43be', 'i-0423ff8528d681fbf', 'i-0c2ed096559d3ec62', 'i-0e95a4c9dab871fb2', 'i-07dfdb901123cddf2', 'i-0673e8da739f0672f', 'i-0f9fceea575ddcf85', 'i-07c9eba22311e392e', 'i-047aa36d8682a38c9', 'i-08d532e3ffb9fab70']
+    exclude_instance_id arg:  None
+[DEBUG1] filtered_instance_ids → ['i-01eef8e06640e39b0', 'i-068771c887738eb53', 'i-006f4f2f5e03e9b12', 'i-05033115d9f3001f7', 'i-07ddf0a9d4ac9768e', 'i-0e5ec8720a169d9e9', 'i-0b0906a4ff58b43be', 'i-0423ff8528d681fbf', 'i-0c2ed096559d3ec62', 'i-0e95a4c9dab871fb2', 'i-07dfdb901123cddf2', 'i-0673e8da739f0672f', 'i-0f9fceea575ddcf85', 'i-07c9eba22311e392e', 'i-047aa36d8682a38c9', 'i-08d532e3ffb9fab70']
+[DEBUG1] count of filtered IDs → 16
+[DEBUG] Attempt 1: Checking public IPs...
+[DEBUG1] Launch response keys → dict_keys(['Reservations', 'ResponseMetadata'])
+[DEBUG1] Number of Reservations → 1
+[DEBUG1] Instance ID → i-01eef8e06640e39b0
+[DEBUG1] Public IP → 54.90.14.50
+[DEBUG1] State → running
+[DEBUG1] Instance ID → i-068771c887738eb53
+[DEBUG1] Public IP → 100.26.110.83
+[DEBUG1] State → running
+[INFO] All 16 instances have public IPs.
+[DEBUG] instance_ips initialized with 16 entries
+[DEBUG] Null or missing IPs: []
+[DEBUGX-SG-DELAY] Sleeping 30s to allow SG propagation
+```
+
+
+Verifying the ip rehydration with the final golden ip list below checks out: 
+
+
+```
+[TRACE][aggregator] Aggregate GOLD IPs from chunk hydration:
+  100.26.110.83
+  100.27.209.98
+  13.222.174.199
+  18.207.123.84
+  3.89.66.86
+  34.224.22.250
+  34.228.24.187
+  34.229.162.183
+  54.197.178.209
+  54.235.55.218
+  54.237.202.191
+  54.242.206.161
+  54.89.171.139
+  54.90.14.50
+  98.88.26.42
+  98.93.214.148
+[TRACE][aggregator] Total GOLD IPs: 16
+```
+
+The total execution time of the pipleline deploy stage increased from about 15.5 minutes to 21 minutes. Note that this 16 node case
+would not occur in real life. This is an extreme simulation just to stress test and verify the code path.
+
+
+The final json registry logs and the stats look fine.
+
+The registry contains all 16 registry_entrys for the 16 threads and they are all install_success. I verified a few of them manually with
+an SSH to the node. So the ips that were rehydrated and incorporated into teh golden ip list were successfully incorporated into their
+respective threads.
+
+```
+  "04ffcde2": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-11-19 05:05:23.175750",
+    "pid": 12,
+    "thread_id": 128272484533952,
+    "thread_uuid": "04ffcde2",
+    "public_ip": "54.90.14.50",
+    "private_ip": "172.31.28.136",
+    "tags": [
+      "install_success",
+      "installation_completed",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Install succeeded"
+  },
+
+```
+
+
+
+
+```
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 0,
+
+
+
+  "unique_missing_ips_ghosts": [],
+  "gatekeeper_resurrected": 0,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 16,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 0.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 0.0
+```
 
 
 ##### 16 node test case with 8 synthetic ghosts
+
+The gitlab console logs look very similar to the above with the added 8 synthetic ghosts that have been injected into eacy process.
+
+
+For example, 
+```
+[POST_THREAD_GHOST] Injected ghost IP 1.1.15.133 into assigned_ips for PID 15
+[TRACE][tomcat_worker] Passing process_registry to resurrection_monitor with 2 entries
+[RESMON_7d] Runtime log line count: 67
+[RESMON_7d] Raw line 39: '2025-11-20 00:23:33,630 - 15 - MainThread - [PID 15] [UUID 05293117] ✅ Install succeeded | Public IP: 18.234.50.183 | Private IP: 172.31.17.28\n'
+[RESMON_7d] Matched IPs: ['18.234.50.183', '172.31.17.28']
+[RESMON_7d] Raw line 40: '2025-11-20 00:23:36,569 - 15 - MainThread - [PID 15] [UUID 89ac0d67] ✅ Install succeeded | Public IP: 3.88.51.145 | Private IP: 172.31.21.188\n'
+[RESMON_7d] Matched IPs: ['3.88.51.145', '172.31.21.188']
+[RESMON_7d] Hydrated benchmark IPs: {'3.88.51.145', '18.234.50.183'}
+[RESMON_8] �� Ghost detected in process 15: 1.1.15.133
+[RESMON_8] ✅ Resurrection Candidate Monitor: No thread failures in process 15.
+[RESMON_8] Process stats written to: /aws_EC2/logs/statistics/process_stats_15_20251120T002337Z.json
+[POST-MONITOR METRIC] [PID 15] max_retry_observed = 1
+
+```
+
+```
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 8,<<< These are the 8 injected ghost ips
+
+  "gatekeeper_resurrected": 8,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 100.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
+```
+
+
+
 
 
 ##### 16 node test case with 8 synthetic ghosts and HYBRID futures crashes in the install_tomcat thread
