@@ -101,6 +101,7 @@ artifact logs per pipeline)
 - Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
 - Process level synthetic ghost ip injection to test process level ghost detection code
 - Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
+- Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
@@ -150,7 +151,7 @@ artifact logs per pipeline)
 
 - Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
 
-
+- Update part 41 Phase3c: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
 
 
 ## A note on the STATUS_TAGS:
@@ -176,6 +177,10 @@ STATUS_TAGS = {
     "ghost" 
 }
 ```
+
+## UPDATES part 41: Phase 3c: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
+
+
 
 ## UPDATES part 40: Phase 3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
 
