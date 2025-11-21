@@ -2018,7 +2018,8 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
     #### for testing purposes
 
     start_ts = time.time()
-    max_watchdog = 100  # or 10/100 depending on your test
+    #max_watchdog = 100  # 100 will cause 16 nodes of 16 to "fail". This is good for testing.  1200 seconds for normal operation.
+    max_watchdog = 1200  # 1200 is good for normal operations.  600 or 300 for testing with 512 nodes to incite "failures"
 
     while True:
         all_ok = True
@@ -7129,9 +7130,9 @@ def main():
 
 
     ### Configurable parameters
-    chunk_size = 2 # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
-    max_workers = 2 # Threads per process
-    desired_count = 6  ## Max concurrent processes (NOT threads) for iniital batch.
+    chunk_size = 1 # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
+    max_workers = 1 # Threads per process
+    desired_count = 487  ## Max concurrent processes (NOT threads) for iniital batch.
     #### For the 16 node test chunk_size of 2, max_workers of 2, and desired_count of 6 so that 2 processes are pooled for the
     #### last 4 of 16 nodes
     #### For the 512 test, it is one thread per process, so: chunk_size of 1, max_workers of 1, desired_count of 487 so that 
