@@ -562,7 +562,9 @@ def AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids, ip_wait_l
 
 The validation mainly consists of reducing the watchdog from the standard liberal 1200 seconds to a lower amount to induce "failures"
 in the nodes (stop/start and ip rehydration).   With the 16 node test, 100 seconds caused all 16 nodes to "fail" and they were all stopped
-and started and ip rehydrated.   With the 512 node test, 600 and 300 seconds was insufficient to induce "failures".
+and started and ip rehydrated.   With the 512 node test, 600 and 300 seconds was insufficient to induce "failures", but a 200 second 
+watchdog caused 44 of the 512 nodes to "fail" and go through the stop, start and ip rehydration process. The details are below. 
+
 
 NOTE on the logs:
 
@@ -576,8 +578,18 @@ is sequential. However, the most important part is batch parallelized, the stopp
   - `[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Forcing stop/start on N: [...]`  
 - **Batch behavior:**  
   - AWS will stop/start all laggards in parallel.  
-  - The logs will show sequential confirmation (`Waiting for public IP…`, `2/2 recovered…`) because iterantion through the laggards 
+  - The logs will show sequential confirmation (`Waiting for public IP…`, `2/2 recovered…`) because iteration through the laggards 
 is done one by one, but the actual reboots are happening together.  
+
+For a 512 node test that had 44 "failures" and given that the reboots and status2/2 takes around 2-3 minutes a node, if this were
+serialized it would take over 88 minutes. In a real life test it took about 7-10 minutes due to the parallel nature of the reboots
+done on the entire laggard batch of problematic nodes.
+
+Doing the check for status on the nodes at the orchestration layer rather than at the thread level of install_tomcat (the previous
+iterantion of code), is much cleaner and ensures that integrity of the golden ip list in terms of accuracy.
+
+
+
 
 #### 16 node testing
 
@@ -586,8 +598,62 @@ is done one by one, but the actual reboots are happening together.
 
 #### 512 node testing
 
+##### Detail on the gitlab console logging behavior
 
 
+- **Parallel reboots at AWS:** All 44 laggards are stop/started together. They’re all rebooting in parallel at the control plane.  
+- **Sequential confirmation in the loop:** The  orchestration code walks the list one by one, waiting for each node to hit `running` + 2/2 before moving on. That’s why the logs look like they’re “stuck” on the first node for a while.  
+- **Velocity effect:** As time passes, more and more of the remaining nodes are already healthy by the time the serailized loop reaches them. So the early ones take longer (because they’re still coming up), but the later ones clear almost instantly. That’s why the iteration speeds up as the  progress is made through the list.  
+- **Bounded runtime:** The total delay is governed by the slowest reboot cycle among the 44, not multiplied by 44. That’s the total time is considerably less than 44 times a typical node reboot cycle. 
+
+The test of 44 simulated status 1/2 nodes is an extreme corner case. The probability of that many nodes (almost 10%) being stuck in such
+a state is very unlikely.  But this is a good stress test of the code and overall worst case execution time. 
+
+
+
+
+### Ideal watchdog timeout
+
+
+After testing, the ideal watchdog timeout is 300-600 seconds.   200 second will induce failures in 512 node testing and 100 seconds 
+causes all 16 nodes to fail in lower scale testing.
+
+For now the setting will be at 600 seconds for non-testing scenarios.
+
+
+```
+
+    # Step 2.5: wait for fleet health or trigger batch. Use batch processing. The serial processing above is not a good approach.
+
+    ##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
+    ##### NOTE: use max_watchdog of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
+    #### for testing purposes
+
+    start_ts = time.time()
+    #max_watchdog = 100  # 100 will cause 16 nodes of 16 to "fail". This is good for testing.  1200 seconds for normal operation.
+    max_watchdog = 600  # 1200 is good for normal operations.  200 for testing with 512 nodes to incite "failures". 300 runs clean.
+    # use a 600 second default.
+
+    while True:
+        all_ok = True
+        for iid in instance_ids:
+            st = AWS_ISSUE_get_status(ec2_client, iid)
+            if not st or not (st["state"] == "running" and st["sys_ok"] and st["inst_ok"]):
+                all_ok = False
+                break
+        if all_ok:
+            print("[AWS_ISSUE_REHYDRATION_DIAG] All instances passed 2/2 within watchdog; no rehydration needed.")
+            break
+        if time.time() - start_ts >= max_watchdog:
+            print("[AWS_ISSUE_REHYDRATION_DIAG] Watchdog exceeded; initiating batch rehydration for laggards.")
+            rehydrated = AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids)
+            break
+        time.sleep(10)
+
+    # Ensure the aggregate file exists (empty) before proceeding
+    AWS_ISSUE_ensure_empty_failure_artifact()
+
+```
 
 
 
