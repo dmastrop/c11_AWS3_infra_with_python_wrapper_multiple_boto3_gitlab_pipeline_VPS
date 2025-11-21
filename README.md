@@ -554,6 +554,45 @@ def AWS_ISSUE_batch_rehydrate_after_watchdog(ec2_client, instance_ids, ip_wait_l
 ```
 
 
+
+
+### Validation testing of the code
+
+#### Introduction
+
+The validation mainly consists of reducing the watchdog from the standard liberal 1200 seconds to a lower amount to induce "failures"
+in the nodes (stop/start and ip rehydration).   With the 16 node test, 100 seconds caused all 16 nodes to "fail" and they were all stopped
+and started and ip rehydrated.   With the 512 node test, 600 and 300 seconds was insufficient to induce "failures".
+
+NOTE on the logs:
+
+All the relevant logs are prefixed by AWS_ISSUE for easily searchability in the gitlab console logs.
+The nodes are always stopped and started in parallel, however the logs appear sequential becasue some of the loops for status checking
+is sequential. However, the most important part is batch parallelized, the stopping and starting of the nodes. 
+
+
+- **Step 2.5 logs:**  
+  - `[AWS_ISSUE_REHYDRATION_DIAG] Laggards at watchdog cutoff: [...]`  
+  - `[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Forcing stop/start on N: [...]`  
+- **Batch behavior:**  
+  - AWS will stop/start all laggards in parallel.  
+  - The logs will show sequential confirmation (`Waiting for public IP…`, `2/2 recovered…`) because iterantion through the laggards 
+is done one by one, but the actual reboots are happening together.  
+
+#### 16 node testing
+
+
+
+
+#### 512 node testing
+
+
+
+
+
+
+
+
 ## UPDATES part 39: Phase 3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning
 
 
