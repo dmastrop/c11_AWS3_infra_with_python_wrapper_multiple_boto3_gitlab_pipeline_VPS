@@ -1667,149 +1667,150 @@ def wait_for_instance_visibility(ec2_client, expected_count, tag_key, tag_value,
 
 
 
-
-##### [global function, along with wait_for_all_public_ips and wait_for_instance_visiblity]
-##### This is the new wait_for_instance_running to be incorporated into the orchestrate_instance_launch_and_ip_polling function
-##### that is called from main() early on during AWS orchestration. The new function is renamed wait_for_instance_running_rehydrate
-
-##### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
-##### NOTE: use max_wait of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
-#### for testing purposes
-
-def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
-    """
-    Waits for an EC2 instance to reach 'running' state and pass both system/instance status checks.
-    If the watchdog timeout is hit, forces a stop/start cycle once, then rehydrates IPs.
-    Always returns the current public/private IPs for the instance.
-    """
-
-    elapsed = 0
-    stop_start_attempts = 0
-
-    while True:
-        instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
-        statuses = instance_status.get('InstanceStatuses', [])
-
-        if statuses:
-            state = statuses[0]['InstanceState']['Name']
-            system_status = statuses[0]['SystemStatus']['Status']
-            instance_status_check = statuses[0]['InstanceStatus']['Status']
-
-            if state == 'running' and system_status == 'ok' and instance_status_check == 'ok':
-                # ✅ Always fetch current IPs before returning
-                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
-                for reservation in desc['Reservations']:
-                    for inst in reservation['Instances']:
-                        if inst['InstanceId'] == instance_id:
-                            public_ip = inst.get('PublicIpAddress')
-                            private_ip = inst['PrivateIpAddress']
-                            print(f"[WAIT] Instance {instance_id} ready → Public IP: {public_ip}, Private IP: {private_ip}")
-                            return public_ip, private_ip   
-        else:
-            print(f"No status yet for instance {instance_id}. Waiting...")
-
-        time.sleep(10)
-        elapsed += 10
-
-        if elapsed >= max_wait and stop_start_attempts == 0:
-            print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
-
-            ec2_client.stop_instances(InstanceIds=[instance_id])
-            
-            #time.sleep(30)
-            # Wait until the instance is fully stopped
-            while True:
-                resp = ec2_client.describe_instance_status(
-                    InstanceIds=[instance_id],
-                    IncludeAllInstances=True
-                )
-                statuses = resp.get('InstanceStatuses', [])
-                if statuses and statuses[0]['InstanceState']['Name'] == 'stopped':
-                    break
-                time.sleep(10)
-        
-            # Now it is safe to start 
-            ec2_client.start_instances(InstanceIds=[instance_id])
-            
-            stop_start_attempts += 1    # this ensures that the loop will not keep stopping and starting the node over and over again
-            elapsed = 0   # reset watchdog after restart
-            
-            # 🔄 Rehydrate IPs after restart. Note that the private ip will be the same, but the public ip will change after stop/start
-            
-            # Wait until AWS assigns new IP
-            while True:
-                time.sleep(10)
-                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
-                for reservation in desc['Reservations']:
-                    for inst in reservation['Instances']:
-                        if inst['InstanceId'] == instance_id:
-                            public_ip = inst.get('PublicIpAddress')
-                            private_ip = inst['PrivateIpAddress']
-                            if public_ip:
-                                print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
-                                 #### Before returning the public_ip and private_ip make sure that the rebotted node's status health checks
-                                 #### are ok, so that downstream thread code does not get hung up and crash. The latency added for stop and
-                                 #### start is signficant and these nodes will lag behind the rest of the pack of nodes in the execution run
-                                 # <<< NEW WAIT: ensure status checks are 2/2 before releasing >>>
-                                 # This code block ensures that if the node cannot be revived, that it will not crash the entire 
-                                 # orchestrate calling function and the rest of the golden ips will still be included in the instance_ips
-                                 # This code also logs to a new .json artifact log in the gitlab pipeline to indicate these very rare
-                                 # occurrences by the instance_id and ip.
-                                while True:
-                                    resp = ec2_client.describe_instance_status(
-                                        InstanceIds=[instance_id],
-                                        IncludeAllInstances=True
-                                    )
-                                    statuses = resp.get('InstanceStatuses', [])
-                                    if statuses:
-                                        state = statuses[0]['InstanceState']['Name']
-                                        sys_status = statuses[0]['SystemStatus']['Status']
-                                        inst_status = statuses[0]['InstanceStatus']['Status']
-                                        if state == 'running' and sys_status == 'ok' and inst_status == 'ok':
-                                            return public_ip, private_ip #only now return the ip for thread processing in lower layers
-                                    time.sleep(10)
-
-                                # If we somehow never reach ok/ok, bail out
-                                print(f"[AWS_ISSUE_REHYDRATION_FAILED] Instance {instance_id} did not recover after the rehydration attempt")
-
-                                # Export to JSON log file in artifact path
-                                log_entry = {
-                                    "instance_id": instance_id,
-                                    "public_ip": public_ip,
-                                    "private_ip": private_ip,
-                                    "status": "rehydration_failed",
-                                    "timestamp": datetime.utcnow().isoformat(),
-                                    "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
-                                }
-                                
-
-                                os.makedirs("/aws_EC2/logs", exist_ok=True)
-                                log_path = "/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json"
-
-                                # Ensure the file exists — if empty, initialize with []
-                                if not os.path.exists(log_path):
-                                    with open(log_path, "w") as f:
-                                        json.dump([], f)
-
-                                # Append this entry to the JSON array
-                                with open(log_path, "r+") as f:
-                                    try:
-                                        data = json.load(f)
-                                    except json.JSONDecodeError:
-                                        data = []
-                                    data.append(log_entry)
-                                    f.seek(0)
-                                    json.dump(data, f, indent=2)
-                                    f.truncate()
-
-                                return None, None
-
-                                
-                                #os.makedirs("/aws_EC2/logs", exist_ok=True)
-                                #with open("/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json", "a") as f:
-                                #    f.write(json.dumps(log_entry) + "\n")
-
-                                #return None, None
+######### Deprecated function wait_for_instance_running_rehydrated replaced with AWS_ISSUE_batch_rehydrate_after_watchdog ###########
+#
+###### [global function, along with wait_for_all_public_ips and wait_for_instance_visiblity]
+###### This is the new wait_for_instance_running to be incorporated into the orchestrate_instance_launch_and_ip_polling function
+###### that is called from main() early on during AWS orchestration. The new function is renamed wait_for_instance_running_rehydrate
+#
+###### Incorporate ip rehydration after stop and start as part of Phase3 implemenation for resurrection of problematic threads
+###### NOTE: use max_wait of 1200 for standard operation tolerance and use 100 to instigate intentional stop/start of some of the nodes
+##### for testing purposes
+#
+#def wait_for_instance_running_rehydrate(instance_id, ec2_client, max_wait=1200):  # 100 to instigate stop/start and 1200 default
+#    """
+#    Waits for an EC2 instance to reach 'running' state and pass both system/instance status checks.
+#    If the watchdog timeout is hit, forces a stop/start cycle once, then rehydrates IPs.
+#    Always returns the current public/private IPs for the instance.
+#    """
+#
+#    elapsed = 0
+#    stop_start_attempts = 0
+#
+#    while True:
+#        instance_status = ec2_client.describe_instance_status(InstanceIds=[instance_id])
+#        statuses = instance_status.get('InstanceStatuses', [])
+#
+#        if statuses:
+#            state = statuses[0]['InstanceState']['Name']
+#            system_status = statuses[0]['SystemStatus']['Status']
+#            instance_status_check = statuses[0]['InstanceStatus']['Status']
+#
+#            if state == 'running' and system_status == 'ok' and instance_status_check == 'ok':
+#                # ✅ Always fetch current IPs before returning
+#                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
+#                for reservation in desc['Reservations']:
+#                    for inst in reservation['Instances']:
+#                        if inst['InstanceId'] == instance_id:
+#                            public_ip = inst.get('PublicIpAddress')
+#                            private_ip = inst['PrivateIpAddress']
+#                            print(f"[WAIT] Instance {instance_id} ready → Public IP: {public_ip}, Private IP: {private_ip}")
+#                            return public_ip, private_ip   
+#        else:
+#            print(f"No status yet for instance {instance_id}. Waiting...")
+#
+#        time.sleep(10)
+#        elapsed += 10
+#
+#        if elapsed >= max_wait and stop_start_attempts == 0:
+#            print(f"[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Instance {instance_id} failed checks after {max_wait}s. Forcing stop/start...")
+#
+#            ec2_client.stop_instances(InstanceIds=[instance_id])
+#            
+#            #time.sleep(30)
+#            # Wait until the instance is fully stopped
+#            while True:
+#                resp = ec2_client.describe_instance_status(
+#                    InstanceIds=[instance_id],
+#                    IncludeAllInstances=True
+#                )
+#                statuses = resp.get('InstanceStatuses', [])
+#                if statuses and statuses[0]['InstanceState']['Name'] == 'stopped':
+#                    break
+#                time.sleep(10)
+#        
+#            # Now it is safe to start 
+#            ec2_client.start_instances(InstanceIds=[instance_id])
+#            
+#            stop_start_attempts += 1    # this ensures that the loop will not keep stopping and starting the node over and over again
+#            elapsed = 0   # reset watchdog after restart
+#            
+#            # 🔄 Rehydrate IPs after restart. Note that the private ip will be the same, but the public ip will change after stop/start
+#            
+#            # Wait until AWS assigns new IP
+#            while True:
+#                time.sleep(10)
+#                desc = ec2_client.describe_instances(InstanceIds=[instance_id])
+#                for reservation in desc['Reservations']:
+#                    for inst in reservation['Instances']:
+#                        if inst['InstanceId'] == instance_id:
+#                            public_ip = inst.get('PublicIpAddress')
+#                            private_ip = inst['PrivateIpAddress']
+#                            if public_ip:
+#                                print(f"[AWS_ISSUE_REHYDRATION] Instance {instance_id} reassigned following stop/start recovery → Public IP: {public_ip}, Private IP: {private_ip}")
+#                                 #### Before returning the public_ip and private_ip make sure that the rebotted node's status health checks
+#                                 #### are ok, so that downstream thread code does not get hung up and crash. The latency added for stop and
+#                                 #### start is signficant and these nodes will lag behind the rest of the pack of nodes in the execution run
+#                                 # <<< NEW WAIT: ensure status checks are 2/2 before releasing >>>
+#                                 # This code block ensures that if the node cannot be revived, that it will not crash the entire 
+#                                 # orchestrate calling function and the rest of the golden ips will still be included in the instance_ips
+#                                 # This code also logs to a new .json artifact log in the gitlab pipeline to indicate these very rare
+#                                 # occurrences by the instance_id and ip.
+#                                while True:
+#                                    resp = ec2_client.describe_instance_status(
+#                                        InstanceIds=[instance_id],
+#                                        IncludeAllInstances=True
+#                                    )
+#                                    statuses = resp.get('InstanceStatuses', [])
+#                                    if statuses:
+#                                        state = statuses[0]['InstanceState']['Name']
+#                                        sys_status = statuses[0]['SystemStatus']['Status']
+#                                        inst_status = statuses[0]['InstanceStatus']['Status']
+#                                        if state == 'running' and sys_status == 'ok' and inst_status == 'ok':
+#                                            return public_ip, private_ip #only now return the ip for thread processing in lower layers
+#                                    time.sleep(10)
+#
+#                                # If we somehow never reach ok/ok, bail out
+#                                print(f"[AWS_ISSUE_REHYDRATION_FAILED] Instance {instance_id} did not recover after the rehydration attempt")
+#
+#                                # Export to JSON log file in artifact path
+#                                log_entry = {
+#                                    "instance_id": instance_id,
+#                                    "public_ip": public_ip,
+#                                    "private_ip": private_ip,
+#                                    "status": "rehydration_failed",
+#                                    "timestamp": datetime.utcnow().isoformat(),
+#                                    "tags": ["AWS_ISSUE_REHYDRATION_FAILED", "pre_ghost"]
+#                                }
+#                                
+#
+#                                os.makedirs("/aws_EC2/logs", exist_ok=True)
+#                                log_path = "/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json"
+#
+#                                # Ensure the file exists — if empty, initialize with []
+#                                if not os.path.exists(log_path):
+#                                    with open(log_path, "w") as f:
+#                                        json.dump([], f)
+#
+#                                # Append this entry to the JSON array
+#                                with open(log_path, "r+") as f:
+#                                    try:
+#                                        data = json.load(f)
+#                                    except json.JSONDecodeError:
+#                                        data = []
+#                                    data.append(log_entry)
+#                                    f.seek(0)
+#                                    json.dump(data, f, indent=2)
+#                                    f.truncate()
+#
+#                                return None, None
+#
+#                                
+#                                #os.makedirs("/aws_EC2/logs", exist_ok=True)
+#                                #with open("/aws_EC2/logs/orchestration_layer_rehydration_failed_nodes.json", "a") as f:
+#                                #    f.write(json.dumps(log_entry) + "\n")
+#
+#                                #return None, None
 
 
 
@@ -2019,7 +2020,7 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
 
     start_ts = time.time()
     #max_watchdog = 100  # 100 will cause 16 nodes of 16 to "fail". This is good for testing.  1200 seconds for normal operation.
-    max_watchdog = 300  # 1200 is good for normal operations.  600 or 300 for testing with 512 nodes to incite "failures"
+    max_watchdog = 200  # 1200 is good for normal operations.  200 for testing with 512 nodes to incite "failures"
 
     while True:
         all_ok = True
