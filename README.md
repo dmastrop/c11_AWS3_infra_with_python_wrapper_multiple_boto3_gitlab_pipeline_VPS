@@ -573,41 +573,89 @@ The nodes are always stopped and started in parallel, however the logs appear se
 is sequential. However, the most important part is batch parallelized, the stopping and starting of the nodes. 
 
 
-- **Step 2.5 logs:**  
+- Step 2.5 logs: 
   - `[AWS_ISSUE_REHYDRATION_DIAG] Laggards at watchdog cutoff: [...]`  
+  
   - `[AWS_ISSUE_NODE_REQUIRED_STOP_AND_START_orchestration_layer_rehydrate] Forcing stop/start on N: [...]`  
-- **Batch behavior:**  
+
+- Batch behavior:  
   - AWS will stop/start all laggards in parallel.  
+  
   - The logs will show sequential confirmation (`Waiting for public IP…`, `2/2 recovered…`) because iteration through the laggards 
-is done one by one, but the actual reboots are happening together.  
+is done one by one, but the actual reboots are happening together. (see the next section below) 
 
 For a 512 node test that had 44 "failures" and given that the reboots and status2/2 takes around 2-3 minutes a node, if this were
-serialized it would take over 88 minutes. In a real life test it took about 7-10 minutes due to the parallel nature of the reboots
-done on the entire laggard batch of problematic nodes.
+serialized it would take over 88 minutes. In a real life test it took about 12  minutes due to the parallel nature of the reboots
+done on the entire laggard batch of problematic nodes (batch processing)
 
 Doing the check for status on the nodes at the orchestration layer rather than at the thread level of install_tomcat (the previous
-iterantion of code), is much cleaner and ensures that integrity of the golden ip list in terms of accuracy.
+iteration of code did this), is much cleaner and ensures the integrity of the golden ip list in terms of accuracy.
 
 
+#### Further detail on the gitlab console logging behavior
+
+The flow of logs to the gitlab console can be confusing.   The characteristics explain the somewhat confusing flow:
+
+This is for a 512 node test with the watchdog timeout set to 200 seconds. It induced 44 of the nodes to "fail" (i.e. they were 
+not in status 2/2 by the time the watchdog timer terminated). This was done intentionally to test the various code paths.
+
+
+- Parallel reboots at AWS: 
+All 44 laggards are stop/started together. They’re all rebooting in parallel on the AWS 
+control plane.  
+
+- Sequential confirmation in the loop:
+The  orchestration code walks the list one by one, waiting for each node to hit `running` + 2/2 before moving on. That’s why the logs 
+look like they’re “stuck” on the first node for a while.  
+
+- Velocity effect: As time passes, more and more of the remaining nodes are already healthy by the time the serailized loop reaches
+them. So the early ones take longer (because they’re still coming up), but the later ones clear almost instantly. That’s why the 
+serail iteration to the gitlab log console speeds up as the  progress is made through the list.  
+
+- Bounded runtime: The total delay is governed by the slowest reboot cycle among the 44, not multiplied by 44. That the total time is 
+considerably less than 44 times a typical node reboot cycle.  In the test there was a about a 12 minute increase in total execution
+time from the clean test case (no "failures") of 34 minutes to 46 minutes. A typical stop and start and status2/2 cycle for a single
+node is about 2-3 minutes per node. So the parallelization effecct reduces the time greatly. 
+
+The test of 44 simulated status 1/2 nodes is an extreme corner case. The probability of that many nodes (almost 10%) being stuck in such
+a state is very unlikely.  But this is a good stress test of the code and overall worst case execution time. 
 
 
 #### 16 node testing
 
+An artificially lowered watchdog timeout of 100 seconds caused all 16 nodes to enter this "failure" state whereby they were identified 
+as laggards and subsequently stopped, started and then the new ip address was observed (ip rehydrated) so that the golden ip list
+could be appropriately updated.
 
+The logs of this entire process are below. There were several variant iterations of this done performed.  The first test was a 
+clean install_success of all 16 nodes, the next test added 8 synthetic ghosts (1 per process) to the execution run, and then the
+last test added synthetic HYBRID futures crashes (a mix of futures crashes after the first command success and also futures crashes
+that occurred after all the commands successfully executed on the node) to the 8 ghosts and the 16 nodes that were "failed"
+
+The gatekeeper stats and the registry_entrys for all of the threads were then observed for accuracy.
+
+Of note, since the 16 nodes are stopped and started and ip rehydrated, the nodes should end up in install_success status for each 
+registry_entry thread. I also verified a few of these nodes manually with an SSH to the node and verified that the installation on the 
+node was successful (systemctl status on the shell).
+
+
+##### 16 node test case
+
+
+##### 16 node test case with 8 synthetic ghosts
+
+
+##### 16 node test case with 8 synthetic ghosts and HYBRID futures crashes in the install_tomcat thread
+
+
+
+
+
+ 
 
 
 #### 512 node testing
 
-##### Detail on the gitlab console logging behavior
-
-
-- **Parallel reboots at AWS:** All 44 laggards are stop/started together. They’re all rebooting in parallel at the control plane.  
-- **Sequential confirmation in the loop:** The  orchestration code walks the list one by one, waiting for each node to hit `running` + 2/2 before moving on. That’s why the logs look like they’re “stuck” on the first node for a while.  
-- **Velocity effect:** As time passes, more and more of the remaining nodes are already healthy by the time the serailized loop reaches them. So the early ones take longer (because they’re still coming up), but the later ones clear almost instantly. That’s why the iteration speeds up as the  progress is made through the list.  
-- **Bounded runtime:** The total delay is governed by the slowest reboot cycle among the 44, not multiplied by 44. That’s the total time is considerably less than 44 times a typical node reboot cycle. 
-
-The test of 44 simulated status 1/2 nodes is an extreme corner case. The probability of that many nodes (almost 10%) being stuck in such
-a state is very unlikely.  But this is a good stress test of the code and overall worst case execution time. 
 
 
 
