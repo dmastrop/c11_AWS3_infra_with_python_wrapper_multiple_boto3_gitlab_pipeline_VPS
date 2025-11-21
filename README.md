@@ -857,17 +857,201 @@ For example,
   "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
 ```
 
-
+The final registry json file consists of 8 synthetic ghost registry_entrys that are tagged for resurrection by the gatekeeper and the
+16 threads that have been stopped, started and ip rehydrated for install_success.
 
 
 
 ##### 16 node test case with 8 synthetic ghosts and HYBRID futures crashes in the install_tomcat thread
 
+The gitlab log console looks very similar to the other 2 scenarios above but also with selected futures crashes in install_tomcat 
+
+Thus, not all the threads are install_success. In the test case below with only 16 nodes all the threads are designed to crash with 
+one or the other futures crash.
+
+The idx1 futures crash (crash after first command execution success) do not have a successful installation
+The futures that crash after all commands have succeeded are status install_failed because of the crash, but are tagged by the gatekeeper
+as not requiring Phase3 thread resurrection.
+
+The example below is a thread that was stopped, started, ip rehyadrated at the orchestration layer and then intentionally futures crashed
+at idx1 (first command)
+
+
+```
+54.163.24.56
+
+
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for public IP… i-0078059b2341c05f0
+[AWS_ISSUE_REHYDRATION] i-0078059b2341c05f0 reassigned → Public IP: 54.163.24.56, Private IP: 172.31.31.208
+[AWS_ISSUE_REHYDRATION_DIAG] Waiting for 2/2… i-0078059b2341c05f0
+[AWS_ISSUE_REHYDRATION_DIAG] 2/2 recovered after stop/start → i-0078059b2341c05f0
 
 
 
 
- 
+[PID 12] [UUID b5ee6297] ❌ Future crashed | Pre-rehydrated Public IP: unknown | Pre-rehydrated Private IP: unknown
+[TRACE][install_tomcat] Attempt loop exited for command 1/5: 'sudo DEBIAN_FRONTEND=noninteractive apt update -y' on IP 54.163.24.56 — Success flag: True
+[DEBUG] idx=1, FORCE_TOMCAT_FAIL_IDX1=false
+[ERROR][threaded_install] Future failed: Synthetic failure injected at idx 1 with module2c real no tagging
+Traceback (most recent call last):
+  File "<string>", line 6035, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4765, in install_tomcat
+RuntimeError: Synthetic failure injected at idx 1 with module2c real no tagging
+[PID 12] [UUID 4843f0e1] ❌ Future crashed | Pre-rehydrated Public IP: unknown | Pre-rehydrated Private IP: unknown
+[TRACE][threaded_install] Final thread_registry contains 2 entries
+[TRACE][threaded_install] UUID b5ee6297 | PID 12: {'status': 'install_failed', 'attempt': -1, 'pid': 12, 'thread_id': 134086982273920, 'thread_uuid': 'b5ee6297', 'public_ip': 'unknown', 'private_ip': 'unknown', 'timestamp': '2025-11-20 00:51:59.944502', 'tags': ['install_failed', 'future_exception', 'RuntimeError']}
+[TRACE][threaded_install] UUID 4843f0e1 | PID 12: {'status': 'install_failed', 'attempt': -1, 'pid': 12, 'thread_id': 134086982273920, 'thread_uuid': '4843f0e1', 'public_ip': 'unknown', 'private_ip': 'unknown', 'timestamp': '2025-11-20 00:52:00.463264', 'tags': ['install_failed', 'future_exception', 'RuntimeError']}
+[TRACE][run_test] func returned type: <class 'dict'>
+[TRACE][install_tomcat] Attempt loop exited for command 1/5: 'sudo DEBIAN_FRONTEND=noninteractive apt update -y' on IP 98.81.157.247 — Success flag: True
+[DEBUG] idx=1, FORCE_TOMCAT_FAIL_IDX1=false
+[ERROR][threaded_install] Future failed: Synthetic failure injected at idx 1 with module2c real no tagging
+Traceback (most recent call last):
+  File "<string>", line 6035, in threaded_install
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4765, in install_tomcat
+RuntimeError: Synthetic failure injected at idx 1 with module2c real no tagging
+```
+
+
+The registry_entry after execution is below. Note that the gatekeeper has tagged it for thread resurrection because the installation 
+failed.
+
+```
+  "4843f0e1": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 134086982273920,
+    "thread_uuid": "4843f0e1",
+    "public_ip": "54.163.24.56",
+    "private_ip": "172.31.31.208",
+    "timestamp": "2025-11-20 00:52:00.463264",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+  "ba98b1e3": {
+```
+
+
+
+```
+[TRACE][aggregator] Final registry summary:
+  total: 16
+  install_success: 0
+  install_failed: 16
+  stub: 0
+  no_tags: 0
+
+```
+
+
+10 of the 16 nodes were of this idx1 futures crash type. These are flagged by the gatekeeper and need to be resurrected as noted in the
+example above
+
+
+6 of the 16 nodes had a futures crash where all commands were executed successfully on the nodes but the thread crashed right after
+successful installation. Because of the futures crash they are install_failed but the registy_entry is tagged by the gatekeeper so that
+they will not be Phase3 resurrected. The Phase3 resurrection code will be intelligent enough to look at the tags of each thread/
+registry_entry and make a decision to reque the thread and resurrect it.
+
+
+With these 6 nodes the registry_entry looks like this, for example:
+```
+  "981aa6d4": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": 134086982273920,
+    "thread_uuid": "981aa6d4",
+    "public_ip": "18.206.235.198",
+    "private_ip": "172.31.16.161",
+    "timestamp": "2025-11-20 00:56:29.252548",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+
+```
+Note that with these nodes there is an ip rehydration at the orchestration layer (For the AWS_ISSUE; see logs above), and then there is
+an ip rehydration at the thread level after the future crash (since the thread will lose the ip address when the thread crashes, so it
+has to be rehydrated). The orchestration ip rehydration is to a new address post stop and start, whereas teh second thread futures crash
+ip rehydation is just to restore the ip address that it had prior to the futures crash (this ip is the same one that is assigned to the 
+node after the stop and start AWS_ISSUE).
+
+
+
+The other 8 resurrection nodes are from the 8 ghosts.
+
+These registry_entrys are synthetically created (see earlier UPDATES below on how this is done): 
+```
+  "ghost_1_1_17_62": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_17_62",
+    "public_ip": "1.1.17.62",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+
+```
+This last test case provides a good test for the code when there are multiple types of failures in the execution run and is a good
+simulation of real life execution dynamics.
+
+
+The final gatekeeper stats are below: 
+
+```
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 0,
+  "total_failed_and_stubs": 16,
+  "total_resurrection_candidates": 16,
+  "total_resurrection_ghost_candidates": 8,
+
+
+  "gatekeeper_resurrected": 18,   <<<<< 10 idx1 futures crashed threads and 8 ghosts = 18 total
+  "gatekeeper_blocked": 6, <<<< The 6 futures crashes that occurred after the installation completed
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 75.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 75.0
+
+```
+
 
 
 #### 512 node testing
