@@ -2019,7 +2019,7 @@ def orchestrate_instance_launch_and_ip_polling(exclude_instance_id=None):
 
     start_ts = time.time()
     #max_watchdog = 100  # 100 will cause 16 nodes of 16 to "fail". This is good for testing.  1200 seconds for normal operation.
-    max_watchdog = 1200  # 1200 is good for normal operations.  600 or 300 for testing with 512 nodes to incite "failures"
+    max_watchdog = 300  # 1200 is good for normal operations.  600 or 300 for testing with 512 nodes to incite "failures"
 
     while True:
         all_ok = True
