@@ -1370,9 +1370,6 @@ upon the registry_entry tags present from module2, 2a, 2b, 2c, and 2d processing
 The chart and approach will change as testing during Phase3 proceeds, so this is just a preview of the approach
 
 
-
-Got it, Dave — I’ve cleaned up the matrix exactly as you asked: no bold, no `<br>` markup, no “deferrable” note on the ghost IP row, and the SSH row is focused only on real failures with ENV‑based simulation noted separately. This version is ready to drop straight into your README as the **early plan of attack for Phase 3**.
-
 ---
 
 #### Crash Type vs. Recovery Strategy Matrix (Phase 3)
