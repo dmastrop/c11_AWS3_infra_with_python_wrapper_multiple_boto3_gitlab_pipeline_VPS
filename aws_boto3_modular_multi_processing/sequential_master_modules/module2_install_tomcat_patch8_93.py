@@ -422,6 +422,27 @@ def wrap_command(cmd):
 
 
 
+# Phase3 write_command_plan used in tomcat_worker right after the native_commands list is defined. This will be used by module2e
+# to resurrect the threads using the command set list.   The filename is command_plan.json
+def write_command_plan(native_commands, log_dir="/aws_EC2/logs"):
+    wrapped = [wrap_command(cmd) for cmd in native_commands]
+    plan = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "native_commands": native_commands,
+        "wrapped_commands": wrapped,
+        "count": len(native_commands)
+    }
+    os.makedirs(log_dir, exist_ok=True)
+    out = os.path.join(log_dir, "command_plan.json")
+    with open(out, "w") as f:
+        json.dump(plan, f, indent=2)
+    print(f"[TRACE] Wrote command plan to {out}")
+
+
+
+
+
+
 ## aggregate gold ips from chunks
 ## Global helper function for the GOLD standard IP list creation from the AWS control plane for the execution run
 ## This function will be called from main() after chunks is defined. Chunks is the pre-processsing done on the 
@@ -3792,6 +3813,20 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         "sudo systemctl enable tomcat9"
     ]
     
+    ######## end of native_commands block
+
+
+    ######## insert code to create the command_plan.json file to be used in Phase3 resurrection. The command_plan.json has a list
+    ######## of the native commands and wrapped commands (strace) so that the commands can be re-iterated on nodes that need to be
+    ######## resurrected via module2e. THe helper function is defined at the top of this module2 along with the other command related
+    ######## helper modules. The helper module is write_command_plan
+
+    # Serialize command plan once per process in tomcat_worker. This file will be overwritten for a net of command plan per execution run
+    write_command_plan(native_commands)
+
+
+    
+
 
 
 
