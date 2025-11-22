@@ -332,6 +332,9 @@ def post_aggregate_registry_analysis():
 def resurrection_gatekeeper():
     run_module("/aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py")
 
+#### This is module2e for the Phase3 reque and resurrection code
+def reque_and_resurrect():
+    run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect.py")
 
 
 ## modules 3-11:
@@ -389,6 +392,12 @@ def main():
     process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
     process2d.start()
     process2d.join()
+
+    process2e = multiprocessing.Process(target=reque_and_resurrect, name="Process2e: reque_and_resurrect")
+    process2e.start()
+    process2e.join()
+
+
 
 
 
