@@ -37,7 +37,7 @@ def process_idx1(entry, command_plan):
     normalize_resurrection_reason(entry, "Idx1 futures crash detected, requeued with full command set")
     # Prototype: replay full wrapped_commands. Placeholder for the actual callback to module2 to process the SSH connection and the
     # command execution using the thread logic, to resurrect the thread.
-    entry["replayed_commands"] = command_plan["wrapped_commands"]
+    entry["replayed_commands"] = command_plan["wrapped_commands"]   # the command set is actually added to the registry_entry 
     return entry
 
 

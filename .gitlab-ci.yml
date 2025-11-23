@@ -297,6 +297,14 @@ deploy:
       # do not come up. These are not included in the golden ip list and will not show up even as ghosts
       - logs/orchestration_layer_rehydration_failed_nodes.json
 
+      # Phase3 log files 
+      - logs/command_plan.json  # module2
+      - logs/resurrection_module2e_registry.json  # module2e
+      - logs/aggregate_process_stats_module2e.json  # module2e
+
+
+
+
     expire_in: 1 week
 
   allow_failure: true

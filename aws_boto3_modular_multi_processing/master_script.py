@@ -334,7 +334,7 @@ def resurrection_gatekeeper():
 
 #### This is module2e for the Phase3 reque and resurrection code
 def reque_and_resurrect():
-    run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect.py")
+    run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py")
 
 
 ## modules 3-11:
