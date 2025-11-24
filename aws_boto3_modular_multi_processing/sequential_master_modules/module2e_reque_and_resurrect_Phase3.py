@@ -6,7 +6,7 @@ from datetime import datetime
       # Phase3 log files
       #- logs/command_plan.json  # module2
       #- logs/resurrection_module2e_registry.json  # module2e
-      #- logs/aggregate_process_stats_module2e.json  # module2e
+      #- logs/aggregate_process_stats_gatekeeper_module2e.json  # module2e
 LOG_DIR = "/aws_EC2/logs"
 
 def load_json(filename, log_dir=LOG_DIR):
@@ -87,7 +87,7 @@ def main():
     }
 
     write_json("resurrection_module2e_registry.json", resurrection_registry)
-    write_json("aggregate_process_stats_module2e.json", stats_out)
+    write_json("aggregate_process_stats_gatekeeper_module2e.json", stats_out)
 
 if __name__ == "__main__":
     main()
