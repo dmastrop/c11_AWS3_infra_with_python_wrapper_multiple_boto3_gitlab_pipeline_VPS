@@ -336,6 +336,12 @@ def resurrection_gatekeeper():
 def reque_and_resurrect():
     run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py")
 
+#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function
+def resurrection_install_tomcat():
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat.py")    
+
+
+
 
 ## modules 3-11:
 
@@ -397,7 +403,9 @@ def main():
     process2e.start()
     process2e.join()
 
-
+    process2f = multiprocessing.Process(target=reque_and_resurrect, name="Process2f: resurrection_install_tomcat")
+    process2f.start()
+    process2f.join()
 
 
 
