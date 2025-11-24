@@ -255,9 +255,15 @@ STATUS_TAGS = {
 #####  We will still use the WATCHDOG_TIMEOUT but it will be adaptive, calculated in get_watchdog_timeout and used by
 ##### read_output_with_watchdog which is called by install_tomcat
 
-#WATCHDOG_TIMEOUT          = 90   
+
+#### For Phase3 resurrection of threads just use a static 90 seconds. We don't need to get the adaptive watchdog timeout from
+#### module2 because there is no API contention (the SG rules are already applied to the node that needs to be resurrected) and the
+#### multi-processing and multi-threading is not done here. There is much less contention.
+
+WATCHDOG_TIMEOUT          = 90   
 # seconds before we declare a read stalled. This is the default. The WATCHDOG_TIMTOUE is now
 # adaptive. See the function get_watchdog_timeout. 
+
 
 
 
