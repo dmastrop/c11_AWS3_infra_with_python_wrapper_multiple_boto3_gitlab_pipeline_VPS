@@ -78,7 +78,7 @@ deploy:
       # The gatekeeper will bypass resurrecting this thread.
 
 
-    FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "false"   # this futures crash will hit the module2c scan but an additional tag should not be 
+    FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "true"   # this futures crash will hit the module2c scan but an additional tag should not be 
       # inserted. The gatekeeper will try to resurrect this thread.      
 
     FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH: "false"  # this uses the pid which is somewhat deterministic in a 16 node test to 
