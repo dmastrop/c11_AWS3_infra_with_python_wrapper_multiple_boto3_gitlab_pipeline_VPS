@@ -6,11 +6,16 @@ from datetime import datetime
       # Phase3 log files
       #- logs/command_plan.json  # module2
       #- logs/resurrection_module2e_registry.json  # module2e
-      #- logs/aggregate_process_stats_gatekeeper_module2e.json  # module2e
+      #- logs/aggregate_process_stats_module2e.json  # module2e
 LOG_DIR = "/aws_EC2/logs"
+STATISTICS_DIR = os.path.join(LOG_DIR, "statistics")
+
+
+
 
 def load_json(filename, log_dir=LOG_DIR):
     path = os.path.join(log_dir, filename)
+    print(f"[module2e_logging] Loading JSON artifact from {path}")
     with open(path, "r") as f:
         return json.load(f)
 
@@ -19,7 +24,8 @@ def write_json(filename, data, log_dir=LOG_DIR):
     path = os.path.join(log_dir, filename)
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
-    print(f"[TRACE] Wrote JSON artifact to {path}")
+    print(f"[module2e_logging] Wrote JSON artifact to {path}")
+
 
 
 def normalize_resurrection_reason(entry, new_reason):
@@ -49,6 +55,9 @@ def main():
     registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
     stats = load_json("aggregate_process_stats_gatekeeper_module2d.json")
     command_plan = load_json("command_plan.json")
+
+    # stats input lives in /aws_EC2/logs/statistics
+    stats = load_json("aggregate_process_stats_gatekeeper_module2d.json", log_dir=STATISTICS_DIR)
 
     resurrection_registry = {}
     by_bucket = {}
@@ -86,8 +95,21 @@ def main():
         "timestamp": datetime.utcnow().isoformat()
     }
 
-    write_json("resurrection_module2e_registry.json", resurrection_registry)
-    write_json("aggregate_process_stats_gatekeeper_module2e.json", stats_out)
+
+
+    # registry output stays in base logs
+    write_json("resurrection_module2e_registry.json", resurrection_registry, log_dir=LOG_DIR)
+    
+    # stats output goes into /aws_EC2/logs/statistics
+    write_json("aggregate_process_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
+
+    # Final summary printout
+    print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
+          f"resurrected={resurrected_total}, "
+          f"rate={stats_out['resurrection_rate_overall']:.2f}%")
+    print(f"[module2e_logging] By bucket counts: {by_bucket}")
+
+
 
 if __name__ == "__main__":
     main()
