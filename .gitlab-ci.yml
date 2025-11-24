@@ -293,14 +293,17 @@ deploy:
       # These are the aggregate main level stats that are derived from the process level stats
       - logs/statistics/aggregate_process_stats.json
 
+      # These are the aggregate process stats witht the gatekeeper stats as well from module2d
+      - logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+
       # These are the nodes that get stuck at AWS orchestration layer (for example, status1/2) and are stopped and started and still 
       # do not come up. These are not included in the golden ip list and will not show up even as ghosts
       - logs/orchestration_layer_rehydration_failed_nodes.json
 
       # Phase3 log files 
-      - logs/command_plan.json  # module2
-      - logs/resurrection_module2e_registry.json  # module2e
-      - logs/aggregate_process_stats_module2e.json  # module2e
+      - logs/command_plan.json  # module2 command set of wrapped native_commands from module2 used in phase3 module2e
+      - logs/resurrection_module2e_registry.json  # module2e phase3 registry with modified tags and command set added
+      - logs/statistics/aggregate_process_stats_module2e.json  # module2e phase3 thread resurrection stats
 
 
 
