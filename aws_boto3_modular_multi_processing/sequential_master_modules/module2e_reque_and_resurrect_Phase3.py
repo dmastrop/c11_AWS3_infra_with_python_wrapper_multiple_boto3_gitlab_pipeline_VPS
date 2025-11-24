@@ -53,7 +53,7 @@ def process_idx1(entry, command_plan):
 
 def main():
     registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
-    stats = load_json("aggregate_process_stats_gatekeeper_module2d.json")
+    
     command_plan = load_json("command_plan.json")
 
     # stats input lives in /aws_EC2/logs/statistics
