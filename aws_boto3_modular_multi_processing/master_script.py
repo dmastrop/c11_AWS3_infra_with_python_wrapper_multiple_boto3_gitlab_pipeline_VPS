@@ -403,7 +403,7 @@ def main():
     process2e.start()
     process2e.join()
 
-    process2f = multiprocessing.Process(target=reque_and_resurrect, name="Process2f: resurrection_install_tomcat")
+    process2f = multiprocessing.Process(target=resurrection_install_tomcat, name="Process2f: resurrection_install_tomcat")
     process2f.start()
     process2f.join()
 
