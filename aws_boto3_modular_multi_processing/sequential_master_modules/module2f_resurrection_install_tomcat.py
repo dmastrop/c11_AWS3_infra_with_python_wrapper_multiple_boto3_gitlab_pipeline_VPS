@@ -977,5 +977,158 @@ def resurrection_install_tomcat(
         return ip, private_ip, registry_entry
 
 
-####### orchestrator and wrapper 
+####### orchestrator code: this code takes in the resurrection_module2e_registry.json which is already gatekeeper resurrect filtered
+####### (all the threads will be attempted to be resurrected), and extracts out the fields necessary for the 
+####### resurrection_install_tomcat() arguments.   It also has logic to extract some of the args live with helper functions (for 
+####### example, the instance_id). Once it has the args it can run the resurrection_install_tomcat() function on each of the threads
+####### in the module2e registry json file, and then output a json file on whether or not the resurrection was successful. 
+####### There is some primitive fall back and error logic in there as well which will be expanded once this prototype is up and running.
+####### Note the specific test is a thread futures crash in idx1 right after the first command (of 5 here) is successfully executed.
+####### Thus the node does not have a successful installation at the time of the crash. Once the thread is resurrected and the commands
+####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
+
+LOG_DIR = "/aws_EC2/logs"
+MODULE2E_FILE = "resurrection_module2e_registry.json"
+
+def load_module2e_registry(path=os.path.join(LOG_DIR, MODULE2E_FILE)):
+    """
+    Load the resurrection candidates from module2e.
+    If the file is missing or empty, return {} and print a clear message.
+    """
+    if not os.path.exists(path):
+        print(f"[module2f] No module2e registry found at {path}. Nothing to resurrect.")
+        return {}
+    with open(path, "r") as f:
+        data = json.load(f)
+    if not data:
+        print(f"[module2f] module2e registry is empty. Skipping resurrection.")
+    return data
+
+def resolve_instance_id(public_ip=None, private_ip=None, region=None):
+    """
+    Resolve the current InstanceId live from AWS.
+    - Prefer public IP lookup (most stable for resurrection).
+    - Fallback to private IP if public is missing.
+    - This ensures we always get the *current* instance_id, even if IPs were recycled.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    # Try public IP filter first
+    if public_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    # Fallback: try private IP filter
+    if private_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "network-interface.addresses.private-ip-address",
+                      "Values": [private_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
+    return None
+
+def _extract_instance_id(describe_resp):
+    """
+    Helper to pull InstanceId out of AWS describe_instances response.
+    """
+    for r in describe_resp.get("Reservations", []):
+        for i in r.get("Instances", []):
+            iid = i.get("InstanceId")
+            if iid: return iid
+    return None
+
+def get_watchdog_timeout_default():
+    """
+    For resurrection runs we use a simple baseline timeout.
+    Adaptive per-process timeouts from module2 are not strictly needed here.
+    """
+    return 90
+
+def main():
+    registry = load_module2e_registry()
+    if not registry:
+        return
+
+    timeout = get_watchdog_timeout_default()
+    region = os.getenv("region_name")
+
+    results = {}
+    for uuid, entry in registry.items():
+        ip = entry.get("public_ip")
+        private_ip = entry.get("private_ip")
+        replayed_commands = entry.get("replayed_commands", [])
+        extra_tags = entry.get("tags", [])
+        res_uuid = uuid
+
+        # Reuse the original PID from module2e for forensic continuity
+        pid = entry.get("pid", os.getpid())
+
+        # InstanceId logic:
+        # - If module2e already carried instance_id, use it.
+        # - Otherwise, resolve live from AWS by IP.
+        instance_id = entry.get("instance_id")
+        if not instance_id:
+            instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+
+        if not instance_id:
+            # If we still can't resolve, skip safely with a stub tag.
+            print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
+            results[uuid] = {
+                "status": "stub",
+                "attempt": -1,
+                "pid": pid,
+                "thread_uuid": uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["stub", "missing_instance_id"] + extra_tags
+            }
+            continue
+
+        try:
+            ip_out, priv_out, reg = resurrection_install_tomcat(
+                ip=ip,
+                private_ip=private_ip,
+                instance_id=instance_id,
+                WATCHDOG_TIMEOUT=timeout,
+                replayed_commands=replayed_commands,
+                key_path=os.getenv("key_path", "EC2_generic_key.pem"),
+                username=os.getenv("username", "ubuntu"),
+                port=int(os.getenv("port", "22")),
+                max_ssh_attempts=int(os.getenv("max_ssh_attempts", "5")),
+                res_uuid=res_uuid,
+                extra_tags=extra_tags
+            )
+            # Ensure PID continuity in the registry entry
+            reg["pid"] = pid
+            results[uuid] = reg
+        except Exception as e:
+            print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
+            results[uuid] = {
+                "status": "install_failed",
+                "attempt": -1,
+                "pid": pid,
+                "thread_uuid": uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+            }
+
+    # Persist results to disk
+    out_path = os.path.join(LOG_DIR, "module2f_resurrection_results.json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"[module2f] Wrote resurrection results to {out_path}")
+
+if __name__ == "__main__":
+    main()
+
 
