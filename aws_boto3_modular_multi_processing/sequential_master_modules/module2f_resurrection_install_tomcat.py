@@ -74,8 +74,8 @@ APT_WHITELIST_REGEX = [
     r".* is already the newest version.*",
 
     # No changes summary
-	
-	    r"0 upgraded, 0 newly installed, 0 to remove and .* not upgraded",
+    
+        r"0 upgraded, 0 newly installed, 0 to remove and .* not upgraded",
 
     # Package metadata fetch
     r"Reading package lists... Done",
@@ -145,7 +145,7 @@ STRACE_WHITELIST_REGEX = [
     r"execve\(\"/usr/bin/sudo\", .* = 0",
 
     # SIGCHLD noise from child process exits
-	r"--- SIGCHLD .* ---",
+    r"--- SIGCHLD .* ---",
 
     # To catch common subprocesses used in injected commands. We want to whitelist these in the injected stderr as not failures
     r"execve\(\"/usr/bin/bash\", .* = 0",
@@ -357,8 +357,8 @@ def should_wrap(cmd):
         r"sudo .*python.*",
         r"sudo .*fail.*",
     ]
-	
-	
+    
+    
     if any(re.search(pat, cmd) for pat in suspicious_patterns):
         return True
     if cmd.strip().startswith("bash -c"):
@@ -561,7 +561,7 @@ def read_output_with_watchdog(stream, label, ip, timeout):
             try:
                 chunk = stream.channel.recv(4096)
                 collected += chunk
-	            print(f"[{ip}] 📥 Post-loop flush read: {len(chunk)} bytes on {label}")
+                print(f"[{ip}] 📥 Post-loop flush read: {len(chunk)} bytes on {label}")
                 break
             except Exception as e:
                 print(f"[{ip}] ⚠️ Post-loop flush read failed on {label}: {e}")
