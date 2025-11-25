@@ -6870,8 +6870,9 @@ def main():
     # call in main() for the inter-test metrics.  We will use a 0.30-0.70 randomizer and static points on this total_estimated_value 
     # in which to take the sample. From previous hyper-scaling of processes 10 minutes is a good baseline for these types of tests.
     global total_estimated_runtime
-    total_estimated_runtime = 600  # Adjust based on previous test execution times
+    #total_estimated_runtime = 600  # Adjust based on previous test execution times
 
+    total_estimated_runtime = 300  # Adjust based on previous test execution times
 
 
 
