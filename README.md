@@ -180,6 +180,126 @@ STATUS_TAGS = {
 
 ## UPDATES part 41: Phase 3c: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
 
+### Introduction
+
+
+The first main type (referred to as bucket in the code) to try to resurrect is the thread futures type of crashes that occur
+during execution of the commands. A synthetic crash can be used to simulate these types of thread futures crashes in the code
+so that the code implemenation design can be thoroughly tested.
+
+The approach to dealing with install_failed, ghost or stub threads that the gatekeeper has designated for resurrection is multi-staged.
+The first thing that must be done is the commands from the module2 native_commands and strace wrapped processed commands must be
+exported to a json file so that the commands can easily be reexecuted on the affected node for the problematic thread.
+
+Th next step is to use a new python module (module2e_reque_and_resurrect_Phase3.py) to load the output (results) from module2d
+so that they can be further processed for resurrection (these files are the resurrection_gatekeeper_final_registry_module2d.json and
+the aggregate_process_stats_gatekeeper_module2d.json files). 
+
+These files have all the threads from the entire execution run, and also the gatekeeper decision as a tag in each thread's 
+registry_entry.  All the threads marked as gatekeeper_resurrect as shown below in the module2d registry json file. 
+These threads can be easily filtered by module2e from the other threads that do not or can not be resurrected.
+```
+ "1a312c38": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 137874913442688,
+    "thread_uuid": "1a312c38",
+    "public_ip": "52.201.254.235",
+    "private_ip": "172.31.21.189",
+    "timestamp": "2025-11-24 03:39:18.957711",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+```
+
+Once the threads that need to be resurrected are identified, module2e adds some other tags as shown below. The command set from 
+module2 is appended to the registry_entry so that the command set can be replayed during the thread reque and resurrecction.
+
+```
+ "1a312c38": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 137874913442688,
+    "thread_uuid": "1a312c38",
+    "public_ip": "52.201.254.235",
+    "private_ip": "172.31.21.189",
+    "timestamp": "2025-11-24 03:39:18.957711",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+```
+
+This is the basic approach to a very simple futures crash. 
+
+The design gets much more complicated when one considers the nature of the crash (identified as buckets in the code). Some crashes
+will require a stop and start of the node, some will require only a partial replay of the commands due to issues with 
+indempotency.
+
+The prototype above is working as a first step. 
+
+In addtion, the statistics on the success of the resurrections will be reported in the statistics folder alongside all the other json
+stats files.  As mentioned before, they will be in terms of buckets, i.e. resurrection type and will indicate install_success or 
+install_failed. 
+
+Other considerations are if the node requires a stop and start and the ip address changes, etc.
+
+Finally, another early implementation in this design will be to use the ThreadPoolExecutor on the threads that need to be 
+resurrected. The prototype is using a serial design that is very slow (due to all the node output error detection, and watchdog timeouts
+that must be used for slient errors/silent command outputs).   
+
+There is no need to multi-process the multi-threading like the parent module2. Typically the number of nodes that need to be resurrected is
+a small subset of the number of total nodes in the execution run that module2 has to handle.   For example, in a 512 hyper-scaling test
+I have never seen more that around 16 real life thread failures in a single run. So roughly 3-4% failure rate is considered very high and
+unusual. With 16 nodes that is only 1 node at most (and that is very rare).
+
+The multi-threading code however can easily be stress tested. Right now the prototype is running on a 16 node test setup with a synthetic
+IDX1 futures crash right after the first command successfully executes for every node. So 16 nodes. The plan is to first benchmark
+the mutli-threader with 4 threads at a time (max workers), and scale up to 8 or 16 if the VPS host can handle that. It probably can because
+it is configured right now with a generous amount of swap memory and because the multi-threading is not multi-processed. So free memory
+erosion will not be on the order of the module2 multi-processed and multi-threaded execution test runs. Just multi-threading will stress
+the CPU a bit but not overwhelm it at these small numbers.  
+
+In short the commands that are exported as a json file from module2, the module2d resurrection registry with the gatekeeper decisions, and
+the module2d stats json file are all used as inputs into module2e.  Module2e processes these into registry_entrys like the example above
+so that the commands can be accessed and replayed against the same thread_uuid/pid, public node ip in and attempt to resurrect the thread.
+A final module2f_resurrection_results.json file will have the status of each thread' resurrection attempt.
+
+
+
+### Code Design and implementation approach
+
+
+### Code review
+
+
+
+
+
 
 
 ## UPDATES part 40: Phase 3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach

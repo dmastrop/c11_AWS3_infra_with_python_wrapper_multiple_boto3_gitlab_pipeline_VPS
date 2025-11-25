@@ -42,6 +42,7 @@ push:
       # 30 processes(desired_count)  x chunk_size=2 → 60 EC2 instances total so set max and min count to 60 (example)   
 deploy:
   stage: deploy
+  timeout: 4h
   variables:
     PID_JSON_DUMPS: "false"  
     # this is a gating env VAR for module2 if I need to disable the process level resurrection candidate
