@@ -99,6 +99,9 @@ APT_WHITELIST_REGEX = [
     r"Building dependency tree\.\.\.",
     r"Reading state information\.\.\.",
     r"\(Reading database \.\.\. ?\d*%?\)?"
+]
+
+
 
 
 # adding whitelist for the strace that is used with bash or bash like command "commands" in the list (these are not failures)
