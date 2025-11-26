@@ -102,6 +102,7 @@ artifact logs per pipeline)
 - Process level synthetic ghost ip injection to test process level ghost detection code
 - Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
 - Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
+- Requeing and resurrection of thread futures crashes 
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
@@ -151,7 +152,7 @@ artifact logs per pipeline)
 
 - Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
 
-- Update part 41 Phase3c: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
+- Update part 41 Phase3c: Prototype: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
 
 
 ## A note on the STATUS_TAGS:
@@ -178,9 +179,11 @@ STATUS_TAGS = {
 }
 ```
 
-## UPDATES part 41: Phase 3c: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
+## UPDATES part 41: Phase 3c: Protyping: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
 
 ### Introduction
+
+This update is a protype.
 
 
 The first main type (referred to as bucket in the code) to try to resurrect is the thread futures type of crashes that occur
@@ -262,15 +265,16 @@ indempotency.
 
 The prototype above is working as a first step. 
 
-In addtion, the statistics on the success of the resurrections will be reported in the statistics folder alongside all the other json
+In addition, the statistics on the success of the resurrections will be reported in the statistics folder alongside all the other json
 stats files.  As mentioned before, they will be in terms of buckets, i.e. resurrection type and will indicate install_success or 
-install_failed. 
+install_failed. The prototype version of this is a stripped down version just reporting install_success or install_failed for this
+single bucket.
 
 Other considerations are if the node requires a stop and start and the ip address changes, etc.
 
 Finally, another early implementation in this design will be to use the ThreadPoolExecutor on the threads that need to be 
 resurrected. The prototype is using a serial design that is very slow (due to all the node output error detection, and watchdog timeouts
-that must be used for slient errors/silent command outputs).   
+that must be used for slient errors/silent command output flow from the node).   
 
 There is no need to multi-process the multi-threading like the parent module2. Typically the number of nodes that need to be resurrected is
 a small subset of the number of total nodes in the execution run that module2 has to handle.   For example, in a 512 hyper-scaling test
@@ -282,20 +286,195 @@ IDX1 futures crash right after the first command successfully executes for every
 the mutli-threader with 4 threads at a time (max workers), and scale up to 8 or 16 if the VPS host can handle that. It probably can because
 it is configured right now with a generous amount of swap memory and because the multi-threading is not multi-processed. So free memory
 erosion will not be on the order of the module2 multi-processed and multi-threaded execution test runs. Just multi-threading will stress
-the CPU a bit but not overwhelm it at these small numbers.  
+the CPU a bit but not overwhelm it at these small numbers.  (The VPS is running on 6 cores and has shown to be quite resilient under
+far more intensive hyper-scaling tests)
 
-In short the commands that are exported as a json file from module2, the module2d resurrection registry with the gatekeeper decisions, and
+In short, the commands that are exported as a json file from module2, the module2d resurrection registry with the gatekeeper decisions, and
 the module2d stats json file are all used as inputs into module2e.  Module2e processes these into registry_entrys like the example above
-so that the commands can be accessed and replayed against the same thread_uuid/pid, public node ip in and attempt to resurrect the thread.
-A final module2f_resurrection_results.json file will have the status of each thread' resurrection attempt.
+so that the commands can be accessed and replayed against the same thread_uuid/pid, public node ip in an attempt to resurrect the thread.
+A final module2f_resurrection_results.json file will have the status of each thread' resurrection attempt. As a prototype, this is a
+stipped down version of the stats. The full version will bucketize the various forms of crashes and resurrection types and collate the 
+stats accordingly for each bucket.
 
 
 
 ### Code Design and implementation approach
 
+As mentioned above the first code requirement is done in the module2 python file to export the commands that are used in the 
+execution run as a json file.
+
+The next step is to use a module2e to process the resurrection_gatekeeper_final_registry_module2d.json from module2d, the
+command set from module2 (command_plan.json), and optionally the gatekeeper stats from module2d 
+(aggregate_process_stats_gatekeeper_module2d.json) to create registry_entrys of that threads that the gatekeeper has selected for
+resurrection. An example is shown below with some added information module2e (resurrection_module2e_registry.json)
+```
+ "1a312c38": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 137874913442688,
+    "thread_uuid": "1a312c38",
+    "public_ip": "52.201.254.235",
+    "private_ip": "172.31.21.189",
+    "timestamp": "2025-11-24 03:39:18.957711",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+
+```
+Module2e produces a pre-emptive stats json file to indicate how many of the gatekeeper resurrection tagged entries are selected for
+actual resurrection (this is usually 100% and is just a confirmation of the gatekeeper selected threads prior to actually 
+resurrecting the threads in module2f)
+This file is named aggregate_process_stats_module2e.json
+
+
+```
+{
+  "total_candidates_gatekeeper": 16,
+  "resurrected_total": 16,
+  "by_bucket_counts": {
+    "idx1": {
+      "candidates": 16,
+      "resurrected": 16
+    }
+  },
+  "resurrection_rate_overall": 100.0,
+  "timestamp": "2025-11-24T03:46:05.060490"
+}
+```
+
+
+
+The json file containing these module2e processed registries (resurrection_module2e_registry.json) is then used as an input into
+module2f which processes each registry_entry (initial prototype is serially, but this is also done using the ThreadPoolExecutor
+to multi-thread and speed up the resurrection process).  
+
+Module2f uses a stripped down version of the install_tomcat function from
+module2. The reason why a callback from module2f to module2 (install_tomcat) was not used was because of the complexity involved in
+the orchestration layer's integration into the module2 install_tomcat, as well as the several different types of synthetic 
+crashes and ghost code in the module2 code that would need to be bypassed for testing (module2 crashes, but module2f has to bypass
+the crash to test the resurrection of the thread).  In addition, there is a lot of other features like the adaptive 
+WATCHDOG_TIMEOUT in module2 that are overly complicated for the requirements in module2f install_tomcat. Also module2 has a very 
+tight coupling between the mulit-processing and the install_tomcat multi-threading. As noted above module2f install_tomcat does not
+need to be multi-processed. Thus, none of the chunk pre-processing of the node ips (present in module2) needs to be done.
+
+As mentioned earlier, this prototype module2f also exports some primitive stats in the gitlab artifact directory "statistics" a 
+subdirectory of the parent logging directory (module2f_resurrection_results.json)
+
+In porting over the install_tomcat() function from module2 to module2f, the main challenge was to ensure that all of the helper functions
+and the whitelists and the ENV variables, and the read_output_with_watchdog (the node output flow collecting cocde) are included.
+The function has been renamed as resurrection_install_tomcat in the module2f.
+
+Finally, the native_commands and the strace wrapper code, etc do not need to be included in the module2f code becasue the commands are
+exported out into a json file (both strace wrapped and non-strace wrapped native commands). An example of this is given below: 
+```
+{
+  "timestamp": "2025-11-24T03:39:22.700024",
+  "native_commands": [
+    "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+    "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+    "bash -c 'echo \"hello world\" > /tmp/testfile'",
+    "sudo systemctl start tomcat9",
+    "sudo systemctl enable tomcat9"
+  ],
+  "wrapped_commands": [
+    "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+    "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+    "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+    "sudo systemctl start tomcat9",
+    "sudo systemctl enable tomcat9"
+  ],
+  "count": 5
+}
+
+```
+
+Finally, the core code in module2f consists of an orchestrator layer in the main() of module2f. The comments below indicate what this
+orchestration layer does:
+
+```
+####### orchestrator code: this code takes in the resurrection_module2e_registry.json which is already gatekeeper resurrect filtered
+####### (all the threads will be attempted to be resurrected), and extracts out the fields necessary for the 
+####### resurrection_install_tomcat() arguments.   It also has logic to extract some of the args live with helper functions (for 
+####### example, the instance_id). Once it has the args it can run the resurrection_install_tomcat() function on each of the threads
+####### in the module2e registry json file, and then output a json file on whether or not the resurrection was successful. 
+####### There is some primitive fall back and error logic in there as well which will be expanded once this prototype is up and running.
+####### Note the specific test is a thread futures crash in idx1 right after the first command (of 5 here) is successfully executed.
+####### Thus the node does not have a successful installation at the time of the crash. Once the thread is resurrected and the commands
+####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
+```
+So the main sections of the module2f consist of
+- The "top stuff" (imports, whitelist stuff,ENV variables, helper functions for the refactored resurrection_install_tomcat() )
+- The refactored install_tomcat from  module2, renamed resurrection_install_tomcat()
+- The main() function in module2f which is the orchestrator code to process the registry_entrys in the resurrection_module2e_registry.json
+
+
+The prototype is testing out very well, but as mentioned earlier it is extremely slow and needs to the refactored as multi-threaded using
+the ThreadPoolExecutor. This refactored code will also be presented below in the next section "Code review".
+
+
+
+
 
 ### Code review
 
+#### module2 command list code:
+
+
+
+#### module2e registry_entry processing code and resurrection thread stats code:
+
+
+
+#### module2f resurrection_install_tomcat() code and results.json file:
+
+
+
+##### multi-threaded version of module2f to speed up resurrection execution phase:
+
+
+
+
+
+
+
+
+
+
+### Validation
+
+
+#### Validaton of the non-multi-threaded prototype:
+
+As noted above, the validation went very well, but the execution of the resurrection phase was extremely slow because the first prototype
+was done with serial exection of the failed threads.   The synthetic IDX1 futures crash indiscriminately crashes all of the threads, so
+even for a small 16 node test run, that is 16 serially exectued resurrections of the full installatoin (all 5 commands) on each node.
+It takes several hours.
+
+Here are some excerpts from the gitlab console logs of the thread resurrection as it happens:
+
+
+
+
+
+#### Validatoin of the multi-threaded prototype:
 
 
 
