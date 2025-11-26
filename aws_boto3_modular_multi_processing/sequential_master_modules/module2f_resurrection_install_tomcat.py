@@ -1096,6 +1096,10 @@ def main():
             continue
 
         try:
+            
+            # === [LOG ADDITION] Start of resurrection for this node ===
+            print(f"[module2f][INFO] Starting resurrection for InstanceID={instance_id}, PublicIP={ip}")
+
             ip_out, priv_out, reg = resurrection_install_tomcat(
                 ip=ip,
                 private_ip=private_ip,
@@ -1109,6 +1113,11 @@ def main():
                 res_uuid=res_uuid,
                 extra_tags=extra_tags
             )
+            
+
+            # === [LOG ADDITION] Completion of resurrection for this node ===
+            print(f"[module2f][INFO] Completed resurrection for InstanceID={instance_id}, PublicIP={ip} → Status={reg['status']}")
+
             # Ensure PID continuity in the registry entry
             reg["pid"] = pid
             results[uuid] = reg
