@@ -6,7 +6,7 @@ from datetime import datetime
       # Phase3 log files
       #- logs/command_plan.json  # module2
       #- logs/resurrection_module2e_registry.json  # module2e
-      #- logs/aggregate_process_stats_module2e.json  # module2e
+      #- logs/aggregate_resurrection_stats_module2e.json  # module2e
 LOG_DIR = "/aws_EC2/logs"
 STATISTICS_DIR = os.path.join(LOG_DIR, "statistics")
 
@@ -101,7 +101,7 @@ def main():
     write_json("resurrection_module2e_registry.json", resurrection_registry, log_dir=LOG_DIR)
     
     # stats output goes into /aws_EC2/logs/statistics
-    write_json("aggregate_process_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
+    write_json("aggregate_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
 
     # Final summary printout
     print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "

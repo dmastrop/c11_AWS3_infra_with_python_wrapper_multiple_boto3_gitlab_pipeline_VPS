@@ -341,8 +341,10 @@ resurrection. An example is shown below with some added information module2e (re
 ```
 Module2e produces a pre-emptive stats json file to indicate how many of the gatekeeper resurrection tagged entries are selected for
 actual resurrection (this is usually 100% and is just a confirmation of the gatekeeper selected threads prior to actually 
-resurrecting the threads in module2f)
-This file is named aggregate_process_stats_module2e.json
+resurrecting the threads in module2f). The main purpose of this stats file is to present the various buckets of the resurrection
+types.
+
+This file is named aggregate_resurrection_stats_module2e.json
 
 
 ```
@@ -372,14 +374,14 @@ the orchestration layer's integration into the module2 install_tomcat, as well a
 crashes and ghost code in the module2 code that would need to be bypassed for testing (module2 crashes, but module2f has to bypass
 the crash to test the resurrection of the thread).  In addition, there is a lot of other features like the adaptive 
 WATCHDOG_TIMEOUT in module2 that are overly complicated for the requirements in module2f install_tomcat. Also module2 has a very 
-tight coupling between the mulit-processing and the install_tomcat multi-threading. As noted above module2f install_tomcat does not
+tight coupling between the multi-processing and the install_tomcat multi-threading. As noted above module2f install_tomcat does not
 need to be multi-processed. Thus, none of the chunk pre-processing of the node ips (present in module2) needs to be done.
 
 As mentioned earlier, this prototype module2f also exports some primitive stats in the gitlab artifact directory "statistics" a 
 subdirectory of the parent logging directory (module2f_resurrection_results.json)
 
 In porting over the install_tomcat() function from module2 to module2f, the main challenge was to ensure that all of the helper functions
-and the whitelists and the ENV variables, and the read_output_with_watchdog (the node output flow collecting cocde) are included.
+and the whitelists and the ENV variables, and the read_output_with_watchdog (the node output flow collecting code) are included.
 The function has been renamed as resurrection_install_tomcat in the module2f.
 
 Finally, the native_commands and the strace wrapper code, etc do not need to be included in the module2f code becasue the commands are
@@ -406,7 +408,7 @@ exported out into a json file (both strace wrapped and non-strace wrapped native
 
 ```
 
-Finally, the core code in module2f consists of an orchestrator layer in the main() of module2f. The comments below indicate what this
+The core code in module2f consists of an orchestrator layer in the main() of module2f. The comments below indicate what this
 orchestration layer does:
 
 ```
@@ -421,6 +423,7 @@ orchestration layer does:
 ####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
 ```
 So the main sections of the module2f consist of
+
 - The "top stuff" (imports, whitelist stuff,ENV variables, helper functions for the refactored resurrection_install_tomcat() )
 - The refactored install_tomcat from  module2, renamed resurrection_install_tomcat()
 - The main() function in module2f which is the orchestrator code to process the registry_entrys in the resurrection_module2e_registry.json
@@ -447,7 +450,7 @@ the ThreadPoolExecutor. This refactored code will also be presented below in the
 
 
 
-##### multi-threaded version of module2f to speed up resurrection execution phase:
+#### multi-threaded version of module2f to speed up resurrection execution phase:
 
 
 
