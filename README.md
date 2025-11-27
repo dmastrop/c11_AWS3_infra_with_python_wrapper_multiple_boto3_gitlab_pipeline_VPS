@@ -422,7 +422,7 @@ orchestration layer does:
 ####### Thus the node does not have a successful installation at the time of the crash. Once the thread is resurrected and the commands
 ####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
 ```
-So the main sections of the module2f consist of
+So the main sections of the module2f consist of:
 
 - The "top stuff" (imports, whitelist stuff,ENV variables, helper functions for the refactored resurrection_install_tomcat() )
 - The refactored install_tomcat from  module2, renamed resurrection_install_tomcat()
@@ -451,14 +451,469 @@ Module2f → Consumes resurrection_module2e_registry.json, runs resurrection_ins
 ### Code review
 
 #### module2 command list code:
+This simple code is added to module2 to export the command list as a json file: 
+
+
+The helper function added to module2:
+
+```
+# Phase3 write_command_plan used in tomcat_worker right after the native_commands list is defined. This will be used by module2e
+# to resurrect the threads using the command set list.   The filename is command_plan.json
+def write_command_plan(native_commands, log_dir="/aws_EC2/logs"):
+    wrapped = [wrap_command(cmd) for cmd in native_commands]
+    plan = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "native_commands": native_commands,
+        "wrapped_commands": wrapped,
+        "count": len(native_commands)
+    }
+    os.makedirs(log_dir, exist_ok=True)
+    out = os.path.join(log_dir, "command_plan.json")
+    with open(out, "w") as f:
+        json.dump(plan, f, indent=2)
+    print(f"[TRACE] Wrote command plan to {out}")
+```
+
+
+
+The call to the function above is inserted into the tomcat_worker function in module2 at this position right after the native_commands
+defintion block:
+
+This exports the command_plan.json file as an artifact in the gitlab log files for the pipeline. It is then used in module2e to 
+append the command list to the threads that need to be resurrected, so that the commands can easily be replayed against each
+individual thread. In the future, this is extensible so that if each thread is using a different set of commands, that particular
+command list can be replayed for resurrection on that thread if that thread crashes and needs to be resurrected. Note that module2f
+does the actual resurrection of the thread.
+
+
+```
+  ######## end of native_commands block
+
+
+    ######## insert code to create the command_plan.json file to be used in Phase3 resurrection. The command_plan.json has a list
+    ######## of the native commands and wrapped commands (strace) so that the commands can be re-iterated on nodes that need to be
+    ######## resurrected via module2e. THe helper function is defined at the top of this module2 along with the other command related
+    ######## helper modules. The helper module is write_command_plan
+
+    # Serialize command plan once per process in tomcat_worker. This file will be overwritten for a net of command plan per execution run
+    write_command_plan(native_commands)
+```
 
 
 
 #### module2e registry_entry processing code and resurrection thread stats code:
 
+Note that this code is extensible to bucketization of the various thread resurrection types. This initial prototype is for just the
+idx1 futures crash type resurrections. The previous update has a matrix of the various other types that will be added to this module, 
+once the prototype is complete.
 
 
-#### module2f resurrection_install_tomcat() code and results.json file:
+```
+
+import json
+import os
+from datetime import datetime
+
+# per the docker container volume mount. This maps to the logs directory on gitlab artifact logs.(.gitlab-ci.yml)
+      # Phase3 log files
+      #- logs/command_plan.json  # module2
+      #- logs/resurrection_module2e_registry.json  # module2e
+      #- logs/aggregate_resurrection_stats_module2e.json  # module2e
+LOG_DIR = "/aws_EC2/logs"
+STATISTICS_DIR = os.path.join(LOG_DIR, "statistics")
+
+
+
+
+def load_json(filename, log_dir=LOG_DIR):
+    path = os.path.join(log_dir, filename)
+    print(f"[module2e_logging] Loading JSON artifact from {path}")
+    with open(path, "r") as f:
+        return json.load(f)
+
+def write_json(filename, data, log_dir=LOG_DIR):
+    os.makedirs(log_dir, exist_ok=True)
+    path = os.path.join(log_dir, filename)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"[module2e_logging] Wrote JSON artifact to {path}")
+
+
+
+def normalize_resurrection_reason(entry, new_reason):
+    # Convert string to list if needed
+    if isinstance(entry.get("resurrection_reason"), str):
+        entry["resurrection_reason"] = [entry["resurrection_reason"]]
+    entry.setdefault("resurrection_reason", [])
+    entry["resurrection_reason"].append(new_reason)
+
+def process_idx1(entry, command_plan):
+    # Ensure tags list exists
+    entry.setdefault("tags", [])
+    # Add skip flag so synthetic crash doesn’t fire again
+    entry["tags"].append("skip_synthetic_future_crash_on_resurrection")
+    normalize_resurrection_reason(entry, "Idx1 futures crash detected, requeued with full command set")
+    # Prototype: replay full wrapped_commands. Placeholder for the actual callback to module2 to process the SSH connection and the
+    # command execution using the thread logic, to resurrect the thread.
+    entry["replayed_commands"] = command_plan["wrapped_commands"]   # the command set is actually added to the registry_entry 
+    return entry
+
+
+
+#### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
+#### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
+
+def main():
+    registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
+    
+    command_plan = load_json("command_plan.json")
+
+    # stats input lives in /aws_EC2/logs/statistics
+    stats = load_json("aggregate_process_stats_gatekeeper_module2d.json", log_dir=STATISTICS_DIR)
+
+    resurrection_registry = {}
+    by_bucket = {}
+    resurrected_total = 0
+
+    for uuid, entry in registry.items():
+        tags = entry.get("tags", [])
+        if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
+            continue
+        if "gatekeeper_resurrect" not in tags:
+            continue
+
+        # Simplified: only handle idx1 for prototype
+        if "future_exception" in tags and "RuntimeError" in tags:
+            entry = process_idx1(entry, command_plan)
+            resurrected_total += 1
+            bucket = "idx1"
+        else:
+            bucket = "generic"
+
+        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
+        by_bucket[bucket]["candidates"] += 1
+        if bucket == "idx1":
+            by_bucket[bucket]["resurrected"] += 1
+
+        resurrection_registry[uuid] = entry
+
+    stats_out = {
+        "total_candidates_gatekeeper": len(resurrection_registry),
+        "resurrected_total": resurrected_total,
+        "by_bucket_counts": by_bucket,
+        "resurrection_rate_overall": (
+            (resurrected_total / max(1, len(resurrection_registry))) * 100.0
+        ),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+
+    # registry output stays in base logs
+    write_json("resurrection_module2e_registry.json", resurrection_registry, log_dir=LOG_DIR)
+    
+    # stats output goes into /aws_EC2/logs/statistics
+    write_json("aggregate_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
+
+    # Final summary printout
+    print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
+          f"resurrected={resurrected_total}, "
+          f"rate={stats_out['resurrection_rate_overall']:.2f}%")
+    print(f"[module2e_logging] By bucket counts: {by_bucket}")
+
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+
+
+
+#### module2f main() orchestration code and resurrection_install_tomcat() code and results son file:
+
+As noted above there are three basic parts to this module2f. This module2f is the main thread workhorse for actually resurrecting the
+threads.
+
+
+So the main sections of the module2f consist of:
+
+- The "top stuff" (imports, whitelist stuff,ENV variables, helper functions for the refactored resurrection_install_tomcat() )
+- The refactored install_tomcat from  module2, renamed resurrection_install_tomcat()
+- The main() function in module2f which is the orchestrator code to process the registry_entrys in the resurrection_module2e_registry.json
+
+The refactored install_tomcat named resurrection_install_tomcat is a bit of a misnomer. It is not just for tomcat installations but the
+naming was carried forward from the earliest development phases.  Like install_tomcat, the resurrection_install_tomcat is a thread 
+level function that can deal with any type of command set and run the commands on the node and detect failures, stubs or successful
+installations. It can even handle bash and bash-like commands using an strace wrapper for error detection feedback from the node.
+
+The most important "top stuff" is the function read_output_with_watchdog, which is the lowest thread level function used by 
+resurrection_install_tomcat.  
+
+Some important elements of the refactdred resurrection_install_tomcat are shown below:
+
+```
+
+########## resurrection_install_tomcat function transplanted and stripped down from module2.
+########## This version is srictly used for module2e registry resurrection threads 
+########## The module2e registry resurrection_module2e_registry.json file will be used as an input, processed by
+########## a wrapper orchestrator to extract out the args necessary for resurrection_install_tomcat() function below
+
+
+def resurrection_install_tomcat(
+    ip,
+    private_ip,
+    instance_id,
+    WATCHDOG_TIMEOUT,
+    replayed_commands,
+    key_path="EC2_generic_key.pem",
+    username="ubuntu",
+    port=22,
+    max_ssh_attempts=5,
+    res_uuid=None,
+    extra_tags=None
+):
+    """
+    Replay a previously captured command set to resurrect a failed thread.
+    - Uses module2e replayed_commands (already wrapped where needed).
+    - Preserves whitelist-driven decision logic and strace exit overrides.
+    - Tags a compact, forensic registry_entry for every outcome.
+
+    Returns: (ip, private_ip, registry_entry)
+    """
+    import uuid
+    import paramiko
+    from datetime import datetime
+    import threading
+    import multiprocessing
+    import time
+
+    # Thread UUID (stable across a single resurrection run)
+    thread_uuid = res_uuid or uuid.uuid4().hex[:8]
+    base_tags = ["resurrection_attempt", "module2f"]
+    if extra_tags:
+        base_tags.extend(extra_tags)
+
+    # SSH connect with bounded retries + a stub watchdog on final attempt only
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    ssh_connected = False
+    ssh_success = False
+
+    for attempt in range(max_ssh_attempts):
+        try:
+
+<<< removed content for brevity >>>
+
+
+
+
+
+<<< the for idx loop replays the replayed_commands that are attached to the registry_entry of the thread>>>
+
+
+
+    # Replay commands: whitelist-driven logic; strace exit overrides; adaptive watchdogs per stream
+    try:
+        for idx, command in enumerate(replayed_commands):
+            # Each command retry loop
+            command_succeeded = False
+            original_command = command
+            non_shell_failure_tag = None
+
+            for attempt in range(RETRY_LIMIT):
+                try:
+                    # Ensure command is reset before mutation (for per-retry strace trace_path remapping)
+                    command = original_command
+
+                    if "strace" in command:
+                        trace_suffix = generate_trace_suffix()
+                        trace_path = f"/tmp/trace_{trace_suffix}.log"
+                        command = command.replace("/tmp/trace.log", trace_path)
+
+<<< Omitted content for brevity >>>
+
+
+
+        return ip, private_ip, registry_entry
+
+
+```
+
+The module2f main() code is the  most important code in this module. It orchestrates the extraction of the relevant args from 
+each registry_entry that are required for the resurrection_install_tomcat function. 
+It has fallback logic in it as well as error detection for the input file (the output json file from module2e).
+It also has code to get the instance_id live, and it has code to set the WATCHDOG_TIMEOUT (the adaptive watchdog timeout is not required
+here).
+
+
+
+```
+####### orchestrator code: this code takes in the resurrection_module2e_registry.json which is already gatekeeper resurrect filtered
+####### (all the threads will be attempted to be resurrected), and extracts out the fields necessary for the 
+####### resurrection_install_tomcat() arguments.   It also has logic to extract some of the args live with helper functions (for 
+####### example, the instance_id). Once it has the args it can run the resurrection_install_tomcat() function on each of the threads
+####### in the module2e registry json file, and then output a json file on whether or not the resurrection was successful. 
+####### There is some primitive fall back and error logic in there as well which will be expanded once this prototype is up and running.
+####### Note the specific test is a thread futures crash in idx1 right after the first command (of 5 here) is successfully executed.
+####### Thus the node does not have a successful installation at the time of the crash. Once the thread is resurrected and the commands
+####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
+
+LOG_DIR = "/aws_EC2/logs"
+MODULE2E_FILE = "resurrection_module2e_registry.json"
+
+def load_module2e_registry(path=os.path.join(LOG_DIR, MODULE2E_FILE)):
+    """
+    Load the resurrection candidates from module2e.
+    If the file is missing or empty, return {} and print a clear message.
+    """
+    if not os.path.exists(path):
+        print(f"[module2f] No module2e registry found at {path}. Nothing to resurrect.")
+        return {}
+    with open(path, "r") as f:
+        data = json.load(f)
+    if not data:
+        print(f"[module2f] module2e registry is empty. Skipping resurrection.")
+    return data
+
+def resolve_instance_id(public_ip=None, private_ip=None, region=None):
+    """
+    Resolve the current InstanceId live from AWS.
+    - Prefer public IP lookup (most stable for resurrection).
+    - Fallback to private IP if public is missing.
+    - This ensures we always get the *current* instance_id, even if IPs were recycled.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    # Try public IP filter first
+    if public_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    # Fallback: try private IP filter
+    if private_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "network-interface.addresses.private-ip-address",
+                      "Values": [private_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
+    return None
+
+def _extract_instance_id(describe_resp):
+    """
+    Helper to pull InstanceId out of AWS describe_instances response.
+    """
+    for r in describe_resp.get("Reservations", []):
+        for i in r.get("Instances", []):
+            iid = i.get("InstanceId")
+            if iid: return iid
+    return None
+
+def get_watchdog_timeout_default():
+    """
+    For resurrection runs we use a simple baseline timeout.
+    Adaptive per-process timeouts from module2 are not strictly needed here.
+    """
+    return 90
+
+def main():
+    registry = load_module2e_registry()
+    if not registry:
+        return
+
+    timeout = get_watchdog_timeout_default()
+    region = os.getenv("region_name")
+
+    results = {}
+    for uuid, entry in registry.items():
+        ip = entry.get("public_ip")
+        private_ip = entry.get("private_ip")
+        replayed_commands = entry.get("replayed_commands", [])
+        extra_tags = entry.get("tags", [])
+        res_uuid = uuid
+
+        # Reuse the original PID from module2e for forensic continuity
+        pid = entry.get("pid", os.getpid())
+
+        # InstanceId logic:
+        # - If module2e already carried instance_id, use it.
+        # - Otherwise, resolve live from AWS by IP.
+        instance_id = entry.get("instance_id")
+        if not instance_id:
+            instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+
+        if not instance_id:
+            # If we still can't resolve, skip safely with a stub tag.
+            print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
+            results[uuid] = {
+                "status": "stub",
+                "attempt": -1,
+                "pid": pid,
+                "thread_uuid": uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["stub", "missing_instance_id"] + extra_tags
+            }
+            continue
+
+        try:
+
+            # === [LOG ADDITION] Start of resurrection for this node ===
+            print(f"[module2f][INFO] Starting resurrection for InstanceID={instance_id}, PublicIP={ip}")
+
+            ip_out, priv_out, reg = resurrection_install_tomcat(
+                ip=ip,
+                private_ip=private_ip,
+                instance_id=instance_id,
+                WATCHDOG_TIMEOUT=timeout,
+                replayed_commands=replayed_commands,
+                key_path=os.getenv("key_path", "EC2_generic_key.pem"),
+                username=os.getenv("username", "ubuntu"),
+                port=int(os.getenv("port", "22")),
+                max_ssh_attempts=int(os.getenv("max_ssh_attempts", "5")),
+                res_uuid=res_uuid,
+                extra_tags=extra_tags
+            )
+
+
+            # === [LOG ADDITION] Completion of resurrection for this node ===
+            print(f"[module2f][INFO] Completed resurrection for InstanceID={instance_id}, PublicIP={ip} → Status={reg['status']}")
+
+            # Ensure PID continuity in the registry entry
+            reg["pid"] = pid
+            results[uuid] = reg
+        except Exception as e:
+            print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
+            results[uuid] = {
+                "status": "install_failed",
+                "attempt": -1,
+                "pid": pid,
+                "thread_uuid": uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": datetime.utcnow().isoformat(),
+                "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+            }
+
+    # Persist results to disk
+    out_path = os.path.join(LOG_DIR, "module2f_resurrection_results.json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"[module2f] Wrote resurrection results to {out_path}")
+
+if __name__ == "__main__":
+    main()
+```
 
 
 
