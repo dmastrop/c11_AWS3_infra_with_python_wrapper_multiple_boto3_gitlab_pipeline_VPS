@@ -631,7 +631,7 @@ if __name__ == "__main__":
 
 
 
-#### module2f main() orchestration code and resurrection_install_tomcat() code and results son file:
+#### module2f main() orchestration code and resurrection_install_tomcat() code and results json file:
 
 As noted above there are three basic parts to this module2f. This module2f is the main thread workhorse for actually resurrecting the
 threads.
