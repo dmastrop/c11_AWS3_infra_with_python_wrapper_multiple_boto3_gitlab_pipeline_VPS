@@ -336,11 +336,13 @@ def resurrection_gatekeeper():
 def reque_and_resurrect():
     run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py")
 
-#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function
+##### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function
+#def resurrection_install_tomcat():
+#    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat.py")    
+
+#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. THis is the multi-threaded version
 def resurrection_install_tomcat():
-    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat.py")    
-
-
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py")
 
 
 ## modules 3-11:
