@@ -472,12 +472,99 @@ even for a small 16 node test run, that is 16 serially exectued resurrections of
 It takes several hours.
 
 Here are some excerpts from the gitlab console logs of the thread resurrection as it happens:
+Recall that module2d does the gatekeeper processing to decide which of the total threads in the execution run can be resurrected.
+Module2e processes these threads adding some stuff to the registry_entrys so that they can be resurrected using module2f.
+
+
+
+```
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_resurrection_stats_module2e.json
+[module2e_logging] Summary: candidates=16, resurrected=16, rate=100.00%
+[module2e_logging] By bucket counts: {'idx1': {'candidates': 16, 'resurrected': 16}}
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat.py
+
+
+[module2f][INFO] Starting resurrection for InstanceID=i-05a9659acb541da4b, PublicIP=52.90.145.8
+[52.90.145.8] [2025-11-26 23:49:29.836161] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[52.90.145.8] 📥 Watchdog read: 314 bytes on STDOUT
+[52.90.145.8] 📥 Post-loop flush read: 1 bytes on STDOUT
+[52.90.145.8] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+
+
+<<< REMOVED CONTENT FOR BREVITY >>>>>>>>
+
+[52.90.145.8] [2025-11-26 23:57:05.912553] Replay 5/5: sudo systemctl enable tomcat9 (Attempt 1)
+[52.90.145.8] ⏱️  Watchdog timeout on STDOUT read. Stall count: 1
+[52.90.145.8] 🔄 Stall threshold exceeded on STDOUT. Breaking loop.
+[52.90.145.8] 🔍 Final output after flush (first 0 lines):
+[52.90.145.8] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[52.90.145.8] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[52.90.145.8] 🔍 Final output after flush (first 0 lines):
+[52.90.145.8] STDOUT: ''
+[52.90.145.8] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-05a9659acb541da4b, PublicIP=52.90.145.8 → Status=install_success
+[module2f][INFO] Starting resurrection for InstanceID=i-0dfcbde06a78e20eb, PublicIP=54.85.188.45
+[54.85.188.45] [2025-11-27 00:00:32.260830] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
 
 
 
 
 
-#### Validatoin of the multi-threaded prototype:
+```
+There is quite a long delay after some of the commands are executed because the output flow from the node has to have a watchdog
+in case there are commands that have a delayed output response.  The commands above have no output and thus hit the watchdog
+timeout and this takes time. This read_output_with_watchdog() behvaior is required for robust error detection and extensibility 
+to a wide variety of commands (it needs to be able to handle many different types).
+
+The code is working as designed. Some commands produce no STDOUT/STDERR for long periods, triggering watchdog stalls.
+
+Resurrection outcome: Despite the stalls, the registry entry is correctly tagged install_success. This is just one of many examples
+that require a very intelligent code path to discern successful installs vs. install_failed threads.
+
+
+These inherent and unavoidable delays are  why the multi-threaded version of this prototype is required.
+
+The module2f logs clearly show that the first thread is resurrected successfuly with an install_sucess status flag and this is
+empirically verified with an SSH to the affected node:
+
+```
+ubuntu@ip-172-31-22-215:~$ systemctl status tomcat9
+● tomcat9.service - Apache Tomcat 9 Web Application Server
+     Loaded: loaded (/lib/systemd/system/tomcat9.service; enabled; vendor preset: enabled)
+     Active: active (running) since Wed 2025-11-26 23:50:00 UTC; 22min ago
+       Docs: https://tomcat.apache.org/tomcat-9.0-doc/index.html
+   Main PID: 3951 (java)
+      Tasks: 28 (limit: 1129)
+     Memory: 60.7M
+        CPU: 6.095s
+     CGroup: /system.slice/tomcat9.service
+             └─3951 /usr/lib/jvm/default-java/bin/java -Djava.util.logging.config.file=/var/lib/tomcat9/conf/logging.properties -Djava.util.l>
+
+Nov 26 23:50:01 ip-172-31-22-215 tomcat9[3951]: OpenSSL successfully initialized [OpenSSL 3.0.2 15 Mar 2022]
+Nov 26 23:50:02 ip-172-31-22-215 tomcat9[3951]: Initializing ProtocolHandler ["http-nio-8080"]
+Nov 26 23:50:02 ip-172-31-22-215 tomcat9[3951]: Server initialization in [1387] milliseconds
+Nov 26 23:50:02 ip-172-31-22-215 tomcat9[3951]: Starting service [Catalina]
+Nov 26 23:50:02 ip-172-31-22-215 tomcat9[3951]: Starting Servlet engine: [Apache Tomcat/9.0.58 (Ubuntu)]
+Nov 26 23:50:02 ip-172-31-22-215 tomcat9[3951]: Deploying web application directory [/var/lib/tomcat9/webapps/ROOT]
+Nov 26 23:50:05 ip-172-31-22-215 tomcat9[3951]: At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging for this lo>
+Nov 26 23:50:05 ip-172-31-22-215 tomcat9[3951]: Deployment of web application directory [/var/lib/tomcat9/webapps/ROOT] has finished in [3,22>
+Nov 26 23:50:05 ip-172-31-22-215 tomcat9[3951]: Starting ProtocolHandler ["http-nio-8080"]
+Nov 26 23:50:05 ip-172-31-22-215 tomcat9[3951]: Server startup in [3491] milliseconds
+
+```
+
+
+
+#### Validation of the multi-threaded prototype:
 
 
 
