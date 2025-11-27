@@ -433,6 +433,18 @@ The prototype is testing out very well, but as mentioned earlier it is extremely
 the ThreadPoolExecutor. This refactored code will also be presented below in the next section "Code review".
 
 
+#### Summary of code implementation
+
+
+Module2 → Produces command_plan.json (native + wrapped commands).
+
+Module2d → Produces resurrection_gatekeeper_final_registry_module2d.json and aggregate_process_stats_gatekeeper_module2d.json.
+
+Module2e → Consumes Module2 + Module2d outputs, generates resurrection_module2e_registry.json and aggregate_resurrection_stats_module2e.json.
+
+Module2f → Consumes resurrection_module2e_registry.json, runs resurrection_install_tomcat() (serial prototype or threaded), and outputs module2f_resurrection_results.json.
+
+
 
 
 
