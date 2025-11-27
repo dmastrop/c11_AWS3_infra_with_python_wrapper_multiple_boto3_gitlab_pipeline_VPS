@@ -306,6 +306,10 @@ deploy:
       - logs/resurrection_module2e_registry.json  # module2e phase3 registry with modified tags and command set added
       - logs/statistics/aggregate_resurrection_stats_module2e.json  # module2e phase3 thread resurrection stats
 
+      - logs/module2f_resurrection_results.json   # module2f resurrection results
+
+
+
 
 
 
