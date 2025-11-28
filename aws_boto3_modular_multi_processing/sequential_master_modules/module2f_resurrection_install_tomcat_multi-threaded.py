@@ -1166,7 +1166,7 @@ def main():
     results = {}
 
     # === ThreadPool harness ===
-    with ThreadPoolExecutor(max_workers=4) as executor:  # adjust workers as needed
+    with ThreadPoolExecutor(max_workers=16) as executor:  # adjust workers as needed: 4 and 8 and 16 for 16 node test 
         future_map = {}
 
         for uuid, entry in registry.items():
