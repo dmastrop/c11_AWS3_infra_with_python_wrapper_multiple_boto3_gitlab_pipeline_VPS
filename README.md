@@ -1450,7 +1450,46 @@ So the registries are consistent.
 
 
 Here are the final resurrection stats from the module2f stats json file:
+(this was from a different test run, so the ip address above is not below, but normally it would be below):
 
+```
+
+{
+  "resurrected_total_threads": 16,
+  "resurrected_install_success": 16,
+  "resurrected_install_failed": 0,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "34.224.57.69",
+    "52.206.187.39",
+    "52.90.133.125",
+    "54.146.250.218",
+    "54.147.176.31",
+    "54.204.162.179",
+    "54.205.91.9",
+    "54.210.112.250",
+    "54.226.102.243",
+    "54.83.85.166",
+    "54.84.186.224",
+    "54.87.16.58",
+    "54.88.98.192",
+    "54.89.169.34",
+    "54.90.181.219",
+    "54.90.94.68"
+  ],
+  "resurrection_success_rate_percent": 100.0
+}
+
+```
+
+
+### Stats summary relative to modules:
+
+
+This aligns perfectly with the design:  
+- `module2d` → gatekeeper candidates.  
+- `module2e` → selected for resurrection.  
+- `module2f` → actual resurrection outcomes, now summarized in `aggregate_resurrected_node_stats_module2f.json`.
 
 
 
