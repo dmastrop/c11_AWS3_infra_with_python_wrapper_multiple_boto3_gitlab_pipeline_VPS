@@ -920,9 +920,115 @@ if __name__ == "__main__":
 #### multi-threaded version of module2f to speed up resurrection execution phase:
 
 
+The multi-threaded version of module2f requires only a change in the main() orchestrator function in the module.   The rest of the 
+helper files, and the resurrection_install_tomcat() function itself is exactly the same and requires no additional changes. 
+
+
+The refactored main() function using the ThreadPoolExecutor is shown below.
 
 
 
+###### Multi-threaded version of the main() orchestrator
+
+
+```
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def main():
+    registry = load_module2e_registry()
+    if not registry:
+        return
+
+    timeout = get_watchdog_timeout_default()
+    region = os.getenv("region_name")
+
+    results = {}
+
+    # === ThreadPool harness ===
+    with ThreadPoolExecutor(max_workers=16) as executor:  # adjust workers as needed: 4 and 8 and 16 for 16 node test 
+        future_map = {}
+
+        for uuid, entry in registry.items():
+            ip = entry.get("public_ip")
+            private_ip = entry.get("private_ip")
+            replayed_commands = entry.get("replayed_commands", [])
+            extra_tags = entry.get("tags", [])
+            res_uuid = uuid
+
+            # Reuse the original PID from module2e for forensic continuity
+            pid = entry.get("pid", os.getpid())
+
+            # InstanceId logic:
+            instance_id = entry.get("instance_id")
+            if not instance_id:
+                instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+
+            if not instance_id:
+                # If we still can't resolve, skip safely with a stub tag.
+                print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
+                results[uuid] = {
+                    "status": "stub",
+                    "attempt": -1,
+                    "pid": pid,
+                    "thread_uuid": uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "tags": ["stub", "missing_instance_id"] + extra_tags
+                }
+                continue
+
+            # === [LOG ADDITION] Start of resurrection for this node ===
+            print(f"[module2f][INFO] Starting resurrection for InstanceID={instance_id}, PublicIP={ip}")
+
+            # Submit task to thread pool
+            future = executor.submit(
+                resurrection_install_tomcat,
+                ip, private_ip, instance_id, timeout, replayed_commands,
+                key_path=os.getenv("key_path", "EC2_generic_key.pem"),
+                username=os.getenv("username", "ubuntu"),
+                port=int(os.getenv("port", "22")),
+                max_ssh_attempts=int(os.getenv("max_ssh_attempts", "5")),
+                res_uuid=res_uuid,
+                extra_tags=extra_tags
+            )
+            future_map[future] = (uuid, pid, ip, private_ip, instance_id, extra_tags)
+
+        # Collect results as threads finish
+        for future in as_completed(future_map):
+            uuid, pid, ip, private_ip, instance_id, extra_tags = future_map[future]
+            try:
+                ip_out, priv_out, reg = future.result()
+
+                # === [LOG ADDITION] Completion of resurrection for this node ===
+                print(f"[module2f][INFO] Completed resurrection for InstanceID={instance_id}, PublicIP={ip} → Status={reg['status']}")
+
+                # Ensure PID continuity in the registry entry
+                reg["pid"] = pid
+                results[uuid] = reg
+            except Exception as e:
+                print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
+                results[uuid] = {
+                    "status": "install_failed",
+                    "attempt": -1,
+                    "pid": pid,
+                    "thread_uuid": uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+                }
+
+    # Persist results to disk
+    out_path = os.path.join(LOG_DIR, "module2f_resurrection_results.json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"[module2f] Wrote resurrection results to {out_path}")
+
+if __name__ == "__main__":
+    main()
+
+```
 
 
 
