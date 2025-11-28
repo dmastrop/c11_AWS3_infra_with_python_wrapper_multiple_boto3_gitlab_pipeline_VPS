@@ -77,19 +77,19 @@ def main():
             bucket = "idx1"
         else:
             bucket = "generic"
-
-        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
+        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
+        #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
         by_bucket[bucket]["candidates"] += 1
         if bucket == "idx1":
-            by_bucket[bucket]["resurrected"] += 1
+            by_bucket[bucket]["selected_for_resurrection"] += 1
 
         resurrection_registry[uuid] = entry
 
     stats_out = {
         "total_candidates_gatekeeper": len(resurrection_registry),
-        "resurrected_total": resurrected_total,
+        "selected_for_resurrection_total": resurrected_total,
         "by_bucket_counts": by_bucket,
-        "resurrection_rate_overall": (
+        "selected_for_resurrection_rate_overall": (
             (resurrected_total / max(1, len(resurrection_registry))) * 100.0
         ),
         "timestamp": datetime.utcnow().isoformat()
@@ -101,12 +101,12 @@ def main():
     write_json("resurrection_module2e_registry.json", resurrection_registry, log_dir=LOG_DIR)
     
     # stats output goes into /aws_EC2/logs/statistics
-    write_json("aggregate_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
+    write_json("aggregate_selected_for_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
 
     # Final summary printout
     print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
-          f"resurrected={resurrected_total}, "
-          f"rate={stats_out['resurrection_rate_overall']:.2f}%")
+          f"selected_for_resurrection={resurrected_total}, "
+          f"rate={stats_out['selected_for_resurrection_rate_overall']:.2f}%")
     print(f"[module2e_logging] By bucket counts: {by_bucket}")
 
 
