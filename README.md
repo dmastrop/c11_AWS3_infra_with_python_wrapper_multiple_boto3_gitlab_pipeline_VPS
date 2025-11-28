@@ -1030,7 +1030,8 @@ if __name__ == "__main__":
 
 ```
 
-
+The objective of the refactoring of the code is to shorten the execution time of the thread resurrection phase.  The validation below indicates a 
+significantly reduced resurrection execution phase.
 
 
 
@@ -1139,6 +1140,306 @@ Nov 26 23:50:05 ip-172-31-22-215 tomcat9[3951]: Server startup in [3491] millise
 
 #### Validation of the multi-threaded prototype:
 
+As noted in the previous section the sequential resurrection of the 16 threads takes over several hours.   The mulit-threading benchmark tests illustrate that the
+time is reduced signficantly.
+
+With max_workers of 4 (4 concurrent threads) the total execution time of the deploy phase for the pipeline took about 55 minutes (10 minutes to run the base
+case where the threads are intentionally future crashed), and another 45 minutes to resurrect the 16 threads.
+
+Mathematically, by increasing the max_workers to 16 concurrent threads, the 45 minute resurrection time should be decreased by a factor of 4, to approximately
+10 minutes. This was empirically verified with a 16 max_workers test, where total execution time of the deploy phase only took about 20 minutes.
+
+So the total reduction was on the order of several hours to 20 minutes when going from serialized to 16 max_workers multi-threaded.
+
+
+As shown in the gitlab console logs below, the 16 threads are consumed in fairly rapid succession for resurrection: 
+
+
+Here is an excerpt
+
+```
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py
+[module2f][INFO] Starting resurrection for InstanceID=i-0c85dadab07cf9cc4, PublicIP=3.95.65.27
+[module2f][INFO] Starting resurrection for InstanceID=i-08ba2229fa53ec9eb, PublicIP=98.94.13.89
+[3.95.65.27] [2025-11-28 01:40:24.490401] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[98.94.13.89] [2025-11-28 01:40:25.085101] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0afad5505345297ce, PublicIP=3.90.199.254
+[module2f][INFO] Starting resurrection for InstanceID=i-09876f4dfd86354df, PublicIP=54.161.0.165
+[3.90.199.254] [2025-11-28 01:40:25.783750] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[54.161.0.165] [2025-11-28 01:40:26.278565] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0af5172f9d4f4c7a6, PublicIP=3.83.231.108
+[3.95.65.27] 📥 Watchdog read: 314 bytes on STDOUT
+[3.83.231.108] [2025-11-28 01:40:26.869535] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[98.94.13.89] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-0507cada4ebe2de09, PublicIP=54.196.224.179
+[3.90.199.254] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-0584d91288c3f5b07, PublicIP=34.207.185.117
+[54.196.224.179] [2025-11-28 01:40:27.737015] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[3.95.65.27] 📥 Post-loop flush read: 28 bytes on STDOUT
+[3.95.65.27] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[54.161.0.165] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-030397456aa52b345, PublicIP=54.234.110.80
+[34.207.185.117] [2025-11-28 01:40:28.231184] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[98.94.13.89] 📥 Post-loop flush read: 28 bytes on STDOUT
+[98.94.13.89] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[3.83.231.108] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-032a3ea0ced46f359, PublicIP=18.215.144.15
+[54.234.110.80] [2025-11-28 01:40:28.836297] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[3.95.65.27] 📥 Watchdog read: 101 bytes on STDERR
+[98.94.13.89] 📥 Watchdog read: 101 bytes on STDERR
+[module2f][INFO] Starting resurrection for InstanceID=i-04d3450f82454b2a9, PublicIP=54.234.133.90
+[18.215.144.15] [2025-11-28 01:40:29.521803] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[54.196.224.179] 📥 Watchdog read: 299 bytes on STDOUT
+[54.161.0.165] 📥 Post-loop flush read: 28 bytes on STDOUT
+[54.161.0.165] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[54.196.224.179] 📥 Post-loop flush read: 91 bytes on STDOUT
+[54.196.224.179] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[34.207.185.117] 📥 Watchdog read: 314 bytes on STDOUT
+[54.234.133.90] [2025-11-28 01:40:30.148598] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-01e505bedae1a7337, PublicIP=100.30.254.71
+[3.83.231.108] 📥 Post-loop flush read: 129 bytes on STDOUT
+[3.83.231.108] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[54.161.0.165] 📥 Watchdog read: 101 bytes on STDERR
+[54.234.110.80] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-0bcb057f7990c9c1e, PublicIP=34.233.128.162
+[100.30.254.71] [2025-11-28 01:40:30.953396] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[54.196.224.179] 📥 Watchdog read: 56 bytes on STDERR
+[module2f][INFO] Starting resurrection for InstanceID=i-03d539ecc52dd4160, PublicIP=100.26.108.159
+[34.233.128.162] [2025-11-28 01:40:31.467935] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[18.215.144.15] 📥 Watchdog read: 390 bytes on STDOUT
+[3.90.199.254] 📥 Post-loop flush read: 1 bytes on STDOUT
+[3.90.199.254] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[34.207.185.117] 📥 Post-loop flush read: 129 bytes on STDOUT
+[34.207.185.117] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[54.234.133.90] 📥 Watchdog read: 314 bytes on STDOUT
+[100.26.108.159] [2025-11-28 01:40:32.183311] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0699248f2ae35dba8, PublicIP=54.235.47.170
+[3.90.199.254] 📥 Watchdog read: 128 bytes on STDERR
+[module2f][INFO] Starting resurrection for InstanceID=i-0c859716e59430b21, PublicIP=34.227.191.202
+[100.30.254.71] 📥 Watchdog read: 314 bytes on STDOUT
+[54.235.47.170] [2025-11-28 01:40:32.880090] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[18.215.144.15] 📥 Post-loop flush read: 56 bytes on STDOUT
+[18.215.144.15] 🔍 Final output after flush (first 3 lines):
+Hit:1 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-1.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[34.227.191.202] [2025-11-28 01:40:33.352717] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[34.233.128.162] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-0842e1cacc4f1226b, PublicIP=54.211.13.68
+
+```
+
+
+And as expected the threads are completed in fairly rapid succession as well:
+
+
+
+```
+[module2f][INFO] Completed resurrection for InstanceID=i-0507cada4ebe2de09, PublicIP=54.196.224.179 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-08ba2229fa53ec9eb, PublicIP=98.94.13.89 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-0c85dadab07cf9cc4, PublicIP=3.95.65.27 → Status=install_success
+[18.215.144.15] 🔍 Final output after flush (first 0 lines):
+[18.215.144.15] STDOUT: ''
+[18.215.144.15] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-09876f4dfd86354df, PublicIP=54.161.0.165 → Status=install_success
+[100.26.108.159] 🔍 Final output after flush (first 0 lines):
+[100.26.108.159] STDOUT: ''
+[100.26.108.159] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-0afad5505345297ce, PublicIP=3.90.199.254 → Status=install_success
+[54.235.47.170] 🔍 Final output after flush (first 0 lines):
+[54.235.47.170] STDOUT: ''
+[54.235.47.170] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-032a3ea0ced46f359, PublicIP=18.215.144.15 → Status=install_success
+[34.227.191.202] 🔍 Final output after flush (first 0 lines):
+[34.227.191.202] STDOUT: ''
+[34.227.191.202] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-03d539ecc52dd4160, PublicIP=100.26.108.159 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-0699248f2ae35dba8, PublicIP=54.235.47.170 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-0c859716e59430b21, PublicIP=34.227.191.202 → Status=install_success
+[3.83.231.108] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[3.83.231.108] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[34.207.185.117] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[34.207.185.117] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[54.234.133.90] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[54.234.133.90] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[34.233.128.162] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[34.233.128.162] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[54.234.110.80] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[54.234.110.80] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[100.30.254.71] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[100.30.254.71] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[3.83.231.108] 🔍 Final output after flush (first 0 lines):
+[3.83.231.108] STDOUT: ''
+[3.83.231.108] STDERR: ''
+[54.211.13.68] ⏱️  Watchdog timeout on STDERR read. Stall count: 1
+[54.211.13.68] 🔄 Stall threshold exceeded on STDERR. Breaking loop.
+[34.207.185.117] 🔍 Final output after flush (first 0 lines):
+[34.207.185.117] STDOUT: ''
+[34.207.185.117] STDERR: ''
+[54.234.133.90] 🔍 Final output after flush (first 0 lines):
+[54.234.133.90] STDOUT: ''
+[54.234.133.90] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-0af5172f9d4f4c7a6, PublicIP=3.83.231.108 → Status=install_success
+[34.233.128.162] 🔍 Final output after flush (first 0 lines):
+[34.233.128.162] STDOUT: ''
+[34.233.128.162] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-0584d91288c3f5b07, PublicIP=34.207.185.117 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-04d3450f82454b2a9, PublicIP=54.234.133.90 → Status=install_success
+[54.234.110.80] 🔍 Final output after flush (first 0 lines):
+[54.234.110.80] STDOUT: ''
+[54.234.110.80] STDERR: ''
+[100.30.254.71] 🔍 Final output after flush (first 0 lines):
+[100.30.254.71] STDOUT: ''
+[100.30.254.71] STDERR: ''
+[54.211.13.68] 🔍 Final output after flush (first 0 lines):
+[54.211.13.68] STDOUT: ''
+[54.211.13.68] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-0bcb057f7990c9c1e, PublicIP=34.233.128.162 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-030397456aa52b345, PublicIP=54.234.110.80 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-01e505bedae1a7337, PublicIP=100.30.254.71 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-0842e1cacc4f1226b, PublicIP=54.211.13.68 → Status=install_success
+[module2f] Wrote resurrection results to /aws_EC2/logs/module2f_resurrection_results.json
+Process2f: resurrection_install_tomcat: Completed module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py
+```
+
+
+The gitlab artifact logs for the transition from module2d(gatekeeper decision tagging) to module2e(command appending) and finally to module2f(resurrection
+registry_entry results) are shown below. (samples)
+
+
+Here is a  module2d registry_entry tagged for resurrection due to an IDX1 futures crash:
+
+```
+  "a6355660": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 138927893257088,
+    "thread_uuid": "a6355660",
+    "public_ip": "3.95.65.27",
+    "private_ip": "172.31.24.106",
+    "timestamp": "2025-11-28 01:37:22.602359",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+```
+
+Here is a module2e registry_entry processed by adding the command list to the registry_entry so that the commands can be replayed on the thread for resurrection:
+
+```
+  "a6355660": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": 138927893257088,
+    "thread_uuid": "a6355660",
+    "public_ip": "3.95.65.27",
+    "private_ip": "172.31.24.106",
+    "timestamp": "2025-11-28 01:37:22.602359",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+```
+
+These are the module2e stats indicating that requeing and resurrection will be attempted on all of the 16 candidates: 
+```
+{
+  "total_candidates_gatekeeper": 16,
+  "resurrected_total": 16,
+  "by_bucket_counts": {
+    "idx1": {
+      "candidates": 16,
+      "resurrected": 16
+    }
+  },
+  "resurrection_rate_overall": 100.0,
+  "timestamp": "2025-11-28T01:40:23.025902"
+}
+
+```
+
+Finally, here is the module2f final thread resurrection status (it will be install_failed or install_success for this initial prototype code):
+
+
+
+```
+  "a6355660": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-11-28 01:51:24.519779",
+    "pid": 12,
+    "thread_id": 138927818147520,
+    "thread_uuid": "a6355660",
+    "public_ip": "3.95.65.27",
+    "private_ip": "172.31.24.106",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection",
+      "installation_completed"
+    ]
+  },
+```
+
+
+It is very important to note the consistency between the three different phases of the registry_entrys for that same node. The pid and the thread_uuid and
+the ip addresses are all retained from one phase to the  next. This is critical for forensic traceability.   Note that the thread_id is different on the 
+last module2f phase because python is spinning up a completely new thread (with the same thread_uuid and pid identifiers) when it attempts to resurrect the
+thread.
+
+
+
+
+Here are the final resurrection stats:
 
 
 
