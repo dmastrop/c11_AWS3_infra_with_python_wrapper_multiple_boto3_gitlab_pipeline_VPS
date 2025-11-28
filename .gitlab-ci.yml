@@ -304,10 +304,10 @@ deploy:
       # Phase3 log files 
       - logs/command_plan.json  # module2 command set of wrapped native_commands from module2 used in phase3 module2e
       - logs/resurrection_module2e_registry.json  # module2e phase3 registry with modified tags and command set added
-      - logs/statistics/aggregate_resurrection_stats_module2e.json  # module2e phase3 thread resurrection stats
+      - logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json  # module2e phase3 thread selected for resurrection stats
 
       - logs/module2f_resurrection_results.json   # module2f resurrection results
-
+      - logs/statistics/aggregate_resurrected_node_stats_module2f.json  # module2f phase2 thread resurrection node results
 
 
 
