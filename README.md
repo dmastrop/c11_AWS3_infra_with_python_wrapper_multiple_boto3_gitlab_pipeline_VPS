@@ -1424,20 +1424,22 @@ These are the module2e stats indicating that requeing and resurrection will be a
 ```
 {
   "total_candidates_gatekeeper": 16,
-  "resurrected_total": 16,
+  "selected_for_resurrection_total": 16,
   "by_bucket_counts": {
     "idx1": {
       "candidates": 16,
-      "resurrected": 16
+      "resurrected": 0,
+      "selected_for_resurrection": 16
     }
   },
-  "resurrection_rate_overall": 100.0,
-  "timestamp": "2025-11-28T01:40:23.025902"
+  "selected_for_resurrection_rate_overall": 100.0,
+  "timestamp": "2025-11-28T03:33:27.447844"
 }
 
 ```
 
-Finally, here is the module2f final thread resurrection status (it will be install_failed or install_success for this initial prototype code):
+Finally, here is the module2f final thread resurrection status for one of the 16 threads
+(it will be install_failed  r install_success for this initial prototype code):
 
 
 
@@ -1523,7 +1525,7 @@ Here are the final resurrection stats from the module2f stats json file:
 
 This aligns perfectly with the design:  
 - `module2d` → gatekeeper candidates.  
-- `module2e` → selected for resurrection.  
+- `module2e` → selected for resurrection statistics 
 - `module2f` → actual resurrection outcomes, now summarized in `aggregate_resurrected_node_stats_module2f.json`.
 
 
