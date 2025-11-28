@@ -501,7 +501,7 @@ does the actual resurrection of the thread.
 
 
 
-#### module2e registry_entry processing code and resurrection thread stats code:
+#### module2e registry_entry processing code and selected for resurrection thread stats code:
 
 Note that this code is extensible to bucketization of the various thread resurrection types. This initial prototype is for just the
 idx1 futures crash type resurrections. The previous update has a matrix of the various other types that will be added to this module, 
@@ -589,19 +589,20 @@ def main():
             bucket = "idx1"
         else:
             bucket = "generic"
-
-        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
+        
+        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
+        #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
         by_bucket[bucket]["candidates"] += 1
         if bucket == "idx1":
-            by_bucket[bucket]["resurrected"] += 1
+            by_bucket[bucket]["selected_for_resurrection"] += 1
 
         resurrection_registry[uuid] = entry
 
     stats_out = {
         "total_candidates_gatekeeper": len(resurrection_registry),
-        "resurrected_total": resurrected_total,
+        "selected_for_resurrection_total": resurrected_total,
         "by_bucket_counts": by_bucket,
-        "resurrection_rate_overall": (
+        "selected_for_resurrection_rate_overall": (
             (resurrected_total / max(1, len(resurrection_registry))) * 100.0
         ),
         "timestamp": datetime.utcnow().isoformat()
@@ -611,14 +612,14 @@ def main():
 
     # registry output stays in base logs
     write_json("resurrection_module2e_registry.json", resurrection_registry, log_dir=LOG_DIR)
-    
+
     # stats output goes into /aws_EC2/logs/statistics
-    write_json("aggregate_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
+    write_json("aggregate_selected_for_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
 
     # Final summary printout
     print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
-          f"resurrected={resurrected_total}, "
-          f"rate={stats_out['resurrection_rate_overall']:.2f}%")
+          f"selected_for_resurrection={resurrected_total}, "
+          f"rate={stats_out['selected_for_resurrection_rate_overall']:.2f}%")
     print(f"[module2e_logging] By bucket counts: {by_bucket}")
 
 
@@ -648,8 +649,14 @@ naming was carried forward from the earliest development phases.  Like install_t
 level function that can deal with any type of command set and run the commands on the node and detect failures, stubs or successful
 installations. It can even handle bash and bash-like commands using an strace wrapper for error detection feedback from the node.
 
+##### top stuff code
+
 The most important "top stuff" is the function read_output_with_watchdog, which is the lowest thread level function used by 
 resurrection_install_tomcat.  
+
+
+
+##### refactored resurrection_install_tomcat code
 
 Some important elements of the refactdred resurrection_install_tomcat are shown below:
 
@@ -741,6 +748,8 @@ def resurrection_install_tomcat(
 
 
 ```
+
+##### module2f orchestration code
 
 The module2f main() code is the  most important code in this module. It orchestrates the extraction of the relevant args from 
 each registry_entry that are required for the resurrection_install_tomcat function. 
@@ -917,7 +926,7 @@ if __name__ == "__main__":
 
 
 
-#### multi-threaded version of module2f to speed up resurrection execution phase:
+#### multi-threaded version of module2f orchestration code to speed up resurrection execution phase, and module2f stats:
 
 
 The multi-threaded version of module2f requires only a change in the main() orchestrator function in the module.   The rest of the 
@@ -928,7 +937,7 @@ The refactored main() function using the ThreadPoolExecutor is shown below.
 
 
 
-###### Multi-threaded version of the main() orchestrator
+##### Multi-threaded version of the main() orchestrator
 
 
 ```
@@ -1024,6 +1033,32 @@ def main():
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"[module2f] Wrote resurrection results to {out_path}")
+
+
+    # === NEW: Resurrection statistics summary ===
+    resurrected_success = sum(1 for r in results.values() if r["status"] == "install_success")
+    resurrected_failed = sum(1 for r in results.values() if r["status"] == "install_failed")
+    resurrected_stub = sum(1 for r in results.values() if r["status"] == "stub")
+
+    stats = {
+        "resurrected_total_threads": len(results),
+        "resurrected_install_success": resurrected_success,
+        "resurrected_install_failed": resurrected_failed,
+        "resurrected_stub": resurrected_stub,
+        "resurrected_unique_seen_ips": sorted({r["public_ip"] for r in results.values()}),
+        "resurrection_success_rate_percent": (
+            100.0 * resurrected_success / len(results) if results else 0.0
+        )
+    }
+
+    stats_dir = os.path.join(LOG_DIR, "statistics")
+    os.makedirs(stats_dir, exist_ok=True)
+    stats_path = os.path.join(stats_dir, "aggregate_resurrected_node_stats_module2f.json")
+    with open(stats_path, "w") as f:
+        json.dump(stats, f, indent=2)
+    print(f"[module2f] Wrote resurrection stats to {stats_path}")
+
+
 
 if __name__ == "__main__":
     main()
