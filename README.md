@@ -1436,10 +1436,22 @@ the ip addresses are all retained from one phase to the  next. This is critical 
 last module2f phase because python is spinning up a completely new thread (with the same thread_uuid and pid identifiers) when it attempts to resurrect the
 thread.
 
+Consistency check:
+
+- All 16 UUIDs line up across module2d, module2e, and module2f.
+
+- Public/private IPs are consistent.
+
+- PIDs are preserved from the originals.
+
+- Thread IDs differ in module2f (expected, since those are runtime thread identities), but UUID continuity ensures forensic traceability. 
+
+So the registries are consistent.
 
 
+Here are the final resurrection stats from the module2f stats json file:
 
-Here are the final resurrection stats:
+
 
 
 

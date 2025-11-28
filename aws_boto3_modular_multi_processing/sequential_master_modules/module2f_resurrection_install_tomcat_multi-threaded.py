@@ -1246,6 +1246,33 @@ def main():
         json.dump(results, f, indent=2)
     print(f"[module2f] Wrote resurrection results to {out_path}")
 
+
+
+    # === NEW: Resurrection statistics summary ===
+    resurrected_success = sum(1 for r in results.values() if r["status"] == "install_success")
+    resurrected_failed = sum(1 for r in results.values() if r["status"] == "install_failed")
+    resurrected_stub = sum(1 for r in results.values() if r["status"] == "stub")
+
+    stats = {
+        "resurrected_total_threads": len(results),
+        "resurrected_install_success": resurrected_success,
+        "resurrected_install_failed": resurrected_failed,
+        "resurrected_stub": resurrected_stub,
+        "resurrected_unique_seen_ips": sorted({r["public_ip"] for r in results.values()}),
+        "resurrection_success_rate_percent": (
+            100.0 * resurrected_success / len(results) if results else 0.0
+        )
+    }
+
+    stats_dir = os.path.join(LOG_DIR, "statistics")
+    os.makedirs(stats_dir, exist_ok=True)
+    stats_path = os.path.join(stats_dir, "aggregate_resurrected_node_stats_module2f.json")
+    with open(stats_path, "w") as f:
+        json.dump(stats, f, indent=2)
+    print(f"[module2f] Wrote resurrection stats to {stats_path}")
+
+
+
 if __name__ == "__main__":
     main()
 
