@@ -37,24 +37,29 @@ The master_script.py is in this directory
 This has all the latest multi-threading and multi-processing code in the sequential_master_modules package(directory)
 
 The current 14 modules in the package sequential_master_modules are multi-processed in the master_script.py
-All execution is multi-processed as well, and threads in each process are multi-threaded
-The processes permit multi-processing pooling determined by the desirec_count in module2
 
-The key module is the "module2_install tomcat_*.py"  module (module2 in the master_script.py) in the following directory:
+All node execution is multi-processed as well, and threads in each process are multi-threaded
+
+The processes permit multi-processing pooling determined by the desired_count in module2
+
+Most of the RECENT development is in the module2*.py files:
+
+
+- The key module is the "module2_install tomcat_*.py"  module (module2 in the master_script.py) in the following directory:
 aws_boto3_modular_multi_processing/sequential_master_modules
 Use the latest timestamp python file.
 
-module2b has the gitlab console log post processor for ghost threads in it.
+- module2b has the gitlab console log post processor for ghost threads in it.
 
-module2c has the gitlab console log post processor for aggregate registry threads (non-ghost threads) in it.
+- module2c has the gitlab console log post processor for aggregate registry threads (non-ghost threads) in it.
 
-module2d has the resurrection_gatekeeper code in it that converges on resurrection gatekeeper decisions for each of the threads in the execution run.
+- module2d has the resurrection_gatekeeper code in it that converges on resurrection gatekeeper decisions for each of the threads in the execution run.
 
-module2e has specialized post-registry processing code to append the command list and some other tags to the threads that require reque and resurrection. This module
-uses module2d registry as its input
+- module2e has specialized post-registry processing code to append the command list and some other tags to the threads that require reque and resurrection. This module uses module2d registry as its input
 
-module2f has a refactored thread level function for the agnostic command level execution on the nodes, and the orchestrator that processes the module2e processed 
+- module2f has a refactored thread level function for the agnostic command level execution on the nodes, and the orchestrator that processes the module2e processed 
 registry and replays the commands on the threads to resurrect the threads.
+
 
 All of the modules report extensive statistics json log files as part of the gitlab pipeline artifact export. 
 
