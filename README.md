@@ -166,7 +166,17 @@ artifact logs per pipeline)
 
 - Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
 
-- Update part 41 Phase3c: Prototype: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
+- Update part 41 Phase3c: Prototype: Requeing and resurrecting the IDX1 futures crashed threads
+
+- Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and ghosts and bucketization testing
+
+
+## A note on application extensibility
+
+The main thread installer function is named install_tomcat but the tomcat is a misnomer. The code is completely agnostic and extensible to any type of 
+installation application and supports a wide variety of package installers and bash-like command executors as well. The name of the function is just
+a legacy carryover from the original prototype code.
+
 
 
 ## A note on the STATUS_TAGS:
@@ -193,7 +203,63 @@ STATUS_TAGS = {
 }
 ```
 
-## UPDATES part 41: Phase 3c: Protyping: Requeing and resurrecting the install_tomcat futures IDX1 crashed threads
+## UPDATES part 42: Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and ghosts and bucketization testing
+
+### Introduction
+
+The code in module2e that performs the pre-processing on the full registry has code in it to not only append the command list to the threads that 
+will be resurrected, but also assigns resurrection types to each of the threads in the registry.   These are called resurrection type buckets in
+module2e.  The buckets are used in the module2e stats json file so that one can see which threads and bucket types are designated for thread resurrection 
+in module2f.  Some of the bucket types are idx1 (for the idx1 type threads), post_exec_futures_crash (for the successful threads that stalled at a futures
+crash post command exection), already_install_sucess (for the threads that are install_success in module2d registry), generic (for the other install_failed and
+stub threads that will be resurrected; this bucket will be further refined as testing progresses), and ghost (for ghost threads that need to be resurrected)
+
+The stats bucketize all the registry entries from the module2d complete registry and represent the stripped down module2e registry that represents the final 
+registry of those threads that require resurrection and will be attempted to be resurrected. 
+
+A simple example from HYBRID futures crash testing (which will be detailed further below) is shown below:
+```
+{
+  "total_resurrection_candidates": 16,
+  "total_ghost_candidates": 0,
+  "selected_for_resurrection_total": 10,
+  "by_bucket_counts": {
+    "post_exec_future_crash": {
+      "resurrection_candidates": 6,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "idx1": {
+      "resurrection_candidates": 10,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 10
+    }
+  },
+  "selected_for_resurrection_rate_overall": 62.5,
+  "timestamp": "2025-11-29T06:59:23.766495"
+}
+```
+This gives the user a good view of how many of the original execution run full module2d registry entries require resurrection and which type of threads they
+are. Each type of thread (bucket) requires a different approach to resurrection. That is the main purpose of the buckets. The buckets will also be very useful
+once ML (Machine Learning) is implemented in Phase4, as the learning heuristics for each type of thread resurrection will be different from one another.
+
+Note that most of the code changes in this update are in module2e and module2f, as the various resurrection scenarios are implemented in the code and tested.
+
+The previous update below has most of the foundational code changes in module2e to support the bucketization above, and this update will consist of testing
+the various resurrection types and implementing code to support the various resurrection types (with more to come and more buckets to be created as testing 
+progresses).
+
+
+
+
+
+
+
+
+
+
+
+## UPDATES part 41: Phase 3c: Protyping: Requeing and resurrecting the IDX1 futures crashed threads
 
 ### Introduction
 
@@ -454,7 +520,7 @@ Module2 → Produces command_plan.json (native + wrapped commands).
 
 Module2d → Produces resurrection_gatekeeper_final_registry_module2d.json and aggregate_process_stats_gatekeeper_module2d.json.
 
-Module2e → Consumes Module2 + Module2d outputs, generates resurrection_module2e_registry.json and aggregate_resurrection_stats_module2e.json.
+Module2e → Consumes Module2 + Module2d outputs, generates resurrection_module2e_registry.json and aggregate_selected_for_resurrection_stats_module2e.json
 
 Module2f → Consumes resurrection_module2e_registry.json, runs resurrection_install_tomcat() (serial prototype or threaded), and outputs module2f_resurrection_results.json.
 
