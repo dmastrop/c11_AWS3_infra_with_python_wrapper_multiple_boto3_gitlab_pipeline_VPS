@@ -70,23 +70,6 @@ def process_ghost(entry, command_plan):
 #### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
 #### Note the bucketization of the resurrection types. This will help in Phase4 ML
 
-#1. **idx1 prototype**
-#   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.
-#   - Increment `selected_for_resurrection`.
-#
-#2. **post‑exec futures crash**
-#   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.
-#   - Counted as candidates, but not selected for resurrection.
-#
-#3. **everything else**
-#   - Bucket as `generic`.
-#
-#4. **bucket counters**
-#   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.
-#   - `candidates` incremented for every entry.
-#   - `selected_for_resurrection` incremented only for `idx1`.
-
-
 def main():
     registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
     

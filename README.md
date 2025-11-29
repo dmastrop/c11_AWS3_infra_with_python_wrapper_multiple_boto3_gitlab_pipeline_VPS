@@ -278,9 +278,11 @@ Th next step is to use a new python module (module2e_reque_and_resurrect_Phase3.
 so that they can be further processed for resurrection (these files are the resurrection_gatekeeper_final_registry_module2d.json and
 the aggregate_process_stats_gatekeeper_module2d.json files). 
 
-These files have all the threads from the entire execution run, and also the gatekeeper decision as a tag in each thread's 
-registry_entry.  All the threads marked as gatekeeper_resurrect as shown below in the module2d registry json file. 
-These threads can be easily filtered by module2e from the other threads that do not or can not be resurrected.
+So the module2d registry, which is the complete registry of all threads is effectively stripped down to a resurrection list of registry_entrys of
+threads that actually require resurrection.
+
+An example of a module2d registry_entry that is gatekeeper tagged for resurrection is below:
+
 ```
  "1a312c38": {
     "status": "install_failed",
@@ -337,20 +339,26 @@ module2 is appended to the registry_entry so that the command set can be replaye
   },
 ```
 
-This is the basic approach to a very simple futures crash. 
+This is the basic approach to a very simple futures crash and the general approach that will be used for other resurrection type threads.
 
 The design gets much more complicated when one considers the nature of the crash (identified as buckets in the code). Some crashes
 will require a stop and start of the node, some will require only a partial replay of the commands due to issues with 
-indempotency.
+indempotency. Thus the threads are assigned resurrection types (referred to as buckets in the module2e code).
 
-The prototype above is working as a first step. 
-
-In addition, the statistics on the success of the resurrections will be reported in the statistics folder alongside all the other json
-stats files.  As mentioned before, they will be in terms of buckets, i.e. resurrection type and will indicate install_success or 
-install_failed. The prototype version of this is a stripped down version just reporting install_success or install_failed for this
-single bucket.
+As mentioned before, they will be in terms of buckets, i.e. resurrection type and will indicate whether or not the threads in the particular
+bucket will be selected for actual resurrection. 
 
 Other considerations are if the node requires a stop and start and the ip address changes, etc.
+
+Module2e will export this stripped down registry and will also export a stats json file that will have all the original registry_entrys from module2d
+put into buckets that determine how the thread will be dealt with for resurrection (install_success obviously no resurrection, IDX1 futures crash needs
+to be resurrected, ghosts need to be resurrected, futures crash after all commands succeeded does not need resurrection). This gives the user a view of
+how many threads need to be resurrected from the original execution and in what resurrection type bucket they fall into.
+
+Module2f will be the thread code that acctually does the resurrection
+
+In addition, the module 2f will export statistics on the success of the resurrections alongside all the other json stats files. 
+
 
 Finally, another early implementation in this design will be to use the ThreadPoolExecutor on the threads that need to be 
 resurrected. The prototype is using a serial design that is very slow (due to all the node output error detection, and watchdog timeouts
@@ -373,7 +381,7 @@ In short, the commands that are exported as a json file from module2, the module
 the module2d stats json file are all used as inputs into module2e.  Module2e processes these into registry_entrys like the example above
 so that the commands can be accessed and replayed against the same thread_uuid/pid, public node ip in an attempt to resurrect the thread.
 A final module2f_resurrection_results.json file will have the status of each thread' resurrection attempt. As a prototype, this is a
-stipped down version of the stats. The full version will bucketize the various forms of crashes and resurrection types and collate the 
+stipped down version of the stats. Module2e has stats as well that bucketize the various forms of crashes and resurrection types and collate the 
 stats accordingly for each bucket.
 
 
@@ -420,21 +428,24 @@ resurrection. An example is shown below with some added information module2e (re
 
 ```
 Module2e produces a pre-emptive stats json file to indicate how many of the gatekeeper resurrection tagged entries are selected for
-actual resurrection (this is usually 100% and is just a confirmation of the gatekeeper selected threads prior to actually 
-resurrecting the threads in module2f). The main purpose of this stats file is to present the various buckets of the resurrection
-types.
+actual resurrection. The main purpose of this stats file is to present the various buckets of the registry entries from module2d and indicate whether or not
+they require or will be resurrected.
 
-This file is named aggregate_resurrection_stats_module2e.json
+This file is named aggregate_selected_for_resurrection_stats_module2e.json
 
+An example of an execution run with only IDX1 futures crashes looks like this: 
 
+ 
 ```
 {
-  "total_candidates_gatekeeper": 16,
-  "resurrected_total": 16,
+  "total_resurrection_candidates": 16,
+  "total_ghost_candidates": 0,
+  "selected_for_resurrection_total": 16,
   "by_bucket_counts": {
     "idx1": {
-      "candidates": 16,
-      "resurrected": 16
+      "resurrection_candidates": 16,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 16 
     }
   },
   "resurrection_rate_overall": 100.0,
@@ -442,6 +453,30 @@ This file is named aggregate_resurrection_stats_module2e.json
 }
 ```
 
+
+
+A HYBRID crash scenario that has various different types of futures crashes in the threads will look like this: 
+(10 IDX1 futures crashes and 6 crashes that occur after commands are executed)
+
+{
+  "total_resurrection_candidates": 16,
+  "total_ghost_candidates": 0,
+  "selected_for_resurrection_total": 10,
+  "by_bucket_counts": {
+    "post_exec_future_crash": {
+      "resurrection_candidates": 6,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "idx1": {
+      "resurrection_candidates": 10,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 10
+    }
+  },
+  "selected_for_resurrection_rate_overall": 62.5,
+  "timestamp": "2025-11-29T06:59:23.766495"
+}
 
 
 The json file containing these module2e processed registries (resurrection_module2e_registry.json) is then used as an input into
@@ -581,16 +616,16 @@ does the actual resurrection of the thread.
 
 
 
-#### module2e registry_entry processing code and selected for resurrection thread stats code:
+#### module2e registry_entry processing code and selected for resurrection bucketization thread stats code:
 
 Note that this code is extensible to bucketization of the various thread resurrection types. This initial prototype is for just the
-idx1 futures crash type resurrections and the futures exeptions that occur after all of the commands have executed successfully.
-The previous update has a matrix of the various other types that will be added to this module, 
-once the prototype is complete.
+idx1 futures crash type resurrections and the futures exeptions that occur after all of the commands have executed successfully, the install_success case,
+the ghost case and a generic bucket that covers the rest of the install_failed and stub threads (this will be granularized later).
+
+The previous update has a matrix of the various other types that will be added to this module as testing progresses.
 
 
 ```
-
 import json
 import os
 from datetime import datetime
@@ -631,12 +666,29 @@ def normalize_resurrection_reason(entry, new_reason):
 def process_idx1(entry, command_plan):
     # Ensure tags list exists
     entry.setdefault("tags", [])
+    
     # Add skip flag so synthetic crash doesn’t fire again
     entry["tags"].append("skip_synthetic_future_crash_on_resurrection")
+    
     normalize_resurrection_reason(entry, "Idx1 futures crash detected, requeued with full command set")
+    
     # Prototype: replay full wrapped_commands. Placeholder for the actual callback to module2 to process the SSH connection and the
     # command execution using the thread logic, to resurrect the thread.
     entry["replayed_commands"] = command_plan["wrapped_commands"]   # the command set is actually added to the registry_entry 
+    
+    return entry
+
+def process_generic(entry, command_plan):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Generic resurrection candidate, requeued with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
+    return entry
+
+
+def process_ghost(entry, command_plan):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
     return entry
 
 
@@ -645,24 +697,6 @@ def process_idx1(entry, command_plan):
 #### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
 #### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
 #### Note the bucketization of the resurrection types. This will help in Phase4 ML
-
-#1. **idx1 prototype**
-#   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.
-#   - Increment `selected_for_resurrection`.
-#
-#2. **post‑exec futures crash**
-#   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.
-#   - Counted as candidates, but not selected for resurrection.
-#
-#3. **everything else**
-#   - Bucket as `generic`.
-#
-#4. **bucket counters**
-#   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.
-#   - `candidates` incremented for every entry.
-#   - `selected_for_resurrection` incremented only for `idx1`.
-
-
 
 def main():
     registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
@@ -676,67 +710,148 @@ def main():
     by_bucket = {}
     resurrected_total = 0
 
+
+    ## DEPRECATED CODE:
+    #for uuid, entry in registry.items():
+    #    tags = entry.get("tags", [])
+    #    #if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
+    #    #    continue
+    #    #if "gatekeeper_resurrect" not in tags:
+    #    #    continue
+
+    #    # Simplified: only handle idx1 for prototype
+    #    if "future_exception" in tags and "RuntimeError" in tags and "gatekeeper_resurrect" in tags:
+    #        entry = process_idx1(entry, command_plan)
+    #        resurrected_total += 1
+    #        bucket = "idx1"
+    #    
+    #    # Create a bucket for the second type of futures crash
+    #    elif "future_exception" in tags and "RuntimeError" in tags and "install_success_achieved_before_crash" in tags:
+    #        bucket = "post_exec_future_crash"
+    #    
+    #    # This will cover gatekeeper_blocked, gatekeeper_resurrect NOT in tags:
+    #    else:
+    #        bucket = "generic"
+
+    #    by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
+    #    #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
+    #    by_bucket[bucket]["candidates"] += 1
+    #    if bucket == "idx1":
+    #        by_bucket[bucket]["selected_for_resurrection"] += 1
+
+
+    #    resurrection_registry[uuid] = entry
+
+    #Replace the above for block with the block below. The above block has several issues with the HYBRID futures crash case
+    #and with the bucketization and the module2e registry file creation
+
     for uuid, entry in registry.items():
         tags = entry.get("tags", [])
-        #if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
-        #    continue
-        #if "gatekeeper_resurrect" not in tags:
-        #    continue
+        status = entry.get("status", "")
 
-        # Simplified: only handle idx1 for prototype
         if "future_exception" in tags and "RuntimeError" in tags and "gatekeeper_resurrect" in tags:
             entry = process_idx1(entry, command_plan)
             resurrected_total += 1
             bucket = "idx1"
+            resurrection_registry[uuid] = entry
 
-        # Create a bucket for the second type of futures crash
         elif "future_exception" in tags and "RuntimeError" in tags and "install_success_achieved_before_crash" in tags:
-            bucket = "post_exec_future_crash"
+            bucket = "post_exec_future_crash"   # tracked, not resurrected
 
-        # This will cover gatekeeper_blocked, gatekeeper_resurrect NOT in tags:
+        elif status == "install_success":
+            bucket = "already_install_success"  # tracked, not resurrected
+
+        elif status == "ghost":
+            bucket = "ghost"
+            entry = process_ghost(entry, command_plan) # use the ghost handler process_ghost helper function
+            resurrected_total += 1
+            resurrection_registry[uuid] = entry
+       
+        # The rest are either install_failed or stub registry_entrys that will most likely need to be resurrected in accordance with module2d definition of
+        # gatekeeper resurrect. This part of the logic will be refined.
         else:
             bucket = "generic"
+            entry = process_generic(entry, command_plan) # use the generic handler process_generic helper function
+            resurrected_total += 1
+            resurrection_registry[uuid] = entry
 
-        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
-        #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
-        by_bucket[bucket]["candidates"] += 1
-        if bucket == "idx1":
+        by_bucket.setdefault(bucket, {
+            "resurrection_candidates": 0,
+            "ghost_candidates": 0,
+            "selected_for_resurrection": 0
+        })
+
+        # Candidate gating
+        if status in ("install_failed", "stub"):
+            by_bucket[bucket]["resurrection_candidates"] += 1
+        elif status == "ghost":
+            by_bucket[bucket]["ghost_candidates"] += 1
+
+        if bucket in ("idx1", "generic", "ghost"):
             by_bucket[bucket]["selected_for_resurrection"] += 1
 
 
-        resurrection_registry[uuid] = entry
+
+    #stats_out = {
+    #    "total_candidates_gatekeeper": len(resurrection_registry),
+    #    "selected_for_resurrection_total": resurrected_total,
+    #    "by_bucket_counts": by_bucket,
+    #    "selected_for_resurrection_rate_overall": (
+    #        (resurrected_total / max(1, len(resurrection_registry))) * 100.0
+    #    ),
+    #    "timestamp": datetime.utcnow().isoformat()
+    #}
 
     stats_out = {
-        "total_candidates_gatekeeper": len(resurrection_registry),
+        "total_resurrection_candidates": sum(
+            bucket["resurrection_candidates"] for bucket in by_bucket.values()
+        ),
+        "total_ghost_candidates": sum(
+            bucket["ghost_candidates"] for bucket in by_bucket.values()
+        ),
         "selected_for_resurrection_total": resurrected_total,
         "by_bucket_counts": by_bucket,
         "selected_for_resurrection_rate_overall": (
-            (resurrected_total / max(1, len(resurrection_registry))) * 100.0
+            (resurrected_total / max(
+                1,
+                sum(bucket["resurrection_candidates"] for bucket in by_bucket.values())
+                + sum(bucket["ghost_candidates"] for bucket in by_bucket.values())
+            )) * 100.0
         ),
         "timestamp": datetime.utcnow().isoformat()
     }
 
 
-
     # registry output stays in base logs
     write_json("resurrection_module2e_registry.json", resurrection_registry, log_dir=LOG_DIR)
-
+    
     # stats output goes into /aws_EC2/logs/statistics
     write_json("aggregate_selected_for_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
 
+
+
+    ## Final summary printout
+    #print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
+    #      f"selected_for_resurrection={resurrected_total}, "
+    #      f"rate={stats_out['selected_for_resurrection_rate_overall']:.2f}%")
+    #print(f"[module2e_logging] By bucket counts: {by_bucket}")
+
     # Final summary printout
-    print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
-          f"selected_for_resurrection={resurrected_total}, "
+    print(f"[module2e_logging] Summary: "
+          f"total_resurrection_candidates={stats_out['total_resurrection_candidates']}, "
+          f"total_ghost_candidates={stats_out['total_ghost_candidates']}, "
+          f"selected_for_resurrection={stats_out['selected_for_resurrection_total']}, "
           f"rate={stats_out['selected_for_resurrection_rate_overall']:.2f}%")
     print(f"[module2e_logging] By bucket counts: {by_bucket}")
-
 
 
 if __name__ == "__main__":
     main()
 
-```
 
+```
+Note that there are discrete handlers for idx1, ghost and generic. There will be more handlers added as testing progresses and the buckets are further
+granularized.
 
 
 
@@ -857,7 +972,7 @@ def resurrection_install_tomcat(
 
 ```
 
-##### module2f orchestration code
+##### module2f orchestration code (non-multi-threaded)
 
 The module2f main() code is the  most important code in this module. It orchestrates the extraction of the relevant args from 
 each registry_entry that are required for the resurrection_install_tomcat function. 
