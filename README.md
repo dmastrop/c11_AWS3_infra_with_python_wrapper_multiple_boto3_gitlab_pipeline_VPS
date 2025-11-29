@@ -48,12 +48,21 @@ module2b has the gitlab console log post processor for ghost threads in it.
 
 module2c has the gitlab console log post processor for aggregate registry threads (non-ghost threads) in it.
 
-module2d has the resurrection_gatekeeper code in it.
+module2d has the resurrection_gatekeeper code in it that converges on resurrection gatekeeper decisions for each of the threads in the execution run.
 
-The updates in this README pertain to module2* files.
+module2e has specialized post-registry processing code to append the command list and some other tags to the threads that require reque and resurrection. This module
+uses module2d registry as its input
+
+module2f has a refactored thread level function for the agnostic command level execution on the nodes, and the orchestrator that processes the module2e processed 
+registry and replays the commands on the threads to resurrect the threads.
+
+All of the modules report extensive statistics json log files as part of the gitlab pipeline artifact export. 
+
+
+The updates (below)  in this README pertain to these module2* files.
 
 The pem key is a generic pem key for all of the ephemeral test EC2 instances. The EC2 instances are terminated after each successive run.
-
+Thus this does not pose a security risk.
 
 
 
