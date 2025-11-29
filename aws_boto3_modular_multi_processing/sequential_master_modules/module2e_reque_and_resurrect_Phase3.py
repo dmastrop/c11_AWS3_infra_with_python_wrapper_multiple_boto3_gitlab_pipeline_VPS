@@ -65,23 +65,31 @@ def main():
 
     for uuid, entry in registry.items():
         tags = entry.get("tags", [])
-        if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
-            continue
-        if "gatekeeper_resurrect" not in tags:
-            continue
+        #if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
+        #    continue
+        #if "gatekeeper_resurrect" not in tags:
+        #    continue
 
         # Simplified: only handle idx1 for prototype
-        if "future_exception" in tags and "RuntimeError" in tags:
+        if "future_exception" in tags and "RuntimeError" in tags and "idx1" in tags:   :
             entry = process_idx1(entry, command_plan)
             resurrected_total += 1
             bucket = "idx1"
+        
+        # Create a bucket for the second type of futures crash
+        elif "future_exception" in tags and "RuntimeError" in tags and "install_success_achieved_before_crash" in tags:
+            bucket = "post_exec_future_crash"
+        
+        # This will cover gatekeeper_blocked, gatekeeper_resurrect NOT in tags:
         else:
             bucket = "generic"
+
         by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
         #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
         by_bucket[bucket]["candidates"] += 1
         if bucket == "idx1":
             by_bucket[bucket]["selected_for_resurrection"] += 1
+
 
         resurrection_registry[uuid] = entry
 
