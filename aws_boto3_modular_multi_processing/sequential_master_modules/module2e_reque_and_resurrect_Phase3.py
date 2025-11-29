@@ -181,16 +181,34 @@ def main():
 
 
 
+    #stats_out = {
+    #    "total_candidates_gatekeeper": len(resurrection_registry),
+    #    "selected_for_resurrection_total": resurrected_total,
+    #    "by_bucket_counts": by_bucket,
+    #    "selected_for_resurrection_rate_overall": (
+    #        (resurrected_total / max(1, len(resurrection_registry))) * 100.0
+    #    ),
+    #    "timestamp": datetime.utcnow().isoformat()
+    #}
+
     stats_out = {
-        "total_candidates_gatekeeper": len(resurrection_registry),
+        "total_resurrection_candidates": sum(
+            bucket["resurrection_candidates"] for bucket in by_bucket.values()
+        ),
+        "total_ghost_candidates": sum(
+            bucket["ghost_candidates"] for bucket in by_bucket.values()
+        ),
         "selected_for_resurrection_total": resurrected_total,
         "by_bucket_counts": by_bucket,
         "selected_for_resurrection_rate_overall": (
-            (resurrected_total / max(1, len(resurrection_registry))) * 100.0
+            (resurrected_total / max(
+                1,
+                sum(bucket["resurrection_candidates"] for bucket in by_bucket.values())
+                + sum(bucket["ghost_candidates"] for bucket in by_bucket.values())
+            )) * 100.0
         ),
         "timestamp": datetime.utcnow().isoformat()
     }
-
 
 
     # registry output stays in base logs
@@ -199,12 +217,21 @@ def main():
     # stats output goes into /aws_EC2/logs/statistics
     write_json("aggregate_selected_for_resurrection_stats_module2e.json", stats_out, log_dir=STATISTICS_DIR)
 
+
+
+    ## Final summary printout
+    #print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
+    #      f"selected_for_resurrection={resurrected_total}, "
+    #      f"rate={stats_out['selected_for_resurrection_rate_overall']:.2f}%")
+    #print(f"[module2e_logging] By bucket counts: {by_bucket}")
+
     # Final summary printout
-    print(f"[module2e_logging] Summary: candidates={len(resurrection_registry)}, "
-          f"selected_for_resurrection={resurrected_total}, "
+    print(f"[module2e_logging] Summary: "
+          f"total_resurrection_candidates={stats_out['total_resurrection_candidates']}, "
+          f"total_ghost_candidates={stats_out['total_ghost_candidates']}, "
+          f"selected_for_resurrection={stats_out['selected_for_resurrection_total']}, "
           f"rate={stats_out['selected_for_resurrection_rate_overall']:.2f}%")
     print(f"[module2e_logging] By bucket counts: {by_bucket}")
-
 
 
 if __name__ == "__main__":
