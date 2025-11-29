@@ -50,6 +50,20 @@ def process_idx1(entry, command_plan):
     
     return entry
 
+def process_generic(entry, command_plan):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Generic resurrection candidate, requeued with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
+    return entry
+
+
+def process_ghost(entry, command_plan):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
+    return entry
+
+
 
 
 #### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
@@ -85,35 +99,87 @@ def main():
     by_bucket = {}
     resurrected_total = 0
 
+
+    ## DEPRECATED CODE:
+    #for uuid, entry in registry.items():
+    #    tags = entry.get("tags", [])
+    #    #if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
+    #    #    continue
+    #    #if "gatekeeper_resurrect" not in tags:
+    #    #    continue
+
+    #    # Simplified: only handle idx1 for prototype
+    #    if "future_exception" in tags and "RuntimeError" in tags and "gatekeeper_resurrect" in tags:
+    #        entry = process_idx1(entry, command_plan)
+    #        resurrected_total += 1
+    #        bucket = "idx1"
+    #    
+    #    # Create a bucket for the second type of futures crash
+    #    elif "future_exception" in tags and "RuntimeError" in tags and "install_success_achieved_before_crash" in tags:
+    #        bucket = "post_exec_future_crash"
+    #    
+    #    # This will cover gatekeeper_blocked, gatekeeper_resurrect NOT in tags:
+    #    else:
+    #        bucket = "generic"
+
+    #    by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
+    #    #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
+    #    by_bucket[bucket]["candidates"] += 1
+    #    if bucket == "idx1":
+    #        by_bucket[bucket]["selected_for_resurrection"] += 1
+
+
+    #    resurrection_registry[uuid] = entry
+
+    #Replace the above for block with the block below. The above block has several issues with the HYBRID futures crash case
+    #and with the bucketization and the module2e registry file creation
+
     for uuid, entry in registry.items():
         tags = entry.get("tags", [])
-        #if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
-        #    continue
-        #if "gatekeeper_resurrect" not in tags:
-        #    continue
+        status = entry.get("status", "")
 
-        # Simplified: only handle idx1 for prototype
         if "future_exception" in tags and "RuntimeError" in tags and "gatekeeper_resurrect" in tags:
             entry = process_idx1(entry, command_plan)
             resurrected_total += 1
             bucket = "idx1"
-        
-        # Create a bucket for the second type of futures crash
+            resurrection_registry[uuid] = entry
+
         elif "future_exception" in tags and "RuntimeError" in tags and "install_success_achieved_before_crash" in tags:
-            bucket = "post_exec_future_crash"
-        
-        # This will cover gatekeeper_blocked, gatekeeper_resurrect NOT in tags:
+            bucket = "post_exec_future_crash"   # tracked, not resurrected
+
+        elif status == "install_success":
+            bucket = "already_install_success"  # tracked, not resurrected
+
+        elif status == "ghost":
+            bucket = "ghost"
+            entry = process_ghost(entry, command_plan) # use the ghost handler process_ghost helper function
+            resurrected_total += 1
+            resurrection_registry[uuid] = entry
+       
+        # The rest are either install_failed or stub registry_entrys that will most likely need to be resurrected in accordance with module2d definition of
+        # gatekeeper resurrect. This part of the logic will be refined.
         else:
             bucket = "generic"
+            entry = process_generic(entry, command_plan) # use the generic handler process_generic helper function
+            resurrected_total += 1
+            resurrection_registry[uuid] = entry
 
-        by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
-        #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
-        by_bucket[bucket]["candidates"] += 1
-        if bucket == "idx1":
+        by_bucket.setdefault(bucket, {
+            "resurrection_candidates": 0,
+            "ghost_candidates": 0,
+            "selected_for_resurrection": 0
+        })
+
+        # Candidate gating
+        if status in ("install_failed", "stub"):
+            by_bucket[bucket]["resurrection_candidates"] += 1
+        elif status == "ghost":
+            by_bucket[bucket]["ghost_candidates"] += 1
+
+        if bucket in ("idx1", "generic", "ghost"):
             by_bucket[bucket]["selected_for_resurrection"] += 1
 
 
-        resurrection_registry[uuid] = entry
 
     stats_out = {
         "total_candidates_gatekeeper": len(resurrection_registry),
