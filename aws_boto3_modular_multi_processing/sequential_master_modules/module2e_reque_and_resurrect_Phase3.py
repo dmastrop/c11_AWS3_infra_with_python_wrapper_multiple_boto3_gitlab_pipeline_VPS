@@ -38,18 +38,40 @@ def normalize_resurrection_reason(entry, new_reason):
 def process_idx1(entry, command_plan):
     # Ensure tags list exists
     entry.setdefault("tags", [])
+    
     # Add skip flag so synthetic crash doesn’t fire again
     entry["tags"].append("skip_synthetic_future_crash_on_resurrection")
+    
     normalize_resurrection_reason(entry, "Idx1 futures crash detected, requeued with full command set")
+    
     # Prototype: replay full wrapped_commands. Placeholder for the actual callback to module2 to process the SSH connection and the
     # command execution using the thread logic, to resurrect the thread.
     entry["replayed_commands"] = command_plan["wrapped_commands"]   # the command set is actually added to the registry_entry 
+    
     return entry
 
 
 
 #### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
 #### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
+#### Note the bucketization of the resurrection types. This will help in Phase4 ML
+
+#1. **idx1 prototype**
+#   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.
+#   - Increment `selected_for_resurrection`.
+#
+#2. **post‑exec futures crash**
+#   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.
+#   - Counted as candidates, but not selected for resurrection.
+#
+#3. **everything else**
+#   - Bucket as `generic`.
+#
+#4. **bucket counters**
+#   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.
+#   - `candidates` incremented for every entry.
+#   - `selected_for_resurrection` incremented only for `idx1`.
+
 
 def main():
     registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
@@ -71,7 +93,7 @@ def main():
         #    continue
 
         # Simplified: only handle idx1 for prototype
-        if "future_exception" in tags and "RuntimeError" in tags and "idx1" in tags:
+        if "future_exception" in tags and "RuntimeError" in tags and "gatekeeper_resurrect" in tags:
             entry = process_idx1(entry, command_plan)
             resurrected_total += 1
             bucket = "idx1"

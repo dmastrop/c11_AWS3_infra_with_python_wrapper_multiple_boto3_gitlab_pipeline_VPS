@@ -618,7 +618,7 @@ def main():
         #    continue
 
         # Simplified: only handle idx1 for prototype
-        if "future_exception" in tags and "RuntimeError" in tags and "idx1" in tags:
+        if "future_exception" in tags and "RuntimeError" in tags and "gatekeeper_resurrect" in tags:
             entry = process_idx1(entry, command_plan)
             resurrected_total += 1
             bucket = "idx1"
