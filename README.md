@@ -518,7 +518,8 @@ does the actual resurrection of the thread.
 #### module2e registry_entry processing code and selected for resurrection thread stats code:
 
 Note that this code is extensible to bucketization of the various thread resurrection types. This initial prototype is for just the
-idx1 futures crash type resurrections. The previous update has a matrix of the various other types that will be added to this module, 
+idx1 futures crash type resurrections and the futures exeptions that occur after all of the commands have executed successfully.
+The previous update has a matrix of the various other types that will be added to this module, 
 once the prototype is complete.
 
 
@@ -574,8 +575,28 @@ def process_idx1(entry, command_plan):
 
 
 
+
 #### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
 #### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
+#### Note the bucketization of the resurrection types. This will help in Phase4 ML
+
+#1. **idx1 prototype**
+#   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.
+#   - Increment `selected_for_resurrection`.
+#
+#2. **post‑exec futures crash**
+#   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.
+#   - Counted as candidates, but not selected for resurrection.
+#
+#3. **everything else**
+#   - Bucket as `generic`.
+#
+#4. **bucket counters**
+#   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.
+#   - `candidates` incremented for every entry.
+#   - `selected_for_resurrection` incremented only for `idx1`.
+
+
 
 def main():
     registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
@@ -591,24 +612,31 @@ def main():
 
     for uuid, entry in registry.items():
         tags = entry.get("tags", [])
-        if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
-            continue
-        if "gatekeeper_resurrect" not in tags:
-            continue
+        #if "gatekeeper_blocked" in tags or "install_success_achieved_before_crash" in tags:
+        #    continue
+        #if "gatekeeper_resurrect" not in tags:
+        #    continue
 
         # Simplified: only handle idx1 for prototype
-        if "future_exception" in tags and "RuntimeError" in tags:
+        if "future_exception" in tags and "RuntimeError" in tags and "idx1" in tags:
             entry = process_idx1(entry, command_plan)
             resurrected_total += 1
             bucket = "idx1"
+
+        # Create a bucket for the second type of futures crash
+        elif "future_exception" in tags and "RuntimeError" in tags and "install_success_achieved_before_crash" in tags:
+            bucket = "post_exec_future_crash"
+
+        # This will cover gatekeeper_blocked, gatekeeper_resurrect NOT in tags:
         else:
             bucket = "generic"
-        
+
         by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0, "selected_for_resurrection": 0})
         #by_bucket.setdefault(bucket, {"candidates": 0, "resurrected": 0})
         by_bucket[bucket]["candidates"] += 1
         if bucket == "idx1":
             by_bucket[bucket]["selected_for_resurrection"] += 1
+
 
         resurrection_registry[uuid] = entry
 
@@ -1539,6 +1567,24 @@ after all of the command set executes successfully (these threads do not need to
 execution gitlab console log scan in module2c).   The "resurrection" types should be bucketized accordingly and the stats should indicate which bucket threads
 are to be resurrected and which are not to be resurrected, via module2e stats.
 
+This HYBRID crash test case will validate the following resurrection buckets stratification:
+
+
+1. idx1  
+   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.  
+   - Increment `selected_for_resurrection`.
+
+2. post‑exec futures crash  
+   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.  
+   - Counted as candidates, but not selected for resurrection.
+
+3. everything else
+   - Bucket as `generic`.
+
+4. bucket counters
+   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.  
+   - `candidates` incremented for every entry.  
+   - `selected_for_resurrection` incremented only for `idx1`.
 
 
 
