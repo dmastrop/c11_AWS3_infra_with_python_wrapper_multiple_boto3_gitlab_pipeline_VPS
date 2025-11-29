@@ -1087,7 +1087,7 @@ significantly reduced resurrection execution phase.
 ### Validation
 
 
-#### Validaton of the non-multi-threaded prototype:
+#### Validaton of the non-multi-threaded module2f resurrection code with IDX1 futures crashes:
 
 As noted above, the validation went very well, but the execution of the resurrection phase was extremely slow because the first prototype
 was done with serial exection of the failed threads.   The synthetic IDX1 futures crash indiscriminately crashes all of the threads, so
@@ -1187,7 +1187,7 @@ Nov 26 23:50:05 ip-172-31-22-215 tomcat9[3951]: Server startup in [3491] millise
 
 
 
-#### Validation of the multi-threaded prototype:
+#### Validation of the multi-threaded module2f resurrection with IDX1 futures crashes:
 
 As noted in the previous section the sequential resurrection of the 16 threads takes over several hours.   The mulit-threading benchmark tests illustrate that the
 time is reduced signficantly.
@@ -1532,6 +1532,11 @@ Here are the final resurrection stats from the module2f stats json file:
 }
 
 ```
+#### Validation of multi-threaded resurrection module2f code with HYBRID futures crashes to test the buckets:
+
+
+
+
 
 
 ### Stats summary relative to modules:
