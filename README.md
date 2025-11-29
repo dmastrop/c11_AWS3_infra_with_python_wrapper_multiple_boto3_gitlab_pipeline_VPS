@@ -1534,7 +1534,10 @@ Here are the final resurrection stats from the module2f stats json file:
 ```
 #### Validation of multi-threaded resurrection module2f code with HYBRID futures crashes to test the buckets:
 
-
+These synthetic thread futures crashes are after the first command executes successfully (IDX1 futures crashes) as well as futures crashes that occur
+after all of the command set executes successfully (these threads do not need to be resurrected as the installtion is successful as determined by a post
+execution gitlab console log scan in module2c).   The "resurrection" types should be bucketized accordingly and the stats should indicate which bucket threads
+are to be resurrected and which are not to be resurrected, via module2e stats.
 
 
 
