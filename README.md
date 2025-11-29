@@ -250,6 +250,54 @@ the various resurrection types and implementing code to support the various resu
 progresses).
 
 
+### module2e code review (bucketization code and resurrection thread handlers)
+
+
+
+
+
+### Validation testing of bucketization and thread resurrection
+
+#### Validation of multi-threaded resurrection module2f code with HYBRID futures crashes to test the buckets:
+
+These synthetic thread futures crashes are after the first command executes successfully (IDX1 futures crashes) as well as futures crashes that occur
+after all of the command set executes successfully (these threads do not need to be resurrected as the installtion is successful as determined by a post
+execution gitlab console log scan in module2c).   The "resurrection" types should be bucketized accordingly and the stats should indicate which bucket threads
+are to be resurrected and which are not to be resurrected, via module2e stats.
+
+This HYBRID crash test case will validate the following resurrection buckets stratification:
+
+
+1. idx1  
+   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.  
+   - Increment `selected_for_resurrection`.
+
+2. post‑exec futures crash  
+   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.  
+   - Counted as candidates, but not selected for resurrection.
+
+3. everything else
+   - Bucket as `generic`.
+
+4. bucket counters
+   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.  
+   - `candidates` incremented for every entry.  
+   - `selected_for_resurrection` incremented only for `idx1`.
+
+
+#### Validation of multi-threaded resurrection module2f with install_success case
+
+
+
+#### Validation of multi-threaded resurrection module2f with  50 nodes with install_sucess and HYBRID future crashes
+
+#### Validation of multi-threaded resurrection module2f with ghost threads
+
+
+#### Validation of multi-threaded resurrection module2f with ghost threads, HYBRID crashes and install_success with 50 nodes
+
+
+
 
 
 
@@ -1646,18 +1694,20 @@ Here is a module2e registry_entry processed by adding the command list to the re
 These are the module2e stats indicating that requeing and resurrection will be attempted on all of the 16 candidates: 
 ```
 {
-  "total_candidates_gatekeeper": 16,
+  "total_resurrection_candidates": 16,
+  "total_ghost_candidates": 0,
   "selected_for_resurrection_total": 16,
   "by_bucket_counts": {
     "idx1": {
-      "candidates": 16,
-      "resurrected": 0,
+      "resurrection_candidates": 16,
+      "ghost_candidates": 0,
       "selected_for_resurrection": 16
     }
   },
-  "selected_for_resurrection_rate_overall": 100.0,
-  "timestamp": "2025-11-28T03:33:27.447844"
+  "resurrection_rate_overall": 100.0,
+  "timestamp": "2025-11-24T03:46:05.060490"
 }
+
 
 ```
 
@@ -1741,32 +1791,6 @@ Here are the final resurrection stats from the module2f stats json file:
 }
 
 ```
-#### Validation of multi-threaded resurrection module2f code with HYBRID futures crashes to test the buckets:
-
-These synthetic thread futures crashes are after the first command executes successfully (IDX1 futures crashes) as well as futures crashes that occur
-after all of the command set executes successfully (these threads do not need to be resurrected as the installtion is successful as determined by a post
-execution gitlab console log scan in module2c).   The "resurrection" types should be bucketized accordingly and the stats should indicate which bucket threads
-are to be resurrected and which are not to be resurrected, via module2e stats.
-
-This HYBRID crash test case will validate the following resurrection buckets stratification:
-
-
-1. idx1  
-   - `future_exception` + `RuntimeError` + `idx1` → process and bucket as `idx1`.  
-   - Increment `selected_for_resurrection`.
-
-2. post‑exec futures crash  
-   - `future_exception` + `RuntimeError` + `install_success_achieved_before_crash` → bucket as `post_exec_future_crash`.  
-   - Counted as candidates, but not selected for resurrection.
-
-3. everything else
-   - Bucket as `generic`.
-
-4. bucket counters
-   - All buckets initialized with `candidates`, `resurrected`, and `selected_for_resurrection`.  
-   - `candidates` incremented for every entry.  
-   - `selected_for_resurrection` incremented only for `idx1`.
-
 
 
 ### Stats summary relative to modules:
