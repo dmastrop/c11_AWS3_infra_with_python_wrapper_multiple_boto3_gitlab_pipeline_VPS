@@ -506,6 +506,9 @@ An example of an execution run with only IDX1 futures crashes looks like this:
 A HYBRID crash scenario that has various different types of futures crashes in the threads will look like this: 
 (10 IDX1 futures crashes and 6 crashes that occur after commands are executed)
 
+
+
+```
 {
   "total_resurrection_candidates": 16,
   "total_ghost_candidates": 0,
@@ -525,7 +528,7 @@ A HYBRID crash scenario that has various different types of futures crashes in t
   "selected_for_resurrection_rate_overall": 62.5,
   "timestamp": "2025-11-29T06:59:23.766495"
 }
-
+```
 
 The json file containing these module2e processed registries (resurrection_module2e_registry.json) is then used as an input into
 module2f which processes each registry_entry (initial prototype is serially, but this is also done using the ThreadPoolExecutor
