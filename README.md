@@ -288,6 +288,284 @@ This HYBRID crash test case will validate the following resurrection buckets str
    - `candidates` incremented for every entry.  
    - `selected_for_resurrection` incremented only for `idx1`.
 
+These are some of the  module2d registry threads that are exported for the module2d resurrection registry. Note that there are 10 IDX1 type
+futures crash threads and 6 futures crashes that occurr after all of the commands have successfully executed (so the thread itself does not have to be
+requed and resurrected). The module2d gatekeeper decision is included in the tags: 
+
+
+This is one of the IDX1 futures crashed threads:
+```
+
+  "9d96703f": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": 123468835634048,
+    "thread_uuid": "9d96703f",
+    "public_ip": "54.174.212.81",
+    "private_ip": "172.31.22.97",
+    "timestamp": "2025-12-01 02:10:20.278944",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+```
+This is one of the other type of futures crash threads: 
+
+```
+ "f35d5cf2": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": 123468835634048,
+    "thread_uuid": "f35d5cf2",
+    "public_ip": "3.90.188.48",
+    "private_ip": "172.31.25.160",
+    "timestamp": "2025-12-01 02:15:07.894922",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+
+```
+
+
+This is one of the 10 IDX1 module2e registry threads that has been selected for resurrection
+(the same one as noted above in the module2d registry). Note the post module2d processing that module2e has performed on the regsitry_entry for the thread.
+
+```
+
+  "9d96703f": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": 123468835634048,
+    "thread_uuid": "9d96703f",
+    "public_ip": "54.174.212.81",
+    "private_ip": "172.31.22.97",
+    "timestamp": "2025-12-01 02:10:20.278944",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+```
+
+
+
+These are the module2e stats. Note the proper bucketization of the threads in accordance to the "resurrection type" of the thread.   Note that only the IDX1
+type future crashed threads will be resurrected.
+Note the bucketization of the threads that breakdown how many threads per bucket have been selected for resurrection. 
+
+```
+{
+  "total_resurrection_candidates": 16,
+  "total_ghost_candidates": 0,
+  "selected_for_resurrection_total": 10,
+  "by_bucket_counts": {
+    "post_exec_future_crash": {
+      "resurrection_candidates": 6,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "idx1": {
+      "resurrection_candidates": 10,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 10
+    }
+  },
+  "selected_for_resurrection_rate_overall": 62.5,
+  "timestamp": "2025-12-01T02:15:26.024732"
+}
+```
+
+This is one of the threads above (the IDX1 thread) in the module2f registry that indicates that it was install_success after being requed and resurrected
+```
+  "9d96703f": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-12-01 02:26:32.937577",
+    "pid": 13,
+    "thread_id": 123468764939968,
+    "thread_uuid": "9d96703f",
+    "public_ip": "54.174.212.81",
+    "private_ip": "172.31.22.97",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection",
+      "installation_completed"
+    ]
+  },
+
+```
+
+This is an SSH to the node above to empirically verify that it has completed the installation
+(tomcat9 is the sample installed application but this could be any application, done with a variety of pkg installers like apt, yum, dnf)
+```
+ubuntu@ip-172-31-22-97:~$ systemctl status tomcat9
+● tomcat9.service - Apache Tomcat 9 Web Application Server
+     Loaded: loaded (/lib/systemd/system/tomcat9.service; enabled; vendor preset: enabled)
+     Active: active (running) since Mon 2025-12-01 02:15:59 UTC; 27min ago
+       Docs: https://tomcat.apache.org/tomcat-9.0-doc/index.html
+   Main PID: 3939 (java)
+      Tasks: 28 (limit: 1129)
+     Memory: 61.9M
+        CPU: 5.568s
+     CGroup: /system.slice/tomcat9.service
+             └─3939 /usr/lib/jvm/default-java/bin/java -Djava.util.logging.config.file=/var/lib/tomcat9/conf/logging.properties -Djava.util.logging.manager=org.apach>
+
+Dec 01 02:16:00 ip-172-31-22-97 tomcat9[3939]: OpenSSL successfully initialized [OpenSSL 3.0.2 15 Mar 2022]
+Dec 01 02:16:01 ip-172-31-22-97 tomcat9[3939]: Initializing ProtocolHandler ["http-nio-8080"]
+Dec 01 02:16:01 ip-172-31-22-97 tomcat9[3939]: Server initialization in [1227] milliseconds
+Dec 01 02:16:01 ip-172-31-22-97 tomcat9[3939]: Starting service [Catalina]
+Dec 01 02:16:01 ip-172-31-22-97 tomcat9[3939]: Starting Servlet engine: [Apache Tomcat/9.0.58 (Ubuntu)]
+Dec 01 02:16:01 ip-172-31-22-97 tomcat9[3939]: Deploying web application directory [/var/lib/tomcat9/webapps/ROOT]
+Dec 01 02:16:04 ip-172-31-22-97 tomcat9[3939]: At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging for this logger for a complete list >
+Dec 01 02:16:04 ip-172-31-22-97 tomcat9[3939]: Deployment of web application directory [/var/lib/tomcat9/webapps/ROOT] has finished in [3,013] ms
+Dec 01 02:16:04 ip-172-31-22-97 tomcat9[3939]: Starting ProtocolHandler ["http-nio-8080"]
+Dec 01 02:16:04 ip-172-31-22-97 tomcat9[3939]: Server startup in [3224] milliseconds
+```
+
+
+Finally, here are the module2f stats on the thread resurrection. Note that there are 10 IDX1 threads that have been resurrected and accounted for in the 
+stats below. The sample from above is included as one of the 10 ip addresses below.
+```
+{
+  "resurrected_total_threads": 10,
+  "resurrected_install_success": 10,
+  "resurrected_install_failed": 0,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "13.222.178.60",
+    "3.87.235.69",
+    "50.17.40.61",
+    "54.174.212.81", <<<< This is the node that we tracked above 
+    "54.227.35.121",
+    "54.234.22.170",
+    "54.235.22.139",
+    "54.242.112.110",
+    "98.84.96.231",
+    "98.93.31.83"
+  ],
+  "resurrection_success_rate_percent": 100.0
+}
+```
+
+Here is a small portion of the gitlab console logs indicating the progression through the various stages of module processing. 
+
+```
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 18d36864 (IP: 13.218.107.214) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID ac72fe52 (IP: 54.208.1.154) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ✅ Resurrecting UUID 9d96703f (IP: 54.174.212.81) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 73625eb6 (IP: 54.242.112.110) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 193e063f (IP: 54.227.35.121) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 7f7e3a0c (IP: 98.84.96.231) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID f35d5cf2 (IP: 3.90.188.48) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 0ddeb725 (IP: 54.86.109.225) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ✅ Resurrecting UUID 2cd05ce9 (IP: 13.222.178.60) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 892a7d73 (IP: 98.93.31.83) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID fd459750 (IP: 50.17.40.61) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 86ad0643 (IP: 54.235.22.139) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID ff2fcedc (IP: 13.220.86.215) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID b279eeb8 (IP: 3.84.121.165) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ✅ Resurrecting UUID 281311dc (IP: 3.87.235.69) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 569789ae (IP: 54.234.22.170) — Reason: Tagged with future_exception
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 10
+[module2d.1] Total blocked: 6
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 0
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 0
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 16
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 10, Blocked: 6, Total: 16
+[module2d.4] Resurrection Rate: 62.50%
+[module2d.4] Gatekeeper Rate: 62.50%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=16, total_ghost_candidates=0, selected_for_resurrection=10, rate=62.50%
+[module2e_logging] By bucket counts: {'post_exec_future_crash': {'resurrection_candidates': 6, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'idx1': {'resurrection_candidates': 10, 'ghost_candidates': 0, 'selected_for_resurrection': 10}}
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py
+[module2f][INFO] Starting resurrection for InstanceID=i-064b03e4d555450c7, PublicIP=54.174.212.81
+[54.174.212.81] [2025-12-01 02:15:27.630742] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0248f0e8528e5d1dc, PublicIP=54.242.112.110
+[54.242.112.110] [2025-12-01 02:15:28.253022] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-09b100e6e42ae70e2, PublicIP=54.227.35.121
+[module2f][INFO] Starting resurrection for InstanceID=i-07ff9d0db64d225f7, PublicIP=98.84.96.231
+[54.227.35.121] [2025-12-01 02:15:28.862037] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[54.174.212.81] 📥 Watchdog read: 314 bytes on STDOUT
+[98.84.96.231] [2025-12-01 02:15:29.523674] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-057ebc3c8b0a869e5, PublicIP=13.222.178.60
+[54.242.112.110] 📥 Watchdog read: 314 bytes on STDOUT
+[13.222.178.60] [2025-12-01 02:15:30.170635] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-08187921e1d41c229, PublicIP=98.93.31.83
+[54.227.35.121] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-0ff9659f67e2c82ac, PublicIP=50.17.40.61
+[98.93.31.83] [2025-12-01 02:15:31.040735] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[98.84.96.231] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-020afb0ed61243f0f, PublicIP=54.235.22.139
+[50.17.40.61] [2025-12-01 02:15:31.532107] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0443594d6001d37b0, PublicIP=3.87.235.69
+[54.235.22.139] [2025-12-01 02:15:32.053342] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[13.222.178.60] 📥 Watchdog read: 314 bytes on STDOUT[54.227.35.121] 📥 Post-loop flush read: 28 bytes on STDOUT
+
+```
+
+Note that the module2f thread starting resurrections are done concurrently due to the multi-threading code that was implemented. The total execution time is about
+20 minutes well below the hours that it would take to resurrect the 10 idx1 futures crashes serially (see the previous update for a benchmark comparison between
+the serial and multi-threaded implemenation of module2f)
+
 
 
 
@@ -336,6 +614,17 @@ def main():
 
 
 #### Validation of multi-threaded resurrection module2f with  50 nodes with install_sucess and HYBRID future crashes
+
+This test presents a good mix of three different thread "resurrection type" buckets.  The install_success threads and the threads that crash after all of the
+commands have executed will not be resurrected. Only the IDX1 futures crash threads will be resurrected.
+
+The desired_count in module2 is set to 20 and max_workers to 2 for 20 processes of 2 threads each. There will be 5 more processes that are pooled to handle the
+last 10 nodes (5 pooled processes of 2 threads each).
+
+
+
+
+
 
 #### Validation of multi-threaded resurrection module2f with ghost threads
 
