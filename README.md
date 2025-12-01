@@ -435,6 +435,13 @@ if __name__ == "__main__":
 
 ### Validation testing of bucketization and thread resurrection
 
+
+#### Validation of multi-threaded resurrection module2f with the IDX1 futures crashes (Regression testing from the previous update):
+
+
+
+
+
 #### Validation of multi-threaded resurrection module2f code with HYBRID futures crashes to test the buckets:
 
 These synthetic thread futures crashes are after the first command executes successfully (IDX1 futures crashes) as well as futures crashes that occur
