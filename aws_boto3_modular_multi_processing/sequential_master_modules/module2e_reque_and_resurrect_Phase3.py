@@ -54,18 +54,15 @@ def process_generic(entry, command_plan):
     entry.setdefault("tags", [])
     normalize_resurrection_reason(entry, "Generic resurrection candidate, requeued with full command set")
     entry["replayed_commands"] = command_plan["wrapped_commands"]
-    entry["pre_resurrection_reboot_required"] = True  # This is for module2f code. We want to reboot the node if it is a ghost prior to attemping resurrection
     return entry
 
 
 def process_ghost(entry, command_plan):
     entry.setdefault("tags", [])
     normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+    entry["pre_resurrection_reboot_required"] = True  # This is for module2f code. We want to reboot the node if it is a ghost prior to attemping resurrection
     entry["replayed_commands"] = command_plan["wrapped_commands"]
     return entry
-
-
-
 
 #### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
 #### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
