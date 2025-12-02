@@ -82,7 +82,7 @@ deploy:
     FORCE_TOMCAT_FAIL_IDX1_REAL_TAG: "false"   # this futures crash will hit the module2c scan but an additional tag should not be 
       # inserted. The gatekeeper will try to resurrect this thread.      
 
-    FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH: "true"  # this uses the pid which is somewhat deterministic in a 16 node test to 
+    FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH: "false"  # this uses the pid which is somewhat deterministic in a 16 node test to 
       # activate half of the processes with a futures crash after the first command and the other half of the processes with a futures
       # crash after all the commands have succeeded. This tests the gatekeeper stats code implemenented in module2d. This 
       # activates FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG crash for half of the processes and activates 
@@ -98,7 +98,7 @@ deploy:
       # InstanceId as well for downstream code, and that synthetic InstanceId causes a futures crash (install_failed) instead of a
       # ghost.  The code for this has been commented out.   Use the flag below
       
-    INJECT_POST_THREAD_GHOSTS: "false"  # this injection is in tomcat_worker between the process_registry run_test call to 
+    INJECT_POST_THREAD_GHOSTS: "true"  # this injection is in tomcat_worker between the process_registry run_test call to 
       # threaded_install which establishes the process_registry for the process (seen_ips) and the call to 
       # resurrection_monitor_patch8. The instance_info variable is mutated in between the two with the ghost injection. This 
       # creates delta between seen_ips and golden ips which are missing_ips or ghosts, as evalluated by the helper fuction 

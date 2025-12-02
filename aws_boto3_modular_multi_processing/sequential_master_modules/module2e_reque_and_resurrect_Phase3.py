@@ -54,6 +54,7 @@ def process_generic(entry, command_plan):
     entry.setdefault("tags", [])
     normalize_resurrection_reason(entry, "Generic resurrection candidate, requeued with full command set")
     entry["replayed_commands"] = command_plan["wrapped_commands"]
+    entry["pre_resurrection_reboot_required"] = True  # This is for module2f code. We want to reboot the node if it is a ghost prior to attemping resurrection
     return entry
 
 

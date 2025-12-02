@@ -117,6 +117,7 @@ artifact logs per pipeline)
 - Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
 - Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
 - Requeing and resurrection of thread futures crashes 
+- Requeing and resurrection of ghost threads
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
@@ -170,6 +171,10 @@ artifact logs per pipeline)
 
 - Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and ghosts and bucketization testing
 
+- Update part 43 Phase 3e: Requeing and resurrecting ghost threads and verifying bucketization
+
+
+
 
 ## A note on application extensibility
 
@@ -202,6 +207,25 @@ STATUS_TAGS = {
     "ghost" 
 }
 ```
+
+
+## UPDATES part 43: Phase 3e: Requeing and resurrecting ghost threads and verifying bucketization
+
+
+### Introduction
+
+
+
+### Validation testing
+
+#### Validation of multi-threaded resurrection module2f with ghost threads
+
+#### Validation of multi-threaded resurrection module2f with ghost threasd and HYBRID futures crashes 
+
+#### Validation of multi-threaded resurrection module2f with ghost threads, HYBRID crashes and install_success with 50 nodes
+
+
+
 
 ## UPDATES part 42: Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and ghosts and bucketization testing
 
@@ -1490,24 +1514,6 @@ Note the sample ip address above (the .213 address) as one of the 16 resurrected
 }
 
 ```
-
-
-
-
-
-
-#### Validation of multi-threaded resurrection module2f with ghost threads
-
-
-#### Validation of multi-threaded resurrection module2f with ghost threads, HYBRID crashes and install_success with 50 nodes
-
-
-
-
-
-
-
-
 
 
 
