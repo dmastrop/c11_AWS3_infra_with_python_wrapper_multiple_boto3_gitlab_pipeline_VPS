@@ -214,6 +214,9 @@ STATUS_TAGS = {
 
 ### Introduction
 
+### New Code added to module2f to initiate a reboot if the instance_id is available for the ghost
+
+
 
 
 ### Validation testing
