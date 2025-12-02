@@ -664,7 +664,7 @@ after all of the command set executes successfully (these threads do not need to
 execution gitlab console log scan in module2c).   The "resurrection" types should be bucketized accordingly and the stats should indicate which bucket threads
 are to be resurrected and which are not to be resurrected, via module2e stats.
 
-This HYBRID crash test case will validate the following resurrection buckets stratification:
+This HYBRID crash test case will validate the the first 2 of the current resurrection buckets stratification, along with the counters in item 4 below:
 
 
 1. idx1  
@@ -1015,6 +1015,10 @@ commands have executed will not be resurrected. Only the IDX1 futures crash thre
 
 The desired_count in module2 is set to 20 and max_workers to 2 for 20 processes of 2 threads each. There will be 5 more processes that are pooled to handle the
 last 10 nodes (5 pooled processes of 2 threads each).
+
+Because the HYBRID crashes are designed only to occur in specific PIDs by design, with the 50 node test, there will be a large bucket of already_install_success
+threads to test 3 of the  buckets in this one test (2 futures crashes and the already_install_success threads).
+
 
 
 
