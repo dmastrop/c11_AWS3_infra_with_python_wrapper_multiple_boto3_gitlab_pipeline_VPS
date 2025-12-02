@@ -169,7 +169,7 @@ artifact logs per pipeline)
 
 - Update part 41 Phase3c: Prototype: Requeing and resurrecting the IDX1 futures crashed threads
 
-- Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and ghosts and bucketization testing
+- Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and bucketization testing
 
 - Update part 43 Phase 3e: Requeing and resurrecting ghost threads and verifying bucketization
 
@@ -230,7 +230,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 42: Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and ghosts and bucketization testing
+## UPDATES part 42: Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and bucketization testing
 
 ### Introduction
 
