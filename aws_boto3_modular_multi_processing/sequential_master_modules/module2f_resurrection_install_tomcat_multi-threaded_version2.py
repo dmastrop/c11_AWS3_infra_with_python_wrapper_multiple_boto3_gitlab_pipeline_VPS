@@ -1250,7 +1250,7 @@ def main():
                 results[uuid] = reg
             
 
-            # when this exception this with a synthetic ghost ip it is because:
+            # when this exception hits  with a synthetic ghost ip it is because:
             #- The ghost threads timed out inside `resurrection_install_tomcat`.
             #- That exception propagated out of the function without building a registry entry.
             #- The `Future` is now marked **finished with an exception**.
