@@ -340,9 +340,15 @@ def reque_and_resurrect():
 #def resurrection_install_tomcat():
 #    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat.py")    
 
-#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. THis is the multi-threaded version
+##### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. THis is the multi-threaded version
+#def resurrection_install_tomcat():
+#    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py")
+
+#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. THis is the multi-threaded version and supports ghost ips
 def resurrection_install_tomcat():
-    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py")
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py")
+
+
 
 
 ## modules 3-11:

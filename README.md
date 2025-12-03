@@ -288,13 +288,16 @@ def process_ghost(entry, command_plan):
 
 
 
-#### Pre-emptive testing with just the module2e entry added to the synthetic ghost registry_entry
+#### Pre-emptive testing with just the module2e entry added to the synthetic ghost registry_entry (using existing module2f code)
 
 
 The current basic code path was tested and when the ghost ip is injected (1 per process; so a total of 8 ghost ips in the execution for the 8 processes and 
 16 threads), it is carried through and processed all the way to module2f. Since a synthetically injected ghost ip (unlike a real ghost) has no actual 
 AWS node, there is no instance_id and the code creates a stub due to the missing instance_id.  This validation is just to verify the stats and code path for
-a ghost ip from module2d to 2e and to 2f. The new code in module2f (cited above) will then take care of real life ghost ips and resurrect the threads.
+a ghost ip from module2d to 2e and to 2f. The new code in module2f (cited above) will then take care of real life ghost ips and resurrect the threads. It will
+do this by querying for the InstanceIds of the ghosts and then initiate a reboot of all the ghosts and then wait for the instances to come up and then 
+call the resurrection_install_tomcat to resturrect each of the ghost ip nodes. That testing will come after the module2f code has been integrated and those 
+tests will follow this section.  This section is just a basic validation of the existing code path.
 
 
 Here are some logs for this basic pre-emptive testing:
@@ -731,11 +734,11 @@ So the code path is verified and in place for full resurrection by the new modul
 
 
 
-#### Validation of multi-threaded resurrection module2f with ghost threads
+#### Validation of multi-threaded resurrection module2f(added code to support restart, etc.) with ghost threads
 
-#### Validation of multi-threaded resurrection module2f with ghost threasd and HYBRID futures crashes 
+#### Validation of multi-threaded resurrection module2f(added code to support restart,etc.)  with ghost threads and HYBRID futures crashes 
 
-#### Validation of multi-threaded resurrection module2f with ghost threads, HYBRID crashes and install_success with 50 nodes
+#### Validation of multi-threaded resurrection module2f (added code to support restart, etc.) with ghost threads, HYBRID crashes and install_success with 50 nodes
 
 
 
