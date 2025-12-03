@@ -26,6 +26,36 @@ def write_json(filename, data, log_dir=LOG_DIR):
         json.dump(data, f, indent=2)
     print(f"[module2e_logging] Wrote JSON artifact to {path}")
 
+#### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost
+def resolve_instance_id(public_ip=None, private_ip=None, region=None):
+    """
+    Resolve the current InstanceId live from AWS.
+    - Prefer public IP lookup (most stable for resurrection).
+    - Fallback to private IP if public is missing.
+    - This ensures we always get the *current* instance_id, even if IPs were recycled.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    # Try public IP filter first
+    if public_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    # Fallback: try private IP filter
+    if private_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "network-interface.addresses.private-ip-address",
+                      "Values": [private_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
+    return None
 
 
 def normalize_resurrection_reason(entry, new_reason):
@@ -57,12 +87,38 @@ def process_generic(entry, command_plan):
     return entry
 
 
-def process_ghost(entry, command_plan):
+#def process_ghost(entry, command_plan):
+#    entry.setdefault("tags", [])
+#    normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+#    entry["pre_resurrection_reboot_required"] = True  # This is for module2f code. We want to reboot the node if it is a ghost prior to attemping resurrection
+#    entry["replayed_commands"] = command_plan["wrapped_commands"]
+#    return entry
+
+
+#### Ghost ip handler:
+#### Add decision logic for whether or not the InstanceId is available. The pre_resurrection_reboot_required is only required if the InstanceId is available
+#### If the InstanceId is not available then set this to false. If it is avaiable set it to true
+#### This uses the same InstanceId helper function resolve_instance_id from module2f
+def process_ghost(entry, command_plan, region=None):
     entry.setdefault("tags", [])
     normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
-    entry["pre_resurrection_reboot_required"] = True  # This is for module2f code. We want to reboot the node if it is a ghost prior to attemping resurrection
     entry["replayed_commands"] = command_plan["wrapped_commands"]
+
+    # Try to resolve InstanceId for this ghost
+    instance_id = entry.get("instance_id")
+    if not instance_id:
+        instance_id = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+
+    # Set reboot flag based on whether InstanceId is available
+    entry["pre_resurrection_reboot_required"] = bool(instance_id)
+
     return entry
+
+
 
 #### prototype code for resurrecting an idx1 futures crash thread using re-iteration of the complete command set (native_commands that
 #### are in  strace wrapped form from module2).  Will decide on a more sreamlined approach once the prototype is tested.
