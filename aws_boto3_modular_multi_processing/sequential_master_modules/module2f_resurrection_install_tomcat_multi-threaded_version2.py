@@ -620,6 +620,12 @@ def resurrection_install_tomcat(
     if extra_tags:
         base_tags.extend(extra_tags)
 
+    # Annotate ghost context if instance_id is None (for analytics transparency)
+    # For example, with a synthetic ghost ip injection.
+    if instance_id is None:
+        base_tags.append("no_instance_id_context")
+ 
+
     # SSH connect with bounded retries + a stub watchdog on final attempt only
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -1183,21 +1189,36 @@ def main():
             instance_id = entry.get("instance_id")
             if not instance_id:
                 instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+ 
+            # version1 of module2f:
+            #if not instance_id:
+            #    # If we still can't resolve, skip safely with a stub tag.
+            #    print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
+            #    results[uuid] = {
+            #        "status": "stub",
+            #        "attempt": -1,
+            #        "pid": pid,
+            #        "thread_uuid": uuid,
+            #        "public_ip": ip,
+            #        "private_ip": private_ip,
+            #        "timestamp": datetime.utcnow().isoformat(),
+            #        "tags": ["stub", "missing_instance_id"] + extra_tags
+            #    }
+            #    continue
 
+
+            # version2 of module2f: If there is no instance_id do not use the continue as above, but let the code flow into the submit future and execute
+            # the ThreadPoolExecutor on the node.  It is highly unusual if an AWS node InstanceId cannot be fetched, but with the synthetic ghost injection
+            # for code testing, this is in fact the case. We want the synthetically injected ghost ips to fail "naturally" with an install_failed SSH connect
+            # error in the TheadPoolExecutor call to resurrection_install_tomcat rather than stub the entry as above. The stub code block is commented out for
+            # this reason. In addtion tag the registry_entry accordingly with missing_instance_ip
             if not instance_id:
-                # If we still can't resolve, skip safely with a stub tag.
-                print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
-                results[uuid] = {
-                    "status": "stub",
-                    "attempt": -1,
-                    "pid": pid,
-                    "thread_uuid": uuid,
-                    "public_ip": ip,
-                    "private_ip": private_ip,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "tags": ["stub", "missing_instance_id"] + extra_tags
-                }
-                continue
+                print(f"[module2f] Proceeding without InstanceId for {ip} (UUID {uuid}). Will attempt SSH and log clean failure if any.")
+                extra_tags = (extra_tags or []) + ["missing_instance_id"]
+                # do not use a continue after this. Let the code flow into the ThreadPoolExecutor call to resurrection_install_tomcat below.
+
+
+
 
             # === [LOG ADDITION] Start of resurrection for this node ===
             print(f"[module2f][INFO] Starting resurrection for InstanceID={instance_id}, PublicIP={ip}")
