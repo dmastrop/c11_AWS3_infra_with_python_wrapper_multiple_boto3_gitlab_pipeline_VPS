@@ -214,17 +214,40 @@ STATUS_TAGS = {
 
 ### Introduction
 
+Because of the inherent complexities in ghost resurrection and especially when trying to validate this type of code, the development has to be done in several 
+succesive parts.
+
+- Part1 consists of testing the existing code as is to ensure that the module2d to 2e to 2f basic processing of ghost ips is intact
+
+- Part2 consists of addressing the code so that the synthetic ghost ip tests produce and install_failed registry_entry and tag the registry_entry with the correct 
+faliure tags (in this case an SSH timeout). Most importantly, this part of the implemenation tests the code if the node does not have an AWS InstanceId. While this
+is extremely rare in real life, with the synthetic ghost ip injection this is always true. So the tagging has to indicate that the "no instance id" code is being
+exercised rather than the "instance id present" code (a real life ghost will have an AWS InstanceId in almost all circumstances).
+
+- Part3 consists of adding a small helper function like `log_ghost_context(entry, reason)` to append ghost‑specific context tags (`ghost_context:no_instance_id`, `ghost_context:health_checks_not_ok`, etc.) without changing status.  
+   - This keeps ghost failures analytically distinct from normal SSH failures, for example. Ghosts are a unique type of issue and this helps in the forensic analysis
+of such nodes.
+
+- Part4 consists of the reboot code. Ghosts will always be rebooted (restarted as opposed to stop/start; thus the ip address will stay the same). This is for the 
+case where the InstanceId is available for the ghost node. This is the typical node scenario.   This code has to borrow some of the code from module2 to ensure
+that the ghost node comes up cleanly after the reboot. 
+   - Use `ec2_client.reboot_instances(InstanceIds=[iid])`.  
+   - Then wait for the node to be healthy before attempting SSH.  
+   - Borrow a simplified watchdog loop from the module2  AWS_ISSUE code (visibility → running → optional 2/2 checks).  
+   - Batch reboot is possible if multiple ghosts resolve to real instance IDs. The batch code approach was implemented in module2 for the AWS_ISSUE (nodes stuck in status 0/2 or 1/2 state) and tested out successfully.
+
+- Part5 for this InstanceId available path of the code: call the resurrection_install_tomcat and reque the ghost for command replay and resurrection.
 
 
+### Part1: Testing the existing code path for synthetic ghost ips (no InstanceId code path)
 
-### New Code
+The main objective here is to test the existing code with a synthetic ghost with no InstanceId and ensure that the registry entries look ok and the stats and buckets
+are ok in the gitlab artifact logs (json files).
+
+#### New code added to module2e: add an entry on the registry_entry for ghosts (This entry will only be used for nodes with InstanceId later on in Parts 4-5)
 
 
-
-#### New code added to module2e: add an entry on the registry_entry for ghosts
-
-
-This is so that the new logic in module2f (see below) can initiate a reboot of the ghost if the instance_id is avaiable for the ghost.
+This is so that the new logic in module2f (later on in Parts 4-5) can initiate a reboot of the ghost if the instance_id is avaiable for the ghost.
 
 The new entry is noted below in the example registry_entry for a synthetic ghost injection. A real ghost registry_entry will look very similar, becasue 
 regardless of whether or not the ghost ip is sythetically generated or a real ghost from the AWS orchestration layer mismatch, a synthetic ghost 
@@ -276,19 +299,7 @@ def process_ghost(entry, command_plan):
 
 
 
-
-### New Code added to module2f to get the instance_id of the ghost, initiate a reboot, wait for instance to come up, initiate a full resurrection
-
-
-
-
-
-
-### Validation testing
-
-
-
-#### Pre-emptive testing with just the module2e entry added to the synthetic ghost registry_entry (using existing module2f code)
+#### Validation testing:Pre-emptive testing with just the module2e entry added to the synthetic ghost registry_entry (using existing module2f code)
 
 
 The current basic code path was tested and when the ghost ip is injected (1 per process; so a total of 8 ghost ips in the execution for the 8 processes and 
@@ -732,7 +743,419 @@ Module2f stats look ok given that the missing instance id creates a stub and not
 
 So the code path is verified and in place for full resurrection by the new module2f code.
 
+### Part2: - Part2 consists of addressing the code so that the synthetic ghost ip tests produce and install_failed registry_entry and tag the registry_entry with the correct faliure tags (in this case an SSH timeout). (nodes have no InstanceId) 
 
+Most importantly, this part of the implemenation tests the code if the node does not have an AWS InstanceId. While this is extremely rare in real life, with the 
+synthetic ghost ip injection this is always true. So the tagging has to indicate that the "no instance id" code is being exercised rather than the 
+"instance id present" code (a real life ghost will have an AWS InstanceId in almost all circumstances).
+
+#### Code changes in module2f
+
+The following code changes were made in module2f in the main() function and in the resurrection_install_tomcat function
+
+
+In main() see the version2 block below. The case where there is no instance_id has been revised so taht a stub is no longer created and there is no continue 
+escape. Instead the "missing_instance_id" tag is added to the registry_entry for the node (in this case it is a synthetic ghost) and the code is allowed to 
+flow into the futures call to resurrection_install_tomcat. This call will hit the exception at the end of the snippet below and produce the correct install_failed
+registry_entry for such nodes. This tested out very well. Note the code now will call the ThreadPoolExecutor which calls resurrection_install_tomcat. Before this
+change the code aborted with a stub registry_entry. That code has been commented out as shown below.
+
+ 
+```
+    # === ThreadPool harness ===
+    with ThreadPoolExecutor(max_workers=16) as executor:  # adjust workers as needed: 4 and 8 and 16 for 16 node test 
+        future_map = {}
+
+        for uuid, entry in registry.items():
+            ip = entry.get("public_ip")
+            private_ip = entry.get("private_ip")
+            replayed_commands = entry.get("replayed_commands", [])
+            extra_tags = entry.get("tags", [])
+            res_uuid = uuid
+
+            # Reuse the original PID from module2e for forensic continuity
+            pid = entry.get("pid", os.getpid())
+
+            # InstanceId logic:
+            instance_id = entry.get("instance_id")
+            if not instance_id:
+                instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+
+            # version1 of module2f:
+            #if not instance_id:
+            #    # If we still can't resolve, skip safely with a stub tag.
+            #    print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
+            #    results[uuid] = {
+            #        "status": "stub",
+            #        "attempt": -1,
+            #        "pid": pid,
+            #        "thread_uuid": uuid,
+            #        "public_ip": ip,
+            #        "private_ip": private_ip,
+            #        "timestamp": datetime.utcnow().isoformat(),
+            #        "tags": ["stub", "missing_instance_id"] + extra_tags
+            #    }
+            #    continue
+            
+            # version2 of module2f: If there is no instance_id do not use the continue as above, but let the code flow into the submit future and execute
+            # the ThreadPoolExecutor on the node.  It is highly unusual if an AWS node InstanceId cannot be fetched, but with the synthetic ghost injection
+            # for code testing, this is in fact the case. We want the synthetically injected ghost ips to fail "naturally" with an install_failed SSH connect
+            # error in the TheadPoolExecutor call to resurrection_install_tomcat rather than stub the entry as above. The stub code block is commented out for
+            # this reason. In addtion tag the registry_entry accordingly with missing_instance_ip
+            if not instance_id:
+                print(f"[module2f] Proceeding without InstanceId for {ip} (UUID {uuid}). Will attempt SSH and log clean failure if any.")
+                extra_tags = (extra_tags or []) + ["missing_instance_id"]
+                # do not use a continue after this. Let the code flow into the ThreadPoolExecutor call to resurrection_install_tomcat below.
+
+
+
+            # === [LOG ADDITION] Start of resurrection for this node ===
+            print(f"[module2f][INFO] Starting resurrection for InstanceID={instance_id}, PublicIP={ip}")
+
+            # Submit task to thread pool
+            future = executor.submit(
+                resurrection_install_tomcat,
+                ip, private_ip, instance_id, timeout, replayed_commands,
+                key_path=os.getenv("key_path", "EC2_generic_key.pem"),
+                username=os.getenv("username", "ubuntu"),
+                port=int(os.getenv("port", "22")),
+                max_ssh_attempts=int(os.getenv("max_ssh_attempts", "5")),
+                res_uuid=res_uuid,
+                extra_tags=extra_tags
+            )
+            future_map[future] = (uuid, pid, ip, private_ip, instance_id, extra_tags)
+
+        # Collect results as threads finish
+        for future in as_completed(future_map):
+            uuid, pid, ip, private_ip, instance_id, extra_tags = future_map[future]
+            try:
+                ip_out, priv_out, reg = future.result()
+
+                # === [LOG ADDITION] Completion of resurrection for this node ===
+                print(f"[module2f][INFO] Completed resurrection for InstanceID={instance_id}, PublicIP={ip} → Status={reg['status']}")
+
+                # Ensure PID continuity in the registry entry
+                reg["pid"] = pid
+                results[uuid] = reg
+
+
+            # when this exception hits  with a synthetic ghost ip it is because:
+            #- The ghost threads timed out inside `resurrection_install_tomcat`.
+            #- That exception propagated out of the function without building a registry entry.
+            #- The `Future` is now marked **finished with an exception**.
+            #- `as_completed` yields it immediately. (the for block above)
+            #- The call to `future.result()`, Python re‑raises the exception that was stored in the `Future`.
+            #- This `try/except` block in main() is then hit — not because the future is still running, but because it finished *unsuccessfully*.
+
+            except Exception as e:
+                print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
+                tags = ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+                if instance_id is None:
+                    tags.append("no_instance_id_context")   # ensure ghost context survives if there is a timeout in the resurrection_install_tomcat
+                results[uuid] = {
+                    "status": "install_failed",
+                    "attempt": -1,
+                    "pid": pid,
+                    "thread_uuid": uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "tags": tags
+                }
+```
+
+
+The second minor code change for this Part2 implementation is in the resurrection_install_tomcat function.
+It is just a simple tag addition if the function is called by a node without an InstanceId. The actual args list in the resurrection_install_tomcat is not 
+changed (it still has the instance_id in the args list). The reason why this code is required is because in practice this function will run fine without
+the instance_id function. The ssh.connect does not require the instance_id (only essentially the ip address) and the ssh.exec_command function call does not 
+require the instance_id either to execute the commands on the node.  This small code change ensures that the nodes that do not have InstanceIds are taken care
+of.
+
+```
+def resurrection_install_tomcat(
+    ip,
+    private_ip,
+    instance_id,
+    WATCHDOG_TIMEOUT,
+    replayed_commands,
+    key_path="EC2_generic_key.pem",
+    username="ubuntu",
+    port=22,
+    max_ssh_attempts=5,
+    res_uuid=None,
+    extra_tags=None
+):
+    """
+    Replay a previously captured command set to resurrect a failed thread.
+    - Uses module2e replayed_commands (already wrapped where needed).
+    - Preserves whitelist-driven decision logic and strace exit overrides.
+    - Tags a compact, forensic registry_entry for every outcome.
+
+    Returns: (ip, private_ip, registry_entry)
+    """
+    import uuid
+    import paramiko
+    from datetime import datetime
+    import threading
+    import multiprocessing
+    import time
+
+    # Thread UUID (stable across a single resurrection run)
+    thread_uuid = res_uuid or uuid.uuid4().hex[:8]
+    base_tags = ["resurrection_attempt", "module2f"]
+    if extra_tags:
+        base_tags.extend(extra_tags)
+
+    # Annotate ghost context if instance_id is None (for analytics transparency)
+    # For example, with a synthetic ghost ip injection.
+    if instance_id is None:
+        base_tags.append("no_instance_id_context") <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< small change is here to append a tag so that it can be properly processed
+
+
+    # SSH connect with bounded retries + a stub watchdog on final attempt only
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    ssh_connected = False
+    ssh_success = False
+
+    for attempt in range(max_ssh_attempts):
+        try:
+            # Final-attempt watchdog to prevent silent stalls from becoming ghosts
+            def _watchdog():
+                try:
+                    time.sleep(30)
+                    if not ssh_connected and attempt == (max_ssh_attempts - 1):
+                        pid = multiprocessing.current_process().pid if multiprocessing.current_process() else None
+                        if pid:
+                            stub_entry = {
+                                "status": "stub",
+                                "attempt": -1,
+                                "pid": pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": base_tags + ["watchdog_triggered", "ssh_connect_stall"]
+                            }
+                            # Return path for stub handled by caller; here we just print
+                            print(f"[RESURRECTION][{ip}] SSH watchdog stub tagged on final attempt.")
+                except Exception as e:
+                    print(f"[RESURRECTION][{ip}] Watchdog exception: {e}")
+
+            threading.Thread(target=_watchdog, daemon=True).start()
+
+            ssh.connect(ip, port, username, key_filename=key_path, timeout=45)  <<< note that the instance_id is not required to initiate the SSH connection to the node
+            ssh_connected = True
+            ssh_success = True
+            break
+
+```
+
+#### Validation of Part2 code changes
+
+This consists of running the same synthetic ghost ip injection code as in Part1. Now the registry_entry is install_failed with the tags that indicate that there 
+is no instance_id for the node. 
+
+
+The gitlab logs are shown below. Note that now there is an explicit timeout because the ThreadPoolExector future call to resurrection_install_tomcat is actually
+performed (unlike in Part1 where the python script code aborts due to a missing InstanceId; that code has been removed from module2f as noted above).
+```
+Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 33d46cd1 (IP: 54.90.255.37) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID cf98160a (IP: 34.227.225.232) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 27d68ca8 (IP: 98.81.165.159) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 15e2dda2 (IP: 98.81.83.84) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 0cf694a6 (IP: 54.242.108.141) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4856febb (IP: 54.226.236.126) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 721d8e48 (IP: 100.31.157.120) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b8c2d87c (IP: 44.222.206.144) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 0c458dec (IP: 54.91.193.10) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 76c4a3c5 (IP: 98.89.20.74) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 26f2ac8e (IP: 54.234.29.88) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 97270905 (IP: 13.218.231.40) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID db558e3d (IP: 54.234.129.152) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 9470b0bc (IP: 98.93.227.159) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID af07363f (IP: 100.25.219.252) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 5ae1e38c (IP: 23.23.5.102) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_251 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_28 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_219 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_18 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_87 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_57 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_184 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_131 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=0, total_ghost_candidates=8, selected_for_resurrection=8, rate=100.00%
+[module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+[module2f] InstanceId not found for IPs public=1.1.12.251, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.12.251 (UUID ghost_1_1_12_251). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.12.251
+[module2f] InstanceId not found for IPs public=1.1.16.28, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.16.28 (UUID ghost_1_1_16_28). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.16.28
+[module2f] InstanceId not found for IPs public=1.1.15.219, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.15.219 (UUID ghost_1_1_15_219). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.15.219
+[module2f] InstanceId not found for IPs public=1.1.13.18, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.13.18 (UUID ghost_1_1_13_18). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.13.18
+[module2f] InstanceId not found for IPs public=1.1.14.87, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.14.87 (UUID ghost_1_1_14_87). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.14.87
+[module2f] InstanceId not found for IPs public=1.1.15.57, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.15.57 (UUID ghost_1_1_15_57). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.15.57
+[module2f] InstanceId not found for IPs public=1.1.12.184, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.12.184 (UUID ghost_1_1_12_184). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.12.184
+[module2f] InstanceId not found for IPs public=1.1.17.131, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.17.131 (UUID ghost_1_1_17_131). Will attempt SSH and log clean failure if any.
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.17.131
+[module2f] Resurrection failed for 1.1.12.251 (UUID ghost_1_1_12_251): timed out
+[module2f] Resurrection failed for 1.1.16.28 (UUID ghost_1_1_16_28): timed out
+[module2f] Resurrection failed for 1.1.15.219 (UUID ghost_1_1_15_219): timed out
+[module2f] Resurrection failed for 1.1.13.18 (UUID ghost_1_1_13_18): timed out
+[module2f] Resurrection failed for 1.1.14.87 (UUID ghost_1_1_14_87): timed out
+[module2f] Resurrection failed for 1.1.15.57 (UUID ghost_1_1_15_57): timed out
+[module2f] Resurrection failed for 1.1.12.184 (UUID ghost_1_1_12_184): timed out
+[module2f] Resurrection failed for 1.1.17.131 (UUID ghost_1_1_17_131): timed out
+[module2f] Wrote resurrection results to /aws_EC2/logs/module2f_resurrection_results.json
+[module2f] Wrote resurrection stats to /aws_EC2/logs/statistics/aggregate_resurrected_node_stats_module2f.json
+Process2f: resurrection_install_tomcat: Completed module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+```
+
+The registry_entry progression from module2d to 2e to 2f is shown below. Note the tags now in the module2f registry_entry for the ghost and note that the status
+is now correctly install_failed rather than a stub and that the timeout error is given in the tags.
+
+```
+
+Module2d registry
+
+
+"ghost_1_1_12_251": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_12_251",
+    "public_ip": "1.1.12.251",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+
+Module2e registry
+
+
+{
+  "ghost_1_1_12_251": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_12_251",
+    "public_ip": "1.1.12.251",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "pre_resurrection_reboot_required": true,
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+
+Module2f registry
+
+
+{
+  "ghost_1_1_12_251": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 12,
+    "thread_uuid": "ghost_1_1_12_251",
+    "public_ip": "1.1.12.251",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-03T05:33:59.932048",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError",
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "missing_instance_id",
+      "no_instance_id_context" <<<<<<<<<<<< this is now present
+    ]
+  },
+```
+### Part3: 
 
 #### Validation of multi-threaded resurrection module2f(added code to support restart, etc.) with ghost threads
 
