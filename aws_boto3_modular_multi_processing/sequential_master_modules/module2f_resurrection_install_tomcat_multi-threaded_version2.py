@@ -1248,8 +1248,21 @@ def main():
                 # Ensure PID continuity in the registry entry
                 reg["pid"] = pid
                 results[uuid] = reg
+            
+
+            # when this exception this with a synthetic ghost ip it is because:
+            #- The ghost threads timed out inside `resurrection_install_tomcat`.
+            #- That exception propagated out of the function without building a registry entry.
+            #- The `Future` is now marked **finished with an exception**.
+            #- `as_completed` yields it immediately. (the for block above)
+            #- The call to `future.result()`, Python re‑raises the exception that was stored in the `Future`.
+            #- This `try/except` block in main() is then hit — not because the future is still running, but because it finished *unsuccessfully*.
+
             except Exception as e:
                 print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
+                tags = ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+                if instance_id is None:
+                    tags.append("no_instance_id_context")   # ensure ghost context survives if there is a timeout in the resurrection_install_tomcat
                 results[uuid] = {
                     "status": "install_failed",
                     "attempt": -1,
@@ -1258,8 +1271,25 @@ def main():
                     "public_ip": ip,
                     "private_ip": private_ip,
                     "timestamp": datetime.utcnow().isoformat(),
-                    "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+                    "tags": tags
                 }
+
+
+            #except Exception as e:
+            #    print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
+            #    results[uuid] = {
+            #        "status": "install_failed",
+            #        "attempt": -1,
+            #        "pid": pid,
+            #        "thread_uuid": uuid,
+            #        "public_ip": ip,
+            #        "private_ip": private_ip,
+            #        "timestamp": datetime.utcnow().isoformat(),
+            #        "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
+            #    }
+
+
+
 
     # Persist results to disk
     out_path = os.path.join(LOG_DIR, "module2f_resurrection_results.json")
