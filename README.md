@@ -221,7 +221,7 @@ succesive parts.
 
 - Part2 consists of addressing the code so that the synthetic ghost ip tests produce and install_failed registry_entry and tag the registry_entry with the correct 
 faliure tags (in this case an SSH timeout). Most importantly, this part of the implemenation tests the code if the node does not have an AWS InstanceId. While this
-is extremely rare in real life, with the synthetic ghost ip injection this is always true. So the tagging has to indicate that the "no instance id" code is being
+is extremely rare in real life, with the synthetic ghost ip injection this is always true. So the registry has to indicate that the "no instance id" code is being
 exercised rather than the "instance id present" code (a real life ghost will have an AWS InstanceId in almost all circumstances).
 
 - Part3 consists of adding a small helper function like `log_ghost_context(entry, reason)` to append ghost‑specific context tags (`ghost_context:no_instance_id`, `ghost_context:health_checks_not_ok`, etc.) without changing status.  
@@ -244,14 +244,22 @@ that the ghost node comes up cleanly after the reboot.
 The main objective here is to test the existing code with a synthetic ghost with no InstanceId and ensure that the registry entries look ok and the stats and buckets
 are ok in the gitlab artifact logs (json files).
 
-#### New code added to module2e: add an entry on the registry_entry for ghosts (This entry will only be used for nodes with InstanceId later on in Parts 4-5)
+#### New code added to module2e: add a reboot field (true/false) in the registry_entry for ghosts 
 
+The logic is that if the InstanceId is available for the ghost ip, then pre_resurrection_reboot_required: true.
+If there is no InstanceId avaiable for the ghost ip (this is very rare; but with synthetically injected ghost ips, this is always the case for testing), then
+the pre_resurrection_reboot_required: false.
 
-This is so that the new logic in module2f (later on in Parts 4-5) can initiate a reboot of the ghost if the instance_id is avaiable for the ghost.
+The reboot logic will be added to module2f in a later stage of development (Part4) 
 
 The new entry is noted below in the example registry_entry for a synthetic ghost injection. A real ghost registry_entry will look very similar, becasue 
 regardless of whether or not the ghost ip is sythetically generated or a real ghost from the AWS orchestration layer mismatch, a synthetic ghost 
 registry_entry has to be created to resurrect any type of thread to the ghost node.
+
+The main difference between a synthetic ghost ip injection registry and a real life ghost ip registry is in the pre_resurrection_reboot_required flag.
+It will be set to false for the synthetic ghost ip injection case, but it will be set true for a real life ghost ip (assuming it has an InstanceId available, which
+is usually the case).
+
 
 ```
 {
@@ -274,7 +282,7 @@ registry_entry has to be created to resurrect any type of thread to the ghost no
       "Ghost entry: resurrection always attempted",
       "Ghost entry: resurrection always attempted with full command set"
     ],
-    "pre_resurrection_reboot_required": true, <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    "pre_resurrection_reboot_required": false, <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     "replayed_commands": [
       "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
       "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
@@ -287,13 +295,68 @@ registry_entry has to be created to resurrect any type of thread to the ghost no
 ```
 
 
-The entry is added in module2e inside the ghost handler function as shown below:
+The entry is added in module2e inside the ghost handler function as new code as shown below. 
+
+
+A helper function named resolve_instance_id is added to module2e:
+
 ```
-def process_ghost(entry, command_plan):
+#### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost
+def resolve_instance_id(public_ip=None, private_ip=None, region=None):
+    """
+    Resolve the current InstanceId live from AWS.
+    - Prefer public IP lookup (most stable for resurrection).
+    - Fallback to private IP if public is missing.
+    - This ensures we always get the *current* instance_id, even if IPs were recycled.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    # Try public IP filter first
+    if public_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    # Fallback: try private IP filter
+    if private_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "network-interface.addresses.private-ip-address",
+                      "Values": [private_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
+    return None
+```
+
+
+The ghost handler function below now has added logic to set the flag to true if the InstanceId is avaiable, and to set it to false if it is not available.
+```
+#### Ghost ip handler:
+#### Add decision logic for whether or not the InstanceId is available. The pre_resurrection_reboot_required is only required if the InstanceId is available
+#### If the InstanceId is not available then set this to false. If it is avaiable set it to true
+#### This uses the same InstanceId helper function resolve_instance_id from module2f
+def process_ghost(entry, command_plan, region=None):
     entry.setdefault("tags", [])
     normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
-    entry["pre_resurrection_reboot_required"] = True  # This is for module2f code. We want to reboot the node if it is a ghost prior to attemping resurrection
     entry["replayed_commands"] = command_plan["wrapped_commands"]
+
+    # Try to resolve InstanceId for this ghost
+    instance_id = entry.get("instance_id")
+    if not instance_id:
+        instance_id = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+
+    # Set reboot flag based on whether InstanceId is available
+    entry["pre_resurrection_reboot_required"] = bool(instance_id)
+
     return entry
 ```
 
@@ -412,9 +475,10 @@ For the synthetic ips a stub will be correctly created as shown below in the mod
 
 
 
-Aggregate_ghost_detail_module2d.json (synthetic registry_entrys are always created for ghosts by module2b and module2d appends the gatekeeper decisions
+The aggregate_ghost_detail_module2d.json is shown below
+(synthetic registry_entrys are always created for ghosts by module2b and module2d appends the gatekeeper decisions
 
-These entries are then processed by module2e
+(These entries are then later processed by module2e, and the new code shown above)
 
 ```
 {
@@ -582,20 +646,24 @@ Module2e processed sample ghost registry:
       "Ghost entry: resurrection always attempted",
       "Ghost entry: resurrection always attempted with full command set"
     ],
-    "pre_resurrection_reboot_required": true,  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< This is the added entry from module2e so that module2f can process this properly
     "replayed_commands": [
       "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
       "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
       "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
       "sudo systemctl start tomcat9",
       "sudo systemctl enable tomcat9"
-    ]
+    ],
+    "pre_resurrection_reboot_required": false  <<< This is the added entry from module2e in addition to the others above.  This is false because there is no InstanceId
   },
+
 ```
 
 
 Resurrection results json file from module2f
 Stubbed because no instance id error . It did not attempt SSH and fail. It was taken out prior. See gitlab console logs
+
+
+
 
 ```
 {
@@ -718,7 +786,8 @@ Module2e stats buckets look ok
 ```
 
 Module2f stats look ok given that the missing instance id creates a stub and not install_failed
-
+(Note that this will be changed to install_failed with Part2 implementation code in the next section. The existing code as is in Part1
+creates a stub but that is not technically correct).
 
 ```
 {
@@ -743,10 +812,15 @@ Module2f stats look ok given that the missing instance id creates a stub and not
 
 So the code path is verified and in place for full resurrection by the new module2f code.
 
+
+
+
+
+
 ### Part2: - Part2 consists of addressing the code so that the synthetic ghost ip tests produce and install_failed registry_entry and tag the registry_entry with the correct faliure tags (in this case an SSH timeout). (nodes have no InstanceId) 
 
 Most importantly, this part of the implemenation tests the code if the node does not have an AWS InstanceId. While this is extremely rare in real life, with the 
-synthetic ghost ip injection this is always true. So the tagging has to indicate that the "no instance id" code is being exercised rather than the 
+synthetic ghost ip injection this is always true. So the registry has to indicate that the "no instance id" code is being exercised rather than the 
 "instance id present" code (a real life ghost will have an AWS InstanceId in almost all circumstances).
 
 #### Code changes in module2f
@@ -1121,15 +1195,16 @@ Module2e registry
       "Ghost entry: resurrection always attempted",
       "Ghost entry: resurrection always attempted with full command set"
     ],
-    "pre_resurrection_reboot_required": true,
     "replayed_commands": [
       "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
       "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
       "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
       "sudo systemctl start tomcat9",
       "sudo systemctl enable tomcat9"
-    ]
+    ],
+    "pre_resurrection_reboot_required": false <<<<< false because there is no InstanceId with synthetically injected ghost ips
   },
+
 
 Module2f registry
 
@@ -1155,6 +1230,12 @@ Module2f registry
     ]
   },
 ```
+
+
+
+
+
+
 ### Part3: 
 
 #### Validation of multi-threaded resurrection module2f(added code to support restart, etc.) with ghost threads
