@@ -3,8 +3,11 @@ import os
 from datetime import datetime
 import boto3
 
-# Imports from shared utilities (utils.py)
-from utils import resolve_instance_id, _extract_instance_id
+## Imports from shared utilities (utils.py)
+#from utils import resolve_instance_id, _extract_instance_id
+
+# Shared helper functions live in sequential_master_modules/utils.py
+from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id
 
 
 # per the docker container volume mount. This maps to the logs directory on gitlab artifact logs.(.gitlab-ci.yml)

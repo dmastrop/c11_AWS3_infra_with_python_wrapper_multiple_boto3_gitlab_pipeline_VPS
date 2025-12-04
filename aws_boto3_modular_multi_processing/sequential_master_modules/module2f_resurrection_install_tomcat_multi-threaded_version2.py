@@ -33,9 +33,11 @@ import ipaddress # used with the is_valid_ip helper function below. This functio
 # futures crashes.
 import glob # need this for the aggregate stats function aggregate_process_stats in main()
 
-# Imports from shared utilities (utils.py)
-from utils import resolve_instance_id, _extract_instance_id
+## Imports from shared utilities (utils.py)
+#from utils import resolve_instance_id, _extract_instance_id
 
+# Shared helper functions live in sequential_master_modules/utils.py
+from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id
 
 
 
