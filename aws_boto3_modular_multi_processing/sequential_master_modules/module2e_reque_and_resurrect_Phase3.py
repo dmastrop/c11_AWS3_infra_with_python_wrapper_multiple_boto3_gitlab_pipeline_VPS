@@ -1,6 +1,8 @@
 import json
 import os
 from datetime import datetime
+import boto3
+
 
 # per the docker container volume mount. This maps to the logs directory on gitlab artifact logs.(.gitlab-ci.yml)
       # Phase3 log files
@@ -25,6 +27,23 @@ def write_json(filename, data, log_dir=LOG_DIR):
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
     print(f"[module2e_logging] Wrote JSON artifact to {path}")
+
+
+
+
+
+
+#### add the _extract_instance_id function that is used by teh resolve_instance_id function below. These are both from module2f
+def _extract_instance_id(describe_resp):
+    """
+    Helper to pull InstanceId out of AWS describe_instances response.
+    """
+    for r in describe_resp.get("Reservations", []):
+        for i in r.get("Instances", []):
+            iid = i.get("InstanceId")
+            if iid: return iid
+    return None
+
 
 #### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost
 def resolve_instance_id(public_ip=None, private_ip=None, region=None):
