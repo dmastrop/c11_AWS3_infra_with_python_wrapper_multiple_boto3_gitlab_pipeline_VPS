@@ -839,11 +839,13 @@ So the code path is verified and in place for full resurrection by the new modul
 
 
 
-### Part2: - Part2 consists of addressing the code so that the synthetic ghost ip tests produce and install_failed registry_entry and tag the registry_entry with the correct faliure tags (in this case an SSH timeout). (nodes have no InstanceId) 
+### Part2: Code additions to module2f so that the synthetic ghost ip tests produce an install_failed registry_entry and tag the registry_entry with the correct faliure tags (in this case an SSH timeout). (nodes for this validation testing have no InstanceId) 
 
 Most importantly, this part of the implemenation tests the code if the node does not have an AWS InstanceId. While this is extremely rare in real life, with the 
 synthetic ghost ip injection this is always true. So the registry has to indicate that the "no instance id" code is being exercised rather than the 
 "instance id present" code (a real life ghost will have an AWS InstanceId in almost all circumstances).
+
+
 
 #### Code changes in module2f
 
@@ -1267,10 +1269,10 @@ Part3 consists of adding a small helper function like `log_ghost_context(entry, 
 This keeps ghost failures analytically distinct from normal SSH failures, for example. Ghosts are a unique type of issue and this helps in the forensic analysis
 of such nodes.
 
-### Code changes
+#### Code changes
 
 
-### Validation of Part3 code changes
+#### Validation of Part3 code changes
 
 
 
