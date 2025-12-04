@@ -282,15 +282,16 @@ is usually the case).
       "Ghost entry: resurrection always attempted",
       "Ghost entry: resurrection always attempted with full command set"
     ],
-    "pre_resurrection_reboot_required": false, <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     "replayed_commands": [
       "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
       "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
       "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
       "sudo systemctl start tomcat9",
       "sudo systemctl enable tomcat9"
-    ]
+    ],
+    "pre_resurrection_reboot_required": false   <<<<<<<<
   },
+
 
 ```
 
@@ -299,8 +300,24 @@ The entry is added in module2e inside the ghost handler function as new code as 
 
 
 A helper function named resolve_instance_id is added to module2e:
+(this code is borrowed from module2f)
+
+
 
 ```
+#### add the _extract_instance_id function that is used by teh resolve_instance_id function below. These are both from module2f
+def _extract_instance_id(describe_resp):
+    """
+    Helper to pull InstanceId out of AWS describe_instances response.
+    """
+    for r in describe_resp.get("Reservations", []):
+        for i in r.get("Instances", []):
+            iid = i.get("InstanceId")
+            if iid: return iid
+    return None
+
+
+
 #### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost
 def resolve_instance_id(public_ip=None, private_ip=None, region=None):
     """
@@ -331,10 +348,15 @@ def resolve_instance_id(public_ip=None, private_ip=None, region=None):
 
     print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
     return None
+
+
 ```
 
 
 The ghost handler function below now has added logic to set the flag to true if the InstanceId is avaiable, and to set it to false if it is not available.
+
+
+
 ```
 #### Ghost ip handler:
 #### Add decision logic for whether or not the InstanceId is available. The pre_resurrection_reboot_required is only required if the InstanceId is available
