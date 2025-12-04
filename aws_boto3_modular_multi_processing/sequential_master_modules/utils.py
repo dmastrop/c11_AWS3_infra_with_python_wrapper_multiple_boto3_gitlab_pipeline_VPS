@@ -1,6 +1,8 @@
 # utils.py
 # These functions are used in both module2e and 2f so far
 
+import boto3
+import os
 
 def log_ghost_context(entry, reason):
     """
