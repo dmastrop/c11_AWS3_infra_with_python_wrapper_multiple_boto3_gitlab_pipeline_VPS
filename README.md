@@ -1258,7 +1258,26 @@ Module2f registry
 
 
 
-### Part3: 
+### Part3: Adding a small helper function log_ghost_context(entry, reason) to append ghost-specific context tags
+
+This will help in forensics when ghost ips are encountered. For example is an SSH timeout occurs it can be due to non-ghost threads or it can occur with a ghost ip.
+The ghost-specific context tags will help differentiate such errors relative to the resurrection bucket type (ghost, etc.....)
+
+Part3 consists of adding a small helper function like `log_ghost_context(entry, reason)` to append ghost‑specific context tags (`ghost_context:no_instance_id`, `ghost_context:health_checks_not_ok`, etc.) without changing status.
+This keeps ghost failures analytically distinct from normal SSH failures, for example. Ghosts are a unique type of issue and this helps in the forensic analysis
+of such nodes.
+
+### Code changes
+
+
+### Validation of Part3 code changes
+
+
+
+
+
+
+### Part4:
 
 #### Validation of multi-threaded resurrection module2f(added code to support restart, etc.) with ghost threads
 
