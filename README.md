@@ -1387,6 +1387,11 @@ def process_ghost(entry, command_plan, region=None):
 ```
 
 
+##### Code change to module2f
+
+This helper function will be used in Part4 when we add the reboot and status and instance health check code prior to resurrecting ghost ips that have an InstanceId.
+See Part4 Section further below.
+
 #### Validation of Part3 code changes
 
 
@@ -1395,7 +1400,89 @@ def process_ghost(entry, command_plan, region=None):
 
 Using a simple 16 node test:
 
+The sample ghost registry_entry progresses fine from module2e to module2f with the ghost_context tagging intact.
+```
+"ghost_1_1_16_140": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_16_140",
+    "public_ip": "1.1.16.140",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
 
+
+
+Module2e registry sample. This looks good
+
+
+{
+  "ghost_1_1_16_140": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_16_140",
+    "public_ip": "1.1.16.140",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:no_instance_id"  <<< ghost_context tag is now added since no instance id.
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": false
+  },
+
+
+
+Module2f sample carries that tag as well as expected
+
+{
+  "ghost_1_1_16_140": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 16,
+    "thread_uuid": "ghost_1_1_16_140",
+    "public_ip": "1.1.16.140",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-05T02:25:30.765291",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError",
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:no_instance_id",   <<<<<<<<< carried through from module2e
+      "missing_instance_id",
+      "no_instance_id_context"
+    ]
+  },
+
+```
 
 
 
