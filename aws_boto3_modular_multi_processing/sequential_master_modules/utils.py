@@ -25,7 +25,7 @@ def _extract_instance_id(describe_resp):
     return None
 
 
-#### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost
+#### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost in module2e)
 def resolve_instance_id(public_ip=None, private_ip=None, region=None):
     """
     Resolve the current InstanceId live from AWS.

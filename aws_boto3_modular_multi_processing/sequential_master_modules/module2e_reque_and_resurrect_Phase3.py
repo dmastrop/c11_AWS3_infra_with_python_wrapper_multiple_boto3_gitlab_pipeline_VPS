@@ -7,7 +7,7 @@ import boto3
 #from utils import resolve_instance_id, _extract_instance_id
 
 # Shared helper functions live in sequential_master_modules/utils.py
-from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id
+from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id log_ghost_context
 
 
 # per the docker container volume mount. This maps to the logs directory on gitlab artifact logs.(.gitlab-ci.yml)
@@ -140,6 +140,12 @@ def process_ghost(entry, command_plan, region=None):
 
     # Set reboot flag based on whether InstanceId is available
     entry["pre_resurrection_reboot_required"] = bool(instance_id)
+
+    # Ghost context tagging for synthetic ghosts. If there is no instance_id, set teh ghost context tag to no_instance_id. Ghost context tagging will help 
+    # differentiate non-ghost thread issues with ghost issues not only for thread resurrection in module2f but also with Machine Learning analytics in Phase4
+    if not instance_id:
+        log_ghost_context(entry, "no_instance_id")
+
 
     return entry
 
