@@ -1370,7 +1370,7 @@ outcomes from.
 
 
 The importance of registry_entry tagging
-— **tagging is the key**. Without tags, ML would just see “install_failed” vs “install_success” with no context. With tags, ML sees *why* it failed or succeeded, 
+- **tagging is the key**. Without tags, ML would just see “install_failed” vs “install_success” with no context. With tags, ML sees *why* it failed or succeeded, 
 which makes predictions meaningful and interpretable.
 
 Why tagging matters across all handlers (module2e handlers are essentially the resurrection bucket types that prep the registry_entry for the resurrection in 
