@@ -1212,7 +1212,7 @@ into the infrastructure that has been created in Phases 1-3.
 
 
 
-### A sneak look ahead at Machine Learning implementation (Phase4 of the project): Phase3 to Phase4 Readiness
+### A look ahead at Machine Learning implementation (Phase4 of the project): Phase3 to Phase4 Readiness
 
 
 The 50‑node regression test demonstrates that the orchestration pipeline has matured to the point where it produces **structured, discriminative signals** suitable for machine learning. While Phase3 is still evolving (e.g., reboot logic, health‑check tagging), the current implementation already provides ML‑ready features.
@@ -1235,11 +1235,11 @@ The 50‑node regression test demonstrates that the orchestration pipeline has m
   - Resurrection rate, gatekeeper rate, candidate counts.  
   - Provide baseline metrics for ML drift detection and model calibration.
 
-#### Why This Matters for ML
+#### Relevance to  ML
 - **Feature engineering**: Tags and resurrection reasons can be converted into categorical and textual features.  
 - **Labeling**: Status fields (`install_success`, `install_failed`) serve as ground‑truth labels for supervised models.  
 - **Lineage tracking**: Ghost context ensures models don’t confuse synthetic test failures with real infrastructure failures.  
-- **Validation**: Aggregate statistics give you a way to benchmark ML predictions against deterministic outcomes.
+- **Validation**: Aggregate statistics present a way to benchmark ML predictions against deterministic outcomes.
 
 
 #### Sample ML Feature Table
@@ -1277,7 +1277,7 @@ artifacts) can be flattened into ML‑ready rows. Each row is one thread/IP, eac
 
 Models can then learn patterns like “ghost_context:no_instance_id + TimeoutError → always fails” or “Idx1 futures crash + reboot_required → often succeeds.”
 
-This provides enormous predictive capability to the ML state machine.
+This pattern and signature learning provides enormous predictive capability to the ML state machine.
 
 
 
@@ -1302,7 +1302,7 @@ These are the ones ML models will use to **forecast outcomes**:
 - `is_ghost`, `ghost_context`, `error_type`, `pre_reboot_required`, `command_count`, `timestamp_delta`.
 
 Explanatory Features
-These are the ones ML models (and humans) will use to **explain lineage**:
+These are the ones ML models (and users via the logs) will use to **explain lineage**:
 - `resurrection_reason`, `gatekeeper_action`, `ip_rehydrated`, `tags`.
 
 Relevance to the ML design:
@@ -1317,7 +1317,6 @@ new predictive features (`reboot_failed`, `health_checks_not_ok`) and new explan
 
 
 #### For the ghost processing example .....
-
 
  Key Additions in Phase3 that will be used for Phase4 ML
 - **Reboot path**: If `pre_resurrection_reboot_required=True`, the resurrection attempt first goes through a reboot outcome check.  
@@ -1366,7 +1365,8 @@ Phase4
     - Certain error types + command counts → higher risk of failure.  
 - **Result**: ML can predict the probability of success for each resurrection attempt, and even suggest whether to replay commands, reboot, or block.
 
-The code becomes self adaptive, self learning, self correcting and self optimizing based upon incoming tagged data that it has learned to "read"
+The code becomes self adaptive, self learning, self correcting and self optimizing based upon incoming tagged data that it has learned to "read" and predict 
+outcomes from.
 
 The Key
 — **tagging is the key**. Without tags, ML would just see “install_failed” vs “install_success” with no context. With tags, ML sees *why* it failed or succeeded, 
