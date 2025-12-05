@@ -152,6 +152,23 @@ def process_ghost(entry, command_plan, region=None):
     if not instance_id:
         log_ghost_context(entry, "no_instance_id")
 
+    # Add the calls to reboot_instance and health_check_instance for instance_id present case. The else ensures that instance_id will be present. Note for the 
+    # instance_id present case the tag will be pre_resurrection_reboot_required: True
+    else:
+        # Real ghost → attempt reboot + health check
+        reboot_ok = reboot_instance(instance_id, region=region)
+        if not reboot_ok:
+            log_ghost_context(entry, "reboot_failed")
+            entry["status"] = "install_failed"
+            return entry
+
+        health_ok = health_check_instance(instance_id, region=region)
+        if not health_ok:
+            log_ghost_context(entry, "health_checks_not_ok")
+            entry["status"] = "install_failed"
+            return entry
+
+
 
     return entry
 
