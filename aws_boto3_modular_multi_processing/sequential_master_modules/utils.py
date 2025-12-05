@@ -3,6 +3,9 @@
 
 import boto3
 import os
+import time
+
+
 
 def log_ghost_context(entry, reason):
     """
@@ -55,4 +58,62 @@ def resolve_instance_id(public_ip=None, private_ip=None, region=None):
 
     print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
     return None
+
+
+#### These helper functions are to reboot a node and check that status and instance health checks on the node
+#### These functions are used especially in the module2e handler blocks (for example in the process_ghost handler for ghost ips)
+#### when the instance_id is available. Ghost ips are always rebooted prior to resurrection. These functions will be used in 
+#### other handlers in module2e as the code evolves.
+def reboot_instance(instance_id, region=None, max_wait=300, poll_interval=15):
+    """
+    Reboot a single EC2 instance and wait until it is healthy.
+    Returns True if reboot succeeded and health checks passed, False otherwise.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    try:
+        ec2.reboot_instances(InstanceIds=[instance_id])
+        print(f"[utils] Reboot initiated for {instance_id}")
+
+        waited = 0
+        while waited < max_wait:
+            resp = ec2.describe_instance_status(InstanceIds=[instance_id])
+            statuses = resp.get("InstanceStatuses", [])
+            if statuses:
+                inst_status = statuses[0]["InstanceStatus"]["Status"]
+                sys_status = statuses[0]["SystemStatus"]["Status"]
+                if inst_status == "ok" and sys_status == "ok":
+                    print(f"[utils] Instance {instance_id} passed 2/2 checks")
+                    return True
+            time.sleep(poll_interval)
+            waited += poll_interval
+
+        print(f"[utils] Timeout waiting for {instance_id} to become healthy")
+        return False
+
+    except Exception as e:
+        print(f"[utils] Error rebooting {instance_id}: {e}")
+        return False
+
+
+def health_check_instance(instance_id, region=None):
+    """
+    Perform a lightweight health check (2/2 status checks).
+    Returns True if healthy, False otherwise.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    try:
+        resp = ec2.describe_instance_status(InstanceIds=[instance_id])
+        statuses = resp.get("InstanceStatuses", [])
+        if statuses:
+            inst_status = statuses[0]["InstanceStatus"]["Status"]
+            sys_status = statuses[0]["SystemStatus"]["Status"]
+            return inst_status == "ok" and sys_status == "ok"
+        return False
+    except Exception as e:
+        print(f"[utils] Error checking health for {instance_id}: {e}")
+        return False
 
