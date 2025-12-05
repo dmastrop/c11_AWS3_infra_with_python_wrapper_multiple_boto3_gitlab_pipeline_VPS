@@ -7,7 +7,13 @@ import boto3
 #from utils import resolve_instance_id, _extract_instance_id
 
 # Shared helper functions live in sequential_master_modules/utils.py
-from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id, log_ghost_context
+from sequential_master_modules.utils import (
+    resolve_instance_id,
+    _extract_instance_id,
+    log_ghost_context,
+    reboot_instance,
+    health_check_instance
+)
 
 
 # per the docker container volume mount. This maps to the logs directory on gitlab artifact logs.(.gitlab-ci.yml)

@@ -37,7 +37,13 @@ import glob # need this for the aggregate stats function aggregate_process_stats
 #from utils import resolve_instance_id, _extract_instance_id
 
 # Shared helper functions live in sequential_master_modules/utils.py
-from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id, log_ghost_context
+from sequential_master_modules.utils import (
+    resolve_instance_id,
+    _extract_instance_id,
+    log_ghost_context,
+    reboot_instance,
+    health_check_instance
+)
 
 
 
