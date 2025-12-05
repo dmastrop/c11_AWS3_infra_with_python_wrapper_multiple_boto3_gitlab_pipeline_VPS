@@ -1368,11 +1368,22 @@ Phase4
 The code becomes self adaptive, self learning, self correcting and self optimizing based upon incoming tagged data that it has learned to "read" and predict 
 outcomes from.
 
-The Key
+
+The importance of registry_entry tagging
 — **tagging is the key**. Without tags, ML would just see “install_failed” vs “install_success” with no context. With tags, ML sees *why* it failed or succeeded, 
 which makes predictions meaningful and interpretable.
 
-Summary
+Why tagging matters across all handlers (module2e handlers are essentially the resurrection bucket types that prep the registry_entry for the resurrection in 
+module2f)
+- **Consistency**: Every handler produces lineage in the same “language” (`ghost_context:*`, `reboot_failed`, `health_checks_not_ok`).  
+- **ML readiness**: Models don’t care which bucket a thread came from — they learn patterns across tags.  
+- **Forensic clarity**: Humans can trace why a resurrection failed, regardless of bucket type.  
+
+
+
+
+#### Summary
+
 - **Phase3 = deterministic tagging + code logic. Consumable for training**
 - **Phase4 = ML overlay that learns from those tags and outcomes.**
 
