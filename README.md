@@ -1262,17 +1262,144 @@ Module2f registry
 
 ### Part3: Adding a small helper function log_ghost_context(entry, reason) to append ghost-specific context tags
 
-This will help in forensics when ghost ips are encountered. For example is an SSH timeout occurs it can be due to non-ghost threads or it can occur with a ghost ip.
-The ghost-specific context tags will help differentiate such errors relative to the resurrection bucket type (ghost, etc.....)
+This will help in forensics when ghost ips are encountered. For example, if an SSH timeout occurs, it can be due to non-ghost threads or it can occur with a ghost ip.
+The ghost-specific context tags will help differentiate such errors relative to the resurrection bucket type (ghost, etc.....), solely from a tag perspective. This can 
+be utilized later in Phase4 ML as well for learning analytics.
 
-Part3 consists of adding a small helper function like `log_ghost_context(entry, reason)` to append ghost‑specific context tags (`ghost_context:no_instance_id`, `ghost_context:health_checks_not_ok`, etc.) without changing status.
+Part3 consists of adding a small helper function like `log_ghost_context(entry, reason)` to append ghost‑specific context tags (`ghost_context:no_instance_id`, 
+`ghost_context:health_checks_not_ok`, etc.) without changing status.
+
 This keeps ghost failures analytically distinct from normal SSH failures, for example. Ghosts are a unique type of issue and this helps in the forensic analysis
 of such nodes.
 
 #### Code changes
 
+The first change was to centralize the new log_ghost_context function in a utils.py shared functions utility file.  This is so that the ghost context tagging can
+easily be implemented in both module2e and 2f where it is required. (in module2f, for example indicating that the reboot did not succeed or that the instance and
+status health checks did not pass on the node after reboot, etc....)
+
+
+Here is the current utils.py file. Note that I also shared out the resolve_instance_id and _extract_instance_id functions as well as they are both used in modules
+2e and 2f
+
+
+```
+# utils.py
+# These functions are used in both module2e and 2f so far
+
+import boto3
+import os
+
+def log_ghost_context(entry, reason):
+    """
+    Append ghost-specific forensic context tags to a registry entry.
+    Does not change status, only adds tags for analytics clarity.
+    """
+    entry.setdefault("tags", [])
+    entry["tags"].append(f"ghost_context:{reason}")
+    return entry
+
+#### add the _extract_instance_id function that is used by teh resolve_instance_id function below. These are both from module2f
+def _extract_instance_id(describe_resp):
+    """
+    Helper to pull InstanceId out of AWS describe_instances response.
+    """
+    for r in describe_resp.get("Reservations", []):
+        for i in r.get("Instances", []):
+            iid = i.get("InstanceId")
+            if iid: return iid
+    return None
+
+
+#### This helper function is used for the InstanceId decison logic (in the ghost handler function process_ghost in module2e)
+def resolve_instance_id(public_ip=None, private_ip=None, region=None):
+    """
+    Resolve the current InstanceId live from AWS.
+    - Prefer public IP lookup (most stable for resurrection).
+    - Fallback to private IP if public is missing.
+    - This ensures we always get the *current* instance_id, even if IPs were recycled.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    # Try public IP filter first
+    if public_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    # Fallback: try private IP filter
+    if private_ip:
+        resp = ec2.describe_instances(
+            Filters=[{"Name": "network-interface.addresses.private-ip-address",
+                      "Values": [private_ip]}]
+        )
+        iid = _extract_instance_id(resp)
+        if iid: return iid
+
+    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
+    return None
+```
+
+
+The sequential_master_modules directory in the repo has already been defined as a python package with the __init__.py file, so simply add the following import
+to both module2e and 2f
+
+```
+# Shared helper functions live in sequential_master_modules/utils.py
+from sequential_master_modules.utils import resolve_instance_id, _extract_instance_id, log_ghost_context
+```
+
+##### Code change to module2e
+
+To test this out in module2e, insert the call to the log_ghost_context as shown below in the ghost handler of module2e:
+
+```
+#### Ghost ip handler:
+#### Add decision logic for whether or not the InstanceId is available. The pre_resurrection_reboot_required is only required if the InstanceId is available
+#### If the InstanceId is not available then set this to false. If it is avaiable set it to true
+#### This uses the same InstanceId helper function resolve_instance_id from module2f
+def process_ghost(entry, command_plan, region=None):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
+
+    # Try to resolve InstanceId for this ghost
+    instance_id = entry.get("instance_id")
+    if not instance_id:
+        instance_id = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+
+    # Set reboot flag based on whether InstanceId is available
+    entry["pre_resurrection_reboot_required"] = bool(instance_id)
+
+    # Ghost context tagging for synthetic ghosts. If there is no instance_id, set teh ghost context tag to no_instance_id. Ghost context tagging will help 
+    # differentiate non-ghost thread issues with ghost issues not only for thread resurrection in module2f but also with Machine Learning analytics in Phase4
+    if not instance_id:
+        log_ghost_context(entry, "no_instance_id")
+
+
+```
+
 
 #### Validation of Part3 code changes
+
+
+##### Validation of module2e ghost context tagging
+
+
+Using a simple 16 node test:
+
+
+
+
+
+Using a 50 node HYBRID futures crash, install_success, ghost test case for regression:
 
 
 
