@@ -61,6 +61,13 @@ from sequential_master_modules.utils import (
 # Controlled by ENV variable in gitlab-ci.yml
 # Set INJECT_FAKE_INSTANCE_ID=true to activate
 # Set the FAKE_INSTANCE_ID in gitlab-ci.yml.  For example, i-033f7957281756224
+# Note that the FACKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
+# need to be refreshed with a more recent one periodically.
+  # For example, i-1234567890abcdef0 looks to be correct format but AWS API will return InvalidInstanceID.Malformed
+  # The i-033f7957281756224 is a recently retired node real instance_id and this worked prior to AWS caching it as no longer valid.
+  # While it worked it behaved in the code as a real instance_id (during reboot loop the watchdog had to timeout eventually since it is no longer atached
+  # to a node).  When it stopped working after AWS caching, AWS API flagged it as InvalidInstanceID.NotFound and this tests a different part of the python
+  # code.
 if os.getenv("INJECT_FAKE_INSTANCE_ID", "false").lower() in ("1", "true", "yes"):
     fake_id = os.getenv("FAKE_INSTANCE_ID", "i-FAKE1234567890TEST")
     resolve_instance_id = lambda **kwargs: fake_id
