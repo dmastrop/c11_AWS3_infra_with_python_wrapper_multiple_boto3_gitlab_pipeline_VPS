@@ -15,6 +15,12 @@ from sequential_master_modules.utils import (
     health_check_instance
 )
 
+# --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
+# This will test the instance_id present reboot and health check code added to the process_ghost handler below.
+resolve_instance_id = lambda **kwargs: "i-FAKE1234567890TEST"
+
+
+
 
 # per the docker container volume mount. This maps to the logs directory on gitlab artifact logs.(.gitlab-ci.yml)
       # Phase3 log files
