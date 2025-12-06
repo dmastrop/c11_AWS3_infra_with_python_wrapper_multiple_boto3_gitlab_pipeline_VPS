@@ -107,10 +107,33 @@ deploy:
       # synthetically modified to registry_entry format in module2d so that it can be processed by the gatekeeper.
 
     INJECT_FAKE_INSTANCE_ID: "true"
-    FAKE_INSTANCE_ID: "i-033f7957281756224"
+    FAKE_INSTANCE_ID: "i-0e1830a4a2c718130"
       # This is to inject a fake instance_id into the modules2e and 2f for conditional logic testing in those modules for resurrection and tagging code.
       # The instance_id above is a real life AWS instance_id
-
+      # Note that the FACKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
+      # need to be refreshed with a more recent one periodically.
+      # For example, i-1234567890abcdef0 looks to be correct format but AWS API will return InvalidInstanceID.Malformed
+      # The i-033f7957281756224 is a recently retired node real instance_id and this worked prior to AWS caching it as no longer valid.
+      # While it worked it behaved in the code as a real instance_id (during reboot loop the watchdog had to timeout eventually since it is no longer atached
+      # to a node).  When it stopped working after AWS caching, AWS API flagged it as InvalidInstanceID.NotFound and this tests a different part of the python
+      # code.
+      # Sample instance_ids from retired nodes: 
+      #i-0e1830a4a2c718130
+      #i-0f294cf1d4dd1f554
+      #i-0dd5d1e288a248912
+      #i-063ab80518a6d6642
+      #i-0d222bc857df037d2
+      #i-05479d09681d833d2
+      #i-0d19f7b750da36854
+      #i-0166fda7992ec00d2
+      #i-0f420100f58bffbc4
+      #i-05380c612dd1cd62e
+      #i-025318b54c7901189
+      #i-06d15e0d386d332e2
+      #i-047878f8ef4159d12
+      #i-0939ad8ea21cb3dbe
+      #i-025207ab1875ca99e
+      #i-017591c44053e1504
 
 
 
