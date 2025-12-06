@@ -170,7 +170,8 @@ deploy:
 
     - echo 'INJECT_POST_THREAD_GHOSTS='${INJECT_POST_THREAD_GHOSTS} >> .env  # inject synthetic ghost at the process level in tomcat_worker between the call to run_test/threaded_install for the process_registry AND the call to the resurrection_monitor_patch8. Mutate theinstance_info variable which maps to assigned_ips in the resurrection_monitor function.
 
-
+    - echo 'INJECT_FAKE_INSTANCE_ID='${INJECT_FAKE_INSTANCE_ID} >> .env # this injects fake instance_id for module2e and 2f reboot and resurrection testing Phase3
+    - echo 'FAKE_INSTANCE_ID='${FAKE_INSTANCE_ID} >> .env 
 
 
        
