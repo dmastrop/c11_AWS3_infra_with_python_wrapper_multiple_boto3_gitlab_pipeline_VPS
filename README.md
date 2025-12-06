@@ -253,6 +253,7 @@ that the ghost node comes up cleanly after the reboot.
 
 ### Part3: Adding a small helper function log_ghost_context(entry, reason) to append ghost-specific context tags
 
+
 This will help in forensics when ghost ips are encountered. For example, if an SSH timeout occurs, it can be due to non-ghost threads or it can occur with a ghost ip.
 The ghost-specific context tags will help differentiate such errors relative to the resurrection bucket type (ghost, etc.....), solely from a tag perspective. This can 
 be utilized later in Phase4 ML as well for learning analytics.
@@ -1390,6 +1391,40 @@ module2f)
 
 
 ### Part4:
+
+#### Introduction
+
+As noted above Part4 consists of the reboot code and the subsequent health check code to ensure that the ghost ip address and whatever node associated with it
+is in proper shape to be requed and resurrected in Part5 of this implementation.
+
+There are several areas of new code for this part of the implementation:
+
+- 2 helper functions are added to the shared utlity file utils.py and the imports are modified on module2e and 2f so that they can use these functions. These
+are functions for the reboot itself and then the subsequent status and instance health checking of the node.
+
+- The process_ghost ghost handler in module2e is then modified to use the two functions above
+The reboot will use `ec2_client.reboot_instances(InstanceIds=[iid])
+
+- To test this there is a synthetic instance_id injection code that is added to both module2e and 2f. The injection is done in the code where the ghost ip 
+addresses need to be rebooted. This effectively assigns a dummy instance_id to these synthetic ghost ips for testing the code conditional tagging and 
+branching logic. It worked out very well as detailed further below. The code is gated by an ENV variable in the .gitlab-ci.yml pipeline file. 
+
+- Similar to the AWS_ISSUE code (for nodes stuck in 1/2 status health checks) in module2 and the thread resurrection code in module2f, module2e will 
+use a batch processing to process the rebooting of all the ghost ips associated nodes in parallel. Similar to the other areas of code where this is used
+it will save a lot of time. The initial implementation is serial rebooting of ghost ip nodes, but this will use a batch processing with the 
+ThreadPoolExecutor (multi-threaded).
+
+- The testing of the synthetic ghost ips is a challenge and thus a synthetic instance_id injection methodology will be used. Creatively, the instance_id
+can be purposefully malformed (InvalidFormat), a valid format uncached by AWS (using a real retired instance_id from previous testing), and a valid format
+cached by AWS (re-using an older real retired instance_id). These will provoke different areas of the code as noted in the Validation sections below. 
+The malformed and the valid format but cached (NotFound) will provoke the error exit path of the reboot (tag will be reboot failed but module2f will still
+try to resurrect the node), and the valid format but uncached will fool the AWS API and this will test the watchdog timeout code in the reboot code of module2e
+for the ghost ip handler. As noted above it is serialized reboots in the inital coding which takes a lot of time. This will be refactored with batch processsing
+as indicated in a section below to save a lot of time in the reboot process of module2e for ghost ip nodes.
+
+- The uncached version of the synthetic  instance_id is required to test the batch code optimization.
+
+
 
 #### Validation of multi-threaded resurrection module2f(added code to support restart, etc.) with ghost threads
 
