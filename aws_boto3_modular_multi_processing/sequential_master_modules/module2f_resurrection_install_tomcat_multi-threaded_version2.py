@@ -46,6 +46,16 @@ from sequential_master_modules.utils import (
 )
 
 
+# --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
+# This will test the instance_id present reboot and health check code added to the process_ghost handler in module2e
+# It is also used to test the no_instance_id logic in module2f
+# It needs to be included in both modules to provide instance_id consistency between the two modules as far as the testing is concerned.
+# There are two variants that are tested. One has an invalid instance_id format
+# The other is a valid instance_id format
+resolve_instance_id = lambda **kwargs: "i-FAKE1234567890TEST"  ## invalid instance_id format. This will invoke Malformed from the AWS API
+resolve_instance_id = lambda **kwargs: "i-1234567890abcdef0"   ## Valid instance_id format. This will invole InvalidInstanceID.NotFound from the AWS API
+
+
 
 ## This is the whitelist code to be used in install_tomcat for categorizing the status of the registry_entry of the
 ## threads.  The helper function is used in install_tomcat to do a pattern search for this whitelist in the STDERR
