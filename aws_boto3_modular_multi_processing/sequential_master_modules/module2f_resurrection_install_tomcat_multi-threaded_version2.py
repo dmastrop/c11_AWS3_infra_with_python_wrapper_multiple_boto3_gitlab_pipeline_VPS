@@ -53,7 +53,7 @@ from sequential_master_modules.utils import (
 # There are two variants that are tested. One has an invalid instance_id format
 # The other is a valid instance_id format
 #resolve_instance_id = lambda **kwargs: "i-FAKE1234567890TEST"  ## invalid instance_id format. This will invoke Malformed from the AWS API
-resolve_instance_id = lambda **kwargs: "i-1234567890abcdef0"   ## Valid instance_id format. This will invole InvalidInstanceID.NotFound from the AWS API
+resolve_instance_id = lambda **kwargs: "i-033f7957281756224"   ## Valid instance_id format. This will invole InvalidInstanceID.NotFound from the AWS API
 
 
 
