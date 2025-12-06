@@ -22,7 +22,19 @@ from sequential_master_modules.utils import (
 # There are two variants that are tested. One has an invalid instance_id format
 # The other is a valid instance_id format
 #resolve_instance_id = lambda **kwargs: "i-FAKE1234567890TEST"  ## invalid instance_id format. This will invoke Malformed from the AWS API
-resolve_instance_id = lambda **kwargs: "i-033f7957281756224"   ## Valid instance_id format. This will invole InvalidInstanceID.NotFound from the AWS API
+#resolve_instance_id = lambda **kwargs: "i-033f7957281756224"   ## Valid instance_id format. This will invole InvalidInstanceID.NotFound from the AWS API
+
+
+# --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
+# Controlled by ENV variable in gitlab-ci.yml
+# Set INJECT_FAKE_INSTANCE_ID=true to activate
+# Set the FAKE_INSTANCE_ID in gitlab-ci.yml.  For example, i-033f7957281756224
+if os.getenv("INJECT_FAKE_INSTANCE_ID", "false").lower() in ("1", "true", "yes"):
+    fake_id = os.getenv("FAKE_INSTANCE_ID", "i-FAKE1234567890TEST")
+    resolve_instance_id = lambda **kwargs: fake_id
+    print(f"[TEST] Overriding resolve_instance_id → {fake_id}")
+
+
 
 
 
