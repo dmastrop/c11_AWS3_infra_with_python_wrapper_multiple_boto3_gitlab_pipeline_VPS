@@ -1394,7 +1394,7 @@ module2f)
 
 #### Introduction
 
-As noted above Part4 consists of the reboot code and the subsequent health check code to ensure that the ghost ip address and whatever node associated with it
+Part4 consists of the reboot code and the subsequent health check code to ensure that the ghost ip address and whatever node associated with it
 is in proper shape to be requed and resurrected in Part5 of this implementation.
 
 There are several areas of new code for this part of the implementation:
@@ -1403,11 +1403,59 @@ There are several areas of new code for this part of the implementation:
 are functions for the reboot itself and then the subsequent status and instance health checking of the node.
 
 - The process_ghost ghost handler in module2e is then modified to use the two functions above
-The reboot will use `ec2_client.reboot_instances(InstanceIds=[iid])
+The reboot helper function in utils.py will use `ec2_client.reboot_instances(InstanceIds=[iid])
 
-- To test this there is a synthetic instance_id injection code that is added to both module2e and 2f. The injection is done in the code where the ghost ip 
+- To test this there is a synthetic instance_id injection code that is added to BOTH module2e and 2f. The injection is done in the code where the ghost ip 
 addresses need to be rebooted. This effectively assigns a dummy instance_id to these synthetic ghost ips for testing the code conditional tagging and 
 branching logic. It worked out very well as detailed further below. The code is gated by an ENV variable in the .gitlab-ci.yml pipeline file. 
+The reason the synthetic instance_id has to be injected into both module2e and 2f is becasue the synthetic nature of the injection means that the 
+instance_id injected into module2e is not automatically carried through to module2f (its a fake instance_id and so there is no way to query it using the
+AWS API). 
+
+Module2f also needs the synthetic instance_id in order to append the proper tags to the ghost registry_entry. 
+
+For example, in the resurrection_install_tomcat function that actually resurrects the ghost ip:
+
+```
+    # Annotate ghost context if instance_id is None (for analytics transparency)
+    # For example, with a synthetic ghost ip injection.
+    if instance_id is None:
+        base_tags.append("no_instance_id_context")
+```
+
+And in main() of module2f ThreadPool harness:
+
+```
+    # === ThreadPool harness ===
+    with ThreadPoolExecutor(max_workers=16) as executor:  # adjust workers as needed: 4 and 8 and 16 for 16 node test 
+        future_map = {}
+
+        for uuid, entry in registry.items():
+            ip = entry.get("public_ip")
+            private_ip = entry.get("private_ip")
+            replayed_commands = entry.get("replayed_commands", [])
+            extra_tags = entry.get("tags", [])
+            res_uuid = uuid
+
+            # Reuse the original PID from module2e for forensic continuity
+            pid = entry.get("pid", os.getpid())
+
+            # InstanceId logic:
+            instance_id = entry.get("instance_id")
+            if not instance_id:
+                instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+
+            # version2 of module2f: If there is no instance_id do not use the continue as above, but let the code flow into the submit future and execute
+            # the ThreadPoolExecutor on the node.  It is highly unusual if an AWS node InstanceId cannot be fetched, but with the synthetic ghost injection
+            # for code testing, this is in fact the case. We want the synthetically injected ghost ips to fail "naturally" with an install_failed SSH connect
+            # error in the TheadPoolExecutor call to resurrection_install_tomcat rather than stub the entry as above. The stub code block is commented out for
+            # this reason. In addtion tag the registry_entry accordingly with missing_instance_ip
+            if not instance_id:
+                print(f"[module2f] Proceeding without InstanceId for {ip} (UUID {uuid}). Will attempt SSH and log clean failure if any.")
+                extra_tags = (extra_tags or []) + ["missing_instance_id"]
+                # do not use a continue after this. Let the code flow into the ThreadPoolExecutor call to resurrection_install_tomcat below.
+```
+
 
 - Similar to the AWS_ISSUE code (for nodes stuck in 1/2 status health checks) in module2 and the thread resurrection code in module2f, module2e will 
 use a batch processing to process the rebooting of all the ghost ips associated nodes in parallel. Similar to the other areas of code where this is used
@@ -1419,18 +1467,81 @@ can be purposefully malformed (InvalidFormat), a valid format uncached by AWS (u
 cached by AWS (re-using an older real retired instance_id). These will provoke different areas of the code as noted in the Validation sections below. 
 The malformed and the valid format but cached (NotFound) will provoke the error exit path of the reboot (tag will be reboot failed but module2f will still
 try to resurrect the node), and the valid format but uncached will fool the AWS API and this will test the watchdog timeout code in the reboot code of module2e
-for the ghost ip handler. As noted above it is serialized reboots in the inital coding which takes a lot of time. This will be refactored with batch processsing
-as indicated in a section below to save a lot of time in the reboot process of module2e for ghost ip nodes.
+(the ghost ip handler of module2e and utils.py). As noted above it is serialized reboots in the inital coding which takes a lot of time. 
+This will be refactored with batch processsing as indicated in a section below to save a lot of time in the reboot process of module2e for ghost ip nodes.
 
-- The uncached version of the synthetic  instance_id is required to test the batch code optimization.
+- The uncached version of the synthetic instance_id is required to test the batch code optimization. The AWS API has to be fooled with a completely 
+legitimate (I am using formerly terminated/retired nodes) that has not been cached yet by AWS. This causes the code to loop and poll for a watchdog timeout
+period of 300 seconds for each node (polling every 15 seconds). The polling consists of the code below:
+
+```
+         if statuses:
+                inst_status = statuses[0]["InstanceStatus"]["Status"]
+                sys_status = statuses[0]["SystemStatus"]["Status"]
+                if inst_status == "ok" and sys_status == "ok":
+                    print(f"[utils] Instance {instance_id} passed 2/2 checks")
+                    return True
+```
+
+The reboot function will be reviewed in detail in the Coding section below.  The reboot function is called from the ghost handler in module2e for each ghost
+ip in the registry, and this is intially done in a serial fashion.  Once the code is refactored to do this in parallel using batch processing (ThreadPoolExecutor),
+it will need to be tested with a valid instance_id that has not been cached yet by AWS. The details of this testing will be presented in the Validation section
+below.
 
 
 
-#### Validation of multi-threaded resurrection module2f(added code to support restart, etc.) with ghost threads
+#### Code changes
 
-#### Validation of multi-threaded resurrection module2f(added code to support restart,etc.)  with ghost threads and HYBRID futures crashes 
+##### utils.py helper functions (2 of them)
 
-#### Validation of multi-threaded resurrection module2f (added code to support restart, etc.) with ghost threads, HYBRID crashes and install_success with 50 nodes
+
+##### import modifications in module2e and module2f
+
+
+##### module2e ghost handler code changes (serialized implementation for reboot)
+
+
+##### module2e ghost handler code changes (multi-threaded batch processing implementation for reboot)
+
+
+##### module2e and 2f added code for synthetic instance_id injection
+
+
+##### .gitlab-ci.yml code ENV variable to gate the synthetic instance_id injection
+
+
+
+
+#### Validation
+
+The validation for this code is a bit challenging because ghost ip addresses are very hard to reproduce in the real life setting. I have seen them several
+times but that is over hundreds of pipelined tests with various number of nodes.  Typically when they occur, it is when hyper-scaling (512 processes), but 
+I have seen them outside of this scenario.
+
+The validation involves various forms of the synthetic instance_id to fire up the desired code path in module2e's ghost handler.
+
+In addtion, the validation consists of testing batch reboot processing as well.
+
+Some of the test cases are highlighted below.
+
+
+
+##### Validation with malformed instance_id (serail restart implementation)
+
+
+##### Validation with valid instance_id but cached (serial restart implementation)
+
+
+##### Validation with valid instance_id and not cached (serail restart implementation)
+
+
+
+
+##### Validation of multi-threaded resurrection module2f(with module2e multi-threaded restart, etc.) with ghost threads
+
+##### Validation of multi-threaded resurrection module2f(with module2e multi-threaded restart, etc.)  with ghost threads and HYBRID futures crashes 
+
+##### Validation of multi-threaded resurrection module2f(with module2e multi-threaded restart, etc.) with ghost threads, HYBRID crashes and install_success with 50 nodes
 
 
 
