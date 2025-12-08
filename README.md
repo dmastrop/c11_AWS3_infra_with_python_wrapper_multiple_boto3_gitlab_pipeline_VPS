@@ -1414,7 +1414,8 @@ AWS API).
 
 Module2f also needs the synthetic instance_id in order to append the proper tags to the ghost registry_entry. 
 
-For example, in the resurrection_install_tomcat function that actually resurrects the ghost ip:
+For example, in the resurrection_install_tomcat function that actually resurrects the ghost ip uses instance_id to determine if a tag of no_instance_id_context and
+missing_instance_id needs to be added to the tags for that registry_entry
 
 ```
     # Annotate ghost context if instance_id is None (for analytics transparency)
@@ -1488,9 +1489,15 @@ ip in the registry, and this is intially done in a serial fashion.  Once the cod
 it will need to be tested with a valid instance_id that has not been cached yet by AWS. The details of this testing will be presented in the Validation section
 below.
 
+Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
+and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
+mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
+code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
 
 
-#### Code changes
+
+
+#### Code changes for serailized version
 
 ##### utils.py helper functions (2 of them)
 
@@ -1501,8 +1508,6 @@ below.
 ##### module2e ghost handler code changes (serialized implementation for reboot)
 
 
-##### module2e ghost handler code changes (multi-threaded batch processing implementation for reboot)
-
 
 ##### module2e and 2f added code for synthetic instance_id injection
 
@@ -1512,7 +1517,19 @@ below.
 
 
 
-#### Validation
+
+
+#### Code changes for multi-threaded reboots
+
+Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
+and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
+mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
+code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
+
+
+
+
+#### Validation for serailized reboot version
 
 The validation for this code is a bit challenging because ghost ip addresses are very hard to reproduce in the real life setting. I have seen them several
 times but that is over hundreds of pipelined tests with various number of nodes.  Typically when they occur, it is when hyper-scaling (512 processes), but 
@@ -1520,13 +1537,12 @@ I have seen them outside of this scenario.
 
 The validation involves various forms of the synthetic instance_id to fire up the desired code path in module2e's ghost handler.
 
-In addtion, the validation consists of testing batch reboot processing as well.
 
 Some of the test cases are highlighted below.
 
 
 
-##### Validation with malformed instance_id (serail restart implementation)
+##### Validation with malformed instance_id (serial restart implementation)
 
 
 ##### Validation with valid instance_id but cached (serial restart implementation)
@@ -1536,14 +1552,26 @@ Some of the test cases are highlighted below.
 
 
 
+#### Validation for multi-threaded reboots (dcoupling the reboot code from the bucketization and process handler code)
 
-##### Validation of multi-threaded resurrection module2f(with module2e multi-threaded restart, etc.) with ghost threads
+Note that this approach still uses the exact same reboot helper functions in utils.py that the serailized version uses. So the basic testing with malformed instance_id,
+valid instance_id cached, and valid instance_id not cached will have the same results. Those tests are regression tested below
+To understand this from a code perspective please see the Code review section above under the multi-threaded batch implemenation section.
 
-##### Validation of multi-threaded resurrection module2f(with module2e multi-threaded restart, etc.)  with ghost threads and HYBRID futures crashes 
-
-##### Validation of multi-threaded resurrection module2f(with module2e multi-threaded restart, etc.) with ghost threads, HYBRID crashes and install_success with 50 nodes
+##### Validation with malformed instance_id (multi-threaded restart implementation), ghost ips only
 
 
+##### Validation with valid instance_id but cached (multi-threaded restart implementation), ghost ips only
+
+
+##### Validation with valid instance_id and not cached (multi-threaded restart implementation), ghost ips only
+
+
+##### Validation with module2e multi-threaded restar with ghost ips and HYBRID futures crashes 
+
+##### Validation with module2e multi-threaded restartwith ghost ips, HYBRID crashes and install_success with 50 nodes
+
+So 4 different types idx1 (resurrection but no reboot, in module2e file) , post install futures crash (no resurrection, no reboot and not in module2e file), ghosts ( reboot and resurrection and in module2e file) , install_success (no resurrection and no reboot and wont be in the module2e file)
 
 
 
