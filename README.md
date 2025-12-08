@@ -173,7 +173,7 @@ artifact logs per pipeline)
 
 - Update part 43 Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization. 
 
-- Update part 44 Phase 3f: Parts 3,4, and 5: Requeing and resurrecting ghost threads. Maching Learning (Phase4 Ml) Preview
+- Update part 44 Phase 3f: Parts 3,4, and 5: Requeing and resurrecting ghost threads. Machine Learning (Phase4 Ml) Preview
 
 
 
