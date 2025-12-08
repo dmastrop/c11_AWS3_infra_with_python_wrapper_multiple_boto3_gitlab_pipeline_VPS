@@ -332,9 +332,14 @@ def post_aggregate_registry_analysis():
 def resurrection_gatekeeper():
     run_module("/aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py")
 
-#### This is module2e for the Phase3 reque and resurrection code
+##### This is module2e for the Phase3 reque and resurrection code. The reboot is serial and slow here.
+#def reque_and_resurrect():
+#    run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py")
+
+#### This is module2e for the Phase3 reque and resurrection code. This version2 is multi-threaded reboot code prior to the hand off to module 2f below
 def reque_and_resurrect():
-    run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py")
+    run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py")
+
 
 ##### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function
 #def resurrection_install_tomcat():
