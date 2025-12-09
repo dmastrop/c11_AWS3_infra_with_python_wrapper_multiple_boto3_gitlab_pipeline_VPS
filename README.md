@@ -55,10 +55,16 @@ Use the latest timestamp python file.
 
 - module2d has the resurrection_gatekeeper code in it that converges on resurrection gatekeeper decisions for each of the threads in the execution run.
 
-- module2e has specialized post-registry processing code to append the command list and some other tags to the threads that require reque and resurrection. This module uses module2d registry as its input
+- module2e has specialized post-registry processing code to append the command list and some other tags to the threads that require reque and resurrection. 
+This module uses module2d registry as its input. Module2e pares down the original module2d for resurrection candidates and then further processes and retains 
+the same list of registry_entrys, bucketizes them based upon crash type or if a ghost ip, and then attempts reboots on certain types (bucket types) and appends a 
+reboot_context tag prior to passing them off for resurrection in module2f. Module 2e has thread specific handlers to do this. The handlers do not do the 
+reboot. The reboot is decoupled so that it can be used for any crash type/any handler. The reboot process has been refactored as multi-threaded. Module2e
+never modifies the status of a registry_entry. Module2 and 2f have the complex logic to do that.
 
-- module2f has a refactored thread level function for the agnostic command level execution on the nodes, and the orchestrator that processes the module2e processed 
-registry and replays the commands on the threads to resurrect the threads.
+- module2f has a refactored thread level function (multi-threaded) for the agnostic command level execution on the nodes, and the orchestrator that processes the 
+module2e processed registry and replays the commands on the threads to resurrect the threads. The final status of each registry_entry is updated only in module2f
+and never in module2e
 
 
 All of the modules report extensive statistics json log files as part of the gitlab pipeline artifact export. 
@@ -173,7 +179,11 @@ artifact logs per pipeline)
 
 - Update part 43 Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization. 
 
-- Update part 44 Phase 3f: Parts 3,4, and 5: Requeing and resurrecting ghost threads. Machine Learning (Phase4 Ml) Preview
+- Update part 44 Phase 3f: Parts 3,4a: Requeing and resurrectng ghost threads
+
+- Update part 45 Phase 3g: Machine Learning (Phase4 ML) Preview
+
+- Update part 46 Phase 3h: Parts 4b, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging
 
 
 
@@ -209,17 +219,399 @@ STATUS_TAGS = {
 }
 ```
 
-## UPDATES part 44: Phase 3f: Parts 3,4, and 5: Requeing and resurrecting ghost threads. Machine Learning (Phase4 ML) Preview.
+- The reboot function will be reviewed in detail in the Coding section below.  The reboot function is called from the ghost handler in module2e for each ghost
+ip in the registry, and this is intially done in a serial fashion.  Once the code is refactored to do this in parallel using batch processing (ThreadPoolExecutor),
+it will need to be tested with a valid instance_id that has not been cached yet by AWS. The details of this testing will be presented in Part4b
+
+- Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
+and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
+mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
+code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
+
+
+
+
+
+## UPDATES part 46: Phase 3h: Parts 4b, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging
+
 
 ### Introduction
 
 Because of the inherent complexities in ghost resurrection and especially when trying to validate this type of code, the development has to be done in several
 succesive parts.
 
-The last update focused on Parts 1 and 2. This update focuses in on Parts 3-5 of the implementation and also has a section on the the transition to Phase4 
-ML using the groundwork of these changes made in Phase3.
+The last update focused on Parts 1 and 2. This update focuses in on Parts 3 and 4a of the implementation
 
 
+- Part1 consists of testing the existing code as is to ensure that the module2d to 2e to 2f basic processing of ghost ips is intact
+
+- Part2 consists of addressing the code so that the synthetic ghost ip tests produce and install_failed registry_entry and tag the registry_entry with the correct
+faliure tags (in this case an SSH timeout). Most importantly, this part of the implemenation tests the code if the node does not have an AWS InstanceId. While this
+is extremely rare in real life, with the synthetic ghost ip injection this is always true. So the registry has to indicate that the "no instance id" code is being
+exercised rather than the "instance id present" code (a real life ghost will have an AWS InstanceId in almost all circumstances). The major change in Part2 is that
+the code will now call the ThreadPoolExecutor even if the InstanceId is not avaiable. It will try to resurrect the ghost ip node.   If the InstanceId is avaiable, see
+Parts 4 and 5 below.(The node will be rebooted and then the resurrection will be attempted).
+
+- Part3 consists of adding a small helper function like `log_ghost_context(entry, reason)` to append ghost‑specific context tags (`ghost_context:no_instance_id`, `ghost_context:health_checks_not_ok`, etc.) without changing status.
+   - This keeps ghost failures analytically distinct from normal SSH failures, for example. Ghosts are a unique type of issue and this helps in the forensic analysis
+of such nodes.
+
+
+- Part4a consists of the reboot code. Ghosts will always be rebooted (restarted as opposed to stop/start; thus the ip address will stay the same). This is for the
+case where the InstanceId is available for the ghost node. This is the typical node scenario.   This code has to borrow some of the code from module2 to ensure
+that the ghost node comes up cleanly after the reboot.
+   - Use `ec2_client.reboot_instances(InstanceIds=[iid])`.
+   - Then wait for the node to be healthy before attempting SSH.
+   - Borrow a simplified watchdog loop from the module2  AWS_ISSUE code (visibility → running → optional 2/2 checks).
+
+- Part4b consists of the multi-threaded version of the reboot code.
+   - Batch reboot is possible if multiple ghosts resolve to real instance IDs. The batch code approach was implemented in module2 for the AWS_ISSUE (nodes stuck in status 0/2 or 1/2 state) and tested out successfully.
+
+- Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
+as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
+
+
+
+
+### Part4b: Reboot code and health check code: Multi-threaded batch processing of reboots and health checks, and adding the reboot_context tagging
+
+#### Introduction
+
+Similar to the resurrection code in module2f, if there is a large number of ghost ips or threads that need to be rebooted during module2e processing, the
+serialized approach can take a very long time. The watchdog timeout for the reboot code is currently set to 300 seconds so for 8 ghost ips, it will add on
+40 minutes to the total execution time. This is not acceptable.
+
+Using the ThreadPoolExecutor resolves this issue. 
+
+In addtion, a reboot_context tag will be added as well to indicate the nature of the reboot result.
+
+
+
+
+#### High level code approach and Code implemenation details
+
+
+
+Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
+and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
+mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
+code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
+
+- In general the handlers are used to tag and pre-process the various bucket types prior to module2f resurrection. They do not perform the reboot. This 
+decoupling of the reboot code permits the reboot code to be used with any resurrection bucket type. Right now ghosts are always rebooted but there may be
+new or different or even existing bucket types (IDX1 futures crashes, for example that were tested in a previous UPDATE) that require rebooting of the node.
+
+- In addition, module2e will never change the status of a registry_entry. That is only done in module2 or module2f (resurrected threads). The decison logic to assign
+status is complex and cannot be performed by the other modules. 
+
+Here are the main items to note in this latest code implementation. These code changes will carry forward to Phase4 ML extremely well. The extensive tagging
+architecture of this design makes it highly suitable for ML. The reboot_context is just one more additonal tagging context added to the long list of others.
+Understanding this high level architecture prior to reviewing the Code in the next section will make it much easier to understand.
+
+##### Registry persistence
+- The **updated registry** (`resurrection_module2e_registry_rebooted.json`) has the **same number of entries** as the original `resurrection_module2e_registry.json`.
+- Nothing is removed. Every candidate that module2e marked for resurrection stays in the list.
+- The only difference is that reboot‑eligible entries (`pre_resurrection_reboot_required == True`) get **extra tags** (`reboot_context:*`) and a `timestamp_reboot_stage`.
+
+
+##### Reboot context vs. readiness
+- `reboot_context:initiated` → reboot started, but no outcome yet.
+- `reboot_context:reboot_failed` → AWS reboot call failed (e.g. malformed ID).
+- `reboot_context:health_checks_not_ok` → reboot succeeded but health checks didn’t pass.
+- `reboot_context:ready` → reboot + health checks succeeded.
+
+The **`not_ready` list** is just a diagnostic: entries that were initiated but didn’t reach any of the terminal tags. They’re still left in the registry, and there is 
+only a gitlab log console warning.
+
+
+##### Status mutation
+- In this design, **module2e never changes `status`** based on reboot outcome.  
+- Even if reboot fails or health checks fail, the entry’s `status` remains whatever the handler was given from the module2d registry 
+(bucket handlers such as `ghost`, `idx1`, etc.).
+- That’s intentional: resurrection outcome logic belongs in **module2f** (`resurrection_install_tomcat`), not in module2e.
+
+
+##### Module2e flow into module2f
+- Module2f consumes the rebooted registry file.  
+- Every entry is attempted for resurrection, regardless of reboot tags.  
+- If a node is stuck in reboot or fails health checks, module2f will empirically fail it during resurrection.  
+- That keeps the separation clean: module2e = classification + reboot attempt, module2f = resurrection + final status.
+- Handlers in module2e do not perform the reboot attempt. The decoupling of the reboot code from the handlers was an intentional code change so that any present
+or future handlers have the option to reboot the node if required. Handler processing is done serially and integrating a multi-threaded reboot process into
+serailized handlers would have been very messy.
+
+
+
+
+
+
+#### Code changes for multi-threaded reboots (final version)
+
+
+The code changes occur in four areas. As indicated below the code changes to mult-thread the reboots and perform reboot_context tagging are extensive. This are
+in line with the Code implemenation details above.
+
+##### Module2e multi-threading reboot and reboot_context tagging post processing block
+
+This code has to be added after the module2e first pass json registry file is written to disk. This code takes the module2e registry listing of resurrection
+candidates that have been bucketized by the handlers and further processes it with an attempted reboot and updated reboot_context tags.
+
+
+
+##### Removal of the reboot code from the ghost handler process_ghost
+
+In line with the approach to decouple the reboot code from the handlers, this was very easy to do. So far, the only handler that had the reboot code was
+the process_ghost ghost handler. The changes are indicated below.
+
+##### utils.py
+
+The original core reboot function and health check function used for the serail prototype version in Part4a stays exactly the same. As such during the validation
+testing of various instance_id types the gitlab console error messages should be exactly the same. This will be reviewed in further detail in the Validation section
+further below.
+
+
+##### Module2f input file from module2e
+
+This file need to be changed to the module2e registry json file that has been post processed by the reboot code in module2e. This will have the reboot_context
+tags appended to any registry_entrys that were rebooted so that the module2f has an awareness of what occurred to the registry_entry.
+
+The MODULE2E_FILE simply needs to be changed from resurrection_module2e_registry.json to resurrection_module2e_registry_rebooted.json
+
+
+
+
+
+
+
+
+#### Validation for multi-threaded reboots (dcoupling the reboot code from the bucketization and process handler code)
+
+Note that this approach still uses the exact same reboot helper functions in utils.py that the serailized version uses. So the basic testing with malformed instance_id,
+valid instance_id cached, and valid instance_id not cached will have the same results. Those tests are regression tested below
+To understand this from a code perspective please see the Code review section above under the multi-threaded batch implemenation section.
+
+##### Validation with malformed instance_id (multi-threaded restart implementation), ghost ips only
+
+
+##### Validation with valid instance_id but cached (multi-threaded restart implementation), ghost ips only
+
+
+##### Validation with valid instance_id and not cached (multi-threaded restart implementation), ghost ips only
+
+
+##### Validation with module2e multi-threaded restar with ghost ips and HYBRID futures crashes 
+
+##### Validation with module2e multi-threaded restartwith ghost ips, HYBRID crashes and install_success with 50 nodes
+
+So 4 different types idx1 (resurrection but no reboot, in module2e file) , post install futures crash (no resurrection, no reboot and not in module2e file), ghosts ( reboot and resurrection and in module2e file) , install_success (no resurrection and no reboot and wont be in the module2e file)
+
+
+
+### Part5:
+
+
+
+
+
+
+
+
+
+## UPDATES part 45: Phase 3g: Machine Learning (Phase4 ML) Preview
+
+
+### A look ahead at Machine Learning implementation (Phase4 of the project): Phase3 to Phase4 Readiness
+
+
+The 50‑node regression test demonstrates that the orchestration pipeline has matured to the point where it produces **structured, discriminative signals** suitable for machine learning. While Phase3 is still evolving (e.g., reboot logic, health‑check tagging), the current implementation already provides ML‑ready features.
+
+#### Signals Established in Phase3
+- **Ghost context tagging**  
+  - `ghost_context:no_instance_id` consistently applied in module2e and carried through module2f.  
+  - Provides forensic lineage that distinguishes synthetic ghost timeouts from genuine SSH failures.  
+  - Enables categorical features for ML models to separate ghost vs. non‑ghost outcomes.
+
+- **Resurrection reason arrays**  
+  - Human‑readable lineage such as `"Idx1 futures crash detected, requeued with full command set"`.  
+  - Can be parsed into structured features (e.g., crash type, resurrection path) for supervised learning.
+
+- **Registry lifecycle consistency**  
+  - Deterministic tagging across modules (`install_success`, `install_failed`, `future_exception`, `ghost`).  
+  - Ensures reproducible signals for model training and validation.
+
+- **Aggregate statistics JSONs**  
+  - Resurrection rate, gatekeeper rate, candidate counts.  
+  - Provide baseline metrics for ML drift detection and model calibration.
+
+#### Relevance to  ML
+- **Feature engineering**: Tags and resurrection reasons can be converted into categorical and textual features.  
+- **Labeling**: Status fields (`install_success`, `install_failed`) serve as ground‑truth labels for supervised models.  
+- **Lineage tracking**: Ghost context ensures models don’t confuse synthetic test failures with real infrastructure failures.  
+- **Validation**: Aggregate statistics present a way to benchmark ML predictions against deterministic outcomes.
+
+
+#### Sample ML Feature Table
+
+| Feature Name              | Source (Registry Field/Tag)                          | Example Value(s)                          | ML Use Case |
+|---------------------------|------------------------------------------------------|-------------------------------------------|-------------|
+| **status**                | `status`                                             | `install_success`, `install_failed`, `ghost` | Label (ground truth for supervised learning) |
+| **attempt_count**         | `attempt`                                            | `0`, `-1`                                 | Numeric feature for resilience modeling |
+| **is_ghost**              | `tags` contains `"ghost"`                            | `True` / `False`                          | Binary feature to separate synthetic vs real |
+| **ghost_context**         | `tags` contains `"ghost_context:*"`                  | `no_instance_id`, `reboot_failed`         | Categorical feature for ghost lineage |
+| **error_type**            | `tags` contains error markers                        | `TimeoutError`, `RuntimeError`            | Failure classification |
+| **resurrection_reason**   | `resurrection_reason` array                          | `"Idx1 futures crash detected..."`        | Text feature (can be tokenized for ML) |
+| **command_count**         | `replayed_commands` length                           | `5`                                       | Numeric feature for workload complexity |
+| **pre_reboot_required**   | `pre_resurrection_reboot_required`                   | `True` / `False`                          | Binary feature for reboot path prediction |
+| **gatekeeper_action**     | `tags` contains `"gatekeeper_resurrect"` or `"gatekeeper_blocked"` | `resurrect`, `blocked`                    | Outcome classification |
+| **ip_rehydrated**         | `tags` contains `"ip_rehydrated"`                    | `True` / `False`                          | Feature for network lineage |
+| **timestamp_delta**       | Difference between `timestamp` and crash time        | `120s`, `300s`                            | Numeric feature for time‑to‑resurrection modeling |
+
+- **Labels**: `status` is the ground truth (success vs. failure).  
+- **Categorical features**: Tags like `ghost_context:no_instance_id` or `RuntimeError` become categorical inputs.  
+- **Numeric features**: Attempt counts, command counts, and time deltas give quantitative signals.  
+- **Text features**: Resurrection reasons can be tokenized into keywords (e.g., “Idx1”, “future_exception”) for ML models.  
+
+
+
+#### Example ML-ready Row (from the 50‑node test)
+
+| status          | attempt_count | is_ghost | ghost_context     | error_type   | resurrection_reason                          | command_count | pre_reboot_required | gatekeeper_action | ip_rehydrated | timestamp_delta |
+|-----------------|---------------|----------|------------------|--------------|---------------------------------------------|---------------|---------------------|------------------|---------------|----------------|
+| install_failed  | -1            | True     | no_instance_id   | TimeoutError | Ghost entry: resurrection always attempted   | 5             | False               | resurrect        | False         | 300s           |
+
+
+This example ML-ready row table shows how the registry JSON (the data presented earlier are from json logs that have been exported by the gitlab pipeline as
+artifacts) can be flattened into ML‑ready rows. Each row is one thread/IP, each column is a feature. 
+
+Models can then learn patterns like “ghost_context:no_instance_id + TimeoutError → always fails” or “Idx1 futures crash + reboot_required → often succeeds.”
+
+This pattern and signature learning provides enormous predictive capability to the ML state machine.
+
+
+
+#### Predictive vs Explanatory Feature Grouping
+
+| Feature Name              | Predictive Role (helps forecast outcomes)             | Explanatory Role (helps explain lineage) |
+|---------------------------|------------------------------------------------------|------------------------------------------|
+| **status**                | Label (ground truth for supervised learning)         | Shows final outcome (success/failure/ghost) |
+| **attempt_count**         | Predicts resilience (multiple retries vs immediate fail) | Explains how many resurrection attempts were made |
+| **is_ghost**              | Predicts likelihood of timeout/failure               | Explains synthetic vs real infrastructure |
+| **ghost_context**         | Predicts failure modes (no_instance_id → always fail) | Explains why ghost failed (synthetic injection) |
+| **error_type**            | Predicts failure class (TimeoutError vs RuntimeError) | Explains runtime exception lineage |
+| **resurrection_reason**   | Predicts success likelihood (Idx1 crash vs post‑install crash) | Explains why resurrection was attempted |
+| **command_count**         | Predicts workload complexity (more commands → higher risk) | Explains what was replayed during resurrection |
+| **pre_reboot_required**   | Predicts success/failure depending on reboot path     | Explains whether reboot was part of the plan |
+| **gatekeeper_action**     | Predicts resurrection vs block decision               | Explains why candidate was allowed/blocked |
+| **ip_rehydrated**         | Predicts recovery likelihood (rehydrated IPs often succeed) | Explains network lineage and recovery path |
+| **timestamp_delta**       | Predicts time‑to‑resurrection success rate            | Explains how long recovery took |
+
+Predictive Features
+These are the ones ML models will use to **forecast outcomes**:
+- `is_ghost`, `ghost_context`, `error_type`, `pre_reboot_required`, `command_count`, `timestamp_delta`.
+
+Explanatory Features
+These are the ones ML models (and users via the logs) will use to **explain lineage**:
+- `resurrection_reason`, `gatekeeper_action`, `ip_rehydrated`, `tags`.
+
+Relevance to the ML design:
+- **Predictive features** feed into the ML state machine to forecast whether a resurrection attempt will succeed.  
+- **Explanatory features** provide forensic clarity and can be used for model interpretability (e.g., SHAP values, feature importance plots).  
+- Together, they ensure your ML pipeline isn’t a black box — it predicts outcomes *and* explains them in terms of registry lineage.
+
+With this grouping, one can now see how Phase3’s structured tags and registry lifecycle are already producing both predictive and explanatory signals. 
+Once reboot and health‑check logic are added in Part4/5 (and this will be extended to other handlers beyhond just ghosts), this will enrich both sides: 
+new predictive features (`reboot_failed`, `health_checks_not_ok`) and new explanatory lineage for why a resurrection failed.
+
+
+
+#### For the ghost processing example .....
+
+ Key Additions in Phase3 that will be used for Phase4 ML
+- **Reboot path**: If `pre_resurrection_reboot_required=True`, the resurrection attempt first goes through a reboot outcome check.  
+  - Success → continue with command replay.  
+  - Failure → tag with `ghost_context:reboot_failed`.  
+- **Health checks**: After reboot or command replay, health checks validate service state.  
+  - Success → `status=install_success`.  
+  - Failure → tag with `ghost_context:health_checks_not_ok`.  
+- **Ghost lineage**: Synthetic ghosts (`no_instance_id`) and real ghosts with missing IDs are tagged distinctly, so ML can learn to separate them.  
+- **Command replay logic**: Some commands can be repeated safely, others may require reboot instead of replay. This branching will be encoded in tags, avoiding cumbersome whitelists.
+
+
+Relevance for  ML
+- **Predictive signals**: `pre_resurrection_reboot_required`, `ghost_context:reboot_failed`, `ghost_context:health_checks_not_ok`.  
+- **Explanatory lineage**: Registry entries now show *why* a resurrection failed (no ID, reboot failed, health check failed).  
+- **State transitions**: ML can model the probability of success at each branch (ghost vs real, reboot vs replay, health check pass vs fail).  
+
+
+
+#### Final Phase3 to Phase4 high level plan
+
+Phase4 ML will extend the  current deterministic pipeline into a **state machine** where every branch is tagged. That tagging is what makes ML feasible — the model 
+won’t just see “install_failed,” it will see *why* it failed, and learn patterns across thousands of runs.
+
+Phase3
+- **Purpose**: Build the deterministic pipeline and add **all the tagging logic**.  
+- Examples:  
+  - Ghost context tags (`ghost_context:no_instance_id`, etc.).  
+  - Resurrection reason arrays.  
+  - Reboot flags (`pre_resurrection_reboot_required`).  
+  - Health‑check outcomes (coming in Part4/5).  
+- **Result**: Every registry entry is fully annotated with lineage, context, and outcome.  
+
+Phase3 is *laying down the forensic signals*. In the absence of ML, just  making sure the data is rich, consistent, and traceable. And most importantly, 
+consumable by the ML state machine.
+
+Phase4
+- **Purpose**: Use those tags and registry entries as **training data** for ML.  
+- **What ML will do**:  
+  - Flatten registry JSONs into rows (like the long feature table example for the ghost case, above).  
+  - Treat `status` as the ground‑truth label (success/failure).  
+  - Use tags, resurrection reasons, reboot flags, and error types as **features**.  
+  - Learn patterns like:  
+    - Ghosts with `no_instance_id` → always fail.  
+    - IDX1 crashes with reboot → often succeed.  
+    - Certain error types + command counts → higher risk of failure.  
+- **Result**: ML can predict the probability of success for each resurrection attempt, and even suggest whether to replay commands, reboot, or block.
+
+The code becomes self adaptive, self learning, self correcting and self optimizing based upon incoming tagged data that it has learned to "read" and predict 
+outcomes from.
+
+
+The importance of registry_entry tagging
+- **tagging is the key**. Without tags, ML would just see “install_failed” vs “install_success” with no context. With tags, ML sees *why* it failed or succeeded, 
+which makes predictions meaningful and interpretable.
+
+Why tagging matters across all handlers (module2e handlers are essentially the resurrection bucket types that prep the registry_entry for the resurrection in 
+module2f)
+- **Consistency**: Every handler produces lineage in the same “language” (`ghost_context:*`, `reboot_failed`, `health_checks_not_ok`).  
+- **ML readiness**: Models don’t care which bucket a thread came from — they learn patterns across tags.  
+- **Forensic clarity**: Humans can trace why a resurrection failed, regardless of bucket type.  
+
+
+
+
+#### Summary
+
+- **Phase3 = deterministic tagging + code logic. Consumable for training**
+- **Phase4 = ML overlay that learns from those tags and outcomes.**
+
+
+
+
+
+
+
+
+
+
+## UPDATES part 44: Phase 3f: Parts 3,4a: Requeing and resurrecting ghost threads
+
+### Introduction
+
+Because of the inherent complexities in ghost resurrection and especially when trying to validate this type of code, the development has to be done in several
+succesive parts.
+
+The last update focused on Parts 1 and 2. This update focuses in on Parts 3 and 4a of the implementation 
 
 
 - Part1 consists of testing the existing code as is to ensure that the module2d to 2e to 2f basic processing of ghost ips is intact
@@ -235,17 +627,19 @@ Parts 4 and 5 below.(The node will be rebooted and then the resurrection will be
    - This keeps ghost failures analytically distinct from normal SSH failures, for example. Ghosts are a unique type of issue and this helps in the forensic analysis
 of such nodes.
 
-- A section detailing the transition plan from Phase3 to Phase4 ML is interjected between Parts 3 and 4.
 
-- Part4 consists of the reboot code. Ghosts will always be rebooted (restarted as opposed to stop/start; thus the ip address will stay the same). This is for the
+- Part4a consists of the reboot code. Ghosts will always be rebooted (restarted as opposed to stop/start; thus the ip address will stay the same). This is for the
 case where the InstanceId is available for the ghost node. This is the typical node scenario.   This code has to borrow some of the code from module2 to ensure
 that the ghost node comes up cleanly after the reboot.
    - Use `ec2_client.reboot_instances(InstanceIds=[iid])`.
    - Then wait for the node to be healthy before attempting SSH.
    - Borrow a simplified watchdog loop from the module2  AWS_ISSUE code (visibility → running → optional 2/2 checks).
+
+- Part4b consists of the multi-threaded version of the reboot code.
    - Batch reboot is possible if multiple ghosts resolve to real instance IDs. The batch code approach was implemented in module2 for the AWS_ISSUE (nodes stuck in status 0/2 or 1/2 state) and tested out successfully.
 
-- Part5 for this InstanceId available path of the code: call the resurrection_install_tomcat and reque the ghost for command replay and resurrection.
+- Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
+as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
 
 
@@ -1213,189 +1607,24 @@ into the infrastructure that has been created in Phases 1-3.
 
 
 
-### A look ahead at Machine Learning implementation (Phase4 of the project): Phase3 to Phase4 Readiness
 
-
-The 50‑node regression test demonstrates that the orchestration pipeline has matured to the point where it produces **structured, discriminative signals** suitable for machine learning. While Phase3 is still evolving (e.g., reboot logic, health‑check tagging), the current implementation already provides ML‑ready features.
-
-#### Signals Established in Phase3
-- **Ghost context tagging**  
-  - `ghost_context:no_instance_id` consistently applied in module2e and carried through module2f.  
-  - Provides forensic lineage that distinguishes synthetic ghost timeouts from genuine SSH failures.  
-  - Enables categorical features for ML models to separate ghost vs. non‑ghost outcomes.
-
-- **Resurrection reason arrays**  
-  - Human‑readable lineage such as `"Idx1 futures crash detected, requeued with full command set"`.  
-  - Can be parsed into structured features (e.g., crash type, resurrection path) for supervised learning.
-
-- **Registry lifecycle consistency**  
-  - Deterministic tagging across modules (`install_success`, `install_failed`, `future_exception`, `ghost`).  
-  - Ensures reproducible signals for model training and validation.
-
-- **Aggregate statistics JSONs**  
-  - Resurrection rate, gatekeeper rate, candidate counts.  
-  - Provide baseline metrics for ML drift detection and model calibration.
-
-#### Relevance to  ML
-- **Feature engineering**: Tags and resurrection reasons can be converted into categorical and textual features.  
-- **Labeling**: Status fields (`install_success`, `install_failed`) serve as ground‑truth labels for supervised models.  
-- **Lineage tracking**: Ghost context ensures models don’t confuse synthetic test failures with real infrastructure failures.  
-- **Validation**: Aggregate statistics present a way to benchmark ML predictions against deterministic outcomes.
-
-
-#### Sample ML Feature Table
-
-| Feature Name              | Source (Registry Field/Tag)                          | Example Value(s)                          | ML Use Case |
-|---------------------------|------------------------------------------------------|-------------------------------------------|-------------|
-| **status**                | `status`                                             | `install_success`, `install_failed`, `ghost` | Label (ground truth for supervised learning) |
-| **attempt_count**         | `attempt`                                            | `0`, `-1`                                 | Numeric feature for resilience modeling |
-| **is_ghost**              | `tags` contains `"ghost"`                            | `True` / `False`                          | Binary feature to separate synthetic vs real |
-| **ghost_context**         | `tags` contains `"ghost_context:*"`                  | `no_instance_id`, `reboot_failed`         | Categorical feature for ghost lineage |
-| **error_type**            | `tags` contains error markers                        | `TimeoutError`, `RuntimeError`            | Failure classification |
-| **resurrection_reason**   | `resurrection_reason` array                          | `"Idx1 futures crash detected..."`        | Text feature (can be tokenized for ML) |
-| **command_count**         | `replayed_commands` length                           | `5`                                       | Numeric feature for workload complexity |
-| **pre_reboot_required**   | `pre_resurrection_reboot_required`                   | `True` / `False`                          | Binary feature for reboot path prediction |
-| **gatekeeper_action**     | `tags` contains `"gatekeeper_resurrect"` or `"gatekeeper_blocked"` | `resurrect`, `blocked`                    | Outcome classification |
-| **ip_rehydrated**         | `tags` contains `"ip_rehydrated"`                    | `True` / `False`                          | Feature for network lineage |
-| **timestamp_delta**       | Difference between `timestamp` and crash time        | `120s`, `300s`                            | Numeric feature for time‑to‑resurrection modeling |
-
-- **Labels**: `status` is the ground truth (success vs. failure).  
-- **Categorical features**: Tags like `ghost_context:no_instance_id` or `RuntimeError` become categorical inputs.  
-- **Numeric features**: Attempt counts, command counts, and time deltas give quantitative signals.  
-- **Text features**: Resurrection reasons can be tokenized into keywords (e.g., “Idx1”, “future_exception”) for ML models.  
-
-
-
-#### Example ML-ready Row (from the 50‑node test)
-
-| status          | attempt_count | is_ghost | ghost_context     | error_type   | resurrection_reason                          | command_count | pre_reboot_required | gatekeeper_action | ip_rehydrated | timestamp_delta |
-|-----------------|---------------|----------|------------------|--------------|---------------------------------------------|---------------|---------------------|------------------|---------------|----------------|
-| install_failed  | -1            | True     | no_instance_id   | TimeoutError | Ghost entry: resurrection always attempted   | 5             | False               | resurrect        | False         | 300s           |
-
-
-This example ML-ready row table shows how the registry JSON (the data presented earlier are from json logs that have been exported by the gitlab pipeline as
-artifacts) can be flattened into ML‑ready rows. Each row is one thread/IP, each column is a feature. 
-
-Models can then learn patterns like “ghost_context:no_instance_id + TimeoutError → always fails” or “Idx1 futures crash + reboot_required → often succeeds.”
-
-This pattern and signature learning provides enormous predictive capability to the ML state machine.
-
-
-
-#### Predictive vs Explanatory Feature Grouping
-
-| Feature Name              | Predictive Role (helps forecast outcomes)             | Explanatory Role (helps explain lineage) |
-|---------------------------|------------------------------------------------------|------------------------------------------|
-| **status**                | Label (ground truth for supervised learning)         | Shows final outcome (success/failure/ghost) |
-| **attempt_count**         | Predicts resilience (multiple retries vs immediate fail) | Explains how many resurrection attempts were made |
-| **is_ghost**              | Predicts likelihood of timeout/failure               | Explains synthetic vs real infrastructure |
-| **ghost_context**         | Predicts failure modes (no_instance_id → always fail) | Explains why ghost failed (synthetic injection) |
-| **error_type**            | Predicts failure class (TimeoutError vs RuntimeError) | Explains runtime exception lineage |
-| **resurrection_reason**   | Predicts success likelihood (Idx1 crash vs post‑install crash) | Explains why resurrection was attempted |
-| **command_count**         | Predicts workload complexity (more commands → higher risk) | Explains what was replayed during resurrection |
-| **pre_reboot_required**   | Predicts success/failure depending on reboot path     | Explains whether reboot was part of the plan |
-| **gatekeeper_action**     | Predicts resurrection vs block decision               | Explains why candidate was allowed/blocked |
-| **ip_rehydrated**         | Predicts recovery likelihood (rehydrated IPs often succeed) | Explains network lineage and recovery path |
-| **timestamp_delta**       | Predicts time‑to‑resurrection success rate            | Explains how long recovery took |
-
-Predictive Features
-These are the ones ML models will use to **forecast outcomes**:
-- `is_ghost`, `ghost_context`, `error_type`, `pre_reboot_required`, `command_count`, `timestamp_delta`.
-
-Explanatory Features
-These are the ones ML models (and users via the logs) will use to **explain lineage**:
-- `resurrection_reason`, `gatekeeper_action`, `ip_rehydrated`, `tags`.
-
-Relevance to the ML design:
-- **Predictive features** feed into the ML state machine to forecast whether a resurrection attempt will succeed.  
-- **Explanatory features** provide forensic clarity and can be used for model interpretability (e.g., SHAP values, feature importance plots).  
-- Together, they ensure your ML pipeline isn’t a black box — it predicts outcomes *and* explains them in terms of registry lineage.
-
-With this grouping, one can now see how Phase3’s structured tags and registry lifecycle are already producing both predictive and explanatory signals. 
-Once reboot and health‑check logic are added in Part4/5 (and this will be extended to other handlers beyhond just ghosts), this will enrich both sides: 
-new predictive features (`reboot_failed`, `health_checks_not_ok`) and new explanatory lineage for why a resurrection failed.
-
-
-
-#### For the ghost processing example .....
-
- Key Additions in Phase3 that will be used for Phase4 ML
-- **Reboot path**: If `pre_resurrection_reboot_required=True`, the resurrection attempt first goes through a reboot outcome check.  
-  - Success → continue with command replay.  
-  - Failure → tag with `ghost_context:reboot_failed`.  
-- **Health checks**: After reboot or command replay, health checks validate service state.  
-  - Success → `status=install_success`.  
-  - Failure → tag with `ghost_context:health_checks_not_ok`.  
-- **Ghost lineage**: Synthetic ghosts (`no_instance_id`) and real ghosts with missing IDs are tagged distinctly, so ML can learn to separate them.  
-- **Command replay logic**: Some commands can be repeated safely, others may require reboot instead of replay. This branching will be encoded in tags, avoiding cumbersome whitelists.
-
-
-Relevance for  ML
-- **Predictive signals**: `pre_resurrection_reboot_required`, `ghost_context:reboot_failed`, `ghost_context:health_checks_not_ok`.  
-- **Explanatory lineage**: Registry entries now show *why* a resurrection failed (no ID, reboot failed, health check failed).  
-- **State transitions**: ML can model the probability of success at each branch (ghost vs real, reboot vs replay, health check pass vs fail).  
-
-
-
-#### Final Phase3 to Phase4 high level plan
-
-Phase4 ML will extend the  current deterministic pipeline into a **state machine** where every branch is tagged. That tagging is what makes ML feasible — the model 
-won’t just see “install_failed,” it will see *why* it failed, and learn patterns across thousands of runs.
-
-Phase3
-- **Purpose**: Build the deterministic pipeline and add **all the tagging logic**.  
-- Examples:  
-  - Ghost context tags (`ghost_context:no_instance_id`, etc.).  
-  - Resurrection reason arrays.  
-  - Reboot flags (`pre_resurrection_reboot_required`).  
-  - Health‑check outcomes (coming in Part4/5).  
-- **Result**: Every registry entry is fully annotated with lineage, context, and outcome.  
-
-Phase3 is *laying down the forensic signals*. In the absence of ML, just  making sure the data is rich, consistent, and traceable. And most importantly, 
-consumable by the ML state machine.
-
-Phase4
-- **Purpose**: Use those tags and registry entries as **training data** for ML.  
-- **What ML will do**:  
-  - Flatten registry JSONs into rows (like the long feature table example for the ghost case, above).  
-  - Treat `status` as the ground‑truth label (success/failure).  
-  - Use tags, resurrection reasons, reboot flags, and error types as **features**.  
-  - Learn patterns like:  
-    - Ghosts with `no_instance_id` → always fail.  
-    - IDX1 crashes with reboot → often succeed.  
-    - Certain error types + command counts → higher risk of failure.  
-- **Result**: ML can predict the probability of success for each resurrection attempt, and even suggest whether to replay commands, reboot, or block.
-
-The code becomes self adaptive, self learning, self correcting and self optimizing based upon incoming tagged data that it has learned to "read" and predict 
-outcomes from.
-
-
-The importance of registry_entry tagging
-- **tagging is the key**. Without tags, ML would just see “install_failed” vs “install_success” with no context. With tags, ML sees *why* it failed or succeeded, 
-which makes predictions meaningful and interpretable.
-
-Why tagging matters across all handlers (module2e handlers are essentially the resurrection bucket types that prep the registry_entry for the resurrection in 
-module2f)
-- **Consistency**: Every handler produces lineage in the same “language” (`ghost_context:*`, `reboot_failed`, `health_checks_not_ok`).  
-- **ML readiness**: Models don’t care which bucket a thread came from — they learn patterns across tags.  
-- **Forensic clarity**: Humans can trace why a resurrection failed, regardless of bucket type.  
-
-
-
-
-#### Summary
-
-- **Phase3 = deterministic tagging + code logic. Consumable for training**
-- **Phase4 = ML overlay that learns from those tags and outcomes.**
-
-
-
-### Part4: Reboot code and healh check code: Serailized prototype and multi-threaded optimization
+### Part4a: Reboot code and healh check code: Serialized prototype 
 
 #### Introduction
 
 Part4 consists of the reboot code and the subsequent health check code to ensure that the ghost ip address and whatever node associated with it
 is in proper shape to be requed and resurrected in Part5 of this implementation.
+
+Note that this is just a prototype of the reboot code. The full implemenation with complete validation testing will be done in the next UPDATE as Part4b
+of the ghost resurrection coding.
+
+The prototype code performs a serial reboot of the nodes. As noted earlier this is very slow. A typical reboot takes up to 5 minutes to time out and so worst
+case scenario for just 8 ghost ips is 40 minutes. So the code does have to be multi-threaded (Part4b).
+
+In addtion, the prototype code has the reboot code integrated into the ghost handler process_ghost. This is, in general, bad practice but was done just to
+get the prototype working and test some basic logic.  The handlers should only be used to bucketize and tag the registry_entrys, not reboot them. Decoupling the
+reboot code from the process handlers (in Part4b) will make the reboot code extensible to be used by any handler. That is the goal. But for now this code
+suffices for testing.
 
 There are several areas of new code for this part of the implementation:
 
@@ -1421,7 +1650,7 @@ missing_instance_id needs to be added to the tags for that registry_entry
     # Annotate ghost context if instance_id is None (for analytics transparency)
     # For example, with a synthetic ghost ip injection.
     if instance_id is None:
-        base_tags.append("no_instance_id_context")
+        base_tags.append("no_instance_id_context")<<<<<<<<
 ```
 
 And in main() of module2f ThreadPool harness:
@@ -1453,7 +1682,7 @@ And in main() of module2f ThreadPool harness:
             # this reason. In addtion tag the registry_entry accordingly with missing_instance_ip
             if not instance_id:
                 print(f"[module2f] Proceeding without InstanceId for {ip} (UUID {uuid}). Will attempt SSH and log clean failure if any.")
-                extra_tags = (extra_tags or []) + ["missing_instance_id"]
+                extra_tags = (extra_tags or []) + ["missing_instance_id"] <<<<<<<<<<<<<
                 # do not use a continue after this. Let the code flow into the ThreadPoolExecutor call to resurrection_install_tomcat below.
 ```
 
@@ -1461,7 +1690,7 @@ And in main() of module2f ThreadPool harness:
 - Similar to the AWS_ISSUE code (for nodes stuck in 1/2 status health checks) in module2 and the thread resurrection code in module2f, module2e will 
 use a batch processing to process the rebooting of all the ghost ips associated nodes in parallel. Similar to the other areas of code where this is used
 it will save a lot of time. The initial implementation is serial rebooting of ghost ip nodes, but this will use a batch processing with the 
-ThreadPoolExecutor (multi-threaded).
+ThreadPoolExecutor (multi-threaded).(Part4b)
 
 - The testing of the synthetic ghost ips is a challenge and thus a synthetic instance_id injection methodology will be used. Creatively, the instance_id
 can be purposefully malformed (InvalidFormat), a valid format uncached by AWS (using a real retired instance_id from previous testing), and a valid format
@@ -1469,10 +1698,10 @@ cached by AWS (re-using an older real retired instance_id). These will provoke d
 The malformed and the valid format but cached (NotFound) will provoke the error exit path of the reboot (tag will be reboot failed but module2f will still
 try to resurrect the node), and the valid format but uncached will fool the AWS API and this will test the watchdog timeout code in the reboot code of module2e
 (the ghost ip handler of module2e and utils.py). As noted above it is serialized reboots in the inital coding which takes a lot of time. 
-This will be refactored with batch processsing as indicated in a section below to save a lot of time in the reboot process of module2e for ghost ip nodes.
+This will be refactored with batch processsing in Part4b, which will save a lot of time in the reboot process of module2e for ghost ip nodes.
 
 - The uncached version of the synthetic instance_id is required to test the batch code optimization. The AWS API has to be fooled with a completely 
-legitimate (I am using formerly terminated/retired nodes) that has not been cached yet by AWS. This causes the code to loop and poll for a watchdog timeout
+legitimate instance_id (I am using formerly terminated/retired nodes) that has not been cached yet by AWS. This causes the code to loop and poll for a watchdog timeout
 period of 300 seconds for each node (polling every 15 seconds). The polling consists of the code below:
 
 ```
@@ -1486,13 +1715,13 @@ period of 300 seconds for each node (polling every 15 seconds). The polling cons
 
 - The reboot function will be reviewed in detail in the Coding section below.  The reboot function is called from the ghost handler in module2e for each ghost
 ip in the registry, and this is intially done in a serial fashion.  Once the code is refactored to do this in parallel using batch processing (ThreadPoolExecutor),
-it will need to be tested with a valid instance_id that has not been cached yet by AWS. The details of this testing will be presented in the Validation section
-below.
+it will need to be tested with a valid instance_id that has not been cached yet by AWS. The details of this testing will be presented in Part4b
 
 - Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
 and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
 mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
-code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
+code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts). The code and the verification
+testing will be presented in Part4b in a subsequent UPDATE.
 
 
 
@@ -1501,80 +1730,812 @@ code becomes much cleaner, faster and the reboot process can be used by any othe
 
 ##### utils.py helper functions (2 of them)
 
+These are the additonal functions that have been added to the utils.py function:
+
+```
+#### These helper functions are to reboot a node and check that status and instance health checks on the node
+#### These functions are used especially in the module2e handler blocks (for example in the process_ghost handler for ghost ips)
+#### when the instance_id is available. Ghost ips are always rebooted prior to resurrection. These functions will be used in 
+#### other handlers in module2e as the code evolves but to do that the code will be refactored to decouple the reboot process from the handlers. This will
+#### be done when the reboot process is refactored for multi-threading. This same exact function will be used in both serailized and multi-threaded implementations.
+def reboot_instance(instance_id, region=None, max_wait=300, poll_interval=15):
+    """
+    Reboot a single EC2 instance and wait until it is healthy.
+    Returns True if reboot succeeded and health checks passed, False otherwise.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    try:
+        ec2.reboot_instances(InstanceIds=[instance_id])
+        print(f"[utils] Reboot initiated for {instance_id}")
+
+        waited = 0
+        while waited < max_wait:
+            resp = ec2.describe_instance_status(InstanceIds=[instance_id])
+            statuses = resp.get("InstanceStatuses", [])
+            if statuses:
+                inst_status = statuses[0]["InstanceStatus"]["Status"]
+                sys_status = statuses[0]["SystemStatus"]["Status"]
+                if inst_status == "ok" and sys_status == "ok":
+                    print(f"[utils] Instance {instance_id} passed 2/2 checks")
+                    return True
+            time.sleep(poll_interval)
+            waited += poll_interval
+
+        print(f"[utils] Timeout waiting for {instance_id} to become healthy")
+        return False
+    except Exception as e:
+        print(f"[utils] Error rebooting {instance_id}: {e}")
+        return False
+```
+
+
+
+```
+def health_check_instance(instance_id, region=None):
+    """
+    Perform a lightweight health check (2/2 status checks).
+    Returns True if healthy, False otherwise.
+    """
+    session = boto3.Session(region_name=region or os.getenv("region_name"))
+    ec2 = session.client("ec2")
+
+    try:
+        resp = ec2.describe_instance_status(InstanceIds=[instance_id])
+        statuses = resp.get("InstanceStatuses", [])
+        if statuses:
+            inst_status = statuses[0]["InstanceStatus"]["Status"]
+            sys_status = statuses[0]["SystemStatus"]["Status"]
+            return inst_status == "ok" and sys_status == "ok"
+        return False
+    except Exception as e:
+        print(f"[utils] Error checking health for {instance_id}: {e}")
+        return False
+```
 
 ##### import modifications in module2e and module2f
 
 
+To use the helper functions in utils.py above, add them to the imports in module2e and 2f:
+
+```
+# Shared helper functions live in sequential_master_modules/utils.py
+from sequential_master_modules.utils import (
+    resolve_instance_id,
+    _extract_instance_id,
+    log_ghost_context,
+    reboot_instance,
+    health_check_instance
+)
+
+```
+
+
+
 ##### module2e ghost handler code changes (serialized implementation for reboot)
+
+As noted above, this is a temporarily code change, integrating the reboot code inside the ghost handler process_ghost function of module2e. This will be restructured
+when the reboot is made multi-threaded.
+The new code are the last 10 lines below.
+
+
+```
+def process_ghost(entry, command_plan, region=None):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
+
+    # Try to resolve InstanceId for this ghost
+    instance_id = entry.get("instance_id")
+    if not instance_id:
+        instance_id = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+
+    # Set reboot flag based on whether InstanceId is available
+    entry["pre_resurrection_reboot_required"] = bool(instance_id)
+
+    # Ghost context tagging for synthetic ghosts. If there is no instance_id, set teh ghost context tag to no_instance_id. Ghost context tagging will help 
+    # differentiate non-ghost thread issues with ghost issues not only for thread resurrection in module2f but also with Machine Learning analytics in Phase4
+    if not instance_id:
+        log_ghost_context(entry, "no_instance_id")
+
+    # Add the calls to reboot_instance and health_check_instance for instance_id present case. The else ensures that instance_id will be present. Note for the 
+    # instance_id present case the tag will be pre_resurrection_reboot_required: True
+    else:
+        # Real ghost → attempt reboot + health check
+        reboot_ok = reboot_instance(instance_id, region=region)
+        if not reboot_ok:
+            log_ghost_context(entry, "reboot_failed")
+            entry["status"] = "install_failed"
+            return entry
+
+        health_ok = health_check_instance(instance_id, region=region)
+        if not health_ok:
+            log_ghost_context(entry, "health_checks_not_ok")
+            entry["status"] = "install_failed"
+            return entry
+
+    return entry
+```
 
 
 
 ##### module2e and 2f added code for synthetic instance_id injection
 
 
+This code must be added in both module2e and 2f for the reasons outlined earlier. This provides a way to test various paths in the reboot code logic.
+The comments describe how this is an effective testing code for the code logic.
+
+In short, an invalid instance_id will be flagged as an error and InvalidInstanceID.Malformed. The node will not be rebooted and it will be paseed on to
+module2f. Module2f will attempt to resurrect the node, but since it is a synthetic ghost ip the resurrection attempt will timeout.
+
+An valid instance_id that is cahced by AWS will give an InvalidInstanceID.NotFound error and it will not be rebooted and it will also pass to 
+module2f and that resurrection will time out.
+
+An invalid instance_id that is not cached by AWS will fool the AWS API and the reboot will be attempted. This will test the watchdog timeout in the reboot
+helper functoin becasue the node ip does not actually exist. After the timeout (300 seconds), the node will be passed to module2f and that resurrection will
+timeout like the others.
+
+The FAKE_INSTANCE_ID is specified in the .gitlab-ci.yml as an ENV variable (see next section below).
+The code is gated by INJECT_FAKE_INSTANCE_ID in the .gitlab-ci.yml file. True will turn the test code on and False will disable it.
+
+
+
+```
+# --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
+# Controlled by ENV variable in gitlab-ci.yml
+# Set INJECT_FAKE_INSTANCE_ID=true to activate
+# Set the FAKE_INSTANCE_ID in gitlab-ci.yml.  For example, i-033f7957281756224
+# Note that the FACKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
+# need to be refreshed with a more recent one periodically.
+  # For example, i-1234567890abcdef0 looks to be correct format but AWS API will return InvalidInstanceID.Malformed
+  # The i-033f7957281756224 is a recently retired node real instance_id and this worked prior to AWS caching it as no longer valid.
+  # While it worked it behaved in the code as a real instance_id (during reboot loop the watchdog had to timeout eventually since it is no longer atached
+  # to a node).  When it stopped working after AWS caching, AWS API flagged it as InvalidInstanceID.NotFound and this tests a different part of the python
+  # code.
+if os.getenv("INJECT_FAKE_INSTANCE_ID", "false").lower() in ("1", "true", "yes"):
+    fake_id = os.getenv("FAKE_INSTANCE_ID", "i-FAKE1234567890TEST")
+    resolve_instance_id = lambda **kwargs: fake_id
+    print(f"[TEST] Overriding resolve_instance_id → {fake_id}")
+```
+
+
+
+
 ##### .gitlab-ci.yml code ENV variable to gate the synthetic instance_id injection
 
+The sample node list below is mostly uncached at the time of this writing. New sample instance_ids get be fetched from new test runs after the nodes are terminated and
+retired.
+
+```
+    INJECT_FAKE_INSTANCE_ID: "true"
+    FAKE_INSTANCE_ID: "i-0e1830a4a2c718130"
+      # This is to inject a fake instance_id into the modules2e and 2f for conditional logic testing in those modules for resurrection and tagging code.
+      # The instance_id above is a real life AWS instance_id
+      # Note that the FACKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
+      # need to be refreshed with a more recent one periodically.
+      # For example, i-1234567890abcdef0 looks to be correct format but AWS API will return InvalidInstanceID.Malformed
+      # The i-033f7957281756224 is a recently retired node real instance_id and this worked prior to AWS caching it as no longer valid.
+      # While it worked it behaved in the code as a real instance_id (during reboot loop the watchdog had to timeout eventually since it is no longer atached
+      # to a node).  When it stopped working after AWS caching, AWS API flagged it as InvalidInstanceID.NotFound and this tests a different part of the python
+      # code.
+      # Sample instance_ids from retired nodes: 
+      #i-0e1830a4a2c718130
+      #i-0f294cf1d4dd1f554
+      #i-0dd5d1e288a248912
+      #i-063ab80518a6d6642
+      #i-0d222bc857df037d2
+      #i-05479d09681d833d2
+      #i-0d19f7b750da36854
+      #i-0166fda7992ec00d2
+      #i-0f420100f58bffbc4
+      #i-05380c612dd1cd62e
+      #i-025318b54c7901189
+      #i-06d15e0d386d332e2
+      #i-047878f8ef4159d12
+      #i-0939ad8ea21cb3dbe
+      #i-025207ab1875ca99e
+      #i-017591c44053e1504
+```
 
 
 
 
 
-#### Code changes for multi-threaded reboots (final version)
 
-Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
-and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
-mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
-code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
-
-
-
-
-#### Validation for serailized reboot version
+#### Validation for serialized reboot version
 
 The validation for this code is a bit challenging because ghost ip addresses are very hard to reproduce in the real life setting. I have seen them several
 times but that is over hundreds of pipelined tests with various number of nodes.  Typically when they occur, it is when hyper-scaling (512 processes), but 
 I have seen them outside of this scenario.
 
 The validation involves various forms of the synthetic instance_id to fire up the desired code path in module2e's ghost handler.
+The test cases below cover almost all of the various decision blocks in the serialized version of the reboot code.  In the next UPDATE Part4b will expand the testing
+to test more of the decision logic between the various bucket types.
 
+Some of the test cases for the serailized version  are highlighted below.
 
-Some of the test cases are highlighted below.
+Note that all of these tests were performed with the instance_id injection in both module2e and 2f. 
+
+If it is not added to module2f, module2f will not see the instance_id and it will go down a different code path as shown below:
+
+```
+[module2f][INFO] Starting resurrection for InstanceID=None, PublicIP=1.1.14.112
+[module2f] InstanceId not found for IPs public=1.1.15.133, private=unknown
+[module2f] Proceeding without InstanceId for 1.1.15.133 (UUID ghost_1_1_15_133). Will attempt SSH and log clean failure if any.
+```
+
+Module2f registry_entry will show no_instance_id in the tags. This is a useful one time test but is not the test that was desired.
+
 
 
 
 ##### Validation with malformed instance_id (serial restart implementation)
 
+The error is Malformed
+
+```
+Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID a500ddf5 (IP: 54.166.207.248) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 80635933 (IP: 54.161.21.123) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 90f5b9a8 (IP: 44.220.153.248) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e4a54e4b (IP: 3.89.162.156) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 0e6df5d3 (IP: 54.196.180.16) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 7f0dd81f (IP: 54.226.216.32) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID a0774e94 (IP: 54.235.8.57) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 63301436 (IP: 54.242.74.61) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 2ffd08a2 (IP: 54.165.73.139) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 9c48b631 (IP: 54.221.157.164) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4a78ff5f (IP: 34.229.120.200) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e220997a (IP: 54.197.92.163) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 8b680b2c (IP: 18.212.240.42) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 518c681b (IP: 54.82.77.247) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID c53412db (IP: 54.197.2.38) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 9ae7b5ae (IP: 18.215.152.187) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_190 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_18 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_90 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_232 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_165 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_178 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_97 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_161 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[utils] Error rebooting i-FAKE1234567890TEST: An error occurred (InvalidInstanceID.Malformed) when calling the RebootInstances operation: The instance ID 'i-FAKE1234567890TEST' is malformed
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=0, total_ghost_candidates=8, selected_for_resurrection=8, rate=100.00%
+[module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.13.190
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.15.18
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.16.90
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.12.232
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.12.165
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.13.178
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.14.97
+[module2f][INFO] Starting resurrection for InstanceID=i-FAKE1234567890TEST, PublicIP=1.1.17.161
+[module2f] Resurrection failed for 1.1.17.161 (UUID ghost_1_1_17_161): timed out
+[module2f] Resurrection failed for 1.1.13.178 (UUID ghost_1_1_13_178): timed out
+[module2f] Resurrection failed for 1.1.14.97 (UUID ghost_1_1_14_97): timed out
+[module2f] Resurrection failed for 1.1.16.90 (UUID ghost_1_1_16_90): timed out
+[module2f] Resurrection failed for 1.1.12.165 (UUID ghost_1_1_12_165): timed out
+[module2f] Resurrection failed for 1.1.12.232 (UUID ghost_1_1_12_232): timed out
+[module2f] Resurrection failed for 1.1.13.190 (UUID ghost_1_1_13_190): timed out
+[module2f] Resurrection failed for 1.1.15.18 (UUID ghost_1_1_15_18): timed out
+[module2f] Wrote resurrection results to /aws_EC2/logs/module2f_resurrection_results.json
+[module2f] Wrote resurrection stats to /aws_EC2/logs/statistics/aggregate_resurrected_node_stats_module2f.json
+Process2f: resurrection_install_tomcat: Completed module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+
+```
+
+Registry_entrys:
+
+```
+Module2e
+
+  "ghost_1_1_13_190": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_13_190",
+    "public_ip": "1.1.13.190",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:reboot_failed" <<<<<<<<<<<
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true   <<<<<<<<<
+  },
+
+
+
+Module2f
+Correctly No longer shows no_instance_id
+
+{
+  "ghost_1_1_17_161": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 17,
+    "thread_uuid": "ghost_1_1_17_161",
+    "public_ip": "1.1.17.161",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-06T03:15:01.524132",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError",  <<<<<<<< SSH TimeoutError as expected (synthetic ghost ip)
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:reboot_failed"  <<<<<<<<
+    ]
+  },
+
+```
+
+
+
+Statistics:
+
+```
+Module2e stats
+{
+  "total_resurrection_candidates": 0,
+  "total_ghost_candidates": 8,
+  "selected_for_resurrection_total": 8,
+  "by_bucket_counts": {
+    "already_install_success": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "ghost": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 8,
+      "selected_for_resurrection": 8
+    }
+  },
+  "selected_for_resurrection_rate_overall": 100.0,
+  "timestamp": "2025-12-06T03:14:16.345180"
+}
+
+
+
+
+Module2f stats
+
+
+  "resurrected_total_threads": 8,
+  "resurrected_install_success": 0,
+  "resurrected_install_failed": 8,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "1.1.12.165",
+    "1.1.12.232",
+    "1.1.13.178",
+    "1.1.13.190",
+    "1.1.14.97",
+    "1.1.15.18",
+    "1.1.16.90",
+    "1.1.17.161"
+  ],
+  "resurrection_success_rate_percent": 0.0
+}
+```
+
+
 
 ##### Validation with valid instance_id but cached (serial restart implementation)
 
-
-##### Validation with valid instance_id and not cached (serail restart implementation)
-
+The error this time is NotFound
 
 
-#### Validation for multi-threaded reboots (dcoupling the reboot code from the bucketization and process handler code)
+```
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 6a91c052 (IP: 3.88.47.175) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ea39811b (IP: 52.0.113.83) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6bdf2751 (IP: 54.167.94.156) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID adeff338 (IP: 13.218.242.252) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 7d954a81 (IP: 3.80.136.131) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 426a000d (IP: 54.160.226.13) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ab176998 (IP: 50.19.155.59) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 016679ea (IP: 54.167.91.171) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4ec85f15 (IP: 3.90.232.116) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 2108bae4 (IP: 107.22.39.36) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID dd49bdcc (IP: 54.160.239.193) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d63f56af (IP: 54.227.95.85) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 13c489cc (IP: 98.88.251.17) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 3481d566 (IP: 98.88.79.160) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 605f31d3 (IP: 44.223.0.146) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 6a8fab7f (IP: 52.90.222.104) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_132 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_22 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_135 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_95 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_241 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_70 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_212 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_162 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+[TEST] Overriding resolve_instance_id → i-033f7957281756224
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[utils] Error rebooting i-033f7957281756224: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-033f7957281756224' does not exist
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=0, total_ghost_candidates=8, selected_for_resurrection=8, rate=100.00%
+[module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+[TEST] Overriding resolve_instance_id → i-033f7957281756224
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.13.132
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.16.22
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.14.135
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.17.95
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.13.241
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.12.70
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.14.212
+[module2f][INFO] Starting resurrection for InstanceID=i-033f7957281756224, PublicIP=1.1.15.162
+[module2f] Resurrection failed for 1.1.15.162 (UUID ghost_1_1_15_162): timed out
+[module2f] Resurrection failed for 1.1.13.132 (UUID ghost_1_1_13_132): timed out
+[module2f] Resurrection failed for 1.1.13.241 (UUID ghost_1_1_13_241): timed out
+[module2f] Resurrection failed for 1.1.14.135 (UUID ghost_1_1_14_135): timed out
+[module2f] Resurrection failed for 1.1.17.95 (UUID ghost_1_1_17_95): timed out
+[module2f] Resurrection failed for 1.1.16.22 (UUID ghost_1_1_16_22): timed out
+[module2f] Resurrection failed for 1.1.12.70 (UUID ghost_1_1_12_70): timed out
+[module2f] Resurrection failed for 1.1.14.212 (UUID ghost_1_1_14_212): timed out
+[module2f] Wrote resurrection results to /aws_EC2/logs/module2f_resurrection_results.json
+[module2f] Wrote resurrection stats to /aws_EC2/logs/statistics/aggregate_resurrected_node_stats_module2f.json
+Process2f: resurrection_install_tomcat: Completed module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+```
 
-Note that this approach still uses the exact same reboot helper functions in utils.py that the serailized version uses. So the basic testing with malformed instance_id,
-valid instance_id cached, and valid instance_id not cached will have the same results. Those tests are regression tested below
-To understand this from a code perspective please see the Code review section above under the multi-threaded batch implemenation section.
-
-##### Validation with malformed instance_id (multi-threaded restart implementation), ghost ips only
-
-
-##### Validation with valid instance_id but cached (multi-threaded restart implementation), ghost ips only
-
-
-##### Validation with valid instance_id and not cached (multi-threaded restart implementation), ghost ips only
-
-
-##### Validation with module2e multi-threaded restar with ghost ips and HYBRID futures crashes 
-
-##### Validation with module2e multi-threaded restartwith ghost ips, HYBRID crashes and install_success with 50 nodes
-
-So 4 different types idx1 (resurrection but no reboot, in module2e file) , post install futures crash (no resurrection, no reboot and not in module2e file), ghosts ( reboot and resurrection and in module2e file) , install_success (no resurrection and no reboot and wont be in the module2e file)
+registry_entrys:
 
 
 
+```
+Module 2e
+
+{
+  "ghost_1_1_13_132": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_13_132",
+    "public_ip": "1.1.13.132",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:reboot_failed"  <<<<<<<
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true  <<<<<<<<
+  },
+
+
+Module 2f
+
+
+{
+  "ghost_1_1_15_162": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 15,
+    "thread_uuid": "ghost_1_1_15_162",
+    "public_ip": "1.1.15.162",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-06T05:54:08.813133",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError", <<<<<<<<<<<
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:reboot_failed"  <<<<<<<
+    ]
+  },
+
+```
+
+##### Validation with valid instance_id and not cached (serial restart implementation)
+
+Here the instance_id is not cached and fools the AWS API. The module2e reboot code will attempt to reboot the node and because it is a synthetic ghost ip
+the reboot code will wait for the watchdog timeout of 300 seconds repolling every 15 seconds. This is why a multi-threaded solution is a must. This test 
+added 40 minutes to the execution time. Once it is done in parallel (16 max_workers threads) it will only add 5 minutes to the total execution time. That
+implementation will be done in Part4b, in the next UPDATE.
+
+```
+Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID b5ada66c (IP: 98.81.238.181) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 468e3aaa (IP: 34.227.49.133) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID dd5dd878 (IP: 3.85.193.57) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 2e1e54cf (IP: 54.196.164.17) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d2688f0b (IP: 34.228.112.31) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 57a0882f (IP: 13.220.49.170) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 63e479b1 (IP: 54.210.178.86) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b87d5cb3 (IP: 54.80.161.26) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 5964ac2e (IP: 54.147.40.125) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 02239816 (IP: 50.19.57.157) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID c19cd400 (IP: 34.227.24.178) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID acdb278d (IP: 3.93.187.145) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 00a671ea (IP: 3.90.215.102) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 818c5470 (IP: 18.215.167.115) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 18d7da90 (IP: 35.175.186.181) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 2ab68744 (IP: 34.230.35.177) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_90 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_163 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_50 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_27 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_105 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_118 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_243 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_6 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3.py
+[TEST] Overriding resolve_instance_id → i-0e1830a4a2c718130
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[utils] Reboot initiated for i-0e1830a4a2c718130
+[utils] Timeout waiting for i-0e1830a4a2c718130 to become healthy  <<<<<< After 300 second timeout
+[utils] Reboot initiated for i-0e1830a4a2c718130 <<<<< This is the next ghost ip. Note this is serial and way too slow.
+
+<< Test aborted to save time >>
+```
+
+
+
+The registry_entry for module2e and 2f look exactly the same as the others
+The logs go on to module2f and it attempts a resurrection on the ghost ips and they all timeout with the TimeoutError.
+
+
+
+
+
+
+##### Validation summary of the prototype reboot code in module2e
+
+- Every possible AWS error path (Malformed, NotFound, Timeout).  
+- Registry consistency across module2e and module2f.  
+- End‑to‑end stats aggregation showing 8 ghosts selected, 16 successes blocked, resurrection rate 100%, gatekeeper rate ~33%.  
+
+With the 8 synthetically injected ghost ips there are a total of 24 "threads".  The standard 16 real threads go to install_success and the 8 ghost ips
+fail in the nature described in the 3 scenarios above.
+
+module2d stats json sample:
+
+
+```
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "18.209.16.74",
+    "23.22.244.121",
+    "3.80.62.148",
+    "3.84.184.237",
+    "3.88.214.133",
+    "3.90.108.204",
+    "3.93.46.36",
+    "34.202.205.106",
+    "34.229.130.119",
+    "52.90.255.1",
+    "54.174.41.47",
+    "54.196.172.188",
+    "54.221.115.170",
+    "54.242.32.74",
+    "54.90.113.60",
+    "98.89.20.78"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.194",
+    "1.1.12.205",
+    "1.1.13.251",
+    "1.1.13.62",
+    "1.1.14.237",
+    "1.1.15.144",
+    "1.1.16.84",
+    "1.1.17.213",
+    "18.209.16.74",
+    "23.22.244.121",
+    "3.80.62.148",
+    "3.84.184.237",
+    "3.88.214.133",
+    "3.90.108.204",
+    "3.93.46.36",
+    "34.202.205.106",
+    "34.229.130.119",
+    "52.90.255.1",
+    "54.174.41.47",
+    "54.196.172.188",
+    "54.221.115.170",
+    "54.242.32.74",
+    "54.90.113.60",
+    "98.89.20.78"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.194",
+    "1.1.12.205",
+    "1.1.13.251",
+    "1.1.13.62",
+    "1.1.14.237",
+    "1.1.15.144",
+    "1.1.16.84",
+    "1.1.17.213"
+  ],
+  "gatekeeper_resurrected": 8,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 100.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
+}
+
+```
 
 
 
