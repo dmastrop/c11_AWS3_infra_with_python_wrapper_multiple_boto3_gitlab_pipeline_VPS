@@ -505,7 +505,7 @@ These are the ones ML models (and users via the logs) will use to **explain line
 Relevance to the ML design:
 - **Predictive features** feed into the ML state machine to forecast whether a resurrection attempt will succeed.  
 - **Explanatory features** provide forensic clarity and can be used for model interpretability (e.g., SHAP values, feature importance plots).  
-- Together, they ensure your ML pipeline isn’t a black box — it predicts outcomes *and* explains them in terms of registry lineage.
+- Together, they ensure the  ML pipeline isn’t a black box — it predicts outcomes *and* explains them in terms of registry lineage.
 
 With this grouping, one can now see how Phase3’s structured tags and registry lifecycle are already producing both predictive and explanatory signals. 
 Once reboot and health‑check logic are added in Part4/5 (and this will be extended to other handlers beyhond just ghosts), this will enrich both sides: 
@@ -10504,7 +10504,7 @@ In `resurrection_gatekeeper_final_registry_module2d.json`
 
 Post-Test Validation Checklist
 
-Once the test completes, you can confirm:
+Once the test completes, confirm:
 - PID presence in `aggregate_ghost_detail.json`
 - PID propagation through all module2d outputs
 - No missing ghost entries
@@ -21361,7 +21361,7 @@ This blend gives just the right visibility at scale: lightweight per-process ale
 Advantages:
 - No wasted I/O on all-success flows.
 - Immediate forensic breadcrumbs on the rare failures.
-- Consistent aggregate artifacts for your Phase 3 pipeline.
+- Consistent aggregate artifacts for the Phase 3 pipeline.
 - Frugal publishing of the process logs: if they are blank then they will not be published. With hyper-scaling this will help a lot.
 
 
@@ -21502,7 +21502,7 @@ This final registry is logs/final_aggregate_execution_run_registry.json referred
 
 
 1. **main()**  
-   - Splits your EC2 tasks into `chunks` (size chunk_size)
+   - Splits the EC2 tasks into `chunks` (size chunk_size)
    - Builds `args_list` of `(chunk, security_group_ids, max_workers)`
    - max_workers is the number of threads (eventually used by ThreadPoolExecutor_ 
    - Calls `multiprocessing.Pool(processes=desired_count)` and `pool.starmap(tomcat_worker_wrapper, args_list)`.
@@ -24360,7 +24360,7 @@ def monitor_kswapd(interval=60):
 
         time.sleep(interval)
 
-# Adjust the interval based on your testing needs
+# Adjust the interval based on the testing needs
 monitor_kswapd(interval=15)
 ```
 
