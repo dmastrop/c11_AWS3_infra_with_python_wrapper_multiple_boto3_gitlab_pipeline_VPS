@@ -219,17 +219,6 @@ STATUS_TAGS = {
 }
 ```
 
-- The reboot function will be reviewed in detail in the Coding section below.  The reboot function is called from the ghost handler in module2e for each ghost
-ip in the registry, and this is intially done in a serial fashion.  Once the code is refactored to do this in parallel using batch processing (ThreadPoolExecutor),
-it will need to be tested with a valid instance_id that has not been cached yet by AWS. The details of this testing will be presented in Part4b
-
-- Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
-and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
-mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
-code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
-
-
-
 
 
 ## UPDATES part 46: Phase 3h: Parts 4b, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging
@@ -292,7 +281,7 @@ In addtion, a reboot_context tag will be added as well to indicate the nature of
 
 
 
-Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
+- Note that the refactoring of the code in  module2e to support multi-threaded reboots required removing the reboot function from the process_ghost ghost handler
 and decoupling the reboot code from the bucketization/ghost handler code. This is because the bucketization and ghost handler uses serialized processing and
 mixing in multi-threading just for reboot would cause the code to get too messy. Once the reboot is decoupled from the process handlers and bucketization the
 code becomes much cleaner, faster and the reboot process can be used by any other process handler as required (not just for ghosts).
