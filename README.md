@@ -608,16 +608,74 @@ Note that this approach still uses the exact same reboot helper functions in uti
 valid instance_id cached, and valid instance_id not cached will have the same results. Those tests are regression tested below
 To understand this from a code perspective please see the Code review section above under the multi-threaded batch implemenation section.
 
+The first objective is to test the insstance_id variants with synthetic ghost ip injections
+
+These will test the following cases:
+ 
+- Malformed ID → fast fail but always module2f resurrection attempt 
+- Cached/NotFound → fast fail but always module2f resurrection attempt
+- Valid but retired(not cached yet by AWS) → parallel timeout (~300s) but alwsays module2f resurrection attempt  
+- Healthy ID → reboot_context:ready, node is actually rebooted and the resurrectio should be successful. This will require a modification to the synthetic ghost
+ip injection code.
+
+
+The gitlab console logs will clearly demarcate the various pipeline layers in the code:
+
+module2e → bucketization + mark reboot candidates.
+
+module2e2 → parallel reboot attempts, tagging outcomes.
+
+module2f → resurrection attempts, final status assignment.
+
+As noted earlier, the handlers in module2e will never do the reboot. The reboot code has been separated out from the various handler code so that any handler
+can perform a reboot if required
+
+Also, the status will never be changed until module2f. The tags will carry the forensic historical data from one module to the next and the status should stay 
+the same until module2f.
+
+
+Then the next tests involve testing with the HYBRID synthetic crashes and install_success threads to test the upper layer gatekeeper and tagging decision
+logic as regression.
+
+
+
+
 ##### Validation with malformed instance_id (multi-threaded restart implementation), ghost ips only
+
+This will test the InvalidInstanceID.Malformed instance_id error case.
+
+
 
 
 ##### Validation with valid instance_id but cached (multi-threaded restart implementation), ghost ips only
 
+This will test the InvalidInstanceID.NotFound instance_id error case.
+
 
 ##### Validation with valid instance_id and not cached (multi-threaded restart implementation), ghost ips only
 
+As in previous tests, this will test the watchdog timeout. The watchdog timeouts will now be in parallel threads and will just consume 300 seconds of the total
+execution time (rather than the 8*300=2400 seconds in the previous serial implemenation; see the Part4a previous UPDATE).
 
-##### Validation with module2e multi-threaded restar with ghost ips and HYBRID futures crashes 
+
+
+##### Validation with valud instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
+
+This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The code modification
+is below:
+
+
+
+
+This will permit the node to actually be rebooted successfully and then module2f will be able to do the full resurrection (command installation iteration).
+
+This will test the real life tagging scenario of a ghost ip that has fallen out of the orchestration layer and is resurrected as install_success.
+
+
+
+
+
+##### Validation with module2e multi-threaded restart with ghost ips and HYBRID futures crashes 
 
 ##### Validation with module2e multi-threaded restartwith ghost ips, HYBRID crashes and install_success with 50 nodes
 
