@@ -337,13 +337,178 @@ serailized handlers would have been very messy.
 #### Code changes for multi-threaded reboots (final version)
 
 
-The code changes occur in four areas. As indicated below the code changes to mult-thread the reboots and perform reboot_context tagging are extensive. This are
+The code changes occur in five areas. As indicated below the code changes to mult-thread the reboots and perform reboot_context tagging are extensive. This are
 in line with the Code implemenation details above.
+
 
 ##### Module2e multi-threading reboot and reboot_context tagging post processing block
 
 This code has to be added after the module2e first pass json registry file is written to disk. This code takes the module2e registry listing of resurrection
 candidates that have been bucketized by the handlers and further processes it with an attempted reboot and updated reboot_context tags.
+
+The entire post processing multi-threaded block is added after the end of the main() function in the module2e as shown below.
+
+Note that the block is executed after main() (see the last part)
+
+
+```
+#### Version 2 of module2e #####
+#================ post processing functions for rebooting  (module2e2) ===========
+
+LOG_DIR = "/aws_EC2/logs"
+IN_PATH = os.path.join(LOG_DIR, "resurrection_module2e_registry.json")
+OUT_PATH = os.path.join(LOG_DIR, "resurrection_module2e_registry_rebooted.json")
+
+
+
+
+def load_registry(path=IN_PATH):
+    if not os.path.exists(path):
+        print(f"[module2e2] Missing registry at {path}")
+        return {}
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+
+
+def save_registry(reg, path=OUT_PATH):
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(reg, f, indent=2)
+    print(f"[module2e2] Wrote reboot-annotated registry to {path}")
+
+
+
+
+## This sets the reboot_context tags in the registry_entry
+
+def mark(entry, tag):
+    entry.setdefault("tags", []).append(f"reboot_context:{tag}")
+
+
+
+
+## note that reboot_instance and health_check_instance are the original unchanged functions in utils.py
+## Thus the validation will provide very similar  gitlab console logs when compared to the serialized case
+## The mark function is used to set teh reboot_context tag in each of the various reboot scenarios. 
+## As noted below the registry_entrys that have gone through attempted reboot will ALWAYS be passed on to module2f for an actualy attempted resurrection.
+## Module2f will then empirically set the final status in these threads/registry_entrys.   The status should never be set by this module2e.
+
+def reboot_and_check(uuid, entry, region=None, max_wait=300, poll_interval=15):
+    iid = entry.get("instance_id")
+    if not iid:
+        mark(entry, "no_instance_id_skip")
+        return uuid, entry
+
+    mark(entry, "initiated")
+    ok = reboot_instance(iid, region=region, max_wait=max_wait, poll_interval=poll_interval)
+    if not ok:
+        mark(entry, "reboot_failed")
+        # optional: entry["status"] = "install_failed"
+        return uuid, entry
+
+    ok2 = health_check_instance(iid, region=region)
+    if not ok2:
+        mark(entry, "health_checks_not_ok")
+        # optional: entry["status"] = "install_failed"
+        return uuid, entry
+
+    mark(entry, "ready")
+    return uuid, entry
+
+
+
+
+def batch_reboot_registry(region=None, max_workers=16):
+    reg = load_registry()
+    if not reg:
+        return
+
+    # Select reboot targets
+    targets = {uuid: e for uuid, e in reg.items() if e.get("pre_resurrection_reboot_required") is True}
+    print(f"[module2e2] Reboot targets: {len(targets)}")
+
+    ## The futures call the reboot_and_check function (in parallel) which calls the original reboot_instance and health_check_instance that was
+    ## used in the serialized case.  The futures call the subset pre_resurrection_reboot_required registry_entrys  (targets) from the original module2e registry. Only a subset of the module2e registry nodes need to be rebooted
+
+    results = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(reboot_and_check, uuid, entry, region): uuid for uuid, entry in targets.items()}
+        for fut in as_completed(futs):
+            uuid, updated = fut.result()
+            updated["timestamp_reboot_stage"] = datetime.utcnow().isoformat() + "Z"
+            results[uuid] = updated
+
+    # Merge results back into registry (updated reg). This registry is the same list of registry_entrys from the  original module2e
+    # but they are now tagged with the reboot_context tags if they have the pre_resurrection_reboot_required
+    for uuid, updated in results.items():
+        reg[uuid] = updated
+
+    # Basic readiness gate (optional): ensure all reboot-required entries are ready or logged failed
+    not_ready = [
+        uuid for uuid, e in reg.items()
+        if e.get("pre_resurrection_reboot_required") is True
+        and "reboot_context:ready" not in (e.get("tags") or [])
+        and "reboot_context:reboot_failed" not in (e.get("tags") or [])
+        and "reboot_context:health_checks_not_ok" not in (e.get("tags") or [])
+    ]
+    if not_ready:
+        print(f"[module2e2] Warning: {len(not_ready)} entries not ready post-reboot stage")
+
+    save_registry(reg)
+
+    ## note that reboot not_ready((just has reboot_context:initiated), reboot_context:ready and reboot_context:reboot_failed and reboot_context:
+    ## health_checks_not_ok are still all included in the updated registry and the module2f will still try to resurrect all the registry_entrys
+    ## Don't attempt to change the status in module2e. Module2f will update the registry_entry status after it tries to resurrect each of the
+    ## problematic threads or ghost ips.
+    ## The original module2e registry: resurrection_module2e_registry.json AND the updated module2e registry with post.
+    ## reboot_context tags, should have the exact same number of registry_entrys in them.  All of them need to be resurrected by
+    ## module2f (attempted). This part of module2e merely identifies those that need to be rebooted and then attempts a reboot
+    ## and then tags them accordingly with the reboot_context tag.
+    ## At minimum such registry_entrys will have the reboot_context: initiated (not_ready). If the reboot fails or succeeds (ready), etc
+    ## the registry_entry will be updated as such with the appropriate reboot_context tag.
+
+
+
+
+if __name__ == "__main__":
+    main()
+    # Version 2 module2e
+    # Post processing reboot function after main() for the multi-threaded version of the reboot code. This also decouples
+    # the reboot code from the handler code (for example, process_ghost handler).
+    # region could be pulled from env
+    batch_reboot_registry(region=os.getenv("region_name"))
+```
+
+
+##### Add the imports to module2e to support the futures ThreadPoolExecutor use in the post processing block above
+
+
+Put this at the top of the module. Note taht the utlity functions have already been added from the previous coding UPDATE
+
+
+```
+## Version 2 of module2e
+## Import of futures for the use of the ThreadPoolExecutor in the post execution block after main() (see below). 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+
+## Imports from shared utilities (utils.py)
+#from utils import resolve_instance_id, _extract_instance_id
+
+# Shared helper functions live in sequential_master_modules/utils.py
+from sequential_master_modules.utils import (
+    resolve_instance_id,
+    _extract_instance_id,
+    log_ghost_context,
+    reboot_instance,
+    health_check_instance
+)
+```
+
+
 
 
 
@@ -351,6 +516,63 @@ candidates that have been bucketized by the handlers and further processes it wi
 
 In line with the approach to decouple the reboot code from the handlers, this was very easy to do. So far, the only handler that had the reboot code was
 the process_ghost ghost handler. The changes are indicated below.
+
+
+The block shown in the comments below in process_ghost ghost handler have been commented out
+
+```
+#### Ghost ip handler:
+#### Add decision logic for whether or not the InstanceId is available. The pre_resurrection_reboot_required is only required if the InstanceId is available
+#### If the InstanceId is not available then set this to false. If it is avaiable set it to true
+#### This uses the same InstanceId helper function resolve_instance_id from module2f
+def process_ghost(entry, command_plan, region=None):
+    entry.setdefault("tags", [])
+    normalize_resurrection_reason(entry, "Ghost entry: resurrection always attempted with full command set")
+    entry["replayed_commands"] = command_plan["wrapped_commands"]
+
+    # Try to resolve InstanceId for this ghost
+    instance_id = entry.get("instance_id")
+    if not instance_id:
+        instance_id = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+
+    # Set reboot flag based on whether InstanceId is available
+    entry["pre_resurrection_reboot_required"] = bool(instance_id)
+
+    # Ghost context tagging for synthetic ghosts. If there is no instance_id, set teh ghost context tag to no_instance_id. Ghost context tagging will help 
+    # differentiate non-ghost thread issues with ghost issues not only for thread resurrection in module2f but also with Machine Learning analytics in Phase4
+    if not instance_id:
+        log_ghost_context(entry, "no_instance_id")
+
+
+    ##### Version 2 of module2e.py
+    ##### Remove the calls to reboot_instance and health_check_instance from the ghost process handler process_ghost 
+    ##### This is for the refactoriing to make the reboot code multi-threading. Need to decouple the reboot code from the handler codes so that any
+    ##### handler can utlize the reboot code if need be. The multi-treading reboot code will be appended to the main() function below (see below) and executed
+    # Add the calls to reboot_instance and health_check_instance for instance_id present case. The else ensures that instance_id will be present. Note for the 
+    # instance_id present case the tag will be pre_resurrection_reboot_required: True
+
+    #else:
+    #    # Real ghost → attempt reboot + health check
+    #    reboot_ok = reboot_instance(instance_id, region=region)
+    #    if not reboot_ok:
+    #        log_ghost_context(entry, "reboot_failed")
+    #        entry["status"] = "install_failed"
+    #        return entry
+
+    #    health_ok = health_check_instance(instance_id, region=region)
+    #    if not health_ok:
+    #        log_ghost_context(entry, "health_checks_not_ok")
+    #        entry["status"] = "install_failed"
+    #        return entry
+
+    return entry
+```
+
+
 
 ##### utils.py
 
@@ -2433,10 +2655,121 @@ Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_mast
 << Test aborted to save time >>
 ```
 
+Registry_entrys
+
+```
+Module2e sample
+
+  "ghost_1_1_16_102": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_16_102",
+    "public_ip": "1.1.16.102",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:reboot_failed"  <<<<<<<<
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true   <<<<<<<
+  },
+
+Module2f sample
 
 
-The registry_entry for module2e and 2f look exactly the same as the others
-The logs go on to module2f and it attempts a resurrection on the ghost ips and they all timeout with the TimeoutError.
+  "ghost_1_1_15_123": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 15,
+    "thread_uuid": "ghost_1_1_15_123",
+    "public_ip": "1.1.15.123",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-10T23:38:31.476453",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError", <<<<<<<
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "ghost_context:reboot_failed"   <<<<<<<<
+    ]
+  },
+```
+
+
+Statistics:
+```
+
+Module2e
+
+{
+  "total_resurrection_candidates": 0,
+  "total_ghost_candidates": 8,
+  "selected_for_resurrection_total": 8,
+  "by_bucket_counts": {
+    "already_install_success": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "ghost": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 8,
+      "selected_for_resurrection": 8
+    }
+  },
+  "selected_for_resurrection_rate_overall": 100.0,
+  "timestamp": "2025-12-10T23:37:46.249048"
+}
+
+
+
+
+Module2f
+
+{
+  "resurrected_total_threads": 8,
+  "resurrected_install_success": 0,
+  "resurrected_install_failed": 8,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "1.1.12.131",
+    "1.1.13.56",
+    "1.1.14.16",
+    "1.1.14.41",
+    "1.1.15.123",
+    "1.1.16.102",
+    "1.1.17.107",
+    "1.1.17.188"
+  ],
+  "resurrection_success_rate_percent": 0.0
+}
+```
+
+
+
+As mentioned above, the reboot with timeout case takes an addtional 40 minutes due to the 300 second timeout and the 8 ghost ips.  This code will be
+refactored as multi-threaded in the next UPDATE.
+
+Ovarall, the prototype testing here went really well.
+
 
 
 

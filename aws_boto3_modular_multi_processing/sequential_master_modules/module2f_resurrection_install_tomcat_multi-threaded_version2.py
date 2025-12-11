@@ -1036,7 +1036,16 @@ def resurrection_install_tomcat(
 ####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
 
 LOG_DIR = "/aws_EC2/logs"
-MODULE2E_FILE = "resurrection_module2e_registry.json"
+
+#MODULE2E_FILE = "resurrection_module2e_registry.json"
+
+#### For multi-threaded version we need to use the post processed module2e json file where the registry_entrys designated for reboot prior to resurrection have
+#### been attempted reboot and the registry_entrys have the reboot_context tags now.  There will no longer be a ghost_context reboot tag used. The reboot_context
+#### will cover several different scenarios. Rebooting is now decoupled from the handlers such as process_ghost, so there is no longer a ghost_context reboot.
+MODULE2E_FILE = "resurrection_module2e_registry_rebooted.json"
+
+
+
 
 def load_module2e_registry(path=os.path.join(LOG_DIR, MODULE2E_FILE)):
     """
