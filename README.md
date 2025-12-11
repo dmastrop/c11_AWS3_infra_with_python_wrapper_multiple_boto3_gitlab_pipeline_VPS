@@ -587,10 +587,17 @@ This file need to be changed to the module2e registry json file that has been po
 tags appended to any registry_entrys that were rebooted so that the module2f has an awareness of what occurred to the registry_entry.
 
 The MODULE2E_FILE simply needs to be changed from resurrection_module2e_registry.json to resurrection_module2e_registry_rebooted.json
+```
+LOG_DIR = "/aws_EC2/logs"
 
+#MODULE2E_FILE = "resurrection_module2e_registry.json"
 
+#### For multi-threaded version we need to use the post processed module2e json file where the registry_entrys designated for reboot prior to resurrection have
+#### been attempted reboot and the registry_entrys have the reboot_context tags now.  There will no longer be a ghost_context reboot tag used. The reboot_context
+#### will cover several different scenarios. Rebooting is now decoupled from the handlers such as process_ghost, so there is no longer a ghost_context reboot.
+MODULE2E_FILE = "resurrection_module2e_registry_rebooted.json"
 
-
+```
 
 
 
