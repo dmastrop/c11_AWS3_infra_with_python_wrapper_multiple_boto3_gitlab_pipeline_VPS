@@ -426,9 +426,30 @@ def mark(entry, tag):
 
 def reboot_and_check(uuid, entry, region=None, max_wait=300, poll_interval=15):
     iid = entry.get("instance_id")
+    
+    #if not iid:
+    #    mark(entry, "no_instance_id_skip")
+    #    return uuid, entry
+
+    ## module2e Version 2
+    ## Since the reboot code moved out of the handler (process_ghost) need to do the instance_id lookup here. This will be called for each future by the 
+    ## ThreadPoolExecutor through the reboot_and_check with unique thread_uuid that has the unique publicip for lookup. Also add the rboot_context flag with
+    ## the resolved instance_id to each registry_entry that is going to be rebooted.  For synthetic instance_id testing this will be the same across all
+    ## ghost ips.
     if not iid:
-        mark(entry, "no_instance_id_skip")
-        return uuid, entry
+        iid = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+        if iid:
+            # Tag the resolved ID for forensic traceability
+            mark(entry, f"resolved_instance_id:{iid}")
+        else:
+            mark(entry, "no_instance_id_skip")
+            return uuid, entry
+
+
 
     mark(entry, "initiated")
     ok = reboot_instance(iid, region=region, max_wait=max_wait, poll_interval=poll_interval)
