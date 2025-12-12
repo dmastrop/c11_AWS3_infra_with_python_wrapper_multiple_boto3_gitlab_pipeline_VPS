@@ -40,7 +40,7 @@ import ipaddress # used with the is_valid_ip helper function below. This functio
 # in resurrection_monitor_patch8 and is also used in the tomcat_worker "unknown" ip address rehydration code  that occurs with thread
 # futures crashes.
 import glob # need this for the aggregate stats function aggregate_process_stats in main()
-
+import fcntl # this is used for the pop of the file used for INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS
 
 
 
@@ -6532,37 +6532,53 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         with open(ghost_ip_path, "w") as f:
             f.write(ghost_ip + "\n")
 
+
+
+
     # The code below is similar to the ghost ip injection code above but permits real node public ips to be used. This is for a more real life test involving
     # ghost ips without having to reproduce actual ghost nodes (very rare). The ips are write-to-disk so that they can be retrieved by main() and injected into
-    # the aggregate_gold_ips
+    # the aggregate_gold_ips. Search on INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS to see the other code chunks in main() for this.
     # Real ghost injection (new)
+    POOL_PATH = "/aws_EC2/logs/ghost_pool.json"
+    LOG_DIR   = "/aws_EC2/logs"
+
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
-        # Define your real public IPs here
-        real_ghosts = [
 
-            {"PublicIpAddress": "52.91.90.153", "PrivateIpAddress": "172.31.21.247"},
-            {"PublicIpAddress": "54.235.22.70 ", "PrivateIpAddress": "172.31.17.152"},
-            {"PublicIpAddress": "98.88.81.76", "PrivateIpAddress": "172.31.23.132"},
-            {"PublicIpAddress": "54.173.246.162", "PrivateIpAddress": "172.31.25.206"},
-            {"PublicIpAddress": "3.92.83.30", "PrivateIpAddress": "172.31.31.96"},
-            {"PublicIpAddress": "34.227.103.210", "PrivateIpAddress": "172.31.16.54"},
-            {"PublicIpAddress": "54.234.194.224", "PrivateIpAddress": "172.31.24.195"},
-            {"PublicIpAddress": "50.17.129.144", "PrivateIpAddress": "172.31.18.119"},
-        ]
+        def pop_one_ghost_from_pool(pool_path=POOL_PATH):
+            try:
+                with open(pool_path, "r+") as f:
+                    fcntl.flock(f, fcntl.LOCK_EX)  # exclusive lock
+                    pool = json.load(f)            # read current pool
+                    ghost = pool.pop(0) if pool else None  # take first entry
+                    f.seek(0)                      # rewind file
+                    json.dump(pool, f, indent=2)   # write updated pool
+                    f.truncate()                   # cut off leftover bytes
+                    fcntl.flock(f, fcntl.LOCK_UN)  # release lock
+                    return ghost
+            except FileNotFoundError:
+                return None
 
-        for ghost in real_ghosts:
-            instance_info.append(ghost)
-            print(f"[POST_THREAD_GHOST] Injected real ghost IP {ghost['PublicIpAddress']} into assigned_ips")
+        def inject_one_ghost(instance_info):
+            g = pop_one_ghost_from_pool()
+            if not g:
+                print("[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] No ghosts left in pool; skipping injection")
+                return None
 
+            instance_info.append(g)
+            ip = g["PublicIpAddress"]
             ts = int(time.time())
-            ghost_ip_path = os.path.join(
-                "/aws_EC2/logs",
-                f"real_process_ghost_ip_{ghost['PublicIpAddress'].replace('.', '_')}_{ts}.log"
-            )
+            ip_tag = ip.replace(".", "_")
+            os.makedirs(LOG_DIR, exist_ok=True)
+
+            ghost_ip_path = os.path.join(LOG_DIR, f"real_process_ghost_ip_{ip_tag}_{ts}.log")
             with open(ghost_ip_path, "w") as f:
-                f.write(f"{ghost['PublicIpAddress']}\n")
+                f.write(f"{ip}\n")
 
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} into assigned_ips (ts={ts})")
+            return g
 
+        # Inside tomcat_worker:
+        inject_one_ghost(instance_info)
 
 
 
@@ -6827,6 +6843,26 @@ def main():
     # The helper function setup_main_logging for the logging at the process orchestration level, see below
     # Pass this logger into the inter-test helper function call below sample_inter_test_metrics 
     logger = setup_main_logging()
+
+    # --- For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
+    if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+        real_ghosts = [
+            {"PublicIpAddress": "52.91.90.153", "PrivateIpAddress": "172.31.21.247"},
+            {"PublicIpAddress": "54.235.22.70", "PrivateIpAddress": "172.31.17.152"},
+            {"PublicIpAddress": "98.88.81.76", "PrivateIpAddress": "172.31.23.132"},
+            {"PublicIpAddress": "54.173.246.162", "PrivateIpAddress": "172.31.25.206"},
+            {"PublicIpAddress": "3.92.83.30", "PrivateIpAddress": "172.31.31.96"},
+            {"PublicIpAddress": "34.227.103.210", "PrivateIpAddress": "172.31.16.54"},
+            {"PublicIpAddress": "54.234.194.224", "PrivateIpAddress": "172.31.24.195"},
+            {"PublicIpAddress": "50.17.129.144", "PrivateIpAddress": "172.31.18.119"},
+        ]
+
+        pool_path = "/aws_EC2/logs/ghost_pool.json"
+        os.makedirs(os.path.dirname(pool_path), exist_ok=True)
+        with open(pool_path, "w") as f:
+            json.dump(real_ghosts, f, indent=2)
+
+
 
 
 
@@ -7661,7 +7697,7 @@ def main():
         with open(ghost_path, "w") as f:
             json.dump(ghosts, f, indent=2)
         print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
-
+        print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
 
         ##### aggregate gold ips from chunks ####
         # 10. Dump ghost IPs to plain-text log format (for GitLab artifact visibility)
