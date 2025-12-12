@@ -6532,6 +6532,38 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         with open(ghost_ip_path, "w") as f:
             f.write(ghost_ip + "\n")
 
+    # The code below is similar to the ghost ip injection code above but permits real node public ips to be used. This is for a more real life test involving
+    # ghost ips without having to reproduce actual ghost nodes (very rare). The ips are write-to-disk so that they can be retrieved by main() and injected into
+    # the aggregate_gold_ips
+    # Real ghost injection (new)
+    if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+        # Define your real public IPs here
+        real_ghosts = [
+            {"PublicIpAddress": "3.91.253.219", "PrivateIpAddress": "10.0.0.101"},
+            {"PublicIpAddress": "54.159.246.72", "PrivateIpAddress": "10.0.0.102"},
+            {"PublicIpAddress": "18.234.175.145", "PrivateIpAddress": "10.0.0.103"},
+            {"PublicIpAddress": "34.229.199.72", "PrivateIpAddress": "10.0.0.104"},
+            {"PublicIpAddress": "54.163.39.26", "PrivateIpAddress": "10.0.0.105"},
+            {"PublicIpAddress": "184.72.214.108", "PrivateIpAddress": "10.0.0.106"},
+            {"PublicIpAddress": "54.198.181.82", "PrivateIpAddress": "10.0.0.107"},
+            {"PublicIpAddress": "13.218.233.227", "PrivateIpAddress": "10.0.0.108"},
+        ]
+
+        for ghost in real_ghosts:
+            instance_info.append(ghost)
+            print(f"[POST_THREAD_GHOST] Injected real ghost IP {ghost['PublicIpAddress']} into assigned_ips")
+
+            ts = int(time.time())
+            ghost_ip_path = os.path.join(
+                "/aws_EC2/logs",
+                f"real_process_ghost_ip_{ghost['PublicIpAddress'].replace('.', '_')}_{ts}.log"
+            )
+            with open(ghost_ip_path, "w") as f:
+                f.write(f"{ghost['PublicIpAddress']}\n")
+
+
+
+
 
 
 
@@ -7561,6 +7593,19 @@ def main():
                                 aggregate_gold_ips.add(ip)
             print(f"[POST_THREAD_GHOST] Injected ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
 
+        # 5.6. The code block below is similar to the code above but this is used to inject real public node ips rather than synthetically generated ones.
+        # These ghost ips are also injected in tomcat_worker and are write-to_disk and are retrieved here in main() and injected into aggregate_gold_ips.
+        # New block for real public IP ghosts
+        if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+            ghost_dir = "/aws_EC2/logs"
+            for fname in os.listdir(ghost_dir):
+                if fname.startswith("real_process_ghost_ip_") and fname.endswith(".log"):
+                    with open(os.path.join(ghost_dir, fname), "r") as f:
+                        for line in f:
+                            ip = line.strip()
+                            if ip:
+                                aggregate_gold_ips.add(ip)
+            print(f"[POST_THREAD_GHOST_REAL_PUBLIC_IPS] Injected real ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
 
 
 
