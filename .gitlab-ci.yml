@@ -329,7 +329,9 @@ deploy:
       # These logs are for the process level synthetic ghost injection and are not normally seen. Only seen when the
       # INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS ENV variable is enabled
       - logs/real_process_ghost_ip_*.log
-
+      - logs/ghost_pool.json  ## this file is generated early in module2 main().
+      
+      
       # These are for the process level stats that are generated from resurrection monitor function in module2
       - logs/statistics/process_stats_*.json
 

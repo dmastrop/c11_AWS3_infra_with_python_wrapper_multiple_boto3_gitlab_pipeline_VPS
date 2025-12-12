@@ -696,14 +696,11 @@ instance_id is completely valid and a real node.
 
 This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The ghost injection code is
 below. It uses the same methodlogy as the original ghost ip inject but allows for custom public ips from real nodes to be used. These are written-to-disk and then
-read in main() and incorporated into aggregate_gold_ips:
+read in main() and incorporated into aggregate_gold_ips
 
+The code for this is in main() and in tomcat_worker() gated by the ENV variable in .gitlab-ci.yml INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS
 
-
-
-
-
-
+This uses a pop stack design with a write-to-disk per process in tomcat_worker, so that each process gets 1 unique public ip address from the list.
 
 
 
@@ -719,6 +716,18 @@ The procedure used to run this test is the following:
 - Because the instances are healthy, there will be  `reboot_context:initiated` followed by `reboot_context:ready` tags once the 2/2 checks pass.
 - module2f should be able to actually resurrect the nodes and install the commands on the nodes and the statuses of these nodes should change from ghost to
 install_success  
+
+###### Code:
+
+in main()
+
+
+
+in tomcat_worker()
+
+
+the gating code in .gitlab-ci.yml
+
 
 
 
