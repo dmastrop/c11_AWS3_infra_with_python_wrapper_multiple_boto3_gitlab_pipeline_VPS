@@ -350,6 +350,12 @@ The entire post processing multi-threaded block is added after the end of the ma
 
 Note that the block is executed after main() (see the last part)
 
+Also note that the reboot_and_check function needs to do the instance_id lookup now, since that code along with the reboot code was removed from the 
+ghost handler (proces_ghost).  This will be called for each future by the
+ThreadPoolExecutor through the reboot_and_check with unique thread_uuid that has the unique publicip for lookup. Also the rboot_context flag with
+the resolved instance_id to each registry_entry that is going to be rebooted needs to be added to the registry_entry.  
+For synthetic instance_id testing this will be the same across all ghost ips.
+For real life testing, this will be unique across the ghost ips.
 
 ```
 #### Version 2 of module2e #####
@@ -397,9 +403,28 @@ def mark(entry, tag):
 
 def reboot_and_check(uuid, entry, region=None, max_wait=300, poll_interval=15):
     iid = entry.get("instance_id")
+
+    #if not iid:
+    #    mark(entry, "no_instance_id_skip")
+    #    return uuid, entry
+
+    ## module2e Version 2
+    ## Since the reboot code moved out of the handler (process_ghost) need to do the instance_id lookup here. This will be called for each future by the 
+    ## ThreadPoolExecutor through the reboot_and_check with unique thread_uuid that has the unique publicip for lookup. Also add the rboot_context flag with
+    ## the resolved instance_id to each registry_entry that is going to be rebooted.  For synthetic instance_id testing this will be the same across all
+    ## ghost ips.
     if not iid:
-        mark(entry, "no_instance_id_skip")
-        return uuid, entry
+        iid = resolve_instance_id(
+            public_ip=entry.get("public_ip"),
+            private_ip=entry.get("private_ip"),
+            region=region
+        )
+        if iid:
+            # Tag the resolved ID for forensic traceability
+            mark(entry, f"resolved_instance_id:{iid}")
+        else:
+            mark(entry, "no_instance_id_skip")
+            return uuid, entry
 
     mark(entry, "initiated")
     ok = reboot_instance(iid, region=region, max_wait=max_wait, poll_interval=poll_interval)
@@ -621,11 +646,11 @@ ip injection code.
 
 The gitlab console logs will clearly demarcate the various pipeline layers in the code:
 
-module2e → bucketization + mark reboot candidates.
+- module2e → bucketization + mark reboot candidates.
 
-module2e2 → parallel reboot attempts, tagging outcomes.
+- module2e2 → parallel reboot attempts, tagging outcomes.
 
-module2f → resurrection attempts, final status assignment.
+- module2f → resurrection attempts, final status assignment.
 
 As noted earlier, the handlers in module2e will never do the reboot. The reboot code has been separated out from the various handler code so that any handler
 can perform a reboot if required
@@ -657,9 +682,17 @@ This will test the InvalidInstanceID.NotFound instance_id error case.
 As in previous tests, this will test the watchdog timeout. The watchdog timeouts will now be in parallel threads and will just consume 300 seconds of the total
 execution time (rather than the 8*300=2400 seconds in the previous serial implemenation; see the Part4a previous UPDATE).
 
+The execution time was massively reduced during the full test.
+
+Since the instance_id is not cached by AWS yet, the reboots will timeout rather than error abort.  This essentially fools the AWS API into believing that the
+instance_id is completely valid and a real node.
 
 
-##### Validation with valud instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
+
+
+
+
+##### Validation with valid instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
 
 This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The code modification
 is below:
@@ -671,15 +704,27 @@ This will permit the node to actually be rebooted successfully and then module2f
 
 This will test the real life tagging scenario of a ghost ip that has fallen out of the orchestration layer and is resurrected as install_success.
 
+The procedure used to run this test is the following:
+- Start up 8 real ubuntu nodes and use the same pem key on them that the code uses (the gitlab pipeline)
+- Capture the current public IPs 
+- Inject those IPs into  ghost injection logic (see new code above) so it appears in the registry as a ghost candidate.  
+- When the batch reboot stage runs, `resolve_instance_id` will look up those public IPs, find the active instance IDs, and attempt the reboots in parallel.  
+- Because the instances are healthy, there will be  `reboot_context:initiated` followed by `reboot_context:ready` tags once the 2/2 checks pass.
+- module2f should be able to actually resurrect the nodes and install the commands on the nodes and the statuses of these nodes should change from ghost to
+install_success  
 
 
 
 
 ##### Validation with module2e multi-threaded restart with ghost ips and HYBRID futures crashes 
 
-##### Validation with module2e multi-threaded restartwith ghost ips, HYBRID crashes and install_success with 50 nodes
+This will test 3 different bucket types: idx1 (resurrection but no reboot; included in module2e registry file), post install futures crash (no resurrection,
+no reboot and not in module2e registry file), ghosts (reboot and resurrection, and in module2e registry file)
 
-So 4 different types idx1 (resurrection but no reboot, in module2e file) , post install futures crash (no resurrection, no reboot and not in module2e file), ghosts ( reboot and resurrection and in module2e file) , install_success (no resurrection and no reboot and wont be in the module2e file)
+##### Validation with module2e multi-threaded restart with ghost ips, HYBRID crashes and install_success with 50 nodes
+
+This will test 4 different bucket types idx1 (resurrection but no reboot; included in  module2e registryfile) , post install futures crash (no resurrection, no reboot 
+and not in module2e file), ghosts ( reboot and resurrection and in module2e file) , install_success (no resurrection and no reboot and wont be in the module2e file)
 
 
 
