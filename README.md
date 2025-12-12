@@ -694,8 +694,15 @@ instance_id is completely valid and a real node.
 
 ##### Validation with valid instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
 
-This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The code modification
-is below:
+This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The ghost injection code is
+below. It uses the same methodlogy as the original ghost ip inject but allows for custom public ips from real nodes to be used. These are written-to-disk and then
+read in main() and incorporated into aggregate_gold_ips:
+
+
+
+
+
+
 
 
 

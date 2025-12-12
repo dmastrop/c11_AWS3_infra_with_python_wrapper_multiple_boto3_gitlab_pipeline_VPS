@@ -6539,14 +6539,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
         # Define your real public IPs here
         real_ghosts = [
-            {"PublicIpAddress": "3.91.253.219", "PrivateIpAddress": "10.0.0.101"},
-            {"PublicIpAddress": "54.159.246.72", "PrivateIpAddress": "10.0.0.102"},
-            {"PublicIpAddress": "18.234.175.145", "PrivateIpAddress": "10.0.0.103"},
-            {"PublicIpAddress": "34.229.199.72", "PrivateIpAddress": "10.0.0.104"},
-            {"PublicIpAddress": "54.163.39.26", "PrivateIpAddress": "10.0.0.105"},
-            {"PublicIpAddress": "184.72.214.108", "PrivateIpAddress": "10.0.0.106"},
-            {"PublicIpAddress": "54.198.181.82", "PrivateIpAddress": "10.0.0.107"},
-            {"PublicIpAddress": "13.218.233.227", "PrivateIpAddress": "10.0.0.108"},
+
+            {"PublicIpAddress": "52.91.90.153", "PrivateIpAddress": "172.31.21.247"},
+            {"PublicIpAddress": "54.235.22.70 ", "PrivateIpAddress": "172.31.17.152"},
+            {"PublicIpAddress": "98.88.81.76", "PrivateIpAddress": "172.31.23.132"},
+            {"PublicIpAddress": "54.173.246.162", "PrivateIpAddress": "172.31.25.206"},
+            {"PublicIpAddress": "3.92.83.30", "PrivateIpAddress": "172.31.31.96"},
+            {"PublicIpAddress": "34.227.103.210", "PrivateIpAddress": "172.31.16.54"},
+            {"PublicIpAddress": "54.234.194.224", "PrivateIpAddress": "172.31.24.195"},
+            {"PublicIpAddress": "50.17.129.144", "PrivateIpAddress": "172.31.18.119"},
         ]
 
         for ghost in real_ghosts:
