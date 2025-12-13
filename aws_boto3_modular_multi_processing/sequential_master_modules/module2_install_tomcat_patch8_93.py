@@ -6584,7 +6584,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             with open(ghost_ip_path, "w") as f:
                 f.write(f"{ip}\n")  # only need the public ip in the real_process_ghost_ip_*.log files because only that is required for orchestration, SSH, etc.
 
-            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} into assigned_ips (ts={ts})")
+            #print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} into assigned_ips (ts={ts})")
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} (private={g.get('PrivateIpAddress')}) into assigned_ips (ts={ts})")
             return g
 
         # Inside tomcat_worker:
