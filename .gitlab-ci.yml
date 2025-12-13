@@ -108,8 +108,11 @@ deploy:
 
     INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS: "true"  # this injection is similar to INJECT_POST_THREAD_GHOSTS but allows for real node public ips (and private ips)
       # to be used. The code is very similar to the INJECT_POST_THREAD_GHOSTS. The injections are made in tomcat_worker at the process level (1 ghost ip
-      # per process), written to disk (1 ip per json file) and then main() retrieves the ip addresses from disk and assimilates them into the 
-      # aggregate_gold_ips which is then used in the downstream modules (synthetic ghost registry creation, etc)
+      # per process), written to disk (1 ip per json file) and then main() retrieves the ip addresses from disk and assimilates and aggregates them from the process 
+      # level into the aggregate_gold_ips which is then used in the downstream modules (synthetic ghost registry creation, etc)
+      # The public ip addresses are added to a block very early in main() of module2 prior to the call by multiprocessing.Pool to tomcat_worker. 
+      # This ensures that the addresses are available to each process call to tomcat_worker and they can be popped from the list one by one, one per process
+      # and incorporated into the process registry for that pid. This has been tested and works very well.
 
 
     INJECT_FAKE_INSTANCE_ID: "false"
@@ -329,7 +332,7 @@ deploy:
       # These logs are for the process level synthetic ghost injection and are not normally seen. Only seen when the
       # INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS ENV variable is enabled
       - logs/real_process_ghost_ip_*.log
-      - logs/ghost_pool.json  ## this file is generated early in module2 main().
+      - logs/ghost_pool.json  ## this file is generated early in module2 main(). This file is used for the pop stack read for the INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPSA code
       
       
       # These are for the process level stats that are generated from resurrection monitor function in module2

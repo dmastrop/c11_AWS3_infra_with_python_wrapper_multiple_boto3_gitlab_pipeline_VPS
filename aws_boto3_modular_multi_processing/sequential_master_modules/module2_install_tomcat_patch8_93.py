@@ -6844,24 +6844,66 @@ def main():
     # Pass this logger into the inter-test helper function call below sample_inter_test_metrics 
     logger = setup_main_logging()
 
-    # --- For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
+
+
+
+    ## --- For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk. Must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
+    #if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+    #    real_ghosts = [
+    #        {"PublicIpAddress": "100.30.254.41", "PrivateIpAddress": "172.31.18.7"},
+    #        {"PublicIpAddress": "54.225.6.127", "PrivateIpAddress": "172.31.27.81"},
+    #        {"PublicIpAddress": "54.236.88.9", "PrivateIpAddress": "172.31.19.136"},
+    #        {"PublicIpAddress": "98.93.229.76", "PrivateIpAddress": "172.31.20.119"},
+    #        {"PublicIpAddress": "3.82.25.68", "PrivateIpAddress": "172.31.31.228"},
+    #        {"PublicIpAddress": "3.90.201.34", "PrivateIpAddress": "172.31.21.171"},
+    #        {"PublicIpAddress": "54.160.221.201", "PrivateIpAddress": "172.31.20.186"},
+    #        {"PublicIpAddress": "52.201.248.88", "PrivateIpAddress": "172.31.20.220"},
+    #    ]
+
+    #    pool_path = "/aws_EC2/logs/ghost_pool.json"
+    #    os.makedirs(os.path.dirname(pool_path), exist_ok=True)
+    #    with open(pool_path, "w") as f:
+    #        json.dump(real_ghosts, f, indent=2)
+
+
+
+# --- VERSION2: For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk. Must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
+# This version automatically gets the ips using the AWS API
+
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
-        real_ghosts = [
-            {"PublicIpAddress": "100.30.254.41", "PrivateIpAddress": "172.31.18.7"},
-            {"PublicIpAddress": "54.225.6.127", "PrivateIpAddress": "172.31.27.81"},
-            {"PublicIpAddress": "54.236.88.9", "PrivateIpAddress": "172.31.19.136"},
-            {"PublicIpAddress": "98.93.229.76", "PrivateIpAddress": "172.31.20.119"},
-            {"PublicIpAddress": "3.82.25.68", "PrivateIpAddress": "172.31.31.228"},
-            {"PublicIpAddress": "3.90.201.34", "PrivateIpAddress": "172.31.21.171"},
-            {"PublicIpAddress": "54.160.221.201", "PrivateIpAddress": "172.31.20.186"},
-            {"PublicIpAddress": "52.201.248.88", "PrivateIpAddress": "172.31.20.220"},
-        ]
+
+        def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4","ghost5","ghost6","ghost7","ghost8")):
+            session = boto3.Session(
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                region_name=os.getenv("region_name")
+            )
+            ec2 = session.client("ec2")
+            filters = [{"Name": "tag:Name", "Values": list(names)}]
+            resp = ec2.describe_instances(Filters=filters)
+
+            ghosts = []
+            for reservation in resp["Reservations"]:
+                for inst in reservation["Instances"]:
+                    ghosts.append({
+                        "PublicIpAddress": inst.get("PublicIpAddress"),
+                        "PrivateIpAddress": inst.get("PrivateIpAddress"),
+                        "InstanceId": inst["InstanceId"]
+                    })
+            return ghosts
+
+        real_ghosts = fetch_ghost_instances()
+
+        # Print all discovered ghosts to GitLab console
+        for g in real_ghosts:
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance "
+                  f"InstanceId={g['InstanceId']} Public={g['PublicIpAddress']} Private={g['PrivateIpAddress']}")
 
         pool_path = "/aws_EC2/logs/ghost_pool.json"
         os.makedirs(os.path.dirname(pool_path), exist_ok=True)
         with open(pool_path, "w") as f:
             json.dump(real_ghosts, f, indent=2)
-
+        print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Initialized {pool_path} with {len(real_ghosts)} entries")
 
 
 
