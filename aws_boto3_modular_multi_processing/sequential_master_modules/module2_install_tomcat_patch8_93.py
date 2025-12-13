@@ -6564,7 +6564,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print("[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] No ghosts left in pool; skipping injection")
                 return None
 
-            instance_info.append(g)
+            # Append the full dict with both PublicIpAddress and PrivateIpAddress. This absolutely ensures that the registry_entry is consistent
+            instance_info.append({
+                "PublicIpAddress": g["PublicIpAddress"],
+                "PrivateIpAddress": g.get("PrivateIpAddress", "unknown"),
+                "InstanceId": g.get("InstanceId", "unknown")
+            })
+
+            #instance_info.append(g)  
+            # get rid of this and use the block above for registry_entry consistency. This would still work but if g has missing
+            # entries it could cause issues.
+            
             ip = g["PublicIpAddress"]
             ts = int(time.time())
             ip_tag = ip.replace(".", "_")
@@ -6572,7 +6582,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
             ghost_ip_path = os.path.join(LOG_DIR, f"real_process_ghost_ip_{ip_tag}_{ts}.log")
             with open(ghost_ip_path, "w") as f:
-                f.write(f"{ip}\n")
+                f.write(f"{ip}\n")  # only need the public ip in the real_process_ghost_ip_*.log files because only that is required for orchestration, SSH, etc.
 
             print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} into assigned_ips (ts={ts})")
             return g
@@ -6868,7 +6878,7 @@ def main():
 
 
 # --- VERSION2: For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk. Must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
-# This version automatically gets the ips using the AWS API
+# This version automatically gets the ips using the AWS API. Note ghost_pool.json will have public ip, private ip, and instance_id
 
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
 
