@@ -228,9 +228,16 @@ STATUS_TAGS = {
 
 ### Introduction
 
+The code for the multi-threaded reboot code in module2e has been commited in Part 4b (The previous UPDATE)
+
 This UPDATE covers the specialized validation testing to test the multi-threaded reboot code that is used for the ghost ip resurrection. In addtion, 
 there is a signficant amount of regression testing that will be detailed in the sections that follow, that will test the higher level decision logic
-(gatekeeper decision code, bucektization of the resurrection types, etc.)
+(gatekeeper decision code, bucektization of the resurrection types, etc.). The regression tesitng with the multiple bucket resurrection types will 
+test handlers, the gatekeeper decision logic in modules2b and 2c, the reboot decision logic, etc. and represents a more realistic scenario.
+The specialized testing for the ghost resurrection logic is necessary to ensure that the cases where the reboot fails and the cases where the reboot succeeds
+result in the correct final status designation by the module2f processing. The important concepts that the module2e handlers must be decoupled from the 
+reboot code and that the handlers should never mutate or change the status are reiterated throughout.  The logic necessary to designate the status has only
+been added to modules 2 and 2f thus far. Those are the only modules that have the logic to properly designate the status of the registry_entry for a thread.
 
 
 Because of the inherent complexities in ghost resurrection and especially when trying to validate this type of code, the development has to be done in several
@@ -270,26 +277,67 @@ regression testing that is required for the ghost resurreciton code that is basi
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
 
+### Additonal code requirements
+
+As noted above, there are a few additional areas of code that need to be added. The first is a modified ghost injection code to allow customized public and 
+private ip addresses to be injected. These public and private ip addresses will represent test "ghost nodes", real life nodes on AWS that have been created
+beforehand and designated as ghosts in the code. This will permit complete testing of the ghost resurrection lifecycle from the code perspective.
+
+Another area of code that  needs to be added is a security group rule re-application. If the ghost ip node is in a failure state very early in the 
+orchestration layer (modules 1 and 2), the SG rules will most likely not be applied to the node. The new code in either module2e or 2f will reapply the 
+SG rules from the orchesration layer to ensure that the nodes have the proper rules prior to engaing on resurrection thread operations on the node (SSH, and 
+installation command execution on the node). The code in module2e or 2f will have to query the rules for the SG id designated in module1 and then once it has
+the rules, reapply them to all the ghost nodes after the ghost nodes have been rebooted and before the thread level operatoins (like SSH and commmand execution)
+are performed by module2f resurrection_install_tocmat.
+
+
+
+#### New ghost ip injection code: INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS
+
+
+##### .gitlab-ci.yml ENV variable delcaration and setting to gate the code in the functions below
+
+##### module2 main()
+
+##### module2 tomcat_worker()
+
+
+
+
+
+
+#### SG rule reapplication code post ghost reboot and prior to thread resurrection operations
+
+
+
+
+
 
 
 ### Validation for multi-threaded reboots (dcoupling the reboot code from the bucketization and process handler code)
 
 Note that this approach still uses the exact same reboot helper functions in utils.py that the serailized version uses. So the basic testing with malformed instance_id,
-valid instance_id cached, and valid instance_id not cached will have the same results. Those tests are regression tested below
-To understand this from a code perspective please see the Code review section above under the multi-threaded batch implemenation section.
+valid instance_id cached, and valid instance_id not cached will have the same results from the perspective of the gitlab console logs.
+Those specific tests are regression tested below
+Througout all of these tests the new reboot_context tag can be verified, as well as all of the other tags that require regression testing.
 
 The first objective is to test the insstance_id variants with synthetic ghost ip injections
 
 These will test the following cases:
  
-- Malformed ID → fast fail but always module2f resurrection attempt 
-- Cached/NotFound → fast fail but always module2f resurrection attempt
-- Valid but retired(not cached yet by AWS) → parallel timeout (~300s) but alwsays module2f resurrection attempt  
-- Healthy ID → reboot_context:ready, node is actually rebooted and the resurrectio should be successful. This will require a modification to the synthetic ghost
-ip injection code.
+- Malformed ID → fast fail on the reboot logic, but always module2f resurrection attempt 
+- Cached/NotFound → fast fail on the reboot logic, but always module2f resurrection attempt
+- Valid but retired(not cached yet by AWS) → parallel timeout (~300s) on the reboot logic, because the AWS API thinks that it is a valid real life node, 
+and  alwsays module2f resurrection attempt  
+- Healthy ID: The reboot_context:ready should appear in the registry_entry (module2e2 processing), and then the  node is actually rebooted and the 
+resurrection should be successful. Module2f actually changes the status of the registry_entry for the ghost ip from ghost to install_success.
+This will require a modification to the synthetic ghost ip injection code that will be reviewed in a section below. This test validates multiple pathways in the
+code as it simulates a real life ghost.
 
 
 The gitlab console logs will clearly demarcate the various pipeline layers in the code:
+
+- module2d has the aggregated registry for the ghosts and the non-ghost threads
 
 - module2e → bucketization + mark reboot candidates.
 
@@ -298,28 +346,32 @@ The gitlab console logs will clearly demarcate the various pipeline layers in th
 - module2f → resurrection attempts, final status assignment.
 
 As noted earlier, the handlers in module2e will never do the reboot. The reboot code has been separated out from the various handler code so that any handler
-can perform a reboot if required
+can perform a reboot if required. Currently, only the ghost ips perform a reboot on the node. But there will be other resurrection bucket types in the future
+that will require reboot, namely if command re-execution on half failed nodes will cause issues (commands that are not indempotent). The code logic for these
+more complicated cases will be done once this part of the code and tagging is verified.
 
 Also, the status will never be changed until module2f. The tags will carry the forensic historical data from one module to the next and the status should stay 
 the same until module2f.
 
 
-Then the next tests involve testing with the HYBRID synthetic crashes and install_success threads to test the upper layer gatekeeper and tagging decision
-logic as regression.
-
+The final set of tests involve testing with the HYBRID synthetic crashes and install_success threads to test the upper layer gatekeeper and tagging decision
+logic as a regression test.  This will create a more realistic scenario with 4 bucket types: idx1 futures crash, post installation futures crash, ghosts, and
+already_install_success. 
 
 
 
 #### Validation with malformed instance_id (multi-threaded restart implementation), ghost ips only
 
-This will test the InvalidInstanceID.Malformed instance_id error case.
+This will test the InvalidInstanceID.Malformed instance_id error case. The reboots will be done in parallel and will all fail. The execution time of the 
+reboot phase will be much shorter than before with the serialized version. 
 
 
 
 
 #### Validation with valid instance_id but cached (multi-threaded restart implementation), ghost ips only
 
-This will test the InvalidInstanceID.NotFound instance_id error case.
+This will test the InvalidInstanceID.NotFound instance_id error case. The reboots will be done in parallel and will all fail. The execution time of the
+reboot phase will be much shorter than before with the serialized version.
 
 
 #### Validation with valid instance_id and not cached (multi-threaded restart implementation), ghost ips only
@@ -334,26 +386,33 @@ instance_id is completely valid and a real node.
 
 
 
-
-
-
 #### Validation with valid instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
 
 This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The ghost injection code is
 below. It uses the same methodlogy as the original ghost ip inject but allows for custom public ips from real nodes to be used. These are written-to-disk and then
 read in main() and incorporated into aggregate_gold_ips
 
-The code for this is in main() and in tomcat_worker() gated by the ENV variable in .gitlab-ci.yml INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS
+- The code for this testing is in main() and in tomcat_worker() gated by the ENV variable in .gitlab-ci.yml INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS as reviewed
+in the Coding section above
 
-This uses a pop stack design with a write-to-disk per process in tomcat_worker, so that each process gets 1 unique public ip address from the list.
+- THis code uses the gated synthetic injection code INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS
 
+- This uses a pop stack design with a write-to-disk per process in tomcat_worker, so that each process gets 1 unique public ip address from the list.
+This is basically a pointer based design to pop off one public ip address in the write-to-disk file (that is created early in the module2 main() function)
+for each process call of the tomcat_worker function. So it is 1 ghost ip address injected per process, just like the older synthetic ghost ip injection, but
+this code permits the use of real life node public ips.
 
+- This will permit the "ghost" node to actually be rebooted successfully and then module2f will be able to do the full resurrection (command installation iteration).
 
-This will permit the node to actually be rebooted successfully and then module2f will be able to do the full resurrection (command installation iteration).
+- This will test the real life tagging scenario of a ghost ip that has fallen out of the orchestration layer and is resurrected as install_success.
+The newly added reboot_context tag can be verifed as well as the final status change to install_success in module2f.
 
-This will test the real life tagging scenario of a ghost ip that has fallen out of the orchestration layer and is resurrected as install_success.
+- This test is done with 8 processes, 2 thread per process and 1 ghost ip injected into each process, so a total of 8 real nodes need to be started up in 
+AWS prior to starting the test as indicated in the procedure below.
+
 
 The procedure used to run this test is the following:
+
 - Start up 8 real ubuntu nodes and use the same pem key on them that the code uses (the gitlab pipeline)
 - Capture the current public IPs 
 - Inject those IPs into  ghost injection logic (see new code above) so it appears in the registry as a ghost candidate.  
@@ -362,25 +421,14 @@ The procedure used to run this test is the following:
 - module2f should be able to actually resurrect the nodes and install the commands on the nodes and the statuses of these nodes should change from ghost to
 install_success  
 
-##### Code:
-
-in main()
 
 
-
-in tomcat_worker()
-
-
-the gating code in .gitlab-ci.yml
-
-
-
-
-
-#### Validation with module2e multi-threaded restart with ghost ips and HYBRID futures crashes 
+#### Validation with module2e multi-threaded restart with ghost ips and HYBRID futures crashes with 16 nodes 
 
 This will test 3 different bucket types: idx1 (resurrection but no reboot; included in module2e registry file), post install futures crash (no resurrection,
 no reboot and not in module2e registry file), ghosts (reboot and resurrection, and in module2e registry file)
+
+
 
 #### Validation with module2e multi-threaded restart with ghost ips, HYBRID crashes and install_success with 50 nodes
 
