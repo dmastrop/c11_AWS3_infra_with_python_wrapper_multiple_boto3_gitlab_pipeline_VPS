@@ -6534,7 +6534,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+    #### [tomcat_worker]
     # The code below is similar to the ghost ip injection code above but permits real node public ips to be used. This is for a more real life test involving
     # ghost ips without having to reproduce actual ghost nodes (very rare). The ips are write-to-disk so that they can be retrieved by main() and injected into
     # the aggregate_gold_ips. Search on INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS to see the other code chunks in main() for this.

@@ -187,11 +187,22 @@ artifact logs per pipeline)
 
 - Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrection ghost threads (multi-threaded reboot) Specialized Validation testing
 
+- Update part 48 Phase 3j: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
+
+
+
+
+
+
 ## A note on application extensibility
 
 The main thread installer function is named install_tomcat but the tomcat is a misnomer. The code is completely agnostic and extensible to any type of 
 installation application and supports a wide variety of package installers and bash-like command executors as well. The name of the function is just
 a legacy carryover from the original prototype code.
+
+
+
+
 
 
 
@@ -223,12 +234,67 @@ STATUS_TAGS = {
 
 
 
+## UPDATES part 48: Phase 3j: Part 6: Requeing and resurrection ghost thread: Private ip population and security group rules reapply post ghost node reboot
+
+### Introduction
+
+This is the final part for the initial ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
+processing code. The buik of the ghost resurrection code has been implemmented in Parts 1-5 as noted in the previous UPDATES.
+
+- Create a public ip to private ip mapping json file from the orchestration layer chunk data in module2.   This json file can then be used as another INPUT 
+to module2b which creates the syntehtic ghost registry_entry for the ghost ip.   The public ip can be mapped to the private ip from the json file and then 
+the private_ip address field in the registry_entry can be populated with the private ip.  This will only be done for the real life ghost ip case, and not for
+the synthetic ghost ip injection code (there is no requirement for it with the synthetic ghost ip injection code as it is just used for white box testing of the
+code paths)
+
+- Reapply the security group rules from module2 at the orchestration layer, in module2e or module2f after the reboot in module2e and prior to the resurrection of
+the node in module2f
+
+
+
+### HIgh level code implemenation
+
+
+
+
+
+
+### Code Revivew
+
+#### public ip to private ip mapping json file (module2)
+
+
+#### import of the mapping table and injection of the private_ip address into the ghost registry_entry (module2b)
+
+
+#### Security group rules rapply post reboot in module2e prior to resurrection 
+
+
+
+
+### Validation testing
+
+#### The public ip to private ip mapping json file verification
+
+
+#### The security group rules reapply post reboot in module2e prior to resurrection
+
+
+
+
+
+
+
 
 ## UPDATES part 47: Phase 3i: Parts 4c, and 5: Requeing and resurrection ghost threads (multi-threaded reboot) Specialized Validation testing
 
 ### Introduction
 
 The code for the multi-threaded reboot code in module2e has been commited in Part 4b (The previous UPDATE)
+
+This UPDATE is an important milestone in that it fully reveals where the code is at in preparation for the Phase 4 ML implemenation. The earlier 
+preview of the ML design will require a lot of the intrinsic tagging that has been integrated into the code. This tagging will be shown in the 
+validation outputs in the sections below.
 
 This UPDATE covers the specialized validation testing to test the multi-threaded reboot code that is used for the ghost ip resurrection. In addtion, 
 there is a signficant amount of regression testing that will be detailed in the sections that follow, that will test the higher level decision logic
@@ -275,6 +341,9 @@ regression testing that is required for the ghost resurreciton code that is basi
 
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
+
+- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
+
 
 
 ### Additonal code requirements
@@ -486,7 +555,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-
+- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 ### Part4b: Reboot code and health check code: Multi-threaded batch processing of reboots and health checks, and adding the reboot_context tagging
@@ -1092,7 +1161,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-
+- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 
@@ -3140,7 +3209,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-
+- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 ### Part1: Testing the existing code path for synthetic ghost ips (no InstanceId code path)
