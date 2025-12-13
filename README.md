@@ -442,6 +442,363 @@ reboot phase will be much shorter than before with the serialized version.
 This will test the InvalidInstanceID.NotFound instance_id error case. The reboots will be done in parallel and will all fail. The execution time of the
 reboot phase will be much shorter than before with the serialized version.
 
+The gitlab conosole logs are shown below. Note tahat it is a valid instance_id that is used but it is cached by AWS and so the NotFound error will cause the 
+reboot attempt to error out quickly. The attempted resurrection will then occur after that by module2f processing. T
+The resurrection fails as the simulated ghost ip does not actually exist as a node on AWS. (That test, with a real node will be done in a section further below)
+```
+Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 919a322c (IP: 44.223.64.56) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 73a87e9f (IP: 18.212.211.153) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 70ff9e4b (IP: 13.222.139.108) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 7cc6baed (IP: 54.224.146.161) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 55d1cc76 (IP: 54.167.83.140) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 91ab34f7 (IP: 98.80.9.54) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 80bbcd31 (IP: 54.144.52.212) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 34adea2a (IP: 3.89.248.208) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID a8b34424 (IP: 100.48.91.27) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 835046b1 (IP: 3.80.85.84) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e1cb6712 (IP: 98.80.118.109) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID be7fef5b (IP: 54.196.165.7) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 62263769 (IP: 3.80.80.177) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 070c4ef6 (IP: 100.26.61.205) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 04ac7934 (IP: 34.204.52.71) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4a591517 (IP: 34.207.111.93) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_180 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_99 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_15 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_231 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_117 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_35 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_65 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_52 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py
+[TEST] Overriding resolve_instance_id → i-009e01e1e097f0e86
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=0, total_ghost_candidates=8, selected_for_resurrection=8, rate=100.00%
+[module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+
+[module2e2] Reboot targets: 8
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[utils] Error rebooting i-009e01e1e097f0e86: An error occurred (InvalidInstanceID.NotFound) when calling the RebootInstances operation: The instance ID 'i-009e01e1e097f0e86' does not exist
+[module2e2] Wrote reboot-annotated registry to /aws_EC2/logs/resurrection_module2e_registry_rebooted.json
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+[TEST] Overriding resolve_instance_id → i-009e01e1e097f0e86
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.12.180
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.14.99
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.13.15
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.15.231
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.12.117
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.16.35
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.17.65
+[module2f][INFO] Starting resurrection for InstanceID=i-009e01e1e097f0e86, PublicIP=1.1.17.52
+[module2f] Resurrection failed for 1.1.17.65 (UUID ghost_1_1_17_65): timed out
+[module2f] Resurrection failed for 1.1.16.35 (UUID ghost_1_1_16_35): timed out
+[module2f] Resurrection failed for 1.1.17.52 (UUID ghost_1_1_17_52): timed out
+[module2f] Resurrection failed for 1.1.12.117 (UUID ghost_1_1_12_117): timed out
+[module2f] Resurrection failed for 1.1.14.99 (UUID ghost_1_1_14_99): timed out
+[module2f] Resurrection failed for 1.1.12.180 (UUID ghost_1_1_12_180): timed out
+[module2f] Resurrection failed for 1.1.13.15 (UUID ghost_1_1_13_15): timed out
+[module2f] Resurrection failed for 1.1.15.231 (UUID ghost_1_1_15_231): timed out
+[module2f] Wrote resurrection results to /aws_EC2/logs/module2f_resurrection_results.json
+[module2f] Wrote resurrection stats to /aws_EC2/logs/statistics/aggregate_resurrected_node_stats_module2f.json
+Process2f: resurrection_install_tomcat: Completed module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+```
+
+
+
+
+
+This is a sample registry_entry mutation from module2d to 2f from this test. Note the tagging. 
+This tagging will be a source of forensic data for the Phase 4 ML implemenation. 
+
+```
+Module2d
+
+
+"ghost_1_1_12_180": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_12_180",
+    "public_ip": "1.1.12.180",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+
+
+Module2e (pre-reboot)
+
+  "ghost_1_1_12_180": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_12_180",
+    "public_ip": "1.1.12.180",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true  <<<<<<<<
+  },
+
+
+Module2e2 (post reboot_context processing)
+
+{
+  "ghost_1_1_12_180": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 12,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_12_180",
+    "public_ip": "1.1.12.180",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-009e01e1e097f0e86", <<<<<<
+      "reboot_context:initiated",  <<<<<
+      "reboot_context:reboot_failed"    <<<<<<
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true,
+    "timestamp_reboot_stage": "2025-12-11T01:52:54.619528Z" <<<<<<<
+  },
+
+
+
+Module2f (resurrected node)
+
+
+"ghost_1_1_12_180": {
+    "status": "install_failed", <<<<<<<< As noted above, this is expected. A live node test will be performed in a later section.
+    "attempt": -1,
+    "pid": 12,
+    "thread_uuid": "ghost_1_1_12_180",
+    "public_ip": "1.1.12.180",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-11T01:53:39.871257",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError",  <<<<<<<<<<
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-009e01e1e097f0e86",
+      "reboot_context:initiated",
+      "reboot_context:reboot_failed"
+    ]
+  },
+
+```
+
+
+
+
+These are the stats. This is a simple 16 node test with 8 processes (2 threads per process) and 8 ghost ips are synthetically injected (these synthetics in this
+test case don't actually exist on AWS. That test will be performed in anoter section below to test the complete lifecycle of the ghost ip resurrection implemenation).
+Note the bucketization of resurrection type in module2e
+
+```
+Module2d stats
+
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "100.26.61.205",
+    "100.48.91.27",
+    "13.222.139.108",
+    "18.212.211.153",
+    "3.80.80.177",
+    "3.80.85.84",
+    "3.89.248.208",
+    "34.204.52.71",
+    "34.207.111.93",
+    "44.223.64.56",
+    "54.144.52.212",
+    "54.167.83.140",
+    "54.196.165.7",
+    "54.224.146.161",
+    "98.80.118.109",
+    "98.80.9.54"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.117",
+    "1.1.12.180",
+    "1.1.13.15",
+    "1.1.14.99",
+    "1.1.15.231",
+    "1.1.16.35",
+    "1.1.17.52",
+    "1.1.17.65",
+    "100.26.61.205",
+    "100.48.91.27",
+    "13.222.139.108",
+    "18.212.211.153",
+    "3.80.80.177",
+    "3.80.85.84",
+    "3.89.248.208",
+    "34.204.52.71",
+    "34.207.111.93",
+    "44.223.64.56",
+    "54.144.52.212",
+    "54.167.83.140",
+    "54.196.165.7",
+    "54.224.146.161",
+    "98.80.118.109",
+    "98.80.9.54"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.117",
+    "1.1.12.180",
+    "1.1.13.15",
+    "1.1.14.99",
+    "1.1.15.231",
+    "1.1.16.35",
+    "1.1.17.52",
+    "1.1.17.65"
+  ],
+  "gatekeeper_resurrected": 8,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 100.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
+}
+
+
+Module2e stats
+
+{
+  "total_resurrection_candidates": 0,
+  "total_ghost_candidates": 8,
+  "selected_for_resurrection_total": 8,
+  "by_bucket_counts": {
+    "already_install_success": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "ghost": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 8,
+      "selected_for_resurrection": 8
+    }
+  },
+  "selected_for_resurrection_rate_overall": 100.0,
+  "timestamp": "2025-12-11T01:52:51.930537"
+}
+
+
+Module2f stats
+
+{
+  "resurrected_total_threads": 8,
+  "resurrected_install_success": 0,
+  "resurrected_install_failed": 8,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "1.1.12.117",
+    "1.1.12.180",
+    "1.1.13.15",
+    "1.1.14.99",
+    "1.1.15.231",
+    "1.1.16.35",
+    "1.1.17.52",
+    "1.1.17.65"
+  ],
+  "resurrection_success_rate_percent": 0.0
+}
+```
 
 #### Validation with valid instance_id and not cached (multi-threaded restart implementation), ghost ips only
 
@@ -453,9 +810,374 @@ The execution time was massively reduced during the full test.
 Since the instance_id is not cached by AWS yet, the reboots will timeout rather than error abort.  This essentially fools the AWS API into believing that the
 instance_id is completely valid and a real node.
 
+The timeouts occur because this is tested without a real node. A real node test will be performed in the section after this.
+
+These first 3 tests (Malformed, NotFound, and timeout) are negative tests. The postive test case will be in the next section.
+
+These are the gitlab console logs:
 
 
-#### Validation with valid instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
+Note that the reboots are initiated all at once in parallel rather than in the previous test case where they were serialized.
+
+```
+Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 0 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 0 candidate IPs with command success entries
+[module2c] Total registry entries tagged: 0
+[module2c] No registry entries qualified for tagging. Output file still written for consistency.
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 2f4dcb17 (IP: 34.224.67.167) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ce678190 (IP: 52.90.18.152) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bd0d8563 (IP: 184.72.187.52) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 5f522edb (IP: 54.157.211.227) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID f28d467c (IP: 98.81.246.42) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID b498d8ee (IP: 13.218.233.227) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 7130cc07 (IP: 54.163.39.26) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 049c0755 (IP: 54.198.181.82) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID afa2ed7d (IP: 184.72.214.108) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 36cb83f1 (IP: 3.89.223.160) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 52699123 (IP: 54.87.201.244) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 5d9507df (IP: 3.91.253.219) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID e9bbd67d (IP: 54.211.127.32) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 511d3960 (IP: 54.159.246.72) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID c812317b (IP: 34.229.199.72) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 8a585682 (IP: 18.234.175.145) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 0
+[module2d.1] Total blocked: 16
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_249 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_15_112 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_13_26 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_211 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_16_152 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_17_210 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_12_224 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_1_1_14_69 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 24
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 8, Blocked: 16, Total: 24
+[module2d.4] Resurrection Rate: 100.00%
+[module2d.4] Gatekeeper Rate: 33.33%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py
+[TEST] Overriding resolve_instance_id → i-04db5334416589234
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=0, total_ghost_candidates=8, selected_for_resurrection=8, rate=100.00%
+[module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+[module2e2] Reboot targets: 8
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Reboot initiated for i-04db5334416589234
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[utils] Timeout waiting for i-04db5334416589234 to become healthy
+[module2e2] Wrote reboot-annotated registry to /aws_EC2/logs/resurrection_module2e_registry_rebooted.json
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+[TEST] Overriding resolve_instance_id → i-04db5334416589234
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.13.249
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.15.112
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.13.26
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.16.211
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.16.152
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.17.210
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.12.224
+[module2f][INFO] Starting resurrection for InstanceID=i-04db5334416589234, PublicIP=1.1.14.69
+[module2f] Resurrection failed for 1.1.16.152 (UUID ghost_1_1_16_152): timed out
+[module2f] Resurrection failed for 1.1.16.211 (UUID ghost_1_1_16_211): timed out
+[module2f] Resurrection failed for 1.1.13.26 (UUID ghost_1_1_13_26): timed out
+[module2f] Resurrection failed for 1.1.13.249 (UUID ghost_1_1_13_249): timed out
+[module2f] Resurrection failed for 1.1.15.112 (UUID ghost_1_1_15_112): timed out
+[module2f] Resurrection failed for 1.1.17.210 (UUID ghost_1_1_17_210): timed out
+[module2f] Resurrection failed for 1.1.14.69 (UUID ghost_1_1_14_69): timed out
+[module2f] Resurrection failed for 1.1.12.224 (UUID ghost_1_1_12_224): timed out
+[module2f] Wrote resurrection results to /aws_EC2/logs/module2f_resurrection_results.json
+[module2f] Wrote resurrection stats to /aws_EC2/logs/statistics/aggregate_resurrected_node_stats_module2f.json
+Process2f: resurrection_install_tomcat: Completed module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+ [32;1m$ echo "Contents of logs directory after container run:" [0;m
+```
+
+This is a registry_entry mutation from module2d to module2f:
+
+```
+Module2d
+
+"ghost_1_1_13_249": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_13_249",
+    "public_ip": "1.1.13.249",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+
+
+
+Module2e (gatekeeper)
+
+  "ghost_1_1_13_249": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_13_249",
+    "public_ip": "1.1.13.249",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true
+  },
+
+
+
+Module2e2 (reboot_context tags)
+
+
+  "ghost_1_1_13_249": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 13,
+    "thread_id": null,
+    "thread_uuid": "ghost_1_1_13_249",
+    "public_ip": "1.1.13.249",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-04db5334416589234",  <<<<<<
+      "reboot_context:initiated",  <<<<<<<
+      "reboot_context:reboot_failed"  <<<<<<<<<
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true,
+    "timestamp_reboot_stage": "2025-12-11T22:23:35.053273Z"  <<<<<<<
+  },
+
+
+
+
+Module2f (final resurrection status)
+
+
+  "ghost_1_1_13_249": {
+    "status": "install_failed",  <<<<<<<<<<
+    "attempt": -1,
+    "pid": 13,
+    "thread_uuid": "ghost_1_1_13_249",
+    "public_ip": "1.1.13.249",
+    "private_ip": "unknown",
+    "timestamp": "2025-12-11T22:24:20.623498",
+    "tags": [
+      "install_failed",
+      "module2f_exception",
+      "TimeoutError",  <<<<<<<<<<
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-04db5334416589234",
+      "reboot_context:initiated",
+      "reboot_context:reboot_failed"
+    ]
+  },
+```
+
+These are the stats
+Note the bucketization of resurrection type in module2e
+```
+Module2d
+
+{
+  "total_processes": 8,
+  "total_threads": 16,
+  "total_success": 16,
+  "total_failed_and_stubs": 0,
+  "total_resurrection_candidates": 0,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "13.218.233.227",
+    "18.234.175.145",
+    "184.72.187.52",
+    "184.72.214.108",
+    "3.89.223.160",
+    "3.91.253.219",
+    "34.224.67.167",
+    "34.229.199.72",
+    "52.90.18.152",
+    "54.157.211.227",
+    "54.159.246.72",
+    "54.163.39.26",
+    "54.198.181.82",
+    "54.211.127.32",
+    "54.87.201.244",
+    "98.81.246.42"
+  ],
+  "unique_assigned_ips_golden": [
+    "1.1.12.224",
+    "1.1.13.249",
+    "1.1.13.26",
+    "1.1.14.69",
+    "1.1.15.112",
+    "1.1.16.152",
+    "1.1.16.211",
+    "1.1.17.210",
+    "13.218.233.227",
+    "18.234.175.145",
+    "184.72.187.52",
+    "184.72.214.108",
+    "3.89.223.160",
+    "3.91.253.219",
+    "34.224.67.167",
+    "34.229.199.72",
+    "52.90.18.152",
+    "54.157.211.227",
+    "54.159.246.72",
+    "54.163.39.26",
+    "54.198.181.82",
+    "54.211.127.32",
+    "54.87.201.244",
+    "98.81.246.42"
+  ],
+  "unique_missing_ips_ghosts": [
+    "1.1.12.224",
+    "1.1.13.249",
+    "1.1.13.26",
+    "1.1.14.69",
+    "1.1.15.112",
+    "1.1.16.152",
+    "1.1.16.211",
+    "1.1.17.210"
+  ],
+  "gatekeeper_resurrected": 8,
+  "gatekeeper_blocked": 16,
+  "gatekeeper_total": 24,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 100.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 33.33
+}
+
+Module2e
+
+{
+  "total_resurrection_candidates": 0,
+  "total_ghost_candidates": 8,
+  "selected_for_resurrection_total": 8,
+  "by_bucket_counts": {
+    "already_install_success": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "ghost": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 8,
+      "selected_for_resurrection": 8
+    }
+  },
+  "selected_for_resurrection_rate_overall": 100.0,
+  "timestamp": "2025-12-11T22:18:29.561455"
+}
+
+
+Module2f
+
+
+{
+  "resurrected_total_threads": 8,
+  "resurrected_install_success": 0,
+  "resurrected_install_failed": 8,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "1.1.12.224",
+    "1.1.13.249",
+    "1.1.13.26",
+    "1.1.14.69",
+    "1.1.15.112",
+    "1.1.16.152",
+    "1.1.16.211",
+    "1.1.17.210"
+  ],
+  "resurrection_success_rate_percent": 0.0
+}
+
+```
+
+
+
+
+### Validation with valid instance_ids by using real AWS instances and injecting their ips as ghost ips (multi-threaded restart implementation)
 
 This test will actually go through the complete lifecycle. The synthetic ghost ip logic will use real AWS instance public ip addresses. The ghost injection code is
 below. It uses the same methodlogy as the original ghost ip inject but allows for custom public ips from real nodes to be used. These are written-to-disk and then
