@@ -6847,14 +6847,14 @@ def main():
     # --- For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
         real_ghosts = [
-            {"PublicIpAddress": "52.91.90.153", "PrivateIpAddress": "172.31.21.247"},
-            {"PublicIpAddress": "54.235.22.70", "PrivateIpAddress": "172.31.17.152"},
-            {"PublicIpAddress": "98.88.81.76", "PrivateIpAddress": "172.31.23.132"},
-            {"PublicIpAddress": "54.173.246.162", "PrivateIpAddress": "172.31.25.206"},
-            {"PublicIpAddress": "3.92.83.30", "PrivateIpAddress": "172.31.31.96"},
-            {"PublicIpAddress": "34.227.103.210", "PrivateIpAddress": "172.31.16.54"},
-            {"PublicIpAddress": "54.234.194.224", "PrivateIpAddress": "172.31.24.195"},
-            {"PublicIpAddress": "50.17.129.144", "PrivateIpAddress": "172.31.18.119"},
+            {"PublicIpAddress": "100.30.254.41", "PrivateIpAddress": "172.31.18.7"},
+            {"PublicIpAddress": "54.225.6.127", "PrivateIpAddress": "172.31.27.81"},
+            {"PublicIpAddress": "54.236.88.9", "PrivateIpAddress": "172.31.19.136"},
+            {"PublicIpAddress": "98.93.229.76", "PrivateIpAddress": "172.31.20.119"},
+            {"PublicIpAddress": "3.82.25.68", "PrivateIpAddress": "172.31.31.228"},
+            {"PublicIpAddress": "3.90.201.34", "PrivateIpAddress": "172.31.21.171"},
+            {"PublicIpAddress": "54.160.221.201", "PrivateIpAddress": "172.31.20.186"},
+            {"PublicIpAddress": "52.201.248.88", "PrivateIpAddress": "172.31.20.220"},
         ]
 
         pool_path = "/aws_EC2/logs/ghost_pool.json"
