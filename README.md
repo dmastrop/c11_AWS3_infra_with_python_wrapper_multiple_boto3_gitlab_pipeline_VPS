@@ -363,12 +363,363 @@ are performed by module2f resurrection_install_tocmat.
 
 #### New ghost ip injection code: INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS
 
+The current ghost ip injection code gated by the ENV variable INJECT_POST_THREAD_GHOSTS 
+is used for the first several tests in the Validation section further below. In general, this is sufficient for testing the 
+negative test case paths in the reboot code whereby the reboot fails because the instance_id is Malformed or NotFound or the reboot fails because the 
+node cannot be rebooted. In all cases, the code is designed to unconditionally proceed with the module2f resurrection attempt, even if the reboot fails.  
 
-##### .gitlab-ci.yml ENV variable delcaration and setting to gate the code in the functions below
+This tested out very well.
 
-##### module2 main()
+However, to test the postive test case, in the absence of a true real life ghost (these are hard to simulate, even with hyper-scaling), 
+the following procedure must be done, and the code in module2 needs to be modified accordingly as indicated below.
+
+The procedure used to run this test is the following:
+
+- Start up 8 real ubuntu nodes and use the same pem key on them that the code uses (the gitlab pipeline)
+- Capture the current public IPs
+- Inject those IPs into  ghost injection logic so it appears in the registry as a ghost candidate.
+- When the batch reboot stage runs, `resolve_instance_id` will look up those public IPs, find the active instance IDs, and attempt the reboots in parallel.
+- Because the instances are healthy, there will be  `reboot_context:initiated` followed by `reboot_context:ready` tags once the 2/2 checks pass.(module2e2)
+- module2f should be able to actually resurrect the nodes and install the commands on the nodes and the statuses of these nodes should change from ghost to
+install_success
+
+The capturing of the current public IPs is done through an API call once the test "ghost" nodes are up and running. 
+As noted below in the Validation section this tested the code very well.
+Note that the private_ip field in the registry_entry for the ghost is still unknown state and this will be fixed for the real life ghost case in the next
+UPDATE. But for this synthetic test, the private_ip unknown does not have any adverse affects on the integrity of the test.
+
+The new code below injects the code in the same place as the former INJECT_POST_THREAD_GHOSTS code did. It is done as 1 ghost ip per prcess at the process level 
+in the tomcat_worker() function. This is so that all of the logs and stats percolate up from module2 through module2f with the injected ghost ips. As such, 
+all of the module logging is tested all the way up to and includeing module2f. The mutation in the the registry_entry will be shown in the Validation section below.
+It represents a true ghost ip scenario in every way from the code perspective. 
+
+
+
+
+
+##### .gitlab-ci.yml ENV variable delcaration used to gate the code in the functions below
+
+The new code in main() and tomcat() worker is completely gated by the ENV variable below. This makes it easy to switch the test on and off and mix in the various
+other synthetic tests.
+
+The new ENV variable is INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS as show below. 
+
+```
+   INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS: "true"  # this injection is similar to INJECT_POST_THREAD_GHOSTS but allows for real node public ips (and private ips)
+      # to be used. The code is very similar to the INJECT_POST_THREAD_GHOSTS. The injections are made in tomcat_worker at the process level (1 ghost ip
+      # per process), written to disk (1 ip per json file) and then main() retrieves the ip addresses from disk and assimilates and aggregates them from the process 
+      # level into the aggregate_gold_ips which is then used in the downstream modules (synthetic ghost registry creation, etc)
+      # The public ip addresses are added to a block very early in main() of module2 prior to the call by multiprocessing.Pool to tomcat_worker. 
+      # This ensures that the addresses are available to each process call to tomcat_worker and they can be popped from the list one by one, one per process
+      # and incorporated into the process registry for that pid. This has been tested and works very well.
+```
+And this:
+
+```
+    - echo 'INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS='${INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS} >> .env # inject real node public ips as ghosts at the process level in tomcat_worker between the call to run_test/threaded_install for the process_registry AND the call to the resurrection_monitor_patch8. Mutate teh aggregate_gold_ips in main() 
+```
+
+
+A new json log artifact is created (and exported by the gitlab pipeline) named ghost_pool.json and is listed in the artifacts section of the .gitlab-ci.yml.
+The use of this file will be described in the code sections below for main() and tomcat_worker(). In short, it is created at the orchestration layer in main()
+very early on and is accessed by tomcat_worker() in a pointer pop stack fashion to grab 1 of the gosth ips per tomcat_worker process call.  The pop removes the 
+top entry each call, so in the end all 8 ghost ips are gone (The file is empty by the time the gitlab pipeline exports the ghost_pool.json at the end of the 
+pipeline execution deply stage.
+
+In the .gitlab-ci.yml this artifact is delcared by this line:
+
+```
+      # These logs are for the process level synthetic ghost injection and are not normally seen. Only seen when the
+      # INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS ENV variable is enabled
+      - logs/real_process_ghost_ip_*.log
+      - logs/ghost_pool.json  ## this file is generated early in module2 main(). This file is used for the pop stack read for the INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS```
+
+The real_process_ghost_ip_*.log is similar to the INJECT_POST_THREAD_GHOST original injection. It has the single ghost ip that is injected at the process layer per
+tomcat_worker call.
+
+
+1.  As noted above, the ghost_pool.json file is created that has all the ghost ips in it. This file is created prior and very early on in main() and the 
+tomcat_worker pops off one ghost ip per call and then removes it from the list. It has to be done this way because these are real time public ips from real life 
+nodes, not node ips that are synthetically constructed (like 1.1.1.x addreses with the other ghost ip injection).
+
+2. So ghost_pool.json is first created then the tomcat_worker pops one ip from the top of the list and removes it and that ip for that pid gets stored in the 
+real_process_ghost_ip_*.log and is the public ip assigned to that pid and assigned to the registry_entry public ip for the ghost.
+
+3. Finally, just like the original code, once tomcat_worker() calls create all the real_proces_ghost_ip_*.log files, main() them reads them, aggregates them and
+then assigns them to the aggregate_gold_ips variable. This complete golden orchestration layer list of ips is then used by the subsequent modules.
+
+This tested out very well.
+
+NOTE that all of the code blocks are gated by the ENV variable, so these code blocks only run if the synthetic ghost injection is enabled in the .gitlab-ci.yml 
+file as noted above.
+
+
+The code is a bit complex because the processes are all parallel. I have tried to present then in an orderly fashion below.
+The sections below are ordered in relation to the actual functional execution.
+
+
+
+
+##### module2 main() early block:
+
+As noted above this is where the AWS API queries the 8 "ghost" nodes that are runing, and gets the public ip, private ip and the instance_id of each of the 
+nodes.  It then stores the ips in the ghost_pool.json file that was described above. tomcat_worker will then pop on e of the ips off the list of this json 
+file per call to tomcat_worker and incorporate that public ip into the ghost registry_entry. This ip will be carried up all the way from module2 to module2f.
+Module2b will use the public ip to create the synthetic ghost registry_entry which the following modules will then use and add tags as they process the 
+soon to be thread.
+
+This code block in main() is inserted at the very start of the main() function of module2. It has to be prior to the multiprocessing.Pool call to tomcat_worker
+so that tomcat_worker can pop the ips off from the ghost_pool.json file.
+
+
+```
+# --- VERSION2: For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk. Must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
+# This version automatically gets the ips using the AWS API. Note ghost_pool.json will have public ip, private ip, and instance_id
+
+    if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+
+        def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4","ghost5","ghost6","ghost7","ghost8")):
+            session = boto3.Session(
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                region_name=os.getenv("region_name")
+            )
+            ec2 = session.client("ec2")
+            filters = [{"Name": "tag:Name", "Values": list(names)}]
+            resp = ec2.describe_instances(Filters=filters)
+
+            ghosts = []
+            for reservation in resp["Reservations"]:
+                for inst in reservation["Instances"]:
+                    ghosts.append({
+                        "PublicIpAddress": inst.get("PublicIpAddress"),
+                        "PrivateIpAddress": inst.get("PrivateIpAddress"),
+                        "InstanceId": inst["InstanceId"]
+                    })
+            return ghosts
+
+        real_ghosts = fetch_ghost_instances()
+
+        # Print all discovered ghosts to GitLab console
+        for g in real_ghosts:
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance "
+                  f"InstanceId={g['InstanceId']} Public={g['PublicIpAddress']} Private={g['PrivateIpAddress']}")
+
+        pool_path = "/aws_EC2/logs/ghost_pool.json"
+        os.makedirs(os.path.dirname(pool_path), exist_ok=True)
+        with open(pool_path, "w") as f:
+            json.dump(real_ghosts, f, indent=2)
+        print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Initialized {pool_path} with {len(real_ghosts)} entries")
+```
 
 ##### module2 tomcat_worker()
+
+Once the ghost_pool.json file has been created early in main() at some point in main the multiprocessing.Pool starts to make the parallel calls to 
+tocmat_worker. Each call to tomcat_worker then pops off one of the ips from the top of ghost_pool.json file and removes it from the list so that another 
+tomcat_worker can pull the next ip in the list. The json file is fully locked to prevent race conditions. The lock is very very important.
+
+
+Make sure to import the following at the top of module2:
+
+```
+import fcntl # this is used for the pop of the file used for INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS
+
+```
+
+This is the code block in tomcat_worker() a process level function that is called by the multiprocessing.Pool
+Note the POOL_PATH. This is getting the ghost_pool.json created in early main() as noted in the previous section.
+Note the entire block is gated including the helper functions. We do not need any of this outside of running this particular synthetic ghost ip injection.
+The full dictionaary is appended but for the synthetic case the private ip is not incorporated into the ghost registry_entry. In the real life ghost case
+the private ip will be injected into the registry_entry. This will be coded in the next UPDATE.
+
+
+```
+    #### [tomcat_worker]
+    # The code below is similar to the ghost ip injection code above but permits real node public ips to be used. This is for a more real life test involving
+    # ghost ips without having to reproduce actual ghost nodes (very rare). The ips are write-to-disk so that they can be retrieved by main() and injected into
+    # the aggregate_gold_ips. Search on INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS to see the other code chunks in main() for this.
+    # Real ghost injection (new)
+    POOL_PATH = "/aws_EC2/logs/ghost_pool.json"
+    LOG_DIR   = "/aws_EC2/logs"
+
+    if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+
+        def pop_one_ghost_from_pool(pool_path=POOL_PATH):
+            try:
+                with open(pool_path, "r+") as f:
+                    fcntl.flock(f, fcntl.LOCK_EX)  # exclusive lock
+                    pool = json.load(f)            # read current pool
+                    ghost = pool.pop(0) if pool else None  # take first entry
+                    f.seek(0)                      # rewind file
+                    json.dump(pool, f, indent=2)   # write updated pool
+                    f.truncate()                   # cut off leftover bytes
+                    fcntl.flock(f, fcntl.LOCK_UN)  # release lock
+                    return ghost
+            except FileNotFoundError:
+                return None
+
+        def inject_one_ghost(instance_info):
+            g = pop_one_ghost_from_pool()
+            if not g:
+                print("[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] No ghosts left in pool; skipping injection")
+                return None
+
+            # Append the full dict with both PublicIpAddress and PrivateIpAddress. This absolutely ensures that the registry_entry is consistent
+            instance_info.append({
+                "PublicIpAddress": g["PublicIpAddress"],
+                "PrivateIpAddress": g.get("PrivateIpAddress", "unknown"),
+                "InstanceId": g.get("InstanceId", "unknown")
+            })
+
+            #instance_info.append(g)  
+            # get rid of this and use the block above for registry_entry consistency. This would still work but if g has missing
+            # entries it could cause issues.
+
+            ip = g["PublicIpAddress"]
+            ts = int(time.time())
+            ip_tag = ip.replace(".", "_")
+            os.makedirs(LOG_DIR, exist_ok=True)
+
+            ghost_ip_path = os.path.join(LOG_DIR, f"real_process_ghost_ip_{ip_tag}_{ts}.log")
+            with open(ghost_ip_path, "w") as f:
+                f.write(f"{ip}\n")  # only need the public ip in the real_process_ghost_ip_*.log files because only that is required for orchestration, SSH, etc.
+
+            #print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} into assigned_ips (ts={ts})")
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} (private={g.get('PrivateIpAddress')}) into assigned_ips (ts={ts})")
+            return g
+
+        # Inside tomcat_worker:
+        inject_one_ghost(instance_info)
+
+```
+Basically the inject_one_ghost function is called with the instance_info by the current process that is calling tomcat_worker. Next, inject_one_ghost calls 
+pop_one_ghost_from_pool which pops the topmost ip address from the ghost_pool.json file that was created early in main(). The public ip is then incorporated into
+this process' real_process_ghost_ip_*.log file that will be used later in main() in step 5.6 (see next section below).
+
+main step 5.6 goes through all the real_proces_ghost_ip_*.log files for each process and appends all these ghost ips to the  aggregate_gold_ips variable (the complete
+list of all the ips in the execution run). See the next section below on how this utlimately creates the necessary ghost log files that can be used by module2b and
+subsequent modules to process the ghost ips as threads and tag them accordingly.
+
+
+##### module2 main() later blocks:
+
+
+This next insertion in main() is towards the end of main().
+Here, just like the prior ghost injection method using fake ips, the real_process_ghost_ip_*.log files are aggregated from each process and added to the 
+aggregate_gold_ips variable list. This ip list is then used to create several other variables that are used in the logs and statistics in module2 and the 
+subsequent modules. See the next section below.
+
+
+```
+        # 5.6. The code block below is similar to the code above but this is used to inject real public node ips rather than synthetically generated ones.
+        # These ghost ips are also injected in tomcat_worker and are write-to_disk and are retrieved here in main() and injected into aggregate_gold_ips.
+        # New block for real public IP ghosts
+        if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
+            ghost_dir = "/aws_EC2/logs"
+            for fname in os.listdir(ghost_dir):
+                if fname.startswith("real_process_ghost_ip_") and fname.endswith(".log"):
+                    with open(os.path.join(ghost_dir, fname), "r") as f:
+                        for line in f:
+                            ip = line.strip()
+                            if ip:
+                                aggregate_gold_ips.add(ip)  <<<<<<<<<<<<<<<<<<<<<<<< This is the complete list of orchestration layer golden list of ips including ghosts
+            print(f"[POST_THREAD_GHOST_REAL_PUBLIC_IPS] Injected real ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
+
+```
+
+
+
+###### module2 main() blocks that stay the same:
+
+
+These blocks below stay the same. They follow the 5.6 block above and are listed just to illustrate how the important aggregate_gold_ips list (that now has
+the injected ghost ips in it) is used to construct various other important variables and logs. The missing_ips is ultimately used to create the 
+aggregate_ghost_summary.log. This log file is used by module2b to create the aggregate_ghost_detail.json which is an early synthetic registry_entry listing 
+of all the ghost ips. This is then built up by the subsequent modules and creates the entire ghost ip registry_entry forensic framework where tags, etc 
+are inserted.
+
+```
+        # 6. Build IP sets from final_registry statuses (final registry is the aggregate runtime list of all the threads with ip addresses)
+        # Get the success_ips from the tag(status), get failed as total - success and get missing as benchmark_ips(gold) - total_ips
+        total_ips   = {e["public_ip"] for e in final_registry.values()}
+        success_ips = {
+            e["public_ip"]
+            for e in final_registry.values()
+            if e.get("status") == "install_success"
+        }
+        failed_ips  = total_ips - success_ips
+        #missing_ips = benchmark_ips - total_ips
+        #### aggregate gold ips from chunks ####
+        missing_ips = aggregate_gold_ips - total_ips <<<<< the missing_ips list of ips defines the list of ghost ips 
+
+
+
+        # 7. Dump per-category artifact logs to gitlab console
+        for name, ip_set in [
+            ("total_registry_ips", total_ips),
+            ("successful_registry_ips", success_ips),
+            ("failed_registry_ips", failed_ips),
+            ("missing_registry_ips", missing_ips),
+        ]:
+            path = f"/aws_EC2/logs/{name}_artifact.log"
+            with open(path, "w") as f:
+                for ip in sorted(ip_set):
+                    f.write(ip + "\n")
+            print(f"[TRACE][aggregator] Wrote {len(ip_set)} IPs to {path}")
+
+        # 8. Dump resurrection candidates JSON (all non-success entries; i.e. failed = total - successful or !successful)
+        # This is also done in resurrection_monitor_patch7c at the process level.
+        ts = int(time.time())
+        candidates = [
+            entry
+            for entry in final_registry.values()
+            if entry.get("status") != "install_success"
+        ]
+        cand_path = f"/aws_EC2/logs/resurrection_candidates_registry_{ts}.json"
+        with open(cand_path, "w") as f:
+            json.dump(candidates, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(candidates)} candidates to {cand_path}")
+
+        # 9. Dump ghost/missing JSON (benchmark IPs never touched). By definition these are simply ips and not registry entries
+        # since they have never been processed as threads (true ghosts). This is done in the resurrection_monitor_patch7c at
+        # the process level
+
+        ghosts = sorted(missing_ips)
+
+        ghost_path = f"/aws_EC2/logs/resurrection_ghost_missing_{ts}.json"
+        with open(ghost_path, "w") as f:
+            json.dump(ghosts, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
+        print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS][aggregator] Wrote {len(ghosts)} ghosts to {ghost_path}")
+
+        ##### aggregate gold ips from chunks ####
+        # 10. Dump ghost IPs to plain-text log format (for GitLab artifact visibility)
+        ghost_log_path = f"/aws_EC2/logs/aggregate_ghost_summary.log"
+        with open(ghost_log_path, "w") as f:
+            for ip in ghosts:
+                f.write(ip + "\n")
+        print(f"[TRACE][aggregator] Wrote {len(ghosts)} ghosts to {ghost_log_path}")
+        
+        ##### This is the aggregated version of the resurrection_untraceable_registry_entries.json file. For more detail on this and 
+        ##### the two others (resurrection candidate and resurrection ghost) see the extensive comments in the resurrection_monitor
+        ##### function where the process versions of each of the files are created from the process_registry
+        # 11. Dump untraceable registry entries — entries with missing or invalid public IPs
+        untraceable_entries = [
+            entry
+            for entry in final_registry.values()
+            if not entry.get("public_ip") or not is_valid_ip(entry["public_ip"])
+        ]
+
+        untraceable_path = f"/aws_EC2/logs/resurrection_untraceable_registry_entries_{ts}.json"
+        with open(untraceable_path, "w") as f:
+            json.dump(untraceable_entries, f, indent=2)
+        print(f"[TRACE][aggregator] Wrote {len(untraceable_entries)} untraceable entries to {untraceable_path}")
+```
+
+module2 main() pretty much ends after this. 
+
+Because of the strategic placement of this injection and because it is using real nodes and real public ip addresses, this test the ghost ip code postive test 
+case in every way. 
 
 
 
@@ -445,6 +796,8 @@ reboot phase will be much shorter than before with the serialized version.
 The gitlab conosole logs are shown below. Note tahat it is a valid instance_id that is used but it is cached by AWS and so the NotFound error will cause the 
 reboot attempt to error out quickly. The attempted resurrection will then occur after that by module2f processing. T
 The resurrection fails as the simulated ghost ip does not actually exist as a node on AWS. (That test, with a real node will be done in a section further below)
+
+
 ```
 Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
 Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
