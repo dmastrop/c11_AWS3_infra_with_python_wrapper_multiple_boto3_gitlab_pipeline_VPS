@@ -432,7 +432,11 @@ In the .gitlab-ci.yml this artifact is delcared by this line:
       # These logs are for the process level synthetic ghost injection and are not normally seen. Only seen when the
       # INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS ENV variable is enabled
       - logs/real_process_ghost_ip_*.log
-      - logs/ghost_pool.json  ## this file is generated early in module2 main(). This file is used for the pop stack read for the INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS```
+      - logs/ghost_pool.json  ## this file is generated early in module2 main(). This file is used for the pop stack read for the INJECT_POST_THREAD_GHOST_REAL_PUBLIC_IPS
+
+```
+
+
 
 The real_process_ghost_ip_*.log is similar to the INJECT_POST_THREAD_GHOST original injection. It has the single ghost ip that is injected at the process layer per
 tomcat_worker call.
