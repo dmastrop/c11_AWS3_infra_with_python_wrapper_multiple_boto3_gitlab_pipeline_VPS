@@ -7695,7 +7695,7 @@ def main():
                             ip = line.strip()
                             if ip:
                                 aggregate_gold_ips.add(ip)
-            print(f"[POST_THREAD_GHOST_REAL_PUBLIC_IPS] Injected real ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IPs into aggregate_gold_ips: {sorted(aggregate_gold_ips)}")
 
 
 
