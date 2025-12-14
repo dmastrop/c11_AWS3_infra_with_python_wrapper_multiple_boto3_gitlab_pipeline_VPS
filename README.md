@@ -738,7 +738,7 @@ case in every way.
 
 
 
-### Validation for multi-threaded reboots (dcoupling the reboot code from the bucketization and process handler code)
+### Validation for multi-threaded reboots (decoupling the reboot code from the bucketization and process handler code)
 
 Note that this approach still uses the exact same reboot helper functions in utils.py that the serailized version uses. So the basic testing with malformed instance_id,
 valid instance_id cached, and valid instance_id not cached will have the same results from the perspective of the gitlab console logs.
