@@ -1822,8 +1822,24 @@ Dec 12 04:20:06 ip-172-31-23-132 tomcat9[400]: Server startup in [4280] millisec
 
 
 This is the missing_registry_ips.log file calculated as the delta between the orchestration layer golden list of ips and the list of seen_ips (those with 
-registry_entrys, i.e. active threads. Ghosts will not be seen in the seen_ips and initially will not have an organic registry_entry because they do not have
-an active thread for them.
+registry_entrys, i.e. active threads. Ghosts will not have an organic registry_entry because they do not have an active thread. Thus, the total_ips variable
+in module2 will be missing the ghost ip addresses.
+
+The ghost ips are injected into the aggregate_gold_ips variable list of all the orchestratio layer ips.  the missing_registry_ips.log is calculated by 
+aggregate_gold_ips - total_ips. This missing list of ips in missing_registry_ips.log is below:
+```
+100.30.254.41
+3.82.25.68
+3.90.201.34
+52.201.248.88
+54.160.221.201
+54.225.6.127
+54.236.88.9   <<<<<<<
+98.93.229.76
+```
+
+For purposes of this discussion the 54.236.88.9 ghost will be followed.
+
 
 This is an example ghost record from the aggregate_ghost_detail.json file created from this missing_registry_ips.log file
 One can think of this as a pre-registry_entry record of the ghost ip. This is built in module2b after a scan of the gitlab console logs to confirm that the 
