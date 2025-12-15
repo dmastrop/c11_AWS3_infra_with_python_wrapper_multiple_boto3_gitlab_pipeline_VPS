@@ -98,7 +98,7 @@ deploy:
       # InstanceId as well for downstream code, and that synthetic InstanceId causes a futures crash (install_failed) instead of a
       # ghost.  The code for this has been commented out.   Use the flag below
       
-    INJECT_POST_THREAD_GHOSTS: "false"  # this injection is in tomcat_worker between the process_registry run_test call to 
+    INJECT_POST_THREAD_GHOSTS: "true"  # this injection is in tomcat_worker between the process_registry run_test call to 
       # threaded_install which establishes the process_registry for the process (seen_ips) and the call to 
       # resurrection_monitor_patch8. The instance_info variable is mutated in between the two with the ghost injection. This 
       # creates delta between seen_ips and golden ips which are missing_ips or ghosts, as evalluated by the helper fuction 
@@ -106,7 +106,7 @@ deploy:
       # gitlab console log scan, and it can then create the aggregate_ghost_deteail.json ghost entry which will then be 
       # synthetically modified to registry_entry format in module2d so that it can be processed by the gatekeeper.
 
-    INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS: "true"  # this injection is similar to INJECT_POST_THREAD_GHOSTS but allows for real node public ips (and private ips)
+    INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS: "false"  # this injection is similar to INJECT_POST_THREAD_GHOSTS but allows for real node public ips (and private ips)
       # to be used. The code is very similar to the INJECT_POST_THREAD_GHOSTS. The injections are made in tomcat_worker at the process level (1 ghost ip
       # per process), written to disk (1 ip per json file) and then main() retrieves the ip addresses from disk and assimilates and aggregates them from the process 
       # level into the aggregate_gold_ips which is then used in the downstream modules (synthetic ghost registry creation, etc)
@@ -115,11 +115,11 @@ deploy:
       # and incorporated into the process registry for that pid. This has been tested and works very well.
 
 
-    INJECT_FAKE_INSTANCE_ID: "false"
-    FAKE_INSTANCE_ID: "i-04db5334416589234"
+    INJECT_FAKE_INSTANCE_ID: "true"
+    FAKE_INSTANCE_ID: "FAKE_INSTANCE_ID"
       # This is to inject a fake instance_id into the modules2e and 2f for conditional logic testing in those modules for resurrection and tagging code.
       # The instance_id above is a real life AWS instance_id
-      # Note that the FACKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
+      # Note that the FAKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
       # need to be refreshed with a more recent one periodically.
       # For example, i-1234567890abcdef0 looks to be correct format but AWS API will return InvalidInstanceID.Malformed
       # The i-033f7957281756224 is a recently retired node real instance_id and this worked prior to AWS caching it as no longer valid.
