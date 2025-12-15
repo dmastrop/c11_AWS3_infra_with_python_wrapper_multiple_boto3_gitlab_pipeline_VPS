@@ -210,12 +210,22 @@ a legacy carryover from the original prototype code.
 
 
 I added a STATUS_TAGS at the top of the module to track the taxonomy of the various status tags that can be used in 
-the registry_entry. All of the status tags below have not been put to use yet.(for example. gatekeeper_resurrection,
-watchdog_timeout, no_tags, ssh_initiated_failed).  The ssh_retry_failed, install_failed, install_success, and stub
-are currently in use. The registry_entry also has a "tags" field that can be used for other identifying and contextual
-information regarding the status. This can be used in forensics when troubleshooting mysterious threads that are not 
-behaving properly and can be used by the resurrection_gatekeeper filter logic heuristics when deciding whether or not
-a thread (candidate) is viable for actual resurrection.
+the registry_entry. All of the status tags below have been used except for the no_tags.
+
+The name "status tag" is a misnomer and part of the legacy naming. The "status tags" below refer to the  status field of the thread registry_entry.
+Several examples of this can be seen throughout this README in the UPDATES below.
+
+The tags field of the registry_entry has offloaded much of the descriptive and forensic burden on the status field. The status field values will very 
+rarely need to be added upon.  The tags field will incorporate the bulk of the descriptive and historical forensic information in the regitry_entry of
+each thread.  Many examples can be seen throughout this README in the UPDATES below. The tags will provide the ML state machine with a rich and dense
+informational history of each thread... data which it will be able to work on to make the system truly adaptive and self correcting.
+
+Outside of the ML use, teh tags can be used in forensics and troubleshooting mysterious threads taht are not behaving properly. The tags are also used by
+the resurrection gatekeeper filter logic heuristics when deciding upon whether or not a thread (candidate) is viable for actual resurrection.   The tags
+are used in many other areas as well for codified decision making and branching and bucketization of thread resurrection "types".  Code application for a 
+robust tagging system is endless.  Therefore,  much of the development has been devoted to enriching the tagging information in as much of a detailed manner 
+as possible.
+
 
 ```
 ## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
