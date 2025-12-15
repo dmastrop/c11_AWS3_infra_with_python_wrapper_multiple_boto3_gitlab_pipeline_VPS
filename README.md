@@ -367,7 +367,9 @@ orchestration layer (modules 1 and 2), the SG rules will most likely not be appl
 SG rules from the orchesration layer to ensure that the nodes have the proper rules prior to engaing on resurrection thread operations on the node (SSH, and 
 installation command execution on the node). The code in module2e or 2f will have to query the rules for the SG id designated in module1 and then once it has
 the rules, reapply them to all the ghost nodes after the ghost nodes have been rebooted and before the thread level operatoins (like SSH and commmand execution)
-are performed by module2f resurrection_install_tocmat.
+are performed by module2f resurrection_install_tocmat.  The code for this will be done in Part6 in the UPDATE that follows this one.
+
+The key objective right now it to get all of the current code commits verified so that there is a stable foundation for the Phase4 ML implementation.
 
 
 
@@ -380,7 +382,7 @@ node cannot be rebooted. In all cases, the code is designed to unconditionally p
 
 This tested out very well.
 
-However, to test the postive test case, in the absence of a true real life ghost (these are hard to simulate, even with hyper-scaling), 
+However, to test the postive test case, in the absence of a true real life ghost (these are hard to instigate, even with hyper-scaling), 
 the following procedure must be done, and the code in module2 needs to be modified accordingly as indicated below.
 
 The procedure used to run this test is the following:
@@ -459,7 +461,7 @@ nodes, not node ips that are synthetically constructed (like 1.1.1.x addreses wi
 2. So ghost_pool.json is first created then the tomcat_worker pops one ip from the top of the list and removes it and that ip for that pid gets stored in the 
 real_process_ghost_ip_*.log and is the public ip assigned to that pid and assigned to the registry_entry public ip for the ghost.
 
-3. Finally, just like the original code, once tomcat_worker() calls create all the real_proces_ghost_ip_*.log files, main() them reads them, aggregates them and
+3. Finally, just like the original code, once tomcat_worker() calls create all the real_proces_ghost_ip_*.log files, main() then reads them, aggregates them and
 then assigns them to the aggregate_gold_ips variable. This complete golden orchestration layer list of ips is then used by the subsequent modules.
 
 This tested out very well.
@@ -757,15 +759,14 @@ These will test the following cases:
 and  alwsays module2f resurrection attempt  
 - Healthy ID: The reboot_context:ready should appear in the registry_entry (module2e2 processing), and then the  node is actually rebooted and the 
 resurrection should be successful. Module2f actually changes the status of the registry_entry for the ghost ip from ghost to install_success.
-This will require a modification to the synthetic ghost ip injection code that will be reviewed in a section below. This test validates multiple pathways in the
-code as it simulates a real life ghost.
+The code was reviewed in the prior section above. This test validates multiple pathways in the code as it simulates a real life ghost.
 
 
 The gitlab console logs will clearly demarcate the various pipeline layers in the code:
 
-- module2d has the aggregated registry for the ghosts and the non-ghost threads
+- module2d has the aggregated registry for the ghosts and the non-ghost threads after resurrection gatekeeper processing
 
-- module2e → bucketization + mark reboot candidates.
+- module2e → bucketization + mark reboot candidates using dedicated handlers
 
 - module2e2 → parallel reboot attempts, tagging outcomes.
 
@@ -781,8 +782,8 @@ the same until module2f.
 
 
 The final set of tests involve testing with the HYBRID synthetic crashes and install_success threads to test the upper layer gatekeeper and tagging decision
-logic as a regression test.  This will create a more realistic scenario with 4 bucket types: idx1 futures crash, post installation futures crash, ghosts, and
-already_install_success. 
+logic, as well as the resurrection type bucketization,  as a regression test.  This will create a more realistic scenario with 4 bucket types: idx1 futures crash, 
+post installation futures crash, ghosts, and already_install_success. 
 
 
 
