@@ -2488,6 +2488,13 @@ FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH
 ```
 
 
+Key points from this validation test:
+
+- Determinism: Ghosts always require reboot before resurrection, IDX1 crashes do not.  
+- Bucketization: Each category is cleanly separated, which is critical for ML training later.  
+- Resurrection rate: 18/24 = 75%, matches the logs and gatekeeper stats.  
+- Clustering: Ghosts appear as a block in the completion logs because of registry ordering, not coincidence.  
+
 
 
 ##### Logs and regisry_entry mutations and tagging
