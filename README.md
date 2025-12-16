@@ -3116,9 +3116,13 @@ Module2f
 ##### Statistics
 
 The module2d is a great summary of the gatekeeper first pass decision making. 8 ghosts need to be resurrected and 10 IDX futures crashes need to be resurrected. The post install futures crashes do not require resurrection.
-``
-`
+
+
+```
+
+
 Module2d
+
 
 {
   "total_processes": 8,
