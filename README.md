@@ -3532,7 +3532,9 @@ Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_
 [module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
 [module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
 
-[module2d.4] Resurrected: 24, Blocked: 34, Total: 58   <<< Blocked are the 28 install_success and the 6 post install futures crashes=34.  Gatekeeper Resurrection are the 16 IDX1 futures crashes and 6 post install futures crashes. But as shown below the 6 post install futures crashes are filtered out by module2e so that only the IDX1 and ghosts are actually selected for resurrection = 16 + 8 = 24
+[module2d.4] Resurrected: 24, Blocked: 34, Total: 58   <<< Blocked are the 28 install_success and the 6 post install futures crashes=34.
+Gatekeeper Resurrection are the 16 IDX1 futures crashes and 6 post install futures crashes. But as shown below the 6 post install 
+futures crashes are filtered out by module2e so that only the IDX1 and ghosts are actually selected for resurrection = 16 + 8 = 24
 
 
 
