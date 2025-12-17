@@ -3264,7 +3264,7 @@ Module2f
   "resurrection_success_rate_percent": 100.0
 }
 ```
-
+##### Empirical verification
 
 Ghost node empirical verification (1 of the 8 ghost nodes)
 
@@ -3336,6 +3336,933 @@ Overall, a very successful validation.
 
 This will test 4 different bucket types idx1 (resurrection but no reboot; included in  module2e registryfile) , post install futures crash (no resurrection, no reboot 
 and not in module2e file), ghosts ( reboot and resurrection and in module2e file) , install_success (no resurrection and no reboot and wont be in the module2e file)
+
+##### High level summary
+
+| Bucket Type                  | Candidates | Selected for Resurrection | Blocked | Final Status (after module2f) |
+|------------------------------|------------|---------------------------|---------|-------------------------------|
+| **Ghosts**                   | 8          | 8                         | 0       | All rebooted + resurrected → `install_success` |
+| **IDX1 futures crashes**     | 16         | 16                        | 0       | All resurrected → `install_success` |
+| **Post‑install futures crash** | 6         | 0                         | 6       | Blocked by gatekeeper (no resurrection needed) |
+| **Original install_success** | 28         | 0                         | 28      | Already healthy, no resurrection attempted |
+| **Total**                    | 58         | 24                        | 34      | Resurrection rate = 24/58 = **41.38%** (Gatekeeper rate), Candidate resurrection rate = 24/30 = **80%** |
+
+
+
+Key observations:
+
+- Ghosts: Always require reboot before resurrection; all 8 completed successfully.  
+- IDX1 crashes: Rehydrated and resurrected without reboot; all 16 succeeded.  
+- Post‑install crashes: Correctly blocked — resurrection not needed.  
+- Install_success: Baseline healthy nodes, excluded from resurrection.  
+- Rates:  
+  - Gatekeeper rate (resurrected / total threads + ghosts) = 41.38%.  
+  - Resurrection rate (resurrected / candidates + ghosts) = 80%.  
+
+The detail on the rates calculations are given in the statistics section further below.
+
+
+In short 24 of the 58 total were ultimately selected for resurrection (16 IDX1 crashes + 8 ghosts)
+
+Of the resurrection candidates (IDX1 + post install futures crashes + ghosts) 24 of the 30 candidates were ultimately selected for resurrection
+
+
+
+##### Logs and registry_entry mutations and tagging
+
+The logs by now should be self explanatory. Some notes were added to highlight the decision-making logic
+
+
+Gitlab console logs:
+
+These logs below show how the synthetic ghost injection with real AWS nodes worked with the 50 node (25 processes) test:
+
+
+Main() discovers the 8
+
+```
+INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0b3ea8b5135c47b23 Public=54.160.228.79 Private=172.31.26.252
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0e354299fa706e54d Public=34.227.190.213 Private=172.31.29.171
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-07ea0f24cc62860b5 Public=54.242.245.59 Private=172.31.17.154
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0f38c76a32664616f Public=13.220.91.228 Private=172.31.16.208
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0542fba1851fb6254 Public=13.220.85.192 Private=172.31.29.196
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0429ea30c8b45d84c Public=54.163.13.168 Private=172.31.16.93
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-02b565c61df8d8b1c Public=3.95.172.139 Private=172.31.18.198
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0cfe426511b5eedce Public=18.212.237.74 Private=172.31.20.182
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Initialized /aws_EC2/logs/ghost_pool.json with 8 entries
+```
+8 of these (tomcat worker pop successful on the ghost_pool.json file). After the 8 there are none left for the other 17 processes
+
+```
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0b3ea8b5135c47b23 Public=54.160.228.79 Private=172.31.26.252
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0e354299fa706e54d Public=34.227.190.213 Private=172.31.29.171
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-07ea0f24cc62860b5 Public=54.242.245.59 Private=172.31.17.154
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0f38c76a32664616f Public=13.220.91.228 Private=172.31.16.208
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0542fba1851fb6254 Public=13.220.85.192 Private=172.31.29.196
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0429ea30c8b45d84c Public=54.163.13.168 Private=172.31.16.93
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-02b565c61df8d8b1c Public=3.95.172.139 Private=172.31.18.198
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0cfe426511b5eedce Public=18.212.237.74 Private=172.31.20.182
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Initialized /aws_EC2/logs/ghost_pool.json with 8 entries
+```
+
+Thesre are  17 of these as expected (tomcat worker pop fails. Nothing left in ghost_pool.log)
+
+```
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] No ghosts left in pool; skipping injection
+```
+
+
+Then this. Note that there are HYBRID crashes and those are the failed ips. The 8 ghosts are there as well ( missing_registry_ips_artifact.log)
+This list below is the complete golden list of ips, where 8 of them are injected ghost ips:
+
+```
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IPs into aggregate_gold_ips: ['107.20.121.106', '13.220.188.222', '13.220.85.192', '13.220.91.228', '13.222.181.234', '18.204.226.180', '18.206.209.232', '18.207.152.110', '18.212.222.48', '18.212.237.74', '18.214.98.0', '18.234.31.45', '18.234.82.91', '3.208.13.89', '3.208.19.253', '3.80.21.145', '3.85.129.69', '3.91.150.200', '3.95.172.139', '34.201.135.240', '34.224.167.193', '34.224.30.208', '34.227.190.213', '34.229.14.111', '34.229.140.167', '34.229.201.51', '34.235.88.54', '44.222.200.45', '44.223.69.72', '50.19.25.237', '52.201.248.184', '52.23.192.180', '52.23.214.69', '54.144.106.245', '54.145.181.197', '54.152.36.131', '54.160.228.79', '54.163.13.168', '54.163.26.241', '54.173.6.220', '54.196.154.7', '54.210.56.249', '54.221.142.60', '54.242.245.59', '54.82.1.220', '54.83.121.6', '54.84.198.163', '54.89.194.30', '54.90.114.122', '98.84.130.207', '98.90.199.47', '98.91.25.217', '98.91.27.247', '98.93.16.75', '98.93.21.4', '98.93.212.223', '98.93.248.189', '98.93.46.231']
+[TRACE][aggregator] Wrote 50 IPs to /aws_EC2/logs/total_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 28 IPs to /aws_EC2/logs/successful_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 22 IPs to /aws_EC2/logs/failed_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 8 IPs to /aws_EC2/logs/missing_registry_ips_artifact.log
+[TRACE][aggregator] Wrote 22 candidates to /aws_EC2/logs/resurrection_candidates_registry_1765937439.json
+[TRACE][aggregator] Wrote 8 ghosts to /aws_EC2/logs/resurrection_ghost_missing_1765937439.json
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS][aggregator] Wrote 8 ghosts to /aws_EC2/logs/resurrection_ghost_missing_1765937439.json
+[TRACE][aggregator] Wrote 8 ghosts to /aws_EC2/logs/aggregate_ghost_summary.log
+[TRACE][aggregator] Wrote 0 untraceable entries to /aws_EC2/logs/resurrection_untraceable_registry_entries_1765937439.json
+2025-12-17 02:10:39,808 - 8 - INFO - [MAIN] All chunks have been processed.
+```
+
+
+These are the module2 through 2f gitlab console logs:
+
+
+```
+Process2: install_tomcat_on_instances: Completed module script: /aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py
+Process2b: post_ghost_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Found 8 ghost IPs
+Process2b: post_ghost_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2b_post_ghost_analysis.py
+[TRACE] Ghost detail written to: /aws_EC2/logs/aggregate_ghost_detail.json
+Process2c: post_aggregate_registry_analysis: Starting module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+[module2c] Found 22 candidate registry entries
+[module2c] Parsed expected command count: 5
+[module2c] Found 22 candidate IPs with command success entries
+[module2c] Tagged UUID f2df0a59 (IP: 3.208.13.89) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 7872197f (IP: 3.85.129.69) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 3e16e41d (IP: 34.235.88.54) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 6a05a0ff (IP: 98.93.212.223) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 48625729 (IP: 54.163.26.241) with 'install_success_achieved_before_crash'
+[module2c] Tagged UUID 192cc967 (IP: 54.210.56.249) with 'install_success_achieved_before_crash'
+[module2c] Total registry entries tagged: 6
+[module2c] Updated registry written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+Process2c: post_aggregate_registry_analysis: Completed module script: /aws_EC2/sequential_master_modules/module2c_post_registry_analysis.py
+Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+[module2d.1] Loaded registry from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2c.json
+[module2d.1] ⛔ Blocking UUID 9d16caec (IP: 98.93.46.231) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 828691da (IP: 54.173.6.220) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID f2df0a59 (IP: 3.208.13.89) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 7872197f (IP: 3.85.129.69) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID f0460746 (IP: 98.93.21.4) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 84f8c6bd (IP: 34.229.140.167) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID c29e345b (IP: 18.234.82.91) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID da096d59 (IP: 98.93.248.189) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 71d59a23 (IP: 13.220.188.222) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 538b4453 (IP: 50.19.25.237) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d1bb33cc (IP: 18.204.226.180) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID bafefc9a (IP: 3.208.19.253) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 757163ec (IP: 3.91.150.200) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 8d9c5668 (IP: 107.20.121.106) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 2e8da3db (IP: 34.224.30.208) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID ceb7e7ff (IP: 54.145.181.197) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 0f074242 (IP: 98.91.25.217) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4ad327ee (IP: 52.23.192.180) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 4ec1c207 (IP: 44.223.69.72) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ec8f882d (IP: 98.84.130.207) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 91b744b6 (IP: 13.222.181.234) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID d7ca2e2a (IP: 34.229.201.51) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 3334bd05 (IP: 54.144.106.245) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 1f75efbd (IP: 44.222.200.45) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 70581003 (IP: 54.196.154.7) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID ad18ecbe (IP: 54.84.198.163) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID f3c19f8b (IP: 54.82.1.220) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 5e650551 (IP: 54.152.36.131) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 363cb028 (IP: 34.224.167.193) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID e7ffbd67 (IP: 98.91.27.247) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 3e16e41d (IP: 34.235.88.54) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 6a05a0ff (IP: 98.93.212.223) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ✅ Resurrecting UUID f34793d0 (IP: 18.234.31.45) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 1087f926 (IP: 52.201.248.184) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 1425544b (IP: 3.80.21.145) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 366e6265 (IP: 52.23.214.69) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID de0d7865 (IP: 98.90.199.47) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 276885ed (IP: 98.93.16.75) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 33bfb25b (IP: 18.206.209.232) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 3ad35902 (IP: 54.90.114.122) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 48625729 (IP: 54.163.26.241) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 192cc967 (IP: 54.210.56.249) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID aadb5dae (IP: 54.83.121.6) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 42aef1bc (IP: 54.221.142.60) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 16e2a5e6 (IP: 34.229.14.111) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID c2c02910 (IP: 18.214.98.0) — Reason: Install succeeded
+[module2d.1] ✅ Resurrecting UUID 5d79aab8 (IP: 34.201.135.240) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 9b4d2caf (IP: 54.89.194.30) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID ac9a53f6 (IP: 18.207.152.110) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID 543f4d84 (IP: 18.212.222.48) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 16
+[module2d.1] Total blocked: 34
+[module2d.1] Output written to: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.2a] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail.json
+[module2d.2a] Synthetic ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_synthetic_registry.json
+[module2d.2a] Total entries synthesized: 8
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_54_160_228_79 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_13_220_85_192 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_18_212_237_74 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_54_163_13_168 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_54_242_245_59 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_34_227_190_213 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_13_220_91_228 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] ✅ Resurrecting ghost UUID ghost_3_95_172_139 — Reason: Ghost entry: resurrection always attempted
+[module2d.2b] Final ghost registry written to: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.2b] Total resurrected: 8
+[module2d.2b] Total blocked: 0
+[module2d.3] Loaded registry entries from: /aws_EC2/logs/final_aggregate_execution_run_registry_module2d.json
+[module2d.3] Loaded ghost entries from: /aws_EC2/logs/aggregate_ghost_detail_module2d.json
+[module2d.3] Final merged registry written to: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.3] Total entries in final registry: 58
+[module2d.4] Loaded final registry from: /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2d.4] Loaded aggregate stats from: /aws_EC2/logs/statistics/aggregate_process_stats.json
+[module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 24, Blocked: 34, Total: 58   <<< Blocked are the 28 install_success and the 6 post install futures crashes=34.  Gatekeeper Resurrection are the 16 IDX1 futures crashes and 6 post install futures crashes. But as shown below the 6 post install futures crashes are filtered out by module2e so that only the IDX1 and ghosts are actually selected for resurrection = 16 + 8 = 24
+[module2d.4] Resurrection Rate: 80.00%
+[module2d.4] Gatekeeper Rate: 41.38%
+Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
+Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/resurrection_gatekeeper_final_registry_module2d.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/command_plan.json
+[module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
+[module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+[module2e_logging] Summary: total_resurrection_candidates=22, total_ghost_candidates=8, selected_for_resurrection=24, rate=80.00%
+[module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'post_exec_future_crash': {'resurrection_candidates': 6, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'idx1': {'resurrection_candidates': 16, 'ghost_candidates': 0, 'selected_for_resurrection': 16}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+[module2e2] Reboot targets: 8
+[utils] Reboot initiated for i-07ea0f24cc62860b5
+[utils] Reboot initiated for i-0e354299fa706e54d
+[utils] Reboot initiated for i-0b3ea8b5135c47b23
+[utils] Reboot initiated for i-0542fba1851fb6254
+[utils] Reboot initiated for i-0429ea30c8b45d84c
+[utils] Reboot initiated for i-0cfe426511b5eedce
+[utils] Reboot initiated for i-0f38c76a32664616f
+[utils] Reboot initiated for i-02b565c61df8d8b1c
+[utils] Instance i-07ea0f24cc62860b5 passed 2/2 checks
+[utils] Instance i-0e354299fa706e54d passed 2/2 checks[utils] Instance i-0b3ea8b5135c47b23 passed 2/2 checks
+
+[utils] Instance i-0542fba1851fb6254 passed 2/2 checks
+[utils] Instance i-0429ea30c8b45d84c passed 2/2 checks
+[utils] Instance i-0cfe426511b5eedce passed 2/2 checks
+[utils] Instance i-0f38c76a32664616f passed 2/2 checks
+[utils] Instance i-02b565c61df8d8b1c passed 2/2 checks
+[module2e2] Wrote reboot-annotated registry to /aws_EC2/logs/resurrection_module2e_registry_rebooted.json
+Process2e: reque_and_resurrect: Completed module script: /aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py
+Process2f: resurrection_install_tomcat: Starting module script: /aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+[module2f][INFO] Starting resurrection for InstanceID=i-035d7de29dfa03faf, PublicIP=18.234.82.91
+[18.234.82.91] [2025-12-17 02:10:54.866146] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-060af63552c19b5e6, PublicIP=98.93.248.189
+[98.93.248.189] [2025-12-17 02:10:55.576489] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-02da6fff03fefd321, PublicIP=34.224.30.208
+[34.224.30.208] [2025-12-17 02:10:56.179251] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0530b1ca4ebe3ea7f, PublicIP=54.145.181.197
+[18.234.82.91] 📥 Watchdog read: 314 bytes on STDOUT
+[54.145.181.197] [2025-12-17 02:10:56.774916] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[module2f][INFO] Starting resurrection for InstanceID=i-0ce398975dfdd42de, PublicIP=54.196.154.7
+[98.93.248.189] 📥 Watchdog read: 314 bytes on STDOUT
+[module2f][INFO] Starting resurrection for InstanceID=i-023d1cb6fbefa52c0, PublicIP=54.84.198.163
+[54.196.154.7] [2025-12-17 02:10:57.886326] Replay 1/5: sudo DEBIAN_FRONTEND=noninteractive apt update -y (Attempt 1)
+[34.224.30.208] 📥 Watchdog read: 314 bytes on STDOUT
+[18.234.82.91] 📥 Post-loop flush read: 1 bytes on STDOUT
+[18.234.82.91] 🔍 Final output after flush (first 3 lines):
+```
+
+
+
+These are as some of the resurrections start to be completed:
+
+
+```
+[54.90.114.122] STDERR: ''
+[module2f][INFO] Completed resurrection for InstanceID=i-0adf6242d6523d5b9, PublicIP=34.224.167.193 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-0530b1ca4ebe3ea7f, PublicIP=54.145.181.197 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-06e1ccf08bde2be1b, PublicIP=98.91.27.247 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-073ac4c1b333985a1, PublicIP=18.206.209.232 → Status=install_success
+[module2f][INFO] Completed resurrection for InstanceID=i-02d74cd59b3198f57, PublicIP=54.90.114.122 → Status=install_success
+```
+
+There are a total of 24 of these. With the latest code they are all worked on in parallel with a max_workers of 16, so 16 worker
+threads in parallel. As threads complete they take up the remaining 8 in a queue like fashion.
+
+
+
+
+Missing_registry_ips_artifact.log
+(These are the ghost ips)
+```
+
+13.220.85.192
+13.220.91.228
+18.212.237.74
+3.95.172.139
+34.227.190.213
+54.160.228.79
+54.163.13.168
+54.242.245.59
+```
+
+
+
+Registry_entry mutations (IDX1, post install futures crash and ghost; install_success not shown) samples
+Note 50 total_ips and 8 ghost ips and 28 install_success and 22 futures crashes (16 IDX1 and 6 post install futures crashes)
+
+
+
+
+Module2d
+
+
+
+```
+Post install futures 
+
+  "f2df0a59": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": 138567611173760,
+    "thread_uuid": "f2df0a59",
+    "public_ip": "3.208.13.89",
+    "private_ip": "172.31.31.186",
+    "timestamp": "2025-12-17 02:09:57.946717",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+
+
+IDX1
+
+"9b4d2caf": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 138567611173760,
+    "thread_uuid": "9b4d2caf",
+    "public_ip": "54.89.194.30",
+    "private_ip": "172.31.21.192",
+    "timestamp": "2025-12-17 02:06:57.821343",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+
+
+Ghost
+
+  "ghost_54_160_228_79": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": null,
+    "thread_uuid": "ghost_54_160_228_79",
+    "public_ip": "54.160.228.79",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+```
+
+
+
+
+Module2e will have 16 IDX1 and 8 ghosts for a total of 24 entries
+
+```
+
+IDX1
+
+  "9b4d2caf": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 138567611173760,
+    "thread_uuid": "9b4d2caf",
+    "public_ip": "54.89.194.30",
+    "private_ip": "172.31.21.192",
+    "timestamp": "2025-12-17 02:06:57.821343",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+
+Ghost
+
+  "ghost_54_160_228_79": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": null,
+    "thread_uuid": "ghost_54_160_228_79",
+    "public_ip": "54.160.228.79",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true
+  },
+
+
+```
+
+
+Module2e2
+
+```
+IDX1 note no reboot_context flags since these nodes do not require rebooting.
+
+  "9b4d2caf": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 138567611173760,
+    "thread_uuid": "9b4d2caf",
+    "public_ip": "54.89.194.30",
+    "private_ip": "172.31.21.192",
+    "timestamp": "2025-12-17 02:06:57.821343",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+
+
+
+Ghost note reboot_context flags are added
+
+  "ghost_54_160_228_79": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": null,
+    "thread_uuid": "ghost_54_160_228_79",
+    "public_ip": "54.160.228.79",
+    "private_ip": "unknown",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-0b3ea8b5135c47b23",
+      "reboot_context:initiated",
+      "reboot_context:ready"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true,
+    "timestamp_reboot_stage": "2025-12-17T02:10:53.308764Z"
+  },
+
+```
+
+
+
+
+Module2f
+
+
+```
+IDX1. One can discern that this is a futures crash and not a ghost by the tags
+
+
+
+  "9b4d2caf": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-12-17 02:22:04.995159",
+    "pid": 14,
+    "thread_id": 138566080399040,
+    "thread_uuid": "9b4d2caf",
+    "public_ip": "54.89.194.30",
+    "private_ip": "172.31.21.192",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection",
+      "installation_completed"
+    ]
+  },
+
+
+
+
+Ghost. A real ghost would not have the ghost_54_160_228_79 as the thread_uuid. But one can discern this is a ghost by looking at the tags
+
+
+  "ghost_54_160_228_79": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-12-17 02:32:57.545503",
+    "pid": 14,
+    "thread_id": 138566684378816,
+    "thread_uuid": "ghost_54_160_228_79",
+    "public_ip": "54.160.228.79",
+    "private_ip": "unknown",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-0b3ea8b5135c47b23",
+      "reboot_context:initiated",
+      "reboot_context:ready",
+      "installation_completed"
+    ]
+  },
+
+
+```
+
+
+##### Statistics
+
+
+Module2d
+24 gatekeeper resurrect and 34 gatekeeper blocked (not candidates for resurrection)
+The 24 gatekeeper resurrect candidates are 16 IDX1 futures crashes and 8 ghosts.
+The 34 gatekeeper blocked are the original install_success (28) and the 6 post install futures crashes = 34
+```
+{
+  "total_processes": 25,
+  "total_threads": 50,
+  "total_success": 28,
+  "total_failed_and_stubs": 22,
+  "total_resurrection_candidates": 22,
+  "total_resurrection_ghost_candidates": 8,
+  "unique_seen_ips": [
+    "107.20.121.106",
+    "13.220.188.222",
+    "13.222.181.234",
+    "18.204.226.180",
+    "18.206.209.232",
+    "18.207.152.110",
+    "18.212.222.48",
+    "18.214.98.0",
+    "18.234.31.45",
+    "18.234.82.91",
+    "3.208.13.89",
+    "3.208.19.253",
+    "3.80.21.145",
+    "3.85.129.69",
+    "3.91.150.200",
+    "34.201.135.240",
+    "34.224.167.193",
+    "34.224.30.208",
+    "34.229.14.111",
+    "34.229.140.167",
+    "34.229.201.51",
+    "34.235.88.54",
+    "44.222.200.45",
+    "44.223.69.72",
+    "50.19.25.237",
+    "52.201.248.184",
+    "52.23.192.180",
+    "52.23.214.69",
+    "54.144.106.245",
+    "54.145.181.197",
+    "54.152.36.131",
+    "54.163.26.241",
+    "54.173.6.220",
+    "54.196.154.7",
+    "54.210.56.249",
+    "54.221.142.60",
+    "54.82.1.220",
+    "54.83.121.6",
+    "54.84.198.163",
+    "54.89.194.30",
+    "54.90.114.122",
+    "98.84.130.207",
+    "98.90.199.47",
+    "98.91.25.217",
+    "98.91.27.247",
+    "98.93.16.75",
+    "98.93.21.4",
+    "98.93.212.223",
+    "98.93.248.189",
+    "98.93.46.231"
+  ],
+  "unique_assigned_ips_golden": [
+    "107.20.121.106",
+    "13.220.188.222",
+    "13.220.85.192",
+    "13.220.91.228",
+    "13.222.181.234",
+    "18.204.226.180",
+    "18.206.209.232",
+    "18.207.152.110",
+    "18.212.222.48",
+    "18.212.237.74",
+    "18.214.98.0",
+    "18.234.31.45",
+    "18.234.82.91",
+    "3.208.13.89",
+    "3.208.19.253",
+    "3.80.21.145",
+    "3.85.129.69",
+    "3.91.150.200",
+    "3.95.172.139",
+    "34.201.135.240",
+    "34.224.167.193",
+    "34.224.30.208",
+    "34.227.190.213",
+    "34.229.14.111",
+    "34.229.140.167",
+    "34.229.201.51",
+    "34.235.88.54",
+    "44.222.200.45",
+    "44.223.69.72",
+    "50.19.25.237",
+    "52.201.248.184",
+    "52.23.192.180",
+    "52.23.214.69",
+    "54.144.106.245",
+    "54.145.181.197",
+    "54.152.36.131",
+    "54.160.228.79",
+    "54.163.13.168",
+    "54.163.26.241",
+    "54.173.6.220",
+    "54.196.154.7",
+    "54.210.56.249",
+    "54.221.142.60",
+    "54.242.245.59",
+    "54.82.1.220",
+    "54.83.121.6",
+    "54.84.198.163",
+    "54.89.194.30",
+    "54.90.114.122",
+    "98.84.130.207",
+    "98.90.199.47",
+    "98.91.25.217",
+    "98.91.27.247",
+    "98.93.16.75",
+    "98.93.21.4",
+    "98.93.212.223",
+    "98.93.248.189",
+    "98.93.46.231"
+  ],
+  "unique_missing_ips_ghosts": [
+    "13.220.85.192",
+    "13.220.91.228",
+    "18.212.237.74",
+    "3.95.172.139",
+    "34.227.190.213",
+    "54.160.228.79",
+    "54.163.13.168",
+    "54.242.245.59"
+  ],
+  "gatekeeper_resurrected": 24,
+  "gatekeeper_blocked": 34,
+  "gatekeeper_total": 58,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 80.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 41.38
+}
+
+```
+
+
+
+Module2e
+Bucketization of the 24 that will be resurrected
+
+```
+{
+  "total_resurrection_candidates": 22,
+  "total_ghost_candidates": 8,
+  "selected_for_resurrection_total": 24,
+  "by_bucket_counts": {
+    "already_install_success": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "post_exec_future_crash": {
+      "resurrection_candidates": 6,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "idx1": {
+      "resurrection_candidates": 16,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 16
+    },
+    "ghost": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 8,
+      "selected_for_resurrection": 8
+    }
+  },
+  "selected_for_resurrection_rate_overall": 80.0,
+  "timestamp": "2025-12-17T02:10:44.935140"
+}
+```
+
+
+Module2f
+
+
+```
+{
+  "resurrected_total_threads": 24,
+  "resurrected_install_success": 24,
+  "resurrected_install_failed": 0,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "13.220.85.192",
+    "13.220.91.228",
+    "18.206.209.232",
+    "18.212.237.74",
+    "18.234.31.45",
+    "18.234.82.91",
+    "3.95.172.139",
+    "34.201.135.240",
+    "34.224.167.193",
+    "34.224.30.208",
+    "34.227.190.213",
+    "52.201.248.184",
+    "54.145.181.197",
+    "54.160.228.79",
+    "54.163.13.168",
+    "54.196.154.7",
+    "54.242.245.59",
+    "54.84.198.163",
+    "54.89.194.30",
+    "54.90.114.122",
+    "98.90.199.47",
+    "98.91.27.247",
+    "98.93.16.75",
+    "98.93.248.189"
+  ],
+  "resurrection_success_rate_percent": 100.0
+}
+```
+
+
+
+
+
+
+
+##### Empirical verifications with SSH to the node
+
+One of the ghosts: 
+
+
+```
+ulti_processing$ ssh -i EC2_generic_key.pem ubuntu@54.160.228.79 
+Warning: Permanently added '54.160.228.79' (ED25519) to the list of known hosts.
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 6.8.0-1040-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Dec 17 02:47:04 UTC 2025
+
+  System load:  0.0               Processes:             103
+  Usage of /:   28.6% of 7.57GB   Users logged in:       0
+  Memory usage: 30%               IPv4 address for eth0: 172.31.26.252
+  Swap usage:   0%
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+41 updates can be applied immediately.
+31 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+3 additional security updates can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+New release '24.04.3 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+
+ubuntu@ip-172-31-26-252:~$ systemctl status tomcat9
+● tomcat9.service - Apache Tomcat 9 Web Application Server
+     Loaded: loaded (/lib/systemd/system/tomcat9.service; enabled; vendor preset: enabled)
+     Active: active (running) since Wed 2025-12-17 02:22:27 UTC; 24min ago
+       Docs: https://tomcat.apache.org/tomcat-9.0-doc/index.html
+   Main PID: 2971 (java)
+      Tasks: 28 (limit: 1125)
+     Memory: 72.1M
+        CPU: 6.238s
+     CGroup: /system.slice/tomcat9.service
+             └─2971 /usr/lib/jvm/default-java/bin/java -Djava.util.logging.config.file=/var/lib/tomcat9/conf/logging.properties -Dj>
+
+Dec 17 02:22:28 ip-172-31-26-252 tomcat9[2971]: OpenSSL successfully initialized [OpenSSL 3.0.2 15 Mar 2022]
+Dec 17 02:22:29 ip-172-31-26-252 tomcat9[2971]: Initializing ProtocolHandler ["http-nio-8080"]
+Dec 17 02:22:29 ip-172-31-26-252 tomcat9[2971]: Server initialization in [1704] milliseconds
+Dec 17 02:22:29 ip-172-31-26-252 tomcat9[2971]: Starting service [Catalina]
+Dec 17 02:22:29 ip-172-31-26-252 tomcat9[2971]: Starting Servlet engine: [Apache Tomcat/9.0.58 (Ubuntu)]
+Dec 17 02:22:29 ip-172-31-26-252 tomcat9[2971]: Deploying web application directory [/var/lib/tomcat9/webapps/ROOT]
+Dec 17 02:22:32 ip-172-31-26-252 tomcat9[2971]: At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging f>
+Dec 17 02:22:32 ip-172-31-26-252 tomcat9[2971]: Deployment of web application directory [/var/lib/tomcat9/webapps/ROOT] has finishe>
+Dec 17 02:22:32 ip-172-31-26-252 tomcat9[2971]: Starting ProtocolHandler ["http-nio-8080"]
+Dec 17 02:22:32 ip-172-31-26-252 tomcat9[2971]: Server startup in [2770] milliseconds
+```
+
+
+Empirical verification: One of the IDX1 futures crashes which was rehydrated and now resurrected:
+
+
+```
+ulti_processing$ ssh -i EC2_generic_key.pem ubuntu@54.89.194.30
+Warning: Permanently added '54.89.194.30' (ED25519) to the list of known hosts.
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 6.8.0-1024-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Dec 17 02:48:38 UTC 2025
+
+  System load:  0.0               Processes:             104
+  Usage of /:   28.2% of 7.57GB   Users logged in:       0
+  Memory usage: 28%               IPv4 address for eth0: 172.31.21.192
+  Swap usage:   0%
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+148 updates can be applied immediately.
+116 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+3 additional security updates can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+New release '24.04.3 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+
+ubuntu@ip-172-31-21-192:~$ systemctl status tomcat9
+● tomcat9.service - Apache Tomcat 9 Web Application Server
+     Loaded: loaded (/lib/systemd/system/tomcat9.service; enabled; vendor preset: enabled)
+     Active: active (running) since Wed 2025-12-17 02:11:35 UTC; 37min ago
+       Docs: https://tomcat.apache.org/tomcat-9.0-doc/index.html
+   Main PID: 3983 (java)
+      Tasks: 28 (limit: 1129)
+     Memory: 73.8M
+        CPU: 7.532s
+     CGroup: /system.slice/tomcat9.service
+             └─3983 /usr/lib/jvm/default-java/bin/java -Djava.util.logging.config.file=/var/lib/tomcat9/conf/logging.properties -Dj>
+
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.coyote.http11.Http11InputBuffer.parseRequestLine(Http11InputBuffe>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:271)
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtoco>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.jav>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecut>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecu>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.ja>
+Dec 17 02:27:51 ip-172-31-21-192 tomcat9[3983]:     at java.base/java.lang.Thread.run(Thread.java:829)
+```
+
+
+
+
+
+The total execution time is 34 minutes which is not that bad considering that there were 24 (parallel) resurrecitons that had to be done.(16 IDX1 and 8 ghosts)
+Note in the logs that all the reboots are in parallel and all the resurrections are in parallel with this new code.
+
+
+
+
 
 
 
