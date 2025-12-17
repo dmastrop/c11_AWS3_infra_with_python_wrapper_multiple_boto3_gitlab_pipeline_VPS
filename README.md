@@ -3531,7 +3531,11 @@ Process2d: resurrection_gatekeeper: Starting module script: /aws_EC2/sequential_
 [module2d.4] Gatekeeper stats appended and written to: /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
 [module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
 [module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+
 [module2d.4] Resurrected: 24, Blocked: 34, Total: 58   <<< Blocked are the 28 install_success and the 6 post install futures crashes=34.  Gatekeeper Resurrection are the 16 IDX1 futures crashes and 6 post install futures crashes. But as shown below the 6 post install futures crashes are filtered out by module2e so that only the IDX1 and ghosts are actually selected for resurrection = 16 + 8 = 24
+
+
+
 [module2d.4] Resurrection Rate: 80.00%
 [module2d.4] Gatekeeper Rate: 41.38%
 Process2d: resurrection_gatekeeper: Completed module script: /aws_EC2/sequential_master_modules/module2d_resurrection_gatekeeper.py
@@ -3541,9 +3545,14 @@ Process2e: reque_and_resurrect: Starting module script: /aws_EC2/sequential_mast
 [module2e_logging] Loading JSON artifact from /aws_EC2/logs/statistics/aggregate_process_stats_gatekeeper_module2d.json
 [module2e_logging] Wrote JSON artifact to /aws_EC2/logs/resurrection_module2e_registry.json
 [module2e_logging] Wrote JSON artifact to /aws_EC2/logs/statistics/aggregate_selected_for_resurrection_stats_module2e.json
+
+
 [module2e_logging] Summary: total_resurrection_candidates=22, total_ghost_candidates=8, selected_for_resurrection=24, rate=80.00%
 [module2e_logging] By bucket counts: {'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'post_exec_future_crash': {'resurrection_candidates': 6, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'idx1': {'resurrection_candidates': 16, 'ghost_candidates': 0, 'selected_for_resurrection': 16}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
 [module2e2] Reboot targets: 8
+
+
+
 [utils] Reboot initiated for i-07ea0f24cc62860b5
 [utils] Reboot initiated for i-0e354299fa706e54d
 [utils] Reboot initiated for i-0b3ea8b5135c47b23
