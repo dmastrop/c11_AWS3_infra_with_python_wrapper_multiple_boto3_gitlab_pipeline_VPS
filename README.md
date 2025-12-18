@@ -253,19 +253,16 @@ STATUS_TAGS = {
 This is the final part for the initial ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
 processing code. The buik of the ghost resurrection code has been implemmented in Parts 1-5 as noted in the previous UPDATES.
 
-- Create a public ip to private ip mapping json file from the orchestration layer chunk data in module2.   This json file can then be used as another INPUT 
-to module2b which creates the syntehtic ghost registry_entry for the ghost ip.   The public ip can be mapped to the private ip from the json file and then 
-the private_ip address field in the registry_entry can be populated with the private ip.  This will only be done for the real life ghost ip case, and not for
-the synthetic ghost ip injection code (there is no requirement for it with the synthetic ghost ip injection code as it is just used for white box testing of the
-code paths)
+- Populate the private_ip address field in the ghost registry_entrys. The module2b creates a list of the ghost ips along with a basic
+framework for registry_entrys. In module2d the actual synthetic registry_entry is created for each ghost ip. This is because ghost ips
+do not have organic registry_entrys. The best way to insert the private_ip address into the synthetic ghost registry_entry is to 
+first insert it into the primitive listing in module2b by doing and AWS API request for the private ip that matches with the pubkic
+ip. Once that private ip is known, insert it into the primitive list in module2b. Since module2d uses that list to create the
+synthetic registry_entrys, it just needs to get it from the module2b json file and append it to the synthetic registry_entry.
+Once it is there it will flow into the rest of the upstream modules (module2e, 2f). 
 
 - Reapply the security group rules from module2 at the orchestration layer, in module2e or module2f after the reboot in module2e and prior to the resurrection of
 the node in module2f
-
-
-
-### Part6: High level code implemenation
-
 
 
 
@@ -273,10 +270,9 @@ the node in module2f
 
 ### Part6: Code Revivew
 
-#### public ip to private ip mapping json file (module2)
+#### private_ip added to ghost registry_entry
 
 
-#### import of the mapping table and injection of the private_ip address into the ghost registry_entry (module2b)
 
 
 #### Security group rules rapply post reboot in module2e prior to resurrection 
@@ -286,7 +282,7 @@ the node in module2f
 
 ### Part6: Validation testing
 
-#### The public ip to private ip mapping json file verification
+#### private_ip added to the ghost registry_entry
 
 
 #### The security group rules reapply post reboot in module2e prior to resurrection
@@ -313,7 +309,9 @@ pariticular crash. This will be done as the testing progresses and new issues ar
 each specific issue because that permits the tagging to be very specific and this will help the ML state machine in Phase4 of
 this project to discern, learn about and predict outcomes for these various bucket types. 
 
-
+Without induced swap contention on the VPS, there are no failed threads. So this regiression was ok, but to induce real life 
+failures the swap will have to be squeezed. This testing will be deferred until later when the system is prepped for 
+machine learning.
 
 
 
