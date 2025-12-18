@@ -31,7 +31,7 @@
 
 
 import json
-
+import boto3
 
 ## This helper function is to add the private_ip address to the synthetic ghost registry_entry that is created in module2d
 ## If we inject it early on in module2b it can be queried from the aggregate_ghost_detail.json listing of ghosts that is 
