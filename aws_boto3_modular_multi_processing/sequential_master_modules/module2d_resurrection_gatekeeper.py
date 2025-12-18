@@ -64,6 +64,7 @@ def process_ghost_registry():
     # Step 2a: Convert to synthetic registry format
     for ghost_entry in ghost_entries:
         ip = ghost_entry.get("ip")
+        private_ip = ghost_entry.get("private_ip", "unknown")  # the private ip is now added to the module2b list of ghost entires
         process_index = ghost_entry.get("process_index")
         tags = ghost_entry.get("tags", [])
         pid = ghost_entry.get("pid") # get the pid from the ghost_entry that is from module2b
@@ -77,7 +78,8 @@ def process_ghost_registry():
             "thread_id": None,
             "thread_uuid": synthetic_uuid,
             "public_ip": ip,
-            "private_ip": "unknown",
+            #"private_ip": "unknown",
+            "private_ip": private_ip,  # use the private_ip now from module2b ghost list of entries. See above.
             "timestamp": None,
             "tags": tags,
             "process_index": process_index

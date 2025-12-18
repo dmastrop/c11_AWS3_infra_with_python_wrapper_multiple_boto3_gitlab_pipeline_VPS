@@ -32,6 +32,30 @@
 
 import json
 
+
+## This helper function is to add the private_ip address to the synthetic ghost registry_entry that is created in module2d
+## If we inject it early on in module2b it can be queried from the aggregate_ghost_detail.json listing of ghosts that is 
+## created in this module2b
+def lookup_private_ip(public_ip, region=None):
+    """
+    Resolve the private IP for a given public IP using AWS EC2 describe_instances.
+    Returns 'unknown' if not found.
+    """
+    try:
+        session = boto3.Session(region_name=region or os.getenv("region_name"))
+        ec2 = session.client("ec2")
+        resp = ec2.describe_instances(Filters=[{"Name": "ip-address", "Values": [public_ip]}])
+        for r in resp.get("Reservations", []):
+            for i in r.get("Instances", []):
+                return i.get("PrivateIpAddress", "unknown")
+    except Exception as e:
+        print(f"[WARN] lookup_private_ip failed for {public_ip}: {e}")
+    return "unknown"
+
+
+
+
+
 def main():
     ghost_summary_path = "/aws_EC2/logs/aggregate_ghost_summary.log"
     console_log_path = "/aws_EC2/logs/gitlab_full_run.log"
@@ -102,6 +126,8 @@ def main():
 
             ghost_entries.append({
                 "ip": ip,
+                "private_ip": lookup_private_ip(ip),   # add the private_ip address to the module2b listing of ghost entries. Use 
+                # the helper function lookup_private_ip based upon the public_ip ip.
                 "pid": pid,
                 "process_index": process_index,
                 "tags": tags
