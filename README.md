@@ -187,7 +187,9 @@ artifact logs per pipeline)
 
 - Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrection ghost threads (multi-threaded reboot) Specialized Validation testing
 
-- Update part 48 Phase 3j: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
+- Update part 48 Phase 3j: 512 node regression test (no synthetic injections)
+
+- Update part 49 Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
 
 
 
@@ -244,7 +246,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 48: Phase 3j: Part 6: Requeing and resurrection ghost thread: Private ip population and security group rules reapply post ghost node reboot
+## UPDATES part 49: Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
 
 ### Introduction
 
@@ -291,6 +293,25 @@ the node in module2f
 
 
 
+
+
+
+## UPDATES part 48: Phase 3j: 512 node regression test (no synthetic injections)
+
+
+### Introduction
+
+This is a regression test with the hyper-scaling of 512 processes. There is one thread per process and the first wave consists
+of 487 processes and then the last 25 processes are pooled. 
+
+There are currently 5 resurrection bucket type handlers in module2e: the idx1 handler, the post install futures crash handler,
+the already_install_success handler, the ghost handler and the generic handler. The generic handler is a default last resort
+handler for new issues that might arise with a test. We might hit a generic bucket type with this test. 
+
+In general, once the generic handler is triggered, that information can be used to create a specialized handler for the 
+pariticular crash. This will be done as the testing progresses and new issues arise. It is important to create a new handler for
+each specific issue because that permits the tagging to be very specific and this will help the ML state machine in Phase4 of
+this project to discern, learn about and predict outcomes for these various bucket types. 
 
 
 
