@@ -266,13 +266,142 @@ the node in module2f
 
 
 
-
-
-### Part6: Code Revivew
+### Part6: Code Review
 
 #### private_ip added to ghost registry_entry
 
+The code changes for this were done in module2b and 2d. The actual private ip injection is done in module2b as that is where
+the primitive ghost entry is first created. This ghost entry is then synthetically enhanced to resemble the standard thread 
+registry_entrys in module2d. Thus, injecting the private_ip early on in module2b will ensure that the private ip address is 
+subsequently carried through the rest of the modules and the logs that a derived from these modules all remain consistent with the 
+prvate_ip address field populated accordingly.
 
+The flow, which will be verified in the validation section below is the following: 
+
+- module2b → aggregate_ghost_detail.json: ghost entry now carries both public and private IP.  
+- module2d synthetic registry: private IP is preserved instead of hard‑coded `"unknown"`.  
+- module2d gatekeeper decision: private IP still present alongside the resurrect/block tags.  
+- module2e registry: private IP carried forward into resurrection candidates, with replayed commands and reboot flag.  
+- module2e rebooted registry: instance ID resolved, reboot context tags applied, private IP intact.  
+- module2f results: final resurrection outcome shows `install_success`, with private IP included in the tags and metadata
+
+##### module2b code changes
+
+The chnages here involve adding a helper function to this module, named lookup_private_ip()
+
+Once that is added it can be called from the main() function which appends public ip, private ip, pid, process_index and any tags
+that are present to a primitive ghost entry that will later be transformed into a registry_entry in module2d.
+
+
+
+The helper function lookup_private_ip():
+
+```
+import json
+import boto3
+import os
+
+## This helper function is to add the private_ip address to the synthetic ghost registry_entry that is created in module2d
+## If we inject it early on in module2b it can be queried from the aggregate_ghost_detail.json listing of ghosts that is 
+## created in this module2b
+def lookup_private_ip(public_ip, region=None):
+    """
+    Resolve the private IP for a given public IP using AWS EC2 describe_instances.
+    Returns 'unknown' if not found.
+    """
+    try:
+        session = boto3.Session(region_name=region or os.getenv("region_name"))
+        ec2 = session.client("ec2")
+        resp = ec2.describe_instances(Filters=[{"Name": "ip-address", "Values": [public_ip]}])
+        for r in resp.get("Reservations", []):
+            for i in r.get("Instances", []):
+                return i.get("PrivateIpAddress", "unknown")
+    except Exception as e:
+        print(f"[WARN] lookup_private_ip failed for {public_ip}: {e}")
+    return "unknown"
+```
+
+And the change in main() is just a single line for the private_ip field in the primitive entry. There is an append using a
+call to the helper function above to populate the private_ip that matches with the public_ip (ip) of the ghost ip.
+
+Excerpt from main() of module2b:
+
+
+```
+            tags = ["ghost"]
+
+            if ssh_attempted:
+                tags.append("ssh_attempted")
+            else:
+                tags.append("no_ssh_attempt")
+
+            if match_count <= 2:
+                tags.append("aws_outage_context")
+
+            ghost_entries.append({
+                "ip": ip,
+                "private_ip": lookup_private_ip(ip),   # add the private_ip address to the module2b listing of ghost entries. Use 
+                # the helper function lookup_private_ip based upon the public_ip ip.
+                "pid": pid,
+                "process_index": process_index,
+                "tags": tags
+```
+These primitive ghost entries are written to a log json file named aggregate_ghost_detail.json
+
+
+##### module2d code changes:
+
+The code change in module2d is very straightforwrard. 
+The file that has the primitive ghost entries from the module2b named aggregate_ghost_detail.json is used as an INPUT to 
+module2d. Module2d uses this file and the primitive entries in it, to construct full registry_entrys for each ghost ip entry.
+This is referred to as a synthetic registry format.
+
+
+The code change is just a simple 2 lines of code added  as shown below, to add the private_ip address field to the synthetic ghost 
+registry_entry. Once all of the ghost registry_entrys have been processed they are written to a 
+log file named aggregate_ghost_detail_synthetic_registry.json. This file is then processed by the gatekeeper function in module2d
+to add the gatekeeper tags and fields to each ghost registry_entry. This file is named aggregate_ghost_detail_module2d.json
+
+
+So the change made in module2b above percolates up through the rest of the modules.
+
+This is a code excerpt from def process_ghost_registry() helper function in module2d:
+
+
+```
+    # Step 2a: Convert to synthetic registry format
+    for ghost_entry in ghost_entries:
+        ip = ghost_entry.get("ip")
+        private_ip = ghost_entry.get("private_ip", "unknown")  # the private ip is now added to the module2b list of ghost entires
+        process_index = ghost_entry.get("process_index")
+        tags = ghost_entry.get("tags", [])
+        pid = ghost_entry.get("pid") # get the pid from the ghost_entry that is from module2b
+
+
+        synthetic_uuid = f"ghost_{ip.replace('.', '_')}"
+        synthetic_entry = {
+            "status": "ghost",
+            "attempt": -1,
+            "pid": pid, # get the pid from the ghost_entry that is from module2b
+            "thread_id": None,
+            "thread_uuid": synthetic_uuid,
+            "public_ip": ip,
+            #"private_ip": "unknown",
+            "private_ip": private_ip,  # use the private_ip now from module2b ghost list of entries. See above.
+            "timestamp": None,
+            "tags": tags,
+            "process_index": process_index
+        }
+
+        synthetic_registry[synthetic_uuid] = synthetic_entry
+
+    with open(SYNTHETIC_OUTPUT_PATH, "w") as f:
+        json.dump(synthetic_registry, f, indent=2)
+    print(f"[module2d.2a] Synthetic ghost registry written to: {SYNTHETIC_OUTPUT_PATH}")
+    print(f"[module2d.2a] Total entries synthesized: {len(synthetic_registry)}")
+```
+
+  
 
 
 #### Security group rules rapply post reboot in module2e prior to resurrection 
@@ -283,6 +412,179 @@ the node in module2f
 ### Part6: Validation testing
 
 #### private_ip added to the ghost registry_entry
+
+
+The injection of the private_ip address field into the ghost registry_entry is shown below, from module2b all the way through
+module2f. 
+
+To reiterate:
+
+
+- module2b → aggregate_ghost_detail.json: ghost entry now carries both public and private IP.  
+- module2d synthetic registry: private IP is preserved instead of hard‑coded `"unknown"`.  
+- module2d gatekeeper decision: private IP still present alongside the resurrect/block tags.  
+- module2e registry: private IP carried forward into resurrection candidates, with replayed commands and reboot flag.  
+- module2e rebooted registry: instance ID resolved, reboot context tags applied, private IP intact.  
+- module2f results: final resurrection outcome shows `install_success`, with private IP included in the tags and metadata
+
+```
+Aggregate_ghost_detail.json (module2b)
+
+
+[
+  {
+    "ip": "3.90.252.55",
+    "private_ip": "172.31.24.138",
+    "pid": 15,
+    "process_index": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt"
+    ]
+  },
+
+
+
+
+Aggregate_ghost_detail_synthetic_registry.json (module2d)
+
+{
+  "ghost_3_90_252_55": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_3_90_252_55",
+    "public_ip": "3.90.252.55",
+    "private_ip": "172.31.24.138",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt"
+    ],
+    "process_index": null
+  },
+
+Aggregate_ghost_detail_module2d.json (module2d gatekeeper decision)
+
+
+{
+  "ghost_3_90_252_55": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_3_90_252_55",
+    "public_ip": "3.90.252.55",
+    "private_ip": "172.31.24.138",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+
+
+Resurrection_module2e_registry.json
+
+
+{
+  "ghost_3_90_252_55": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_3_90_252_55",
+    "public_ip": "3.90.252.55",
+    "private_ip": "172.31.24.138",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true
+  },
+
+Resurrection_module2e_registry_rebooted.json
+
+
+  "ghost_3_90_252_55": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 15,
+    "thread_id": null,
+    "thread_uuid": "ghost_3_90_252_55",
+    "public_ip": "3.90.252.55",
+    "private_ip": "172.31.24.138",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-0aa38c8bab17d09fc",
+      "reboot_context:initiated",
+      "reboot_context:ready"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true,
+    "timestamp_reboot_stage": "2025-12-18T04:46:33.420209Z"
+  },
+
+Module2f_resurrection_results.json
+
+"ghost_3_90_252_55": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2025-12-18 04:59:25.702176",
+    "pid": 15,
+    "thread_id": 127268118595264,
+    "thread_uuid": "ghost_3_90_252_55",
+    "public_ip": "3.90.252.55",
+    "private_ip": "172.31.24.138",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-0aa38c8bab17d09fc",
+      "reboot_context:initiated",
+      "reboot_context:ready",
+      "installation_completed"
+    ]
+  },
+```
+An SSH to the example node above was done and it was empirically verified to have the completed installation.
+
+
+
 
 
 #### The security group rules reapply post reboot in module2e prior to resurrection
@@ -311,7 +613,8 @@ this project to discern, learn about and predict outcomes for these various buck
 
 Without induced swap contention on the VPS, there are no failed threads. So this regiression was ok, but to induce real life 
 failures the swap will have to be squeezed. This testing will be deferred until later when the system is prepped for 
-machine learning.
+machine learning. ML will be able to learn quite a bit from the chaotic nature of the gitlab console logs under hyper-scaling testing
+and swap contention on the VPS host that is running the gitlab pipleine docker container.
 
 
 
