@@ -144,6 +144,13 @@ deploy:
       #i-08f1057b9a79cfae5
       #i-07ab1e5de09a2e8f7
 
+    ORCHESTRATION_LEVEL_SG_ID: "sg-0a1f89717193f7896"
+    # This is to set the orchestration level security group id that module1 
+    # (restart_the_EC_multiple_instances_with_client_method_DEBUG.py)  
+    # uses for all the  nodes in the exuection run
+
+
+
   before_script:
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
     - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
@@ -205,6 +212,8 @@ deploy:
 
     - echo 'INJECT_FAKE_INSTANCE_ID='${INJECT_FAKE_INSTANCE_ID} >> .env # this injects fake instance_id for module2e and 2f reboot and resurrection testing Phase3
     - echo 'FAKE_INSTANCE_ID='${FAKE_INSTANCE_ID} >> .env 
+
+    - echo 'ORCHESTRATION_LEVEL_SG_ID='${ORCHESTRATION_LEVEL_SG_ID} >> .env # this is the security group id used in module1 orchestration layer. This is applied to all the nodes in the execution run. module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py
 
 
        

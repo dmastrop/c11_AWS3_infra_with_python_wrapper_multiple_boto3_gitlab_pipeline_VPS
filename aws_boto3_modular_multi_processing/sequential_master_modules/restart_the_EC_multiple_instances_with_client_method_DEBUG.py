@@ -23,6 +23,13 @@ def restart_ec_multiple_instances():
     min_count = f'{os.getenv("min_count")}'
     max_count = f'{os.getenv("max_count")}'
 
+    ## Define the sg_id that is used for the ORCHESTRATINO_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
+    ## this is used in the start_ec2_instances function below
+    sg_id = os.getenv("ORCHESTRATION_LEVEL_SG_ID")
+    if not sg_id:
+        raise RuntimeError("ORCHESTRATION_LEVEL_SG_ID is not set in environment")
+
+
     # Debugging: Print the loaded environment variables
     print("AWS Access Key:", aws_access_key)
     print("AWS Secret Key:", aws_secret_key)
@@ -64,9 +71,15 @@ def restart_ec_multiple_instances():
                 ImageId=image_id,
                 InstanceType=instance_type,
                 KeyName=key_name,
-                SecurityGroupIds=['sg-0a1f89717193f7896'],  
+                
+                #SecurityGroupIds=['sg-0a1f89717193f7896'],  
                 # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
-                # will be applied to the default security group.
+                # will be applied to the default security group. The method is used to apply rules to the security group. This 
+                # security group will be used on all the  nodes in the execution run.
+
+                SecurityGroupIds=[sg_id],   ## sg_id is defined above from the ORCHESTRATION_LEVEL_SG_ID ENV variable
+                ## Use this instead of hardcoding above 
+                
                 MinCount=int(min_count),
                 MaxCount=int(max_count),
                 TagSpecifications=[
