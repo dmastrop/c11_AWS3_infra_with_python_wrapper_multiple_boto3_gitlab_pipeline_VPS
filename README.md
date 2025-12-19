@@ -367,8 +367,7 @@ This happens when:
 
 In these cases:
 
--The SG is attached  
-but  
+- The SG is attached but... 
 - The rules may not have reached the instance
 
 This is why module2e must **reapply the rules** after reboot:
@@ -378,8 +377,7 @@ This is why module2e must **reapply the rules** after reboot:
 - Ensures the resurrection commands can run  
 - Ensures the node is reachable and stable  
 
-This is not theoretical — it happens in real AWS fleets under load.
-
+This is not theoretical — it happens in real AWS fleets under load. (hyper-scaling or VPS under heavy swap contention)
 
 ### Why Generate `orchestration_sg_rules_module2.json`in module2
 
