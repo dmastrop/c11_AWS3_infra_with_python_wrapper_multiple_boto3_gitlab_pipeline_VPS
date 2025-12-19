@@ -39,6 +39,7 @@ def restart_ec_multiple_instances():
     print("Key Name:", key_name)
     print("Min Count:", min_count)
     print("Max Count:", max_count)
+    print("Orchestration_level_SG_ID:", sg_id)
 
     def start_ec2_instances(aws_access_key, aws_secret_key, region_name, image_id, instance_type, key_name, min_count, max_count):
         # multi-threading is encountering scope issues again. Need to import boto3 inside the function
