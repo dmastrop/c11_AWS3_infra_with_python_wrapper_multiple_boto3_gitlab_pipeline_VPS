@@ -304,6 +304,45 @@ retry_lock = threading.Lock()
 # when there are multiple threads per process updating the max_retry_observed for each process.
 
 
+
+#### This helper function is for the SG rule manifest code.  The code is called from main() right after the 
+#### multiprocessing.Pool call to tomcat_worker_wrapper.  That block calls this helper function with all the SG ids
+#### from all the orchestration level nodesthat gets all the SG ids from all the orchestration level nodes
+#### Right now all SGs are assumed to have the same rules, but this will be enhanced later. See the note below.
+# NOTE: If future architectures use multiple SGs with different rule sets,
+# this manifest must evolve to map each SG ID → its own rule list.
+def write_sg_rule_manifest(security_group_ids, log_dir="/aws_EC2/logs"):
+    """
+    Writes the SG rule manifest used by module2 to a JSON file.
+    This becomes the authoritative source for module2e SG replay.
+    """
+
+    ingress_rules = [
+        {"protocol": "tcp", "port": 22, "cidr": "0.0.0.0/0"},
+        {"protocol": "tcp", "port": 80, "cidr": "0.0.0.0/0"},
+        {"protocol": "tcp", "port": 8080, "cidr": "0.0.0.0/0"},
+        # Add future rules here (e.g., {"protocol": "tcp", "port": 5555, "cidr": "0.0.0.0/0"})
+    ]
+
+    manifest = {
+        "sg_ids": list(set(security_group_ids)),
+        "ingress_rules": ingress_rules,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    os.makedirs(log_dir, exist_ok=True)
+    out_path = os.path.join(log_dir, "orchestration_sg_rules_module2.json")
+
+    try:
+        with open(out_path, "w") as f:
+            json.dump(manifest, f, indent=2)
+        print(f"[module2_orchestration_level_SG_manifest] Wrote SG rule manifest to {out_path}")
+    except Exception as e:
+        print(f"[module2_orchestration_level_SG_manifest] ERROR writing SG rule manifest: {e}")
+
+
+
+
 ##### This helper function is for the refactored ghost detection logic in resurrection_monitor_patch8 and also for the 
 ##### rehydration ip logic in tomcat_worker for the unknown ip address if futures thread crashes.
 ##### make sure to import ipaddress
@@ -7587,12 +7626,111 @@ def main():
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
     finally:
+
+        ## Insert the "write SG rule manifest" here after all the processes exit and before teh aggregator code below
+        ## This is used for any subsequent module (like module2e) that needs to replay the orchestration level SG rules
+        ## on the nodes or a subset of the nodes
+        # ============================================================
+        # [module2] WRITE SG RULE MANIFEST (runs once per execution)
+        # ============================================================
+
+        # Re-discover SG IDs from AWS control plane (same logic module2 uses today)
+        # This will discover all the SG IDs from all of the orchestration level nodes on AWS (real time)
+        # This block uses the write_sg_rule_manifest helper function defined at the top of the module.
+       
+        #try:
+        #    session = boto3.Session(
+        #        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        #        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        #        region_name=os.getenv("region_name")
+        #    )
+        #    ec2 = session.client("ec2")
+
+        #    # Describe all instances launched in this run
+        #    response = ec2.describe_instances(
+        #        Filters=[{"Name": "instance-state-name", "Values": ["running", "pending"]}]
+        #    )
+
+        #    sg_ids = set()
+        #    for reservation in response["Reservations"]:
+        #        for instance in reservation["Instances"]:
+        #            for sg in instance.get("SecurityGroups", []):
+        #                sg_ids.add(sg["GroupId"])
+
+        #    sg_ids = list(sg_ids)
+
+        #    print(f"[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: {sg_ids}")
+
+        #    # Write the manifest
+        #    write_sg_rule_manifest(sg_ids)    # helper function at the top of the module
+
+        #except Exception as e:
+        #    print(f"[module2_orchestration_level_SG_manifest] ERROR discovering SG IDs for manifest: {e}")
+
+
+
+
+        ## Version2 WRITE SG RULE MANIFEST to print out instance ids, etc and SGids that are scanned
+        try:
+            session = boto3.Session(
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                region_name=os.getenv("region_name")
+            )
+            ec2 = session.client("ec2")
+
+            # Describe all instances launched in this run
+            response = ec2.describe_instances(
+                Filters=[{"Name": "instance-state-name", "Values": ["running", "pending"]}]
+            )
+
+            sg_ids = set()
+
+            print("\n[module2_orchestration_level_SG_manifest] === INSTANCE DISCOVERY ===")
+
+            for reservation in response["Reservations"]:
+                for instance in reservation["Instances"]:
+
+                    instance_id = instance.get("InstanceId")
+                    public_ip = instance.get("PublicIpAddress")
+                    private_ip = instance.get("PrivateIpAddress")
+
+                    # Print instance details
+                    print(f"[module2] Instance discovered:")
+                    print(f"          instance_id: {instance_id}")
+                    print(f"          public_ip:   {public_ip}")
+                    print(f"          private_ip:  {private_ip}")
+
+                    # Print SGs for this instance
+                    instance_sgs = instance.get("SecurityGroups", [])
+                    sg_list = [sg['GroupId'] for sg in instance_sgs]
+                    print(f"          security_groups: {sg_list}")
+
+                    # Add SGs to global set
+                    for sg in instance_sgs:
+                        sg_ids.add(sg["GroupId"])
+
+            sg_ids = list(sg_ids)
+
+            print(f"\n[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: {sg_ids}")
+
+            # Write the manifest
+            write_sg_rule_manifest(sg_ids)
+
+        except Exception as e:
+            print(f"[module2_orchestration_level_SG_manifest] ERROR discovering SG IDs for manifest: {e}")
+
+
+
+
+        # ============================================================
+        # Continue with registry aggregation, ghost detection, etc.
+        # ============================================================
+
         ### Insert the aggregator code here for the final aggregation in main() after the multiprocessing.Pool
         ### This ensures that the final aggregation file is completed only when all the processes have completed using 
         ### tomcat worker to process the threads. This includes the pooled processes done after the initial desired_Count pools are
         ### done
-
-
 
 
 
