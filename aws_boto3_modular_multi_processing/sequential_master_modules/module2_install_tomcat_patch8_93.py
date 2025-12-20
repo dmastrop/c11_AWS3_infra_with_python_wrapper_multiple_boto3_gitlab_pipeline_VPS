@@ -321,6 +321,7 @@ def write_sg_rule_manifest(security_group_ids, log_dir="/aws_EC2/logs"):
         {"protocol": "tcp", "port": 22, "cidr": "0.0.0.0/0"},
         {"protocol": "tcp", "port": 80, "cidr": "0.0.0.0/0"},
         {"protocol": "tcp", "port": 8080, "cidr": "0.0.0.0/0"},
+        {"protocol": "tcp", "port": 5555, "cidr": "0.0.0.0/0"},
         # Add future rules here (e.g., {"protocol": "tcp", "port": 5555, "cidr": "0.0.0.0/0"})
     ]
 
@@ -4087,11 +4088,45 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
                 # this is caught upstream
 
+
         # Always update max_retry_observed, even if rule already existed
         max_retry_observed = max(max_retry_observed, retry_count)
         print(f"[RETRY METRIC] sg_id={sg_id}, port=8080 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
 
 
+
+    for sg_id in set(security_group_ids):
+        retry_count =0 # default a fallback for this local variable
+        try:
+            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port=8080")
+
+            retry_count = retry_with_backoff(
+                my_ec2.authorize_security_group_ingress,
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': 'tcp',
+                    'FromPort': 5555,
+                    'ToPort': 5555,
+                    'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                }]
+            )
+
+            print(f"[SECURITY GROUP] Successfully applied port 5555 to sg_id={sg_id}")
+
+
+        except my_ec2.exceptions.ClientError as e:
+
+            if 'InvalidPermission.Duplicate' in str(e):
+                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port=5555")
+            else:
+                raise  # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+                # this is caught upstream
+
+
+        # Always update max_retry_observed, even if rule already existed
+        max_retry_observed = max(max_retry_observed, retry_count)
+        print(f"[RETRY METRIC] sg_id={sg_id}, port=5555 → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
 
 
 
