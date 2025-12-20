@@ -7671,6 +7671,11 @@ def main():
 
 
         ## Version2 WRITE SG RULE MANIFEST to print out instance ids, etc and SGids that are scanned
+        
+        # exclude_instance_id is already defined earlier in main()
+        print(f"[module2_orchestration_level_SG_manifest] Controller instance to exclude: {exclude_instance_id}")
+
+
         try:
             session = boto3.Session(
                 aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
@@ -7692,6 +7697,14 @@ def main():
                 for instance in reservation["Instances"]:
 
                     instance_id = instance.get("InstanceId")
+                    
+
+                    # Skip controller instance
+                    if instance_id == exclude_instance_id:
+                        print(f"[module2] Skipping controller instance: {instance_id}")
+                        continue
+
+
                     public_ip = instance.get("PublicIpAddress")
                     private_ip = instance.get("PrivateIpAddress")
 
