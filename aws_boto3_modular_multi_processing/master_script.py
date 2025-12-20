@@ -312,11 +312,13 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_92.py")
 
-##### THIS IS THE MODULE2 SCRIPT  patch8_93.py. This has the code for Phase3 command json file that will be used in module2e for resurrection
+###### THIS IS THE MODULE2 SCRIPT  patch8_93.py. This has the code for Phase3 command json file that will be used in module2e for resurrection
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py")
+
+##### THIS IS THE MODULE2 SCRIPT  patch8_94.py. This has the code for refactoring the SG rule application and Phase3 SG rule mainifest file (json) creation for module2e replay of SG rules. 
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_93.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_94.py")
 
 
 ##### This is module2b for the post ghost analysis on the gitlab console logs
