@@ -189,11 +189,11 @@ artifact logs per pipeline)
 
 - Update part 48 Phase 3j: 512 node regression test (no synthetic injections)
 
-- Update part 49 Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
+- Update part 49 Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population
 
 - Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API
 
-
+- Update part 51 Phase 3m: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e
 
 
 ## A note on application extensibility
@@ -241,6 +241,57 @@ STATUS_TAGS = {
     "ghost" 
 }
 ```
+
+
+
+
+
+
+## UPDATES part 51: Phase 3m: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e
+
+### Introduction
+
+This is Part7 for the initial ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
+processing code. The buik of the ghost resurrection code has been implemmented in Parts 1-5 as noted in the previous UPDATES.
+
+- Reapply the security group rules from module2 at the orchestration layer, after the reboot in module2e and prior to the resurrection of the node in module2f
+
+### Code implemation strategy for the security group (SG) reapplication: Nuances in multi-processing environments
+
+
+The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
+explanation.  Module2 SG rule application is very complicated because module2 is a multi-processing implementation.
+Module2e, on the other hand is not multi-processed and the reapplication of the SG rules to the ghost nodes is much more simpler.
+
+
+The rationale behind both of these implementations deserves a deep explanation on the naunaces of multi-processing and 
+AWS API calls.
+
+
+This explanation is given in the previous UPDATE. Please see that UPDATE. It is an important update that sheds light on why
+the module2e SG rule replay is very simple when compared to that of module2.
+
+
+
+### Part7: Code Review
+
+The code changes for this involves several areas of change in modules 2 and 2e.
+The objective is to get the security group id(s) and the rules in the orchestrationlayer of module2 and reapply those rules
+after the ghost nodes are rebooted in module2e prior to resurrection in module2f. The reasons for this were given in great 
+detail in the previous UPDATE.The rationale of why the reapply in module2e is much simpler than the multi-processing apply in
+module2 is also given in that UPDATE.
+
+
+#### Security group rules reapply post reboot in module2e prior to resurrection 
+
+### Part7: Validation testing
+
+#### The security group rules reapply post reboot in module2e prior to resurrection
+
+
+
+
+
 
 
 ## UPDATES part 50: Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API
@@ -427,11 +478,17 @@ Ghost Nodes
 
 
 
+
+
+
+
+
+
 ## UPDATES part 49: Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
 
 ### Introduction
 
-This is the final part for the initial ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
+This is Part6 for the initial ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
 processing code. The buik of the ghost resurrection code has been implemmented in Parts 1-5 as noted in the previous UPDATES.
 
 - Populate the private_ip address field in the ghost registry_entrys. The module2b creates a list of the ghost ips along with a basic
@@ -441,27 +498,6 @@ first insert it into the primitive listing in module2b by doing and AWS API requ
 ip. Once that private ip is known, insert it into the primitive list in module2b. Since module2d uses that list to create the
 synthetic registry_entrys, it just needs to get it from the module2b json file and append it to the synthetic registry_entry.
 Once it is there it will flow into the rest of the upstream modules (module2e, 2f). 
-
-- Reapply the security group rules from module2 at the orchestration layer, after the reboot in module2e and prior to the resurrection of the node in module2f
-
-
-
-### Code implemation strategy for the security group (SG) reapplication: Nuances in multi-processing environments
-
-
-The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
-explanation.  Module2 SG rule application is very complicated because module2 is a multi-processing implementation.
-Module2e, on the other hand is not multi-processed and the reapplication of the SG rules to the ghost nodes is much more simpler.
-
-
-The rationale behind both of these implementations deserves a deep explanation on the naunaces of multi-processing and 
-AWS API calls.
-
-
-This explanation is given in the UPDATE after this.
-
-
-
 
 
 ### Part6: Code Review
@@ -605,7 +641,6 @@ This is a code excerpt from def process_ghost_registry() helper function in modu
   
 
 
-#### Security group rules reapply post reboot in module2e prior to resurrection 
 
 
 
@@ -788,7 +823,6 @@ An SSH to the example node above was done and it was empirically verified to hav
 
 
 
-#### The security group rules reapply post reboot in module2e prior to resurrection
 
 
 
@@ -875,7 +909,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
+- Part6/7 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 
@@ -890,7 +924,7 @@ orchestration layer (modules 1 and 2), the SG rules will most likely not be appl
 SG rules from the orchesration layer to ensure that the nodes have the proper rules prior to engaing on resurrection thread operations on the node (SSH, and 
 installation command execution on the node). The code in module2e or 2f will have to query the rules for the SG id designated in module1 and then once it has
 the rules, reapply them to all the ghost nodes after the ghost nodes have been rebooted and before the thread level operatoins (like SSH and commmand execution)
-are performed by module2f resurrection_install_tocmat.  The code for this will be done in Part6 in the UPDATE that follows this one.
+are performed by module2f resurrection_install_tocmat.  The code for this will be done in Part6/7 in UPDATES that follows this one.
 
 The key objective right now it to get all of the current code commits verified so that there is a stable foundation for the Phase4 ML implementation.
 
@@ -4862,7 +4896,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
+- Part6/7 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 ### Part4b: Reboot code and health check code: Multi-threaded batch processing of reboots and health checks, and adding the reboot_context tagging
@@ -5468,7 +5502,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
+- Part6/7 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 
@@ -7516,7 +7550,7 @@ regression testing that is required for the ghost resurreciton code that is basi
 - Part5 consists of the  call to the refactored resurrection_install_tomcat:  reque the ghost for command replay and resurrection. This uses the same module2f code
 as the previous HYBRID futures crash code resurrection testing. The module2f is agnostic to the resurrection bucket type that is assigned in module2e.
 
-- Part6 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
+- Part6/7 consists of some enhancements to the ghost resurrection code and ghost ip processing code.
 
 
 ### Part1: Testing the existing code path for synthetic ghost ips (no InstanceId code path)
