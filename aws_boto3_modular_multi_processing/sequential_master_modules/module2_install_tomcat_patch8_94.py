@@ -360,6 +360,63 @@ def write_sg_rule_manifest(security_group_ids, log_dir="/aws_EC2/logs"):
 
 
 
+
+
+#### [module2_orchestration_level_SG_manifest]
+#### This is the helper function called from main() right after AWS SG discovery but before the mainifest is written by the 
+#### helper funcition above.
+#### This function determines if there is any drift between the SG_RULES which is the authorative list of rules and 
+#### the rules on AWS for the SG. It does not detect drift between the AWS SG rules and SG_RULES (in other words, there can
+#### be extra rules on AWS SG that are not in SG_RULES, but if there are rules in SG_RULES that are not in AWS SG rules then that
+#### is defined as drift.
+# ------------------ SG Drift Detector ------------------
+def detect_sg_drift(sg_id, ec2_client):
+    """
+    Compares SG_RULES (authoritative) against the actual AWS SG rules.
+    Only checks for missing rules on AWS SG rules that are in SG_RULES.  Extra AWS rules are ignored.
+    """
+
+    try:
+        resp = ec2_client.describe_security_groups(GroupIds=[sg_id])
+        sg = resp["SecurityGroups"][0]
+    except Exception as e:
+        print(f"[DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
+        return
+
+    # Normalize AWS rules into comparable tuples
+    aws_rules = set()
+    for perm in sg.get("IpPermissions", []):
+        proto = perm.get("IpProtocol")
+        from_p = perm.get("FromPort")
+        to_p = perm.get("ToPort")
+
+        # Only consider rules with explicit ports
+        if from_p is None or to_p is None:
+            continue
+
+        for rng in perm.get("IpRanges", []):
+            cidr = rng.get("CidrIp")
+            if cidr:
+                aws_rules.add((proto, from_p, cidr))
+
+    # Normalize SG_RULES
+    declared_rules = {
+        (rule["protocol"], rule["port"], rule["cidr"])
+        for rule in SG_RULES
+    }
+
+    # Drift = declared rules missing from AWS
+    missing = declared_rules - aws_rules
+
+    if not missing:
+        print(f"[DRIFT] No drift detected for SG {sg_id}. All SG_RULES are present.")
+    else:
+        print(f"[DRIFT] Drift detected for SG {sg_id}: Missing rules:")
+        for proto, port, cidr in sorted(missing):
+            print(f"    - {proto}/{port} from {cidr}")
+
+
+
 ##### This helper function is for the refactored ghost detection logic in resurrection_monitor_patch8 and also for the 
 ##### rehydration ip logic in tomcat_worker for the unknown ip address if futures thread crashes.
 ##### make sure to import ipaddress
@@ -7685,7 +7742,7 @@ def main():
 
 
 
-
+        ## [main]
         ## Version2 [module2_orchestration_level_SG_manifest]
         ## WRITE SG RULE MANIFEST to print out instance ids, etc and SGids that are scanned
         ## The refactored _94.py version has no changes here.
@@ -7745,7 +7802,28 @@ def main():
 
             print(f"\n[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: {sg_ids}")
 
-            # Write the manifest
+
+            ## Now that the SG IDs in AWS have been discovered, next detect the drift in each sg_id identified above
+            ## Currently there is just one SG ID
+            ## detect_sg_drift is a helper function at the top of this module.
+
+            # Create EC2 client for drift detection
+            session = boto3.Session(
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                region_name=os.getenv("region_name")
+            )
+            ec2_client = session.client("ec2")
+
+            # Run drift detection for each SG
+            for sg_id in sg_ids:
+                detect_sg_drift(sg_id, ec2_client)
+
+
+            # Write the manifest. Currently, just one SG ID but if there are multiple SG IDs this will be able to do that 
+            # as well. The manifest will list the SG id and all the rules that are in it, for each SG id.
+            # write_sg_rule_manifest is a helper function at the top of this module.
+            
             write_sg_rule_manifest(sg_ids)
 
         except Exception as e:
