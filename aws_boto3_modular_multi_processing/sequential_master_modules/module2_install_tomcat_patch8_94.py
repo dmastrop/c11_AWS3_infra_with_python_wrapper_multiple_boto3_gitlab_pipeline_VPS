@@ -380,7 +380,7 @@ def detect_sg_drift(sg_id, ec2_client):
         resp = ec2_client.describe_security_groups(GroupIds=[sg_id])
         sg = resp["SecurityGroups"][0]
     except Exception as e:
-        print(f"[DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
+        print(f"[orchestration_level_SG_manifest_DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
         return
 
     # Normalize AWS rules into comparable tuples
@@ -409,9 +409,9 @@ def detect_sg_drift(sg_id, ec2_client):
     missing = declared_rules - aws_rules
 
     if not missing:
-        print(f"[DRIFT] No drift detected for SG {sg_id}. All SG_RULES are present.")
+        print(f"[orchestration_level_SG_manifest_DRIFT] No drift detected for SG {sg_id}. All SG_RULES are present.")
     else:
-        print(f"[DRIFT] Drift detected for SG {sg_id}: Missing rules:")
+        print(f"[orchestration_level_SG_manifest_DRIFT] Drift detected for SG {sg_id}: Missing rules:")
         for proto, port, cidr in sorted(missing):
             print(f"    - {proto}/{port} from {cidr}")
 
@@ -7776,7 +7776,7 @@ def main():
 
                     # Skip controller instance
                     if instance_id == exclude_instance_id:
-                        print(f"[module2] Skipping controller instance: {instance_id}")
+                        print(f"[module2_orchestration_level_SG_manifest] Skipping controller instance: {instance_id}")
                         continue
 
 
@@ -7784,7 +7784,7 @@ def main():
                     private_ip = instance.get("PrivateIpAddress")
 
                     # Print instance details
-                    print(f"[module2] Instance discovered:")
+                    print(f"[module2_orchestration_level_SG_manifest] Instance discovered:")
                     print(f"          instance_id: {instance_id}")
                     print(f"          public_ip:   {public_ip}")
                     print(f"          private_ip:  {private_ip}")

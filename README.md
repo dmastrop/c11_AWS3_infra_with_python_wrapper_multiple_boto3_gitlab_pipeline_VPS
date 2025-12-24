@@ -276,17 +276,168 @@ the module2e SG rule replay is very simple when compared to that of module2.
 ### Part7: Code Review
 
 The code changes for this involves several areas of change in modules 2 and 2e.
-The objective is to get the security group id(s) and the rules in the orchestrationlayer of module2 and reapply those rules
+The objective is to get the security group id(s) and the rules in the orchestration layer of module2 and reapply those rules
 after the ghost nodes are rebooted in module2e prior to resurrection in module2f. The reasons for this were given in great 
 detail in the previous UPDATE.The rationale of why the reapply in module2e is much simpler than the multi-processing apply in
 module2 is also given in that UPDATE.
 
 
-#### Security group rules reapply post reboot in module2e prior to resurrection 
+#### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
+
+The module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py currently uses a static hardcodinged security group id
+(the default security group). To improve flexiblity, add an ENV variable in the .gitlab-ci.yml file and use that in the 
+module1, so the security group id can easily be changed. This is also better for future multiple security group id support. 
+
+The ENV variable is ORCHESTRATINO_LEVEL_SG_ID
+
+
+#### Create a manifest json file of the current rules SG_RULES that are used in the security group specified by ORCHESTRATION_LEVEL_SG_ID
+
+The changes for this involve a small change in the .gitlab-ci.yml to add the log file to the log file paths, and adding several 
+blocks of code changes to module2
+
+The code that applies the SG rules inside tomcat_worker() of module2 has also been refactored to use the SG_RULES list of rules
+Module2 uses multi-processing so this code has to be carefully refactored to apply the rules to each process that is running
+tomcat_worker from multiprocessing.Pool.
+
+This SG_RULES list of rules is also used to create the manifest json file that module2e will use to replay the SG rules on the
+rebooted ghost nodes prior to their resurrection in module2f.  This code is done in main() of module2. This code scans all
+the nodes for their security group ids and the rules that are in those security group ids.
+
+main() then calls a helper function write_sg_rule_mainifest() to actually write all these rules and their respective security group
+ids to the json manifest file. Right now the module is only using 1 SG for all the nodes, but the code will be able to support 
+multipe SG ids used across the nodes in the the future.
+
+#### Drift detection 
+
+Prior to calling the helper function above, write_sg_rule_manifest, each SG id will be passed to detect_sg_drift to determine if 
+there are any rules in the SG_RULES authoritative that are not present in the actual AWS security group.   If there are extra rules in 
+the AWS security group that is ok. This is just to detect if there are any rules in SG_RULES that have failed to be applied to the AWS 
+security group.
+This call to detect_sg_drift is made in main() of module2 right before the call to write_sg_rule_manifest. This ensure taht 
+the tomcat_worker calls per proces to apply the rules to the AWS security group have been done. All the rules in the SG_RULES
+list should be applied to the AWSs security group by the time detect_sg_drift is called.
+
+
+#### module2e application of the mainifest to the ghost nodes after they have been rebooted
+
+Finally, module2e consumes the manifest json file and replays the application of the rules to the security group on the ghosts AFTER 
+they have been rebooted and prior to resurrection in module2f.  As noted in the previous UPDATE, this code is greatly simplified when
+comparted to the rule application code of module2 because there is no requirement in module2e for this to be done in a 
+multi-processing environment. 
+
+Also note that the reboot code in module2e and the thread resurreciton code in module2f is multi-threaded, but the application of 
+the manifest rules to the ghost security group is just a straight forward replay of the rules on the security group. The AWS
+backend will then propagate the rules to the nodes themselves.
+
+
+
+
+
+
+
 
 ### Part7: Validation testing
 
+The logs should be grepped for [SECURITY GROUP], [RETRY_METRIC], 
+
+#### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
+
+This is verified by grepping  [SECURITY GROUP], and [RETRY_METRIC] in the gitlab console logs.
+i
+
+```
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.19s...
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.44s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.13s...
+[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
+
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896'][DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+
+[Retry 1] RequestLimitExceeded. Retrying in 1.47s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.12s...
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.43s...
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 22 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=22 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=80
+[RETRY] Wrapper invoked for authorize_
+
+
+RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5555 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5555 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5556
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.39s...
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 17] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 14] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 14] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Duplicate rule detected on attempt 2
+```
+
+
+#### Add a rule to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
+
+#### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file
+
+#### Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
+
+#### Drift detection from SG_RULES (for the AWS security group) in module2
+
+
 #### The security group rules reapply post reboot in module2e prior to resurrection
+
+Make sure that all of the rules in the mainifest are applied to the security group in module2e after the ghost nodes have been
+rebooted and area healthy.
 
 
 
