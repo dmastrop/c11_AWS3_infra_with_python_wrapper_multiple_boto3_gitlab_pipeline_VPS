@@ -314,9 +314,10 @@ Prior to calling the helper function above, write_sg_rule_manifest, each SG id w
 there are any rules in the SG_RULES authoritative that are not present in the actual AWS security group.   If there are extra rules in 
 the AWS security group that is ok. This is just to detect if there are any rules in SG_RULES that have failed to be applied to the AWS 
 security group.
-This call to detect_sg_drift is made in main() of module2 right before the call to write_sg_rule_manifest. This ensure taht 
+This call to detect_sg_drift is made in main() of module2 right before the call to write_sg_rule_manifest, and after the discovery
+of all the security group ids (and the rules) used on the nodes.. Doing this before the write_sg_rule_mainifest ensures that 
 the tomcat_worker calls per proces to apply the rules to the AWS security group have been done. All the rules in the SG_RULES
-list should be applied to the AWSs security group by the time detect_sg_drift is called.
+list should be applied to the AWS security grou  by the time detect_sg_drift is called.
 
 
 #### module2e application of the mainifest to the ghost nodes after they have been rebooted
