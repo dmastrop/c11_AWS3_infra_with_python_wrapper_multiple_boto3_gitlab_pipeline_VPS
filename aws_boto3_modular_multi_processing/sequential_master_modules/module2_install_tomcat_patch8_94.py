@@ -380,7 +380,7 @@ def detect_sg_drift(sg_id, ec2_client):
         resp = ec2_client.describe_security_groups(GroupIds=[sg_id])
         sg = resp["SecurityGroups"][0]
     except Exception as e:
-        print(f"[orchestration_level_SG_manifest_DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
+        print(f"[module2_orchestration_level_SG_manifest_DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
         return
 
     # Normalize AWS rules into comparable tuples
