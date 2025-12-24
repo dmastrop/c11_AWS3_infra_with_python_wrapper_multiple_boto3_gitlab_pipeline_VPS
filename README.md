@@ -339,7 +339,8 @@ backend will then propagate the rules to the nodes themselves.
 
 ### Part7: Validation testing
 
-The logs should be grepped for [SECURITY GROUP], [RETRY_METRIC], 
+The logs should be grepped for [SECURITY GROUP], [RETRY_METRIC], [module2_orchestration_level_SG_manifest], etc.
+
 
 #### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
 
