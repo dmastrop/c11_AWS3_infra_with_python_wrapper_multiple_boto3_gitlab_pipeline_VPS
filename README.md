@@ -346,7 +346,11 @@ The logs should be grepped for [SECURITY GROUP], [RETRY_METRIC], [module2_orches
 #### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
 
 This is verified by grepping  [SECURITY GROUP], and [RETRY_METRIC] in the gitlab console logs.
-i
+This is just a small sampling of some of the rules while they are being applied to the security group for some of the 
+parallel processes that are running tomcat_worker at this specific point in time. Each process has to do the apply of the rules to
+the security group, hence the repetition.  (The detailed reasons for this were given in the previous UPDATE. In that same UPDATE
+note that when the rules mainifest is replayed in module2e, since it is not a multi-processed environment, the application of the 
+rules is much simpler).
 
 ```
 [RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
@@ -427,13 +431,69 @@ RETRY] Duplicate rule detected on attempt 2
 ```
 
 
-#### Add a rule to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
+#### Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
+
+Note this is making sure the rule application is working in tomcat_worker() using the SG_RULES list. The next section below
+will validate the manifest json file.
+
+
+
 
 #### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file
+
+This can be seen once the pipeline completes. The json file is named orchestration_sg_rules_module2.json and the contents look
+like this (this one was done prior to port 5557 rule being added to the SG_RULES list)
+
+```
+{
+  "sg_ids": [
+    "sg-0a1f89717193f7896"
+  ],
+  "ingress_rules": [
+    {
+      "protocol": "tcp",
+      "port": 22,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 80,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 8080,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5555,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5556,
+      "cidr": "0.0.0.0/0"
+    }
+  ],
+  "timestamp": "2025-12-20T05:04:18.032207"
+}
+```
+
+
+This is after the port 5557 rule has been added to the SG_RULES list:
+
+
+
+
 
 #### Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
 
 #### Drift detection from SG_RULES (for the AWS security group) in module2
+
+This is a positive test. There is expected to be no drift between the two.  All the rules in SG_RULES should be present in the 
+ASW security group.
+
 
 
 #### The security group rules reapply post reboot in module2e prior to resurrection
