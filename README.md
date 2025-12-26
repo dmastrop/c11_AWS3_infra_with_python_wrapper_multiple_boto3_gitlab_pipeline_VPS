@@ -191,7 +191,7 @@ artifact logs per pipeline)
 
 - Update part 49 Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population
 
-- Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API
+- Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent
 
 - Update part 51 Phase 3m: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e
 
@@ -740,7 +740,7 @@ This is a design for highly scalable patterns
 If the SG rule application were not per process, but per fleet, this would be more difficult to achieve in particular with
 the second reason given below: independent processes that have their own memory space and  no synchronization and no shared state.
 
-In a nutshell, the  existing multiprocessing spine becomes a **routing fabric for SG intent**. An SG rule applicatoin overlay over
+In a nutshell, the  existing multiprocessing spine becomes a **routing fabric design for SG rule intent**. An SG rule applicatoin overlay over
 a physical network that is clearly defined through the multi-processing design.
 
 
