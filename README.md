@@ -689,8 +689,12 @@ rebooted and area healthy.
 
 ## UPDATES part 50: Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API
 
-This UPDATE pertains to the SG rule reapplication code in the previous update. The rationale behind that implementation vs.
-the full module2 implemenation which is in a multi-processing environment is given below. 
+
+### Introduction
+
+This UPDATE pertains to the SG rule reapplication code in the next UPDATE. This update presents the  rationale behind this 
+implementation (which will be a reapplication of the security groups to the rebooted ghost nodes in module2e) vs.
+the full module2 implemenation which is in a multi-processing environment.
 
 The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
 explanation.  Module2 SG rule application is very complicated because module2 is a multi-processing implementation.
@@ -699,6 +703,54 @@ Module2e, on the other hand is not multi-processed and the reapplication of the 
 
 The rationale behind both of these implementations deserves a deep explanation on the naunaces of multi-processing and
 AWS API calls.
+
+### Why do SG rule application per process in the first place?
+
+There are two main reasons for doing SG rule application per process in module2.
+
+- One is a design consideration.  If the SG rule application were done prior to the multiprocessing.Pool call to the 
+tomcat_worker_wrapper, all nodes in the entire fleeet (execution run or pipeline run) would have to use the same SG rules.
+This is not a realistic assumption. If the SG rule application is done per process, the future design is far more flexible.
+For example, an sg_manifests json file can be created with several subset security groups, something like this: 
+```
+{
+    "sg_manifests": {
+      "sg-AAA": { "ingress_rules": [...] },
+      "sg-BBB": { "ingress_rules": [...] }
+    }
+  }
+```
+
+Then each tomcat_worker process instance would get one of these subsets (sg-AAA, for example) relevant to its instances
+(the chunk assigned to that process).  
+
+One process can own “web chunk A + its SG manifest subset,” another “db chunk B + its SG manifest subset,” etc.
+
+All driven by a single orchestration‑level manifest, but **applied locally** by each tomcat_worker in a differentiated but
+intentional pattern that aligns with the network design.
+
+This is a design for highly scalable patterns
+
+- Scalable patterns:* 
+  Three processes × 100 threads each, with:
+  - web/db/app split,
+  - per‑SG rule sets,
+  - and per‑process application  
+
+If the SG rule application were not per process, but per fleet, this would be more difficult to achieve in particular with
+the second reason given below: independent processes that have their own memory space and  no synchronization and no shared state.
+
+In a nutshell, the  existing multiprocessing spine becomes a **routing fabric for SG intent**. An SG rule applicatoin overlay over
+a physical network that is clearly defined through the multi-processing design.
+
+
+
+- The second reason is due to the nature of SG rule appliaction via the AWS API call in multi-processing environments. The 
+objective to to ensure that under all circumstances the rule applcation is successful to all nodes (threads) across all
+processes. Even if the first reason (design reason) were not necessary, and the SG rules were uniform througout the entire fleet of 
+nodes, the SG rule application should still be done per process.
+
+The following sections explain the rationale for why the SG rules are applied per process in module2 relative to this second reason.
 
 
 
