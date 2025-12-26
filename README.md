@@ -731,11 +731,11 @@ intentional pattern that aligns with the network design.
 
 This is a design for highly scalable patterns
 
-- Scalable patterns:* 
+Scalable patterns: 
   Three processes × 100 threads each, with:
-  - web/db/app split,
-  - per‑SG rule sets,
-  - and per‑process application  
+  -web/db/app split,
+  -per‑SG rule sets,
+  -and per‑process application  
 
 If the SG rule application were not per process, but per fleet, this would be more difficult to achieve in particular with
 the second reason given below: independent processes that have their own memory space and  no synchronization and no shared state.
