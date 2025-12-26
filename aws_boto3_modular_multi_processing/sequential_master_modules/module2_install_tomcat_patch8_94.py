@@ -6693,13 +6693,38 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             ip_tag = ip.replace(".", "_")
             os.makedirs(LOG_DIR, exist_ok=True)
 
+            ######## Need to be very careful here. Need to institute an atomic lock as after repeated runs the ghost injection
+            ######## was not being consistently done on each process            
+            # keep this line
             ghost_ip_path = os.path.join(LOG_DIR, f"real_process_ghost_ip_{ip_tag}_{ts}.log")
-            with open(ghost_ip_path, "w") as f:
-                f.write(f"{ip}\n")  # only need the public ip in the real_process_ghost_ip_*.log files because only that is required for orchestration, SSH, etc.
+
+            # add this block:
+            # --- Atomic write helper (local to this function) ---
+            def atomic_write(path, text):
+                with open(path, "w") as f:
+                    # Acquire exclusive lock
+                    fcntl.flock(f, fcntl.LOCK_EX)
+                    f.write(text)
+                    f.flush()
+                    os.fsync(f.fileno())
+                    # Release lock
+                    fcntl.flock(f, fcntl.LOCK_UN)
+
+            # --- Use atomic write instead of normal write ---
+            atomic_write(ghost_ip_path, f"{ip}\n")
+
+            ###### Get rid of this block
+            #with open(ghost_ip_path, "w") as f:
+            #    f.write(f"{ip}\n")  # only need the public ip in the real_process_ghost_ip_*.log files because only that is required for orchestration, SSH, etc.
+            #########
+
 
             #print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} into assigned_ips (ts={ts})")
             print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IP {ip} (private={g.get('PrivateIpAddress')}) into assigned_ips (ts={ts})")
             return g
+            ##### end of def inject_one_ghost
+
+
 
         # Inside tomcat_worker:
         inject_one_ghost(instance_info)

@@ -284,11 +284,83 @@ module2 is also given in that UPDATE.
 
 #### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
 
-The module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py currently uses a static hardcodinged security group id
+The module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py currently uses a static hardcoded security group id
 (the default security group). To improve flexiblity, add an ENV variable in the .gitlab-ci.yml file and use that in the 
 module1, so the security group id can easily be changed. This is also better for future multiple security group id support. 
 
-The ENV variable is ORCHESTRATINO_LEVEL_SG_ID
+The ENV variable is ORCHESTRATION_LEVEL_SG_ID
+
+
+In .gitlab-ci.yml:
+
+```
+    ORCHESTRATION_LEVEL_SG_ID: "sg-0a1f89717193f7896"
+    # This is to set the orchestration level security group id that module1 
+    # (restart_the_EC_multiple_instances_with_client_method_DEBUG.py)  
+    # uses for all the  nodes in the exuection run
+```
+
+And this:
+```
+    - echo 'ORCHESTRATION_LEVEL_SG_ID='${ORCHESTRATION_LEVEL_SG_ID} >> .env # this is the security group id used in module1 orchestration layer. This is applied to all the nodes in the execution run. module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py
+```
+
+
+And in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
+```
+    ## Define the sg_id that is used for the ORCHESTRATINO_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
+    ## this is used in the start_ec2_instances function below
+    sg_id = os.getenv("ORCHESTRATION_LEVEL_SG_ID")
+    if not sg_id:
+        raise RuntimeError("ORCHESTRATION_LEVEL_SG_ID is not set in environment")
+```
+
+This is then used in module1 in the EC2 client method:
+
+```
+        # Create an EC2 client
+        try:
+            my_ec2 = session.client('ec2')
+            print("EC2 client created.")
+        except Exception as e:
+            print("Error creating EC2 client:", e)
+            sys.exit(1)
+
+        # Start EC2 instances
+        try:
+            response = my_ec2.run_instances(
+                ImageId=image_id,
+                InstanceType=instance_type,
+                KeyName=key_name,
+
+                #SecurityGroupIds=['sg-0a1f89717193f7896'],  
+                # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
+                # will be applied to the default security group. The method is used to apply rules to the security group. This 
+                # security group will be used on all the  nodes in the execution run.
+
+                SecurityGroupIds=[sg_id],   ## sg_id is defined above from the ORCHESTRATION_LEVEL_SG_ID ENV variable
+                ## Use this instead of hardcoding above 
+
+                MinCount=int(min_count),
+                MaxCount=int(max_count),
+                TagSpecifications=[
+                    {
+                        'ResourceType': 'instance',
+                        'Tags': [
+                            {'Key': 'BatchID', 'Value': 'test-2025-08-13'},
+                            {'Key': 'Patch', 'Value': '7c'}
+                        ]
+                    }
+                ]
+
+            )
+            print("EC2 instances started:", response)
+        except Exception as e:
+            print("Error starting EC2 instances:", e)
+            sys.exit(1)
+
+        return response
+```
 
 
 #### Create a manifest json file of the current rules SG_RULES that are used in the security group specified by ORCHESTRATION_LEVEL_SG_ID
@@ -436,10 +508,76 @@ RETRY] Duplicate rule detected on attempt 2
 Note this is making sure the rule application is working in tomcat_worker() using the SG_RULES list. The next section below
 will validate the manifest json file.
 
+The gitlab console logs are below. Note that as expected there are 6 applications, 1 for each process. There are only 6 of the 8
+here because the last 2 processes are pooled and those processes will run as threads are completed in the first wave of 6 processes
+The requirement for repeated application of the security group rules to the security group in the multi-processed tomcat_worker()
+function was explained in great detail in the previous UPDATE.
+
+```
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5557
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.59s...
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5557
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.80s...
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 13] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 13] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 16] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 16] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 17] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 12] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 12] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[DEBUG] Preparing install_tomcat for 2 instances with WATCHDOG_TIMEOUT=20
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 15] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 15] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+```
 
 
 
-#### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file
+This can be empirically verified on the AWS console, by looking at the rules in the security group. There is an added rule for
+this port 5557 added to the security group specified by the security group id used on the nodes for the execution run.
+This has been empirically verified.
+
+
+
+
+#### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above
 
 This can be seen once the pipeline completes. The json file is named orchestration_sg_rules_module2.json and the contents look
 like this (this one was done prior to port 5557 rule being added to the SG_RULES list)
@@ -481,10 +619,48 @@ like this (this one was done prior to port 5557 rule being added to the SG_RULES
 ```
 
 
-This is after the port 5557 rule has been added to the SG_RULES list:
+This is after the port 5557 rule has been added to the SG_RULES list (see previous section for the gitlab console logs):
 
+```
+{
+  "sg_ids": [
+    "sg-0a1f89717193f7896"
+  ],
+  "ingress_rules": [
+    {
+      "protocol": "tcp",
+      "port": 22,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 80,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 8080,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5555,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5556,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5557,
+      "cidr": "0.0.0.0/0"
+    }
+  ],
+  "timestamp": "2025-12-26T04:02:26.254812"
 
-
+```
 
 
 #### Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
