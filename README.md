@@ -619,6 +619,7 @@ like this (this one was done prior to port 5557 rule being added to the SG_RULES
 ```
 
 
+
 This is after the port 5557 rule has been added to the SG_RULES list (see previous section for the gitlab console logs):
 
 ```
