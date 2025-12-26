@@ -692,9 +692,9 @@ rebooted and area healthy.
 
 ### Introduction
 
-This UPDATE pertains to the SG rule reapplication code in the next UPDATE. This update presents the  rationale behind this 
-implementation (which will be a reapplication of the security groups to the rebooted ghost nodes in module2e) vs.
-the full module2 implemenation which is in a multi-processing environment.
+This UPDATE explains the rationale behind the SG rule reapplication logic that will be introduced in the next update for module2e, 
+specifically focusing on why module2 applies SG rules per process in a multi‑processing environment, while module2e can safely replay 
+them once.
 
 The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
 explanation.  Module2 SG rule application is very complicated because module2 is a multi-processing implementation.
@@ -704,12 +704,14 @@ Module2e, on the other hand is not multi-processed and the reapplication of the 
 The rationale behind both of these implementations deserves a deep explanation on the naunaces of multi-processing and
 AWS API calls.
 
+
+
 ### Why do SG rule application per process in the first place?
 
 There are two main reasons for doing SG rule application per process in module2.
 
 - One is a design consideration.  If the SG rule application were done prior to the multiprocessing.Pool call to the 
-tomcat_worker_wrapper, all nodes in the entire fleeet (execution run or pipeline run) would have to use the same SG rules.
+tomcat_worker_wrapper, all nodes in the entire fleet (execution run or pipeline run) would have to use the same SG rules.
 This is not a realistic assumption. If the SG rule application is done per process, the future design is far more flexible.
 For example, an sg_manifests json file can be created with several subset security groups, something like this: 
 ```
@@ -740,13 +742,18 @@ Scalable patterns:
 If the SG rule application were not per process, but per fleet, this would be more difficult to achieve in particular with
 the second reason given below: independent processes that have their own memory space and  no synchronization and no shared state.
 
-In a nutshell, the  existing multiprocessing spine becomes a **routing fabric design for SG rule intent**. An SG rule applicatoin overlay over
-a physical network that is clearly defined through the multi-processing design.
+In a nutshell, the  existing multiprocessing spine becomes a **routing fabric design for SG rule intent**. 
+An SG rule application overlay over a physical network that is clearly defined through the multi-processing design.
+
+Another subtle benefit of per‑process SG application is that it naturally aligns SG propagation with the lifecycle of each process. 
+Because each process applies rules immediately before initiating SSH and installation work, it guarantees that the SG propagation windowoverlaps with the exact moment that process needs network readiness. This avoids timing gaps where a process begins SSH attempts before
+AWS has propagated the rules. This will make more sense in light of the second reason below, and the sections below regarding the nature
+of multi-processing environments and AWS API calls.
 
 
 
 - The second reason is due to the nature of SG rule appliaction via the AWS API call in multi-processing environments. The 
-objective to to ensure that under all circumstances the rule applcation is successful to all nodes (threads) across all
+objective to ensure that under all circumstances the rule applcation is successful to all nodes (threads) across all
 processes. Even if the first reason (design reason) were not necessary, and the SG rules were uniform througout the entire fleet of 
 nodes, the SG rule application should still be done per process.
 
@@ -786,6 +793,7 @@ This behavior is what makes the module2 design possible.
 ### Why Module2 Reapplies SG Rules in Every Process
 
 Module2 uses **multiprocessing** (with multithreading inside each process, but that is not relevant to SG‑rule propagation).  
+
 In multiprocessing:
 
 Each process is isolated  
@@ -795,7 +803,13 @@ Each process is isolated
 - No ordering guarantees  
 - No synchronization  
 
+Because each process has its own boto3 client and no shared memory, no process can rely on another to have already applied the SG rules
+or triggered AWS propagation.
+
+
 Each process must prepare its own environment  
+
+
 Before a process begins SSH + installation work, it must ensure:
 
 - The SG rules exist  
@@ -825,6 +839,10 @@ Reapplying SG rules in each process ensures:
 
 This is why module2 is “special” — it must converge a distributed, multi‑process control plane onto a consistent network state.
 
+This design also ensures that if a process is delayed, starved, or scheduled later by the OS, it still performs SG rule application at
+the correct moment relative to its own workload, rather than relying on global timing.
+
+
 
 ### Why Module2e Only Replays SG Rules Once
 
@@ -847,7 +865,9 @@ Because of this, module2e can safely:
 This is why module2e’s SG replay is simple and fast.
 
 
-### Why Ghost Nodes Need a Full SG Rule Replay
+
+
+### Why Ghost Nodes Need a Full SG Rule Replay (module2e prior to resurrection in module2f)
 
 Even though ghost nodes *do* have the SG attached (because module1 attaches it at launch),  
 they may **not** have the SG rules fully propagated.
@@ -861,6 +881,12 @@ This happens when:
 - The node was rebooted before propagation completed  
 - AWS backend propagation lagged  
 
+
+AWS SG propagation is eventually consistent, not strongly consistent. A node that is rebooted or flapping may temporarily see an 
+outdated SG rule set even though the SG object itself is correct. Replaying the rules forces AWS to re‑propagate the rule set and 
+eliminates this inconsistency.
+
+
 In these cases:
 
 - The SG is attached but... 
@@ -869,11 +895,13 @@ In these cases:
 This is why module2e must **reapply the rules** after reboot:
 
 - Ensures SSH port 22 is open  
-- Ensures Tomcat ports (80, 8080) are open  
+- Ensures Tomcat ports (80, 8080) are open or whatever other application ports specified in the SG rules that need to be open 
 - Ensures the resurrection commands can run  
 - Ensures the node is reachable and stable  
 
 This is not theoretical — it happens in real AWS fleets under load. (hyper-scaling or VPS under heavy swap contention)
+
+
 
 ### Why Generate `orchestration_sg_rules_module2.json`in module2
 
@@ -885,9 +913,30 @@ Module2 writes a manifest containing:
 
 This manifest is the **authoritative source** for module2e.
 
-If one adds new SG rules in module2 they automatically appear in the manifest.
+It also becomes the foundation for future SG diffing logic, allowing module2 to compute rule additions and removals across pipeline 
+runs without relying on AWS as the source of truth. This is possible because the gitlab pipeline design has the python running in 
+a docker container with a mounted volume to all of the gitlab artifact logs. For each successive pipeline run, the previous pipeline
+run's complete gitlab artfiact logs are available through this mounted volume, and thus SG diffing logic (whether to add and/or remove
+rules) becomes trivial. Thus a stateful design for the rules is present.  
 
-Module2e inherits the rule set  
+This also ensures that the manifest becomes the single source of truth for desired SG state, while AWS SGs become the execution target rather than the authoritative reference.
+
+For example:
+
+- AWS SG rules: ports 5556 and port 5557 (these are the rules on the actual AWS SG in AWS web console)
+- Pipeline1 SG_RULES (rules list in module2 of the python code) has port 5556 and port 5557
+- Pipeline2 runs with modified SG_RULES port 5558 (added) and port 5557 (note port 5556 is REMOVED)
+- A simple push of the SG_RULES would add port 5558 to AWS SG rules but not remove port 5556 on AWS SG rules (5556 is a stale rule now)
+- This is exactly how stale rules accumulate over time when only additive logic is used, without diff logic.
+BUT....
+- If pipeline2 sees pipeline1 SG_RULES (5556, 5557) and now sees pipline2 SG_RULES (5557, 5558) it can easily see ADD port 5558 and
+REMOVE port 5556 and apply that to the AWS SG rules.
+- No more stale entries accumulate
+
+ 
+If one adds or removes new SG_RULES in module2 they automatically appear in the manifest and AWS SG rules reflect that.
+
+Module2e inherits the rule set and can apply the same diff logic as above:
 
 - No hardcoding.  
 - No duplication.  
