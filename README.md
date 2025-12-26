@@ -492,9 +492,12 @@ This is after the port 5557 rule has been added to the SG_RULES list:
 #### Drift detection from SG_RULES (for the AWS security group) in module2
 
 This is a positive test. There is expected to be no drift between the two.  All the rules in SG_RULES should be present in the 
-ASW security group.
-
-
+AWS security group.
+```
+[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: ['sg-0a1f89717193f7896']
+[module2_orchestration_level_SG_manifest_DRIFT] No drift detected for SG sg-0a1f89717193f7896. All SG_RULES are present.
+[module2_orchestration_level_SG_manifest] Wrote SG rule manifest to /aws_EC2/logs/orchestration_sg_rules_module2.json
+```
 
 #### The security group rules reapply post reboot in module2e prior to resurrection
 
@@ -697,7 +700,7 @@ Ghost Nodes
 
 
 
-## UPDATES part 49: Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population and security group rules reapply post ghost node reboot
+## UPDATES part 49: Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population 
 
 ### Introduction
 
