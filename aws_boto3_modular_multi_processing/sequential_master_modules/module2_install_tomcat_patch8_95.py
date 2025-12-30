@@ -3911,7 +3911,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #"sh -c \"echo test\""
 
 
-
+        
 
 
         #### resume normal commands #####
@@ -3991,15 +3991,77 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ###### add DEBUGX for the SG issue at scale that we are seeing. 
     print(f"[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = {security_group_ids}")
 
+    ###########################################################################
+    # [module2_orchestration_level_SG_manifest] SECURITY GROUP RULE APPLICATION
+    #
+    # This block replaces the old SG_RULES loop entirely.
+    #
+    # DESIGN PRINCIPLES:
+    #   • SG_RULES (current pipeline run) = desired state
+    #   • Previous manifest = previous desired state
+    #   • AWS is NOT authoritative (AWS may contain manual rules like 443)
+    #
+    # Therefore:
+    #   • Reapply ALL SG_RULES (add/apply)
+    #   • Remove ONLY rules that were in the previous manifest but NOT in SG_RULES
+    #   • Leave all AWS‑extra rules untouched (e.g., 443)
+    #
+    #   • rules_to_add is NOT used — SG_RULES loop already applies everything
+    #
+    ###########################################################################
 
-    #### This is the new [module2_orchestration_level_SG_manifest] refactored code using the SG_RULES ENV variable
+    # ------------------------------------------------------------
+    # Load previous manifest (previous desired state)
+    # ------------------------------------------------------------
+    previous_manifest_path = "/aws_EC2/logs/orchestration_sg_rules_module2.json"
+    old_rules = []
+
+    if os.path.exists(previous_manifest_path):
+        try:
+            with open(previous_manifest_path, "r") as f:
+                prev = json.load(f)
+                old_rules = prev.get("ingress_rules", [])
+        except Exception as e:
+            print(f"[module2_orchestration_level_SG_manifest_WARNING] Failed to load previous manifest: {e}")
+
+    # Normalize rules into comparable tuples
+    def rule_key(r):
+        return (r["protocol"], r["port"], r["cidr"])
+
+    old_set = {rule_key(r) for r in old_rules}
+    new_set = {rule_key(r) for r in SG_RULES}
+
+    # Compute diffs
+    rules_to_remove = old_set - new_set   # e.g., {(tcp, 5555, 0.0.0.0/0)}
+    # rules_to_add = new_set - old_set    # REDUNDANT — SG_RULES loop already applies all desired rules
+
+    print(f"[module2_orchestration_level_SG_manifest_DIFF] rules_to_remove = {rules_to_remove}")
+    # print(f"[module2_orchestration_level_SG_manifest_DIFF] rules_to_add = {rules_to_add}")  # intentionally unused
+
+
+    ###########################################################################
+    # STEP 1 — APPLY ALL RULES IN SG_RULES (desired state)
+    #
+    # This ensures:
+    #   • New rules (e.g., 5558) get added
+    #   • Existing rules (22, 80, 8080, 5556, 5557) get re-applied
+    #   • Duplicate rules are harmless (AWS returns Duplicate)
+    #
+    ###########################################################################
+
     for sg_id in set(security_group_ids):
+
+        print(f"[module2_orchestration_level_SG_manifest_INFO] Processing SG {sg_id} for this process")
+
         for rule in SG_RULES:
 
-            retry_count = 0  # preserve original behavior
+            retry_count = 0
 
             try:
-                print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port={rule['port']}")
+                print(
+                    f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
+                    f"APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
+                )
 
                 retry_count = retry_with_backoff(
                     my_ec2.authorize_security_group_ingress,
@@ -4012,25 +4074,154 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     }]
                 )
 
-                print(f"[SECURITY GROUP] Successfully applied port {rule['port']} to sg_id={sg_id}")
+                print(
+                    f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
+                    f"Successfully applied port {rule['port']} to sg_id={sg_id}"
+                )
 
             except my_ec2.exceptions.ClientError as e:
 
-                if 'InvalidPermission.Duplicate' in str(e):
-                    print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port={rule['port']}")
+                if "InvalidPermission.Duplicate" in str(e):
+                    print(
+                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
+                        f"Rule already exists sg_id={sg_id}, port={rule['port']}"
+                    )
                 else:
-                    raise  # preserve original behavior
-                    # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
-                    # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
-                    # this is caught upstream
+                    print(
+                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP_ERROR] "
+                        f"Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
+                    )
+                    raise
 
-
-            # preserve retry metric logic. Always update max_retry_observed, even if rule already existed
+            # Always update retry metric
             max_retry_observed = max(max_retry_observed, retry_count)
-            print(f"[RETRY METRIC] sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+            print(
+                f"[module2_orchestration_level_SG_manifest_RETRY_METRIC] "
+                f"sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, "
+                f"max_retry_observed={max_retry_observed}"
+            )
+
+
+        #######################################################################
+        # STEP 2 — REMOVE RULES THAT WERE IN THE PREVIOUS MANIFEST BUT ARE
+        #          NOT IN THE CURRENT SG_RULES.
+        #
+        # This is the ONLY correct definition of "rules to remove".
+        # rules to remove is defined as the delta between the previous pipeline SG_RULES and the 
+        # current pipeline SG_RULES:  rules_to_remove = old_set - new_set
+        # Since the old_set is in json format and the new_set is a list SG_RULES they are both
+        # normalized so that we can calculate old - new.
+        #
+        # Example:
+        #   Previous manifest had port 5555
+        #   New SG_RULES removed it
+        #
+        #   → REMOVE 5555
+        #
+        # AWS‑extra rules (e.g., 443) are preserved.
+        #
+        #######################################################################
+
+        for proto, port, cidr in rules_to_remove:
+
+            retry_count = 0
+
+            print(
+                f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
+                f"REMOVE rule sg_id={sg_id}, port={port}, cidr={cidr}"
+            )
+
+            try:
+                retry_count = retry_with_backoff(
+                    my_ec2.revoke_security_group_ingress,
+                    GroupId=sg_id,
+                    IpPermissions=[{
+                        'IpProtocol': proto,
+                        'FromPort': port,
+                        'ToPort': port,
+                        'IpRanges': [{'CidrIp': cidr}]
+                    }]
+                )
+
+                print(
+                    f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
+                    f"Successfully removed obsolete port {port} from sg_id={sg_id}"
+                )
+
+            except my_ec2.exceptions.ClientError as e:
+                if "InvalidPermission.NotFound" in str(e):
+                    print(
+                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
+                        f"Rule already absent sg_id={sg_id}, port={port}"
+                    )
+                else:
+                    print(
+                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP_ERROR] "
+                        f"Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
+                    )
+                    raise
+
+            # Update retry metric
+            max_retry_observed = max(max_retry_observed, retry_count)
+            print(
+                f"[module2_orchestration_level_SG_manifest_RETRY_METRIC] "
+                f"sg_id={sg_id}, port={port} → retry_count={retry_count}, "
+                f"max_retry_observed={max_retry_observed}"
+            )
+
+    ###########################################################################
+    # END OF SG RULE APPLICATION BLOCK
+    ###########################################################################
 
 
 
+
+    ##### [tomcat_worker} ####
+    ##### Begin comment out of the code below for the latest [module2_orchestration_level_SG_manifest] code above
+    ##### This is the new [module2_orchestration_level_SG_manifest] refactored code using the SG_RULES ENV variable
+    #for sg_id in set(security_group_ids):
+    #    for rule in SG_RULES:
+
+    #        retry_count = 0  # preserve original behavior
+
+    #        try:
+    #            print(f"[SECURITY GROUP] Applying ingress rule: sg_id={sg_id}, port={rule['port']}")
+
+    #            retry_count = retry_with_backoff(
+    #                my_ec2.authorize_security_group_ingress,
+    #                GroupId=sg_id,
+    #                IpPermissions=[{
+    #                    'IpProtocol': rule["protocol"],
+    #                    'FromPort': rule["port"],
+    #                    'ToPort': rule["port"],
+    #                    'IpRanges': [{'CidrIp': rule["cidr"]}]
+    #                }]
+    #            )
+
+    #            print(f"[SECURITY GROUP] Successfully applied port {rule['port']} to sg_id={sg_id}")
+
+    #        except my_ec2.exceptions.ClientError as e:
+
+    #            if 'InvalidPermission.Duplicate' in str(e):
+    #                print(f"[SECURITY GROUP] Rule already exists for sg_id={sg_id}, port={rule['port']}")
+    #            else:
+    #                raise  # preserve original behavior
+    #                # Let the exception go to the logs. Something seriously went wrong here and the SG rule was not 
+    #                # able to be applied, error is NOT a duplicate rule (we check for that), the process will crash unless
+    #                # this is caught upstream
+
+
+    #        # preserve retry metric logic. Always update max_retry_observed, even if rule already existed
+    #        max_retry_observed = max(max_retry_observed, retry_count)
+    #        print(f"[RETRY METRIC] sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}")
+
+
+
+
+
+
+    #### [tomcat_worker] ####
+    #### This is original code doing one rule at a time
     #### Begin comment out for [module2_orchestration_level_SG_manifest] refactored code using SG_RULES. See block above
     #for sg_id in set(security_group_ids):
     #    retry_count =0 # default a fallback for this local variable
