@@ -3991,10 +3991,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ###### add DEBUGX for the SG issue at scale that we are seeing. 
     print(f"[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = {security_group_ids}")
 
+    
+
+
+    #### [tomcat_worker] ####
     ###########################################################################
     # [module2_orchestration_level_SG_manifest] SECURITY GROUP RULE APPLICATION
     #
     # This block replaces the old SG_RULES loop entirely.
+    # This new code  has the diff logic for detecting rules to remove relative to old pipeline SG_RULES when
+    # compared to current pipeline SG_RULES.
     #
     # DESIGN PRINCIPLES:
     #   • SG_RULES (current pipeline run) = desired state
