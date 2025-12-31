@@ -355,14 +355,16 @@ It is important to note the overall design of this system. The VPS host runs git
 runner runs locally on the VPS host. The pipelines that run on gitlab (the gitlab runner) run the code on a docker container
 as well. This container has a mounted volume to store the log artifacts for each pipeline run.  
 
-So on the VPS host one will see this when a pipeline is running: (note there are actually a lot of other container running but these are
+So on the VPS host one will see this when a pipeline is running: (note there are actually a lot of other containers running but these are
 the relevant ones for this discussion)
+
+
 ```
 [root@vps ~]# docker ps
-CONTAINER ID   IMAGE                                                                                                                                      COMMAND                  CREATED          STATUS                 PORTS                                                                                           NAMES
-abfcfc8d88b1   gitlab-registry.linode.cloudnetworktesting.com/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3:latest   "python master_scrip…"   22 minutes ago   Up 22 minutes                                                                                                          ecstatic_blackwell
+CONTAINER ID   IMAGE   COMMAND   CREATED   STATUS   PORTS  NAMES
+abfcfc8d88b1   gitlab-registry.linode.cloudnetworktesting.com/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3:latest   "python master_scrip…"   22 minutes ago   Up 22 minutes ecstatic_blackwell
 
-2c2110373b37   cbe010f46e26                                                                                                                               "/assets/init-contai…"   4 weeks ago      Up 4 weeks (healthy)   80/tcp, 443/tcp, 0.0.0.0:XXXXX->22/tcp, [::]:XXXXX->22/tcp                                      gitlab.linode.cloudnetworktesting.com
+2c2110373b37   cbe010f46e26   "/assets/init-contai…"   4 weeks ago      Up 4 weeks (healthy)   80/tcp, 443/tcp, 0.0.0.0:XXXXX->22/tcp, [::]:XXXXX->22/tcp  gitlab.linode.cloudnetworktesting.com
 ```
 The first container is this docker container that is running the code (from the master script). This is the container that has the
 volume mount to store the log artifacts after the pipeline completes. The artifacts are then available on the gitlab container
