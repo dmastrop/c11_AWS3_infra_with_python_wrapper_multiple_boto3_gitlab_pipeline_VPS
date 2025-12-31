@@ -287,7 +287,7 @@ nodes, this will always ensure that the rules are applied to the nodes in that p
 prior to each process initiating the SSH connections to each of the nodes in that process. 
 
 Note for now, there is just one security group (SG id) for all the nodes in the execution run (fleet) but the code is designed
-from the bottom up to support multiple and unique security groups per process in the future. This was discussed briefly in the
+from the bottom up to support multiple AND unique security groups per process (sg_ids) in the future. This was discussed briefly in the
 UPDATE mentioned above. That UPDATE is required background reading to understand why things are done that way that they are in
 this update.
 
@@ -300,23 +300,91 @@ pipeline.
 So the rule applies are always done on the current SG_RULES even if they are repetitive, and the rule deletes are calculated
 using the delta process above.
 
+The best way to do this is for each pipeline run to save its
+current SG_RULES manifest to an S3 bucket. The S3 bucket will be used in this project for persistent storage requirements that are
+used to maintain state. This is a perfect example of an operation that requires the maintenance of state.   The backup for 
+pipeline N SG_RULES manifest will be made to the S3 bucket. When pipeline N+1 runs, it will have access to the manifest from
+pipeline N, so that a delta can be performed between the current SG_RULES mainifest (that of pipeline N+1) and the SG_RULES
+state (that of pipeline N). With this, any removal of any rule from pipeline N to pipeline N+1 can be calculated. Once that
+delta is caculated, pipeline N+1 can remove the appropriate rules using the AWS delete API. The manifests are just json 
+representations of the SG_RULES list in the module2 code (these are hardcoded and used throughout the module and can be 
+easily edited). Several examples of these will be shown in the validation sections below.  
+
+Ideally the S3 bucket will only have normalized version of the SG_RULES. The SG_RULES format differs a bit from the mainifes json format of the
+same, so these must be normalized to compare the two and calculate the diff. 
+
 Once the delta is calculated in tomcat_worker (of module2), tomcat_worker can then apply the SG_RULES list and remove the 
 rules in the delta so that the AWS security group has the proper rules applied prior to any other thread level operations 
-(like SSH and command applications to the nodes/threads)
+(like SSH and command applications to the nodes/threads). This has to be done per process for the reasons outlined throughout.
 
 Once the multiprocessing.Pool in main completes the call to tomcat_worker above, a drift detector in main() of module2 will
 ensure that there is no drift between the SG_RULES and deletes and the actual rules on the AWS security group.
 
-Then the previous pipeline SG_RULES mainifest has to be backed up (this is accessible via the docker mounted volumne and was
-used in the delta calculation by tomcat_Worker above) PRIOR to writing the current pipeline SG_RULES list to the new 
-mainifest. The manifests are just json log files.  This is because module2e will need access to both the previous pipeline
-mainifest and the current pipeline manifest. When module2 create the new manifest file it overwrites the older manifest so
-it has to be backed up so that module2e can acccess both files.
 
-Finally, module2e does the same operations as module2 tomcat_worker above but it is very simplified as module2e applies the 
-rules in a non-multiprocessed environment and only to the ghost nodes after they have been rebooted (and this will be done for
-any other bucket type resurrection type that has to be rebooted; i.e. for all handlers that require reboot, not just the ghost
-handler in module2e). So after the reboot the rules are reapplied and then module2f resurrections the ghosts.
+So the steps to the code implemenation for this is the following
+
+- Backup th current pipeline N+1 SG_RULES to the S3 bucket. This uses the helper function write_sg_rule_manifest
+- Get the SG_RULES for pipeline N mainifest state from S3 during the pipeline N+1 execution run. NOTE: when the code first runs, there will
+be no initial pipeline N SG_RULES state on S3. Once the second pipeline with this code is run, there will be a pipeline N SG_RULES state on 
+the S3 bucket, and the diff can be calculated from that point on.  The current pipeline N+1 will alwasy get the (N+1)-1 pipleine run SG_RULES
+state to calculate the diff. Very straightforward.
+- Calculate the diff inside tomcat_worker() of module2, per process and per sg_ids used in that process.  As noted, currently there is just one
+sg_id for all the nodes and a single sg_id per process, but the code is extensible to the multiple sg_ids per process with each process having a
+unique sg_ids. This code development will be done later.
+- Inside tomcat_worker(), per process, reapply (add) ALL SG_RULES in the current pipeline N+1 AND also remove (delete) all rules from the delta
+of the previouss step.  Each process has sg_ids to track its unique and possibly multiple sg_ids. Currently just one sg_id is used across all
+processes.
+- Once multiprocessing.Pool call to tomcat_worker from main() completes, main() will then perform drift detection using the delta and the 
+current pipeline N+1 SG_RULES (authoritative), and compare this to the AWS SG rules (non-authoritative). The helper function for this is the
+detect_sg_drift function.
+- Since the N and N+1 SG_RULES state is kept on S3, module2e can then use the same manifests to perform the same delta calculation and 
+then reapply all N+1 SG_RULES and remove the delta rules to the ghost nodes that are going to be resurrected. This operation is done
+after module2e reboots the nodes and prior to module2f resurrecting the ghost nodes.   NOTE that the code in module2e has decoupled the
+handlers (these handle each resurrection bucket type) from the reboot code. So this will work with all types of resurrection bucket types, not
+just ghosts. Any resurrection bucket type that needs to be rebooted can have the SG rules applied in the same manner. Also, as noted in the 
+previous UPDATE, this code is much simpler than the code in module2, when applying/reapplying SG rules. This is because module2e is not in a
+multiprocessing environment like module2 is.
+
+
+
+
+
+#### A note on the ovarall design of this system in regards to stateful design considerations
+
+It is important to note the overall design of this system. The VPS host runs gitlab in a docker container and the gitlab
+runner runs locally on the VPS host. The pipelines that run on gitlab (the gitlab runner) run the code on a docker container
+as well. This container has a mounted volume to store the log artifacts for each pipeline run.  
+
+So on the VPS host one will see this when a pipeline is running: (note there are actually a lot of other container running but these are
+the relevant ones for this discussion)
+```
+[root@vps ~]# docker ps
+CONTAINER ID   IMAGE                                                                                                                                      COMMAND                  CREATED          STATUS                 PORTS                                                                                           NAMES
+abfcfc8d88b1   gitlab-registry.linode.cloudnetworktesting.com/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3:latest   "python master_scrip…"   22 minutes ago   Up 22 minutes                                                                                                          ecstatic_blackwell
+
+2c2110373b37   cbe010f46e26                                                                                                                               "/assets/init-contai…"   4 weeks ago      Up 4 weeks (healthy)   80/tcp, 443/tcp, 0.0.0.0:XXXXX->22/tcp, [::]:XXXXX->22/tcp                                      gitlab.linode.cloudnetworktesting.com
+```
+The first container is this docker container that is running the code (from the master script). This is the container that has the
+volume mount to store the log artifacts after the pipeline completes. The artifacts are then available on the gitlab container
+itself after the pipeline completes via the Gitlab web console. 
+
+The Gitlab web console is hosted on the second container above, the gitlab container. (The port XXXXX has be obsfuscated for security purposes)
+
+This first container with the mounted docker volume is NOT persistent across pipeline runs. 
+So using the exiting setup for state between pipeline runs will not work. 
+There are several ways to make the logs persistent across pipeline runs in gitlab but they are prone to interfering with the current state of the logs 
+when running a pipeline. So for the stateful SG rule design, the S3 bucket approach will be used instead.
+To ensure a decoupling between the docker volume "state" and the S3 bucket state logs, an explicit removal of the logs from the docker volume mount 
+is performed in the before_script of the .gitlab-ci.yml, so that each pipeline has a clean volume mounted directory and no artifacts from the 
+previous pipeline are present in the logs volume mount. This ensures the consistency and integrity of the current artifact logs for the current 
+pipeline that is running.
+
+The S3 bucket solution also alleviates the issue of overwritting the previous N SG_RULES state when creating the new N+1 current SG_RULES state in the\ current pipeline.  
+
+All SG_RULES states will be in separate discrete manifests in S3 and never stored persistently on the docker volume mount.
+
+Thus they are discrete and easily acceible from any module that requires them (modules 2 and 2e).
+
 
 XXXXXXXXXX
 
