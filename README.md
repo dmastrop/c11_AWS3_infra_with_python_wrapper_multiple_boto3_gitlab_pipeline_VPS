@@ -406,7 +406,7 @@ The S3 bucket solution also alleviates the issue of overwritting the previous N 
 
 All SG_RULES states will be in separate discrete manifests in S3 and never stored persistently on the docker volume mount.
 
-Thus they are discrete and easily acceible from any module that requires them (modules 2 and 2e).
+Thus they are discrete and easily accessible from any module that requires them (modules 2 and 2e).
 
 
 XXXXXXXXXX
