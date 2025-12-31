@@ -11,6 +11,13 @@ stages:
 # this lint stage is non-blocking and will not abort, but just report the INFO to the gitlab console
 
 
+
+# cache the sg_manifest so pipeline n+1 can use pipeline n sg rules maninfest json file to compute SG_RULES diff.    
+cache:
+  key: sg_manifest
+  paths:
+    - logs/orchestration_sg_rules_module2.json
+
     
 build:
   stage: build
