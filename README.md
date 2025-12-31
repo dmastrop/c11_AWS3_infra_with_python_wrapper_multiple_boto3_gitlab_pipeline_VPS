@@ -124,6 +124,7 @@ artifact logs per pipeline)
 - Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
 - Requeing and resurrection of thread futures crashes 
 - Requeing and resurrection of ghost threads
+- Stateful security group rules implemenation design
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
