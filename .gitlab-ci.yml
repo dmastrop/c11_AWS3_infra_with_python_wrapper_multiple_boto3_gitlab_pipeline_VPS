@@ -159,6 +159,7 @@ deploy:
 
 
   before_script:
+    - rm -rf logs/*
     - echo 'AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID} >> .env
     - echo 'AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY} >> .env
     - echo 'region_name=us-east-1' >> .env
