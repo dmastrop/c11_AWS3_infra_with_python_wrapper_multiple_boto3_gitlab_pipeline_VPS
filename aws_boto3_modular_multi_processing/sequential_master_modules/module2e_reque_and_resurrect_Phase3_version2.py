@@ -465,6 +465,33 @@ def reboot_and_check(uuid, entry, region=None, max_wait=300, poll_interval=15):
         return uuid, entry
 
     mark(entry, "ready")
+    
+    ###########################################################################
+    # [module2e2] POST-REBOOT GRACE PERIOD
+    #
+    # Purpose:
+    #   - Allow cloud-init to finish
+    #   - Allow sshd to fully start
+    #   - Avoid "Error reading SSH protocol banner" in module2f
+    #
+    # This delay applies uniformly to all rebooted nodes because reboot_and_check
+    # is executed inside the ThreadPoolExecutor. Total wall-clock delay is equal
+    # to the sleep duration, not multiplied by number of nodes.
+    #
+    # Tunable:
+    #   - 8 seconds is usually enough
+    #   - 10 seconds is safer
+    #   - 20 seconds is extremely safe
+    #
+    ###########################################################################
+
+    GRACE_DELAY_SECONDS = 20
+    print(f"[module2e2] Applying post-reboot grace delay of {GRACE_DELAY_SECONDS}s for InstanceId={iid}")
+    time.sleep(GRACE_DELAY_SECONDS)
+    mark(entry, f"grace_period:{GRACE_DELAY_SECONDS}s")
+
+
+
     return uuid, entry
 
 
