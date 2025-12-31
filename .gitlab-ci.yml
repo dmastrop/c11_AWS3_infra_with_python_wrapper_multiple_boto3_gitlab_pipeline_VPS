@@ -13,10 +13,10 @@ stages:
 
 
 # cache the sg_manifest so pipeline n+1 can use pipeline n sg rules maninfest json file to compute SG_RULES diff correctly.    
-cache:
-  key: sg_manifest
-  paths:
-    - logs/orchestration_sg_rules_module2.json
+#cache:
+#  key: sg_manifest
+#  paths:
+#    - logs/orchestration_sg_rules_module2.json
 
     
 build:
