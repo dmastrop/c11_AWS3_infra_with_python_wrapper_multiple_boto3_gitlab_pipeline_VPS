@@ -321,9 +321,27 @@ Once the multiprocessing.Pool in main completes the call to tomcat_worker above,
 ensure that there is no drift between the SG_RULES and deletes and the actual rules on the AWS security group.
 
 
-So the steps to the code implemenation for this is the following
+So the steps to the code implemenation for this is the following:
 
-- Backup th current pipeline N+1 SG_RULES to the S3 bucket. This uses the helper function write_sg_rule_manifest
+Prerequisite tasks:
+
+- First centralize the security group id that is used during each execution run. As noted throughout this update and the last UPDATE,
+the code is written to be extensible to support sg_manifests that contain multiple sg_ids that can be applied deterministically to 
+each process. So each process can eventually have multiple security group ids tied to it, and each process can have its own unique 
+security group ids. For now, it is just this one centralized security group that is added to .gitlab-ci.yml as the environmental 
+variable ORCHESTRATION_LEVEL_SG_ID, and used in module1 (restart_the_EC_multiple_instances_with_client_method_DEBUG.py) which is the 
+orchestration level module that sets up the entire fleet of nodes for the current execution run.
+- Next, use a SG_RULES ENV variable in the module2 as the authoritative centralized rules manifest for the security group id above.
+This centralized the rules mainifest that is used throughout the module2, so that any change need only be made to this one list. 
+This also serves as the source of the manifest rules json files that will be backed up (per pipeline run) to S3 so that there is a
+stateful design for security group rule changes.
+- Incorporate the SG_RULES into the tomcat_worker process loops that add (and will remove) rules to the nodes in each process. This 
+requires a moderate refactor to the tomcat_worker() function in module2.
+
+
+Core tasks for stateful design:
+
+- Backup the current pipeline N+1 SG_RULES to the S3 bucket. This uses the helper function write_sg_rule_manifest
 - Get the SG_RULES for pipeline N mainifest state from S3 during the pipeline N+1 execution run. NOTE: when the code first runs, there will
 be no initial pipeline N SG_RULES state on S3. Once the second pipeline with this code is run, there will be a pipeline N SG_RULES state on 
 the S3 bucket, and the diff can be calculated from that point on.  The current pipeline N+1 will alwasy get the (N+1)-1 pipleine run SG_RULES
@@ -346,7 +364,9 @@ previous UPDATE, this code is much simpler than the code in module2, when applyi
 multiprocessing environment like module2 is.
 
 
-
+This foundation for a stateful paradigm in the project will be very useuful in light of resurrecting threads to their former or desired
+state.  All stateful logs and manifests will be written to S3. Some of the current artifact logs (per pipeline artifact logs) can even
+be copied to S3 on a per pipeline basis if required for more advanced stateful restoration.
 
 
 #### A note on the ovarall design of this system in regards to stateful design considerations
