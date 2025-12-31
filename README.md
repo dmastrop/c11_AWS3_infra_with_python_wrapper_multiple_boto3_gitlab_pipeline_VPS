@@ -256,6 +256,12 @@ processing code. The buik of the ghost resurrection code has been implemmented i
 
 - Reapply the security group rules from module2 at the orchestration layer, after the reboot in module2e and prior to the resurrection of the node in module2f
 
+There are a lot of nuances to this implemenation that need to be reviewed prior to showing the code changes that are required for 
+this. These are reviewed below.
+
+
+
+
 ### Code implemation strategy for the security group (SG) reapplication: Nuances in multi-processing environments
 
 
@@ -271,7 +277,48 @@ AWS API calls.
 This explanation is given in the previous UPDATE. Please see that UPDATE. It is an important update that sheds light on why
 the module2e SG rule replay is very simple when compared to that of module2.
 
+One important takeaway is that module2 tomcat_worker function (a per process function) MUST reapply all the rules to the 
+nodes in that process. This results is a lot of duplicate rules being applied to the same security group (SG), but this 
+needs to be done for the reasons outlined in that UPDATE noted above.   Namely, if we do not reapply the SG rules for each
+process call of tomcat_worker then there can be timing issues and race conditions whereby process1 tries to initate its SSH
+connections to its node and apply the commands prior to the rule changes being propagated on the backend AWS API call to all 
+the nodes in that procdess. If the reapply of the rules ot the security group is made for each process prior to its SSH to the 
+nodes, this will always ensure that the rules are applied to the nodes in that process (and all processes in teh exeuction run) 
+prior to each process initiating the SSH connections to each of the nodes in that process. 
 
+Note for now, there is just one security group (SG id) for all the nodes in the execution run (fleet) but the code is designed
+from the bottom up to support multiple and unique security groups per process in the future. This was discussed briefly in the
+UPDATE mentioned above. That UPDATE is required background reading to understand why things are done that way that they are in
+this update.
+
+There is also an additonal complexity here. The rules will be consolidated into an SG_RULES ENV variable in module2 as part 
+of this implementation. When rules are removed from the SG_RULES, a delta between the previous pipeline SG_RULES and the current
+pipeline SG_RULES must be computed so that the code can invoke the AWS API to delete the proper rule from the SG in AWS. 
+Otherwise the current pipeline has no way of knowing what rule to remove if it is just removed in the SG_RULES of the current 
+pipeline. 
+
+So the rule applies are always done on the current SG_RULES even if they are repetitive, and the rule deletes are calculated
+using the delta process above.
+
+Once the delta is calculated in tomcat_worker (of module2), tomcat_worker can then apply the SG_RULES list and remove the 
+rules in the delta so that the AWS security group has the proper rules applied prior to any other thread level operations 
+(like SSH and command applications to the nodes/threads)
+
+Once the multiprocessing.Pool in main completes the call to tomcat_worker above, a drift detector in main() of module2 will
+ensure that there is no drift between the SG_RULES and deletes and the actual rules on the AWS security group.
+
+Then the previous pipeline SG_RULES mainifest has to be backed up (this is accessible via the docker mounted volumne and was
+used in the delta calculation by tomcat_Worker above) PRIOR to writing the current pipeline SG_RULES list to the new 
+mainifest. The manifests are just json log files.  This is because module2e will need access to both the previous pipeline
+mainifest and the current pipeline manifest. When module2 create the new manifest file it overwrites the older manifest so
+it has to be backed up so that module2e can acccess both files.
+
+Finally, module2e does the same operations as module2 tomcat_worker above but it is very simplified as module2e applies the 
+rules in a non-multiprocessed environment and only to the ghost nodes after they have been rebooted (and this will be done for
+any other bucket type resurrection type that has to be rebooted; i.e. for all handlers that require reboot, not just the ghost
+handler in module2e). So after the reboot the rules are reapplied and then module2f resurrections the ghosts.
+
+XXXXXXXXXX
 
 ### Part7: Code Review
 

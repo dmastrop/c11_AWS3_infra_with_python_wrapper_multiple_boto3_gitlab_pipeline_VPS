@@ -369,9 +369,14 @@ deploy:
 
       # Module2 export of the ORCHESTRATION_LEVEL_SG_ID and the rules that are applied to it. Tthis is to be used in the 
       # module2e SG rule replay code after a ghost, for example, is rebooted prior to resurrection. Need to make sure the
-      # SG rules have been applied to these types of nodes that may have been list early on in orchestration layer.
+      # SG rules have been applied to these types of nodes that may have been lost early on in orchestration layer.
+      # This is the export of the current pipeline's SG_RULES
       - logs/orchestration_sg_rules_module2.json  
 
+      # Module2 export of the previous pipeline's SG_RULES. This is accessible on the docker mounted volume
+      # until the manifest above (orchestration_sg_rules_module2.json) overwrites it. Thus, this must be retained prior to the 
+      # overwrite so that the previous pipeline's SG_RULES is also accesible by the time module2e runs.
+      #
 
     expire_in: 1 week
 
