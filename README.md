@@ -194,7 +194,7 @@ artifact logs per pipeline)
 
 - Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent
 
-- Update part 51 Phase 3m: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e
+- Update part 51 Phase 3m: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
 
 
 ## A note on application extensibility
@@ -248,7 +248,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 51: Phase 3m: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e
+## UPDATES part 51: Phase 3m: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
 
 ### Introduction
 
