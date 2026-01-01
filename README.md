@@ -395,16 +395,27 @@ The Gitlab web console is hosted on the second container above, the gitlab conta
 
 This first container with the mounted docker volume is NOT persistent across pipeline runs. 
 So using the exiting setup for state between pipeline runs will not work. 
+
 There are several ways to make the logs persistent across pipeline runs in gitlab but they are prone to interfering with the current state of the logs 
 when running a pipeline. So for the stateful SG rule design, the S3 bucket approach will be used instead.
+
+S3 is the authoritative state store for SG_RULES across pipelines. The docker volume logs are strictly ephemeral and never used for state.
+
 To ensure a decoupling between the docker volume "state" and the S3 bucket state logs, an explicit removal of the logs from the docker volume mount 
 is performed in the before_script of the .gitlab-ci.yml, so that each pipeline has a clean volume mounted directory and no artifacts from the 
 previous pipeline are present in the logs volume mount. This ensures the consistency and integrity of the current artifact logs for the current 
 pipeline that is running.
 
-The S3 bucket solution also alleviates the issue of overwritting the previous N SG_RULES state when creating the new N+1 current SG_RULES state in the\ current pipeline.  
+The S3 bucket solution also alleviates the issue of overwritting the previous N SG_RULES state when creating the new N+1 current SG_RULES state in the current pipeline.  
 
 All SG_RULES states will be in separate discrete manifests in S3 and never stored persistently on the docker volume mount.
+
+SG_RULES manifests are no longer written to the artifact logs; they live exclusively in S3.
+
+A conceptual S3 keying scheme to track pipeline SG_RULES manifests would look something like this: 
+   - `state/sg_rules/pipeline_0001.json`  (for the previous N pipeline run)
+   - `state/sg_rules/latest.json` (for the current N+1 pipeline run) 
+
 
 Thus they are discrete and easily accessible from any module that requires them (modules 2 and 2e).
 
