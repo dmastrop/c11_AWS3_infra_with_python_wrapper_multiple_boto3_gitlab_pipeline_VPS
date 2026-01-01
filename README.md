@@ -263,7 +263,7 @@ this. These are reviewed below.
 
 
 
-### Code implemation strategy for the security group (SG) reapplication: Nuances in multi-processing environments
+### Part7: Code implemation strategy for the security group (SG) reapplication: Nuances in multi-processing environments
 
 
 The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
@@ -430,7 +430,7 @@ A conceptual S3 keying scheme to track pipeline SG_RULES manifests would look so
    - `state/sg_rules/latest.json` (for the previous pipeline N SG_RULES state; this will be overwritten by the module2 once the delta is calculated)
 
 
-### Code design detail:
+### Part7: Code design detail:
 
 
 #### Module2 Stateful SG Rule Management — Implementation (with Helper Functions)
