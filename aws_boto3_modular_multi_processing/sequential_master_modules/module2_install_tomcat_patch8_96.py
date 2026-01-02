@@ -8061,9 +8061,9 @@ def main():
             )
             ec2_client = session.client("ec2")
 
-            # Run drift detection for each SG
-            for sg_id in sg_ids:
-                detect_sg_drift(sg_id, ec2_client)
+            ## Run drift detection for each SG
+            #for sg_id in sg_ids:
+            #    detect_sg_drift(sg_id, ec2_client)
 
 
             # Write the manifest. Currently, just one SG ID but if there are multiple SG IDs this will be able to do that 
