@@ -4014,7 +4014,24 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ###### add DEBUGX for the SG issue at scale that we are seeing. 
     print(f"[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = {security_group_ids}")
 
-    
+
+
+
+
+
+    #### Stateful SG application code ##########
+    # === STEP 1: Load previous SG_RULES state from S3 ===
+    bucket_name = os.getenv("SG_RULES_S3_BUCKET")  # will be None for now
+    previous_rules = {}
+
+    if bucket_name:
+        try:
+            previous_rules = load_previous_sg_rules_from_s3(bucket_name)
+            print(f"[SG_STATE] Loaded previous SG_RULES from S3: {len(previous_rules)} rules")
+        except Exception as e:
+            print(f"[SG_STATE] WARNING: Failed to load previous SG_RULES from S3: {e}")
+    else:
+        print("[SG_STATE] No S3 bucket configured yet — using empty previous_rules")
 
 
     #### [tomcat_worker] ####
