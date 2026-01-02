@@ -23,6 +23,14 @@ from sequential_master_modules.utils import (
     health_check_instance
 )
 
+# Shared SG state helpers for SG replay after reboot (module2e)
+from sequential_master_modules.utils_sg_state import (
+    load_previous_sg_rules_from_s3,
+    load_delta_delete_from_s3,
+    apply_sg_rules_add,
+    apply_sg_rules_delete,
+    replay_sg_rules_for_resurrection,
+)
 
 
 

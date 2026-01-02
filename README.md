@@ -524,7 +524,45 @@ This works for ghosts and all other resurrection buckets.
 
 #### Helper Functions (Final Names & Responsibilities)
 
-These are the exact helper functions that will be added to module2 and module2e.
+
+
+Because both **module2** (multiprocessing orchestration layer) and **module2e** (post‑reboot SG replay layer) require identical logic for SG rule persistence, delta computation, and drift detection, all SG‑state helper functions are implemented in a shared utility module:
+
+```
+sequential_master_modules/utils_sg_state.py
+```
+
+This file contains the nine stateful SG‑rule helpers:
+
+- `load_previous_sg_rules_from_s3()`
+- `load_delta_delete_from_s3()`  
+- `save_current_sg_rules_to_s3()`  
+- `save_delta_delete_to_s3()`  
+- `compute_delta_delete()`  
+- `apply_sg_rules_add()`  
+- `apply_sg_rules_delete()`  
+- `detect_sg_drift_with_delta()`  
+- `replay_sg_rules_for_resurrection()`
+
+Both **module2** and **module2e** import these helpers using:
+
+```
+from sequential_master_modules.utils_sg_state import (
+    load_previous_sg_rules_from_s3,
+    load_delta_delete_from_s3,
+    save_current_sg_rules_to_s3,
+    save_delta_delete_to_s3,
+    compute_delta_delete,
+    apply_sg_rules_add,
+    apply_sg_rules_delete,
+    detect_sg_drift_with_delta,
+    replay_sg_rules_for_resurrection,
+)
+```
+
+Centralizing these helpers ensures that SG‑rule state management is deterministic, consistent across pipeline runs, and fully reusable across all resurrection workflows
+
+
 
 ---
 
@@ -544,7 +582,21 @@ Returns:
 
 ---
 
-###### 2. save_current_sg_rules_to_s3()
+###### 2. load_delta_delete_from_s3()  
+Loads the delta_delete manifest from S3.
+
+```
+def load_delta_delete_from_s3(bucket, key="state/sg_rules/delta_delete.json"):
+    ...
+```
+
+Returns:
+- list/dict of rules to delete  
+- or `{}` if file does not exist  
+
+---
+
+###### 3. save_current_sg_rules_to_s3()
 Writes the current SG_RULES to S3 as the new authoritative manifest.
 
 ```
@@ -554,7 +606,7 @@ def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json")
 
 ---
 
-###### 3. save_delta_delete_to_s3()
+###### 4. save_delta_delete_to_s3()
 Stores the computed delta_delete for module2e replay.
 
 ```
@@ -566,7 +618,7 @@ def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json
 
 ##### Delta Computation
 
-###### 4. compute_delta_delete(previous_rules, current_rules)
+###### 5. compute_delta_delete(previous_rules, current_rules)
 Computes the rules that must be removed.
 
 ```
@@ -584,7 +636,7 @@ delta_delete = previous_rules - current_rules
 
 ##### SG Rule Application (inside tomcat_worker)
 
-###### 5. apply_sg_rules_add(ec2, sg_id, current_rules)
+###### 6. apply_sg_rules_add(ec2, sg_id, current_rules)
 Reapplies all SG_RULES.
 
 ```
@@ -594,7 +646,7 @@ def apply_sg_rules_add(ec2, sg_id, rules):
 
 ---
 
-###### 6. apply_sg_rules_delete(ec2, sg_id, delta_delete)
+###### 7. apply_sg_rules_delete(ec2, sg_id, delta_delete)
 Deletes stale rules.
 
 ```
@@ -606,7 +658,7 @@ def apply_sg_rules_delete(ec2, sg_id, delta_delete):
 
 ##### Drift Detection
 
-###### 7. detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete)
+###### 8. detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete)
 Used in main() after multiprocessing completes.
 
 ```
@@ -626,7 +678,7 @@ This detects:
 
 Module2e uses the same helpers, plus:
 
-###### 8. replay_sg_rules_for_resurrection(ec2, sg_id, current_rules, delta_delete)
+###### 9. replay_sg_rules_for_resurrection(ec2, sg_id, current_rules, delta_delete)
 Used after rebooting ghost nodes.
 
 ```
@@ -644,6 +696,8 @@ s3://<bucket>/state/sg_rules/delta_delete.json ← rules removed this run
 ```
 
 No versioning, no timestamps, no lineage is required at this time.
+
+
 
 
 XXXXXXXXXX
@@ -736,6 +790,10 @@ This is then used in module1 in the EC2 client method:
 
         return response
 ```
+
+#### utils_sg_state.py file
+
+
 
 
 #### Create a manifest json file of the current rules SG_RULES that are used in the security group specified by ORCHESTRATION_LEVEL_SG_ID
