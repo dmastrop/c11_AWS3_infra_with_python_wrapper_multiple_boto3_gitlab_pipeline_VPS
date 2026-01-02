@@ -144,8 +144,17 @@ def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json")
         - This is called AFTER delta_delete is computed.
         - This file is always overwritten (no versioning needed).
     """
-    pass
+    import boto3
+    import json
 
+    s3 = boto3.client("s3")
+
+    try:
+        body = json.dumps(rules, indent=2)
+        s3.put_object(Bucket=bucket, Key=key, Body=body.encode("utf-8"))
+        print(f"[utils_sg_state] Uploaded SG_RULES to s3://{bucket}/{key}")
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR saving SG_RULES to S3: {e}")
 
 
 # ===========================================================================

@@ -171,7 +171,11 @@ deploy:
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
-    
+
+    - echo 'SG_RULES_S3_BUCKET=c11-sg-rules-state' >> .env  # this is for the stateful SG implementation in module2 and 2e
+
+
+
     - echo 'PID_JSON_DUMPS='${PID_JSON_DUMPS} >> .env  # see above. Gating for the json ghost and res candidate files.  
     
     - echo 'FORCE_TOMCAT_FAIL='${FORCE_TOMCAT_FAIL} >> .env # This is to inject a futures crash in install_tomcat

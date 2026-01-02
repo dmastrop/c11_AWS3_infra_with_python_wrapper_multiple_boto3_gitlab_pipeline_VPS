@@ -8089,6 +8089,19 @@ def main():
             
             write_sg_rule_manifest(sg_ids)
 
+
+
+            # === STEP 2: Save current SG_RULES to S3 ===
+            bucket_name = os.getenv("SG_RULES_S3_BUCKET")
+            if bucket_name:
+                try:
+                    save_current_sg_rules_to_s3(bucket_name, SG_RULES)
+                    print(f"[SG_STATE] Saved current SG_RULES to S3 ({len(SG_RULES)} rules)")
+                except Exception as e:
+                    print(f"[SG_STATE] WARNING: Failed to save SG_RULES to S3: {e}")
+            else:
+                print("[SG_STATE] No S3 bucket configured — skipping SG_RULES save")
+
         except Exception as e:
             print(f"[module2_orchestration_level_SG_manifest] ERROR discovering SG IDs for manifest: {e}")
 
