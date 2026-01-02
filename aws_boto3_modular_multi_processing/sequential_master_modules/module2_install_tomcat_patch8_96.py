@@ -318,6 +318,14 @@ retry_lock = threading.Lock()
 
 
 
+
+
+#### This function will be continued to be used even with the stateful SG replay design
+#### S3 buckets will be used to maintain state but this will have the current SG_RULES that will be stored 
+#### in the artifact logs. This is just a current state and is not stateful. The S3 bucket json files will be used for stateful
+#### SG replay.
+#### This file is orchestration_sg_rules_module2.json in the artifact logs of the pipeline
+
 #### [module2_orchestration_level_SG_manifest] refactoring has 2 changes. Remove the ingress_rules block.
 #### It uses the SG_RULES ENV variable now
 #### Replace the "ingress_rules": ingress_rules with SG_RULES
@@ -363,60 +371,62 @@ def write_sg_rule_manifest(security_group_ids, log_dir="/aws_EC2/logs"):
 
 
 
+#### This drift detector helper function has been deprecated. It does not incorporate the delete diff 
+#### The function will be replaced by the helper function detect_sg_drift_with_delta() in the utils_sg_state.py file
 
-#### [module2_orchestration_level_SG_manifest]
-#### This is the helper function called from main() right after AWS SG discovery but before the mainifest is written by the 
-#### helper funcition above.
-#### This function determines if there is any drift between the SG_RULES which is the authorative list of rules and 
-#### the rules on AWS for the SG. It does not detect drift between the AWS SG rules and SG_RULES (in other words, there can
-#### be extra rules on AWS SG that are not in SG_RULES, but if there are rules in SG_RULES that are not in AWS SG rules then that
-#### is defined as drift.
-# ------------------ SG Drift Detector ------------------
-def detect_sg_drift(sg_id, ec2_client):
-    """
-    Compares SG_RULES (authoritative) against the actual AWS SG rules.
-    Only checks for missing rules on AWS SG rules that are in SG_RULES.  Extra AWS rules are ignored.
-    """
-
-    try:
-        resp = ec2_client.describe_security_groups(GroupIds=[sg_id])
-        sg = resp["SecurityGroups"][0]
-    except Exception as e:
-        print(f"[module2_orchestration_level_SG_manifest_DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
-        return
-
-    # Normalize AWS rules into comparable tuples
-    aws_rules = set()
-    for perm in sg.get("IpPermissions", []):
-        proto = perm.get("IpProtocol")
-        from_p = perm.get("FromPort")
-        to_p = perm.get("ToPort")
-
-        # Only consider rules with explicit ports
-        if from_p is None or to_p is None:
-            continue
-
-        for rng in perm.get("IpRanges", []):
-            cidr = rng.get("CidrIp")
-            if cidr:
-                aws_rules.add((proto, from_p, cidr))
-
-    # Normalize SG_RULES
-    declared_rules = {
-        (rule["protocol"], rule["port"], rule["cidr"])
-        for rule in SG_RULES
-    }
-
-    # Drift = declared rules missing from AWS
-    missing = declared_rules - aws_rules
-
-    if not missing:
-        print(f"[orchestration_level_SG_manifest_DRIFT] No drift detected for SG {sg_id}. All SG_RULES are present.")
-    else:
-        print(f"[orchestration_level_SG_manifest_DRIFT] Drift detected for SG {sg_id}: Missing rules:")
-        for proto, port, cidr in sorted(missing):
-            print(f"    - {proto}/{port} from {cidr}")
-
+##### [module2_orchestration_level_SG_manifest]
+##### This is the helper function called from main() right after AWS SG discovery but before the mainifest is written by the 
+##### helper funcition above.
+##### This function determines if there is any drift between the SG_RULES which is the authorative list of rules and 
+##### the rules on AWS for the SG. It does not detect drift between the AWS SG rules and SG_RULES (in other words, there can
+##### be extra rules on AWS SG that are not in SG_RULES, but if there are rules in SG_RULES that are not in AWS SG rules then that
+##### is defined as drift.
+## ------------------ SG Drift Detector ------------------
+#def detect_sg_drift(sg_id, ec2_client):
+#    """
+#    Compares SG_RULES (authoritative) against the actual AWS SG rules.
+#    Only checks for missing rules on AWS SG rules that are in SG_RULES.  Extra AWS rules are ignored.
+#    """
+#
+#    try:
+#        resp = ec2_client.describe_security_groups(GroupIds=[sg_id])
+#        sg = resp["SecurityGroups"][0]
+#    except Exception as e:
+#        print(f"[module2_orchestration_level_SG_manifest_DRIFT] ERROR: Unable to query AWS SG {sg_id}: {e}")
+#        return
+#
+#    # Normalize AWS rules into comparable tuples
+#    aws_rules = set()
+#    for perm in sg.get("IpPermissions", []):
+#        proto = perm.get("IpProtocol")
+#        from_p = perm.get("FromPort")
+#        to_p = perm.get("ToPort")
+#
+#        # Only consider rules with explicit ports
+#        if from_p is None or to_p is None:
+#            continue
+#
+#        for rng in perm.get("IpRanges", []):
+#            cidr = rng.get("CidrIp")
+#            if cidr:
+#                aws_rules.add((proto, from_p, cidr))
+#
+#    # Normalize SG_RULES
+#    declared_rules = {
+#        (rule["protocol"], rule["port"], rule["cidr"])
+#        for rule in SG_RULES
+#    }
+#
+#    # Drift = declared rules missing from AWS
+#    missing = declared_rules - aws_rules
+#
+#    if not missing:
+#        print(f"[orchestration_level_SG_manifest_DRIFT] No drift detected for SG {sg_id}. All SG_RULES are present.")
+#    else:
+#        print(f"[orchestration_level_SG_manifest_DRIFT] Drift detected for SG {sg_id}: Missing rules:")
+#        for proto, port, cidr in sorted(missing):
+#            print(f"    - {proto}/{port} from {cidr}")
+#
 
 
 ##### This helper function is for the refactored ghost detection logic in resurrection_monitor_patch8 and also for the 
