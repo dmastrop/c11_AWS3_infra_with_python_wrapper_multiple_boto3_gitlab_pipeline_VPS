@@ -91,7 +91,31 @@ def load_previous_sg_rules_from_s3(bucket, key="state/sg_rules/latest.json"):
         - This function must NEVER throw an exception for missing files.
         - Module2 relies on {} to indicate "no previous state".
     """
-    pass
+    import boto3
+    import json
+
+    s3 = boto3.client("s3")
+
+    try:
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        body = obj["Body"].read().decode("utf-8")
+        rules = json.loads(body)
+
+        if isinstance(rules, list):
+            print(f"[utils_sg_state] Loaded previous SG_RULES from s3://{bucket}/{key}")
+            return rules
+
+        print(f"[utils_sg_state] WARNING: SG_RULES file exists but is not a list — returning empty dict")
+        return {}
+
+    except s3.exceptions.NoSuchKey:
+        print(f"[utils_sg_state] No previous SG_RULES found in S3 — returning empty dict")
+        return {}
+
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR loading previous SG_RULES from S3: {e}")
+        return {}
+
 
 
 
