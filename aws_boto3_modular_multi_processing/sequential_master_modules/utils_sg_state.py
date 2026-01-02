@@ -96,7 +96,36 @@ def load_previous_sg_rules_from_s3(bucket, key="state/sg_rules/latest.json"):
 
 
 # ===========================================================================
-# 2. save_current_sg_rules_to_s3()
+# 2. load_delta_delete__from_s3()
+# ===========================================================================
+
+def load_delta_delete_from_s3(bucket, key="state/sg_rules/delta_delete.json"):
+    """
+    Load the delta_delete manifest from S3.
+
+    This file contains the rules that were removed in the previous pipeline run.
+    Module2e uses this to delete stale rules after rebooting ghost nodes.
+
+    Returns:
+        - A list/dict of rules to delete
+        - Or {} if the file does not exist (e.g., first pipeline run)
+    """
+    s3 = boto3.client("s3")
+
+    try:
+        resp = s3.get_object(Bucket=bucket, Key=key)
+        body = resp["Body"].read().decode("utf-8")
+        return json.loads(body)
+    except s3.exceptions.NoSuchKey:
+        print(f"[utils_sg_state] No delta_delete file found at {key}. Returning empty delta.")
+        return {}
+    except Exception as e:
+        print(f"[utils_sg_state] Error loading delta_delete from S3: {e}")
+        return {}
+
+
+# ===========================================================================
+# 3. save_current_sg_rules_to_s3()
 # ===========================================================================
 
 def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json"):
@@ -120,7 +149,7 @@ def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json")
 
 
 # ===========================================================================
-# 3. save_delta_delete_to_s3()
+# 4. save_delta_delete_to_s3()
 # ===========================================================================
 
 def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json"):
@@ -145,7 +174,7 @@ def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json
 
 
 # ===========================================================================
-# 4. compute_delta_delete()
+# 5. compute_delta_delete()
 # ===========================================================================
 
 def compute_delta_delete(previous_rules, current_rules):
@@ -175,7 +204,7 @@ def compute_delta_delete(previous_rules, current_rules):
 
 
 # ===========================================================================
-# 5. apply_sg_rules_add()
+# 6. apply_sg_rules_add()
 # ===========================================================================
 
 def apply_sg_rules_add(ec2, sg_id, rules):
@@ -200,7 +229,7 @@ def apply_sg_rules_add(ec2, sg_id, rules):
 
 
 # ===========================================================================
-# 6. apply_sg_rules_delete()
+# 7. apply_sg_rules_delete()
 # ===========================================================================
 
 def apply_sg_rules_delete(ec2, sg_id, delta_delete):
@@ -225,7 +254,7 @@ def apply_sg_rules_delete(ec2, sg_id, delta_delete):
 
 
 # ===========================================================================
-# 7. detect_sg_drift_with_delta()
+# 8. detect_sg_drift_with_delta()
 # ===========================================================================
 
 def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
@@ -262,7 +291,7 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 
 
 # ===========================================================================
-# 8. replay_sg_rules_for_resurrection()
+# 9. replay_sg_rules_for_resurrection()
 # ===========================================================================
 
 def replay_sg_rules_for_resurrection(ec2, sg_id, current_rules, delta_delete):
