@@ -288,6 +288,8 @@ SG_RULES = [
     {"protocol": "tcp", "port": 5556, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 5557, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 5558, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 6000, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 6001, "cidr": "0.0.0.0/0"},
 ]
 
 
@@ -4029,11 +4031,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     if bucket_name:
         try:
             previous_rules = load_previous_sg_rules_from_s3(bucket_name)
-            print(f"[SG_STATE] Loaded previous SG_RULES from S3: {len(previous_rules)} rules")
+            print(f"[SG_STATE][PID {pid}] Loaded previous SG_RULES from S3: {len(previous_rules)} rules")
         except Exception as e:
-            print(f"[SG_STATE] WARNING: Failed to load previous SG_RULES from S3: {e}")
+            print(f"[SG_STATE][PID {pid}] WARNING: Failed to load previous SG_RULES from S3: {e}")
     else:
-        print("[SG_STATE] No S3 bucket configured yet — using empty previous_rules")
+        print("[SG_STATE][PID {pid}] No S3 bucket configured yet — using empty previous_rules")
 
 
     # === STEP 3: Compute delta_delete and save to S3 ===
@@ -4042,23 +4044,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     bucket_name = os.getenv("SG_RULES_S3_BUCKET")
 
     if not bucket_name:
-        print("[SG_STATE] No S3 bucket configured — skipping delta_delete computation")
+        print("[SG_STATE][PID {pid}] No S3 bucket configured — skipping delta_delete computation")
     else:
         try:
             delta_delete = compute_delta_delete(previous_rules, current_rules)
 
-            print(f"[SG_STATE] Computed delta_delete: {len(delta_delete)} rules to delete")
+            print(f"[SG_STATE][PID {pid}] Computed delta_delete: {len(delta_delete)} rules to delete")
 
             # Print each rule for forensic visibility
             for rule in delta_delete:
-                print(f"[SG_STATE]   DELTA_DELETE → {rule}")
+                print(f"[SG_STATE][PID {pid}]   DELTA_DELETE → {rule}")
 
             # Save delta_delete to S3
             save_delta_delete_to_s3(bucket_name, delta_delete)
-            print(f"[SG_STATE] Saved delta_delete to S3 bucket '{bucket_name}'")
+            print(f"[SG_STATE][PID {pid}] Saved delta_delete to S3 bucket '{bucket_name}'")
 
         except Exception as e:
-            print(f"[SG_STATE] ERROR during delta_delete computation or save: {e}")
+            print(f"[SG_STATE][PID {pid}]  ERROR during delta_delete computation or save: {e}")
 
 
 
