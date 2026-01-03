@@ -4018,8 +4018,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+    #### [tomcat_worker] ****
+    #### Stateful SG application code (see also main() Step2, etc.... ) ##########
+    #### All helper functions below are in utils_sg_state.py ####
 
-    #### Stateful SG application code ##########
     # === STEP 1: Load previous SG_RULES state from S3 ===
     bucket_name = os.getenv("SG_RULES_S3_BUCKET")  # will be None for now
     previous_rules = {}
@@ -4032,6 +4034,35 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             print(f"[SG_STATE] WARNING: Failed to load previous SG_RULES from S3: {e}")
     else:
         print("[SG_STATE] No S3 bucket configured yet — using empty previous_rules")
+
+
+    # === STEP 3: Compute delta_delete and save to S3 ===
+    # previous_rules was loaded in STEP 1
+    current_rules = SG_RULES  # authoritative rules for this pipeline run
+    bucket_name = os.getenv("SG_RULES_S3_BUCKET")
+
+    if not bucket_name:
+        print("[SG_STATE] No S3 bucket configured — skipping delta_delete computation")
+    else:
+        try:
+            delta_delete = compute_delta_delete(previous_rules, current_rules)
+
+            print(f"[SG_STATE] Computed delta_delete: {len(delta_delete)} rules to delete")
+
+            # Print each rule for forensic visibility
+            for rule in delta_delete:
+                print(f"[SG_STATE]   DELTA_DELETE → {rule}")
+
+            # Save delta_delete to S3
+            save_delta_delete_to_s3(bucket_name, delta_delete)
+            print(f"[SG_STATE] Saved delta_delete to S3 bucket '{bucket_name}'")
+
+        except Exception as e:
+            print(f"[SG_STATE] ERROR during delta_delete computation or save: {e}")
+
+
+
+
 
 
     #### [tomcat_worker] ####
@@ -4222,7 +4253,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    ##### [tomcat_worker} ####
+    ##### [tomcat_worker]  ####
     ##### Begin comment out of the code below for the latest [module2_orchestration_level_SG_manifest] code above
     ##### This is the new [module2_orchestration_level_SG_manifest] refactored code using the SG_RULES ENV variable
     #for sg_id in set(security_group_ids):
@@ -8088,9 +8119,14 @@ def main():
             # write_sg_rule_manifest is a helper function at the top of this module.
             
             write_sg_rule_manifest(sg_ids)
+            ##### NOTE that this is the SG_RULES manifest written to the gitlab artifact logs for forensics. It is not used for
+            ##### the stateful SG design. See below for SG stateful design the exclusively uses the S3 bucket, not gitlab artifact logs
 
 
 
+
+            #### [main] ****
+            #### Stateful SG application code (see also tomcat_worker steps 1 and 3, etc....)##########
             # === STEP 2: Save current SG_RULES to S3 ===
             bucket_name = os.getenv("SG_RULES_S3_BUCKET")
             if bucket_name:
@@ -8101,6 +8137,8 @@ def main():
                     print(f"[SG_STATE] WARNING: Failed to save SG_RULES to S3: {e}")
             else:
                 print("[SG_STATE] No S3 bucket configured — skipping SG_RULES save")
+
+
 
         except Exception as e:
             print(f"[module2_orchestration_level_SG_manifest] ERROR discovering SG IDs for manifest: {e}")
