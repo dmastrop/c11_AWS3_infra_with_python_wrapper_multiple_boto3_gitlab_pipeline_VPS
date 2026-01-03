@@ -202,8 +202,19 @@ def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json
         delta (list): List of rule dicts to delete
         key (str): S3 key to write to
     """
-    pass
 
+    import boto3
+    import json
+
+    s3 = boto3.client("s3")
+
+    try:
+        body = json.dumps(delta, indent=2)
+        s3.put_object(Bucket=bucket, Key=key, Body=body.encode("utf-8"))
+        print(f"[utils_sg_state] Uploaded delta_delete → s3://{bucket}/{key}")
+        print(f"[utils_sg_state] Delta count saved: {len(delta)}")
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR saving delta_delete to S3: {e}")
 
 
 # ===========================================================================
@@ -231,9 +242,42 @@ def compute_delta_delete(previous_rules, current_rules):
     Notes:
         - delta_add is intentionally NOT computed.
         - Module2 always reapplies ALL SG_RULES, so delta_add is irrelevant.
-    """
-    pass
 
+    Rules are dicts of the form:
+        {"protocol": "tcp", "port": 22, "cidr": "0.0.0.0/0"}
+
+    Normalization is done inline (no helper function).
+    """
+
+    def normalize(rule):
+        """Inline normalization → convert rule dict to a comparable tuple."""
+        try:
+            return (
+                rule.get("protocol"),
+                int(rule.get("port")),
+                rule.get("cidr")
+            )
+        except Exception:
+            # If rule is malformed, return None so it never matches
+            return None
+
+    # Normalize both sets
+    prev_norm = {normalize(r): r for r in previous_rules if normalize(r)}
+    curr_norm = {normalize(r): r for r in current_rules if normalize(r)}
+
+    # Compute delta: rules present before but not now
+    delta_norm = set(prev_norm.keys()) - set(curr_norm.keys())
+
+    # Convert back to full rule dicts
+    delta_delete = [prev_norm[n] for n in delta_norm]
+
+    print(f"[utils_sg_state] compute_delta_delete → {len(delta_delete)} rules to delete")
+
+    # Print each rule for forensic clarity
+    for rule in delta_delete:
+        print(f"[utils_sg_state] DELTA_DELETE → {rule}")
+
+    return delta_delete
 
 
 # ===========================================================================
