@@ -5,7 +5,9 @@
 #   - Loading previous SG_RULES state from S3 (pipeline N)
 #   - Saving current SG_RULES state to S3 (pipeline N+1)
 #   - Computing delta_delete (rules removed between pipelines)
+#   - Applying SG rule adds/deletes to AWS
 #   - Drift detection helpers for module2 main()
+#   - Replay helpers used by module2e during ghost-node resurrection
 #
 # These helpers are intentionally isolated from module2 to:
 #   - Keep module2 lean and focused on orchestration + multiprocessing
@@ -18,7 +20,10 @@
 #       save_current_sg_rules_to_s3,
 #       save_delta_delete_to_s3,
 #       compute_delta_delete,
+#       apply_sg_rules_add,
+#       apply_sg_rules_delete,
 #       detect_sg_drift_with_delta,
+#       replay_sg_rules_for_resurrection
 #   )
 #
 # NOTE:
@@ -46,18 +51,12 @@
 #   • drift detection using SG_RULES + delta_delete
 #   • replay logic for module2e
 #
+# NOTE:
+#   This file intentionally contains *no business logic yet*.
+#   Only function signatures + extensive comments + docstrings.
+#   The logic will be filled in  during implementation.
+#
 # ---------------------------------------------------------------------------
-
-
-
-# IMPORTANT:
-#   - module2 uses latest.json as "previous" (pipeline N)
-#   - module2 main() overwrites latest.json with SG_RULES (pipeline N+1)
-#   - module2e uses latest.json as "current" (pipeline N+1)
-
-
-
-
 
 import boto3
 import json
@@ -120,10 +119,37 @@ def load_previous_sg_rules_from_s3(bucket, key="state/sg_rules/latest.json"):
 
 
 
+# ===========================================================================
+# 2. load_delta_delete__from_s3()
+# ===========================================================================
+
+def load_delta_delete_from_s3(bucket, key="state/sg_rules/delta_delete.json"):
+    """
+    Load the delta_delete manifest from S3.
+
+    This file contains the rules that were removed in the previous pipeline run.
+    Module2e uses this to delete stale rules after rebooting ghost nodes.
+
+    Returns:
+        - A list/dict of rules to delete
+        - Or {} if the file does not exist (e.g., first pipeline run)
+    """
+    s3 = boto3.client("s3")
+
+    try:
+        resp = s3.get_object(Bucket=bucket, Key=key)
+        body = resp["Body"].read().decode("utf-8")
+        return json.loads(body)
+    except s3.exceptions.NoSuchKey:
+        print(f"[utils_sg_state] No delta_delete file found at {key}. Returning empty delta.")
+        return {}
+    except Exception as e:
+        print(f"[utils_sg_state] Error loading delta_delete from S3: {e}")
+        return {}
 
 
 # ===========================================================================
-# 2. save_current_sg_rules_to_s3()
+# 3. save_current_sg_rules_to_s3()
 # ===========================================================================
 
 def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json"):
@@ -156,7 +182,7 @@ def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json")
 
 
 # ===========================================================================
-# 3. save_delta_delete_to_s3()
+# 4. save_delta_delete_to_s3()
 # ===========================================================================
 
 def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json"):
@@ -192,7 +218,7 @@ def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json
 
 
 # ===========================================================================
-# 4. compute_delta_delete()
+# 5. compute_delta_delete()
 # ===========================================================================
 
 def compute_delta_delete(previous_rules, current_rules):
@@ -255,7 +281,57 @@ def compute_delta_delete(previous_rules, current_rules):
 
 
 # ===========================================================================
-# 5. detect_sg_drift_with_delta()
+# 6. apply_sg_rules_add()
+# ===========================================================================
+
+def apply_sg_rules_add(ec2, sg_id, rules):
+    """
+    Apply (add) ALL SG_RULES to the given security group.
+
+    This is used in:
+        • module2 (per-process SG rule application)
+        • module2e (post-reboot SG replay)
+
+    Behavior:
+        - Must be idempotent (adding an existing rule should not error)
+        - Must handle AWS throttling (retry logic will be added later)
+
+    Parameters:
+        ec2  : boto3 EC2 client
+        sg_id (str): Security group ID
+        rules (list): List of SG rule dicts to add
+    """
+    pass
+
+
+
+# ===========================================================================
+# 7. apply_sg_rules_delete()
+# ===========================================================================
+
+def apply_sg_rules_delete(ec2, sg_id, delta_delete):
+    """
+    Delete stale SG rules from AWS.
+
+    delta_delete contains ONLY the rules that were removed between
+    pipeline N and pipeline N+1.
+
+    Behavior:
+        - Must gracefully handle "rule not found" cases
+        - Must be safe to call repeatedly
+        - Must handle AWS throttling (retry logic added later)
+
+    Parameters:
+        ec2  : boto3 EC2 client
+        sg_id (str): Security group ID
+        delta_delete (list): Rules to delete
+    """
+    pass
+
+
+
+# ===========================================================================
+# 8. detect_sg_drift_with_delta()
 # ===========================================================================
 
 def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
@@ -289,4 +365,28 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
     """
     pass
 
+
+
+# ===========================================================================
+# 9. replay_sg_rules_for_resurrection()
+# ===========================================================================
+
+def replay_sg_rules_for_resurrection(ec2, sg_id, current_rules, delta_delete):
+    """
+    Replay SG rules on rebooted nodes (module2e).
+
+    Steps:
+        1. Reapply ALL current_rules (idempotent)
+        2. Delete ALL delta_delete rules
+        3. Ensure SG converges to desired state
+
+    This is simpler than module2 because module2e is NOT multiprocessing.
+
+    Parameters:
+        ec2  : boto3 EC2 client
+        sg_id (str): Security group ID
+        current_rules (list): SG_RULES for pipeline N+1
+        delta_delete (list): Rules to delete
+    """
+    pass
 
