@@ -46,14 +46,10 @@ import fcntl # this is used for the pop of the file used for INJECT_POST_THREAD_
 # Shared SG state helpers for stateful SG rule management (module2 + module2e)
 from sequential_master_modules.utils_sg_state import (
     load_previous_sg_rules_from_s3,
-    load_delta_delete_from_s3,
     save_current_sg_rules_to_s3,
     save_delta_delete_to_s3,
     compute_delta_delete,
-    apply_sg_rules_add,
-    apply_sg_rules_delete,
     detect_sg_drift_with_delta,
-    replay_sg_rules_for_resurrection,
 )
 
 
