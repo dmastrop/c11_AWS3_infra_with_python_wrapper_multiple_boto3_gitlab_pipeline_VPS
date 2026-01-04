@@ -840,8 +840,23 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 XXXXXXXXXXXXX
 ```
 
+##### imports
 
----
+
+Module2 is the only module right now that uses the helper functions: 
+```
+# Shared SG state helpers for stateful SG rule management (module2 + module2e)
+from sequential_master_modules.utils_sg_state import (
+    load_previous_sg_rules_from_s3,
+    save_current_sg_rules_to_s3,
+    save_delta_delete_to_s3,
+    compute_delta_delete,
+    detect_sg_drift_with_delta,
+)
+```
+
+
+
 
 ##### Storage Model (Final)
 
