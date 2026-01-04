@@ -429,13 +429,15 @@ The S3 bucket solution also alleviates the issue of overwritting the previous N 
 
 All SG_RULES state for pipeline N will be in a  discrete manifest on  S3 and never stored persistently on the docker volume mount.
 
-SG_RULES manifests are no longer written to the artifact logs; they live exclusively in S3.
+SG_RULES manifests are written to the artifact logs only for forensic purposes; the S3 version is the one used to maintain state (latest.json)
 
 A conceptual S3 keying scheme to track pipeline SG_RULES manifests would look something like this: 
    - `state/sg_rules/latest.json` (for the previous pipeline N SG_RULES state; this will be overwritten by the module2 once the delta is calculated)
 
 
 ### Part7: Code design detail:
+
+XXXXX NEEDS WORK
 
 
 #### Module2 Stateful SG Rule Management — Implementation (with Helper Functions)
@@ -540,160 +542,304 @@ Because both **module2** (multiprocessing orchestration layer) and **module2e** 
 ```
 sequential_master_modules/utils_sg_state.py
 ```
+There are 5 helper functions that will be used in the SG stateful design. These are in the utils_sg_state.py file below: 
 
-This file contains the nine stateful SG‑rule helpers:
-
-- `load_previous_sg_rules_from_s3()`
-- `load_delta_delete_from_s3()`  
-- `save_current_sg_rules_to_s3()`  
-- `save_delta_delete_to_s3()`  
-- `compute_delta_delete()`  
-- `apply_sg_rules_add()`  
-- `apply_sg_rules_delete()`  
-- `detect_sg_drift_with_delta()`  
-- `replay_sg_rules_for_resurrection()`
-
-Both **module2** and **module2e** import these helpers using:
 
 ```
-from sequential_master_modules.utils_sg_state import (
-    load_previous_sg_rules_from_s3,
-    load_delta_delete_from_s3,
-    save_current_sg_rules_to_s3,
-    save_delta_delete_to_s3,
-    compute_delta_delete,
-    apply_sg_rules_add,
-    apply_sg_rules_delete,
-    detect_sg_drift_with_delta,
-    replay_sg_rules_for_resurrection,
-)
-```
 
-Centralizing these helpers ensures that SG‑rule state management is deterministic, consistent across pipeline runs, and fully reusable across all resurrection workflows
+# utils_sg_state.py
+# Helper functions for the stateful SG rule system used across module2, module2e, and module2f.
+#
+# This module centralizes all Security Group (SG) state-management helpers:
+#   - Loading previous SG_RULES state from S3 (pipeline N)
+#   - Saving current SG_RULES state to S3 (pipeline N+1)
+#   - Computing delta_delete (rules removed between pipelines)
+#   - Drift detection helpers for module2 main()
+#
+# These helpers are intentionally isolated from module2 to:
+#   - Keep module2 lean and focused on orchestration + multiprocessing
+#   - Allow module2e/module2f to reuse the exact same SG logic
+#   - Ensure deterministic, audit-friendly SG state transitions across pipelines
+#
+# Import path (package-aware):
+#   from sequential_master_modules.utils_sg_state import (
+#       load_previous_sg_rules_from_s3,
+#       save_current_sg_rules_to_s3,
+#       save_delta_delete_to_s3,
+#       compute_delta_delete,
+#       detect_sg_drift_with_delta,
+#   )
+#
+# NOTE:
+#   - This file contains *no* orchestration logic.
+#   - It is purely functional and stateless except for S3 I/O.
+#   - All SG_RULES normalization is handled here to keep module2 clean.
+
+
+# utils_sg_state.py
+# ---------------------------------------------------------------------------
+# Stateful Security Group (SG) Rule Management Utilities
+#
+# This module contains ALL helper functions required for the new stateful
+# SG-rule system used by:
+#
+#   - module2  (multiprocessing SG rule application)
+#   - module2e (post-reboot SG rule replay for ghost nodes)
+#   - module2f (resurrection install logic)
+#
+# These helpers implement the *stateful* SG design:
+#
+#   • SG_RULES (authoritative desired state)
+#   • previous_rules (pipeline N state from S3)
+#   • delta_delete (rules removed between pipelines)
+#   • drift detection using SG_RULES + delta_delete
+#   • replay logic for module2e
+#
+# ---------------------------------------------------------------------------
 
 
 
----
+# IMPORTANT:
+#   - module2 uses latest.json as "previous" (pipeline N)
+#   - module2 main() overwrites latest.json with SG_RULES (pipeline N+1)
+#   - module2e uses latest.json as "current" (pipeline N+1)
 
-##### S3 Helpers
 
-###### 1. load_previous_sg_rules_from_s3()
-Loads the previous pipeline’s SG_RULES manifest.
 
-```
+
+
+import boto3
+import json
+import os
+
+
+# ===========================================================================
+# 1. load_previous_sg_rules_from_s3()
+# ===========================================================================
+
 def load_previous_sg_rules_from_s3(bucket, key="state/sg_rules/latest.json"):
-    ...
-```
+    """
+    Load the SG_RULES manifest from the previous pipeline (pipeline N).
 
-Returns:
-- dict of previous rules  
-- or `{}` if file does not exist
+    This file is stored in S3 and represents the authoritative SG_RULES
+    from the *last* pipeline run. It is used by module2 to compute:
 
----
+        delta_delete = previous_rules - current_rules
 
-###### 2. load_delta_delete_from_s3()  
-Loads the delta_delete manifest from S3.
+    Behavior:
+        • If the file exists → return parsed JSON (list of rule dicts)
+        • If the file does NOT exist → return {} (first pipeline run)
 
-```
-def load_delta_delete_from_s3(bucket, key="state/sg_rules/delta_delete.json"):
-    ...
-```
+    Parameters:
+        bucket (str): S3 bucket name
+        key (str): S3 key for the manifest (default: latest.json)
 
-Returns:
-- list/dict of rules to delete  
-- or `{}` if file does not exist  
+    Returns:
+        dict or list: previous SG rules, or {} if not found
 
----
+    Notes:
+        - This function must NEVER throw an exception for missing files.
+        - Module2 relies on {} to indicate "no previous state".
+    """
+    import boto3
+    import json
 
-###### 3. save_current_sg_rules_to_s3()
-Writes the current SG_RULES to S3 as the new authoritative manifest.
+    s3 = boto3.client("s3")
 
-```
+    try:
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        body = obj["Body"].read().decode("utf-8")
+        rules = json.loads(body)
+
+        if isinstance(rules, list):
+            print(f"[utils_sg_state] Loaded previous SG_RULES from s3://{bucket}/{key}")
+            return rules
+
+        print(f"[utils_sg_state] WARNING: SG_RULES file exists but is not a list — returning empty dict")
+        return {}
+
+    except s3.exceptions.NoSuchKey:
+        print(f"[utils_sg_state] No previous SG_RULES found in S3 — returning empty dict")
+        return {}
+
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR loading previous SG_RULES from S3: {e}")
+        return {}
+
+
+
+
+
+
+# ===========================================================================
+# 2. save_current_sg_rules_to_s3()
+# ===========================================================================
+
 def save_current_sg_rules_to_s3(bucket, rules, key="state/sg_rules/latest.json"):
-    ...
-```
+    """
+    Save the *current* pipeline's SG_RULES (pipeline N+1) to S3.
 
----
+    This overwrites the previous manifest and becomes the new
+    authoritative state for the next pipeline run.
 
-###### 4. save_delta_delete_to_s3()
-Stores the computed delta_delete for module2e replay.
+    Parameters:
+        bucket (str): S3 bucket name
+        rules (list): List of SG rule dicts (SG_RULES)
+        key (str): S3 key to write to
 
-```
+    Notes:
+        - This is called AFTER delta_delete is computed.
+        - This file is always overwritten (no versioning needed).
+    """
+    import boto3
+    import json
+
+    s3 = boto3.client("s3")
+
+    try:
+        body = json.dumps(rules, indent=2)
+        s3.put_object(Bucket=bucket, Key=key, Body=body.encode("utf-8"))
+        print(f"[utils_sg_state] Uploaded SG_RULES to s3://{bucket}/{key}")
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR saving SG_RULES to S3: {e}")
+
+
+# ===========================================================================
+# 3. save_delta_delete_to_s3()
+# ===========================================================================
+
 def save_delta_delete_to_s3(bucket, delta, key="state/sg_rules/delta_delete.json"):
-    ...
-```
+    """
+    Save the delta_delete list to S3.
 
----
+    delta_delete is defined as:
 
-##### Delta Computation
+        previous_rules - current_rules
 
-###### 5. compute_delta_delete(previous_rules, current_rules)
-Computes the rules that must be removed.
+    These are the rules that must be removed from AWS SGs.
 
-```
+    Module2e uses this file to delete stale rules after rebooting ghost nodes.
+
+    Parameters:
+        bucket (str): S3 bucket name
+        delta (list): List of rule dicts to delete
+        key (str): S3 key to write to
+    """
+
+    import boto3
+    import json
+
+    s3 = boto3.client("s3")
+
+    try:
+        body = json.dumps(delta, indent=2)
+        s3.put_object(Bucket=bucket, Key=key, Body=body.encode("utf-8"))
+        print(f"[utils_sg_state] Uploaded delta_delete → s3://{bucket}/{key}")
+        print(f"[utils_sg_state] Delta count saved: {len(delta)}")
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR saving delta_delete to S3: {e}")
+
+
+# ===========================================================================
+# 4. compute_delta_delete()
+# ===========================================================================
+
 def compute_delta_delete(previous_rules, current_rules):
-    ...
-```
+    """
+    Compute the delta_delete set:
 
-Definition:
+        delta_delete = previous_rules - current_rules
 
-```
-delta_delete = previous_rules - current_rules
-```
+    This function must:
+        • Normalize rule formats (tuple or dict)
+        • Compare previous vs current
+        • Return only rules that were removed
 
----
+    Parameters:
+        previous_rules (list): SG rules from pipeline N
+        current_rules  (list): SG_RULES from pipeline N+1
 
-##### SG Rule Application (inside tomcat_worker)
+    Returns:
+        list: rules that must be deleted from AWS SGs
 
-###### 6. apply_sg_rules_add(ec2, sg_id, current_rules)
-Reapplies all SG_RULES.
+    Notes:
+        - delta_add is intentionally NOT computed.
+        - Module2 always reapplies ALL SG_RULES, so delta_add is irrelevant.
 
-```
-def apply_sg_rules_add(ec2, sg_id, rules):
-    ...
-```
+    Rules are dicts of the form:
+        {"protocol": "tcp", "port": 22, "cidr": "0.0.0.0/0"}
 
----
+    Normalization is done inline (no helper function).
+    """
 
-###### 7. apply_sg_rules_delete(ec2, sg_id, delta_delete)
-Deletes stale rules.
+    def normalize(rule):
+        """Inline normalization → convert rule dict to a comparable tuple."""
+        try:
+            return (
+                rule.get("protocol"),
+                int(rule.get("port")),
+                rule.get("cidr")
+            )
+        except Exception:
+            # If rule is malformed, return None so it never matches
+            return None
 
-```
-def apply_sg_rules_delete(ec2, sg_id, delta_delete):
-    ...
-```
+    # Normalize both sets
+    prev_norm = {normalize(r): r for r in previous_rules if normalize(r)}
+    curr_norm = {normalize(r): r for r in current_rules if normalize(r)}
 
----
+    # Compute delta: rules present before but not now
+    delta_norm = set(prev_norm.keys()) - set(curr_norm.keys())
 
-##### Drift Detection
+    # Convert back to full rule dicts
+    delta_delete = [prev_norm[n] for n in delta_norm]
 
-###### 8. detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete)
-Used in main() after multiprocessing completes.
+    print(f"[utils_sg_state] compute_delta_delete → {len(delta_delete)} rules to delete")
 
-```
+    # Print each rule for forensic clarity
+    for rule in delta_delete:
+        print(f"[utils_sg_state] DELTA_DELETE → {rule}")
+
+    return delta_delete
+
+
+# ===========================================================================
+# 5. detect_sg_drift_with_delta()
+# ===========================================================================
+
 def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
-    ...
+    """
+    Perform drift detection using BOTH:
+        • current_rules (desired state)
+        • delta_delete (rules that should have been removed)
+
+    Drift categories:
+        - Missing rules (should be present but aren't)
+        - Stale rules (should have been deleted but still exist)
+        - Unexpected rules (optional: rules not in desired state)
+
+    Parameters:
+        ec2  : boto3 EC2 client
+        sg_id (str): Security group ID
+        current_rules (list): SG_RULES for pipeline N+1
+        delta_delete (list): Rules expected to be deleted
+
+    Returns:
+        dict containing:
+            {
+                "missing": [...],
+                "stale": [...],
+                "unexpected": [...]
+            }
+
+    Notes:
+        - This replaces the old detect_sg_drift() in module2.
+        - This is the authoritative drift detector for the new design.
+    """
+    pass
+XXXXXXXXXXXXX
 ```
 
-This detects:
-
-- Missing rules  
-- Stale rules that failed deletion  
-- Unexpected rules
-
----
-
-##### Module2e Helpers
-
-Module2e uses the same helpers, plus:
-
-###### 9. replay_sg_rules_for_resurrection(ec2, sg_id, current_rules, delta_delete)
-Used after rebooting ghost nodes.
-
-```
-def replay_sg_rules_for_resurrection(ec2, sg_id, current_rules, delta_delete):
-    ...
-```
 
 ---
 
