@@ -490,10 +490,11 @@ s3://<bucket>/state/sg_rules/latest.json
 - This overwrites the previous manifest.  
 - This is intentional — we only need the most recent state.
 - This is performed in main() intentionally AFTER multiprocessing.Pool call to tomcat_worker has finished processing all initial wave
-and pooled processes. Even if there are unique sg_ids per process, there is only one authoritative list of rules or list of security groups
+and pooled processes. 
+- Even if there are unique sg_ids per process, there is only one authoritative list of rules or list of security groups
 (if multiple security groups support is added), and this is always hardcoded in the module2 and only needs to be written one time to S3
-For the current pipeline run N+1, latest.json is the previous pipeline run N SG_RULES
-- Once main() overwrites this file, moodule2e sees latest.json as the current pipeline N_1 SG_RULES
+- For the current pipeline run N+1, latest.json is the previous pipeline run N SG_RULES
+- Once main() overwrites this file, moodule2e sees latest.json as the current pipeline N+1 SG_RULES
 - This is explained in the sections below.
 
 ---
@@ -538,13 +539,14 @@ This works for ghosts and all other resurrection bucket types.
 Because both **module2** (multiprocessing orchestration layer) and **module2e** (post‑reboot SG replay layer) require identical logic for SG rule persistence, delta computation, and drift detection, all SG‑state helper functions are implemented in a shared utility module:
 
 These helper functions are implemented in a shared utility module in case they need to be used outside of module2.  Module2e requires some of the
-smae functionality that these functions performe, and can call these functions if required, but currently module2e natively gets the S3 state
+same functionality that these functions perform, and can call these functions if required, but currently module2e natively gets the S3 state
 files without the use of these functions for simplicity. 
 
 
 ```
 sequential_master_modules/utils_sg_state.py
 ```
+
 There are 5 helper functions that will be used in the SG stateful design. These are in the utils_sg_state.py file below: 
 
 
@@ -875,7 +877,7 @@ No versioning, no timestamps, no lineage is required at this time.
 
 
 
-### Part7: Stateful Security Group (SG) Rule System — Code Architecture Overview**
+### Part7: Stateful Security Group (SG) Rule System — Code Architecture Overview
 
 This section documents the finalized design for the **stateful SG rule system** used across:
 
@@ -896,7 +898,7 @@ state/sg_rules/delta_delete.json ← rules removed between pipelines
 
 The file `latest.json` plays **two different roles** depending on *when* (temporal) it is read.
 
-**In module2 (during pipeline N+1 execution):
+In module2 (during pipeline N+1 execution):
 `latest.json` contains the **previous pipeline’s SG_RULES** (pipeline N).  
 Module2 uses this to compute:
 
@@ -926,7 +928,8 @@ This ensures:
 
 - module2 always compares N vs N+1 (using latest.json and SG_RULES to compute the delta_delete) 
 - module2e always replays the final N+1 rules  (and uses delta_delete to fully update the security group rules on AWS that are consistent with
-those updated by module2. Consistency between the modules across pipeline runs is the key to a stateful SG rule application design).
+those updated by module2). 
+- Consistency between the modules across pipeline runs is the key to a stateful SG rule application design.
 
 ---
 
@@ -1011,7 +1014,7 @@ Module2e runs *after* module2 has overwritten `latest.json` with the current pip
 > Ghost nodes reboot first; once all reboots complete, SG rules are applied to *every* node in the module2e registry.  
 > This guarantees that all problematic nodes entering module2f have converged to the correct SG state.
 
-**module2e steps:
+**module2e steps:**
 
 1. **Reboot all ghost nodes**  
    - Wait for all rebooted nodes to return  
@@ -1036,7 +1039,7 @@ Module2e runs *after* module2 has overwritten `latest.json` with the current pip
 
 ---
 
-##### 3.3 module2f**
+##### 3.3 module2f
 
 - Performs resurrection logic  
 - No SG state operations  
@@ -1060,7 +1063,7 @@ Module2e runs *after* module2 has overwritten `latest.json` with the current pip
 
 ---
 
-#### 5. State Machine Summary**
+#### 5. State Machine Summary
 
 The entire SG state machine is driven by:
 
