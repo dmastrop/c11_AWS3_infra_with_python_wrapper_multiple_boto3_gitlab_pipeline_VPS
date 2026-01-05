@@ -276,6 +276,8 @@ STATUS_TAGS = {
 ## version consolidating the rules across tomcat_worker rule application and the manifest creation done in main() after 
 ## multiprocesing.Pool call to tomcat_worker_wrapper is complete. The helper function called from main()
 ## write_sg_rule_manifest() has  been refactored to use this SG_RULES
+## no change
+
 SG_RULES = [
     {"protocol": "tcp", "port": 22,   "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 80,   "cidr": "0.0.0.0/0"},
