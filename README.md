@@ -390,7 +390,7 @@ state.  All stateful logs and manifests will be written to S3. Some of the curre
 be copied to S3 on a per pipeline basis if required for more advanced stateful restoration.
 
 
-#### A note on the ovarall design of this system in regards to stateful design considerations
+#### A note on the overall design of this system in regards to stateful design considerations
 
 It is important to note the overall design of this system. The VPS host runs gitlab in a docker container and the gitlab
 runner runs locally on the VPS host. The pipelines that run on gitlab (the gitlab runner) run the code on a docker container
@@ -440,7 +440,7 @@ A conceptual S3 keying scheme to track pipeline SG_RULES manifests would look so
 
 
 This section defines the **stateful security‑group rule system** used across module2 → module2e → module2f.  
-It includes the **core workflow**, and the  **helper functions**, and the **storage model** used for SG rule persistence and replay.
+It includes the **core workflow**, and the **storage model** used for SG rule persistence and replay.
 
 
 ##### 1. Retrieve previous pipeline SG_RULES from S3 (pipeline N → used by pipeline N+1) inside tomcat_worker()
@@ -532,8 +532,93 @@ This works for ghosts and all other resurrection bucket types.
 
 ---
 
-#### Helper Functions (Final Names & Responsibilities)
 
+
+##### Storage Model (Final)
+
+```
+s3://<bucket>/state/sg_rules/latest.json        ← current SG_RULES
+s3://<bucket>/state/sg_rules/delta_delete.json ← rules removed this run
+```
+
+No versioning, no timestamps, no lineage is required at this time.
+
+
+
+
+
+
+### Part7: Stateful Security Group (SG) Rule System — Code Architecture Overview
+
+This section documents the finalized design for the **stateful SG rule system** used across:
+
+- **module2** (multiprocessing orchestration)  
+- **module2e** (post‑reboot SG replay)  
+- **module2f** (resurrection)  
+
+The system maintains SG rule state across pipelines using two S3 files:
+
+```
+state/sg_rules/latest.json        ← SG_RULES snapshot
+state/sg_rules/delta_delete.json ← rules removed between pipelines
+```
+
+---
+
+#### 1. Key Concept: The Dual Meaning of latest.json
+
+The file `latest.json` plays **two different roles** depending on *when* (temporal) it is read.
+
+In module2 (during pipeline N+1 execution):
+`latest.json` contains the **previous pipeline’s SG_RULES** (pipeline N).  
+Module2 uses this to compute:
+
+```
+delta_delete = previous_rules (latest.json) – SG_RULES (current pipeline)
+```
+
+**In module2e (after module2 completes):**
+`latest.json` contains the **current pipeline’s SG_RULES** (pipeline N+1).  
+This is because **main() overwrites latest.json** *after* all tomcat_worker processes finish.
+
+This is by design so that only one state, latest.json, needs to be maintained in the S3 bucket.
+
+Module2e uses this updated file as the authoritative ruleset to replay after reboot.
+
+**This temporal transition is the core of the design:**
+
+```
+Before module2 runs:
+    latest.json = SG_RULES from pipeline N
+
+After module2 finishes:
+    latest.json = SG_RULES from pipeline N+1   (written by main())
+```
+
+This ensures:
+
+- module2 always compares N vs N+1 (using latest.json and SG_RULES to compute the delta_delete) 
+- module2e always replays the final N+1 rules  (and uses delta_delete to fully update the security group rules on AWS that are consistent with
+those updated by module2). 
+- Consistency between the modules across pipeline runs is the key to a stateful SG rule application design.
+
+---
+
+#### 2. Helper Functions (utils_sg_state.py)
+
+Only five helper functions are required as noted in the earlier section: 
+
+**Used inside module2 / tomcat_worker**
+- `load_previous_sg_rules_from_s3`  
+- `compute_delta_delete`  
+- `save_delta_delete_to_s3`  
+
+**Used inside module2 / main**
+- `save_current_sg_rules_to_s3`  
+- `detect_sg_drift_with_delta`  
+
+**Not used by module2e**
+Module2e loads both JSON files directly from S3 for clarity.
 
 
 Because both **module2** (multiprocessing orchestration layer) and **module2e** (post‑reboot SG replay layer) require identical logic for SG rule persistence, delta computation, and drift detection, all SG‑state helper functions are implemented in a shared utility module:
@@ -542,9 +627,24 @@ These helper functions are implemented in a shared utility module in case they n
 same functionality that these functions perform, and can call these functions if required, but currently module2e natively gets the S3 state
 files without the use of these functions for simplicity. 
 
+The helper functions are defined here in the python sequential_master__modules package: 
 
 ```
 sequential_master_modules/utils_sg_state.py
+```
+**Import of the utils_sg_state.py file in module2**
+
+
+Module2 is the only module right now that uses the helper functions: 
+```
+# Shared SG state helpers for stateful SG rule management (module2 + module2e)
+from sequential_master_modules.utils_sg_state import (
+    load_previous_sg_rules_from_s3,
+    save_current_sg_rules_to_s3,
+    save_delta_delete_to_s3,
+    compute_delta_delete,
+    detect_sg_drift_with_delta,
+)
 ```
 
 There are 5 helper functions that will be used in the SG stateful design. These are in the utils_sg_state.py file below: 
@@ -845,109 +945,7 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 XXXXXXXXXXXXX
 ```
 
-##### import of the utils_sg_state.py file in module2:
 
-
-Module2 is the only module right now that uses the helper functions: 
-```
-# Shared SG state helpers for stateful SG rule management (module2 + module2e)
-from sequential_master_modules.utils_sg_state import (
-    load_previous_sg_rules_from_s3,
-    save_current_sg_rules_to_s3,
-    save_delta_delete_to_s3,
-    compute_delta_delete,
-    detect_sg_drift_with_delta,
-)
-```
-
-
-
-
-##### Storage Model (Final)
-
-```
-s3://<bucket>/state/sg_rules/latest.json        ← current SG_RULES
-s3://<bucket>/state/sg_rules/delta_delete.json ← rules removed this run
-```
-
-No versioning, no timestamps, no lineage is required at this time.
-
-
-
-
-
-
-### Part7: Stateful Security Group (SG) Rule System — Code Architecture Overview
-
-This section documents the finalized design for the **stateful SG rule system** used across:
-
-- **module2** (multiprocessing orchestration)  
-- **module2e** (post‑reboot SG replay)  
-- **module2f** (resurrection)  
-
-The system maintains SG rule state across pipelines using two S3 files:
-
-```
-state/sg_rules/latest.json        ← SG_RULES snapshot
-state/sg_rules/delta_delete.json ← rules removed between pipelines
-```
-
----
-
-#### 1. Key Concept: The Dual Meaning of latest.json
-
-The file `latest.json` plays **two different roles** depending on *when* (temporal) it is read.
-
-In module2 (during pipeline N+1 execution):
-`latest.json` contains the **previous pipeline’s SG_RULES** (pipeline N).  
-Module2 uses this to compute:
-
-```
-delta_delete = previous_rules (latest.json) – SG_RULES (current pipeline)
-```
-
-**In module2e (after module2 completes):**
-`latest.json` contains the **current pipeline’s SG_RULES** (pipeline N+1).  
-This is because **main() overwrites latest.json** *after* all tomcat_worker processes finish.
-
-This is by design so that only one state, latest.json, needs to be maintained in the S3 bucket.
-
-Module2e uses this updated file as the authoritative ruleset to replay after reboot.
-
-**This temporal transition is the core of the design:**
-
-```
-Before module2 runs:
-    latest.json = SG_RULES from pipeline N
-
-After module2 finishes:
-    latest.json = SG_RULES from pipeline N+1   (written by main())
-```
-
-This ensures:
-
-- module2 always compares N vs N+1 (using latest.json and SG_RULES to compute the delta_delete) 
-- module2e always replays the final N+1 rules  (and uses delta_delete to fully update the security group rules on AWS that are consistent with
-those updated by module2). 
-- Consistency between the modules across pipeline runs is the key to a stateful SG rule application design.
-
----
-
-#### 2. Helper Functions (utils_sg_state.py)
-
-Only five helper functions are required as noted in the earlier section: 
-
-**Used inside module2 / tomcat_worker**
-- `load_previous_sg_rules_from_s3`  
-- `compute_delta_delete`  
-- `save_delta_delete_to_s3`  
-
-**Used inside module2 / main**
-- `save_current_sg_rules_to_s3`  
-- `detect_sg_drift_with_delta`  
-
-**Not used by module2e**
-Module2e loads both JSON files directly from S3 for clarity.
 
 ---
 
