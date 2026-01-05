@@ -3737,7 +3737,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+    ## [tomcat_worker]
     ## native commands in tomcat_worker to be used with the strace wrapper function (in place of commands block above):
 
     native_commands = [
@@ -4015,6 +4015,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     ###### add DEBUGX for the SG issue at scale that we are seeing. 
     print(f"[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = {security_group_ids}")
 
+
+    #### [tomcat_worker] ****
+    #### add the expected command count here (as well as in install_tomcat). The ensures that even if all the threads crash
+    #### that module2c will still be able to access the expected command count when it does the gitlab console log scan of 
+    #### module2 stuff.
+
+    commands = [wrap_command(cmd) for cmd in native_commands]
+
+    # Emit expected command count for module2c
+    print(f"[tomcat_worker] expected command count is : {len(commands)}")
 
 
 
@@ -4754,6 +4764,21 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     def install_tomcat(ip, private_ip, instance_id, WATCHDOG_TIMEOUT):    
         import uuid 
         
+        #### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
+        #### The helper functions wrap_command and should_wrap and the native_commands list that is from the original commands list
+        #### are at the top of this module but later on will modularize the wrap command so that it can be used with other 
+        #### service installations like gitlab and mariadb, etc....
+        #### The commands is used in the for idx loop later on in install_tomcat (see below)
+
+        commands = [wrap_command(cmd) for cmd in native_commands]
+
+        # Emit expected command count for module2c
+        print(f"[install_tomcat] expected command count is : {len(commands)}")
+        
+
+
+
+
         ##### This code below is a synthetic crash injection to test the futures thread crash code that has been added in the 
         ##### resurrection_monitor_patch8.  The ghost detection logic and resurrection candidate logic is in that function.
         ##### prior to the fix, the ghost detection logic was too aggressive, marking instalL_failed registry_entry as ghost.
@@ -4766,6 +4791,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #### with the tags indicating that it is a futures crash. The flag FORCE_TOMCAT_FAIL is set in .gitlab-ci.yml file and imported
         #### as in env variable. It will force all the processes/threads in the execution run to fail. There will be no install_success
         #### on any of the threads.
+       
         #if os.getenv("FORCE_TOMCAT_FAIL", "false").lower() in ("1", "true"):
         #    raise RuntimeError("Synthetic failure for testing")
 
@@ -5336,16 +5362,19 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+        ##### comment out this and move this to the top of def install_tomcat (see above). This is so that even if the SSH init
+        ##### futures crashes on ALL threads, the commands length for module2c will still be available
 
-        #### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
-        #### The helper functions wrap_command and should_wrap and the native_commands list that is from the original commands list
-        #### are at the top of this module but later on will modularize the wrap command so that it can be used with other 
-        #### service installations like gitlab and mariadb, etc....
+        ##### this introduces the wrap command that will look for bash and bash-like commands and wrap them in the strace transform
+        ##### The helper functions wrap_command and should_wrap and the native_commands list that is from the original commands list
+        ##### are at the top of this module but later on will modularize the wrap command so that it can be used with other 
+        ##### service installations like gitlab and mariadb, etc....
+        ##### The commands is used in the for idx loop later on in install_tomcat (see below)
 
-        commands = [wrap_command(cmd) for cmd in native_commands]
+        #commands = [wrap_command(cmd) for cmd in native_commands]
 
-        # Emit expected command count for module2c
-        print(f"expected command count is : {len(commands)}")
+        ## Emit expected command count for module2c
+        #print(f"[install_tomcat] expected command count is : {len(commands)}")
 
 
 
