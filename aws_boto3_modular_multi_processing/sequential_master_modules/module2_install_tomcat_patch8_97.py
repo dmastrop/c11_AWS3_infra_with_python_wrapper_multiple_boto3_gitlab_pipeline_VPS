@@ -4062,71 +4062,79 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-    #### [tomcat_worker] COPY of original code to work on SG_STATE design ####
-    
-    ###########################################################################
-    # [module2_orchestration_level_SG_manifest] SECURITY GROUP RULE APPLICATION
-    #
-    # This block replaces the old SG_RULES loop entirely.
-    # This new code  has the diff logic for detecting rules to remove relative to old pipeline SG_RULES when
-    # compared to current pipeline SG_RULES.
-    #
-    # DESIGN PRINCIPLES:
-    #   • SG_RULES (current pipeline run) = desired state
-    #   • Previous manifest = previous desired state
-    #   • AWS is NOT authoritative (AWS may contain manual rules like 443)
-    #
-    # Therefore:
-    #   • Reapply ALL SG_RULES (add/apply)
-    #   • Remove ONLY rules that were in the previous manifest but NOT in SG_RULES
-    #   • Leave all AWS‑extra rules untouched (e.g., 443)
-    #
-    #   • rules_to_add is NOT used — SG_RULES loop already applies everything
-    #
-    ###########################################################################
+    #### [tomcat_worker] SG_STATE — STEP 4: APPLY + DELETE (Stateful SG Rule Application)
+    #### This block replaces the legacy Step 1/Step 2 SG rule logic.
+    #### It uses:
+    ####   • SG_RULES (current pipeline N+1 desired state)
+    ####   • delta_delete.json (rules removed from pipeline N → N+1)
+    ####   • latest.json is NOT used here (it is previous state, only used for delta computation)
+    ####
+    #### This block MUST:
+    ####   • Apply ALL SG_RULES (idempotent, safe, required for multiprocessing correctness)
+    ####   • Delete ALL rules in delta_delete.json (the authoritative “rules to remove”)
+    ####   • Preserve adaptive watchdog + retry logic
+    ####   • Preserve per‑process SG loop structure
+    ####   • Use [SG_STATE] logs for clarity and grep‑ability
+    ####
+    #### This is Step 4 of the SG_STATE architecture:
+    ####   Step 1: load previous_rules (done earlier)
+    ####   Step 2: main() writes SG_RULES → latest.json (after all processes finish)
+    ####   Step 3: compute + save delta_delete.json (done earlier)
+    ####   Step 4: apply SG_RULES + delete delta_delete (THIS BLOCK)
+    #### ----------------------------------------------------------------------
 
     # ------------------------------------------------------------
-    # Load previous manifest (previous desired state)
+    # Load delta_delete.json from S3 (authoritative rules to remove)
     # ------------------------------------------------------------
-    previous_manifest_path = "/aws_EC2/logs/orchestration_sg_rules_module2.json"
-    old_rules = []
+    print(f"[SG_STATE] Loading delta_delete.json from S3 for this process…")
 
-    if os.path.exists(previous_manifest_path):
+    bucket_name = os.getenv("SG_RULES_S3_BUCKET")
+    if not bucket_name:
+        print("[SG_STATE] ERROR: SG_RULES_S3_BUCKET is not set — cannot load delta_delete.json")
+        delta_delete = []
+    else:
         try:
-            with open(previous_manifest_path, "r") as f:
-                prev = json.load(f)
-                old_rules = prev.get("ingress_rules", [])
+            s3 = boto3.client("s3")
+            delta_obj = s3.get_object(
+                Bucket=bucket_name,
+                Key="state/sg_rules/delta_delete.json"
+            )
+            delta_delete = json.loads(delta_obj["Body"].read().decode("utf-8"))
+            print(f"[SG_STATE] Loaded {len(delta_delete)} delta_delete rules from S3 bucket '{bucket_name}'")
         except Exception as e:
-            print(f"[module2_orchestration_level_SG_manifest_WARNING] Failed to load previous manifest: {e}")
+            print(f"[SG_STATE_ERROR] Failed to load delta_delete.json from S3 bucket '{bucket_name}': {e}")
+            delta_delete = []
 
-    # Normalize rules into comparable tuples
-    def rule_key(r):
-        return (r["protocol"], r["port"], r["cidr"])
+    # Normalize delta_delete into comparable tuples for deletion loop
+    def normalize_delta(rule):
+        try:
+            return (
+                rule.get("protocol"),
+                int(rule.get("port")),
+                rule.get("cidr")
+            )
+        except Exception:
+            return None
 
-    old_set = {rule_key(r) for r in old_rules}
-    new_set = {rule_key(r) for r in SG_RULES}
+    delta_delete_norm = [
+        normalize_delta(r) for r in delta_delete if normalize_delta(r)
+    ]
 
-    # Compute diffs
-    rules_to_remove = old_set - new_set   # e.g., {(tcp, 5555, 0.0.0.0/0)}
-    # rules_to_add = new_set - old_set    # REDUNDANT — SG_RULES loop already applies all desired rules
-
-    print(f"[module2_orchestration_level_SG_manifest_DIFF] rules_to_remove = {rules_to_remove}")
-    # print(f"[module2_orchestration_level_SG_manifest_DIFF] rules_to_add = {rules_to_add}")  # intentionally unused
-
+    print(f"[SG_STATE] Normalized delta_delete rules: {delta_delete_norm}")
 
     ###########################################################################
-    # STEP 1 — APPLY ALL RULES IN SG_RULES (desired state)
+    # STEP 4A — APPLY ALL RULES IN SG_RULES (desired state)
     #
+    # This is identical to the legacy Step 1 logic, but with SG_STATE logs.
     # This ensures:
-    #   • New rules (e.g., 5558) get added
-    #   • Existing rules (22, 80, 8080, 5556, 5557) get re-applied
+    #   • All desired rules are present
+    #   • Multiprocessing correctness (each process reapplies rules)
     #   • Duplicate rules are harmless (AWS returns Duplicate)
-    #
     ###########################################################################
 
     for sg_id in set(security_group_ids):
 
-        print(f"[module2_orchestration_level_SG_manifest_INFO] Processing SG {sg_id} for this process")
+        print(f"[SG_STATE] Processing SG {sg_id} for this process")
 
         for rule in SG_RULES:
 
@@ -4134,8 +4142,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
             try:
                 print(
-                    f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
-                    f"APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
+                    f"[SG_STATE] APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
                 )
 
                 retry_count = retry_with_backoff(
@@ -4150,60 +4157,47 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 )
 
                 print(
-                    f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
-                    f"Successfully applied port {rule['port']} to sg_id={sg_id}"
+                    f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
                 )
 
             except my_ec2.exceptions.ClientError as e:
 
                 if "InvalidPermission.Duplicate" in str(e):
                     print(
-                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
-                        f"Rule already exists sg_id={sg_id}, port={rule['port']}"
+                        f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
                     )
                 else:
                     print(
-                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP_ERROR] "
-                        f"Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
+                        f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
                     )
                     raise
 
             # Always update retry metric
             max_retry_observed = max(max_retry_observed, retry_count)
             print(
-                f"[module2_orchestration_level_SG_manifest_RETRY_METRIC] "
-                f"sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, "
-                f"max_retry_observed={max_retry_observed}"
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
             )
 
-
         #######################################################################
-        # STEP 2 — REMOVE RULES THAT WERE IN THE PREVIOUS MANIFEST BUT ARE
-        #          NOT IN THE CURRENT SG_RULES.
+        # STEP 4B — DELETE RULES IN delta_delete.json
         #
-        # This is the ONLY correct definition of "rules to remove".
-        # rules to remove is defined as the delta between the previous pipeline SG_RULES and the 
-        # current pipeline SG_RULES:  rules_to_remove = old_set - new_set
-        # Since the old_set is in json format and the new_set is a list SG_RULES they are both
-        # normalized so that we can calculate old - new.
+        # This replaces the broken legacy Step 2 logic.
+        # delta_delete.json is the ONLY authoritative source of rules to remove.
         #
         # Example:
-        #   Previous manifest had port 5555
-        #   New SG_RULES removed it
-        #
-        #   → REMOVE 5555
+        #   Pipeline N had port 5555
+        #   Pipeline N+1 removed it from SG_RULES
+        #   delta_delete.json contains {tcp, 5555, 0.0.0.0/0}
         #
         # AWS‑extra rules (e.g., 443) are preserved.
-        #
         #######################################################################
 
-        for proto, port, cidr in rules_to_remove:
+        for proto, port, cidr in delta_delete_norm:
 
             retry_count = 0
 
             print(
-                f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
-                f"REMOVE rule sg_id={sg_id}, port={port}, cidr={cidr}"
+                f"[SG_STATE] DELETE rule sg_id={sg_id}, port={port}, cidr={cidr}"
             )
 
             try:
@@ -4219,38 +4213,29 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 )
 
                 print(
-                    f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
-                    f"Successfully removed obsolete port {port} from sg_id={sg_id}"
+                    f"[SG_STATE] Successfully removed obsolete port {port} from sg_id={sg_id}"
                 )
 
             except my_ec2.exceptions.ClientError as e:
                 if "InvalidPermission.NotFound" in str(e):
                     print(
-                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP] "
-                        f"Rule already absent sg_id={sg_id}, port={port}"
+                        f"[SG_STATE] Rule already absent sg_id={sg_id}, port={port}"
                     )
                 else:
                     print(
-                        f"[module2_orchestration_level_SG_manifest_SECURITY_GROUP_ERROR] "
-                        f"Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
+                        f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
                     )
                     raise
 
             # Update retry metric
             max_retry_observed = max(max_retry_observed, retry_count)
             print(
-                f"[module2_orchestration_level_SG_manifest_RETRY_METRIC] "
-                f"sg_id={sg_id}, port={port} → retry_count={retry_count}, "
-                f"max_retry_observed={max_retry_observed}"
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
             )
 
     ###########################################################################
-    # END OF SG RULE APPLICATION BLOCK
+    # END OF SG_STATE RULE APPLICATION BLOCK (STEP 4)
     ###########################################################################
-
-
-
-
 
 
 
