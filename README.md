@@ -268,7 +268,7 @@ this. These are reviewed below.
 
 
 
-### Part7: Code implemation strategy for the security group (SG) reapplication: Nuances in multi-processing environments
+### Part7: Code implemation strategy for the Stateful security group (SG) reapplication: Nuances in multi-processing environments
 
 
 The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
@@ -286,11 +286,12 @@ the module2e SG rule replay is very simple when compared to that of module2.
 One important takeaway is that module2 tomcat_worker function (a per process function) MUST reapply all the rules to the 
 nodes in that process. This results is a lot of duplicate rules being applied to the same security group (SG), but this 
 needs to be done for the reasons outlined in that UPDATE noted above.   Namely, if we do not reapply the SG rules for each
-process call of tomcat_worker then there can be timing issues and race conditions whereby process1 tries to initate its SSH
+process call of tomcat_worker then there can be timing issues and race conditions whereby process1 tries to initiate its SSH
 connections to its node and apply the commands prior to the rule changes being propagated on the backend AWS API call to all 
 the nodes in that procdess. If the reapply of the rules ot the security group is made for each process prior to its SSH to the 
 nodes, this will always ensure that the rules are applied to the nodes in that process (and all processes in teh exeuction run) 
-prior to each process initiating the SSH connections to each of the nodes in that process. 
+prior to each process initiating the SSH connections to each of the nodes in that process. Timing is critical in multiprocessing, where
+the processes are completely independent of one another.
 
 Note for now, there is just one security group (SG id) for all the nodes in the execution run (fleet) but the code is designed
 from the bottom up to support multiple AND unique security groups per process (sg_ids) in the future. This was discussed briefly in the
@@ -300,8 +301,8 @@ this update.
 There is also an additonal complexity here. The rules will be consolidated into an SG_RULES ENV variable in module2 as part 
 of this implementation. When rules are removed from the SG_RULES, a delta between the previous pipeline SG_RULES and the current
 pipeline SG_RULES must be computed so that the code can invoke the AWS API to delete the proper rule from the SG in AWS. 
-Otherwise the current pipeline has no way of knowing what rule to remove if it is just removed in the SG_RULES of the current 
-pipeline. 
+Otherwise, the current pipeline has no way of knowing what rule to remove if it is just removed in the SG_RULES of the current 
+pipeline. Thus security group rule state across pipelines has to be maintained (pipeline N to pipeline N+1).
 
 So the rule applies are always done on the current SG_RULES even if they are repetitive, and the rule deletes are calculated
 using the delta process above.
@@ -435,33 +436,26 @@ A conceptual S3 keying scheme to track pipeline SG_RULES manifests would look so
    - `state/sg_rules/latest.json` (for the previous pipeline N SG_RULES state; this will be overwritten by the module2 once the delta is calculated)
 
 
-### Part7: Code design detail:
+#### Stateful Security Group Code design task list:
 
-XXXXX NEEDS WORK
-
-
-#### Module2 Stateful SG Rule Management — Implementation (with Helper Functions)
 
 This section defines the **stateful security‑group rule system** used across module2 → module2e → module2f.  
-It includes the **core workflow**, the **exact helper functions**, and the **storage model** used for SG rule persistence and replay.
+It includes the **core workflow**, and the  **helper functions**, and the **storage model** used for SG rule persistence and replay.
 
----
 
-##### Core Tasks for Stateful Design
-
-##### 1. Retrieve previous pipeline SG_RULES from S3 (pipeline N → used by pipeline N+1) 
+##### 1. Retrieve previous pipeline SG_RULES from S3 (pipeline N → used by pipeline N+1) inside tomcat_worker()
 During pipeline N+1, module2 loads the SG rule manifest from the previous run:
 
 ```
 s3://<bucket>/state/sg_rules/latest.json
 ```
 
-If this file does not exist (first run), module2 simply applies the current SG_RULES and stores them.
-This must be done inside tomcat_worker() so that the design is extensible to per process sg ids and multiple sg ids per process
+- If this file does not exist (first run), module2 simply applies the current SG_RULES and stores them.
+- This must be done inside tomcat_worker() so that the design is extensible to a per process sg ids and multiple sg ids per process
 
 ---
 
-##### 2. Compute delta_delete (rules_to_delete) 
+##### 2. Compute delta_delete (rules_to_delete) inside tomcat_worker()
 Inside **tomcat_worker()**, per process and per sg_id:
 
 ```
@@ -481,27 +475,31 @@ For each process:
 1. **Reapply all current SG_RULES** (idempotent, safe, required for multiprocessing correctness)
 2. **Delete all delta_delete rules** (cleanup of stale rules)
 
-This ensures each process independently converges its SG to the correct state.
-This must be done inside tomcat_worker() to support independent SG application and deletion and unique SG ids per process
+- This ensures each process independently converges its SG to the correct state.
+- This must be done inside tomcat_worker() to support independent SG application and deletion and unique SG ids per process
 
 ---
 
-##### 4. Write current SG_RULES to S3 (becomes “previous” for next run) 
-After computing delta_delete, module2 writes:
+##### 4. Write current SG_RULES to S3 (becomes “previous” for next run), in main() afer multiprocessing.Pool
+After computing delta_delete, module2 writes current SG_RULES to S3:
 
 ```
 s3://<bucket>/state/sg_rules/latest.json
 ```
 
-This overwrites the previous manifest.  
-This is intentional — we only need the most recent state.
-This is performed in main() intentionally AFTER multiprocessing.Pool call to tomcat_worker has finished processing all initial wave
-and pooled processes
+- This overwrites the previous manifest.  
+- This is intentional — we only need the most recent state.
+- This is performed in main() intentionally AFTER multiprocessing.Pool call to tomcat_worker has finished processing all initial wave
+and pooled processes. Even if there are unique sg_ids per process, there is only one authoritative list of rules or list of security groups
+(if multiple security groups support is added), and this is always hardcoded in the module2 and only needs to be written one time to S3
+For the current pipeline run N+1, latest.json is the previous pipeline run N SG_RULES
+- Once main() overwrites this file, moodule2e sees latest.json as the current pipeline N_1 SG_RULES
+- This is explained in the sections below.
 
 ---
 
-##### 5. Write delta_delete to S3 for module2e replay 
-Module2 also writes:
+##### 5. Write delta_delete to S3 inside tomcat_worker of module2, for replay in module2e
+Module2 writes:
 
 ```
 s3://<bucket>/state/sg_rules/delta_delete.json
@@ -515,7 +513,7 @@ Module2e will use this to remove stale rules on rebooted nodes.
 After multiprocessing.Pool completes:
 
 - Drift = AWS rules – desired state  
-- Desired state = current SG_RULES  
+- Desired state = current SG_RULES list that is at the top of module2  
 - delta_delete is used to detect stale rules that failed deletion
 
 ---
@@ -523,13 +521,13 @@ After multiprocessing.Pool completes:
 ##### 7. Module2e replay 
 When module2e runs:
 
-- It loads **latest.json** (current SG_RULES)
-- It loads **delta_delete.json**
+- It loads **latest.json** directly from S3 (current SG_RULES)
+- It loads **delta_delete.json** direcctly from S3
 - It reapplies all SG_RULES
 - It deletes all delta_delete rules  
 - It then hands control to module2f for resurrection
 
-This works for ghosts and all other resurrection buckets.
+This works for ghosts and all other resurrection bucket types.
 
 ---
 
@@ -538,6 +536,11 @@ This works for ghosts and all other resurrection buckets.
 
 
 Because both **module2** (multiprocessing orchestration layer) and **module2e** (post‑reboot SG replay layer) require identical logic for SG rule persistence, delta computation, and drift detection, all SG‑state helper functions are implemented in a shared utility module:
+
+These helper functions are implemented in a shared utility module in case they need to be used outside of module2.  Module2e requires some of the
+smae functionality that these functions performe, and can call these functions if required, but currently module2e natively gets the S3 state
+files without the use of these functions for simplicity. 
+
 
 ```
 sequential_master_modules/utils_sg_state.py
@@ -840,7 +843,7 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 XXXXXXXXXXXXX
 ```
 
-##### imports
+##### import of the utils_sg_state.py file in module2:
 
 
 Module2 is the only module right now that uses the helper functions: 
@@ -870,7 +873,220 @@ No versioning, no timestamps, no lineage is required at this time.
 
 
 
-XXXXXXXXXX
+
+
+### Part7: Stateful Security Group (SG) Rule System — Code Architecture Overview**
+
+This section documents the finalized design for the **stateful SG rule system** used across:
+
+- **module2** (multiprocessing orchestration)  
+- **module2e** (post‑reboot SG replay)  
+- **module2f** (resurrection)  
+
+The system maintains SG rule state across pipelines using two S3 files:
+
+```
+state/sg_rules/latest.json        ← SG_RULES snapshot
+state/sg_rules/delta_delete.json ← rules removed between pipelines
+```
+
+---
+
+#### 1. Key Concept: The Dual Meaning of latest.json
+
+The file `latest.json` plays **two different roles** depending on *when* (temporal) it is read.
+
+**In module2 (during pipeline N+1 execution):
+`latest.json` contains the **previous pipeline’s SG_RULES** (pipeline N).  
+Module2 uses this to compute:
+
+```
+delta_delete = previous_rules (latest.json) – SG_RULES (current pipeline)
+```
+
+**In module2e (after module2 completes):**
+`latest.json` contains the **current pipeline’s SG_RULES** (pipeline N+1).  
+This is because **main() overwrites latest.json** *after* all tomcat_worker processes finish.
+
+This is by design so that only one state, latest.json, needs to be maintained in the S3 bucket.
+
+Module2e uses this updated file as the authoritative ruleset to replay after reboot.
+
+**This temporal transition is the core of the design:**
+
+```
+Before module2 runs:
+    latest.json = SG_RULES from pipeline N
+
+After module2 finishes:
+    latest.json = SG_RULES from pipeline N+1   (written by main())
+```
+
+This ensures:
+
+- module2 always compares N vs N+1 (using latest.json and SG_RULES to compute the delta_delete) 
+- module2e always replays the final N+1 rules  (and uses delta_delete to fully update the security group rules on AWS that are consistent with
+those updated by module2. Consistency between the modules across pipeline runs is the key to a stateful SG rule application design).
+
+---
+
+#### 2. Helper Functions (utils_sg_state.py)
+
+Only five helper functions are required as noted in the earlier section: 
+
+**Used inside module2 / tomcat_worker**
+- `load_previous_sg_rules_from_s3`  
+- `compute_delta_delete`  
+- `save_delta_delete_to_s3`  
+
+**Used inside module2 / main**
+- `save_current_sg_rules_to_s3`  
+- `detect_sg_drift_with_delta`  
+
+**Not used by module2e**
+Module2e loads both JSON files directly from S3 for clarity.
+
+---
+
+#### 3. Temporal Code Flow (with Helper Function Mapping)
+
+This section shows the exact execution order across `module2`, `module2e`, and `module2f`, and explicitly lists which helper functions are used at each step. Inline SG rule application and deletion are performed inside the existing tomcat_worker SG loop.
+
+---
+
+##### 3.1 module2 (multiprocessing)
+
+**tomcat_worker (per process)**
+
+1. **Load previous SG_RULES (pipeline N)**  
+   **Helper:** `load_previous_sg_rules_from_s3`  
+   ```
+   previous_rules = latest.json (pipeline N)
+   ```
+
+2. **Compute delta_delete**  
+   **Helper:** `compute_delta_delete`  
+   ```
+   delta_delete = previous_rules – SG_RULES
+   ```
+
+3. **Save delta_delete to S3**  
+   **Helper:** `save_delta_delete_to_s3`  
+   ```
+   delta_delete.json written for module2e
+   ```
+
+4. **Apply SG_RULES (pipeline N+1)**  
+   **Operation:** *inline SG loop*  
+   - Applies all rules in `SG_RULES`  
+   - Required for multiprocessing correctness  
+
+5. **Delete delta_delete rules**  
+   **Operation:** *inline SG loop*  
+   - Removes stale rules from AWS SG  
+
+---
+
+**main() (after all processes finish)**
+
+6. **Save current SG_RULES → latest.json (pipeline N+1)**  
+   **Helper:** `save_current_sg_rules_to_s3`  
+   ```
+   latest.json now becomes the authoritative SG_RULES for module2e
+   ```
+
+7. **Run drift detection**  
+   **Helper:** `detect_sg_drift_with_delta`  
+   - Ensures AWS SG matches desired state  
+   - Calculated from (AWS rules list) - (current SG_RULES). 
+   - Any drift is a delta_delete
+---
+
+##### 3.2 module2e (single-threaded)
+
+Module2e runs *after* module2 has overwritten `latest.json` with the current pipeline’s SG_RULES.
+
+**Important behavioral rule:**
+> **Module2e performs a single SG replay phase for *all* resurrection candidates (ghosts, generics, and any future bucket types).**  
+> Ghost nodes reboot first; once all reboots complete, SG rules are applied to *every* node in the module2e registry.  
+> This guarantees that all problematic nodes entering module2f have converged to the correct SG state.
+
+**module2e steps:
+
+1. **Reboot all ghost nodes**  
+   - Wait for all rebooted nodes to return  
+   - Confirm SSH readiness  
+
+2. **Load current SG_RULES**  
+   **Operation:** direct S3 load of the latest.json  
+   ```
+   latest.json = SG_RULES for pipeline N+1
+   ```
+
+3. **Load delta_delete.json**  
+   **Operation:** direct S3 load of delta_delete.json
+
+4. **Apply all rules from latest.json**  
+   **Operation:** *inline SG loop*  
+   - Reapplies all SG_RULES to all resurrection candidates  
+
+5. **Delete all rules from delta_delete.json**  
+   **Operation:** *inline SG loop*  
+   - Removes stale rules from all resurrection candidates  
+
+---
+
+##### 3.3 module2f**
+
+- Performs resurrection logic  
+- No SG state operations  
+
+---
+
+#### 4. Semantic Flow Summary
+
+**module2 / tomcat_worker**
+- previous_rules = latest.json (pipeline N)  
+- current_rules = SG_RULES (pipeline N+1)  
+- delta_delete = previous – current  
+
+**module2 / main**
+- Writes SG_RULES → latest.json (pipeline N+1)  
+
+**module2e**
+- current_rules = latest.json (pipeline N+1)  
+- delta_delete = delta_delete.json  
+- SG replay applied to *all* resurrection candidates  
+
+---
+
+#### 5. State Machine Summary**
+
+The entire SG state machine is driven by:
+
+**Inputs**
+- SG_RULES (in code)  
+- latest.json (previous or current depending on timing)  
+- delta_delete.json  
+
+**Outputs**
+- Updated AWS SG rules  
+- Updated latest.json  
+- Updated delta_delete.json  
+
+**Replay Algorithm (module2e)**
+```
+reboot ghosts
+wait for all to return
+apply all rules in latest.json to all resurrection candidates
+delete all rules in delta_delete.json from all resurrection candidates
+```
+
+This guarantees that every node entering module2f has converged to the correct SG state.
+
+
+
+
 
 ### Part7: Code Review
 
