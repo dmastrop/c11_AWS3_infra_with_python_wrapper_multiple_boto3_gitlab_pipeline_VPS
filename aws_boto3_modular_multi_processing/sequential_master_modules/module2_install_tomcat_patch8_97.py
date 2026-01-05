@@ -4122,6 +4122,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     print(f"[SG_STATE] Normalized delta_delete rules: {delta_delete_norm}")
 
+
+    # SG_STATE summary counters
+    applied_count = 0
+    deleted_count = 0
+    duplicate_skipped = 0
+    absent_skipped = 0
+
+
+
     ###########################################################################
     # STEP 4A — APPLY ALL RULES IN SG_RULES (desired state)
     #
@@ -4159,6 +4168,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print(
                     f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
                 )
+                applied_count += 1
+
 
             except my_ec2.exceptions.ClientError as e:
 
@@ -4166,6 +4177,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     print(
                         f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
                     )
+                    duplicate_skipped += 1
+
                 else:
                     print(
                         f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
@@ -4215,12 +4228,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 print(
                     f"[SG_STATE] Successfully removed obsolete port {port} from sg_id={sg_id}"
                 )
+                deleted_count += 1
 
             except my_ec2.exceptions.ClientError as e:
                 if "InvalidPermission.NotFound" in str(e):
                     print(
                         f"[SG_STATE] Rule already absent sg_id={sg_id}, port={port}"
                     )
+                    absent_skipped += 1
+
                 else:
                     print(
                         f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
@@ -4232,6 +4248,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             print(
                 f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
             )
+
+
+    # ------------------------------------------------------------
+    # SG_STATE Summary for this process
+    # ------------------------------------------------------------
+    print(
+        f"[SG_STATE][SUMMARY][PID {pid}] "
+        f"applied={applied_count}, "
+        f"deleted={deleted_count}, "
+        f"duplicate_skipped={duplicate_skipped}, "
+        f"absent_skipped={absent_skipped}"
+    )
 
     ###########################################################################
     # END OF SG_STATE RULE APPLICATION BLOCK (STEP 4)
