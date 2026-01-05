@@ -324,9 +324,15 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_95.py")
 
-##### THIS IS THE MODULE2 SCRIPT  patch8_95.py. This has the code for refactoring#3 of  the SG rule application and Phase3 SG rule mainifest file (json) creation for module2e replay of SG rules. This new code calculates delta using S3 for stateful SG_RULES across pipeline runs
+###### THIS IS THE MODULE2 SCRIPT  patch8_96.py. This has the code for refactoring#3 of  the SG rule application and Phase3 SG rule mainifest file (json) creation for module2e replay of SG rules. This new code calculates delta using S3 for stateful SG_RULES across pipeline runs
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_96.py")
+
+##### THIS IS THE MODULE2 SCRIPT  patch8_97.py. This has the code for refactoring of the SG rule application loop in tomcat_worker for the stateful SG rule application design
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_96.py")
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_97.py")
+
+
 
 
 
