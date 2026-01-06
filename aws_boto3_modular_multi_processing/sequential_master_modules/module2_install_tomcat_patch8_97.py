@@ -4782,7 +4782,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     # Base delay of 5s + 5s per retry, capped at 60s
     #propagation_delay = min(60, 5 + max_retry_observed * 5)
-    propagation_delay = max(45, max_retry_observed * 5)
+    propagation_delay = max(60, max_retry_observed * 5)
 
     if propagation_delay > 0:
         print(
