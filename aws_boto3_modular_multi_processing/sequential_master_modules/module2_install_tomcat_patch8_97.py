@@ -289,9 +289,10 @@ SG_RULES = [
     #{"protocol": "tcp", "port": 6000, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 6001, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 6002, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 7000, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7000, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7001, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7002, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 7003, "cidr": "0.0.0.0/0"},
 ]
 
 
@@ -4749,7 +4750,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     node_count = int(os.getenv("max_count", "0"))  # fallback to 0 if not set
     instance_type = os.getenv("instance_type", "micro")
 
-    # Calculate adaptive timeout
+
+    # [tomcat_worker]
+    # Calculate adaptive timeout. This is calculated per process
     WATCHDOG_TIMEOUT = get_watchdog_timeout(
         node_count=node_count,
         instance_type=instance_type,
@@ -4759,6 +4762,41 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     print(f"[Dynamic Watchdog] [PID {os.getpid()}] "
           f"instance_type={instance_type}, node_count={node_count}, "
           f"max_retry_observed={max_retry_observed} → WATCHDOG_TIMEOUT={WATCHDOG_TIMEOUT}s")
+
+
+
+
+
+    # [tomcat_worker]
+    # max_retry_observed also used to access propagation delay prior to engaing thread level operations from tomcat_worker via
+    # call to threaded_install
+    # NOTE: these are all per process metrics and not global metrics. The propagation delay, like the adaptive watchdog timeout 
+    # above is a per process metric and under high load (512 nodes, for example) these metrics definitely vary from one process to
+    # another. We are using the same max_retry_observed used above, to now access propagation delay for the SG rule propragation to 
+    # the nodes, prior to engaging thread level operations (for example, SSH, etc).
+    
+    # --- SG revoke/authorize propagation delay (per process) ---
+
+    # SG propagation delay before threaded_install
+    # Scales with contention and prevents premature SSH attempts after revoke
+
+    # Base delay of 5s + 5s per retry, capped at 60s
+    propagation_delay = min(60, 5 + max_retry_observed * 5)
+
+    if propagation_delay > 0:
+        print(
+            f"[SG_PROPAGATION_DELAY] [PID {os.getpid()}] "
+            f"max_retry_observed={max_retry_observed} → sleeping {propagation_delay}s "
+            f"before starting threaded_install"
+        )
+        time.sleep(propagation_delay)
+    else:
+        print(
+            f"[SG_PROPAGATION_DELAY] [PID {os.getpid()}] "
+            f"max_retry_observed={max_retry_observed} → no extra delay"
+        )
+
+
 
 
     #### [tomcat_worker]
