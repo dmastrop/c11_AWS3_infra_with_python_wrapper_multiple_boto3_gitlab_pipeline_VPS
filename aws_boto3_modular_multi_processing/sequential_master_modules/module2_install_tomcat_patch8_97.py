@@ -1108,7 +1108,11 @@ def retry_with_backoff(func, max_retries=15, base_delay=1, max_delay=10, *args, 
 
     for attempt in range(max_retries):
         try:
-            if attempt == 0 and "authorize_security_group_ingress" in func.__name__:
+            # Try injecting synthetic in the revoke path as well for the 16 node futures crash issue.
+            if attempt == 0 and ( "authorize_security_group_ingress" in func.__name__ or "revoke_security_group_ingress" in func.__name__ ):
+
+
+            #if attempt == 0 and "authorize_security_group_ingress" in func.__name__:
                 print(f"[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for {func.__name__}")
 
                 # This is a synthetic injection to test the code. This will induce an attempt count of 1 and a 
