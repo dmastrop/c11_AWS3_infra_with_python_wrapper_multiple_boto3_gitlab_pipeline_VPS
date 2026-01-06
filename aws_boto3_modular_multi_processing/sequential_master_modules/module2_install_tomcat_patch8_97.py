@@ -4153,123 +4153,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         print(f"[SG_STATE] Processing SG {sg_id} for this process")
 
 
-        #### Test out putting step 4B before 4A to resolve timing issue with 16 thread futures crashes.
-
-
-        #######################################################################
-        # STEP 4B — DELETE RULES IN delta_delete.json
-        #
-        # This replaces the broken legacy Step 2 logic.
-        # delta_delete.json is the ONLY authoritative source of rules to remove.
-        #
-        # Example:
-        #   Pipeline N had port 5555
-        #   Pipeline N+1 removed it from SG_RULES
-        #   delta_delete.json contains {tcp, 5555, 0.0.0.0/0}
-        #
-        # AWS‑extra rules (e.g., 443) are preserved.
-        #######################################################################
-
-        for proto, port, cidr in delta_delete_norm:
-
-            retry_count = 0
-
-            print(
-                f"[SG_STATE] DELETE rule sg_id={sg_id}, port={port}, cidr={cidr}"
-            )
-
-            try:
-                retry_count = retry_with_backoff(
-                    my_ec2.revoke_security_group_ingress,
-                    GroupId=sg_id,
-                    IpPermissions=[{
-                        'IpProtocol': proto,
-                        'FromPort': port,
-                        'ToPort': port,
-                        'IpRanges': [{'CidrIp': cidr}]
-                    }]
-                )
-
-                print(
-                    f"[SG_STATE] Successfully removed obsolete port {port} from sg_id={sg_id}"
-                )
-                deleted_count += 1
-
-            except my_ec2.exceptions.ClientError as e:
-                if "InvalidPermission.NotFound" in str(e):
-                    print(
-                        f"[SG_STATE] Rule already absent sg_id={sg_id}, port={port}"
-                    )
-                    absent_skipped += 1
-
-                else:
-                    print(
-                        f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
-                    )
-                    raise
-
-            # Update retry metric
-            max_retry_observed = max(max_retry_observed, retry_count)
-            print(
-                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
-            )
-
-
-        ###########################################################################
-        # STEP 4A — APPLY ALL RULES IN SG_RULES (desired state)
-        #
-        # This is identical to the legacy Step 1 logic, but with SG_STATE logs.
-        # This ensures:
-        #   • All desired rules are present
-        #   • Multiprocessing correctness (each process reapplies rules)
-        #   • Duplicate rules are harmless (AWS returns Duplicate)
-        ###########################################################################
-        for rule in SG_RULES:
-
-            retry_count = 0
-
-            try:
-                print(
-                    f"[SG_STATE] APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
-                )
-
-                retry_count = retry_with_backoff(
-                    my_ec2.authorize_security_group_ingress,
-                    GroupId=sg_id,
-                    IpPermissions=[{
-                        'IpProtocol': rule["protocol"],
-                        'FromPort': rule["port"],
-                        'ToPort': rule["port"],
-                        'IpRanges': [{'CidrIp': rule["cidr"]}]
-                    }]
-                )
-
-                print(
-                    f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
-                )
-                applied_count += 1
-
-
-            except my_ec2.exceptions.ClientError as e:
-
-                if "InvalidPermission.Duplicate" in str(e):
-                    print(
-                        f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
-                    )
-                    duplicate_skipped += 1
-
-                else:
-                    print(
-                        f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
-                    )
-                    raise
-
-            # Always update retry metric
-            max_retry_observed = max(max_retry_observed, retry_count)
-            print(
-                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
-            )
-
+        ##### Test out putting step 4B before 4A to resolve timing issue with 16 thread futures crashes.
 
 
         ########################################################################
@@ -4329,6 +4213,122 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #    print(
         #        f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
         #    )
+
+
+        ###########################################################################
+        # STEP 4A — APPLY ALL RULES IN SG_RULES (desired state)
+        #
+        # This is identical to the legacy Step 1 logic, but with SG_STATE logs.
+        # This ensures:
+        #   • All desired rules are present
+        #   • Multiprocessing correctness (each process reapplies rules)
+        #   • Duplicate rules are harmless (AWS returns Duplicate)
+        ###########################################################################
+        for rule in SG_RULES:
+
+            retry_count = 0
+
+            try:
+                print(
+                    f"[SG_STATE] APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
+                )
+
+                retry_count = retry_with_backoff(
+                    my_ec2.authorize_security_group_ingress,
+                    GroupId=sg_id,
+                    IpPermissions=[{
+                        'IpProtocol': rule["protocol"],
+                        'FromPort': rule["port"],
+                        'ToPort': rule["port"],
+                        'IpRanges': [{'CidrIp': rule["cidr"]}]
+                    }]
+                )
+
+                print(
+                    f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
+                )
+                applied_count += 1
+
+
+            except my_ec2.exceptions.ClientError as e:
+
+                if "InvalidPermission.Duplicate" in str(e):
+                    print(
+                        f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
+                    )
+                    duplicate_skipped += 1
+
+                else:
+                    print(
+                        f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
+                    )
+                    raise
+
+            # Always update retry metric
+            max_retry_observed = max(max_retry_observed, retry_count)
+            print(
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
+            )
+
+
+
+        #######################################################################
+        # STEP 4B — DELETE RULES IN delta_delete.json
+        #
+        # This replaces the broken legacy Step 2 logic.
+        # delta_delete.json is the ONLY authoritative source of rules to remove.
+        #
+        # Example:
+        #   Pipeline N had port 5555
+        #   Pipeline N+1 removed it from SG_RULES
+        #   delta_delete.json contains {tcp, 5555, 0.0.0.0/0}
+        #
+        # AWS‑extra rules (e.g., 443) are preserved.
+        #######################################################################
+
+        for proto, port, cidr in delta_delete_norm:
+
+            retry_count = 0
+
+            print(
+                f"[SG_STATE] DELETE rule sg_id={sg_id}, port={port}, cidr={cidr}"
+            )
+
+            try:
+                retry_count = retry_with_backoff(
+                    my_ec2.revoke_security_group_ingress,
+                    GroupId=sg_id,
+                    IpPermissions=[{
+                        'IpProtocol': proto,
+                        'FromPort': port,
+                        'ToPort': port,
+                        'IpRanges': [{'CidrIp': cidr}]
+                    }]
+                )
+
+                print(
+                    f"[SG_STATE] Successfully removed obsolete port {port} from sg_id={sg_id}"
+                )
+                deleted_count += 1
+
+            except my_ec2.exceptions.ClientError as e:
+                if "InvalidPermission.NotFound" in str(e):
+                    print(
+                        f"[SG_STATE] Rule already absent sg_id={sg_id}, port={port}"
+                    )
+                    absent_skipped += 1
+
+                else:
+                    print(
+                        f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
+                    )
+                    raise
+
+            # Update retry metric
+            max_retry_observed = max(max_retry_observed, retry_count)
+            print(
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
+            )
 
 
     # ------------------------------------------------------------
