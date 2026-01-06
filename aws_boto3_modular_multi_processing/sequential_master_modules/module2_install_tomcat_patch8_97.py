@@ -287,8 +287,10 @@ SG_RULES = [
     {"protocol": "tcp", "port": 5557, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 5558, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 6000, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 6001, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 6001, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 6002, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 7000, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 7001, "cidr": "0.0.0.0/0"},
 ]
 
 
