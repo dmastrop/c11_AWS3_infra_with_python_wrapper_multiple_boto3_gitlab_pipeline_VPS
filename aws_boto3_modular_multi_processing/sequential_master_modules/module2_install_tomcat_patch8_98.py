@@ -4877,6 +4877,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
     #def install_tomcat(ip, private_ip, instance_id):
     ##### Add the WATCHDOG_TIMEOUT to the arg list for install_tomcat (passed from the threaded_install ThreadPoolExecutor
     ##### futures list)
+    
     def install_tomcat(ip, private_ip, instance_id, WATCHDOG_TIMEOUT):    
         import uuid 
         
@@ -4949,7 +4950,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # debug for patch7c issues. We have isolated it to install_tomcat and the thread_registry in threaded_install
         print(f"[TRACE][install_tomcat] Beginning installation on {ip}")
 
-########## this code block is for the SSH connection establishment code  ############
+
+
+
+        ########## this code block is for the SSH connection establishment code  ############
         
         ## comment out this code and replace with the new code below with failure status codes for the registry 
         ## as well as with stub registry protection in case of aborted silent for/else loop.
@@ -4970,9 +4974,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-########## this is the new code for the SSH connection establishment code with registry failure tagging and ###########
-########## with stub registry protection if the for/else loop is abruptly terminated with no exception      ###########
-########## the stub helps a lot with forensic traceability                                                  ###########
+        ########## this is the new code for the SSH connection establishment code with registry failure tagging and ###########
+        ########## with stub registry protection if the for/else loop is abruptly terminated with no exception      ###########
+        ########## the stub helps a lot with forensic traceability                                                  ###########
 
 
 
@@ -5004,38 +5008,41 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 # thrown in the logs if this happens again. The original error without the try/except was a generic thread
                 # exception from threading.Thread
 
-            ##### OLD CODE #####
-            #    def watchdog():
-            #        try:
-            #            time.sleep(30)
-            #            if not ssh_connected:
-            #                pid = multiprocessing.current_process().pid
-            #                if pid:
-            #                    stub_entry = {
-            #                        "status": "stub",
-            #                        "attempt": -1,
-            #                        "pid": pid,
-            #                        "thread_id": threading.get_ident(),
-            #                        "thread_uuid": thread_uuid,
-            #                        "public_ip": ip,
-            #                        "private_ip": private_ip,
-            #                        "timestamp": str(datetime.utcnow()),
-            #                        "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
-            #                    }
-            #                    thread_registry[thread_uuid] = stub_entry
-            #                    return ip, private_ip, stub_entry
-            #        except Exception as e:
-            #            print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
+                ##### OLD CODE #####
+                #def watchdog():
+                #    try:
+                #        time.sleep(30)
+                #        if not ssh_connected:
+                #            pid = multiprocessing.current_process().pid
+                #            if pid:
+                #                stub_entry = {
+                #                    "status": "stub",
+                #                    "attempt": -1,
+                #                    "pid": pid,
+                #                    "thread_id": threading.get_ident(),
+                #                    "thread_uuid": thread_uuid,
+                #                    "public_ip": ip,
+                #                    "private_ip": private_ip,
+                #                    "timestamp": str(datetime.utcnow()),
+                #                    "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                #                }
+                #                thread_registry[thread_uuid] = stub_entry
+                #                return ip, private_ip, stub_entry
+                #    except Exception as e:
+                #        print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
 
-            #    threading.Thread(target=watchdog, daemon=True).start()
-            #    ####### end of watchdog code ##########        
+                #threading.Thread(target=watchdog, daemon=True).start()
+                ######## end of watchdog code ##########        
 
 
-            #    ssh.connect(ip, port, username, key_filename=key_path)
-            #    ssh_connected = True
-            #    ssh_success = True  # suppress stub
-            #    break  # break out of the for attempt(5) loop
-            #
+                #ssh.connect(ip, port, username, key_filename=key_path)
+                #ssh_connected = True
+                #ssh_success = True  # suppress stub
+                #break  # break out of the for attempt(5) loop
+            
+            
+
+            #### OLD CODE ####
             #except paramiko.ssh_exception.NoValidConnectionsError as e:
             #    print(f"Connection failed: {e}")
             #    time.sleep(10)
@@ -5075,7 +5082,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 ssh_connected = True
                 ssh_success = True  # suppress stub
                 break  # break out of the for attempt(5) loop
+            
 
+            #### excepts for the try block in the for attempt in range(5)
             except paramiko.ssh_exception.NoValidConnectionsError as e:
                 print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
                 if attempt == 4:
@@ -5116,8 +5125,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                     continue
+            #### End of try block inside of for attempt in range(5) loop
 
 
+
+        #### else used with the for attempt in range(5) loop and try block above
         else:
             print(f"Failed to connect to {ip} after multiple attempts")
             registry_entry = {
@@ -5153,8 +5165,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 }
                 return ip, private_ip, stub_entry
 
+        #### END of the for attempt in range(5) block #####
 
-########## these old block are for the early installation of tomcat code ###############
+
+
+
+########## these old blocks are for the early installation of tomcat code ###############
 #        for command in commands:
 #            for attempt in range(3):
 #                stdin, stdout, stderr = ssh.exec_command(command)
@@ -5438,14 +5454,18 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 #
 #
 
-## REFACTOR SSH 4 - Phase 2 The new resurrection policy to flag connecitons that have failed 2 watchdog timeouts
-## and update resurrection registry.  Multiple stalls detected. Flagging for resurrection
-## Note the read_output_with_watchdog function and an new function update_resurrection_registry have been added/moved to just
-## above the main tomcat_worker function above. This makes them global so that we can utilize the resurrection monitor
-## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
-## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
-## The read_output_with_watchdog calls the update_resurrection_registry function
+        
 
+
+
+
+        ## REFACTOR SSH 4 - Phase 2 The new resurrection policy to flag connecitons that have failed 2 watchdog timeouts
+        ## and update resurrection registry.  Multiple stalls detected. Flagging for resurrection
+        ## Note the read_output_with_watchdog function and an new function update_resurrection_registry have been added/moved to just
+        ## above the main tomcat_worker function above. This makes them global so that we can utilize the resurrection monitor
+        ## that will log the resurrection registry candidates.   These functions are now global to tomcat_worker (not indented).
+        ## The comment # ------------------ RESURRECTION REGISTRY + WATCHDOG HOOKS ------------------ flags the block.
+        ## The read_output_with_watchdog calls the update_resurrection_registry function
 
 
 
@@ -5517,8 +5537,15 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
+
+
+
+
         #### Beigin the for idx loop which contains the for attempt loop which does the command list iteration
         #NON-Negative testing use this: (and comment out the above)
+        #### The for idx command iteration follows the for attempt in range(5) loop above that establishes the thread level
+        #### SSH connections to the nodes
+
         for idx, command in enumerate(commands):
 
             ## Negative testing:
@@ -5527,8 +5554,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-        ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
-        ## be modified for any command installation type (any application)
+            ## the commands are listed at the top of tomcat_worker(), the calling function. There are 4 of them. These can
+            ## be modified for any command installation type (any application)
+
+            
 
             ##### Synthetic thread futures crash injection at beginning of for idx loop
             print(f"[DEBUG] idx={idx}, FORCE_TOMCAT_FAIL_IDX1={os.getenv('FORCE_TOMCAT_FAIL_IDX1')}")
@@ -5556,13 +5585,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-###### Major overhaul of the "for attempt" command loop below to support whitelist filtering for agnostic output 
-###### flush analysis of thread STDOUT and STDERR so that the registry_entry can be assigned a status
-######  BLOCKS 1, 2,3 and 4 are to be reordered as shown below, and BLOCK 3 is completely replaced with new 
-###### whitelist based decison making. The whitelist is defined at the top of this module APT_WHITELIST_REGEX 
-###### and will be generalized to be stream/app agnostic at some point
-###### The helper function is_whitelisted_line is also defined at the top of this module.
-###### BLOCK number refers to NEW#(ORIGINAL#)
+            ###### Major overhaul of the "for attempt" command loop below to support whitelist filtering for agnostic output 
+            ###### flush analysis of thread STDOUT and STDERR so that the registry_entry can be assigned a status
+            ######  BLOCKS 1, 2,3 and 4 are to be reordered as shown below, and BLOCK 3 is completely replaced with new 
+            ###### whitelist based decison making. The whitelist is defined at the top of this module APT_WHITELIST_REGEX 
+            ###### and will be generalized to be stream/app agnostic at some point
+            ###### The helper function is_whitelisted_line is also defined at the top of this module.
+            ###### BLOCK number refers to NEW#(ORIGINAL#)
 
             for attempt in range(RETRY_LIMIT):
             ## the inner attempt loop will try up to RETRY_LIMIT = 3 number of times to install the particular command
@@ -5571,7 +5600,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                 try:
                     
-#### BLOCK1(1) is the STDOUT and STDERR output flush from read_output_with_watchdog function
+                    #### BLOCK1(1) is the STDOUT and STDERR output flush from read_output_with_watchdog function
 
                     #BLOCK1(1)
 
@@ -5655,11 +5684,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-## Insert BLOCK2(4) here, before the new whitelist code. This is the failure heuristic code.
+                    ## Insert BLOCK2(4) here, before the new whitelist code. This is the failure heuristic code.
 
 
-##### This block BLOCK2(4)needs to be moved after BLOCK1(1) and before BLOCK3(2)
-##### The failure heuristics can be applied without whitelist filtering as these are known errors
+                    ##### This block BLOCK2(4)needs to be moved after BLOCK1(1) and before BLOCK3(2)
+                    ##### The failure heuristics can be applied without whitelist filtering as these are known errors
 
                     # FAILURE HEURISTICS: BLOCK2(4)
 
@@ -5737,11 +5766,11 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-## BLOCK3(2)
-## comment out the entire block below for new code below this.  The new code has new logic based upon STDERR output from
-## read_output_with_watchdog and also using exit_status and the command attempt iteration of this for attempt loop
-## The watchdog in read_output_with_watchdog is designed for stream stall detection and not failure detection.
-## Failure detection is done in the new code in this install_tomcat function.
+                    ## BLOCK3(2)
+                    ## comment out the entire block below for new code below this.  The new code has new logic based upon STDERR output from
+                    ## read_output_with_watchdog and also using exit_status and the command attempt iteration of this for attempt loop
+                    ## The watchdog in read_output_with_watchdog is designed for stream stall detection and not failure detection.
+                    ## Failure detection is done in the new code in this install_tomcat function.
 
                     ### OLD CODE:(this was using the watchdog for failure detection. This does not work right
                     ### only stub the thread if stdout_stalled AND stderr_stalled (from read_output_with_watchdog) AND
@@ -5783,7 +5812,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-#### Comment out original BLOCK3(2)(Below) and replace this with the new whitelist based filtering logic below
+                    #### Comment out original BLOCK3(2)(Below) and replace this with the new whitelist based filtering logic below
 
                     ### NEW REVISED CODE:
                     ### Logic:
@@ -5872,10 +5901,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-##### New whitelist decision making code replacing orignal BLOCK3(2) above. The basic logic constructs are intact with
-##### the exit_status, RETRY_LIMIT, STDERR output being the main decision making criteria, but also adding in the 
-##### whitelist as well, for apps that don't behave well with STDOUT and STDERR channel separation.  With these types of
-##### installs, STDERR is very dirty and needs to be filtered through the whitelist.
+                    ##### New whitelist decision making code replacing orignal BLOCK3(2) above. The basic logic constructs are intact with
+                    ##### the exit_status, RETRY_LIMIT, STDERR output being the main decision making criteria, but also adding in the 
+                    ##### whitelist as well, for apps that don't behave well with STDOUT and STDERR channel separation.  With these types of
+                    ##### installs, STDERR is very dirty and needs to be filtered through the whitelist.
 
 
                     exit_status = stdout.channel.recv_exit_status()
@@ -5925,7 +5954,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
+                    #####################################################
                     ############# New refactored strace code ############
                     # This was done to handle corner cases as well as to integrate with the strace wrapper and pre-processing
                     # functions that are too be added. This block must be placed after the non_whitelisted_lines
@@ -6189,8 +6218,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     #    # write the print above(trace_output) to STDERR
                     #    # Now all the existing complex logic below can be used to filter these types of commands.
 
- 
 
+
+
+
+
+
+                    ###############################################
                     ############ non-strace logic: #################
 
                     #print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
@@ -6293,16 +6327,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         break
 
 
-## This block below is from faiure heuristics BLOCK2(4) above. This is a last resort catchall.
-##- **Edge cases** where `STDERR` is present but doesn’t match any known fatal pattern
-##- **Crash scenarios** where `STDERR` is truncated or malformed
-##- **Future commands** that emit unexpected output not yet covered by heuristics or whitelist
-##- It catches **any `STDERR` that slips through** due to:
-##  - Regex misfires
-##  - Encoding issues
-##  - Unexpected formatting
-##- It acts as a **final safety net** in case the whitelist logic fails silently or doesn’t cover a new edge case
-##- It ensures that **every command attempt is accounted for**, even if something goes wrong mid-evaluation
+                    ## This block below is from faiure heuristics BLOCK2(4) above. This is a last resort catchall.
+                    ##- **Edge cases** where `STDERR` is present but doesn’t match any known fatal pattern
+                    ##- **Crash scenarios** where `STDERR` is truncated or malformed
+                    ##- **Future commands** that emit unexpected output not yet covered by heuristics or whitelist
+                    ##- It catches **any `STDERR` that slips through** due to:
+                    ##  - Regex misfires
+                    ##  - Encoding issues
+                    ##  - Unexpected formatting
+                    ##- It acts as a **final safety net** in case the whitelist logic fails silently or doesn’t cover a new edge case
+                    ##- It ensures that **every command attempt is accounted for**, even if something goes wrong mid-evaluation
 
 
                     ## ⚠️ Unexpected stderr — retry instead of exiting
@@ -6348,40 +6382,43 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
 
-###### Comment out this block 4 for res mon RESMON_8 refactoring
-###### The resurrection_registry has been replaced by the process_registry and the resurrection_gatekeeper original function is
-###### deprecated and no longer valid with the process_registry. The resurrection_gatekeeper will be moved to a separate module2c
-###### and will use inputs from the logs created in modules 2 and 2b to make intelligent decisions
-
-###### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
-#
-#                    ## Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
-#                    ## the relevant arguments for this function call
-#
-#                    # BLOCK4(3)
-#                    should_resurrect = resurrection_gatekeeper(
-#                        stderr_output=stderr_output,
-#                        stdout_output=stdout_output,
-#                        command_status="Command succeeded",
-#                        exit_code=0,  # If you start capturing this via exec_command(), update accordingly
-#                        runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
-#                        pid=multiprocessing.current_process().pid,
-#                        ip_address=ip,
-#                        resurrection_registry=resurrection_registry
-#                    )
-#
-#                    if should_resurrect:
-#                        update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
-#                        print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
-#                    else:
-#                        print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
 
 
 
+                    ###### Comment out this block 4 for res mon RESMON_8 refactoring
+                    ###### The resurrection_registry has been replaced by the process_registry and the resurrection_gatekeeper original function is
+                    ###### deprecated and no longer valid with the process_registry. The resurrection_gatekeeper will be moved to a separate module2c
+                    ###### and will use inputs from the logs created in modules 2 and 2b to make intelligent decisions
+
+                    ##### BLOCK4(3) is the resurrection legacy code. This will be refactored at some point.
+
+                    ### Insert the call to the resurrection_gatekeeper here now that read_output_with_watchdog has collected all 
+                    ### the relevant arguments for this function call
+
+                    ## BLOCK4(3)
+                    #should_resurrect = resurrection_gatekeeper(
+                    #    stderr_output=stderr_output,
+                    #    stdout_output=stdout_output,
+                    #    command_status="Command succeeded",
+                    #    exit_code=0,  # If you start capturing this via exec_command(), update accordingly
+                    #    runtime_seconds=WATCHDOG_TIMEOUT,  # You can optionally measure actual elapsed time if available
+                    #    pid=multiprocessing.current_process().pid,
+                    #    ip_address=ip,
+                    #    resurrection_registry=resurrection_registry
+                    #)
+
+                    #if should_resurrect:
+                    #    update_resurrection_registry(ip, attempt, "gatekeeper_resurrect", pid=multiprocessing.current_process().pid)
+                    #    print(f"[{ip}] 🛑 Resurrection triggered by gatekeeper logic.")
+                    #else:
+                    #    print(f"[{ip}] ✅ Resurrection blocked — gatekeeper verified node success.")
 
 
 
-##### BLOCK5(5) Command succeeded default
+
+
+
+                    ##### BLOCK5(5) Command succeeded default
 
                     print(f"[{ip}] ✅ Command succeeded.")
                     ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
@@ -6401,7 +6438,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-##### except block for the try block above
+                ##### except block for the try block that is inside the for attempt loop that is inside the for idx command loop
 
                 except Exception as e:
                     print(f"[{ip}] 💥 Exception during exec_command (Attempt {attempt + 1}): {e}")
@@ -6433,9 +6470,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-#### finally block for the "for attempt loop"
-#### This executes even if a break or continue in the for attempt loop. We need to clear the trace.log between command
-#### retry attempts
+                #### finally block for the "for attempt loop"
+                #### This executes even if a break or continue in the for attempt loop. We need to clear the trace.log between command
+                #### retry attempts
 
                 finally:
                     stdin.close()
@@ -6448,11 +6485,14 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-                ## END of the for attempt loop 
+                ## END of the for attempt loop that is inside the for idx command loop 
 
 
 
-            # insert patch7b debug here for the inner attempt for loop
+
+
+            # insert patch7b debug here for the inner for  attempt loop above, that is inside the for idx command loop
+
             #print(f"[TRACE][install_tomcat] Attempt loop ended — preparing to return for {ip}")
 
             ## Keep the trace oustide of the failure block below. This is so that each command will get a TRACE message
@@ -6464,8 +6504,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip}")
 
             #print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/4: '{command}' on IP {ip} — Success flag: {command_succeeded}")
-
-
 
             print(f"[TRACE][install_tomcat] Attempt loop exited for command {idx + 1}/{len(commands)}: '{command}' on IP {ip} — Success flag: {command_succeeded}")
 
@@ -6506,8 +6544,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 return ip, private_ip, registry_entry # the return will return this registry_entry to threaded_install()
                 # and the thread_registry, which will be returned to tomcat_worker and incorproated into this process'
                 # process_registry.
-                 
-        # END of the for idx loop
+        
+
+        ########################################
+        ####### END of the for idx loop ########
         # outer for idx loop ends and close the ssh connection if it has successfuly completed all commands execution
 
         ssh.close()
@@ -6627,6 +6667,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #    }
         #    return ip, None, registry_entry
 
+    ######################################################
     ##### END OF install_tomcat() function ends here ######
 
 
