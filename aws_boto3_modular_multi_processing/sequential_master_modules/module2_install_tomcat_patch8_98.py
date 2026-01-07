@@ -292,9 +292,10 @@ SG_RULES = [
     #{"protocol": "tcp", "port": 7000, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 7001, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 7002, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 7003, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7003, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7004, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7005, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 7006, "cidr": "0.0.0.0/0"},
 ]
 
 
@@ -4784,7 +4785,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     # Base delay of 5s + 5s per retry, capped at 60s
     #propagation_delay = min(60, 5 + max_retry_observed * 5)
-    propagation_delay = max(300, max_retry_observed * 5)
+    propagation_delay = max(900, max_retry_observed * 5)
 
     if propagation_delay > 0:
         print(
