@@ -8252,7 +8252,7 @@ def main():
     #### nodes.
     #### For very low scale use desired_count of 2, and max_workers of 1 and chunk_size of 1 so that 1 thread per process and 1
     #### pooled process for the 3rd thread.  3 total nodes in .gitlab-ci.yml
-
+    #### For one node just use desired_count of 1 and chunk_size and max_workers of 1 and 1 total node in .gitlab-ci.yml
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
 
