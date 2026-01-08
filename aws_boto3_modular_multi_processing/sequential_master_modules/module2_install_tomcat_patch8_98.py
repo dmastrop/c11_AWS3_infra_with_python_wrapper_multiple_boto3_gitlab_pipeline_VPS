@@ -5109,7 +5109,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                  
 
            
-            # Insert 2 additional except blocks for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
+            # Insert additional except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
             except TimeoutError as e:
                 elapsed = time.time() - attempt_start
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⏱️ TimeoutError during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
@@ -5131,6 +5131,53 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                     continue
 
+            #### Original except for the try block in the for attempt in range(5)
+            except paramiko.ssh_exception.NoValidConnectionsError as e:
+                print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+            
+
+
+            #### Original except block: this was found during 512 node testing with the pagination code.
+            except EOFError as e:
+                print(f"[{ip}] 💥 EOFError during SSH handshake on attempt {attempt + 1}: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["install_failed", "eof_error", "ssh_failure"]
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
+
+            # Insert seccond  except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE as the catch-all after
+            # the EOFError and NotValidConnectionsError and the TimeoutError
             except Exception as e:
                 elapsed = time.time() - attempt_start
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] �� Unexpected exception during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {type(e).__name__}: {e}")
@@ -5151,54 +5198,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                     continue
-            # End new debug code except blocks for FUTURES_16_NODE_CRASH_SG_REVOKE
+            # End new debug code except blocks for FUTURES_16_NODE_CRASH_SG_REVOKE and original except blocks
 
 
-
-
-
-
-           #### Original excepts for the try block in the for attempt in range(5)
-            except paramiko.ssh_exception.NoValidConnectionsError as e:
-                print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
-                if attempt == 4:
-                    registry_entry = {
-                        "status": "install_failed",
-                        "attempt": attempt,
-                        "pid": multiprocessing.current_process().pid,
-                        "thread_id": threading.get_ident(),
-                        "thread_uuid": thread_uuid,
-                        "public_ip": ip,
-                        "private_ip": private_ip,
-                        "timestamp": str(datetime.utcnow()),
-                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
-                    }
-                    thread_registry[thread_uuid] = registry_entry
-                    return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
-
-            #### this was found during 512 node testing with the pagination code.
-            except EOFError as e:
-                print(f"[{ip}] 💥 EOFError during SSH handshake on attempt {attempt + 1}: {e}")
-                if attempt == 4:
-                    registry_entry = {
-                        "status": "install_failed",
-                        "attempt": attempt,
-                        "pid": multiprocessing.current_process().pid,
-                        "thread_id": threading.get_ident(),
-                        "thread_uuid": thread_uuid,
-                        "public_ip": ip,
-                        "private_ip": private_ip,
-                        "timestamp": str(datetime.utcnow()),
-                        "tags": ["install_failed", "eof_error", "ssh_failure"]
-                    }
-                    thread_registry[thread_uuid] = registry_entry
-                    return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
             #### End of try block inside of for attempt in range(5) loop
 
 
