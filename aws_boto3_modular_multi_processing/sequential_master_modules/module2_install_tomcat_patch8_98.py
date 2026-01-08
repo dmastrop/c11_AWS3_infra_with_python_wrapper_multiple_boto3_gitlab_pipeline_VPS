@@ -296,7 +296,7 @@ SG_RULES = [
     #{"protocol": "tcp", "port": 7004, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 7005, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 7006, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 7007, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7007, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7008, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7009, "cidr": "0.0.0.0/0"},
 ]
@@ -8241,15 +8241,17 @@ def main():
 
 
     ### Configurable parameters
-    chunk_size = 2 # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
-    max_workers = 2 # Threads per process
-    desired_count = 6  ## Max concurrent processes (NOT threads) for iniital batch.
+    chunk_size = 1 # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
+    max_workers = 1 # Threads per process
+    desired_count = 2  ## Max concurrent processes (NOT threads) for iniital batch.
     #### For the 16 node test chunk_size of 2, max_workers of 2, and desired_count of 6 so that 2 processes are pooled for the
     #### last 4 of 16 nodes
     #### For the 512 test, it is one thread per process, so: chunk_size of 1, max_workers of 1, desired_count of 487 so that 
     #### 25 processes are pooled for the last 25 of the 512 nodes.
     #### For the 50 test, use 2 threads per process, and desired_count of 20 so that 5 processes are pooled for the last 10 of 50 
     #### nodes.
+    #### For very low scale use desired_count of 2, and max_workers of 1 and chunk_size of 1 so that 1 thread per process and 1
+    #### pooled process for the 3rd thread.  3 total nodes in .gitlab-ci.yml
 
 
     chunks = [instance_ips[i:i + chunk_size] for i in range(0, len(instance_ips), chunk_size)]
