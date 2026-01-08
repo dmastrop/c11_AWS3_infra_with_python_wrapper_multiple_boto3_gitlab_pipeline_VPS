@@ -1091,11 +1091,27 @@ This guarantees that every node entering module2f has converged to the correct S
 
 ### Part7: Code Review
 
-The code changes for this involves several areas of change in modules 2 and 2e.
+The code changes for this involves several areas of change in modules 1 and 2 and 2e.
 The objective is to get the security group id(s) and the rules in the orchestration layer of module2 and reapply those rules
-after the ghost nodes are rebooted in module2e prior to resurrection in module2f. The reasons for this were given in great 
-detail in the previous UPDATE.The rationale of why the reapply in module2e is much simpler than the multi-processing apply in
-module2 is also given in that UPDATE.
+after the ghost nodes are rebooted in module2e prior to resurrection in module2f. In addition, the SG rules will be applied
+to any other resurrection candidates in the module2e registry, just to ensure that all nodes are in the proper state prior to
+module2f resurrection.
+
+The SG rule reapply in module2e is much simpler in module2e than in module2, becasue module2e does not use multi-processing.
+The previous UPDATE went into a lot of detail on why the design for module2 is the way it is. In short, for the SG rule apply
+in module2 all rules are always applied for each process (per sg_id per process). This resuls in a a lot repetitive 
+applications of the rules. The reasons for this were given in the previous UPDATE. Multi-processing has a lot of quirks that
+must be dealt with to ensure the integrity of the node states across all processes.
+
+In addtion, as noted in the code implemenation strategy above, the SG rule application has been made into a state machine. 
+This is to track SG rule changes to each security group across pipeine runs and then applying and/or revoking the rules
+accordingly. An S3 bucket is used to maintain state through the latest.json (a full record of the previous and then current
+SG_RULES in module2) and the delta_delete.json (a record of the rules that need to be revoked in the current pipeline). This
+approach is in the previous sections.
+
+The code review below indicates all of the code changes in the .gitlab-ci.yml, module1 and module2 and module2e files.
+
+
 
 
 #### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
