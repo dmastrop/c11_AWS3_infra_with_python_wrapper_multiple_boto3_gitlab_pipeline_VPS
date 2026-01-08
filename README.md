@@ -647,7 +647,264 @@ from sequential_master_modules.utils_sg_state import (
 )
 ```
 
-There are 5 helper functions that will be used in the SG stateful design. These are in the utils_sg_state.py file below: 
+There are 5 helper functions that will be used in the SG stateful design. These are in the utils_sg_state.py and the code
+will be presented in the Code Review section below.
+
+
+
+---
+
+#### 3. Temporal Code Flow (with Helper Function Mapping)
+
+This section shows the exact execution order across `module2`, `module2e`, and `module2f`, and explicitly lists which helper functions are used at each step. Inline SG rule application and deletion are performed inside the existing tomcat_worker SG loop.
+
+---
+
+##### 3.1 module2 (multiprocessing)
+
+**tomcat_worker (per process)**
+
+1. **Load previous SG_RULES (pipeline N)**  
+   **Helper:** `load_previous_sg_rules_from_s3`  
+   ```
+   previous_rules = latest.json (pipeline N)
+   ```
+
+2. **Compute delta_delete**  
+   **Helper:** `compute_delta_delete`  
+   ```
+   delta_delete = previous_rules – SG_RULES
+   ```
+
+3. **Save delta_delete to S3**  
+   **Helper:** `save_delta_delete_to_s3`  
+   ```
+   delta_delete.json written for module2e
+   ```
+
+4. **Apply SG_RULES (pipeline N+1)**  
+   **Operation:** *inline SG loop*  
+   - Applies all rules in `SG_RULES`  
+   - Required for multiprocessing correctness  
+
+5. **Delete delta_delete rules**  
+   **Operation:** *inline SG loop*  
+   - Removes stale rules from AWS SG  
+
+---
+
+**main() (after all processes finish)**
+
+6. **Save current SG_RULES → latest.json (pipeline N+1)**  
+   **Helper:** `save_current_sg_rules_to_s3`  
+   ```
+   latest.json now becomes the authoritative SG_RULES for module2e
+   ```
+
+7. **Run drift detection**  
+   **Helper:** `detect_sg_drift_with_delta`  
+   - Ensures AWS SG matches desired state  
+   - Calculated from (AWS rules list) - (current SG_RULES). 
+   - Any drift is a delta_delete
+---
+
+##### 3.2 module2e (single-threaded)
+
+Module2e runs *after* module2 has overwritten `latest.json` with the current pipeline’s SG_RULES.
+
+**Important behavioral rule:**
+> **Module2e performs a single SG replay phase for *all* resurrection candidates (ghosts, generics, and any future bucket types).**  
+> Ghost nodes reboot first; once all reboots complete, SG rules are applied to *every* node in the module2e registry.  
+> This guarantees that all problematic nodes entering module2f have converged to the correct SG state.
+
+**module2e steps:**
+
+1. **Reboot all ghost nodes**  
+   - Wait for all rebooted nodes to return  
+   - Confirm SSH readiness  
+
+2. **Load current SG_RULES**  
+   **Operation:** direct S3 load of the latest.json  
+   ```
+   latest.json = SG_RULES for pipeline N+1
+   ```
+
+3. **Load delta_delete.json**  
+   **Operation:** direct S3 load of delta_delete.json
+
+4. **Apply all rules from latest.json**  
+   **Operation:** *inline SG loop*  
+   - Reapplies all SG_RULES to all resurrection candidates  
+
+5. **Delete all rules from delta_delete.json**  
+   **Operation:** *inline SG loop*  
+   - Removes stale rules from all resurrection candidates  
+
+---
+
+##### 3.3 module2f
+
+- Performs resurrection logic  
+- No SG state operations  
+
+---
+
+#### 4. Semantic Flow Summary
+
+**module2 / tomcat_worker**
+- previous_rules = latest.json (pipeline N)  
+- current_rules = SG_RULES (pipeline N+1)  
+- delta_delete = previous – current  
+
+**module2 / main**
+- Writes SG_RULES → latest.json (pipeline N+1)  
+
+**module2e**
+- current_rules = latest.json (pipeline N+1)  
+- delta_delete = delta_delete.json  
+- SG replay applied to *all* resurrection candidates  
+
+---
+
+#### 5. State Machine Summary
+
+The entire SG state machine is driven by:
+
+**Inputs**
+- SG_RULES (in code)  
+- latest.json (previous or current depending on timing)  
+- delta_delete.json  
+
+**Outputs**
+- Updated AWS SG rules  
+- Updated latest.json  
+- Updated delta_delete.json  
+
+**Replay Algorithm (module2e)**
+```
+reboot ghosts
+wait for all to return
+apply all rules in latest.json to all resurrection candidates
+delete all rules in delta_delete.json from all resurrection candidates
+```
+
+This guarantees that every node entering module2f has converged to the correct SG state.
+
+
+
+
+
+### Part7: Code Review
+
+The code changes for this involves several areas of change in modules 1 and 2 and 2e.
+The objective is to get the security group id(s) and the rules in the orchestration layer of module2 and reapply those rules
+after the ghost nodes are rebooted in module2e prior to resurrection in module2f. In addition, the SG rules will be applied
+to any other resurrection candidates in the module2e registry, just to ensure that all nodes are in the proper state prior to
+module2f resurrection.
+
+The SG rule reapply in module2e is much simpler in module2e than in module2, becasue module2e does not use multi-processing.
+The previous UPDATE went into a lot of detail on why the design for module2 is the way it is. In short, for the SG rule apply
+in module2 all rules are always applied for each process (per sg_id per process). This resuls in a a lot repetitive 
+applications of the rules. The reasons for this were given in the previous UPDATE. Multi-processing has a lot of quirks that
+must be dealt with to ensure the integrity of the node states across all processes.
+
+In addtion, as noted in the code implemenation strategy above, the SG rule application has been made into a state machine. 
+This is to track SG rule changes to each security group across pipeine runs and then applying and/or revoking the rules
+accordingly. An S3 bucket is used to maintain state through the latest.json (a full record of the previous and then current
+SG_RULES in module2) and the delta_delete.json (a record of the rules that need to be revoked in the current pipeline). This
+approach is in the previous sections.
+
+The code review below indicates all of the code changes in the .gitlab-ci.yml, module1 and module2 and module2e files.
+
+The utils_sg_state.py helper functions file code is shown in the section below following the module2 code review changes.
+
+
+#### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
+
+The module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py currently uses a static hardcoded security group id
+(the default security group). To improve flexiblity, add an ENV variable in the .gitlab-ci.yml file and use that in the 
+module1, so the security group id can easily be changed. This is also better for future multiple security group id support. 
+
+The ENV variable is ORCHESTRATION_LEVEL_SG_ID
+
+
+In .gitlab-ci.yml:
+
+```
+    ORCHESTRATION_LEVEL_SG_ID: "sg-0a1f89717193f7896"
+    # This is to set the orchestration level security group id that module1 
+    # (restart_the_EC_multiple_instances_with_client_method_DEBUG.py)  
+    # uses for all the  nodes in the exuection run
+```
+
+And this:
+```
+    - echo 'ORCHESTRATION_LEVEL_SG_ID='${ORCHESTRATION_LEVEL_SG_ID} >> .env # this is the security group id used in module1 orchestration layer. This is applied to all the nodes in the execution run. module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py
+```
+
+#### Module1 code changes: 
+
+
+And in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
+```
+    ## Define the sg_id that is used for the ORCHESTRATINO_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
+    ## this is used in the start_ec2_instances function below
+    sg_id = os.getenv("ORCHESTRATION_LEVEL_SG_ID")
+    if not sg_id:
+        raise RuntimeError("ORCHESTRATION_LEVEL_SG_ID is not set in environment")
+```
+
+This is then used in module1 in the EC2 client method:
+
+```
+        # Create an EC2 client
+        try:
+            my_ec2 = session.client('ec2')
+            print("EC2 client created.")
+        except Exception as e:
+            print("Error creating EC2 client:", e)
+            sys.exit(1)
+
+        # Start EC2 instances
+        try:
+            response = my_ec2.run_instances(
+                ImageId=image_id,
+                InstanceType=instance_type,
+                KeyName=key_name,
+
+                #SecurityGroupIds=['sg-0a1f89717193f7896'],  
+                # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
+                # will be applied to the default security group. The method is used to apply rules to the security group. This 
+                # security group will be used on all the  nodes in the execution run.
+
+                SecurityGroupIds=[sg_id],   ## sg_id is defined above from the ORCHESTRATION_LEVEL_SG_ID ENV variable
+                ## Use this instead of hardcoding above 
+
+                MinCount=int(min_count),
+                MaxCount=int(max_count),
+                TagSpecifications=[
+                    {
+                        'ResourceType': 'instance',
+                        'Tags': [
+                            {'Key': 'BatchID', 'Value': 'test-2025-08-13'},
+                            {'Key': 'Patch', 'Value': '7c'}
+                        ]
+                    }
+                ]
+
+            )
+            print("EC2 instances started:", response)
+        except Exception as e:
+            print("Error starting EC2 instances:", e)
+            sys.exit(1)
+
+        return response
+```
+#### Module2 code changes
+
+
+#### utils_sg_state.py helper functions used in module2 code changes
+
 
 
 ```
@@ -946,255 +1203,9 @@ XXXXXXXXXXXXX
 ```
 
 
+#### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
----
 
-#### 3. Temporal Code Flow (with Helper Function Mapping)
-
-This section shows the exact execution order across `module2`, `module2e`, and `module2f`, and explicitly lists which helper functions are used at each step. Inline SG rule application and deletion are performed inside the existing tomcat_worker SG loop.
-
----
-
-##### 3.1 module2 (multiprocessing)
-
-**tomcat_worker (per process)**
-
-1. **Load previous SG_RULES (pipeline N)**  
-   **Helper:** `load_previous_sg_rules_from_s3`  
-   ```
-   previous_rules = latest.json (pipeline N)
-   ```
-
-2. **Compute delta_delete**  
-   **Helper:** `compute_delta_delete`  
-   ```
-   delta_delete = previous_rules – SG_RULES
-   ```
-
-3. **Save delta_delete to S3**  
-   **Helper:** `save_delta_delete_to_s3`  
-   ```
-   delta_delete.json written for module2e
-   ```
-
-4. **Apply SG_RULES (pipeline N+1)**  
-   **Operation:** *inline SG loop*  
-   - Applies all rules in `SG_RULES`  
-   - Required for multiprocessing correctness  
-
-5. **Delete delta_delete rules**  
-   **Operation:** *inline SG loop*  
-   - Removes stale rules from AWS SG  
-
----
-
-**main() (after all processes finish)**
-
-6. **Save current SG_RULES → latest.json (pipeline N+1)**  
-   **Helper:** `save_current_sg_rules_to_s3`  
-   ```
-   latest.json now becomes the authoritative SG_RULES for module2e
-   ```
-
-7. **Run drift detection**  
-   **Helper:** `detect_sg_drift_with_delta`  
-   - Ensures AWS SG matches desired state  
-   - Calculated from (AWS rules list) - (current SG_RULES). 
-   - Any drift is a delta_delete
----
-
-##### 3.2 module2e (single-threaded)
-
-Module2e runs *after* module2 has overwritten `latest.json` with the current pipeline’s SG_RULES.
-
-**Important behavioral rule:**
-> **Module2e performs a single SG replay phase for *all* resurrection candidates (ghosts, generics, and any future bucket types).**  
-> Ghost nodes reboot first; once all reboots complete, SG rules are applied to *every* node in the module2e registry.  
-> This guarantees that all problematic nodes entering module2f have converged to the correct SG state.
-
-**module2e steps:**
-
-1. **Reboot all ghost nodes**  
-   - Wait for all rebooted nodes to return  
-   - Confirm SSH readiness  
-
-2. **Load current SG_RULES**  
-   **Operation:** direct S3 load of the latest.json  
-   ```
-   latest.json = SG_RULES for pipeline N+1
-   ```
-
-3. **Load delta_delete.json**  
-   **Operation:** direct S3 load of delta_delete.json
-
-4. **Apply all rules from latest.json**  
-   **Operation:** *inline SG loop*  
-   - Reapplies all SG_RULES to all resurrection candidates  
-
-5. **Delete all rules from delta_delete.json**  
-   **Operation:** *inline SG loop*  
-   - Removes stale rules from all resurrection candidates  
-
----
-
-##### 3.3 module2f
-
-- Performs resurrection logic  
-- No SG state operations  
-
----
-
-#### 4. Semantic Flow Summary
-
-**module2 / tomcat_worker**
-- previous_rules = latest.json (pipeline N)  
-- current_rules = SG_RULES (pipeline N+1)  
-- delta_delete = previous – current  
-
-**module2 / main**
-- Writes SG_RULES → latest.json (pipeline N+1)  
-
-**module2e**
-- current_rules = latest.json (pipeline N+1)  
-- delta_delete = delta_delete.json  
-- SG replay applied to *all* resurrection candidates  
-
----
-
-#### 5. State Machine Summary
-
-The entire SG state machine is driven by:
-
-**Inputs**
-- SG_RULES (in code)  
-- latest.json (previous or current depending on timing)  
-- delta_delete.json  
-
-**Outputs**
-- Updated AWS SG rules  
-- Updated latest.json  
-- Updated delta_delete.json  
-
-**Replay Algorithm (module2e)**
-```
-reboot ghosts
-wait for all to return
-apply all rules in latest.json to all resurrection candidates
-delete all rules in delta_delete.json from all resurrection candidates
-```
-
-This guarantees that every node entering module2f has converged to the correct SG state.
-
-
-
-
-
-### Part7: Code Review
-
-The code changes for this involves several areas of change in modules 1 and 2 and 2e.
-The objective is to get the security group id(s) and the rules in the orchestration layer of module2 and reapply those rules
-after the ghost nodes are rebooted in module2e prior to resurrection in module2f. In addition, the SG rules will be applied
-to any other resurrection candidates in the module2e registry, just to ensure that all nodes are in the proper state prior to
-module2f resurrection.
-
-The SG rule reapply in module2e is much simpler in module2e than in module2, becasue module2e does not use multi-processing.
-The previous UPDATE went into a lot of detail on why the design for module2 is the way it is. In short, for the SG rule apply
-in module2 all rules are always applied for each process (per sg_id per process). This resuls in a a lot repetitive 
-applications of the rules. The reasons for this were given in the previous UPDATE. Multi-processing has a lot of quirks that
-must be dealt with to ensure the integrity of the node states across all processes.
-
-In addtion, as noted in the code implemenation strategy above, the SG rule application has been made into a state machine. 
-This is to track SG rule changes to each security group across pipeine runs and then applying and/or revoking the rules
-accordingly. An S3 bucket is used to maintain state through the latest.json (a full record of the previous and then current
-SG_RULES in module2) and the delta_delete.json (a record of the rules that need to be revoked in the current pipeline). This
-approach is in the previous sections.
-
-The code review below indicates all of the code changes in the .gitlab-ci.yml, module1 and module2 and module2e files.
-
-
-
-
-#### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
-
-The module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py currently uses a static hardcoded security group id
-(the default security group). To improve flexiblity, add an ENV variable in the .gitlab-ci.yml file and use that in the 
-module1, so the security group id can easily be changed. This is also better for future multiple security group id support. 
-
-The ENV variable is ORCHESTRATION_LEVEL_SG_ID
-
-
-In .gitlab-ci.yml:
-
-```
-    ORCHESTRATION_LEVEL_SG_ID: "sg-0a1f89717193f7896"
-    # This is to set the orchestration level security group id that module1 
-    # (restart_the_EC_multiple_instances_with_client_method_DEBUG.py)  
-    # uses for all the  nodes in the exuection run
-```
-
-And this:
-```
-    - echo 'ORCHESTRATION_LEVEL_SG_ID='${ORCHESTRATION_LEVEL_SG_ID} >> .env # this is the security group id used in module1 orchestration layer. This is applied to all the nodes in the execution run. module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py
-```
-
-
-And in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
-```
-    ## Define the sg_id that is used for the ORCHESTRATINO_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
-    ## this is used in the start_ec2_instances function below
-    sg_id = os.getenv("ORCHESTRATION_LEVEL_SG_ID")
-    if not sg_id:
-        raise RuntimeError("ORCHESTRATION_LEVEL_SG_ID is not set in environment")
-```
-
-This is then used in module1 in the EC2 client method:
-
-```
-        # Create an EC2 client
-        try:
-            my_ec2 = session.client('ec2')
-            print("EC2 client created.")
-        except Exception as e:
-            print("Error creating EC2 client:", e)
-            sys.exit(1)
-
-        # Start EC2 instances
-        try:
-            response = my_ec2.run_instances(
-                ImageId=image_id,
-                InstanceType=instance_type,
-                KeyName=key_name,
-
-                #SecurityGroupIds=['sg-0a1f89717193f7896'],  
-                # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
-                # will be applied to the default security group. The method is used to apply rules to the security group. This 
-                # security group will be used on all the  nodes in the execution run.
-
-                SecurityGroupIds=[sg_id],   ## sg_id is defined above from the ORCHESTRATION_LEVEL_SG_ID ENV variable
-                ## Use this instead of hardcoding above 
-
-                MinCount=int(min_count),
-                MaxCount=int(max_count),
-                TagSpecifications=[
-                    {
-                        'ResourceType': 'instance',
-                        'Tags': [
-                            {'Key': 'BatchID', 'Value': 'test-2025-08-13'},
-                            {'Key': 'Patch', 'Value': '7c'}
-                        ]
-                    }
-                ]
-
-            )
-            print("EC2 instances started:", response)
-        except Exception as e:
-            print("Error starting EC2 instances:", e)
-            sys.exit(1)
-
-        return response
-```
-
-#### utils_sg_state.py file
 
 
 
@@ -1248,7 +1259,17 @@ backend will then propagate the rules to the nodes themselves.
 
 ### Part7: Validation testing
 
-The logs should be grepped for [SECURITY GROUP], [RETRY_METRIC], [module2_orchestration_level_SG_manifest], etc.
+There were many layers of validation testing that were required for this implementation, in particular the SG rule apply 
+stateful design using the S3 bucket to maintain state.
+
+All of the validation tests are not listed here, only the most important ones. 
+
+
+The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestration_level_SG_manifest], [SG_STATE], 
+[SG_PROPAGATION_DELAY], etc...
+
+
+
 
 
 #### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
