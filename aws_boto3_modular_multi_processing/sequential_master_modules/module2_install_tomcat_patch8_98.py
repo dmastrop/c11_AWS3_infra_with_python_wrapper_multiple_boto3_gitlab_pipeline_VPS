@@ -5131,6 +5131,78 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                     continue
 
+
+
+            #### 3 more except blocks to harden the SSH error detection. This is a very important part of the code.
+            #### This is part of the debugs for FUTURES_16_NODE_CRASH_SG_REVOKE issue
+            except paramiko.ssh_exception.NoValidConnectionsError as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 💥 NoValidConnectionsError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)],
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
+
+            except paramiko.ssh_exception.AuthenticationException as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔐 AuthenticationException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "AuthenticationException", str(e)],
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
+
+            except paramiko.ssh_exception.BadHostKeyException as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔑 BadHostKeyException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "BadHostKeyException", str(e)],
+                    }
+                    thread_registry[thread_uuid] = registry_entry
+                    return ip, private_ip, registry_entry
+                else:
+                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    continue
+
+
+
+
             #### Original except for the try block in the for attempt in range(5)
             except paramiko.ssh_exception.NoValidConnectionsError as e:
                 print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
@@ -5178,9 +5250,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
             # Insert seccond  except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE as the catch-all after
             # the EOFError and NotValidConnectionsError and the TimeoutError
+            # The ordering of these SSH except blocks is critical. From specific, to this last one, the most general.
             except Exception as e:
                 elapsed = time.time() - attempt_start
-                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] �� Unexpected exception during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {type(e).__name__}: {e}")
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] Unexpected exception during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {type(e).__name__}: {e}")
                 if attempt == 4:
                     registry_entry = {
                         "status": "install_failed",
