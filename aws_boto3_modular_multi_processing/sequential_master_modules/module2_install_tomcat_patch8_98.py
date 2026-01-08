@@ -294,9 +294,10 @@ SG_RULES = [
     #{"protocol": "tcp", "port": 7002, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 7003, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 7004, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 7005, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7005, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7006, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 7007, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 7008, "cidr": "0.0.0.0/0"},
 ]
 
 
@@ -4873,7 +4874,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-# Function to install Tomcat on an instance
+    ########## Function install_tomcat: This can actually be used to install any application on the nodes. The install_tomcat #####
+    ########## name is a legacy name from the original code. Note the registry_entry is in scope. The thread_registry is NOT  #####
+    ########## in scope for this function. thread_registry is a process level registry used by threaded_install and           #####
+    ########## tomcat_worker which are process level functions. install_tomcat is a thread level function                     #####
     
     #def install_tomcat(ip, private_ip, instance_id):
     ##### Add the WATCHDOG_TIMEOUT to the arg list for install_tomcat (passed from the threaded_install ThreadPoolExecutor
@@ -5074,7 +5078,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                     "timestamp": str(datetime.utcnow()),
                                     "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
                                 }
-                                thread_registry[thread_uuid] = stub_entry
                                 return ip, private_ip, stub_entry
                     except Exception as e:
                         print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
@@ -5125,7 +5128,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["ssh_timeout", "TimeoutError", str(e)],
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -5150,7 +5152,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["ssh_exception", "NoValidConnectionsError", str(e)],
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -5172,7 +5173,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["ssh_exception", "AuthenticationException", str(e)],
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -5194,7 +5194,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["ssh_exception", "BadHostKeyException", str(e)],
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -5218,7 +5217,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -5241,7 +5239,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["install_failed", "eof_error", "ssh_failure"]
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -5266,7 +5263,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "timestamp": str(datetime.utcnow()),
                         "tags": ["ssh_unexpected_exception", type(e).__name__, str(e)],
                     }
-                    thread_registry[thread_uuid] = registry_entry
                     return ip, private_ip, registry_entry
                 else:
                     time.sleep(SLEEP_BETWEEN_ATTEMPTS)
