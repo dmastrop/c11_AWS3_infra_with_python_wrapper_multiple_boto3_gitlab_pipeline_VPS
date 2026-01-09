@@ -8894,9 +8894,9 @@ def main():
 
 ##### Test out spawned instead of forked multiprocess workers for the AWS SG rule revoke SSH TimeoutError issue (step4B in the SG_STATE
 ##### implementation).
- if __name__ == "__main__":
-     multiprocessing.set_start_method("spawn")
-     main()
+if __name__ == "__main__":
+ multiprocessing.set_start_method("spawn")
+ main()
 
 
 
