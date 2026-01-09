@@ -495,13 +495,8 @@ def main():
 
 
 
-#if __name__ == "__main__":
-#    main()
-
-#### use the start_method of spawn so that the module2 also uses spawn instead of default fork for the multiprocessing process workers
-#### This is to try to resolve the SSH TimeoutError SYN only issue with the SG revoke AWS API block of code.
 if __name__ == "__main__":
- multiprocessing.set_start_method("spawn")
- main()
+    main()
+
 
 
