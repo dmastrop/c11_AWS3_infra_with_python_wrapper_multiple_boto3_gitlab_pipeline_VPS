@@ -1,7 +1,7 @@
 # This is the mutli-processing version of the multi-threaded version
 # All 11 modules are included
-#### This version is for multiprocessing with default forked process workers. 
-#### The master_script_spawn.py is for multiprocessing with spawned process workers.
+#### This is the spawn version of the master script file. Each process worker will be spawned rather than forked.
+#### The master_script.py will use default fork. This file uses spawn.
 
 
 import multiprocessing
@@ -9,23 +9,46 @@ import logging
 
 logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
 
-def run_module(module_script_path):
-    logging.critical(f"Starting module script: {module_script_path}")
-    with open(module_script_path) as f:
-        code = f.read()
-    exec(code, globals())
-    logging.critical(f"Completed module script: {module_script_path}")
-
-
-
+#### This is the spawn version of the mster script multiprocessing. Use teh def run_module below this original one.
 #def run_module(module_script_path):
 #    logging.critical(f"Starting module script: {module_script_path}")
 #    with open(module_script_path) as f:
 #        code = f.read()
 #    exec(code, globals())
-#    if 'main' in globals():
-#        main()  # <-- This is the key fix
 #    logging.critical(f"Completed module script: {module_script_path}")
+
+
+#### This is the spawn version of the def run_test function above. 
+#### 
+#- **Do not** use `globals()` for exec.
+#- Use a **fresh dict** and explicitly set `__name__ = "__main__"`.
+#- This makes the module’s own (each module's):
+#
+#  ```
+#  if __name__ == "__main__":
+#      main()
+#  ```
+#
+#  behave exactly as if it were run as a script.
+# No changes need to be made in the above inside each module in this package!
+def run_module(module_script_path):
+    logging.critical(f"Starting module script: {module_script_path}")
+    with open(module_script_path) as f:
+        code = f.read()
+
+    # Create a fresh namespace where __name__ is "__main__"
+    module_ns = {"__name__": "__main__"}
+
+    exec(code, module_ns)   ## use module_ns instead of globals which will use the python module's filename. We don't want that.
+
+    logging.critical(f"Completed module script: {module_script_path}")
+
+
+
+
+
+
+
 
 
 ## module 1:
