@@ -302,7 +302,7 @@ SG_RULES = [
     {"protocol": "tcp", "port": 8000, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 8001, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 8002, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 8003, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 8003, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 8004, "cidr": "0.0.0.0/0"},
 ]
 
@@ -4170,66 +4170,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         print(f"[SG_STATE] Processing SG {sg_id} for this process")
 
 
-        ##### Test out putting step 4B before 4A to resolve timing issue with 16 thread futures crashes.
-
-
-        ########################################################################
-        ## STEP 4B — DELETE RULES IN delta_delete.json
-        ##
-        ## This replaces the broken legacy Step 2 logic.
-        ## delta_delete.json is the ONLY authoritative source of rules to remove.
-        ##
-        ## Example:
-        ##   Pipeline N had port 5555
-        ##   Pipeline N+1 removed it from SG_RULES
-        ##   delta_delete.json contains {tcp, 5555, 0.0.0.0/0}
-        ##
-        ## AWS‑extra rules (e.g., 443) are preserved.
-        ########################################################################
-
-        #for proto, port, cidr in delta_delete_norm:
-
-        #    retry_count = 0
-
-        #    print(
-        #        f"[SG_STATE] DELETE rule sg_id={sg_id}, port={port}, cidr={cidr}"
-        #    )
-
-        #    try:
-        #        retry_count = retry_with_backoff(
-        #            my_ec2.revoke_security_group_ingress,
-        #            GroupId=sg_id,
-        #            IpPermissions=[{
-        #                'IpProtocol': proto,
-        #                'FromPort': port,
-        #                'ToPort': port,
-        #                'IpRanges': [{'CidrIp': cidr}]
-        #            }]
-        #        )
-
-        #        print(
-        #            f"[SG_STATE] Successfully removed obsolete port {port} from sg_id={sg_id}"
-        #        )
-        #        deleted_count += 1
-
-        #    except my_ec2.exceptions.ClientError as e:
-        #        if "InvalidPermission.NotFound" in str(e):
-        #            print(
-        #                f"[SG_STATE] Rule already absent sg_id={sg_id}, port={port}"
-        #            )
-        #            absent_skipped += 1
-
-        #        else:
-        #            print(
-        #                f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
-        #            )
-        #            raise
-
-        #    # Update retry metric
-        #    max_retry_observed = max(max_retry_observed, retry_count)
-        #    print(
-        #        f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
-        #    )
 
 
         ###########################################################################
@@ -8949,8 +8889,16 @@ def main():
 
 
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
+
+##### Test out spawned instead of forked multiprocess workers for the AWS SG rule revoke SSH TimeoutError issue (step4B in the SG_STATE
+##### implementation).
+ if __name__ == "__main__":
+     multiprocessing.set_start_method("spawn")
+     main()
+
+
 
 
 
