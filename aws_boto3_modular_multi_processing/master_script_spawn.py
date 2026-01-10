@@ -111,6 +111,10 @@ def run_module(module_script_path):
     # Execute module code
     spec.loader.exec_module(module)
 
+    # If the module defines a main() function, call it
+    if hasattr(module, "main") and callable(module.main):
+        module.main()
+
     logging.critical(f"Completed module script: {module_script_path}")
 
 
