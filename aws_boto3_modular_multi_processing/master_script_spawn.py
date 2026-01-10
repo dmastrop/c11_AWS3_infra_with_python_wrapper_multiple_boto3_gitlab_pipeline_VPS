@@ -108,7 +108,8 @@ def run_module(module_script_path):
     # Register module so spawn workers can import it
     sys.modules[module_name] = module
 
-    # Execute module code
+    # Execute module code. This will attempt to use the module file name to load the module. So need to add the next line below if hasattr
+    # and load each module from this master script instead.
     spec.loader.exec_module(module)
 
     # If the module defines a main() function, call it
