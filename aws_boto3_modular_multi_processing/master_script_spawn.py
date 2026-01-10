@@ -112,9 +112,14 @@ def run_module(module_script_path):
     # and load each module from this master script instead.
     spec.loader.exec_module(module)
 
-    # If the module defines a main() function, call it
-    if hasattr(module, "main") and callable(module.main):
+    # Special case for module1
+    if module_name == "restart_the_EC_multiple_instances_with_client_method_DEBUG":
+        if hasattr(module, "restart_ec_multiple_instances"):
+            module.restart_ec_multiple_instances()
+    # Normal case for all other modules that have a main(). If the module defines a main() functin, call it here with spawned modules.
+    elif hasattr(module, "main") and callable(module.main):
         module.main()
+
 
     logging.critical(f"Completed module script: {module_script_path}")
 
