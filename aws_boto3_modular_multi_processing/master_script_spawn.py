@@ -116,12 +116,40 @@ def run_module(module_script_path):
     if module_name == "restart_the_EC_multiple_instances_with_client_method_DEBUG":
         if hasattr(module, "restart_ec_multiple_instances"):
             module.restart_ec_multiple_instances()
+        
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+
+
+    # Special case for module2d (resurrection gatekeeper)
+    if module_name == "module2d_resurrection_gatekeeper":
+        # Run module2d.1
+        if hasattr(module, "main") and callable(module.main):
+            module.main()
+
+        # Run module2d.2a and 2d.2b
+        if hasattr(module, "process_ghost_registry") and callable(module.process_ghost_registry):
+            module.process_ghost_registry()
+
+        # Run module2d.3
+        if hasattr(module, "merge_resurrection_registries") and callable(module.merge_resurrection_registries):
+            module.merge_resurrection_registries()
+
+        # Run module2d.4
+        if hasattr(module, "aggregate_gatekeeper_stats") and callable(module.aggregate_gatekeeper_stats):
+            module.aggregate_gatekeeper_stats()
+    
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+
+
     # Normal case for all other modules that have a main(). If the module defines a main() functin, call it here with spawned modules.
-    elif hasattr(module, "main") and callable(module.main):
+    if hasattr(module, "main") and callable(module.main):
         module.main()
 
-
     logging.critical(f"Completed module script: {module_script_path}")
+
+
 
 
 
