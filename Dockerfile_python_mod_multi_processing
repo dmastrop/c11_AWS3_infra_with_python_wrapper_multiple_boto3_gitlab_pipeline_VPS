@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 # use for multi-processing forked version
-CMD ["python", "master_script.py"]
+#CMD ["python", "master_script.py"]
 
 # use for multi-processing spawn version
-#CMD ["python", "master_script_spawn.py"]
+CMD ["python", "master_script_spawn.py"]
