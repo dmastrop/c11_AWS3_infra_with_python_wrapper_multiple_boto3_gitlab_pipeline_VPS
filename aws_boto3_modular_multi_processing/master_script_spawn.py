@@ -7,15 +7,29 @@
 import multiprocessing
 import logging
 
+#### These are for the refactored def run_test below for spawned rather than forked processes in the modules (module2 is the only
+#### one that requires this but we have to do it for all the modules in the package. This is good practice too.
+import importlib.util
+import sys
+import logging
+
+
+
 logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
 
 #### This is the spawn version of the mster script multiprocessing. Use teh def run_module below this original one.
+
+#### Original used with forking:
 #def run_module(module_script_path):
 #    logging.critical(f"Starting module script: {module_script_path}")
 #    with open(module_script_path) as f:
 #        code = f.read()
 #    exec(code, globals())
 #    logging.critical(f"Completed module script: {module_script_path}")
+
+
+
+
 
 
 #### This is the spawn version of the def run_test function above. 
@@ -31,20 +45,73 @@ logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s
 #
 #  behave exactly as if it were run as a script.
 # No changes need to be made in the above inside each module in this package!
+
+#def run_module(module_script_path):
+#    logging.critical(f"Starting module script: {module_script_path}")
+#    with open(module_script_path) as f:
+#        code = f.read()
+#
+#    # Create a fresh namespace where __name__ is "__main__"
+#    module_ns = {"__name__": "__main__"}
+#
+#    exec(code, module_ns)   ## use module_ns instead of globals which will use the python module's filename. We don't want that.
+#
+#    logging.critical(f"Completed module script: {module_script_path}")
+
+
+
+
+
+#### Need to refactor again for the spawn version
+# ------------------------------------------------------------------------------
+# WHY THIS CUSTOM MODULE LOADER EXISTS (SPAWN-SAFE EXECUTION)
+#
+# Python’s multiprocessing “spawn” start method launches a completely fresh
+# interpreter for every worker process. Unlike “fork”, the child does NOT inherit
+# the parent’s memory, globals(), or dynamically exec’d code.
+#
+# That means:
+#   - Any function used by a multiprocessing Pool worker MUST be importable
+#     by module name (e.g., module2_install_tomcat_patch8_99.tomcat_worker_wrapper)
+#   - Code executed via exec(..., globals()) is NOT importable, because it has
+#     no module identity and lives only in the parent’s memory.
+#
+# If a worker cannot import the function, spawn raises:
+#       PicklingError: Can't pickle <function ...>: attribute lookup failed
+#
+# To fix this, we load each module using importlib with a real module name:
+#
+#   1. Create a module spec from the file path
+#   2. Create a module object
+#   3. Register it in sys.modules under its filename (minus .py)
+#   4. Execute the module inside that module object
+#
+# This gives the module a proper identity, so spawn workers can import it.
+#
+# IMPORTANT:
+#   - No changes are required inside module2 or any other module.
+#   - Functions like tomcat_worker_wrapper become importable automatically.
+#   - This loader is only needed because the master script dynamically loads
+#     modules instead of importing them normally.
+#
+# This keeps the architecture intact while making it fully spawn-compatible.
+# ------------------------------------------------------------------------------
+
 def run_module(module_script_path):
     logging.critical(f"Starting module script: {module_script_path}")
-    with open(module_script_path) as f:
-        code = f.read()
 
-    # Create a fresh namespace where __name__ is "__main__"
-    module_ns = {"__name__": "__main__"}
+    module_name = module_script_path.split("/")[-1].replace(".py", "")
 
-    exec(code, module_ns)   ## use module_ns instead of globals which will use the python module's filename. We don't want that.
+    spec = importlib.util.spec_from_file_location(module_name, module_script_path)
+    module = importlib.util.module_from_spec(spec)
+
+    # Register module so spawn workers can import it
+    sys.modules[module_name] = module
+
+    # Execute module code
+    spec.loader.exec_module(module)
 
     logging.critical(f"Completed module script: {module_script_path}")
-
-
-
 
 
 
