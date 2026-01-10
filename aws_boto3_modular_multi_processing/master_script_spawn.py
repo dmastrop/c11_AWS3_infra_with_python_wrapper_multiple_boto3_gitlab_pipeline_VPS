@@ -143,6 +143,21 @@ def run_module(module_script_path):
         return
 
 
+    # Special case for module2e (Phase3 requeue + reboot)
+    if module_name == "module2e_reque_and_resurrect_Phase3_version2":
+        # Run module2e main()
+        if hasattr(module, "main") and callable(module.main):
+            module.main()
+
+        # Run the post-processing reboot function
+        if hasattr(module, "batch_reboot_registry") and callable(module.batch_reboot_registry):
+            module.batch_reboot_registry(region=os.getenv("region_name"))
+
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+
+
+
     # Normal case for all other modules that have a main(). If the module defines a main() functin, call it here with spawned modules.
     if hasattr(module, "main") and callable(module.main):
         module.main()
