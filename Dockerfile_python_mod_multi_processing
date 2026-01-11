@@ -24,8 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 #CMD ["python", "-u", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE_AWS3_ONLY_debug_PARALLEL_THREAD.py"]
 
 
-# use for multi-processing forked version
+########### use for multi-processing forked version
 #CMD ["python", "master_script.py"]
 
-# use for multi-processing spawn version
+############ use for multi-processing spawn version
 CMD ["python", "master_script_spawn.py"]
