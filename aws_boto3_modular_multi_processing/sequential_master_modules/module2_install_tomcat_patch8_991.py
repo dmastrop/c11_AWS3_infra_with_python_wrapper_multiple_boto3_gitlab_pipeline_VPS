@@ -43,6 +43,9 @@ import glob # need this for the aggregate stats function aggregate_process_stats
 import fcntl # this is used for the pop of the file used for INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS
 
 
+#### for the [RAW_AFTER_PARAMIKO_TIMEOUT] issue
+import socket
+
 # Shared SG state helpers for stateful SG rule management (module2 + module2e)
 from sequential_master_modules.utils_sg_state import (
     load_previous_sg_rules_from_s3,
@@ -357,6 +360,34 @@ retry_lock = threading.Lock()
 # when there are multiple threads per process updating the max_retry_observed for each process.
 
 
+
+
+
+
+#### For the [RAW_AFTER_PARAMIKO_TIMEOUT] issue
+def debug_raw_connect(ip, port=22, label="RAW_PROBE"):
+    """
+    Process-local raw TCP connect probe.
+    Used only when Paramiko connect() times out, to see if the process
+    can still emit SYNs at all.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(10)
+    t0 = time.time()
+    try:
+        print(f"[{label}] [{ip}] starting raw connect probe to {ip}:{port}")
+        s.connect((ip, port))
+        elapsed = time.time() - t0
+        try:
+            src = s.getsockname()
+        except Exception:
+            src = None
+        print(f"[{label}] [{ip}] RAW CONNECT OK in {elapsed:.2f}s src={src}")
+    except Exception as e:
+        elapsed = time.time() - t0
+        print(f"[{label}] [{ip}] RAW CONNECT FAIL in {elapsed:.2f}s error={repr(e)}")
+    finally:
+        s.close()
 
 
 
@@ -4907,9 +4938,9 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
 
 
-
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ###### COMMENT THIS OUT FOR THE [RAW_AFTER_PARAMIKO_TIMEOUT]
+        #ssh = paramiko.SSHClient()
+        #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
         # debug for patch7c issues. We have isolated it to install_tomcat and the thread_registry in threaded_install
         print(f"[TRACE][install_tomcat] Beginning installation on {ip}")
