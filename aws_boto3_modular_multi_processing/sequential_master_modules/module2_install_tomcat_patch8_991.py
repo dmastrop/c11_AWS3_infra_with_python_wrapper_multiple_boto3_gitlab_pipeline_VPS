@@ -4990,96 +4990,47 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         
 
 
+        ######## Insert the debug for attempt in range(5) code for the [RAW_AFTER_PARAMIKO_TIMEOUT] issue
+        ######## This does a fresh SSH client per attempt and for all except blocks closes the current connection
+        ######## This will call the debug_raw_connect_function to attempt to open a raw ssh connect after each timeout of 
+        ######## paramiko SSH connect failure for debugging the SYN only issue with SG rule revoke.
+
         for attempt in range(5):
+
+            # Fresh SSH client per attempt
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
             try:
                 print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
 
-                # Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
                 attempt_start = time.time()
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] SSH connect attempt {attempt + 1} starting")
 
-
-
-                # Start a watchdog timer in a separate thread. 
-                # This is to catch mysterious thread drops and create a stub entry for those.
-                # The status of stub will make them show up in the failed_ips_list rather than missing 
-            
-                
-                # saw an exception on the watchdog thread itself so use a try/except block so that we have an error message
-                # thrown in the logs if this happens again. The original error without the try/except was a generic thread
-                # exception from threading.Thread
-
-                ##### OLD CODE #####
-                #def watchdog():
-                #    try:
-                #        time.sleep(30)
-                #        if not ssh_connected:
-                #            pid = multiprocessing.current_process().pid
-                #            if pid:
-                #                stub_entry = {
-                #                    "status": "stub",
-                #                    "attempt": -1,
-                #                    "pid": pid,
-                #                    "thread_id": threading.get_ident(),
-                #                    "thread_uuid": thread_uuid,
-                #                    "public_ip": ip,
-                #                    "private_ip": private_ip,
-                #                    "timestamp": str(datetime.utcnow()),
-                #                    "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
-                #                }
-                #                thread_registry[thread_uuid] = stub_entry
-                #                return ip, private_ip, stub_entry
-                #    except Exception as e:
-                #        print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
-
-                #threading.Thread(target=watchdog, daemon=True).start()
-                ######## end of watchdog code ##########        
-
-
-                #ssh.connect(ip, port, username, key_filename=key_path)
-                #ssh_connected = True
-                #ssh_success = True  # suppress stub
-                #break  # break out of the for attempt(5) loop
-            
-            
-
-            #### OLD CODE ####
-            #except paramiko.ssh_exception.NoValidConnectionsError as e:
-            #    print(f"Connection failed: {e}")
-            #    time.sleep(10)
-                
-
-
-                ##### NEW CODE with attempt == 4 gating #####
+                # Watchdog thread (unchanged)
                 def watchdog():
                     try:
                         time.sleep(30)
-                        if not ssh_connected and attempt == 4:  # Only tag stub on final attempt
+                        if not ssh_connected and attempt == 4:
                             pid = multiprocessing.current_process().pid
-                            if pid:
-                                stub_entry = {
-                                    "status": "stub",
-                                    "attempt": -1,
-                                    "pid": pid,
-                                    "thread_id": threading.get_ident(),
-                                    "thread_uuid": thread_uuid,
-                                    "public_ip": ip,
-                                    "private_ip": private_ip,
-                                    "timestamp": str(datetime.utcnow()),
-                                    "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
-                                }
-                                return ip, private_ip, stub_entry
+                            stub_entry = {
+                                "status": "stub",
+                                "attempt": -1,
+                                "pid": pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                            }
+                            return ip, private_ip, stub_entry
                     except Exception as e:
                         print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
 
                 threading.Thread(target=watchdog, daemon=True).start()
-                ####### end of watchdog code ##########
 
-
-
-                #ssh.connect(ip, port, username, key_filename=key_path)
-                # Comment out the above and add new Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
-
+                # Actual Paramiko connect
                 ssh.connect(
                     hostname=ip,
                     port=port,
@@ -5093,19 +5044,26 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 elapsed = time.time() - attempt_start
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] SSH connect attempt {attempt + 1} succeeded in {elapsed:.2f}s")
 
-
-
-
                 ssh_connected = True
-                ssh_success = True  # suppress stub
-                break  # break out of the for attempt(5) loop
-                 
+                ssh_success = True
+                break
 
-           
-            # Insert additional except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
+
+            # -------------------------
+            # TIMEOUT ERROR
+            # -------------------------
             except TimeoutError as e:
                 elapsed = time.time() - attempt_start
-                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⏱️ TimeoutError during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⏱️ TimeoutError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                # 🔍 RAW SOCKET PROBE
+                debug_raw_connect(ip, port=port, label="RAW_AFTER_PARAMIKO_TIMEOUT")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
                 if attempt == 4:
                     registry_entry = {
                         "status": "install_failed",
@@ -5119,17 +5077,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "tags": ["ssh_timeout", "TimeoutError", str(e)],
                     }
                     return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
 
 
-
-            #### 3 more except blocks to harden the SSH error detection. This is a very important part of the code.
-            #### This is part of the debugs for FUTURES_16_NODE_CRASH_SG_REVOKE issue
+            # -------------------------
+            # NoValidConnectionsError
+            # -------------------------
             except paramiko.ssh_exception.NoValidConnectionsError as e:
                 elapsed = time.time() - attempt_start
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 💥 NoValidConnectionsError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
                 if attempt == 4:
                     registry_entry = {
                         "status": "install_failed",
@@ -5143,14 +5107,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "tags": ["ssh_exception", "NoValidConnectionsError", str(e)],
                     }
                     return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
 
 
+            # -------------------------
+            # AuthenticationException
+            # -------------------------
             except paramiko.ssh_exception.AuthenticationException as e:
                 elapsed = time.time() - attempt_start
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔐 AuthenticationException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
                 if attempt == 4:
                     registry_entry = {
                         "status": "install_failed",
@@ -5164,14 +5137,23 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "tags": ["ssh_exception", "AuthenticationException", str(e)],
                     }
                     return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
 
 
-            except paramiko.ssh_exception.BadHostKeyException as e:
+            # -------------------------
+            # SSHException (generic)
+            # -------------------------
+            except paramiko.ssh_exception.SSHException as e:
                 elapsed = time.time() - attempt_start
-                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔑 BadHostKeyException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⚠️ SSHException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
                 if attempt == 4:
                     registry_entry = {
                         "status": "install_failed",
@@ -5182,65 +5164,26 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "public_ip": ip,
                         "private_ip": private_ip,
                         "timestamp": str(datetime.utcnow()),
-                        "tags": ["ssh_exception", "BadHostKeyException", str(e)],
+                        "tags": ["ssh_exception", "SSHException", str(e)],
                     }
                     return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
 
 
-
-
-            #### Original except for the try block in the for attempt in range(5)
-            except paramiko.ssh_exception.NoValidConnectionsError as e:
-                print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
-                if attempt == 4:
-                    registry_entry = {
-                        "status": "install_failed",
-                        "attempt": attempt,
-                        "pid": multiprocessing.current_process().pid,
-                        "thread_id": threading.get_ident(),
-                        "thread_uuid": thread_uuid,
-                        "public_ip": ip,
-                        "private_ip": private_ip,
-                        "timestamp": str(datetime.utcnow()),
-                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
-                    }
-                    return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
-            
-
-
-            #### Original except block: this was found during 512 node testing with the pagination code.
-            except EOFError as e:
-                print(f"[{ip}] 💥 EOFError during SSH handshake on attempt {attempt + 1}: {e}")
-                if attempt == 4:
-                    registry_entry = {
-                        "status": "install_failed",
-                        "attempt": attempt,
-                        "pid": multiprocessing.current_process().pid,
-                        "thread_id": threading.get_ident(),
-                        "thread_uuid": thread_uuid,
-                        "public_ip": ip,
-                        "private_ip": private_ip,
-                        "timestamp": str(datetime.utcnow()),
-                        "tags": ["install_failed", "eof_error", "ssh_failure"]
-                    }
-                    return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
-
-
-            # Insert seccond  except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE as the catch-all after
-            # the EOFError and NotValidConnectionsError and the TimeoutError
-            # The ordering of these SSH except blocks is critical. From specific, to this last one, the most general.
+            # -------------------------
+            # Catch-all Exception
+            # -------------------------
             except Exception as e:
                 elapsed = time.time() - attempt_start
-                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] Unexpected exception during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {type(e).__name__}: {e}")
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ❗ Unexpected exception on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
                 if attempt == 4:
                     registry_entry = {
                         "status": "install_failed",
@@ -5251,13 +5194,254 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         "public_ip": ip,
                         "private_ip": private_ip,
                         "timestamp": str(datetime.utcnow()),
-                        "tags": ["ssh_unexpected_exception", type(e).__name__, str(e)],
+                        "tags": ["ssh_exception", "UnexpectedException", str(e)],
                     }
                     return ip, private_ip, registry_entry
-                else:
-                    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                    continue
-            # End new debug code except blocks for FUTURES_16_NODE_CRASH_SG_REVOKE and original except blocks
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
+
+
+        ###### DEBUG comment out the entire block below for the new debug block above that will call debug_raw_connect on the failure for
+        ###### the [RAW_AFTER_PARAMIKO_TIMEOUT] issue
+
+        #for attempt in range(5):
+        #    try:
+        #        print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+
+        #        # Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
+        #        attempt_start = time.time()
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] SSH connect attempt {attempt + 1} starting")
+
+
+
+        #        # Start a watchdog timer in a separate thread. 
+        #        # This is to catch mysterious thread drops and create a stub entry for those.
+        #        # The status of stub will make them show up in the failed_ips_list rather than missing 
+        #    
+        #        
+        #        # saw an exception on the watchdog thread itself so use a try/except block so that we have an error message
+        #        # thrown in the logs if this happens again. The original error without the try/except was a generic thread
+        #        # exception from threading.Thread
+
+
+
+        #        #### [RAWS_AFTER_PARAMIKO_TIMEOUT]
+        #        #### remove old watchdog code to reduce clutter for this debug code.
+
+
+
+
+
+
+        #        ##### NEW CODE with attempt == 4 gating #####
+        #        def watchdog():
+        #            try:
+        #                time.sleep(30)
+        #                if not ssh_connected and attempt == 4:  # Only tag stub on final attempt
+        #                    pid = multiprocessing.current_process().pid
+        #                    if pid:
+        #                        stub_entry = {
+        #                            "status": "stub",
+        #                            "attempt": -1,
+        #                            "pid": pid,
+        #                            "thread_id": threading.get_ident(),
+        #                            "thread_uuid": thread_uuid,
+        #                            "public_ip": ip,
+        #                            "private_ip": private_ip,
+        #                            "timestamp": str(datetime.utcnow()),
+        #                            "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+        #                        }
+        #                        return ip, private_ip, stub_entry
+        #            except Exception as e:
+        #                print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
+
+        #        threading.Thread(target=watchdog, daemon=True).start()
+        #        ####### end of watchdog code ##########
+
+
+
+        #        #ssh.connect(ip, port, username, key_filename=key_path)
+        #        # Comment out the above and add new Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
+
+        #        ssh.connect(
+        #            hostname=ip,
+        #            port=port,
+        #            username=username,
+        #            key_filename=key_path,
+        #            timeout=30,
+        #            banner_timeout=30,
+        #            auth_timeout=30,
+        #        )
+
+        #        elapsed = time.time() - attempt_start
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] SSH connect attempt {attempt + 1} succeeded in {elapsed:.2f}s")
+
+
+
+
+        #        ssh_connected = True
+        #        ssh_success = True  # suppress stub
+        #        break  # break out of the for attempt(5) loop
+        #         
+
+        #   
+        #    # Insert additional except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE
+        #    except TimeoutError as e:
+        #        elapsed = time.time() - attempt_start
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⏱️ TimeoutError during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["ssh_timeout", "TimeoutError", str(e)],
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+
+
+
+        #    #### 3 more except blocks to harden the SSH error detection. This is a very important part of the code.
+        #    #### This is part of the debugs for FUTURES_16_NODE_CRASH_SG_REVOKE issue
+        #    except paramiko.ssh_exception.NoValidConnectionsError as e:
+        #        elapsed = time.time() - attempt_start
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 💥 NoValidConnectionsError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["ssh_exception", "NoValidConnectionsError", str(e)],
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+
+
+        #    except paramiko.ssh_exception.AuthenticationException as e:
+        #        elapsed = time.time() - attempt_start
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔐 AuthenticationException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["ssh_exception", "AuthenticationException", str(e)],
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+
+
+        #    except paramiko.ssh_exception.BadHostKeyException as e:
+        #        elapsed = time.time() - attempt_start
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔑 BadHostKeyException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["ssh_exception", "BadHostKeyException", str(e)],
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+
+
+
+
+        #    #### Original except for the try block in the for attempt in range(5)
+        #    except paramiko.ssh_exception.NoValidConnectionsError as e:
+        #        print(f"[{ip}] 💥 SSH connection failed on attempt {attempt + 1}: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["ssh_exception", "NoValidConnectionsError", str(e)]
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+        #    
+
+
+        #    #### Original except block: this was found during 512 node testing with the pagination code.
+        #    except EOFError as e:
+        #        print(f"[{ip}] 💥 EOFError during SSH handshake on attempt {attempt + 1}: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["install_failed", "eof_error", "ssh_failure"]
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+
+
+        #    # Insert seccond  except block for the Debug code for FUTURES_16_NODE_CRASH_SG_REVOKE as the catch-all after
+        #    # the EOFError and NotValidConnectionsError and the TimeoutError
+        #    # The ordering of these SSH except blocks is critical. From specific, to this last one, the most general.
+        #    except Exception as e:
+        #        elapsed = time.time() - attempt_start
+        #        print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] Unexpected exception during SSH connect on attempt {attempt + 1} after {elapsed:.2f}s: {type(e).__name__}: {e}")
+        #        if attempt == 4:
+        #            registry_entry = {
+        #                "status": "install_failed",
+        #                "attempt": attempt,
+        #                "pid": multiprocessing.current_process().pid,
+        #                "thread_id": threading.get_ident(),
+        #                "thread_uuid": thread_uuid,
+        #                "public_ip": ip,
+        #                "private_ip": private_ip,
+        #                "timestamp": str(datetime.utcnow()),
+        #                "tags": ["ssh_unexpected_exception", type(e).__name__, str(e)],
+        #            }
+        #            return ip, private_ip, registry_entry
+        #        else:
+        #            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+        #            continue
+        #    # End new debug code except blocks for FUTURES_16_NODE_CRASH_SG_REVOKE and original except blocks
 
 
             #### End of try block inside of for attempt in range(5) loop
