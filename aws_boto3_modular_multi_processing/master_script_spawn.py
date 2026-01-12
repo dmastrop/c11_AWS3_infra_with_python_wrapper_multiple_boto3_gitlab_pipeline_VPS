@@ -480,9 +480,15 @@ def restart_ec_multiple_instances():
 #def install_tomcat_on_instances():
 #    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_98.py")
 
-##### THIS IS THE MODULE2 SCRIPT  patch8_99.py. This has the code for debugging#2 the 16 node futures crash with the SG rule revoke of step4 of the SG_STATE design implemenation. 
+###### THIS IS THE MODULE2 SCRIPT  patch8_99.py. This has the code for debugging#2 the 16 node futures crash with the SG rule revoke of step4 of the SG_STATE design implemenation. 
+#def install_tomcat_on_instances():
+#    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_99.py")
+
+##### THIS IS THE MODULE2 SCRIPT  patch8_991.py. This has the code for ssh instrumentation code for the SSH SYN issue with SG rule revoke
 def install_tomcat_on_instances():
-    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_99.py")
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_991.py")
+
+
 
 
 
