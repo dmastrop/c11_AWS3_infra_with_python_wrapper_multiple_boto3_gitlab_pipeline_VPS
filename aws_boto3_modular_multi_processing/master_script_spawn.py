@@ -12,7 +12,7 @@ import logging
 import importlib.util
 import sys
 import logging
-
+import os ## this is for the module2e special case in def run_module
 
 
 logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
@@ -151,7 +151,7 @@ def run_module(module_script_path):
 
         # Run the post-processing reboot function
         if hasattr(module, "batch_reboot_registry") and callable(module.batch_reboot_registry):
-            module.batch_reboot_registry(region=os.getenv("region_name"))
+            module.batch_reboot_registry(region=os.getenv("region_name"))   ## make sure to import os at the top!!
 
         logging.critical(f"Completed module script: {module_script_path}")
         return
