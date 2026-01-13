@@ -314,7 +314,7 @@ SG_RULES = [
     {"protocol": "tcp", "port": 9003, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 9004, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 9005, "cidr": "0.0.0.0/0"},
-    {"protocol": "tcp", "port": 9006, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9006, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 9007, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 9008, "cidr": "0.0.0.0/0"},
     #{"protocol": "tcp", "port": 9009, "cidr": "0.0.0.0/0"},
@@ -4784,7 +4784,16 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
     # Base delay of 5s + 5s per retry, capped at 60s
     #propagation_delay = min(60, 5 + max_retry_observed * 5)
-    propagation_delay = max(30, max_retry_observed * 5)
+    #propagation_delay = max(30, max_retry_observed * 5)
+
+    # Future-ready SG propagation logic (currently disabled)
+    # base_propagation_delay = min(60, 5 + max_retry_observed * 5)
+    base_propagation_delay = max(30, max_retry_observed * 5)
+
+    SG_PROPAGATION_ENABLED = False  # flip to True when we want it back
+
+    propagation_delay = base_propagation_delay if SG_PROPAGATION_ENABLED else 0
+
 
     if propagation_delay > 0:
         print(
@@ -4799,6 +4808,13 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             f"max_retry_observed={max_retry_observed} → no extra delay"
         )
 
+# Future-ready SG propagation logic (currently disabled)
+# base_propagation_delay = min(60, 5 + max_retry_observed * 5)
+base_propagation_delay = max(30, max_retry_observed * 5)
+
+SG_PROPAGATION_ENABLED = False  # flip to True when we want it back
+
+propagation_delay = base_propagation_delay if SG_PROPAGATION_ENABLED else 0
 
 
 
