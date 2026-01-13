@@ -4808,15 +4808,6 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
             f"max_retry_observed={max_retry_observed} → no extra delay"
         )
 
-# Future-ready SG propagation logic (currently disabled)
-# base_propagation_delay = min(60, 5 + max_retry_observed * 5)
-base_propagation_delay = max(30, max_retry_observed * 5)
-
-SG_PROPAGATION_ENABLED = False  # flip to True when we want it back
-
-propagation_delay = base_propagation_delay if SG_PROPAGATION_ENABLED else 0
-
-
 
     #### [tomcat_worker]
     #### This is the original wait_for_instance_running that is called from install_tomcat. Do not do the ip rehydration here as
