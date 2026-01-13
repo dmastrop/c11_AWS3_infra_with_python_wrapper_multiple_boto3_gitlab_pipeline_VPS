@@ -574,27 +574,27 @@ def main():
     process2.start()
     process2.join()
 
-    #### Temporarily comment out modules 2b through 2f from running for the SSH no SYN issue with AWS SG rule revoke
-    #process2b = multiprocessing.Process(target=post_ghost_analysis, name="Process2b: post_ghost_analysis")
-    #process2b.start()
-    #process2b.join()
+    ### Temporarily comment out modules 2b through 2f from running for the SSH no SYN issue with AWS SG rule revoke
+    process2b = multiprocessing.Process(target=post_ghost_analysis, name="Process2b: post_ghost_analysis")
+    process2b.start()
+    process2b.join()
 
-    #process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
-    #process2c.start()
-    #process2c.join()
+    process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
+    process2c.start()
+    process2c.join()
 
 
-    #process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
-    #process2d.start()
-    #process2d.join()
+    process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
+    process2d.start()
+    process2d.join()
 
-    #process2e = multiprocessing.Process(target=reque_and_resurrect, name="Process2e: reque_and_resurrect")
-    #process2e.start()
-    #process2e.join()
+    process2e = multiprocessing.Process(target=reque_and_resurrect, name="Process2e: reque_and_resurrect")
+    process2e.start()
+    process2e.join()
 
-    #process2f = multiprocessing.Process(target=resurrection_install_tomcat, name="Process2f: resurrection_install_tomcat")
-    #process2f.start()
-    #process2f.join()
+    process2f = multiprocessing.Process(target=resurrection_install_tomcat, name="Process2f: resurrection_install_tomcat")
+    process2f.start()
+    process2f.join()
 
 
 

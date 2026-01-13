@@ -166,8 +166,8 @@ deploy:
     - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
     - echo 'instance_type=t2.micro' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
-    - echo 'min_count=1' >> .env
-    - echo 'max_count=1' >> .env
+    - echo 'min_count=16' >> .env
+    - echo 'max_count=16' >> .env
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
@@ -417,11 +417,11 @@ deploy:
 
 
       ## temporarily comment out cleanup to do debugging on the docker container for the SSH no SYN issue with AWS revoke SG rule API
-#cleanup:
-#  stage: cleanup
-#  script:
-#    - docker rmi $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE:latest -f
-#  when: always
+cleanup:
+  stage: cleanup
+  script:
+    - docker rmi $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE:latest -f
+  when: always
 
 
 
