@@ -4820,7 +4820,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
        
         elapsed = 0
         #MAX_WAIT_SECONDS = 1200  # 20 minutes
-        MAX_WAIT_SECONDS = 10   # force stop/start quickly for test run; revert back to 1200 for normal usage
+        MAX_WAIT_SECONDS = 180   # force stop/start quickly for test run; revert back to 1200 for normal usage
         # This is too short and causes problems in AWS orchestration plane.  Best way to simulate stop/start
         # futures crash is to experiment empirically with different time intervals. First observe the baseline for
         # an instance to get into running and then decrease interval slightly and re-run the test.
