@@ -4225,51 +4225,51 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         #   • Multiprocessing correctness (each process reapplies rules)
         #   • Duplicate rules are harmless (AWS returns Duplicate)
         ###########################################################################
-        #for rule in SG_RULES:
+        for rule in SG_RULES:
 
-        #    retry_count = 0
+            retry_count = 0
 
-        #    try:
-        #        print(
-        #            f"[SG_STATE] APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
-        #        )
+            try:
+                print(
+                    f"[SG_STATE] APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
+                )
 
-        #        retry_count = retry_with_backoff(
-        #            my_ec2.authorize_security_group_ingress,
-        #            GroupId=sg_id,
-        #            IpPermissions=[{
-        #                'IpProtocol': rule["protocol"],
-        #                'FromPort': rule["port"],
-        #                'ToPort': rule["port"],
-        #                'IpRanges': [{'CidrIp': rule["cidr"]}]
-        #            }]
-        #        )
+                retry_count = retry_with_backoff(
+                    my_ec2.authorize_security_group_ingress,
+                    GroupId=sg_id,
+                    IpPermissions=[{
+                        'IpProtocol': rule["protocol"],
+                        'FromPort': rule["port"],
+                        'ToPort': rule["port"],
+                        'IpRanges': [{'CidrIp': rule["cidr"]}]
+                    }]
+                )
 
-        #        print(
-        #            f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
-        #        )
-        #        applied_count += 1
+                print(
+                    f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
+                )
+                applied_count += 1
 
 
-        #    except my_ec2.exceptions.ClientError as e:
+            except my_ec2.exceptions.ClientError as e:
 
-        #        if "InvalidPermission.Duplicate" in str(e):
-        #            print(
-        #                f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
-        #            )
-        #            duplicate_skipped += 1
+                if "InvalidPermission.Duplicate" in str(e):
+                    print(
+                        f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
+                    )
+                    duplicate_skipped += 1
 
-        #        else:
-        #            print(
-        #                f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
-        #            )
-        #            raise
+                else:
+                    print(
+                        f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
+                    )
+                    raise
 
-        #    # Always update retry metric
-        #    max_retry_observed = max(max_retry_observed, retry_count)
-        #    print(
-        #        f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
-        #    )
+            # Always update retry metric
+            max_retry_observed = max(max_retry_observed, retry_count)
+            print(
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
+            )
 
 
 
