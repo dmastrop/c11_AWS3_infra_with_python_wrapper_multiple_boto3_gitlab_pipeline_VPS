@@ -4287,7 +4287,12 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
         # AWS‑extra rules (e.g., 443) are preserved.
         #######################################################################
 
-        for proto, port, cidr in delta_delete_norm:
+        for proto, rule_port, cidr in delta_delete_norm:
+        #for proto, port, cidr in delta_delete_norm:
+        ##### [RAW_AFTER_PARAMIKO_TIMEOUT]
+        ##### Need to use rule_port and not port. If port is used it can mutate the port used in install_tomcat since install_tomcat
+        ##### function is defined inside tomcat_worker (as is threaded_install). This is by design for the multi-processing to work
+        ##### properly.
 
             retry_count = 0
 
@@ -4301,34 +4306,36 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     GroupId=sg_id,
                     IpPermissions=[{
                         'IpProtocol': proto,
-                        'FromPort': port,
-                        'ToPort': port,
+                        #'FromPort': port,
+                        'FromPort': rule_port,
+                        #'ToPort': port,
+                        'ToPort': rule_port,
                         'IpRanges': [{'CidrIp': cidr}]
                     }]
                 )
 
                 print(
-                    f"[SG_STATE] Successfully removed obsolete port {port} from sg_id={sg_id}"
+                    f"[SG_STATE] Successfully removed obsolete port {rule_port} from sg_id={sg_id}"
                 )
                 deleted_count += 1
 
             except my_ec2.exceptions.ClientError as e:
                 if "InvalidPermission.NotFound" in str(e):
                     print(
-                        f"[SG_STATE] Rule already absent sg_id={sg_id}, port={port}"
+                        f"[SG_STATE] Rule already absent sg_id={sg_id}, port={rule_port}"
                     )
                     absent_skipped += 1
 
                 else:
                     print(
-                        f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={port}: {e}"
+                        f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={rule_port}: {e}"
                     )
                     raise
 
             # Update retry metric
             max_retry_observed = max(max_retry_observed, retry_count)
             print(
-                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule_port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
             )
 
 
@@ -5029,11 +5036,17 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                         print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
 
                 threading.Thread(target=watchdog, daemon=True).start()
+                
+                #### [RAW_AFTER_PARAMIKO_TIMEOUT]
+                #### redefine "port" as ssh_port so that there is no chance of generic "port" variable mutation when tomcat_worker
+                #### calls threaded_install which calls install_tomcat (this function)
+                ssh_port = 22
 
                 # Actual Paramiko connect
                 ssh.connect(
                     hostname=ip,
-                    port=port,
+                    port=ssh_port,
+                    #port=port,
                     username=username,
                     key_filename=key_path,
                     timeout=30,
@@ -5056,8 +5069,8 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                 elapsed = time.time() - attempt_start
                 print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⏱️ TimeoutError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
 
-                # 🔍 RAW SOCKET PROBE
-                debug_raw_connect(ip, port=port, label="RAW_AFTER_PARAMIKO_TIMEOUT")
+                # 🔍 RAW SOCKET PROBE. [RAW_AFTER_PARAMIKO_TIMEOUT]
+                debug_raw_connect(ip, port=ssh_port, label="RAW_AFTER_PARAMIKO_TIMEOUT")
 
                 try:
                     ssh.close()
