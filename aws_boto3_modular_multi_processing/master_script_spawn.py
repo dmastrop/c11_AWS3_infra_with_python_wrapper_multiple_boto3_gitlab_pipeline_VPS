@@ -5,6 +5,14 @@
 
 
 import multiprocessing
+
+## enable spawn mode multi-processing. Force spawn mode for all multiprocessing in this pipeline
+multiprocessing.set_start_method("spawn", force=True)
+
+print("[SPAWN_MODE] multiprocessing start method:", multiprocessing.get_start_method())
+
+
+
 import logging
 
 #### These are for the refactored def run_test below for spawned rather than forked processes in the modules (module2 is the only

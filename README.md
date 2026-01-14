@@ -1643,7 +1643,7 @@ forking method used with python mulltiprocessing.
 
 
 
-### Spawn mode for multi-processing
+### Spawn mode multi-processing code
 
 In an effort to provide a cleaner state of each process, spawn mode was added as an option.   The objective was to add this option without
 changing ANY of the module level specfic code. All of the changes were done in the Dockerfile_python_mod_multi_processing docker file, which
@@ -1772,12 +1772,25 @@ if __name__ == "__main__":
 ```
 
 
-
-From the master_script_spawn.py def run_test block:
+First, add the multiprocessing.set_start_method("spawn", force=True) at the top of the master_script_spawn.py file:
 
 
 ```
 import multiprocessing
+multiprocessing.set_start_method("spawn", force=True)
+
+print("[SPAWN_MODE] multiprocessing start method:", multiprocessing.get_start_method())
+```
+
+
+This is the refactored def run_module block in the master_script_spawn.py file: 
+The custom importlib loader makes modules importable under spawn
+The modules being importable will work in forked mode as well, but that is not what is being used here. The multiprocessing will
+be forced to use spawn start method.
+
+
+
+```
 import logging
 
 #### These are for the refactored def run_test below for spawned rather than forked processes in the modules (module2 is the only
@@ -1785,6 +1798,9 @@ import logging
 import importlib.util
 import sys
 import logging
+import os ## this is for the module2e special case in def run_module
+
+
 
 
 #### Need to refactor again for the spawn version
