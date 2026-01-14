@@ -1772,22 +1772,7 @@ if __name__ == "__main__":
 ```
 
 
-First, add the multiprocessing.set_start_method("spawn", force=True) at the top of the master_script_spawn.py file:
-
-
-```
-import multiprocessing
-multiprocessing.set_start_method("spawn", force=True)
-
-print("[SPAWN_MODE] multiprocessing start method:", multiprocessing.get_start_method())
-```
-
-
-This is the refactored def run_module block in the master_script_spawn.py file: 
-The custom importlib loader makes modules importable under spawn
-The modules being importable will work in forked mode as well, but that is not what is being used here. The multiprocessing will
-be forced to use spawn start method.
-
+The necessary imports need to be added: 
 
 
 ```
@@ -1801,6 +1786,33 @@ import logging
 import os ## this is for the module2e special case in def run_module
 
 
+
+import multiprocessing
+
+# Make sure the sequential_master_modules directory is importable in parent and workers
+sys.path.append("/aws_EC2/sequential_master_modules")
+
+## enable spawn mode multi-processing. Force spawn mode for all multiprocessing in this pipeline
+multiprocessing.set_start_method("spawn", force=True)
+
+print("[SPAWN_MODE] multiprocessing start method:", multiprocessing.get_start_method())
+```
+
+
+
+
+This is the refactored def run_module block in the master_script_spawn.py file: 
+The custom importlib loader makes modules importable under spawn
+The modules being importable will work in forked mode as well, but that is not what is being used here. The multiprocessing will
+be forced to use spawn start method.
+The sys.path.append will ensure that the modules directory is importable in parent and worker processes. Module2, for example, needs
+this because it starts its own process workers with multiprocessing.Pool. 
+
+See the sections above for more information on why the sys.path.append has to be included in the code. 
+
+
+
+```
 
 
 #### Need to refactor again for the spawn version

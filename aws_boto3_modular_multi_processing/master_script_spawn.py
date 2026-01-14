@@ -4,6 +4,17 @@
 #### The master_script.py will use default fork. This file uses spawn.
 
 
+import logging
+
+#### These are for the refactored def run_test below for spawned rather than forked processes in the modules (module2 is the only
+#### one that requires this but we have to do it for all the modules in the package. This is good practice too.
+import importlib.util
+import sys
+import logging
+import os ## this is for the module2e special case in def run_module
+
+
+
 import multiprocessing
 
 # Make sure the sequential_master_modules directory is importable in parent and workers
@@ -16,14 +27,6 @@ print("[SPAWN_MODE] multiprocessing start method:", multiprocessing.get_start_me
 
 
 
-import logging
-
-#### These are for the refactored def run_test below for spawned rather than forked processes in the modules (module2 is the only
-#### one that requires this but we have to do it for all the modules in the package. This is good practice too.
-import importlib.util
-import sys
-import logging
-import os ## this is for the module2e special case in def run_module
 
 
 logging.basicConfig(level=logging.CRITICAL, format='%(processName)s: %(message)s')
