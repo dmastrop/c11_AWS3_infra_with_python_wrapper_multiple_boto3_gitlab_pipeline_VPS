@@ -32,11 +32,11 @@ especially for benchmarking the module2 (below).
 
 Latest development work is in the aws_boto3_modular_multi_processing sub-directory
 
-The master_script.py is in this directory
+The master_script.py (forking mode multiprocessing)  is in this directory. A master_script_spawn.py supports spawn mode multiprocessing.
 
 This has all the latest multi-threading and multi-processing code in the sequential_master_modules package(directory)
 
-The current 14 modules in the package sequential_master_modules are multi-processed in the master_script.py
+The current 16 modules in the package sequential_master_modules are multi-processed in the master_script.py
 
 All node execution is multi-processed as well, and threads in each process are multi-threaded
 
@@ -124,7 +124,8 @@ artifact logs per pipeline)
 - Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
 - Requeing and resurrection of thread futures crashes 
 - Requeing and resurrection of ghost threads
-- Stateful security group rules implemenation design
+- Stateful security group rules implementation design
+- Spawn multiprocessing mode option (default is forking)
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 
@@ -196,7 +197,9 @@ artifact logs per pipeline)
 
 - Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)
 
-- Update part 52 Phase 3n: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design **
+- Update part 52 Phase 3n: Implementation of spawn multiprocessing.Pool mode in module2 (default is forking mode) 
+
+- Update part 52 Phase 3p: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design **
 
 
 ** WORK IN PROGRESS
@@ -253,7 +256,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 52: Phase 3n: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
+## UPDATES part 53: Phase 3p: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
 
 ### Introduction
 
@@ -1539,6 +1542,354 @@ Make sure that all of the rules in the mainifest are applied to the security gro
 rebooted and area healthy.
 
 
+
+
+
+
+## UPDATES part 52: Phase 3n: Implementation of spawn multiprocessing.Pool mode in module2 (default is forking mode) 
+
+
+### Introduction
+
+During some debugging for the implementation of the stateful SG rule apply code (SG_STATE code in module2; see the next UPDATE above),
+an option to switch module2's multiprocessing mode from the default of forking, to spawn mode was developed. 
+
+The interest in spawn modue was to troubleshoot if an SSH issue that was seen in the docker container running the script was due to
+state corruption of forked processes. The issue ended up not being related to the state of each of the processes that run the threads
+(and initiate the SSH connections to the nodes), but the feature will be left in the code.   The fork vs. spawn mode will be 
+benchmark tested at a later time when the hyper-scaling of processes testing resumes. 
+
+This UPDATE reviews the code changes that were necessary to implement the spawn mode for all the multiprocessing that takes place
+in the package (so it will apply to all modules that are run in the python package).
+
+
+### Forked multi-processing code
+
+The original code is designed with a master_script.py file controlling the execution of the various modules in the python package.
+There are currently 16 modules in the package and all of them are in a multiprocessing.Process arrangement to optimize execution of the 
+modules, because many of the 16 modules can be run in parallel during the pipeline execution phase.
+
+Currently only 7 of the modules are being actively tested (modules2, 2b, 2c, 2d, 2e, and 2f)
+
+In the master_script.py they are executed sequentially for now:
+
+```
+def main():
+    process1 = multiprocessing.Process(target=restart_ec_multiple_instances, name="Process1: restart_ec_multiple_instances")
+    process1.start()
+    process1.join()
+
+    process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
+    process2.start()
+    process2.join()
+
+    process2b = multiprocessing.Process(target=post_ghost_analysis, name="Process2b: post_ghost_analysis")
+    process2b.start()
+    process2b.join()
+
+    process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
+    process2c.start()
+    process2c.join()
+
+
+    process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
+    process2d.start()
+    process2d.join()
+
+    process2e = multiprocessing.Process(target=reque_and_resurrect, name="Process2e: reque_and_resurrect")
+    process2e.start()
+    process2e.join()
+
+    process2f = multiprocessing.Process(target=resurrection_install_tomcat, name="Process2f: resurrection_install_tomcat")
+    process2f.start()
+    process2f.join()
+```
+The name calls a function in the same master_script.py file that has the path in the repository to the specific module.
+
+For example: 
+```
+process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
+```
+This line will call the function named install_tomcat_on_instances in forked multi-processing mode.
+
+
+That function is defined in the master_script.py file as:
+```
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_99.py")
+```
+This function install_tomcat_on_instances it turn calls the run module to run the actual python script file (*.py)
+
+The run_module function in forked mode is very simple: 
+```
+def run_module(module_script_path):
+    logging.critical(f"Starting module script: {module_script_path}")
+    with open(module_script_path) as f:
+        code = f.read()
+    exec(code, globals())
+    logging.critical(f"Completed module script: {module_script_path}")
+```
+
+
+
+It is important to note that module2 above also uses multiprocessing at the orchestration and dataplane level of the execution run,
+so there is multiprocessing within multiprocessing. The module2 uses multiprocessing.Pool which permits pooled processes as well, which
+are used to optimze the heavy execution runs involving hyper-scaling.  Module2 worker processes actually create the worker threads
+(via ThreadPoolExecutor) that actually perform the thread level operations on the nodes in the fleet for the pipeline execution run.
+
+The threads are what actually call paramiko to initiate the SSH connections to the nodes in each process to perform the installations, 
+etc. on the nodes. So the state of the processes in module2 are inheriting various state from the previous processes via the default
+forking method used with python mulltiprocessing. 
+
+
+
+### Spawn mode for multi-processing
+
+In an effort to provide a cleaner state of each process, spawn mode was added as an option.   The objective was to add this option without
+changing ANY of the module level specfic code. All of the changes were done in the Dockerfile_python_mod_multi_processing docker file, which
+is the docker file specified in the build stage of the .gitlab-ci.yml file, when the pipeline executes. This builds the docker image
+that will run on the host VPS, which will then in turn run the master_script.py file.
+
+The build stage in the .gitlab-ci.yml file uses:
+```
+    - docker build --file Dockerfile_python_mod_multi_processing -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+```
+
+And the deploy stage runs the docker image above as: 
+```
+docker run --rm --env-file .env -v $CI_PROJECT_DIR/logs:/aws_EC2/logs $CI_REGISTRY_IMAGE:latest | tee logs/gitlab_full_run.log
+```
+
+Once the docker container starts, it runs the CMD below from the Dockerfile_python_mod_multi_processing file:
+
+```
+FROM python:3.11.9
+WORKDIR /aws_EC2
+ENV PYTHONUNBUFFERED=1
+
+# Confirm default shell
+RUN echo "Default shell: $(readlink /bin/sh)"
+
+# Install Bash to ensure proper stream redirection
+RUN apt-get update && apt-get install -y bash
+
+
+COPY ./aws_boto3_modular_multi_processing /aws_EC2
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+
+########### use for multi-processing forked version
+#CMD ["python", "master_script.py"]
+
+############ use for multi-processing spawn version
+CMD ["python", "master_script_spawn.py"]
+```
+
+
+Note that there are two options for the CMD. The first one (currently commented out) is for the multi-processing forked mode.
+This is the mode that was reviewed in the previous section, master_script.py
+
+This uses standard forked mode multi-processing on the module execution and since module2 also
+uses multi-processing.Pool, the processes in module2 will also use forked mode for the worker threads described above.
+
+So once the docker container starts it runs the master_script.py file to start executing the modules in forked mode.
+
+To facilitiate the spawn mode and make it easy to switch from forked to spawn modue and vise versa during testing, the second CMD
+line above is used. The requires a new master script file named master_script_spawn.py
+
+The selected contents from the master_script_spawn.py mode are below. There are significant differences between this master script file and the
+forking master_script.py file.
+
+
+This part is exactly the same:
+
+```
+def main():
+    process1 = multiprocessing.Process(target=restart_ec_multiple_instances, name="Process1: restart_ec_multiple_instances")
+    process1.start()
+    process1.join()
+
+    process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
+    process2.start()
+    process2.join()
+
+    ### Temporarily comment out modules 2b through 2f from running for the SSH no SYN issue with AWS SG rule revoke
+    process2b = multiprocessing.Process(target=post_ghost_analysis, name="Process2b: post_ghost_analysis")
+    process2b.start()
+    process2b.join()
+
+    process2c = multiprocessing.Process(target=post_aggregate_registry_analysis, name="Process2c: post_aggregate_registry_analysis")
+    process2c.start()
+    process2c.join()
+
+
+    process2d = multiprocessing.Process(target=resurrection_gatekeeper, name="Process2d: resurrection_gatekeeper")
+    process2d.start()
+    process2d.join()
+
+    process2e = multiprocessing.Process(target=reque_and_resurrect, name="Process2e: reque_and_resurrect")
+    process2e.start()
+    process2e.join()
+
+    process2f = multiprocessing.Process(target=resurrection_install_tomcat, name="Process2f: resurrection_install_tomcat")
+    process2f.start()
+    process2f.join()
+```
+
+
+Just as before, in forked mode. the multiprocessing.Process calls the name referenced in the args list. For example for module2
+```
+process2 = multiprocessing.Process(target=install_tomcat_on_instances, name="Process2: install_tomcat_on_instances")
+```
+
+The "install_tomcat_on_instances" is specified by this functino in the master_script_spawn.py file (same as in forked mode):
+```
+def install_tomcat_on_instances():
+    run_module("/aws_EC2/sequential_master_modules/module2_install_tomcat_patch8_991.py")
+```
+
+This function calls the run_module, and this is where the major change occurs. The run_module function had to be compltely 
+rewritten so that there would be no changes to any of the module level code itself. 
+
+Here is the run_module function in the master_script_spawn.py:
+
+Please note the comments, which describe the design and why it had to be done this way. 
+
+For example, the module2e itself calls the main function and a batch function separately in this way below, and this has to be 
+accomodated here in the master_script_spawn.py when starting the module with spawn mode:
+
+
+From module2e:
+```
+if __name__ == "__main__":
+    main()
+    # Version 2 of module2e
+    # Post processing reboot function after main() for the multi-threaded version of the reboot code. This also decouples
+    # the reboot code from the handler code (for example, process_ghost handler).
+    # region could be pulled from env
+    batch_reboot_registry(region=os.getenv("region_name"))
+```
+
+
+
+From the master_script_spawn.py def run_test block:
+
+
+```
+import multiprocessing
+import logging
+
+#### These are for the refactored def run_test below for spawned rather than forked processes in the modules (module2 is the only
+#### one that requires this but we have to do it for all the modules in the package. This is good practice too.
+import importlib.util
+import sys
+import logging
+
+
+#### Need to refactor again for the spawn version
+# ------------------------------------------------------------------------------
+# WHY THIS CUSTOM MODULE LOADER EXISTS (SPAWN-SAFE EXECUTION)
+#
+# Python’s multiprocessing “spawn” start method launches a completely fresh
+# interpreter for every worker process. Unlike “fork”, the child does NOT inherit
+# the parent’s memory, globals(), or dynamically exec’d code.
+#
+# That means:
+#   - Any function used by a multiprocessing Pool worker MUST be importable
+#     by module name (e.g., module2_install_tomcat_patch8_99.tomcat_worker_wrapper)
+#   - Code executed via exec(..., globals()) is NOT importable, because it has
+#     no module identity and lives only in the parent’s memory.
+#
+# If a worker cannot import the function, spawn raises:
+#       PicklingError: Can't pickle <function ...>: attribute lookup failed
+#
+# To fix this, we load each module using importlib with a real module name:
+#
+#   1. Create a module spec from the file path
+#   2. Create a module object
+#   3. Register it in sys.modules under its filename (minus .py)
+#   4. Execute the module inside that module object
+#
+# This gives the module a proper identity, so spawn workers can import it.
+#
+# IMPORTANT:
+#   - No changes are required inside module2 or any other module.
+#   - Functions like tomcat_worker_wrapper become importable automatically.
+#   - This loader is only needed because the master script dynamically loads
+#     modules instead of importing them normally.
+#
+# This keeps the architecture intact while making it fully spawn-compatible.
+# ------------------------------------------------------------------------------
+
+def run_module(module_script_path):
+    logging.critical(f"Starting module script: {module_script_path}")
+
+    module_name = module_script_path.split("/")[-1].replace(".py", "")
+
+    spec = importlib.util.spec_from_file_location(module_name, module_script_path)
+    module = importlib.util.module_from_spec(spec)
+
+    # Register module so spawn workers can import it
+    sys.modules[module_name] = module
+
+    # Execute module code. This will attempt to use the module file name to load the module. So need to add the next line below if hasattr
+    # and load each module from this master script instead.
+    spec.loader.exec_module(module)
+
+    # Special case for module1
+    if module_name == "restart_the_EC_multiple_instances_with_client_method_DEBUG":
+        if hasattr(module, "restart_ec_multiple_instances"):
+            module.restart_ec_multiple_instances()
+        
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+
+
+    # Special case for module2d (resurrection gatekeeper)
+    if module_name == "module2d_resurrection_gatekeeper":
+        # Run module2d.1
+        if hasattr(module, "main") and callable(module.main):
+            module.main()
+
+        # Run module2d.2a and 2d.2b
+        if hasattr(module, "process_ghost_registry") and callable(module.process_ghost_registry):
+            module.process_ghost_registry()
+
+        # Run module2d.3
+        if hasattr(module, "merge_resurrection_registries") and callable(module.merge_resurrection_registries):
+            module.merge_resurrection_registries()
+
+        # Run module2d.4
+        if hasattr(module, "aggregate_gatekeeper_stats") and callable(module.aggregate_gatekeeper_stats):
+            module.aggregate_gatekeeper_stats()
+    
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+
+
+    # Special case for module2e (Phase3 requeue + reboot)
+    if module_name == "module2e_reque_and_resurrect_Phase3_version2":
+        # Run module2e main()
+        if hasattr(module, "main") and callable(module.main):
+            module.main()
+
+        # Run the post-processing reboot function
+        if hasattr(module, "batch_reboot_registry") and callable(module.batch_reboot_registry):
+            module.batch_reboot_registry(region=os.getenv("region_name"))   ## make sure to import os at the top!!
+
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+
+
+
+    # Normal case for all other modules that have a main(). If the module defines a main() functin, call it here with spawned modules.
+    if hasattr(module, "main") and callable(module.main):
+        module.main()
+
+    logging.critical(f"Completed module script: {module_script_path}")
+
+```
 
 
 
