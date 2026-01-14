@@ -187,19 +187,19 @@ artifact logs per pipeline)
 
 - Update part 46 Phase 3h: Parts 4b: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging
 
-- Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrection ghost threads (multi-threaded reboot) Specialized Validation testing
+- Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing
 
 - Update part 48 Phase 3j: 512 node regression test (no synthetic injections)
 
-- Update part 49 Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population
+- Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population
 
 - Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent
 
 - Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)
 
-- Update part 52 Phase 3n: Implementation of spawn multiprocessing.Pool mode in module2 (default is forking mode) 
+- Update part 52 Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)
 
-- Update part 53 Phase 3o: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design **
+- Update part 53 Phase 3o: Part7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)**
 
 
 ** WORK IN PROGRESS
@@ -256,7 +256,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 53: Phase 3o: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
+## UPDATES part 53: Phase 3o: Part 7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)
 
 ### Introduction
 
@@ -1546,7 +1546,7 @@ rebooted and area healthy.
 
 
 
-## UPDATES part 52: Phase 3n: Implementation of spawn multiprocessing.Pool mode in module2 (default is forking mode) 
+## UPDATES part 52: Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)
 
 
 ### Introduction
@@ -1682,7 +1682,7 @@ Both are useful — for different phases of the project.
 
 ---
 
-### Summary
+### 3. Summary
 
 Spawn mode was added to provide a clean, isolated multiprocessing environment for debugging and benchmarking. It avoids inheriting potentially corrupted state from the parent process and is ideal for validating correctness at scale. Fork mode remains valuable for performance testing and for intentionally provoking rare error conditions, especially when building ML models that rely on diverse and error‑rich log data. Having both modes available gives the pipeline a flexible, forensic‑grade foundation for correctness, performance, and future machine learning analysis.
 
@@ -1957,13 +1957,12 @@ print("[SPAWN_MODE] multiprocessing start method:", multiprocessing.get_start_me
 
 
 This is the refactored def run_module block in the master_script_spawn.py file: 
-The custom importlib loader makes modules importable under spawn
-The modules being importable will work in forked mode as well, but that is not what is being used here. The multiprocessing will
-be forced to use spawn start method.
-The sys.path.append will ensure that the modules directory is importable in parent and worker processes. Module2, for example, needs
+- The custom importlib loader makes modules importable under spawn
+- The modules being importable will work in forked mode as well, but that is not what is being used here. The multiprocessing will be forced to use spawn start method.
+- The sys.path.append will ensure that the modules directory is importable in parent and worker processes. Module2, for example, needs
 this because it starts its own process workers with multiprocessing.Pool. 
 
-See the sections above for more information on why the sys.path.append has to be included in the code. 
+See the section above for more information on why the sys.path.append has to be included in the code. 
 
 
 
@@ -3031,7 +3030,7 @@ Ghost Nodes
 
 
 
-## UPDATES part 49: Phase 3k: Part 6: Requeing and resurrection ghost threads: Private ip population 
+## UPDATES part 49: Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population 
 
 ### Introduction
 
@@ -3400,7 +3399,7 @@ and swap contention on the VPS host that is running the gitlab pipleine docker c
 
 
 
-## UPDATES part 47: Phase 3i: Parts 4c, and 5: Requeing and resurrection ghost threads (multi-threaded reboot) Specialized Validation testing
+## UPDATES part 47: Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing
 
 ### Introduction
 
