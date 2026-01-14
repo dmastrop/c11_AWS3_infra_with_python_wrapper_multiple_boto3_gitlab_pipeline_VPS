@@ -6,6 +6,9 @@
 
 import multiprocessing
 
+# Make sure the sequential_master_modules directory is importable in parent and workers
+sys.path.append("/aws_EC2/sequential_master_modules")
+
 ## enable spawn mode multi-processing. Force spawn mode for all multiprocessing in this pipeline
 multiprocessing.set_start_method("spawn", force=True)
 

@@ -199,7 +199,7 @@ artifact logs per pipeline)
 
 - Update part 52 Phase 3n: Implementation of spawn multiprocessing.Pool mode in module2 (default is forking mode) 
 
-- Update part 53 Phase 3p: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design **
+- Update part 53 Phase 3o: Part7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design **
 
 
 ** WORK IN PROGRESS
@@ -256,7 +256,7 @@ STATUS_TAGS = {
 
 
 
-## UPDATES part 53: Phase 3p: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
+## UPDATES part 53: Phase 3o: Part 7: Requeing and resurrection ghost threads: Security group rules reapply post ghost node reboot in module2e, Stateful Design
 
 ### Introduction
 
