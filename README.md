@@ -909,7 +909,13 @@ This is then used in module1 in the EC2 client method:
 
         return response
 ```
-#### Module2 code changes
+
+
+
+
+
+
+
 
 
 #### utils_sg_state.py helper functions used in module2 code changes
@@ -1332,16 +1338,13 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 
 
 ```
-XXXXXXXXX
-
-#### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
 
+#### Module2 code changes
+XXXXXXXXX WIP
 
 
-
-
-#### Create a manifest json file of the current rules SG_RULES that are used in the security group specified by ORCHESTRATION_LEVEL_SG_ID
+##### Create a manifest json file of the current rules SG_RULES that are used in the security group specified by ORCHESTRATION_LEVEL_SG_ID
 
 The changes for this involve a small change in the .gitlab-ci.yml to add the log file to the log file paths, and adding several 
 blocks of code changes to module2
@@ -1358,7 +1361,7 @@ main() then calls a helper function write_sg_rule_mainifest() to actually write 
 ids to the json manifest file. Right now the module is only using 1 SG for all the nodes, but the code will be able to support 
 multipe SG ids used across the nodes in the the future.
 
-#### Drift detection 
+##### Drift detection 
 
 Prior to calling the helper function above, write_sg_rule_manifest, each SG id will be passed to detect_sg_drift to determine if 
 there are any rules in the SG_RULES authoritative that are not present in the actual AWS security group.   If there are extra rules in 
@@ -1370,7 +1373,18 @@ the tomcat_worker calls per proces to apply the rules to the AWS security group 
 list should be applied to the AWS security grou  by the time detect_sg_drift is called.
 
 
-#### module2e application of the mainifest to the ghost nodes after they have been rebooted
+
+
+#### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
+
+XXXXXXXX WIP
+
+
+
+
+
+
+##### module2e application of the mainifest to the ghost nodes after they have been rebooted
 
 Finally, module2e consumes the manifest json file and replays the application of the rules to the security group on the ghosts AFTER 
 they have been rebooted and prior to resurrection in module2f.  As noted in the previous UPDATE, this code is greatly simplified when
