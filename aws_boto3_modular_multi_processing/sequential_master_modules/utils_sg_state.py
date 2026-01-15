@@ -393,19 +393,19 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
     # STEP 5 — Print results for GitLab logs
     # ------------------------------------------------------------
     print(f"[utils_sg_state] Drift results for SG {sg_id}:")
-    print(f"[utils_sg_state]   drift_missing         = {drift_missing}")
-    print(f"[utils_sg_state]   drift_extra_filtered  = {drift_extra_filtered}")
-    print(f"[utils_sg_state]   drift_extra_raw       = {drift_extra_raw}")
-    print(f"[utils_sg_state]   drift_ignored         = {drift_ignored}")
+    print(f"[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = {drift_missing}")
+    print(f"[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = {drift_extra_filtered}")
+    print(f"[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = {drift_extra_raw}")
+    print(f"[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = {drift_ignored}")
 
     # ------------------------------------------------------------
     # STEP 6 — Return structured drift report
     # ------------------------------------------------------------
     return {
-        "drift_missing": drift_missing,
-        "drift_extra_filtered": drift_extra_filtered,
-        "drift_extra_raw": drift_extra_raw,
-        "drift_ignored": drift_ignored
+        "drift_missing (Ports that SHOULD be on AWS but are NOT)": drift_missing,
+        "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": drift_extra_filtered,
+        "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": drift_extra_raw,
+        "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": drift_ignored
     }
 
 
