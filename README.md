@@ -271,7 +271,7 @@ this. These are reviewed below.
 
 
 
-### Part7: Code implemation strategy for the Stateful security group (SG) reapplication: Nuances in multi-processing environments
+### Part7: Code implementation strategy for the Stateful security group (SG) reapplication: Nuances in multi-processing environments
 
 
 The code implementation to replay the SG rules on the ghost nodes of module2e after the reboot of the ghost nodes deserves
@@ -388,7 +388,7 @@ previous UPDATE, this code is much simpler than the code in module2, when applyi
 multiprocessing environment like module2 is.
 
 
-This foundation for a stateful paradigm in the project will be very useuful in light of resurrecting threads to their former or desired
+This foundation for a stateful paradigm in the project will be very useful in light of resurrecting threads to their former or desired
 state.  All stateful logs and manifests will be written to S3. Some of the current artifact logs (per pipeline artifact logs) can even
 be copied to S3 on a per pipeline basis if required for more advanced stateful restoration.
 
@@ -621,7 +621,9 @@ Only five helper functions are required as noted in the earlier section:
 - `detect_sg_drift_with_delta`  
 
 **Not used by module2e**
-Module2e loads both JSON files directly from S3 for clarity.
+Module2e loads both JSON files directly from S3 for clarity. However, it will use the detect_sg_drift_with_delta function to 
+run drift detection after the SG_RULES and delta_delete.json are replayed on the nodes after they have been rebooted (ghosts, for 
+example are rebooted).
 
 
 Because both **module2** (multiprocessing orchestration layer) and **module2e** (post‑reboot SG replay layer) require identical logic for SG rule persistence, delta computation, and drift detection, all SG‑state helper functions are implemented in a shared utility module:
@@ -629,6 +631,8 @@ Because both **module2** (multiprocessing orchestration layer) and **module2e** 
 These helper functions are implemented in a shared utility module in case they need to be used outside of module2.  Module2e requires some of the
 same functionality that these functions perform, and can call these functions if required, but currently module2e natively gets the S3 state
 files without the use of these functions for simplicity. 
+Module2e will use the detect_sg_drift_with_delta as noted above, but none of the other helpers.
+
 
 The helper functions are defined here in the python sequential_master__modules package: 
 
@@ -638,7 +642,7 @@ sequential_master_modules/utils_sg_state.py
 **Import of the utils_sg_state.py file in module2**
 
 
-Module2 is the only module right now that uses the helper functions: 
+Module2 uses all 5 of the helper functions: 
 ```
 # Shared SG state helpers for stateful SG rule management (module2 + module2e)
 from sequential_master_modules.utils_sg_state import (
@@ -707,8 +711,8 @@ This section shows the exact execution order across `module2`, `module2e`, and `
 7. **Run drift detection**  
    **Helper:** `detect_sg_drift_with_delta`  
    - Ensures AWS SG matches desired state  
-   - Calculated from (AWS rules list) - (current SG_RULES). 
-   - Any drift is a delta_delete
+   - Calculated using several different formulas as noted in the code review section below.
+   - There are various forms of drift that will be detected.
 ---
 
 ##### 3.2 module2e (single-threaded)
@@ -743,6 +747,8 @@ Module2e runs *after* module2 has overwritten `latest.json` with the current pip
    **Operation:** *inline SG loop*  
    - Removes stale rules from all resurrection candidates  
 
+6. **Optionally detect drift after the steps above**
+   **Operation:** Use the helper function detect_sg_drift_with_delta
 ---
 
 ##### 3.3 module2f
@@ -1168,43 +1174,165 @@ def compute_delta_delete(previous_rules, current_rules):
     return delta_delete
 
 
+
+
 # ===========================================================================
 # 5. detect_sg_drift_with_delta()
 # ===========================================================================
 
 def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
     """
-    Perform drift detection using BOTH:
-        • current_rules (desired state)
-        • delta_delete (rules that should have been removed)
+    SG_STATE — STEP 5: Drift Detection
+    ----------------------------------
 
-    Drift categories:
-        - Missing rules (should be present but aren't)
-        - Stale rules (should have been deleted but still exist)
-        - Unexpected rules (optional: rules not in desired state)
+    This function compares:
+        • SG_RULES (current desired state)
+        • delta_delete (rules that SHOULD have been deleted)
+        • actual AWS SG rules
 
-    Parameters:
-        ec2  : boto3 EC2 client
-        sg_id (str): Security group ID
-        current_rules (list): SG_RULES for pipeline N+1
-        delta_delete (list): Rules expected to be deleted
+    It computes FOUR drift categories.
 
-    Returns:
-        dict containing:
-            {
-                "missing": [...],
-                "stale": [...],
-                "unexpected": [...]
-            }
+    -------------------------------------------------------------------------
+    FULL EXAMPLE CONTEXT (for clarity)
+    -------------------------------------------------------------------------
 
-    Notes:
-        - This replaces the old detect_sg_drift() in module2.
-        - This is the authoritative drift detector for the new design.
+    SG_RULES (current desired state):
+        {22, 80, 8080, 5001, 5002, 5003}
+
+    Previous pipeline state (latest.json from module2):
+        {22, 80, 8080, 5001, 5002, 5003, 5004}
+
+    delta_delete.json (rules that SHOULD be deleted this pipeline):
+        {5004}
+
+    Actual AWS SG rules at runtime:
+        {22, 8080, 5001, 5002, 5003, 5004, 443, 9999}
+
+    Observations:
+        • Port 80 is missing on AWS (unexpected)
+        • Port 5004 still exists (revoke failed)
+        • Ports 443 and 9999 exist on AWS but are not part of SG_RULES
+          and not part of delta_delete → these are ignored
+
+    -------------------------------------------------------------------------
+    FORMULAS (explicit)
+    -------------------------------------------------------------------------
+
+    Let:
+        desired = SG_RULES (normalized)
+        delta   = delta_delete (normalized)
+        actual  = AWS SG rules (normalized)
+
+    1. drift_missing:
+           desired - actual
+       Meaning:
+           "Ports that SHOULD be on AWS but are NOT."
+       Example:
+           {80}
+
+    2. drift_extra_raw:
+           actual - desired
+       Meaning:
+           "All ports AWS has that SG_RULES does NOT include."
+       Example:
+           {5004, 443, 9999}
+
+    3. drift_extra_filtered:
+           { r ∈ drift_extra_raw | r ∈ delta_delete }
+       Meaning:
+           "Ports that ARE on AWS but SHOULD have been deleted."
+           The math above will simply get the intersection between drift_extra_raw and delta_delete (in the example: 5004)
+       Example:
+           {5004}
+
+    4. drift_ignored:
+           drift_extra_raw - drift_extra_filtered
+       Meaning:
+           "Ports AWS has that we IGNORE because they are not part of SG_STATE."
+       Example:
+           {443, 9999}
+
+    -------------------------------------------------------------------------
     """
-    pass
-XXXXXXXXXXXXX
-```
 
+    print(f"[utils_sg_state] Starting drift detection for SG {sg_id}")
+
+    # ------------------------------------------------------------
+    # STEP 1 — Normalize SG_RULES (desired state)
+    # ------------------------------------------------------------
+    desired = {
+        (r["protocol"], int(r["port"]), r["cidr"])
+        for r in current_rules
+    }
+
+    # ------------------------------------------------------------
+    # STEP 2 — Normalize delta_delete (rules that SHOULD be removed)
+    # ------------------------------------------------------------
+    delta = {
+        (r["protocol"], int(r["port"]), r["cidr"])
+        for r in delta_delete
+    }
+
+    # ------------------------------------------------------------
+    # STEP 3 — Query AWS for actual SG rules
+    # ------------------------------------------------------------
+    try:
+        resp = ec2.describe_security_groups(GroupIds=[sg_id])
+        sg = resp["SecurityGroups"][0]
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR: Unable to query SG {sg_id}: {e}")
+        return {
+            "drift_missing": [],
+            "drift_extra_filtered": [],
+            "drift_extra_raw": [],
+            "drift_ignored": []
+        }
+
+    actual = set()
+    for perm in sg.get("IpPermissions", []):
+        proto = perm.get("IpProtocol")
+        from_p = perm.get("FromPort")
+        to_p = perm.get("ToPort")
+
+        if from_p is None or to_p is None:
+            continue
+
+        for rng in perm.get("IpRanges", []):
+            cidr = rng.get("CidrIp")
+            if cidr:
+                actual.add((proto, int(from_p), cidr))
+
+    # ------------------------------------------------------------
+    # STEP 4 — Apply formulas to compute drift categories
+    # ------------------------------------------------------------
+
+    drift_missing = sorted(desired - actual)
+    drift_extra_raw = sorted(actual - desired)
+    drift_extra_filtered = sorted([r for r in drift_extra_raw if r in delta])
+    drift_ignored = sorted(set(drift_extra_raw) - set(drift_extra_filtered))
+
+    # ------------------------------------------------------------
+    # STEP 5 — Print results for GitLab logs
+    # ------------------------------------------------------------
+    print(f"[utils_sg_state] Drift results for SG {sg_id}:")
+    print(f"[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = {drift_missing}")
+    print(f"[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = {drift_extra_filtered}")
+    print(f"[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = {drift_extra_raw}")
+    print(f"[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = {drift_ignored}")
+
+    # ------------------------------------------------------------
+    # STEP 6 — Return structured drift report
+    # ------------------------------------------------------------
+    return {
+        "drift_missing (Ports that SHOULD be on AWS but are NOT)": drift_missing,
+        "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": drift_extra_filtered,
+        "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": drift_extra_raw,
+        "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": drift_ignored
+    }
+
+
+```
+XXXXXXXXX
 
 #### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
