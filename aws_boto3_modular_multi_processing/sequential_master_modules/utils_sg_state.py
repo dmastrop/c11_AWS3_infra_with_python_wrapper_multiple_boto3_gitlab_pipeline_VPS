@@ -260,33 +260,152 @@ def compute_delta_delete(previous_rules, current_rules):
 
 def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
     """
-    Perform drift detection using BOTH:
-        • current_rules (desired state)
-        • delta_delete (rules that should have been removed)
+    SG_STATE — STEP 5: Drift Detection
+    ----------------------------------
 
-    Drift categories:
-        - Missing rules (should be present but aren't)
-        - Stale rules (should have been deleted but still exist)
-        - Unexpected rules (optional: rules not in desired state)
+    This function compares:
+        • SG_RULES (current desired state)
+        • delta_delete (rules that SHOULD have been deleted)
+        • actual AWS SG rules
 
-    Parameters:
-        ec2  : boto3 EC2 client
-        sg_id (str): Security group ID
-        current_rules (list): SG_RULES for pipeline N+1
-        delta_delete (list): Rules expected to be deleted
+    It computes FOUR drift categories.
 
-    Returns:
-        dict containing:
-            {
-                "missing": [...],
-                "stale": [...],
-                "unexpected": [...]
-            }
+    -------------------------------------------------------------------------
+    FULL EXAMPLE CONTEXT (for clarity)
+    -------------------------------------------------------------------------
 
-    Notes:
-        - This replaces the old detect_sg_drift() in module2.
-        - This is the authoritative drift detector for the new design.
+    SG_RULES (current desired state):
+        {22, 80, 8080, 5001, 5002, 5003}
+
+    Previous pipeline state (latest.json from module2):
+        {22, 80, 8080, 5001, 5002, 5003, 5004}
+
+    delta_delete.json (rules that SHOULD be deleted this pipeline):
+        {5004}
+
+    Actual AWS SG rules at runtime:
+        {22, 8080, 5001, 5002, 5003, 5004, 443, 9999}
+
+    Observations:
+        • Port 80 is missing on AWS (unexpected)
+        • Port 5004 still exists (revoke failed)
+        • Ports 443 and 9999 exist on AWS but are not part of SG_RULES
+          and not part of delta_delete → these are ignored
+
+    -------------------------------------------------------------------------
+    FORMULAS (explicit)
+    -------------------------------------------------------------------------
+
+    Let:
+        desired = SG_RULES (normalized)
+        delta   = delta_delete (normalized)
+        actual  = AWS SG rules (normalized)
+
+    1. drift_missing:
+           desired - actual
+       Meaning:
+           "Ports that SHOULD be on AWS but are NOT."
+       Example:
+           {80}
+
+    2. drift_extra_raw:
+           actual - desired
+       Meaning:
+           "All ports AWS has that SG_RULES does NOT include."
+       Example:
+           {5004, 443, 9999}
+
+    3. drift_extra_filtered:
+           { r ∈ drift_extra_raw | r ∈ delta_delete }
+       Meaning:
+           "Ports that ARE on AWS but SHOULD have been deleted."
+           The math above will simply get the intersection between drift_extra_raw and delta_delete (in the example: 5004)
+       Example:
+           {5004}
+
+    4. drift_ignored:
+           drift_extra_raw - drift_extra_filtered
+       Meaning:
+           "Ports AWS has that we IGNORE because they are not part of SG_STATE."
+       Example:
+           {443, 9999}
+
+    -------------------------------------------------------------------------
     """
-    pass
+
+    print(f"[utils_sg_state] Starting drift detection for SG {sg_id}")
+
+    # ------------------------------------------------------------
+    # STEP 1 — Normalize SG_RULES (desired state)
+    # ------------------------------------------------------------
+    desired = {
+        (r["protocol"], int(r["port"]), r["cidr"])
+        for r in current_rules
+    }
+
+    # ------------------------------------------------------------
+    # STEP 2 — Normalize delta_delete (rules that SHOULD be removed)
+    # ------------------------------------------------------------
+    delta = {
+        (r["protocol"], int(r["port"]), r["cidr"])
+        for r in delta_delete
+    }
+
+    # ------------------------------------------------------------
+    # STEP 3 — Query AWS for actual SG rules
+    # ------------------------------------------------------------
+    try:
+        resp = ec2.describe_security_groups(GroupIds=[sg_id])
+        sg = resp["SecurityGroups"][0]
+    except Exception as e:
+        print(f"[utils_sg_state] ERROR: Unable to query SG {sg_id}: {e}")
+        return {
+            "drift_missing": [],
+            "drift_extra_filtered": [],
+            "drift_extra_raw": [],
+            "drift_ignored": []
+        }
+
+    actual = set()
+    for perm in sg.get("IpPermissions", []):
+        proto = perm.get("IpProtocol")
+        from_p = perm.get("FromPort")
+        to_p = perm.get("ToPort")
+
+        if from_p is None or to_p is None:
+            continue
+
+        for rng in perm.get("IpRanges", []):
+            cidr = rng.get("CidrIp")
+            if cidr:
+                actual.add((proto, int(from_p), cidr))
+
+    # ------------------------------------------------------------
+    # STEP 4 — Apply formulas to compute drift categories
+    # ------------------------------------------------------------
+
+    drift_missing = sorted(desired - actual)
+    drift_extra_raw = sorted(actual - desired)
+    drift_extra_filtered = sorted([r for r in drift_extra_raw if r in delta])
+    drift_ignored = sorted(set(drift_extra_raw) - set(drift_extra_filtered))
+
+    # ------------------------------------------------------------
+    # STEP 5 — Print results for GitLab logs
+    # ------------------------------------------------------------
+    print(f"[utils_sg_state] Drift results for SG {sg_id}:")
+    print(f"[utils_sg_state]   drift_missing         = {drift_missing}")
+    print(f"[utils_sg_state]   drift_extra_filtered  = {drift_extra_filtered}")
+    print(f"[utils_sg_state]   drift_extra_raw       = {drift_extra_raw}")
+    print(f"[utils_sg_state]   drift_ignored         = {drift_ignored}")
+
+    # ------------------------------------------------------------
+    # STEP 6 — Return structured drift report
+    # ------------------------------------------------------------
+    return {
+        "drift_missing": drift_missing,
+        "drift_extra_filtered": drift_extra_filtered,
+        "drift_extra_raw": drift_extra_raw,
+        "drift_ignored": drift_ignored
+    }
 
 
