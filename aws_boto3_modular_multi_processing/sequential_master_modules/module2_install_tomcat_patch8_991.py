@@ -8890,9 +8890,51 @@ def main():
                 print("[SG_STATE] No S3 bucket configured — skipping SG_RULES save")
 
 
+            #### [main] ****
+            #### Stateful SG application code ####
+            # === STEP 5: Drift Detection ===
+            print("[SG_STATE] Starting SG drift detection (Step 5)")
+
+            # Load delta_delete.json from S3 (written by tomcat_worker)
+            delta_delete = []
+            try:
+                s3 = boto3.client("s3")
+                obj = s3.get_object(
+                    Bucket=bucket_name,
+                    Key="state/sg_rules/delta_delete.json"
+                )
+                body = obj["Body"].read().decode("utf-8")
+                delta_delete = json.loads(body)
+                print(f"[SG_STATE] Loaded delta_delete from S3 ({len(delta_delete)} rules)")
+            except Exception as e:
+                print(f"[SG_STATE] WARNING: Could not load delta_delete.json from S3: {e}")
+                delta_delete = []
+
+            # Run drift detection for each SG
+            for sg_id in sg_ids:
+                try:
+                    drift = detect_sg_drift_with_delta(
+                        ec2=my_ec2,
+                        sg_id=sg_id,
+                        current_rules=SG_RULES,
+                        delta_delete=delta_delete
+                    )
+
+                    # Write drift artifact
+                    drift_path = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_module2.json"
+                    with open(drift_path, "w") as f:
+                        json.dump(drift, f, indent=2)
+
+                    print(f"[SG_STATE] Drift artifact written: {drift_path}")
+
+                except Exception as e:
+                    print(f"[SG_STATE] ERROR during drift detection for SG {sg_id}: {e}")
 
         except Exception as e:
             print(f"[module2_orchestration_level_SG_manifest] ERROR discovering SG IDs for manifest: {e}")
+
+
+
 
 
 

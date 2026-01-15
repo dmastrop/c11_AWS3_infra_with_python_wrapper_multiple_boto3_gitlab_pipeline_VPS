@@ -385,10 +385,11 @@ deploy:
       # This is the export of the current pipeline's SG_RULES
       - logs/orchestration_sg_rules_module2.json  
 
-      # Module2 export of the previous pipeline's SG_RULES. This is accessible on the docker mounted volume
-      # until the manifest above (orchestration_sg_rules_module2.json) overwrites it. Thus, this must be retained prior to the 
-      # overwrite so that the previous pipeline's SG_RULES is also accesible by the time module2e runs.
-      #
+
+      # Module2 export of the SG drift stats
+      - logs/sg_state_drift_*_module2.json
+  
+      # Module2e export of the SG drift stats
 
     expire_in: 1 week
 
