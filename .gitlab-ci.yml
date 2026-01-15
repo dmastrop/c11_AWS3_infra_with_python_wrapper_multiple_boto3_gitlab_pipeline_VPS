@@ -156,6 +156,10 @@ deploy:
     # (restart_the_EC_multiple_instances_with_client_method_DEBUG.py)  
     # uses for all the  nodes in the exuection run
 
+    # This is for enabling the delay between multiprocessing.Pool and the SG rule drift logic so that AWS rules can be changes 
+    # to test the drift logic. 120 seconds should be enough time. THe logic and code is in module2 and will also be ported to module2e  
+    READY_FOR_AWS_SG_EDITS: "true"
+    READY_FOR_AWS_SG_EDITS_DELAY: "120"
 
 
   before_script:
@@ -227,8 +231,11 @@ deploy:
 
     - echo 'ORCHESTRATION_LEVEL_SG_ID='${ORCHESTRATION_LEVEL_SG_ID} >> .env # this is the security group id used in module1 orchestration layer. This is applied to all the nodes in the execution run. module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py
 
+    # This is for a delay so that SG rules on AWS can be changed prior to drift detection logic, so that it can be tested  
+    - echo 'READY_FOR_AWS_SG_EDITS='${READY_FOR_AWS_SG_EDITS} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY} >> .env
 
-       
+
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
       ## Define `PID_JSON_DUMPS` with value `false` (masked/protected as needed).
       ## This value will override the one above in this file. 

@@ -8743,6 +8743,23 @@ def main():
     try:
         with multiprocessing.Pool(processes=desired_count) as pool:
             pool.starmap(tomcat_worker_wrapper, args_list)
+    
+
+        # === SG_STATE: Safe window for AWS edits ===
+        #### ENV vars READY_FOR_AWS_SG_EDITS and READY_FOR_AWS_SG_EDITS_DELAY are in .gitlab-ci.yml file
+        print("[SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now")
+
+        # Optional delay for manual AWS edits (controlled by ENV)
+        ready_flag = os.getenv("READY_FOR_AWS_SG_EDITS", "false").lower()
+
+        if ready_flag in ("1", "true", "yes"):
+            delay_seconds = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY", "120"))
+            print(f"[SG_STATE][READY_FOR_AWS_EDITS] Pausing for {delay_seconds} seconds to allow AWS SG modifications...")
+            time.sleep(delay_seconds)
+        else:
+            print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
+
+
     finally:
 
         ## Insert the "write SG rule manifest" here after all the processes exit and before teh aggregator code below
