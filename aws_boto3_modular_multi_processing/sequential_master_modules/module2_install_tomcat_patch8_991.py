@@ -8995,7 +8995,7 @@ def main():
                 stale_ports   = drift_results["drift_extra_filtered"]
 
                 # ---------------------------------------------
-                # Case 1: Missing ports (Ports that SHOULD be on AWS but are NOT)
+                # Case 1: Missing ports (Ports that SHOULD be on AWS but are NOT) (drift_missing)
                 # ---------------------------------------------
                 if missing_ports:
                     print(f"[SG_STATE][SELF_HEAL] Missing ports detected (Ports that SHOULD be on AWS but are NOT): {missing_ports}")
@@ -9037,7 +9037,7 @@ def main():
                         print("[SG_STATE][SELF_HEAL] Missing ports successfully corrected.")
 
                 # ---------------------------------------------
-                # Case 2: Stale ports (Ports that ARE on AWS but SHOULD have been deleted)
+                # Case 2: Stale ports (Ports that ARE on AWS but SHOULD have been deleted) (drift_extra_filtered)
                 # ---------------------------------------------
                 elif stale_ports:
                     print(f"[SG_STATE][SELF_HEAL] Stale ports detected (Ports that ARE on AWS but SHOULD have been deleted): {stale_ports}")
