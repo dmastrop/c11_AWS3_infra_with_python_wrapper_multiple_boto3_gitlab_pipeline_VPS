@@ -807,17 +807,20 @@ This guarantees that every node entering module2f has converged to the correct S
 
 The code changes for this involves several areas of change in modules 1 and 2 and 2e.
 The objective is to get the security group id(s) and the rules in the orchestration layer of module2 and reapply those rules
-after the ghost nodes are rebooted in module2e prior to resurrection in module2f. In addition, the SG rules will be applied
-to any other resurrection candidates in the module2e registry, just to ensure that all nodes are in the proper state prior to
-module2f resurrection.
+after the ghost nodes are rebooted in module2e prior to resurrection in module2f. 
+In addition, the SG rules will be applied o any other resurrection candidates (referred to as resurrection bucke types in the code)
+in the module2e registry, just to ensure that all nodes are in the proper state prior to module2f resurrection.
 
-The SG rule reapply in module2e is much simpler in module2e than in module2, becasue module2e does not use multi-processing.
+The SG rule reapply in module2e is much simpler in module2e than in module2, because module2e does not use multi-processing.
 The previous UPDATE went into a lot of detail on why the design for module2 is the way it is. In short, for the SG rule apply
 in module2 all rules are always applied for each process (per sg_id per process). This resuls in a a lot repetitive 
 applications of the rules. The reasons for this were given in the previous UPDATE. Multi-processing has a lot of quirks that
-must be dealt with to ensure the integrity of the node states across all processes.
+must be dealt with to ensure the integrity of the node states across all processes, and this is one of them.
 
-In addtion, as noted in the code implemenation strategy above, the SG rule application has been made into a state machine. 
+The SG rule application in module2 was intentionally designed to reside at the process level (tomcat_worker) rather than in main(), so
+that the code is extensible in the future to unique sg_id or sg_ids per process. 
+
+In addition, as noted in the code implementation strategy above, the SG rule application has been made into a state machine. 
 This is to track SG rule changes to each security group across pipeine runs and then applying and/or revoking the rules
 accordingly. An S3 bucket is used to maintain state through the latest.json (a full record of the previous and then current
 SG_RULES in module2) and the delta_delete.json (a record of the rules that need to be revoked in the current pipeline). This
@@ -836,6 +839,12 @@ module1, so the security group id can easily be changed. This is also better for
 
 The ENV variable is ORCHESTRATION_LEVEL_SG_ID
 
+In the future multiple sg_ids will be integrated into the code such that multiple sg_ids can be used in each process and each process
+can have different and unique sg_ids. This design was reviewed in teh previous UPDATE and will be implemeneted once the basic SG_STATE
+code is up and running. The code has been designed from the process level up, so this won't be too difficult.
+
+As such the multiple sg_ids will be specified in the .gitlab-ci.yml as an ENV variable and used accordingly in module1 to bring up and 
+assign the SGs to the nodes.
 
 In .gitlab-ci.yml:
 
@@ -856,7 +865,7 @@ And this:
 
 And in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
 ```
-    ## Define the sg_id that is used for the ORCHESTRATINO_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
+    ## Define the sg_id that is used for the ORCHESTRATION_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
     ## this is used in the start_ec2_instances function below
     sg_id = os.getenv("ORCHESTRATION_LEVEL_SG_ID")
     if not sg_id:
@@ -1341,6 +1350,15 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 
 
 #### Module2 code changes
+
+
+##### SG_RULES ENV variable list set
+
+##### in tomcat_worker()
+
+
+##### in main()
+
 XXXXXXXXX WIP
 
 
@@ -1372,7 +1390,45 @@ of all the security group ids (and the rules) used on the nodes.. Doing this bef
 the tomcat_worker calls per proces to apply the rules to the AWS security group have been done. All the rules in the SG_RULES
 list should be applied to the AWS security grou  by the time detect_sg_drift is called.
 
+##### Optional propagation delay after SG_STATE code Steps 1,3, and 4 in tomcat_worker 
 
+This code is placed right after the SG_STATE code steps 1,3,and 4 in tomcat_worker right before the call to threaded_isntall which 
+invokes the thread level operations within each process. This can be used for debugging purposes or timing issues that are related
+with SG backend AWS API rule propagation. Currently, it is disabled. 
+The propagation delay occurs per process and tagged with the PID in the print to the gitlab console logs.
+
+```
+   # --- SG revoke/authorize propagation delay (per process) ---
+
+    # SG propagation delay before threaded_install
+    # Scales with contention and prevents premature SSH attempts after revoke
+
+    # Base delay of 5s + 5s per retry, capped at 60s
+    #propagation_delay = min(60, 5 + max_retry_observed * 5)
+    #propagation_delay = max(30, max_retry_observed * 5)
+
+    # Future-ready SG propagation logic (currently disabled)
+    # base_propagation_delay = min(60, 5 + max_retry_observed * 5)
+    base_propagation_delay = max(30, max_retry_observed * 5)
+
+    SG_PROPAGATION_ENABLED = False  # flip to True when we want it back
+
+    propagation_delay = base_propagation_delay if SG_PROPAGATION_ENABLED else 0
+
+
+    if propagation_delay > 0:
+        print(
+            f"[SG_PROPAGATION_DELAY] [PID {os.getpid()}] "
+            f"max_retry_observed={max_retry_observed} → sleeping {propagation_delay}s "
+            f"before starting threaded_install"
+        )
+        time.sleep(propagation_delay)
+    else:
+        print(
+            f"[SG_PROPAGATION_DELAY] [PID {os.getpid()}] "
+            f"max_retry_observed={max_retry_observed} → no extra delay"
+        )
+```
 
 
 #### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
@@ -1670,13 +1726,58 @@ This is after the port 5557 rule has been added to the SG_RULES list (see previo
 
 #### Drift detection from SG_RULES (for the AWS security group) in module2
 
-This is a positive test. There is expected to be no drift between the two.  All the rules in SG_RULES should be present in the 
-AWS security group.
+
+The instrumentation for testing the various drift scnearios is simple. Add a wait ENV variable to the module2 code in between the 
+multiprocessing.Pool line that calls tomcat_worker_wrapper in main(), and the code that follows (which will be the main() SG_STATE 
+code steps 2 and 5 (drift detection is step 5)).
+
 ```
-[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: ['sg-0a1f89717193f7896']
-[module2_orchestration_level_SG_manifest_DRIFT] No drift detected for SG sg-0a1f89717193f7896. All SG_RULES are present.
-[module2_orchestration_level_SG_manifest] Wrote SG rule manifest to /aws_EC2/logs/orchestration_sg_rules_module2.json
+    # This is for enabling the delay between multiprocessing.Pool and the SG rule drift logic so that AWS rules can be changed 
+    # to test the drift logic. 120 seconds should be enough time. THe logic and code is in module2 and will also be ported to module2e  
+    READY_FOR_AWS_SG_EDITS: "true"
+    READY_FOR_AWS_SG_EDITS_DELAY: "120"
 ```
+And this: 
+
+```
+    # This is for a delay so that SG rules on AWS can be changed prior to drift detection logic, so that it can be tested  
+    - echo 'READY_FOR_AWS_SG_EDITS='${READY_FOR_AWS_SG_EDITS} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY} >> .env
+```
+
+
+The wait time permits artifical changes to be made to the AWS security group rule set prior to step 5 drift detection to induce an 
+artifical drift to test the various drift detection variables.
+
+
+Then the code in module2 main() is added right here: 
+
+```
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+
+
+        # === SG_STATE: Safe window for AWS edits ===
+        #### ENV vars READY_FOR_AWS_SG_EDITS and READY_FOR_AWS_SG_EDITS_DELAY are in .gitlab-ci.yml file
+        print("[SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now")
+
+        # Optional delay for manual AWS edits (controlled by ENV)
+        ready_flag = os.getenv("READY_FOR_AWS_SG_EDITS", "false").lower()
+
+        if ready_flag in ("1", "true", "yes"):
+            delay_seconds = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY", "120"))
+            print(f"[SG_STATE][READY_FOR_AWS_EDITS] Pausing for {delay_seconds} seconds to allow AWS SG modifications...")
+            time.sleep(delay_seconds)
+        else:
+            print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
+
+
+    finally:
+```
+
+
 
 #### The security group rules reapply post reboot in module2e prior to resurrection
 
