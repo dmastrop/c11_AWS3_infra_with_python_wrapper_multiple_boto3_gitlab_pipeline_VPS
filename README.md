@@ -1354,15 +1354,24 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 
 ##### SG_RULES ENV variable list set
 
-##### in tomcat_worker()
+##### in tomcat_worker(): SG_STATE Steps 1,3, and 4a (authorize) and 4b (revoke)
+
+
+
+
+##### in tomcat_worker() ssh enhancements after testing of Step4b (revoke)
+
+
+
+
+
 
 
 ##### in main()
 
 XXXXXXXXX WIP
 
-
-##### Create a manifest json file of the current rules SG_RULES that are used in the security group specified by ORCHESTRATION_LEVEL_SG_ID
+##### SG_STATE Step2: write the current state of the rules SG_RULES to the latest.json file in the S3 bucket.
 
 The changes for this involve a small change in the .gitlab-ci.yml to add the log file to the log file paths, and adding several 
 blocks of code changes to module2
@@ -1372,23 +1381,22 @@ Module2 uses multi-processing so this code has to be carefully refactored to app
 tomcat_worker from multiprocessing.Pool.
 
 This SG_RULES list of rules is also used to create the manifest json file that module2e will use to replay the SG rules on the
-rebooted ghost nodes prior to their resurrection in module2f.  This code is done in main() of module2. This code scans all
-the nodes for their security group ids and the rules that are in those security group ids.
+rebooted ghost nodes prior to their resurrection in module2f.  
 
 main() then calls a helper function write_sg_rule_mainifest() to actually write all these rules and their respective security group
 ids to the json manifest file. Right now the module is only using 1 SG for all the nodes, but the code will be able to support 
-multipe SG ids used across the nodes in the the future.
+multipe SG ids used across the nodes(and unique per process) in the the future.
 
-##### Drift detection 
+##### SG_STATE Step5:  Drift detection
 
-Prior to calling the helper function above, write_sg_rule_manifest, each SG id will be passed to detect_sg_drift to determine if 
-there are any rules in the SG_RULES authoritative that are not present in the actual AWS security group.   If there are extra rules in 
-the AWS security group that is ok. This is just to detect if there are any rules in SG_RULES that have failed to be applied to the AWS 
-security group.
-This call to detect_sg_drift is made in main() of module2 right before the call to write_sg_rule_manifest, and after the discovery
-of all the security group ids (and the rules) used on the nodes.. Doing this before the write_sg_rule_mainifest ensures that 
-the tomcat_worker calls per proces to apply the rules to the AWS security group have been done. All the rules in the SG_RULES
-list should be applied to the AWS security grou  by the time detect_sg_drift is called.
+
+
+##### SG_STATE Step5b: Self healing from the drift detection 
+
+Two cases
+ENV variable SG_STATE_SELF_HEAL_ENABLED
+
+XXXXXXXX
 
 ##### Optional propagation delay after SG_STATE code Steps 1,3, and 4 in tomcat_worker 
 

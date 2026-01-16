@@ -158,8 +158,14 @@ deploy:
 
     # This is for enabling the delay between multiprocessing.Pool and the SG rule drift logic so that AWS rules can be changed 
     # to test the drift logic. 120 seconds should be enough time. THe logic and code is in module2 and will also be ported to module2e  
+    # This code is in module2
     READY_FOR_AWS_SG_EDITS: "true"
     READY_FOR_AWS_SG_EDITS_DELAY: "120"
+
+
+    # This is for enabling the self-healing from the drift detectin logic results (Step5) of SG_STATE implementation in module2
+    # The self-healing code is Step5b and follows Step5
+    SG_STATE_SELF_HEAL_ENABLED: "true"
 
 
   before_script:
@@ -234,6 +240,13 @@ deploy:
     # This is for a delay so that SG rules on AWS can be changed prior to drift detection logic, so that it can be tested  
     - echo 'READY_FOR_AWS_SG_EDITS='${READY_FOR_AWS_SG_EDITS} >> .env
     - echo 'READY_FOR_AWS_SG_EDITS_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY} >> .env
+
+
+
+    # This is for enabling the self-healing from the drift detectin logic results (Step5) of SG_STATE implementation in module2
+    # The self-healing code is Step5b and follows Step5
+    - echo 'SG_STATE_SELF_HEAL_ENABLED='${SG_STATE_SELF_HEAL_ENABLED} >> .env
+  
 
 
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
