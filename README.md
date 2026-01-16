@@ -124,8 +124,9 @@ artifact logs per pipeline)
 - Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
 - Requeing and resurrection of thread futures crashes 
 - Requeing and resurrection of ghost threads
-- Stateful security group rules implementation design
 - Spawn multiprocessing mode option (default is forking)
+- Stateful security group rules implementation design
+- Stateful security group drift detection and auto-remediation
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 
 

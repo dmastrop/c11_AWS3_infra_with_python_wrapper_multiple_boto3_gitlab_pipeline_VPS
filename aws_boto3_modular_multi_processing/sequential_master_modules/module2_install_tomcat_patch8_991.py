@@ -8990,22 +8990,25 @@ def main():
             if self_heal_flag in ("1", "true", "yes"):
                 print("[SG_STATE][SELF_HEAL] Self-heal enabled. Evaluating drift for corrective action...")
 
-                # Extract drift results from Step 5
-                missing_ports = drift_results["drift_missing"]
-                stale_ports   = drift_results["drift_extra_filtered"]
+                # Extract drift categories from the Step 5 result
+                missing_ports = drift.get("drift_missing", [])
+                stale_ports   = drift.get("drift_extra_filtered", [])
+
+                # Track whether remediation was attempted
+                remediation_attempted = bool(missing_ports or stale_ports)
 
                 # ---------------------------------------------
-                # Case 1: Missing ports (Ports that SHOULD be on AWS but are NOT) (drift_missing)
+                # Case 1: Missing ports (Ports that SHOULD be on AWS but are NOT)
                 # ---------------------------------------------
                 if missing_ports:
                     print(f"[SG_STATE][SELF_HEAL] Missing ports detected (Ports that SHOULD be on AWS but are NOT): {missing_ports}")
                     print("[SG_STATE][SELF_HEAL] Re-applying SG_RULES and delta_delete to correct missing ports...")
 
-                    # Re-apply SG_RULES (authorize)
+                    # Re-apply SG_RULES
                     for rule in SG_RULES:
                         try:
-                            ec2.authorize_security_group_ingress(
-                                GroupId=sg_id,
+                            my_ec2.authorize_security_group_ingress(
+                                GroupId=last_sg_id,
                                 IpProtocol=rule["protocol"],
                                 FromPort=rule["port"],
                                 ToPort=rule["port"],
@@ -9014,11 +9017,11 @@ def main():
                         except Exception as e:
                             print(f"[SG_STATE][SELF_HEAL][WARN] Failed to authorize rule {rule}: {e}")
 
-                    # Re-apply delta_delete (revoke)
+                    # Re-apply delta_delete
                     for rule in delta_delete:
                         try:
-                            ec2.revoke_security_group_ingress(
-                                GroupId=sg_id,
+                            my_ec2.revoke_security_group_ingress(
+                                GroupId=last_sg_id,
                                 IpProtocol=rule["protocol"],
                                 FromPort=rule["port"],
                                 ToPort=rule["port"],
@@ -9027,17 +9030,17 @@ def main():
                         except Exception as e:
                             print(f"[SG_STATE][SELF_HEAL][WARN] Failed to revoke stale rule {rule}: {e}")
 
-                    # Re-run drift detection once
+                    # Re-run drift detection
                     print("[SG_STATE][SELF_HEAL] Re-running drift detection to verify correction...")
-                    drift_results_after = detect_sg_drift_with_delta(ec2, sg_id, SG_RULES, delta_delete)
+                    drift_after = detect_sg_drift_with_delta(my_ec2, last_sg_id, SG_RULES, delta_delete)
 
-                    if drift_results_after["drift_missing"]:
+                    if drift_after["drift_missing"]:
                         print("[SG_STATE][SELF_HEAL][ERROR] Missing ports remain after self-heal. Manual investigation required.")
                     else:
                         print("[SG_STATE][SELF_HEAL] Missing ports successfully corrected.")
 
                 # ---------------------------------------------
-                # Case 2: Stale ports (Ports that ARE on AWS but SHOULD have been deleted) (drift_extra_filtered)
+                # Case 2: Stale ports (Ports that ARE on AWS but SHOULD have been deleted)
                 # ---------------------------------------------
                 elif stale_ports:
                     print(f"[SG_STATE][SELF_HEAL] Stale ports detected (Ports that ARE on AWS but SHOULD have been deleted): {stale_ports}")
@@ -9045,8 +9048,8 @@ def main():
 
                     for rule in stale_ports:
                         try:
-                            ec2.revoke_security_group_ingress(
-                                GroupId=sg_id,
+                            my_ec2.revoke_security_group_ingress(
+                                GroupId=last_sg_id,
                                 IpProtocol=rule[0],
                                 FromPort=rule[1],
                                 ToPort=rule[1],
@@ -9055,24 +9058,50 @@ def main():
                         except Exception as e:
                             print(f"[SG_STATE][SELF_HEAL][WARN] Failed to revoke stale rule {rule}: {e}")
 
-                    # Re-run drift detection once
+                    # Re-run drift detection
                     print("[SG_STATE][SELF_HEAL] Re-running drift detection to verify stale ports were removed...")
-                    drift_results_after = detect_sg_drift_with_delta(ec2, sg_id, SG_RULES, delta_delete)
+                    drift_after = detect_sg_drift_with_delta(my_ec2, last_sg_id, SG_RULES, delta_delete)
 
-                    if drift_results_after["drift_extra_filtered"]:
+                    if drift_after["drift_extra_filtered"]:
                         print("[SG_STATE][SELF_HEAL][ERROR] Stale ports remain after self-heal. Manual investigation required.")
                     else:
                         print("[SG_STATE][SELF_HEAL] Stale ports successfully removed.")
 
                 # ---------------------------------------------
-                # Case 3: Only ignored drift (non-tracked ports)
+                # Case 3: Only ignored drift
                 # ---------------------------------------------
                 else:
                     print("[SG_STATE][SELF_HEAL] Only ignored drift detected (non-tracked ports). No corrective action taken.")
+                    drift_after = drift  # no remediation, so after == before
+
+                # ============================================================
+                # Write remediated drift log (only if remediation occurred)
+                # ============================================================
+                if remediation_attempted:
+                    remediated_payload = {
+                        "original_drift": drift,
+                        "remediation_actions": (
+                            [f"Re-applied SG_RULES and delta_delete for missing ports: {missing_ports}"] if missing_ports else []
+                        ) + (
+                            [f"Revoked stale ports: {stale_ports}"] if stale_ports else []
+                        ),
+                        "drift_after_remediation": drift_after,
+                        "remediation_success": (
+                            not drift_after.get("drift_missing")
+                            and not drift_after.get("drift_extra_filtered")
+                        )
+                    }
+
+                    remediated_path = f"/aws_EC2/logs/sg_state_drift_SGID_{last_sg_id}_remediated_module2.json"
+                    try:
+                        with open(remediated_path, "w") as f:
+                            json.dump(remediated_payload, f, indent=2)
+                        print(f"[SG_STATE][SELF_HEAL] Wrote remediated drift artifact: {remediated_path}")
+                    except Exception as e:
+                        print(f"[SG_STATE][SELF_HEAL][WARN] Failed to write remediated drift artifact: {e}")
 
             else:
                 print("[SG_STATE][SELF_HEAL] Self-heal disabled. Skipping Step 5b.")
-
 
 
 
