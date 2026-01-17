@@ -200,12 +200,13 @@ artifact logs per pipeline)
 
 - Update part 52 Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)
 
-- Update part 53 Phase 3o: Part7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)**
+- Update part 53 Phase 3o: Part7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE) <<
 
-- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful drift detection and remediation**
+- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful drift detection and remediation <<
 
 
-** WORK IN PROGRESS
+
+<< WORK IN PROGRESS
 
 
 ## A note on application extensibility
@@ -259,7 +260,11 @@ STATUS_TAGS = {
 
 ### Introduction
 
+This is Part8 of the ghost resurrection code implementation. This finishes off the SG rule stateful implementation with drift detection,
+drift remediation, and finally the replay of the stateful SG rules on module2e resurrection candidates prior to their resurrection in 
+module2f.
 
+This will present Steps 5,5b, and 8 of the SG_STATE implementation.  Steps 5 and 5b are in module2 and Step 6 is in module2e.
 
 
 
@@ -268,7 +273,7 @@ STATUS_TAGS = {
 
 ### Introduction
 
-This is Part7 for the initial ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
+This is Part7 of the  ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
 processing code. The buik of the ghost resurrection code has been implemmented in Parts 1-5 as noted in the previous UPDATES.
 
 - Reapply the security group rules from module2 at the orchestration layer, after the reboot in module2e and prior to the resurrection of the node in module2f
@@ -276,7 +281,10 @@ processing code. The buik of the ghost resurrection code has been implemmented i
 There are a lot of nuances to this implemenation that need to be reviewed prior to showing the code changes that are required for 
 this. These are reviewed below.
 
+Part7 will present Steps 1,2,3,4a and 4b of the module2 SG_STATE implemenation
 
+Part8 (the next update) will implement Steps 5,5b and Step6 of the SG_STATE implementation (drift detection, drift remedication and SG 
+playback in module2e prior to module2f resurrection.
 
 
 ### Part7: Code implementation strategy for the Stateful security group (SG) reapplication: Nuances in multi-processing environments
