@@ -9012,8 +9012,16 @@ def main():
                                         ToPort=rule["port"],
                                         CidrIp=rule["cidr"]
                                     )
+                                
+                                    print(f"[SG_STATE][SELF_HEAL] Successfully applied rule {rule}")
+                                
                                 except Exception as e:
-                                    print(f"[SG_STATE][SELF_HEAL][WARN] Failed to authorize rule {rule}: {e}")
+                                    
+                                    if "InvalidPermission.Duplicate" in str(e):
+                                        print(f"[SG_STATE][SELF_HEAL] Rule already exists: {rule}") 
+                                    else:
+                                        print(f"[SG_STATE][SELF_HEAL][WARN] Failed to authorize rule {rule}: {e}")
+
 
                             for rule in delta_delete:
                                 try:
