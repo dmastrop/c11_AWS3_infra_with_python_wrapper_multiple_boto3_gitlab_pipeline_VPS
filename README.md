@@ -202,7 +202,7 @@ artifact logs per pipeline)
 
 - Update part 53 Phase 3o: Part7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)**
 
-- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful drift detectiona and remediation**
+- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful drift detection and remediation**
 
 
 ** WORK IN PROGRESS
