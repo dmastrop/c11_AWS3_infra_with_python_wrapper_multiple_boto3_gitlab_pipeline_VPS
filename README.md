@@ -1738,6 +1738,55 @@ multipe SG ids used across the nodes(and unique per process) in the the future.
 
 ##### in main(): SG_STATE Step5b: Self healing from the drift detection (drift remediation) 
 
+ Since drift detection and drift mediation code is a bit complicated it is a good idea to see where this code sits in relation to the
+main() function in module2.
+The drift detection logic is embedded inside several try blocks as shown below: 
+
+
+
+```
+0  def main():
+0      try:                                            # OUTER OUTER TRY
+1          ...
+1          try:                                        # OUTER TRY
+2              ...
+2              # Run drift detection for each SG
+2              for sg_id in sg_ids:                    # LOOP
+3                  try:                                # INNER TRY  ← Step 5 lives here
+4                      drift = detect_sg_drift_with_delta(...)
+4                      write drift artifact
+4                      print("[SG_STATE] Drift artifact written...")
+
+4                      # ============================================================
+4                      # Step 5b: SG_STATE Self-Heal Logic (Optional, Single-Pass)
+4                      # ============================================================
+4                      if self_heal_flag in (...):
+5                          missing_ports = ...
+5                          stale_ports   = ...
+5                          remediation_attempted = ...
+
+5                          if missing_ports:
+6                              ... remediation logic ...
+5                          elif stale_ports:
+6                              ... remediation logic ...
+5                          else:
+6                              ... ignored drift ...
+
+5                          if remediation_attempted:
+6                              ... write remediated artifact ...
+
+4                      else:
+5                          print("[SELF_HEAL disabled]")
+
+3                  except Exception as e:              # INNER EXCEPT
+4                      print("[SG_STATE] ERROR ...")
+
+1          except Exception as e:                      # OUTER EXCEPT
+2              print("[module2_orchestration_level_SG_manifest] ERROR ...")
+
+0      except Exception as e:                          # OUTER OUTER EXCEPT
+1          print("[main] ERROR ...")
+```
 
 Two cases
 ENV variable SG_STATE_SELF_HEAL_ENABLED
