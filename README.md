@@ -264,7 +264,9 @@ This is Part8 of the ghost resurrection code implementation. This finishes off t
 drift remediation, and finally the replay of the stateful SG rules on module2e resurrection candidates prior to their resurrection in 
 module2f.
 
-This will present Steps 5,5b, and 8 of the SG_STATE implementation.  Steps 5 and 5b are in module2 and Step 6 is in module2e.
+This will present Steps 5,5b, and 6 of the SG_STATE implementation.  Steps 5 and 5b are in module2 and Step 6 is in module2e.
+
+For a complete detailed description of the Stateful design and code flow see the previous UPDATE. 
 
 
 
