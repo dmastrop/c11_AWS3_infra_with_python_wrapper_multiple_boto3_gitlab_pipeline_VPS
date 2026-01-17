@@ -202,11 +202,14 @@ artifact logs per pipeline)
 
 - Update part 53 Phase 3o: Part7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE) <<
 
-- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful drift detection and remediation <<
-
+- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful design VALIDATION testing <<
 
 
 << WORK IN PROGRESS
+
+
+
+
 
 
 ## A note on application extensibility
@@ -256,17 +259,349 @@ STATUS_TAGS = {
 ```
 
 
-## UPDATES part 54: Phase3p: Part 8: Requeing and resurrecting ghost threads: Security group stateful drift detection and remediation
+## UPDATES part 54: Phase3p: Part 8: Requeing and resurrecting ghost threads: Security group rules stateful design VALIDATION testing
+
 
 ### Introduction
 
-This is Part8 of the ghost resurrection code implementation. This finishes off the SG rule stateful implementation with drift detection,
-drift remediation, and finally the replay of the stateful SG rules on module2e resurrection candidates prior to their resurrection in 
-module2f.
+This UPDATE has all of the validation testing for the SG_STATE Security group rules stateful design that was presented in the last UPDATE.
 
-This will present Steps 5,5b, and 6 of the SG_STATE implementation.  Steps 5 and 5b are in module2 and Step 6 is in module2e.
+For a complete detailed description of the Stateful design and code flow, as well as a complete code review, see the previous UPDATE. 
 
-For a complete detailed description of the Stateful design and code flow see the previous UPDATE. 
+This UPDATE has the validation testing only. 
+
+
+
+### Part8: Validation testing
+
+There were many layers of validation testing that were required for this implementation
+
+For space issues and brevity, all the testing and test cases could not be included in this UPDATE, but the most relevant tests that
+show all the features of the implemenation are presented in detail in this UPDATE.
+
+The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestration_level_SG_manifest], [SG_STATE], 
+[SG_PROPAGATION_DELAY], [uitls_sg_state], [SPAWN_MODE], [SG_STATE_SELF_HEAL_ENABLED], and several others.
+
+
+
+
+
+#### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
+
+This is verified by grepping  [SECURITY GROUP], and [RETRY_METRIC] in the gitlab console logs.
+This is just a small sampling of some of the rules while they are being applied to the security group for some of the 
+parallel processes that are running tomcat_worker at this specific point in time. Each process has to do the apply of the rules to
+the security group, hence the repetition.  (The detailed reasons for this were given in the previous UPDATE. In that same UPDATE
+note that when the rules mainifest is replayed in module2e, since it is not a multi-processed environment, the application of the 
+rules is much simpler).
+
+```
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.19s...
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.44s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.13s...
+[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
+
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896'][DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+
+[Retry 1] RequestLimitExceeded. Retrying in 1.47s...
+[Retry 1] RequestLimitExceeded. Retrying in 1.12s...
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
+[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.43s...
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 22 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=22 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=80
+[RETRY] Wrapper invoked for authorize_
+
+
+RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5555 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5555 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5556
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.39s...
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 17] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 14] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 14] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Duplicate rule detected on attempt 2
+```
+
+
+#### Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
+
+Note this is making sure the rule application is working in tomcat_worker() using the SG_RULES list. The next section below
+will validate the manifest json file.
+
+The gitlab console logs are below. Note that as expected there are 6 applications, 1 for each process. There are only 6 of the 8
+here because the last 2 processes are pooled and those processes will run as threads are completed in the first wave of 6 processes
+The requirement for repeated application of the security group rules to the security group in the multi-processed tomcat_worker()
+function was explained in great detail in the previous UPDATE.
+
+```
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5557
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.59s...
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
+[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5557
+[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.80s...
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 13] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 13] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 16] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 16] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 17] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 12] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 12] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+[DEBUG] Preparing install_tomcat for 2 instances with WATCHDOG_TIMEOUT=20
+[RETRY] Duplicate rule detected on attempt 2
+[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
+[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
+[WATCHDOG METRIC] [PID 15] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 15] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+```
+
+
+
+This can be empirically verified on the AWS console, by looking at the rules in the security group. There is an added rule for
+this port 5557 added to the security group specified by the security group id used on the nodes for the execution run.
+This has been empirically verified.
+
+
+
+
+#### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above
+
+This can be seen once the pipeline completes. The json file is named orchestration_sg_rules_module2.json and the contents look
+like this (this one was done prior to port 5557 rule being added to the SG_RULES list)
+
+```
+{
+  "sg_ids": [
+    "sg-0a1f89717193f7896"
+  ],
+  "ingress_rules": [
+    {
+      "protocol": "tcp",
+      "port": 22,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 80,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 8080,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5555,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5556,
+      "cidr": "0.0.0.0/0"
+    }
+  ],
+  "timestamp": "2025-12-20T05:04:18.032207"
+}
+```
+
+
+
+This is after the port 5557 rule has been added to the SG_RULES list (see previous section for the gitlab console logs):
+
+```
+{
+  "sg_ids": [
+    "sg-0a1f89717193f7896"
+  ],
+  "ingress_rules": [
+    {
+      "protocol": "tcp",
+      "port": 22,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 80,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 8080,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5555,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5556,
+      "cidr": "0.0.0.0/0"
+    },
+    {
+      "protocol": "tcp",
+      "port": 5557,
+      "cidr": "0.0.0.0/0"
+    }
+  ],
+  "timestamp": "2025-12-26T04:02:26.254812"
+
+```
+
+
+#### Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
+
+#### Drift detection from SG_RULES (for the AWS security group) in module2
+
+
+The instrumentation for testing the various drift scnearios is simple. Add a wait ENV variable to the module2 code in between the 
+multiprocessing.Pool line that calls tomcat_worker_wrapper in main(), and the code that follows (which will be the main() SG_STATE 
+code steps 2 and 5 (drift detection is step 5)).
+
+```
+    # This is for enabling the delay between multiprocessing.Pool and the SG rule drift logic so that AWS rules can be changed 
+    # to test the drift logic. 120 seconds should be enough time. THe logic and code is in module2 and will also be ported to module2e  
+    READY_FOR_AWS_SG_EDITS: "true"
+    READY_FOR_AWS_SG_EDITS_DELAY: "120"
+```
+And this: 
+
+```
+    # This is for a delay so that SG rules on AWS can be changed prior to drift detection logic, so that it can be tested  
+    - echo 'READY_FOR_AWS_SG_EDITS='${READY_FOR_AWS_SG_EDITS} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY} >> .env
+```
+
+
+The wait time permits artifical changes to be made to the AWS security group rule set prior to step 5 drift detection to induce an 
+artifical drift to test the various drift detection variables.
+
+
+Then the code in module2 main() is added right here: 
+
+```
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+
+
+        # === SG_STATE: Safe window for AWS edits ===
+        #### ENV vars READY_FOR_AWS_SG_EDITS and READY_FOR_AWS_SG_EDITS_DELAY are in .gitlab-ci.yml file
+        print("[SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now")
+
+        # Optional delay for manual AWS edits (controlled by ENV)
+        ready_flag = os.getenv("READY_FOR_AWS_SG_EDITS", "false").lower()
+
+        if ready_flag in ("1", "true", "yes"):
+            delay_seconds = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY", "120"))
+            print(f"[SG_STATE][READY_FOR_AWS_EDITS] Pausing for {delay_seconds} seconds to allow AWS SG modifications...")
+            time.sleep(delay_seconds)
+        else:
+            print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
+
+
+    finally:
+```
+
+
+
+#### The security group rules reapply post reboot in module2e prior to resurrection
+
+Make sure that all of the rules in the mainifest are applied to the security group in module2e after the ghost nodes have been
+rebooted and area healthy.
+
+
+
+
+
+
 
 
 
@@ -278,15 +613,14 @@ For a complete detailed description of the Stateful design and code flow see the
 This is Part7 of the  ghost resurrection code implementation. This consists of some ehancements to the ghost resurrection code and ghost ip 
 processing code. The buik of the ghost resurrection code has been implemmented in Parts 1-5 as noted in the previous UPDATES.
 
-- Reapply the security group rules from module2 at the orchestration layer, after the reboot in module2e and prior to the resurrection of the node in module2f
+This UPDATE reviews the code to: Reapply the security group rules from module2 at the orchestration layer, after the reboot in module2e and prior to the resurrection of the node in module2f
 
-There are a lot of nuances to this implemenation that need to be reviewed prior to showing the code changes that are required for 
+There are a lot of nuances to this implementation that need to be reviewed prior to showing the code changes that are required for 
 this. These are reviewed below.
 
-Part7 will present Steps 1,2,3,4a and 4b of the module2 SG_STATE implemenation
+Part7 will present Steps 1,2,3,4a,4b,5,5b of the module2 SG_STATE implementation, and Step 6 of the module2e SG_STATE implementation
 
-Part8 (the next update) will implement Steps 5,5b and Step6 of the SG_STATE implementation (drift detection, drift remedication and SG 
-playback in module2e prior to module2f resurrection.
+Part8 (the next UPDATE) will present the validation testing for the SG rule stateful implementation.  This will cover validation of Steps 1-6as well as several other aspects of the implemenation.
 
 
 ### Part7: Code implementation strategy for the Stateful security group (SG) reapplication: Nuances in multi-processing environments
@@ -846,7 +1180,7 @@ approach is in the previous sections.
 
 The code review below indicates all of the code changes in the .gitlab-ci.yml, module1 and module2 and module2e files.
 
-The utils_sg_state.py helper functions file code is shown in the section below following the module2 code review changes.
+The utils_sg_state.py helper functions file code is shown in the section below, prior to the module2 code review changes.
 
 
 #### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
@@ -1398,13 +1732,11 @@ multipe SG ids used across the nodes(and unique per process) in the the future.
 
 ##### in main(): SG_STATE Step5:  Drift detection
 
-See the next UPDATE for the Code review on this
 
 
 
-##### in main(): SG_STATE Step5b: Self healing from the drift detection 
+##### in main(): SG_STATE Step5b: Self healing from the drift detection (drift remediation) 
 
-See the next UPDATE for the Code review on this
 
 Two cases
 ENV variable SG_STATE_SELF_HEAL_ENABLED
@@ -1454,7 +1786,6 @@ The propagation delay occurs per process and tagged with the PID in the print to
 
 #### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
-See the next UPDATE for the Code review on this.
 
 
 
@@ -1472,338 +1803,6 @@ Also note that the reboot code in module2e and the thread resurreciton code in m
 the manifest rules to the ghost security group is just a straight forward replay of the rules on the security group. The AWS
 backend will then propagate the rules to the nodes themselves.
 
-
-
-
-
-
-
-
-### Part7: Validation testing
-
-There were many layers of validation testing that were required for this implementation, in particular the SG rule apply 
-stateful design using the S3 bucket to maintain state.
-
-All of the validation tests are not listed here, only the most important ones. 
-
-
-The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestration_level_SG_manifest], [SG_STATE], 
-[SG_PROPAGATION_DELAY], etc...
-
-
-
-
-
-#### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
-
-This is verified by grepping  [SECURITY GROUP], and [RETRY_METRIC] in the gitlab console logs.
-This is just a small sampling of some of the rules while they are being applied to the security group for some of the 
-parallel processes that are running tomcat_worker at this specific point in time. Each process has to do the apply of the rules to
-the security group, hence the repetition.  (The detailed reasons for this were given in the previous UPDATE. In that same UPDATE
-note that when the rules mainifest is replayed in module2e, since it is not a multi-processed environment, the application of the 
-rules is much simpler).
-
-```
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[Retry 1] RequestLimitExceeded. Retrying in 1.19s...
-should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
-should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
-
-should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
-[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
-[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
-
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[Retry 1] RequestLimitExceeded. Retrying in 1.44s...
-[Retry 1] RequestLimitExceeded. Retrying in 1.13s...
-[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
-
-[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896'][DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
-
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
-
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-
-[Retry 1] RequestLimitExceeded. Retrying in 1.47s...
-[Retry 1] RequestLimitExceeded. Retrying in 1.12s...
-should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
-[TRACE] Wrote command plan to /aws_EC2/logs/command_plan.json
-[DEBUGX-TOMCATWORKER-PROCESS] Entering SG block with security_group_ids = ['sg-0a1f89717193f7896', 'sg-0a1f89717193f7896']
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=22
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[Retry 1] RequestLimitExceeded. Retrying in 1.43s...
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 22 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=22 → retry_count=1, max_retry_observed=1
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=80
-[RETRY] Wrapper invoked for authorize_
-
-
-RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5555 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5555 → retry_count=1, max_retry_observed=1
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5556
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[Retry 1] RequestLimitExceeded. Retrying in 1.39s...
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5556, 'ToPort': 5556, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 17] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
-[TRACE][tomcat_worker] Instance count for this chunk: 2
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 14] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 14] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
-[TRACE][tomcat_worker] Instance count for this chunk: 2
-[RETRY] Duplicate rule detected on attempt 2
-```
-
-
-#### Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
-
-Note this is making sure the rule application is working in tomcat_worker() using the SG_RULES list. The next section below
-will validate the manifest json file.
-
-The gitlab console logs are below. Note that as expected there are 6 applications, 1 for each process. There are only 6 of the 8
-here because the last 2 processes are pooled and those processes will run as threads are completed in the first wave of 6 processes
-The requirement for repeated application of the security group rules to the security group in the multi-processed tomcat_worker()
-function was explained in great detail in the previous UPDATE.
-
-```
-[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5557
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[Retry 1] RequestLimitExceeded. Retrying in 1.59s...
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5556 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5556 → retry_count=1, max_retry_observed=1
-[SECURITY GROUP] Applying ingress rule: sg_id=sg-0a1f89717193f7896, port=5557
-[RETRY] Wrapper invoked for authorize_security_group_ingress with max_retries=15
-[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for authorize_security_group_ingress
-[Retry 1] RequestLimitExceeded. Retrying in 1.80s...
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 13] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 13] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
-[TRACE][tomcat_worker] Instance count for this chunk: 2
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 16] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 16] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
-[TRACE][tomcat_worker] Instance count for this chunk: 2
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 17] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 17] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
-[TRACE][tomcat_worker] Instance count for this chunk: 2
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 12] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 12] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
-[TRACE][tomcat_worker] Instance count for this chunk: 2
-[RETRY] Attempt 2 for authorize_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 5557, 'ToPort': 5557, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
-[DEBUG] Preparing install_tomcat for 2 instances with WATCHDOG_TIMEOUT=20
-[RETRY] Duplicate rule detected on attempt 2
-[SECURITY GROUP] Successfully applied port 5557 to sg_id=sg-0a1f89717193f7896
-[RETRY METRIC] sg_id=sg-0a1f89717193f7896, port=5557 → retry_count=1, max_retry_observed=1
-[WATCHDOG METRIC] [PID 15] Final max_retry_observed = 1
-[Dynamic Watchdog] [PID 15] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
-```
-
-
-
-This can be empirically verified on the AWS console, by looking at the rules in the security group. There is an added rule for
-this port 5557 added to the security group specified by the security group id used on the nodes for the execution run.
-This has been empirically verified.
-
-
-
-
-#### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above
-
-This can be seen once the pipeline completes. The json file is named orchestration_sg_rules_module2.json and the contents look
-like this (this one was done prior to port 5557 rule being added to the SG_RULES list)
-
-```
-{
-  "sg_ids": [
-    "sg-0a1f89717193f7896"
-  ],
-  "ingress_rules": [
-    {
-      "protocol": "tcp",
-      "port": 22,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 80,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 8080,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 5555,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 5556,
-      "cidr": "0.0.0.0/0"
-    }
-  ],
-  "timestamp": "2025-12-20T05:04:18.032207"
-}
-```
-
-
-
-This is after the port 5557 rule has been added to the SG_RULES list (see previous section for the gitlab console logs):
-
-```
-{
-  "sg_ids": [
-    "sg-0a1f89717193f7896"
-  ],
-  "ingress_rules": [
-    {
-      "protocol": "tcp",
-      "port": 22,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 80,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 8080,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 5555,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 5556,
-      "cidr": "0.0.0.0/0"
-    },
-    {
-      "protocol": "tcp",
-      "port": 5557,
-      "cidr": "0.0.0.0/0"
-    }
-  ],
-  "timestamp": "2025-12-26T04:02:26.254812"
-
-```
-
-
-#### Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
-
-#### Drift detection from SG_RULES (for the AWS security group) in module2
-
-
-The instrumentation for testing the various drift scnearios is simple. Add a wait ENV variable to the module2 code in between the 
-multiprocessing.Pool line that calls tomcat_worker_wrapper in main(), and the code that follows (which will be the main() SG_STATE 
-code steps 2 and 5 (drift detection is step 5)).
-
-```
-    # This is for enabling the delay between multiprocessing.Pool and the SG rule drift logic so that AWS rules can be changed 
-    # to test the drift logic. 120 seconds should be enough time. THe logic and code is in module2 and will also be ported to module2e  
-    READY_FOR_AWS_SG_EDITS: "true"
-    READY_FOR_AWS_SG_EDITS_DELAY: "120"
-```
-And this: 
-
-```
-    # This is for a delay so that SG rules on AWS can be changed prior to drift detection logic, so that it can be tested  
-    - echo 'READY_FOR_AWS_SG_EDITS='${READY_FOR_AWS_SG_EDITS} >> .env
-    - echo 'READY_FOR_AWS_SG_EDITS_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY} >> .env
-```
-
-
-The wait time permits artifical changes to be made to the AWS security group rule set prior to step 5 drift detection to induce an 
-artifical drift to test the various drift detection variables.
-
-
-Then the code in module2 main() is added right here: 
-
-```
-    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
-    try:
-        with multiprocessing.Pool(processes=desired_count) as pool:
-            pool.starmap(tomcat_worker_wrapper, args_list)
-
-
-        # === SG_STATE: Safe window for AWS edits ===
-        #### ENV vars READY_FOR_AWS_SG_EDITS and READY_FOR_AWS_SG_EDITS_DELAY are in .gitlab-ci.yml file
-        print("[SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now")
-
-        # Optional delay for manual AWS edits (controlled by ENV)
-        ready_flag = os.getenv("READY_FOR_AWS_SG_EDITS", "false").lower()
-
-        if ready_flag in ("1", "true", "yes"):
-            delay_seconds = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY", "120"))
-            print(f"[SG_STATE][READY_FOR_AWS_EDITS] Pausing for {delay_seconds} seconds to allow AWS SG modifications...")
-            time.sleep(delay_seconds)
-        else:
-            print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
-
-
-    finally:
-```
-
-
-
-#### The security group rules reapply post reboot in module2e prior to resurrection
-
-Make sure that all of the rules in the mainifest are applied to the security group in module2e after the ghost nodes have been
-rebooted and area healthy.
 
 
 
