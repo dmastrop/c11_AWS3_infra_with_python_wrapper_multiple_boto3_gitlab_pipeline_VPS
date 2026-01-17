@@ -730,7 +730,8 @@ current SG_RULES is always avaiable in module2 itself at runtime.
 
 - Once multiprocessing.Pool call to tomcat_worker from main() completes, main() will then perform drift detection using the delta and the 
 current pipeline N+1 SG_RULES (authoritative), and compare this to the AWS SG rules (non-authoritative). There will be a helper function for
-this.
+this. In addition a fairly complex drift remediation will be performed, based upon the drift detection, to correct any deviations that
+are present in the AWS SG rules list relative to the desired state (SG_RULES and delta delete).
 
 - By the time module2e runs, it will have access to the current SG_RULES for pipeline N+1 on S3 (it has been written to by module2 above) and
 it will have access to the delta calculated in module2 above so it can perform the add/remove SG rules operation on the ghost nodes after
@@ -825,7 +826,21 @@ This is the only delta we need.
 
 ---
 
-##### 3. Apply SG rules inside tomcat_worker()  
+
+##### 3. Write delta_delete to S3 inside tomcat_worker of module2, for replay in module2e
+Module2 writes:
+
+```
+s3://<bucket>/state/sg_rules/delta_delete.json
+```
+
+Module2e will use this to remove stale rules on rebooted nodes.
+
+
+---
+
+
+##### 4. Apply SG rules inside tomcat_worker()  
 For each process:
 
 1. **Reapply all current SG_RULES** (idempotent, safe, required for multiprocessing correctness)
@@ -836,7 +851,9 @@ For each process:
 
 ---
 
-##### 4. Write current SG_RULES to S3 (becomes “previous” for next run), in main() afer multiprocessing.Pool
+
+
+##### 5. Write current SG_RULES to S3 (becomes “previous” for next run), in main() afer multiprocessing.Pool
 After computing delta_delete, module2 writes current SG_RULES to S3:
 
 ```
@@ -855,23 +872,16 @@ and pooled processes.
 
 ---
 
-##### 5. Write delta_delete to S3 inside tomcat_worker of module2, for replay in module2e
-Module2 writes:
-
-```
-s3://<bucket>/state/sg_rules/delta_delete.json
-```
-
-Module2e will use this to remove stale rules on rebooted nodes.
-
----
 
 ##### 6. Drift detection in main()  
 After multiprocessing.Pool completes:
 
-- Drift = AWS rules – desired state  
+- Drift = AWS rules – desired state. There are several different types of drift that are detected. These will be presented in more detail
+in a section below.
 - Desired state = current SG_RULES list that is at the top of module2  
 - delta_delete is used to detect stale rules that failed deletion
+- Drift remediation is then performed to correct any deviations present in the AWS SG rules list relative to the desired state (SG_RULES and
+delta_delete) in accordance to the drift that was detected.
 
 ---
 
@@ -882,9 +892,11 @@ When module2e runs:
 - It loads **delta_delete.json** direcctly from S3
 - It reapplies all SG_RULES
 - It deletes all delta_delete rules  
+- It runs drift detection and remediation
 - It then hands control to module2f for resurrection
 
 This works for ghosts and all other resurrection bucket types.
+For ghosts it will be done after the rebooting of the ghost nodes is complete.
 
 ---
 
@@ -1066,6 +1078,8 @@ This section shows the exact execution order across `module2`, `module2e`, and `
    - Ensures AWS SG matches desired state  
    - Calculated using several different formulas as noted in the code review section below.
    - There are various forms of drift that will be detected.
+   - Drift remediation (self-healing, and correction) will be performed based upon the drift to correct any deviations that are preent in the AWS SG rules list relative to the desired state (SG_RULES and delta_delete)
+
 ---
 
 ##### 3.2 module2e (single-threaded)
@@ -1102,6 +1116,7 @@ Module2e runs *after* module2 has overwritten `latest.json` with the current pip
 
 6. **Optionally detect drift after the steps above**
    **Operation:** Use the helper function detect_sg_drift_with_delta
+   - Also run drift remediation to correcct any AWS SG rule inconsistencies with the desired state.
 ---
 
 ##### 3.3 module2f
@@ -1151,6 +1166,165 @@ delete all rules in delta_delete.json from all resurrection candidates
 ```
 
 This guarantees that every node entering module2f has converged to the correct SG state.
+
+#### 6. Drift detection and drift remediation Step5b implementation design (self-healing)
+
+Since the drift remediation logic is a bit complicated, this separate section details some of the design concepts so that the code
+presented below can be easily understood. The prototype testing on this looks very good.
+
+
+##### Step 5b — SG_STATE Self‑Heal Forensic Flow
+
+Step 5b is the corrective phase of SG_STATE.  
+It runs **inside the per‑SG drift‑detection loop** and performs a single‑pass, deterministic remediation of any drift discovered in Step 5.
+
+This section documents the *forensic flow* — what the system checks, what actions it takes, and what artifacts it produces.
+
+It is important to node the flow. Based upon drift detection, there is a self-healing corrective remediation, after which the drift
+detection is run again to ensure that the remedication actually worked. If remediation fails, a gitlab log console message is thrown to 
+indicate that manual intervention is required. The same "failure" status will be noted in the remediation json artifact file as well.
+
+
+---
+
+###### 1. Inputs to Step 5b
+
+Step 5b receives three critical inputs from Step 5:
+
+- `drift_missing`  
+  Ports that **should** exist on AWS but do **not**.
+
+- `drift_extra_filtered`  
+  Ports that **should have been deleted** but still exist.
+
+- `delta_delete`  
+  The authoritative list of ports that must be removed.
+
+It also reads:
+
+- `SG_RULES` — the authoritative desired state  
+- `SG_STATE_SELF_HEAL_ENABLED` — environment flag controlling whether remediation runs
+
+---
+
+###### 2. Self‑Heal Activation
+
+Self‑heal only runs when:
+
+```
+SG_STATE_SELF_HEAL_ENABLED ∈ {"1", "true", "yes"}
+```
+
+If disabled, Step 5b logs a skip and produces **no remediation artifact**.
+
+---
+
+###### 3. Drift Classification
+
+Step 5b evaluates drift in this order:
+
+1. **Missing ports**  
+2. **Stale ports**  
+3. **Ignored drift only**
+
+This ordering is intentional — missing ports represent a correctness failure, while stale ports represent a cleanup failure.
+
+---
+
+###### 4. Case 1 — Missing Ports
+
+If any ports are missing:
+
+ 4.1 Action
+- Re‑apply **all** SG_RULES  
+- Re‑apply **all** delta_delete revocations  
+- Log each rule as:
+  - `Rule already exists`  
+  - `Successfully applied rule`  
+  - or a WARN on failure
+
+4.2 Verification
+After applying rules, Step 5b performs a **second drift detection**:
+
+- If `drift_missing` is now empty → remediation succeeded  
+- If not → remediation failed and manual investigation is required
+
+---
+
+###### 5. Case 2 — Stale Ports
+
+If no missing ports exist but stale ports do:
+
+5.1 Action
+- Revoke each stale port exactly once  
+- Log each revoke attempt  
+- No re‑application of SG_RULES occurs in this path
+
+5.2 Verification
+A second drift detection confirms whether stale ports were removed.
+
+---
+
+###### 6. Case 3 — Only Ignored Drift
+
+If the only drift is in `drift_ignored`, Step 5b:
+
+- Takes **no corrective action**  
+- Sets `drift_after = drift`  
+- Still produces a remediation artifact if `remediation_attempted` is true
+
+---
+
+###### 7. Remediation Artifact
+
+When any remediation action was attempted, Step 5b writes:
+
+```
+/aws_EC2/logs/sg_state_drift_SGID_<sg_id>_remediated_module2.json
+```
+
+This JSON contains:
+
+- `original_drift` — full drift snapshot before remediation  
+- `remediation_actions` — human‑readable list of actions taken  
+- `drift_after_remediation` — second drift detection results  
+- `remediation_success` — boolean indicating whether drift was fully resolved  
+
+This file is the authoritative forensic record for Step 5b.
+
+---
+
+###### 8. Forensic Guarantees
+
+Step 5b provides:
+
+Deterministic behavior
+- One pass  
+- No loops  
+- No retries  
+- No partial state
+
+Full auditability
+- Every rule application is logged  
+- Every drift state is captured  
+- Every remediation attempt is recorded  
+- Final success/failure is explicit
+
+Idempotence
+Running Step 5b multiple times produces the same end state.
+
+---
+
+###### 9. Expected Console Pattern
+
+A healthy remediation run produces:
+
+- Drift detected  
+- Self‑heal enabled  
+- Rule‑by‑rule logs  
+- Second drift detection  
+- “Missing ports successfully corrected” or “Stale ports successfully removed”  
+- Remediation artifact written  
 
 
 
@@ -1216,7 +1390,7 @@ And this:
 #### Module1 code changes: 
 
 
-And in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
+The above ENV variable is then used in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
 ```
     ## Define the sg_id that is used for the ORCHESTRATION_LEVEL_SG_ID that is defined in the .gitlab-ci.yml file
     ## this is used in the start_ec2_instances function below
@@ -1242,11 +1416,6 @@ This is then used in module1 in the EC2 client method:
                 ImageId=image_id,
                 InstanceType=instance_type,
                 KeyName=key_name,
-
-                #SecurityGroupIds=['sg-0a1f89717193f7896'],  
-                # Specify SG explicitly. For now i am using the default SG so all authorize_security_group_ingress method callls
-                # will be applied to the default security group. The method is used to apply rules to the security group. This 
-                # security group will be used on all the  nodes in the execution run.
 
                 SecurityGroupIds=[sg_id],   ## sg_id is defined above from the ORCHESTRATION_LEVEL_SG_ID ENV variable
                 ## Use this instead of hardcoding above 
@@ -1280,7 +1449,9 @@ This is then used in module1 in the EC2 client method:
 
 
 
-#### utils_sg_state.py helper functions used in module2 code changes
+#### utils_sg_state.py helper functions used in module2 SG_STATE implemenation:
+
+This file is a shared functions utility file with the helper functions that module1 uses for the SG_STATE implementation.
 
 
 
@@ -1707,36 +1878,728 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 
 ##### SG_RULES ENV variable list set
 
+This is the module2 global ENV variable that has the desired state of the SG_RULES. In the future this will be a manifest of
+several security groups with their unique rules list.  This is so that each process can use a unique SG for the policy enforcement 
+of its nodes, and also so that each process can use multiple security groups across those nodes. As discussed in a previous UPDATE, 
+the design is extensible to creating a type of security group routing infrastructure that maps network topology to a logical SG policy
+enforcement, all at the process level in a multi-processing environment. For example the application servers can be run in 
+process1 of multiprocessing.Pool, the database servers in process2 of multiprocessing.Pool, and the web servers in process3 of the 
+multiprocessing.Pool. Then the security group(s) are assigned accordingly to each process, and all of the SG_STATE design will apply
+to each of the process' security group(s).  This is a very powerful design because it is fully stateful across gitlab pipelines.
+
+Currently, the SG_RULES ENV variable list is defined at the top of module2. For example: 
+```
+SG_RULES = [
+    {"protocol": "tcp", "port": 22,   "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 80,   "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 8080, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 5555, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 5556, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 5557, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 5558, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 6000, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 6001, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 6002, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7000, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7001, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7002, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7003, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7004, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7005, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7006, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7007, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7008, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 7009, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 8000, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 8001, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 8002, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 8003, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 8004, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 9000, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 9001, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 9002, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9003, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9004, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9005, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9006, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9007, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9008, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9009, "cidr": "0.0.0.0/0"},
+    #{"protocol": "tcp", "port": 9010, "cidr": "0.0.0.0/0"},
+
+    {"protocol": "tcp", "port": 4000, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4001, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4002, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4003, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4004, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4005, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4006, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4007, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4008, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4009, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4010, "cidr": "0.0.0.0/0"},
+]
+
+```
+
+
 ##### in tomcat_worker(): SG_STATE Steps 1,3, and 4a (authorize) and 4b (revoke)
 
+These are the next temporal steps that are executed at the process level. As discussed in the earlier sections, these steps bascially
+apply the new desired state of the SG rules in pipeline N+1 to the fleet of nodes, relative to the pipeline N state.  As such, 
+ports that are removed can be easily detected.
+
+Because module2 is a multi-processing environment, the code here had to be regression tested quite a bit. The SG is reapplied for each
+process for reasons mentioned in a previous update. So there is a lot of churn and the code has to be robust to handle process
+hyper-scaling. 
+
+The regression testing went well. 
+The validation testing for the complete SG_STATE implementation will be presented in the next UPDATE.
+
+
+```
+    #### [tomcat_worker] ****
+    #### Stateful SG application code (see also main() Step2, etc.... ) ##########
+    #### All helper functions below are in utils_sg_state.py ####
+
+    # === STEP 1: Load previous SG_RULES state from S3 ===
+    bucket_name = os.getenv("SG_RULES_S3_BUCKET")  # will be None for now
+    previous_rules = {}
+
+    if bucket_name:
+        try:
+            previous_rules = load_previous_sg_rules_from_s3(bucket_name)
+            print(f"[SG_STATE][PID {pid}] Loaded previous SG_RULES from S3: {len(previous_rules)} rules")
+        except Exception as e:
+            print(f"[SG_STATE][PID {pid}] WARNING: Failed to load previous SG_RULES from S3: {e}")
+    else:
+        print("[SG_STATE][PID {pid}] No S3 bucket configured yet — using empty previous_rules")
+
+
+    # === STEP 3: Compute delta_delete and save to S3 ===
+    # previous_rules was loaded in STEP 1
+    current_rules = SG_RULES  # authoritative rules for this pipeline run
+    bucket_name = os.getenv("SG_RULES_S3_BUCKET")
+
+    if not bucket_name:
+        print("[SG_STATE][PID {pid}] No S3 bucket configured — skipping delta_delete computation")
+    else:
+        try:
+            delta_delete = compute_delta_delete(previous_rules, current_rules)
+
+            print(f"[SG_STATE][PID {pid}] Computed delta_delete: {len(delta_delete)} rules to delete")
+
+            # Print each rule for forensic visibility
+            for rule in delta_delete:
+                print(f"[SG_STATE][PID {pid}]   DELTA_DELETE → {rule}")
+
+            # Save delta_delete to S3
+            save_delta_delete_to_s3(bucket_name, delta_delete)
+            print(f"[SG_STATE][PID {pid}] Saved delta_delete to S3 bucket '{bucket_name}'")
+
+        except Exception as e:
+            print(f"[SG_STATE][PID {pid}]  ERROR during delta_delete computation or save: {e}")
 
 
 
-##### in tomcat_worker() ssh enhancements after testing of Step4b (revoke)
+
+    #### [tomcat_worker] SG_STATE — STEP 4: APPLY + DELETE (Stateful SG Rule Application)
+    #### This block replaces the legacy Step 1/Step 2 SG rule logic.
+    #### It uses:
+    ####   • SG_RULES (current pipeline N+1 desired state)
+    ####   • delta_delete.json (rules removed from pipeline N → N+1)
+    ####   • latest.json is NOT used here (it is previous state, only used for delta computation)
+    ####
+    #### This block MUST:
+    ####   • Apply ALL SG_RULES (idempotent, safe, required for multiprocessing correctness)
+    ####   • Delete ALL rules in delta_delete.json (the authoritative “rules to remove”)
+    ####   • Preserve adaptive watchdog + retry logic
+    ####   • Preserve per‑process SG loop structure
+    ####   • Use [SG_STATE] logs for clarity and grep‑ability
+    ####
+    #### This is Step 4 of the SG_STATE architecture:
+    ####   Step 1: load previous_rules (done earlier)
+    ####   Step 2: main() writes SG_RULES → latest.json (after all processes finish)
+    ####   Step 3: compute + save delta_delete.json (done earlier)
+    ####   Step 4: apply SG_RULES + delete delta_delete (THIS BLOCK)
+    #### ----------------------------------------------------------------------
+
+    # ------------------------------------------------------------
+    # Load delta_delete.json from S3 (authoritative rules to remove)
+    # ------------------------------------------------------------
+    print(f"[SG_STATE] Loading delta_delete.json from S3 for this process…")
+
+    bucket_name = os.getenv("SG_RULES_S3_BUCKET")
+    if not bucket_name:
+        print("[SG_STATE] ERROR: SG_RULES_S3_BUCKET is not set — cannot load delta_delete.json")
+        delta_delete = []
+    else:
+        try:
+            s3 = boto3.client("s3")
+            delta_obj = s3.get_object(
+                Bucket=bucket_name,
+                Key="state/sg_rules/delta_delete.json"
+            )
+            delta_delete = json.loads(delta_obj["Body"].read().decode("utf-8"))
+            print(f"[SG_STATE] Loaded {len(delta_delete)} delta_delete rules from S3 bucket '{bucket_name}'")
+        except Exception as e:
+            print(f"[SG_STATE_ERROR] Failed to load delta_delete.json from S3 bucket '{bucket_name}': {e}")
+            delta_delete = []
+
+    # Normalize delta_delete into comparable tuples for deletion loop
+    def normalize_delta(rule):
+        try:
+            return (
+                rule.get("protocol"),
+                int(rule.get("port")),
+                rule.get("cidr")
+            )
+        except Exception:
+            return None
+
+    delta_delete_norm = [
+        normalize_delta(r) for r in delta_delete if normalize_delta(r)
+    ]
+
+    print(f"[SG_STATE] Normalized delta_delete rules: {delta_delete_norm}")
+
+
+    # SG_STATE summary counters
+    applied_count = 0
+    deleted_count = 0
+    duplicate_skipped = 0
+    absent_skipped = 0
+
+
+
+
+
+    #### STEP 4 APPLICATION and REMOVAL OF RULES
+    for sg_id in set(security_group_ids):
+
+        print(f"[SG_STATE] Processing SG {sg_id} for this process")
+
+
+
+
+        ###########################################################################
+        # STEP 4A — APPLY ALL RULES IN SG_RULES (desired state)
+        #
+        # This is identical to the legacy Step 1 logic, but with SG_STATE logs.
+        # This ensures:
+        #   • All desired rules are present
+        #   • Multiprocessing correctness (each process reapplies rules)
+        #   • Duplicate rules are harmless (AWS returns Duplicate)
+        ###########################################################################
+        for rule in SG_RULES:
+
+            retry_count = 0
+
+            try:
+                print(
+                    f"[SG_STATE] APPLY rule sg_id={sg_id}, port={rule['port']}, cidr={rule['cidr']}"
+                )
+
+                retry_count = retry_with_backoff(
+                    my_ec2.authorize_security_group_ingress,
+                    GroupId=sg_id,
+                    IpPermissions=[{
+                        'IpProtocol': rule["protocol"],
+                        'FromPort': rule["port"],
+                        'ToPort': rule["port"],
+                        'IpRanges': [{'CidrIp': rule["cidr"]}]
+                    }]
+                )
+
+                print(
+                    f"[SG_STATE] Successfully applied port {rule['port']} to sg_id={sg_id}"
+                )
+                applied_count += 1
+
+
+            except my_ec2.exceptions.ClientError as e:
+
+                if "InvalidPermission.Duplicate" in str(e):
+                    print(
+                        f"[SG_STATE] Rule already exists sg_id={sg_id}, port={rule['port']}"
+                    )
+                    duplicate_skipped += 1
+
+                else:
+                    print(
+                        f"[SG_STATE_ERROR] Unexpected AWS error applying rule sg_id={sg_id}, port={rule['port']}: {e}"
+                    )
+                    raise
+
+            # Always update retry metric
+            max_retry_observed = max(max_retry_observed, retry_count)
+            print(
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule['port']} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
+            )
+
+
+
+        #######################################################################
+        # STEP 4B — DELETE RULES IN delta_delete.json
+        #
+        # This replaces the broken legacy Step 2 logic.
+        # delta_delete.json is the ONLY authoritative source of rules to remove.
+        #
+        # Example:
+        #   Pipeline N had port 5555
+        #   Pipeline N+1 removed it from SG_RULES
+        #   delta_delete.json contains {tcp, 5555, 0.0.0.0/0}
+        #
+        # AWS‑extra rules (e.g., 443) are preserved.
+        #######################################################################
+
+        for proto, rule_port, cidr in delta_delete_norm:
+        #for proto, port, cidr in delta_delete_norm:
+        ##### [RAW_AFTER_PARAMIKO_TIMEOUT]
+        ##### Need to use rule_port and not port. If port is used it can mutate the port used in install_tomcat since install_tomcat
+        ##### function is defined inside tomcat_worker (as is threaded_install). This is by design for the multi-processing to work
+        ##### properly.
+
+            retry_count = 0
+
+            print(
+                f"[SG_STATE] DELETE rule sg_id={sg_id}, port={port}, cidr={cidr}"
+            )
+
+            try:
+                retry_count = retry_with_backoff(
+                    my_ec2.revoke_security_group_ingress,
+                    GroupId=sg_id,
+                    IpPermissions=[{
+                        'IpProtocol': proto,
+                        #'FromPort': port,
+                        'FromPort': rule_port,
+                        #'ToPort': port,
+                        'ToPort': rule_port,
+                        'IpRanges': [{'CidrIp': cidr}]
+                    }]
+                )
+
+                print(
+                    f"[SG_STATE] Successfully removed obsolete port {rule_port} from sg_id={sg_id}"
+                )
+                deleted_count += 1
+
+            except my_ec2.exceptions.ClientError as e:
+                if "InvalidPermission.NotFound" in str(e):
+                    print(
+                        f"[SG_STATE] Rule already absent sg_id={sg_id}, port={rule_port}"
+                    )
+                    absent_skipped += 1
+
+                else:
+                    print(
+                        f"[SG_STATE_ERROR] Unexpected AWS error removing rule sg_id={sg_id}, port={rule_port}: {e}"
+                    )
+                    raise
+
+            # Update retry metric
+            max_retry_observed = max(max_retry_observed, retry_count)
+            print(
+                f"[SG_STATE] RETRY_METRIC sg_id={sg_id}, port={rule_port} → retry_count={retry_count}, max_retry_observed={max_retry_observed}"
+            )
+
+
+    # ------------------------------------------------------------
+    # SG_STATE Summary for this process
+    # ------------------------------------------------------------
+    print(
+        f"[SG_STATE][SUMMARY][PID {pid}] "
+        f"applied={applied_count}, "
+        f"deleted={deleted_count}, "
+        f"duplicate_skipped={duplicate_skipped}, "
+        f"absent_skipped={absent_skipped}"
+    )
+
+    ###########################################################################
+    # END OF SG_STATE RULE APPLICATION BLOCK (STEP 4)
+    ###########################################################################
+```
+
+
+
+
+##### in install_tomcat():  ssh enhancements after testing of Step4b (revoke)
+
+There was a port variable scoping but that was present in the earlier code whereby the SSH SYN did not appear to be sent out
+during Step4B above (the revoke step). Prior to discovering that this was a port variable scoping issue, several SSH 
+enhancements were done to SSH retry loop in install_tomcat() because it was initially suspected that the bug was a paramiko or
+SSH socket based error. 
+
+install_tocmat() is thread level process that runs inside each process. tomcat_worker() calls threaded_install() which in turn
+uses the ThreadPoolExecutor to call install_tomcat() to invoke the worker threads in the process in a multi-threaded fashion.
+This code works extremely well under stress, but the optimizations that were made during defect discovery will make the thread level
+SSH connect code even more robust. The comments in the code presented below are self explanatory. In short, a new SSH connection is
+made for each retry (there are up to 5 SSH retries performed), and several additional exception blocks were added to cover all the
+various types of SSH paramiko failures. In addtion, each exception block now closes the connection. Because all the various paramiko 
+SSH exceptions are now covered inside the SSH retry loop, there is very little chance that an SSH error or exception will be kicked up
+to the calling function threaded_install (even though a registry_entry is still there in case there is a rare SSH exception that is
+not caught by the code below). This will not only improve forensics but will help in the ML learning phase, as the registry_entrys 
+always have deteailed information on the nature and type of (SSH) exception. 
+```
+
+        ######## Insert the debug for attempt in range(5) code for the [RAW_AFTER_PARAMIKO_TIMEOUT] issue
+        ######## This does a fresh SSH client per attempt and for all except blocks closes the current connection
+        ######## This will call the debug_raw_connect_function to attempt to open a raw ssh connect after each timeout of 
+        ######## paramiko SSH connect failure for debugging the SYN only issue with SG rule revoke.
+
+        for attempt in range(5):
+
+            # Fresh SSH client per attempt
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            try:
+                print(f"Attempting to connect to {ip} (Attempt {attempt + 1})")
+
+                attempt_start = time.time()
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] SSH connect attempt {attempt + 1} starting")
+
+                # Watchdog thread (unchanged)
+                def watchdog():
+                    try:
+                        time.sleep(30)
+                        if not ssh_connected and attempt == 4:
+                            pid = multiprocessing.current_process().pid
+                            stub_entry = {
+                                "status": "stub",
+                                "attempt": -1,
+                                "pid": pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": ["stub", "watchdog_triggered", "ssh_connect_stall"]
+                            }
+                            return ip, private_ip, stub_entry
+                    except Exception as e:
+                        print(f"[ERROR][watchdog] Exception in watchdog thread: {e}")
+
+                threading.Thread(target=watchdog, daemon=True).start()
+                
+                #### [RAW_AFTER_PARAMIKO_TIMEOUT]
+                #### redefine "port" as ssh_port so that there is no chance of generic "port" variable mutation when tomcat_worker
+                #### calls threaded_install which calls install_tomcat (this function)
+                ssh_port = 22
+
+                # Actual Paramiko connect
+                ssh.connect(
+                    hostname=ip,
+                    port=ssh_port,
+                    #port=port,
+                    username=username,
+                    key_filename=key_path,
+                    timeout=30,
+                    banner_timeout=30,
+                    auth_timeout=30,
+                )
+
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] SSH connect attempt {attempt + 1} succeeded in {elapsed:.2f}s")
+
+                ssh_connected = True
+                ssh_success = True
+                break
+
+
+            # -------------------------
+            # TIMEOUT ERROR
+            # -------------------------
+            except TimeoutError as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⏱️ TimeoutError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                # 🔍 RAW SOCKET PROBE. [RAW_AFTER_PARAMIKO_TIMEOUT]
+                debug_raw_connect(ip, port=ssh_port, label="RAW_AFTER_PARAMIKO_TIMEOUT")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_timeout", "TimeoutError", str(e)],
+                    }
+                    return ip, private_ip, registry_entry
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
+
+
+            # -------------------------
+            # NoValidConnectionsError
+            # -------------------------
+            except paramiko.ssh_exception.NoValidConnectionsError as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 💥 NoValidConnectionsError on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "NoValidConnectionsError", str(e)],
+                    }
+                    return ip, private_ip, registry_entry
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
+
+
+            # -------------------------
+            # AuthenticationException
+            # -------------------------
+            except paramiko.ssh_exception.AuthenticationException as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] 🔐 AuthenticationException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "AuthenticationException", str(e)],
+                    }
+                    return ip, private_ip, registry_entry
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
+
+
+            # -------------------------
+            # SSHException (generic)
+            # -------------------------
+            except paramiko.ssh_exception.SSHException as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ⚠️ SSHException on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "SSHException", str(e)],
+                    }
+                    return ip, private_ip, registry_entry
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
+
+
+            # -------------------------
+            # Catch-all Exception
+            # -------------------------
+            except Exception as e:
+                elapsed = time.time() - attempt_start
+                print(f"[FUTURES_16_NODE_CRASH_SG_REVOKE] [{ip}] ❗ Unexpected exception on attempt {attempt + 1} after {elapsed:.2f}s: {e}")
+
+                try:
+                    ssh.close()
+                except Exception:
+                    pass
+
+                if attempt == 4:
+                    registry_entry = {
+                        "status": "install_failed",
+                        "attempt": attempt,
+                        "pid": multiprocessing.current_process().pid,
+                        "thread_id": threading.get_ident(),
+                        "thread_uuid": thread_uuid,
+                        "public_ip": ip,
+                        "private_ip": private_ip,
+                        "timestamp": str(datetime.utcnow()),
+                        "tags": ["ssh_exception", "UnexpectedException", str(e)],
+                    }
+                    return ip, private_ip, registry_entry
+
+                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                continue
+
+
+
+
+            #### End of try block inside of for attempt in range(5) loop
+
+
+
+        #### else used with the for attempt in range(5) loop and try block above
+        else:
+            print(f"Failed to connect to {ip} after multiple attempts")
+            registry_entry = {
+                "status": "ssh_retry_failed",
+                "attempt": -1,
+                "pid": multiprocessing.current_process().pid,
+                "thread_id": threading.get_ident(),
+                "thread_uuid": thread_uuid,
+                "public_ip": ip,
+                "private_ip": private_ip,
+                "timestamp": str(datetime.utcnow()),
+                "tags": ["ssh_retry_failed"]
+            }
+            status_tagged = True
+            registry_entry_created = True
+            return ip, private_ip, registry_entry
+
+
+        if not status_tagged and not registry_entry_created and not ssh_success:
+            pid = multiprocessing.current_process().pid
+            if pid:  # only stub if pid exists
+                print(f"[STUB] install_tomcat ssh.connecct exited early for {ip}")
+                stub_entry = {
+                    "status": "stub",
+                    "attempt": -1,
+                    "pid": pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": ["stub", "early_exit", "ssh_init_failed"]
+                }
+                return ip, private_ip, stub_entry
+
+        #### END of the for attempt in range(5) block #####
+```
 
 
 ##### in main(): SG_STATE Step2: write the current state of the rules SG_RULES to the latest.json file in the S3 bucket.
 
-The changes for this involve a small change in the .gitlab-ci.yml to add the log file to the log file paths, and adding several 
-blocks of code changes to module2
+The changes for this involve a small change in the .gitlab-ci.yml to add the log file to the log file paths
 
-The code that applies the SG rules inside tomcat_worker() of module2 has also been refactored to use the SG_RULES list of rules
-Module2 uses multi-processing so this code has to be carefully refactored to apply the rules to each process that is running
-tomcat_worker from multiprocessing.Pool.
 
-This SG_RULES list of rules is also used to create the manifest json file that module2e will use to replay the SG rules on the
-rebooted ghost nodes prior to their resurrection in module2f.  
+Module2 uses multi-processing so the code changes in tomcat_worekr were carefully refactored to apply the SG SG_RULES to each process that is 
+running tomcat_worker from multiprocessing.Pool.(code presented in the section above). It is up to AWS to propagate the actual rules
+to the nodes in the process.
 
-main() then calls a helper function write_sg_rule_mainifest() to actually write all these rules and their respective security group
-ids to the json manifest file. Right now the module is only using 1 SG for all the nodes, but the code will be able to support 
-multipe SG ids used across the nodes(and unique per process) in the the future.
+THere are two parts of code in this section. 
+1. The SG_RULES list of rules is used to create a manifest json file artifact for the current
+gitlab pipeline run. This file is just used for forensics along with all of the other log files created by the pipeline.
 
-##### in main(): SG_STATE Step5:  Drift detection
-
+main() calls a helper function write_sg_rule_mainifest() to actually write all these rules and their respective security group
+ids to the json manifest file.( This file is not used in the actual state machine. The file created in item 2 below, on the S3 bucket 
+(latest.json) is the file that is used to maintain state).
 
 
 
-##### in main(): SG_STATE Step5b: Self healing from the drift detection (drift remediation) 
+The helper function write_sg_rule_manifest() is at the top of module2: 
+```
+#### This helper function is for the SG rule manifest code.  The code is called from main() right after the 
+#### multiprocessing.Pool call to tomcat_worker_wrapper.  That block calls this helper function with all the SG ids
+#### from all the orchestration level nodesthat gets all the SG ids from all the orchestration level nodes
+#### Right now all SGs are assumed to have the same rules, but this will be enhanced later. See the note below.
+# NOTE: If future architectures use multiple SGs with different rule sets,
+# this manifest must evolve to map each SG ID → its own rule list.
+
+def write_sg_rule_manifest(security_group_ids, log_dir="/aws_EC2/logs"):
+    """
+    Writes the SG rule manifest used by module2 to a JSON file.
+    This becomes the authoritative source for module2e SG replay.
+    """
+
+    manifest = {
+        "sg_ids": list(set(security_group_ids)),
+        #"ingress_rules": ingress_rules,
+        "ingress_rules": SG_RULES,  ## use the common ENV variable now that ties tomcat_worker SG rule application with this code!
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    os.makedirs(log_dir, exist_ok=True)
+    out_path = os.path.join(log_dir, "orchestration_sg_rules_module2.json")
+
+    try:
+        with open(out_path, "w") as f:
+            json.dump(manifest, f, indent=2)
+        print(f"[module2_orchestration_level_SG_manifest] Wrote SG rule manifest to {out_path}")
+    except Exception as e:
+        print(f"[module2_orchestration_level_SG_manifest] ERROR writing SG rule manifest: {e}")
+```
+
+main() calls the function above, right before the Step2 code presented in item2 below.
+
+```
+            # Write the manifest. Currently, just one SG ID but if there are multiple SG IDs this will be able to do that 
+            # as well. The manifest will list the SG id and all the rules that are in it, for each SG id.
+            # write_sg_rule_manifest is a helper function at the top of this module.
+            
+            write_sg_rule_manifest(sg_ids)
+            ##### NOTE that this is the SG_RULES manifest written to the gitlab artifact logs for forensics. It is not used for
+            ##### the stateful SG design. See below for SG stateful design the exclusively uses the S3 bucket, not gitlab artifact logs
+```
+
+
+
+2. The latest.json file on the S3 bucket is created in main() as well as Step2 of the SG_STATE design. This is the file that is actually
+used to maintain state across pipelines (along with the delta_delete.json file).
+
+pipeline N+1  overwrites the previous latest.json made by the previous pipeline N, so that the state is updated for use in module2e.
+
+This uses the shared utlity helper function save_current_sg_rules_to_s3 from the utils_sg_state.py code presented earlier.
+```
+
+            #### [main] ****
+            #### Stateful SG application code (see also tomcat_worker steps 1 and 3, etc....)##########
+            # === STEP 2: Save current SG_RULES to S3 ===
+            bucket_name = os.getenv("SG_RULES_S3_BUCKET")
+            if bucket_name:
+                try:
+                    save_current_sg_rules_to_s3(bucket_name, SG_RULES)
+                    print(f"[SG_STATE] Saved current SG_RULES to S3 ({len(SG_RULES)} rules)")
+                except Exception as e:
+                    print(f"[SG_STATE] WARNING: Failed to save SG_RULES to S3: {e}")
+            else:
+                print("[SG_STATE] No S3 bucket configured — skipping SG_RULES save")
+```
+
+
+
+##### in main(): SG_STATE Step5 and 5b:  Drift detection and self-healing using the drift detection (drift remediation)
+
+
 
  Since drift detection and drift mediation code is a bit complicated it is a good idea to see where this code sits in relation to the
 main() function in module2.
@@ -1788,10 +2651,282 @@ The drift detection logic is embedded inside several try blocks as shown below:
 1          print("[main] ERROR ...")
 ```
 
-Two cases
-ENV variable SG_STATE_SELF_HEAL_ENABLED
+The drift remediation code (Step5b) is embedded inside of the dirft detection code (Step5).
 
-XXXXXXXX
+The extensive comments are self explanatory. The extensive validation testing for this will be presented as part of the next UPDATE.
+
+As noted in the comments, there are 4 types of drift. The first 2 types are the ones used for AWS rule remediation:
+```
+                        missing_ports = drift.get("drift_missing (Ports that SHOULD be on AWS but are NOT)", [])
+                        stale_ports   = drift.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)", [])
+```
+The large code blocks below are embedded quite deep inside main() of module2 as shown in the snippet above. It has to be this way, because
+the drift detection and remediation have to be performed per sg_id. In the future the code will support multiple SG ids per process and
+unique SG ids across different processes. 
+
+
+Also, remediation is gated by an ENV variable in .gitlab-ci.yml so that it can be toggled on and off. Currently it is set on.
+```
+                    # Gate the self-heal with an ENV flag so it can be disabled easily.
+                    self_heal_flag = os.getenv("SG_STATE_SELF_HEAL_ENABLED", "false").lower()
+```
+
+drift detection and remediation Steps 5 and 5b:
+The drift detection uses the helper function from ultis_sg_state.py, detect_sg_drift_with_delta.
+There are two main cases of drift remediation: one for missing_ports that uses the drift_missing drift detection and the other one
+for stale_ports that uses the drift_extra_filtered drift detection.
+
+The prototype has been tested and performed very well. The Validation testing on this will be presented in the next update.
+
+Note that here are 2 gitlab artifact log files created for this:
+
+The first one is for the drift detection: sg_state_drift_SGID_{sg_id}_module2.json
+The second one is for the drift remediation: sg_state_drift_SGID_{sg_id}_remediated_module2.json
+
+The contents of both of these files will be presented under various testing scenarios in the next UPDATE.
+
+```
+            #### [main] ****
+            #### Stateful SG application code ####
+            # === STEP 5: Drift Detection ===
+            print("[SG_STATE] Starting SG drift detection (Step 5)")
+
+            # Load delta_delete.json from S3 (written by tomcat_worker)
+            delta_delete = []
+            try:
+                s3 = boto3.client("s3")
+                obj = s3.get_object(
+                    Bucket=bucket_name,
+                    Key="state/sg_rules/delta_delete.json"
+                )
+                body = obj["Body"].read().decode("utf-8")
+                delta_delete = json.loads(body)
+                print(f"[SG_STATE] Loaded delta_delete from S3 ({len(delta_delete)} rules)")
+            except Exception as e:
+                print(f"[SG_STATE] WARNING: Could not load delta_delete.json from S3: {e}")
+                delta_delete = []
+
+            # Run drift detection for each SG
+            for sg_id in sg_ids:
+                try:
+                    drift = detect_sg_drift_with_delta(
+                        ec2=my_ec2,
+                        sg_id=sg_id,
+                        current_rules=SG_RULES,
+                        delta_delete=delta_delete
+                    )
+
+                    # Write drift artifact
+                    drift_path = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_module2.json"
+                    with open(drift_path, "w") as f:
+                        json.dump(drift, f, indent=2)
+
+                    print(f"[SG_STATE] Drift artifact written: {drift_path}")
+
+
+
+                    # ============================================================
+                    # Step 5b: SG_STATE Self-Heal Logic (Optional, Single-Pass Only)
+                    # ============================================================
+
+
+                    # [main] #
+                    # ============================================================
+                    # Step 5b: SG_STATE Self-Heal Logic (Optional, Single-Pass Only)
+                    # ============================================================
+                    #
+                    # This block runs AFTER Step 5 drift detection and BEFORE module2b.
+                    # It attempts a *single* corrective action if drift is detected.
+                    #
+                    # Drift categories:
+                    #   drift_missing:
+                    #       Ports that SHOULD be on AWS but are NOT.
+                    #       (AWS is missing rules that SG_RULES requires.)
+                    #
+                    #   drift_extra_filtered:
+                    #       Ports that ARE on AWS but SHOULD have been deleted.
+                    #       (AWS still has stale rules that delta_delete removed.)
+                    #
+                    #   drift_extra_raw:
+                    #       Ports AWS has that SG_RULES does NOT include.
+                    #       (We ignore these unless they are also in delta_delete.)
+                    #
+                    #   drift_ignored:
+                    #       Ports AWS has that we IGNORE because they are not tracked.
+                    #       (No action taken.)
+                    #
+                    # This self-heal step:
+                    #   - Performs ONE corrective apply/revoke.
+                    #   - Re-runs drift detection once.
+                    #   - Logs success or failure.
+                    #   - Never loops.
+                    #
+                    # ============================================================
+
+                    # Gate the self-heal with an ENV flag so it can be disabled easily.
+                    self_heal_flag = os.getenv("SG_STATE_SELF_HEAL_ENABLED", "false").lower()
+
+                    if self_heal_flag in ("1", "true", "yes"):
+                        print("[SG_STATE][SELF_HEAL] Self-heal enabled. Evaluating drift for corrective action...")
+
+                        missing_ports = drift.get("drift_missing (Ports that SHOULD be on AWS but are NOT)", [])
+                        stale_ports   = drift.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)", [])
+
+                        remediation_attempted = bool(missing_ports or stale_ports)
+
+                        # Case 1: Missing ports
+                        if missing_ports:
+                            print(f"[SG_STATE][SELF_HEAL] Missing ports detected (Ports that SHOULD be on AWS but are NOT): {missing_ports}")
+                            print("[SG_STATE][SELF_HEAL] Re-applying SG_RULES and delta_delete to correct missing ports...")
+
+                            for rule in SG_RULES:
+                                try:
+                                    my_ec2.authorize_security_group_ingress(
+                                        GroupId=sg_id,
+                                        IpProtocol=rule["protocol"],
+                                        FromPort=rule["port"],
+                                        ToPort=rule["port"],
+                                        CidrIp=rule["cidr"]
+                                    )
+                                
+                                    print(f"[SG_STATE][SELF_HEAL] Successfully applied rule {rule}")
+                                
+                                except Exception as e:
+                                    
+                                    if "InvalidPermission.Duplicate" in str(e):
+                                        print(f"[SG_STATE][SELF_HEAL] Rule already exists: {rule}") 
+                                    else:
+                                        print(f"[SG_STATE][SELF_HEAL][WARN] Failed to authorize rule {rule}: {e}")
+
+
+                            for rule in delta_delete:
+                                try:
+                                    my_ec2.revoke_security_group_ingress(
+                                        GroupId=sg_id,
+                                        IpProtocol=rule["protocol"],
+                                        FromPort=rule["port"],
+                                        ToPort=rule["port"],
+                                        CidrIp=rule["cidr"]
+                                    )
+                                except Exception as e:
+                                    print(f"[SG_STATE][SELF_HEAL][WARN] Failed to revoke stale rule {rule}: {e}")
+
+                            print("[SG_STATE][SELF_HEAL] Re-running drift detection to verify correction...")
+                            drift_after = detect_sg_drift_with_delta(my_ec2, sg_id, SG_RULES, delta_delete)
+
+                            if drift_after.get("drift_missing (Ports that SHOULD be on AWS but are NOT)"):
+                                print("[SG_STATE][SELF_HEAL][ERROR] Missing ports remain after self-heal. Manual investigation required.")
+                            else:
+                                print("[SG_STATE][SELF_HEAL] Missing ports successfully corrected.")
+
+                        # Case 2: Stale ports
+                        elif stale_ports:
+                            print(f"[SG_STATE][SELF_HEAL] Stale ports detected (Ports that ARE on AWS but SHOULD have been deleted): {stale_ports}")
+                            print("[SG_STATE][SELF_HEAL] Attempting single-pass revoke of stale ports...")
+
+                            for rule in stale_ports:
+                                try:
+                                    my_ec2.revoke_security_group_ingress(
+                                        GroupId=sg_id,
+                                        IpProtocol=rule[0],
+                                        FromPort=rule[1],
+                                        ToPort=rule[1],
+                                        CidrIp=rule[2]
+                                    )
+                                except Exception as e:
+                                    print(f"[SG_STATE][SELF_HEAL][WARN] Failed to revoke stale rule {rule}: {e}")
+
+                            print("[SG_STATE][SELF_HEAL] Re-running drift detection to verify stale ports were removed...")
+                            drift_after = detect_sg_drift_with_delta(my_ec2, sg_id, SG_RULES, delta_delete)
+
+                            if drift_after.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)"):
+                                print("[SG_STATE][SELF_HEAL][ERROR] Stale ports remain after self-heal. Manual investigation required.")
+                            else:
+                                print("[SG_STATE][SELF_HEAL] Stale ports successfully removed.")
+
+                        # Case 3: Only ignored drift
+                        else:
+                            print("[SG_STATE][SELF_HEAL] Only ignored drift detected (non-tracked ports). No corrective action taken.")
+                            drift_after = drift
+
+                        # Write remediated drift log
+                        if remediation_attempted:
+                            remediated_payload = {
+                                "original_drift": drift,
+                                "remediation_actions": (
+                                    [f"Re-applied SG_RULES and delta_delete for missing ports: {missing_ports}"] if missing_ports else []
+                                ) + (
+                                    [f"Revoked stale ports: {stale_ports}"] if stale_ports else []
+                                ),
+                                "drift_after_remediation": drift_after,
+                                "remediation_success": (
+                                    not drift_after.get("drift_missing (Ports that SHOULD be on AWS but are NOT)", [])
+                                    and not drift_after.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)", [])
+                                )
+                            }
+
+                            remediated_path = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2.json"
+                            try:
+                                with open(remediated_path, "w") as f:
+                                    json.dump(remediated_payload, f, indent=2)
+                                print(f"[SG_STATE][SELF_HEAL] Wrote remediated drift artifact: {remediated_path}")
+                            except Exception as e:
+                                print(f"[SG_STATE][SELF_HEAL][WARN] Failed to write remediated drift artifact: {e}")
+
+                    else:
+                        print("[SG_STATE][SELF_HEAL] Self-heal disabled. Skipping Step 5b.")
+
+
+
+                except Exception as e:
+                    print(f"[SG_STATE] ERROR during drift detection for SG {sg_id}: {e}")
+
+
+
+        except Exception as e:
+            print(f"[module2_orchestration_level_SG_manifest] ERROR discovering SG IDs for manifest: {e}")
+```
+
+
+
+##### in main(): Induced delay between the exit of multiprocessing.Pool and the drift detection and remediation code
+
+To facilitate synthetic testing of the drift detection and remediation code, an intentional induced delay is coded right
+after all the processes exit tomcat_worker from mutliprocessing.Pool, and before all the drift detection and remediation 
+code. This permits manipualtion of the AWS SG rule state prior to drift detection to force missing and stale and ignored rule
+sets into the SG so that drift detection logic picks this up and corrects it (self healing). The prototype of the code has tested 
+out very well. The testing for this will be presented in the next UPDATE.
+
+The code is here in main() right after the call to tomcat_worker_wrapper via multiprocessing.Pool
+
+```
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+
+
+        # === SG_STATE: Safe window for AWS edits ===
+        #### ENV vars READY_FOR_AWS_SG_EDITS and READY_FOR_AWS_SG_EDITS_DELAY are in .gitlab-ci.yml file
+        print("[SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now")
+
+        # Optional delay for manual AWS edits (controlled by ENV)
+        ready_flag = os.getenv("READY_FOR_AWS_SG_EDITS", "false").lower()
+
+        if ready_flag in ("1", "true", "yes"):
+            delay_seconds = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY", "120"))
+            print(f"[SG_STATE][READY_FOR_AWS_EDITS] Pausing for {delay_seconds} seconds to allow AWS SG modifications...")
+            time.sleep(delay_seconds)
+        else:
+            print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
+```
+
+It is gated by the ENV varaible in .gitlab-ci.yml named READY_FOR_AWS_SG_EDITS. The default delay of 120 seconds can also be changed
+in the .gitlab-ci.yml file using the ENV variable READY_FOR_AWS_SG_EDITS_DELAY
+
+
+
+
 
 ##### in tomcat_worker(): Optional propagation delay after SG_STATE code Steps 1,3, and 4 for troublehsooting and debugging
 
@@ -1832,7 +2967,7 @@ The propagation delay occurs per process and tagged with the PID in the print to
             f"max_retry_observed={max_retry_observed} → no extra delay"
         )
 ```
-
+XXXXXXXX
 
 #### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
