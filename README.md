@@ -280,7 +280,8 @@ For space issues and brevity, all the testing and test cases could not be includ
 show all the features of the implemenation are presented in detail in this UPDATE.
 
 The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestration_level_SG_manifest], [SG_STATE], 
-[SG_PROPAGATION_DELAY], [uitls_sg_state], [SPAWN_MODE], [SG_STATE_SELF_HEAL_ENABLED], and several others.
+[SG_PROPAGATION_DELAY], [uitls_sg_state], [SPAWN_MODE], [SG_STATE_SELF_HEAL], [READY_FOR_AWS_EDITS], [and several others.
+
 
 
 
