@@ -1378,16 +1378,7 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 ##### in tomcat_worker() ssh enhancements after testing of Step4b (revoke)
 
 
-
-
-
-
-
-##### in main()
-
-XXXXXXXXX WIP
-
-##### SG_STATE Step2: write the current state of the rules SG_RULES to the latest.json file in the S3 bucket.
+##### in main(): SG_STATE Step2: write the current state of the rules SG_RULES to the latest.json file in the S3 bucket.
 
 The changes for this involve a small change in the .gitlab-ci.yml to add the log file to the log file paths, and adding several 
 blocks of code changes to module2
@@ -1403,18 +1394,22 @@ main() then calls a helper function write_sg_rule_mainifest() to actually write 
 ids to the json manifest file. Right now the module is only using 1 SG for all the nodes, but the code will be able to support 
 multipe SG ids used across the nodes(and unique per process) in the the future.
 
-##### SG_STATE Step5:  Drift detection
+##### in main(): SG_STATE Step5:  Drift detection
+
+See the next UPDATE for the Code review on this
 
 
 
-##### SG_STATE Step5b: Self healing from the drift detection 
+##### in main(): SG_STATE Step5b: Self healing from the drift detection 
+
+See the next UPDATE for the Code review on this
 
 Two cases
 ENV variable SG_STATE_SELF_HEAL_ENABLED
 
 XXXXXXXX
 
-##### Optional propagation delay after SG_STATE code Steps 1,3, and 4 in tomcat_worker 
+##### in tomcat_worker(): Optional propagation delay after SG_STATE code Steps 1,3, and 4 for troublehsooting and debugging
 
 This code is placed right after the SG_STATE code steps 1,3,and 4 in tomcat_worker right before the call to threaded_isntall which 
 invokes the thread level operations within each process. This can be used for debugging purposes or timing issues that are related
@@ -1457,7 +1452,7 @@ The propagation delay occurs per process and tagged with the PID in the print to
 
 #### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
-XXXXXXXX WIP
+See the next UPDATE for the Code review on this.
 
 
 
