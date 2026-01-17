@@ -1167,13 +1167,13 @@ delete all rules in delta_delete.json from all resurrection candidates
 
 This guarantees that every node entering module2f has converged to the correct SG state.
 
-#### 6. Drift detection and drift remediation Step5b implementation design (self-healing)
+### Part7: Drift detection and drift remediation Step5b implementation design (self-healing)
 
 Since the drift remediation logic is a bit complicated, this separate section details some of the design concepts so that the code
 presented below can be easily understood. The prototype testing on this looks very good.
 
 
-##### Step 5b — SG_STATE Self‑Heal Forensic Flow
+#### Step 5b — SG_STATE Self‑Heal Forensic Flow
 
 Step 5b is the corrective phase of SG_STATE.  
 It runs **inside the per‑SG drift‑detection loop** and performs a single‑pass, deterministic remediation of any drift discovered in Step 5.
@@ -1187,7 +1187,7 @@ indicate that manual intervention is required. The same "failure" status will be
 
 ---
 
-###### 1. Inputs to Step 5b
+#### 1. Inputs to Step 5b
 
 Step 5b receives three critical inputs from Step 5:
 
@@ -1207,7 +1207,7 @@ It also reads:
 
 ---
 
-###### 2. Self‑Heal Activation
+#### 2. Self‑Heal Activation
 
 Self‑heal only runs when:
 
@@ -1219,7 +1219,7 @@ If disabled, Step 5b logs a skip and produces **no remediation artifact**.
 
 ---
 
-###### 3. Drift Classification
+#### 3. Drift Classification
 
 Step 5b evaluates drift in this order:
 
@@ -1231,7 +1231,7 @@ This ordering is intentional — missing ports represent a correctness failure, 
 
 ---
 
-###### 4. Case 1 — Missing Ports
+#### 4. Case 1 — Missing Ports
 
 If any ports are missing:
 
@@ -1251,7 +1251,7 @@ After applying rules, Step 5b performs a **second drift detection**:
 
 ---
 
-###### 5. Case 2 — Stale Ports
+#### 5. Case 2 — Stale Ports
 
 If no missing ports exist but stale ports do:
 
@@ -1265,7 +1265,7 @@ A second drift detection confirms whether stale ports were removed.
 
 ---
 
-###### 6. Case 3 — Only Ignored Drift
+#### 6. Case 3 — Only Ignored Drift
 
 If the only drift is in `drift_ignored`, Step 5b:
 
@@ -1275,7 +1275,7 @@ If the only drift is in `drift_ignored`, Step 5b:
 
 ---
 
-###### 7. Remediation Artifact
+#### 7. Remediation Artifact
 
 When any remediation action was attempted, Step 5b writes:
 
@@ -1294,7 +1294,7 @@ This file is the authoritative forensic record for Step 5b.
 
 ---
 
-###### 8. Forensic Guarantees
+#### 8. Forensic Guarantees
 
 Step 5b provides:
 
@@ -1315,7 +1315,7 @@ Running Step 5b multiple times produces the same end state.
 
 ---
 
-###### 9. Expected Console Pattern
+#### 9. Expected Console Pattern
 
 A healthy remediation run produces:
 
