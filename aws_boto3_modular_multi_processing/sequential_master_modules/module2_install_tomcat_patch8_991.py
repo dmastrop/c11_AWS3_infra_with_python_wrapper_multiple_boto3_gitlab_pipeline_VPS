@@ -9090,8 +9090,8 @@ def main():
                         "drift_after_remediation": drift_after, 
 
                         "remediation_success": (
-                            not drift_after.get("drift_missing (Ports that SHOULD be on AWS but are NOT)")
-                            and not drift_after.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)")
+                            not drift_after.get("drift_missing (Ports that SHOULD be on AWS but are NOT)", [])
+                            and not drift_after.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)", [])
                         )
                     }
 
