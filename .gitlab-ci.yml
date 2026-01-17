@@ -413,7 +413,7 @@ deploy:
 
 
       # Module2 drift remediation stats
-      - logs/sg_state_drift_SGID_*_remediated_module2.json"
+      - logs/sg_state_drift_SGID_*_remediated_module2.json
 
 
     expire_in: 1 week
