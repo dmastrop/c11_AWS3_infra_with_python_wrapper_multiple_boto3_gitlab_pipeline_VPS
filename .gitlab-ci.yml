@@ -162,8 +162,13 @@ deploy:
     READY_FOR_AWS_SG_EDITS: "true"
     READY_FOR_AWS_SG_EDITS_DELAY: "120"
 
+    # Same as above but for module2e delay.
+    READY_FOR_AWS_SG_EDITS_MODULE2E: "true"
+    READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E: "120"
 
-    # This is for enabling the self-healing from the drift detectin logic results (Step5) of SG_STATE implementation in module2
+
+
+    # Module2: This is for enabling the self-healing from the drift detectin logic results (Step5) of SG_STATE implementation in module2
     # The self-healing code is Step5b and follows Step5
     SG_STATE_SELF_HEAL_ENABLED: "true"
 
