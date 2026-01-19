@@ -1180,8 +1180,8 @@ It runs **inside the per‑SG drift‑detection loop** and performs a single‑p
 
 This section documents the *forensic flow* — what the system checks, what actions it takes, and what artifacts it produces.
 
-It is important to node the flow. Based upon drift detection, there is a self-healing corrective remediation, after which the drift
-detection is run again to ensure that the remedication actually worked. If remediation fails, a gitlab log console message is thrown to 
+It is important to note the flow. Based upon drift detection, there is a self-healing corrective remediation, after which the drift
+detection is run again to ensure that the remediation actually worked. If remediation fails, a gitlab log console message is thrown to 
 indicate that manual intervention is required. The same "failure" status will be noted in the remediation json artifact file as well.
 
 
