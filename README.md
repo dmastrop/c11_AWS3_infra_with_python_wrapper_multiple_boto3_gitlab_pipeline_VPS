@@ -611,7 +611,18 @@ Then the code in module2 main() is added right here:
 
 
 
-#### Test7: Drift remediation testing (self-healing)
+#### Test7: Drift remediation testing (self-healing), module2
+
+| Test | Scenario | Validated |
+|------|----------|-----------|
+| **A** | No drift | Baseline correctness |
+| **B** | Missing rule | Reapply logic | <<<< remediation required
+| **C** | Stale rule | Revoke logic | <<<< remediation required
+| **D** | Ignored drift | No action |
+
+
+
+
 
 #### Test8: The security group rules reapply post reboot in module2e prior to resurrection
 
@@ -1102,6 +1113,11 @@ This section shows the exact execution order across `module2`, `module2e`, and `
 
 ---
 
+
+
+
+
+
 ##### 3.2 module2e (single-threaded)
 
 Module2e runs *after* module2 has overwritten `latest.json` with the current pipeline’s SG_RULES.
@@ -1137,7 +1153,16 @@ Module2e runs *after* module2 has overwritten `latest.json` with the current pip
 6. **Optionally detect drift after the steps above**
    **Operation:** Use the helper function detect_sg_drift_with_delta
    - Also run drift remediation to correcct any AWS SG rule inconsistencies with the desired state.
+
+
+NOTE that there are some additonal challenges to the code design for module2e and they will be reviewed in detail in a separate section 
+below. 
+
 ---
+
+
+
+
 
 ##### 3.3 module2f
 
@@ -1187,7 +1212,10 @@ delete all rules in delta_delete.json from all resurrection candidates
 
 This guarantees that every node entering module2f has converged to the correct SG state.
 
-### Part7: Drift detection and drift remediation Step5b implementation design (self-healing)
+
+
+
+### Part7: Drift detection and drift remediation Step5b implementation design (self-healing) in module2
 
 Since the drift remediation logic is a bit complicated, this separate section details some of the design concepts so that the code
 presented below can be easily understood. The prototype testing on this looks very good.
@@ -1348,6 +1376,115 @@ A healthy remediation run produces:
 
 
 
+### Part7: Module2e SG_STATE design
+
+For the reapplication of the SG_STATE to the resurrection candidates in the module2e registry overall objectives and guidelines
+that were implemented in module2, are similar with a very signicant difference.  Note that the resurrection candidates  are nodes 
+that are either ghosts or install_failed in accordance to the resurrection bucket type; all of this information is incorporated into each 
+node's (thread's) registry_entry).
+
+The difference is that the list of resurrection candidates in the registry for module2e have no explicit correlation to the process from 
+where they originated, in the code itself. 
+
+In module2 the SG replay is embedded in the process level tomcat_worker which tracks the security per chunk list of ips in the process with
+the variable sg_chunk. This is very precise and will make processing SG ids per process very easy to do.   In contrast, the registry_entrys
+present in the module2e json file come from a variety of different processes and the code is not multi-processed in module2. As such, 
+the SG ids that are used for each node are not easily available from the code perspective.   Since the registry_entrys do include the pid, 
+if a pid to sg_id(s) mapping table is creatd in module2 during the process level code (tomat_worker), that mapping table could then be used
+with  module2e to look up each nodes sg_id(s) and process the accordingly during replay. However, this is a cumbersome approach to the 
+problem.
+
+Another approach would be to incorporate the security ids into an additional field in the registry_entrys so that the lookup could easily
+be done by module2e.   In the future, the security ids field will be added, but right now it is not there.
+
+Finally, the easiest approach is to get the instannce_id of each node (registry_entry) in the resurrection_module2e_registry_rebooted.json, 
+and using that extract the SG list applied to each node (registry_entry) and perform an SG_STATE operation using the latest.json and 
+delta_delete.json file to update the nodes SG_STATE. This is the approach that will be used for now.
+
+In summary:
+
+module2 had process‑level SG correlation  
+Because module2 used:
+
+- chunks  
+- sg_chunks  
+- zip(chunk, sg_chunk)  
+- multiprocessing.Pool  
+
+So each worker knew exactly which SG(s) applied to its chunk.
+
+module2e has **no process context**  
+module2e only has:
+
+- a registry of resurrection candidates  
+- their IPs  
+- maybe their instance_id (after resolution)  
+
+Therefore:
+
+module2e must query AWS for each node’s SGs, because right now there is no process pid to SG ids mapping table and there is no security ids
+list field in the registry_entry for each node yet. 
+
+This design in place will then be extensible in the future if, for example there is: 
+
+- SG_A for process 1  
+- SG_B for process 2  
+- SG_C for process 3  
+
+
+So module2e must:
+
+1. Resolve instance_id (an example of this is in the def process_ghsots helper function in module2e)
+2. Call `describe_instances`  
+3. Extract the SG list  
+4. Apply latest.json rules to each SG  
+5. Revoke delta_delete rules from each SG  
+6. Run drift detection  
+7. Run remediation if needed  
+8. Write artifacts  
+
+
+There is one additional nuance that needs to be highlighted, and this is integrated into the new SG_STATE code for module2e (this will
+be reviewed in the next section).
+
+
+```
+# NOTE: module2e currently assumes a single global SG (one latest.json and one delta_delete.json),
+# because module2 only writes one SG_RULES state and one delta_delete file.
+#
+# When we move to multi‑SG architectures (different SGs per process or per node),
+# this logic MUST evolve so that:
+#   - each SG_ID has its own latest_<SGID>.json
+#   - each SG_ID has its own delta_delete_<SGID>.json
+#   - and the SG_STATE reapply/revoke/drift/remediation is done using the
+#     correct pair of files for the specific SG_ID(s) attached to this node.
+#
+# For now, since only one SG exists, we safely load the global latest.json and
+# delta_delete.json from S3 for every node.
+```
+
+In summary: SG_STATE design for module2e
+
+After batch_reboot_registry finishes:
+
+module2e should:
+
+Step A — Load:
+- resurrection_module2e_registry_rebooted.json  
+- latest.json from S3  
+- delta_delete.json from S3  
+
+Step B — For each resurrection candidate:
+1. Resolve instance_id (already done)  
+2. Query AWS for SG IDs  
+3. For each SG ID:
+   - Apply latest.json rules (Step 4a)  
+   - Revoke delta_delete rules (Step 4b)  
+4. Run drift detection (Step 5)  
+5. If drift_extra_filtered (stale ports) OR drift_missing (missing ports) exists → remediation (Step 5b) 
+6. Write drift artifact_module2e
+7. Write remediation artifact_module2e (if needed)
+
 
 
 ### Part7: Code Review
@@ -1378,7 +1515,7 @@ The code review below indicates all of the code changes in the .gitlab-ci.yml, m
 The utils_sg_state.py helper functions file code is shown in the section below, prior to the module2 code review changes.
 
 
-#### Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
+#### A.Using a ENV variable in .gitlab-ci.yml to specify the security group -id and use this in module1
 
 The module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py currently uses a static hardcoded security group id
 (the default security group). To improve flexiblity, add an ENV variable in the .gitlab-ci.yml file and use that in the 
@@ -1407,7 +1544,7 @@ And this:
     - echo 'ORCHESTRATION_LEVEL_SG_ID='${ORCHESTRATION_LEVEL_SG_ID} >> .env # this is the security group id used in module1 orchestration layer. This is applied to all the nodes in the execution run. module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py
 ```
 
-#### Module1 code changes: 
+#### B.Module1 code changes: 
 
 
 The above ENV variable is then used in the module1 restart_the_EC_multiple_instances_with_client_method_DEBUG.py:
@@ -1469,7 +1606,7 @@ This is then used in module1 in the EC2 client method:
 
 
 
-#### utils_sg_state.py helper functions used in module2 SG_STATE implemenation:
+#### C. utils_sg_state.py helper functions used in module2 SG_STATE implemenation:
 
 This file is a shared functions utility file with the helper functions that module1 uses for the SG_STATE implementation.
 
@@ -1893,7 +2030,7 @@ def detect_sg_drift_with_delta(ec2, sg_id, current_rules, delta_delete):
 ```
 
 
-#### Module2 code changes
+#### D. Module2 code changes
 
 
 ##### SG_RULES ENV variable list set
@@ -2989,14 +3126,14 @@ The propagation delay occurs per process and tagged with the PID in the print to
 ```
 XXXXXXXX
 
-#### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
+#### E. Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
 
 The SG_STATE code in module2e is very similar to the code implemenation in module2. The main difference is that the code in
 module2e is not in a multi-processing environment, so the SG_STATE does not need to be reapplied repeatedly for each process.
 The module2e is a single pass application of the SG_STATE.
 
-Another notable difference is that the lastet.json file represents the current state of the SG_RULES and not the previous state of the
+Another notable difference is that the latest.json file represents the current state of the SG_RULES and not the previous state of the
 SG_RULES (as it did for module2). This is intentional. The complete SG_STATE can be applied using the latest.json file and the 
 delta_delete.json file in module2e.  Also the drift detection and remediation will also be performed in module2e as well, similar to
 that done in module2. The detect_sg_drift_with_delta() is a shared utility helper function (from utils_sg_state.py) and can be reused
@@ -3007,19 +3144,25 @@ files will be fetched directly with inline code without using the helper functio
 done inline and will not use any type of utility helper function even though the code will be exactly the same as that done in 
 module2.
 
+Finally, there is a fundamental difference in how module2 tracks the security groups relative to the nodes vs. how module2e
+will have to discover the security groups attached to the resurrection candidates, since module2e has no process context.
+In module2, sg_chunk is used, so the security group id(s) are tracked per process and the nodes in that process get those security groups.
+In module23, the security group id(s) will have to be discovered from each node since the resurrection candidate list of nodes can
+be from any process and this is not tracked. 
 
+This design difference was reviewed in great detail in a section above covering the module2e SG_STATE design.
+The design requirement difference boils down to the fact that module2 uses multi-processing and module2e does not, and the security group
+ids (in the future) will be assigned at a per process level, a context which module2e has no awareness of.
 
-
-##### module2e application of the mainifest to the ghost nodes after they have been rebooted
-
-Finally, module2e consumes the manifest json file and replays the application of the rules to the security group on the ghosts AFTER 
-they have been rebooted and prior to resurrection in module2f.  As noted in the previous UPDATE, this code is greatly simplified when
-comparted to the rule application code of module2 because there is no requirement in module2e for this to be done in a 
-multi-processing environment. 
 
 Also note that the reboot code in module2e and the thread resurreciton code in module2f is multi-threaded, but the application of 
-the manifest rules to the ghost security group is just a straight forward replay of the rules on the security group. The AWS
+the manifest rules to the security group in module2e is just a straight forward replay of the rules on the security group. The AWS
 backend will then propagate the rules to the nodes themselves.
+
+
+
+
+
 
 
 
