@@ -287,7 +287,7 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 
 
 
-#### Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
+#### Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
 
 This is verified by grepping  [SECURITY GROUP], and [RETRY_METRIC] in the gitlab console logs.
 This is just a small sampling of some of the rules while they are being applied to the security group for some of the 
@@ -375,7 +375,7 @@ RETRY] Duplicate rule detected on attempt 2
 ```
 
 
-#### Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
+#### Test2: Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
 
 Note this is making sure the rule application is working in tomcat_worker() using the SG_RULES list. The next section below
 will validate the manifest json file.
@@ -449,10 +449,15 @@ This has been empirically verified.
 
 
 
-#### Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above
+#### Test3: Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above
 
 This can be seen once the pipeline completes. The json file is named orchestration_sg_rules_module2.json and the contents look
 like this (this one was done prior to port 5557 rule being added to the SG_RULES list)
+Note that this is not used to maintain state. The S3 bucket latest.json and delta_delete.json are used to maintain state.
+
+This file is used simply for gitlab artifact log forensics.
+
+
 
 ```
 {
@@ -535,8 +540,19 @@ This is after the port 5557 rule has been added to the SG_RULES list (see previo
 
 ```
 
+This confirms that the basic SG_STATE code that replaced the current code inside the tomcat_worker loop now correctly applies the 
+rules in the SG at a per process level using the SG_RULES variable list. This SG_RULES is used throughout the SG_STATE implementation
+as a single source of truth. The SG_RULES will be expanded in the future to be a manifest of many security groups that can be 
+applied deterministically and uniquely to each process.
 
-#### Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
+
+
+#### Test4: Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
+
+
+
+
+
 
 #### Drift detection from SG_RULES (for the AWS security group) in module2
 
@@ -2972,7 +2988,20 @@ XXXXXXXX
 #### Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
 
+The SG_STATE code in module2e is very similar to the code implemenation in module2. The main difference is that the code in
+module2e is not in a multi-processing environment, so the SG_STATE does not need to be reapplied repeatedly for each process.
+The module2e is a single pass application of the SG_STATE.
 
+Another notable difference is that the lastet.json file represents the current state of the SG_RULES and not the previous state of the
+SG_RULES (as it did for module2). This is intentional. The complete SG_STATE can be applied using the latest.json file and the 
+delta_delete.json file in module2e.  Also the drift detection and remediation will also be performed in module2e as well, similar to
+that done in module2. The detect_sg_drift_with_delta() is a shared utility helper function (from utils_sg_state.py) and can be reused
+here in module2e to calculate the drift paramenters.   
+
+Another difference is that for simplicity (since the module2e is much simpler than module2), the latest.json and delta_delete.json 
+files will be fetched directly with inline code without using the helper functions. Similarly the drift remediation code will be
+done inline and will not use any type of utility helper function even though the code will be exactly the same as that done in 
+module2.
 
 
 
