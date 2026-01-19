@@ -1425,11 +1425,22 @@ Therefore:
 module2e must query AWS for each node’s SGs, because right now there is no process pid to SG ids mapping table and there is no security ids
 list field in the registry_entry for each node yet. 
 
+As such:
+module2 replays SG_STATE for all SGs in the fleet through process iteration in tomcat_worker
+
+module2e replays SG_STATE only for SGs attached to resurrection candidates (as specified in the module2e json file). The outer loop for 
+module2e will be a node iteration and then once in that loop the inner loop will iterate over the SGids for that particular node.
+
+
+
 This design in place will then be extensible in the future if, for example there is: 
 
 - SG_A for process 1  
 - SG_B for process 2  
 - SG_C for process 3  
+
+Both module2 and 2e will be able to adapt to such a set up.
+
 
 
 So module2e must:
@@ -1484,6 +1495,13 @@ Step B — For each resurrection candidate:
 5. If drift_extra_filtered (stale ports) OR drift_missing (missing ports) exists → remediation (Step 5b) 
 6. Write drift artifact_module2e
 7. Write remediation artifact_module2e (if needed)
+
+Also, by design for missing drift remediation, in module2 the entire SG_STATE (SG_RULES + delta_delete.json) was replayed on the nodes
+to correct the missing rule(s). In module2e this has been simplified to target an authorize add rule on just the specific missing rule(s), 
+rather than replaying the entire SG_STATE on the node.  For stale rules, both module2 and 2e just re-revoke the exact rules in the 
+drift that failed the initial revoke. 
+
+
 
 
 
@@ -3147,13 +3165,17 @@ module2.
 Finally, there is a fundamental difference in how module2 tracks the security groups relative to the nodes vs. how module2e
 will have to discover the security groups attached to the resurrection candidates, since module2e has no process context.
 In module2, sg_chunk is used, so the security group id(s) are tracked per process and the nodes in that process get those security groups.
-In module23, the security group id(s) will have to be discovered from each node since the resurrection candidate list of nodes can
+In module2e, the security group id(s) will have to be discovered from each node since the resurrection candidate list of nodes can
 be from any process and this is not tracked. 
 
 This design difference was reviewed in great detail in a section above covering the module2e SG_STATE design.
 The design requirement difference boils down to the fact that module2 uses multi-processing and module2e does not, and the security group
 ids (in the future) will be assigned at a per process level, a context which module2e has no awareness of.
 
+Also, by design for missing drift remediation, in module2 the entire SG_STATE (SG_RULES + delta_delete.json) was replayed on the nodes
+to correct the missing rule(s). In module2e this has been simplified to target an authorize add rule on just the specific missing rule(s), 
+rather than replaying the entire SG_STATE on the node.  For stale rules, both module2 and 2e just re-revoke the exact rules in the 
+drift that failed the initial revoke.
 
 Also note that the reboot code in module2e and the thread resurreciton code in module2f is multi-threaded, but the application of 
 the manifest rules to the security group in module2e is just a straight forward replay of the rules on the security group. The AWS
