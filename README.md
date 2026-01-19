@@ -550,11 +550,12 @@ applied deterministically and uniquely to each process.
 #### Test4: Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
 
 
+#### Test5: Revoke (remove/delete)a rule in the SG_RULES
 
 
 
 
-#### Drift detection from SG_RULES (for the AWS security group) in module2
+#### Test6: Drift detection of AWS rule deviation from SG_RULES, in module2
 
 
 The instrumentation for testing the various drift scnearios is simple. Add a wait ENV variable to the module2 code in between the 
@@ -609,7 +610,10 @@ Then the code in module2 main() is added right here:
 
 
 
-#### The security group rules reapply post reboot in module2e prior to resurrection
+
+#### Test7: Drift remediation testing (self-healing)
+
+#### Test8: The security group rules reapply post reboot in module2e prior to resurrection
 
 Make sure that all of the rules in the mainifest are applied to the security group in module2e after the ghost nodes have been
 rebooted and area healthy.
