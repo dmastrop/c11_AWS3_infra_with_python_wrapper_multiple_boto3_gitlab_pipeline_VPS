@@ -167,9 +167,12 @@ def run_module(module_script_path):
         if hasattr(module, "batch_reboot_registry") and callable(module.batch_reboot_registry):
             module.batch_reboot_registry(region=os.getenv("region_name"))   ## make sure to import os at the top!!
 
+        # Run the SG_STATE replay function (new)
+        if hasattr(module, "apply_sg_state_module2e") and callable(module.apply_sg_state_module2e):
+            module.apply_sg_state_module2e(region=os.getenv("region_name"))
+
         logging.critical(f"Completed module script: {module_script_path}")
         return
-
 
 
     # Normal case for all other modules that have a main(). If the module defines a main() functin, call it here with spawned modules.
