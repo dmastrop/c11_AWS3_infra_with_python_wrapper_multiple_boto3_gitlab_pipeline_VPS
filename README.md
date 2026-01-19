@@ -1427,10 +1427,18 @@ list field in the registry_entry for each node yet.
 
 As such:
 module2 replays SG_STATE for all SGs in the fleet through process iteration in tomcat_worker
+After all tomcat_worker processes finish, module2 runs a fleet‑wide SG drift detection loop by design in main() of module2:
+
+```
+for sg_id in sg_ids:
+    detect drift
+    remediate drift
+```
+This is correct because module2 is the authoritative SG enforcer for the entire fleet.
 
 module2e replays SG_STATE only for SGs attached to resurrection candidates (as specified in the module2e json file). The outer loop for 
 module2e will be a node iteration and then once in that loop the inner loop will iterate over the SGids for that particular node.
-
+We do NOT want to reapply SG rules to the entire fleet.
 
 
 This design in place will then be extensible in the future if, for example there is: 
