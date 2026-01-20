@@ -628,10 +628,10 @@ def apply_sg_state_module2e(region=None):
 
     print("DEBUG WAIT ENABLED RAW =", os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E"))
 
-    wait_flag = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").strip().strip('"').strip("'").lower()
-    wait_enabled = wait_flag in ("1", "true", "yes")
+    #wait_flag = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").strip().strip('"').strip("'").lower()
+    #wait_enabled = wait_flag in ("1", "true", "yes")
 
-    #wait_enabled = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes")
+    wait_enabled = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes")
     delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
 
 

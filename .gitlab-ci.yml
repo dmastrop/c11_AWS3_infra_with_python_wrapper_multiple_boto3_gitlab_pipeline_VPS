@@ -255,6 +255,11 @@ deploy:
     - echo 'SG_STATE_SELF_HEAL_ENABLED='${SG_STATE_SELF_HEAL_ENABLED} >> .env
   
 
+    # Delay for module2e drift detection 
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E='${READY_FOR_AWS_SG_EDITS_MODULE2E} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS='${READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS} >> .env
+
 
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
       ## Define `PID_JSON_DUMPS` with value `false` (masked/protected as needed).
