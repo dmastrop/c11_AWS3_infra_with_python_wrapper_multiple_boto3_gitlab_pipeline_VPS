@@ -165,7 +165,9 @@ deploy:
     # Same as above but for module2e delay.
     READY_FOR_AWS_SG_EDITS_MODULE2E: "true"
     READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E: "120"
-
+    READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS: "1,4,5"
+    ## For postions, if there are 8 ghosts in the module2e registry the '1,4,5" will select the first, fourth and fifth registry_entrys
+    ## in the module2e registry for the wait. All the others will not wait. The code for this is in module2e.
 
 
     # Module2: This is for enabling the self-healing from the drift detectin logic results (Step5) of SG_STATE implementation in module2
