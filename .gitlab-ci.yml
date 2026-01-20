@@ -415,13 +415,13 @@ deploy:
       - logs/sg_state_drift_SGID_*_module2.json
   
       # Module2e export of the SG drift stats
-
+      - logs/sg_state_drift_SGID_*_module2e.json
 
       # Module2 drift remediation stats
       - logs/sg_state_drift_SGID_*_remediated_module2.json
 
       # Module2e drift remediation stats
-
+      - logs/sg_state_drift_SGID_*_remediated_module2e.json
 
     expire_in: 1 week
 
