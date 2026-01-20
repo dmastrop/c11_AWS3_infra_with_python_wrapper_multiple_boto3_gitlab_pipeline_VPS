@@ -3422,6 +3422,13 @@ def apply_sg_state_module2e(region=None):
 
             print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
 ```
+This module2e uses the shared utility function detect_sg_drift_with_delta, so the import must be added to the top of the module2e
+
+
+```
+from sequential_master_modules.utils_sg_state import detect_sg_drift_with_delta
+```
+
 
 
 In order to make this new function importable in the master_script_spawn.py file  (in spawn mode multi-processing) it needs to be 

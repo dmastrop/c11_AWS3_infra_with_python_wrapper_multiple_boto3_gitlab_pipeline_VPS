@@ -24,6 +24,8 @@ from sequential_master_modules.utils import (
 )
 
 
+from sequential_master_modules.utils_sg_state import detect_sg_drift_with_delta # this function is used in the SG_STATE code 
+#implementation in module2e. The function is apply_sg_state_module2e as defined below.
 
 
 
