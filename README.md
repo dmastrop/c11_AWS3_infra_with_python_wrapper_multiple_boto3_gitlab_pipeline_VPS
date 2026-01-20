@@ -3520,6 +3520,9 @@ Then the logic needs to be added to the master_script_spawn.py file as shown bel
         logging.critical(f"Completed module script: {module_script_path}")
         return
 ```
+
+
+
 ##### Deterministic per node wait code to facilitate validation testing of drift and remediation in module2e
 
 Given that module2e iterates through the module2e registry nodes one by one, the wait code has to be a bit creative to 
@@ -3530,6 +3533,23 @@ Note that there is an intentional wait state in between step4a/4b and step5/5b s
 the drift detection and remediation logs. Since the loop is a per node iteration this option needs to include node specificity so
 that not all the node loops will incur the wait (to save a lot of time). During the wait, a drift_missing or a stale drift can
 be induced to test the detection and remedication for the SG attached to that specific node. 
+
+Add the ENV variables to the .gitlab-ci.yml file:
+
+```
+    # Same as above but for module2e delay.
+    READY_FOR_AWS_SG_EDITS_MODULE2E: "true"
+    READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E: "120"
+    READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS: "1,4,5"
+    ## For postions, if there are 8 ghosts in the module2e registry the '1,4,5" will select the first, fourth and fifth registry_entrys
+    ## in the module2e registry for the wait. All the others will not wait. The code for this is in module2e.
+
+    # Delay for module2e drift detection 
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E='${READY_FOR_AWS_SG_EDITS_MODULE2E} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS='${READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS} >> .env
+```
+
 
 ```
 The first block of code here establishes the position_uuid_set
