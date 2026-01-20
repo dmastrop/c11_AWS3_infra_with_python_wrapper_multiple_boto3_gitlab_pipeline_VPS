@@ -3400,7 +3400,7 @@ def apply_sg_state_module2e(region=None):
             time.sleep(delay)
 
         if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
-            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E", "0"))
+            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
             print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
@@ -3539,14 +3539,14 @@ Add the ENV variables to the .gitlab-ci.yml file:
 ```
     # Same as above but for module2e delay.
     READY_FOR_AWS_SG_EDITS_MODULE2E: "true"
-    READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E: "120"
+    READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY: "120"
     READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS: "1,4,5"
     ## For postions, if there are 8 ghosts in the module2e registry the '1,4,5" will select the first, fourth and fifth registry_entrys
     ## in the module2e registry for the wait. All the others will not wait. The code for this is in module2e.
 
     # Delay for module2e drift detection 
     - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E='${READY_FOR_AWS_SG_EDITS_MODULE2E} >> .env
-    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY='${READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY='${READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY} >> .env
     - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS='${READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS} >> .env
 ```
 
@@ -3609,7 +3609,7 @@ The second block is inside the for uuid loop and actually establishes the waitin
             time.sleep(delay)
 
         if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
-            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E", "0"))
+            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
             print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
