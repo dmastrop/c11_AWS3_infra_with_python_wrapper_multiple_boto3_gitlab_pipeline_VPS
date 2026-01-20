@@ -3257,6 +3257,29 @@ def apply_sg_state_module2e(region=None):
         registry = json.load(f)
 
     # ------------------------------------------------------------
+    # Build ordered UUID list for position-based WAIT logic
+    # The WAIT logic is inserted between steps 4 and 5 below
+    # The ENV vars are all in .gitlab-ci.yml file.
+    # ------------------------------------------------------------
+    ordered_uuids = list(registry.keys())
+
+    positions_raw = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS", "")
+    positions = {int(p.strip()) for p in positions_raw.split(",") if p.strip().isdigit()}
+
+    # Convert 1-indexed positions to UUIDs
+    position_uuid_set = {
+        ordered_uuids[p - 1]
+        for p in positions
+        if 1 <= p <= len(ordered_uuids)
+    }
+
+    wait_enabled = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes")
+    delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
+
+
+
+
+    # ------------------------------------------------------------
     # Load latest.json + delta_delete.json directly from S3
     # ------------------------------------------------------------
     s3 = boto3.client("s3")
@@ -3356,14 +3379,34 @@ def apply_sg_state_module2e(region=None):
                 except Exception:
                     pass  # ignore if already removed
 
+
+
         # --------------------------------------------------------
         # WAIT — allow user to modify AWS SG rules for drift testing
+        # The logic below is dictated by the earlier WAIT logic above right after the registry is defined (see above)
         # --------------------------------------------------------
-        if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
-            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
+        # --------------------------------------------------------
+        # WAIT — selective AWS SG edit window based upon the position specified in the .gitlab-ci.yml ENV variable
+        # READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS
+        # --------------------------------------------------------
+        should_wait = (
+            wait_enabled and
+            (not position_uuid_set or uuid in position_uuid_set)
+        )
+
+        if should_wait:
             print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
+
+        if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
+            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E", "0"))
+            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
+                  f"(UUID={uuid}, public_ip={public_ip})")
+            time.sleep(delay)
+
+
+
 
         # --------------------------------------------------------
         # Step 5 — Drift detection
@@ -3427,6 +3470,9 @@ def apply_sg_state_module2e(region=None):
                 }, f, indent=2)
 
             print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
+
+
+
 ```
 This module2e uses the shared utility function detect_sg_drift_with_delta, so the import must be added to the top of the module2e
 
