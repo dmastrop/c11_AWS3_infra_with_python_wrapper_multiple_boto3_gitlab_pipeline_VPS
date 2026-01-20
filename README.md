@@ -630,7 +630,13 @@ Make sure that all of the rules in the mainifest are applied to the security gro
 rebooted and area healthy.
 
 
+#### Test9: stale drift case in module2e with remediation
 
+
+
+#### Test10: missing drift case in module2e with remediation
+
+#### Test11: HYBRID futures crashes (16) with * ghosts
 
 
 
@@ -3469,7 +3475,10 @@ Then the logic needs to be added to the master_script_spawn.py file as shown bel
         return
 ```
 
-
+Note that there is an intentional wait state in between step4a/4b and step5/5b so that drift can be artificially induced to test
+the drift detection and remediation logs. Since the loop is a per node iteration this option needs to include node specificity so
+that not all the node loops will incur the wait (to save a lot of time). During the wait, a drift_missing or a stale drift can
+be induced to test the detection and remedication for the SG attached to that specific node. 
 
 
 

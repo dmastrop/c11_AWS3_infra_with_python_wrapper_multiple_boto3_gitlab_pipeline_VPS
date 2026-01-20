@@ -713,7 +713,7 @@ def apply_sg_state_module2e(region=None):
         # WAIT — allow user to modify AWS SG rules for drift testing
         # --------------------------------------------------------
         if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
-            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
+            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E", "0"))
             print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
