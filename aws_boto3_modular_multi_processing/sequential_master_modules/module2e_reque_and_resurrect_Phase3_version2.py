@@ -611,7 +611,7 @@ def apply_sg_state_module2e(region=None):
     # Load latest.json + delta_delete.json directly from S3
     # ------------------------------------------------------------
     s3 = boto3.client("s3")
-    bucket = os.getenv("SG_RULES_BUCKET")
+    bucket = os.getenv("SG_RULES_S3_BUCKET")
 
     latest_key = "state/sg_rules/latest.json"
     delta_key = "state/sg_rules/delta_delete.json"
