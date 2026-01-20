@@ -3399,12 +3399,6 @@ def apply_sg_state_module2e(region=None):
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
 
-        if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
-            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
-            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
-                  f"(UUID={uuid}, public_ip={public_ip})")
-            time.sleep(delay)
-
 
 
 
@@ -3604,12 +3598,6 @@ The second block is inside the for uuid loop and actually establishes the waitin
         )
 
         if should_wait:
-            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
-                  f"(UUID={uuid}, public_ip={public_ip})")
-            time.sleep(delay)
-
-        if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
-            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
             print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
