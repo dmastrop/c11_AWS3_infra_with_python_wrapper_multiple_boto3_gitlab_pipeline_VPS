@@ -3520,12 +3520,80 @@ Then the logic needs to be added to the master_script_spawn.py file as shown bel
         logging.critical(f"Completed module script: {module_script_path}")
         return
 ```
+##### Deterministic per node wait code to facilitate validation testing of drift and remediation in module2e
+
+Given that module2e iterates through the module2e registry nodes one by one, the wait code has to be a bit creative to 
+facilitate testing for drift detection and remediation. 
+
 
 Note that there is an intentional wait state in between step4a/4b and step5/5b so that drift can be artificially induced to test
 the drift detection and remediation logs. Since the loop is a per node iteration this option needs to include node specificity so
 that not all the node loops will incur the wait (to save a lot of time). During the wait, a drift_missing or a stale drift can
 be induced to test the detection and remedication for the SG attached to that specific node. 
 
+```
+The first block of code here establishes the position_uuid_set
+
+   # ------------------------------------------------------------
+    # Load registry
+    # ------------------------------------------------------------
+    registry_path = "/aws_EC2/logs/resurrection_module2e_registry_rebooted.json"
+    if not os.path.exists(registry_path):
+        print(f"[module2e_SG_STATE] No registry found at {registry_path}")
+        return
+
+    with open(registry_path, "r") as f:
+        registry = json.load(f)
+
+    # ------------------------------------------------------------
+    # Build ordered UUID list for position-based WAIT logic
+    # The WAIT logic is inserted between steps 4 and 5 below
+    # The ENV vars are all in .gitlab-ci.yml file.
+    # ------------------------------------------------------------
+    ordered_uuids = list(registry.keys())
+
+    positions_raw = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS", "")
+    positions = {int(p.strip()) for p in positions_raw.split(",") if p.strip().isdigit()}
+
+    # Convert 1-indexed positions to UUIDs
+    position_uuid_set = {
+        ordered_uuids[p - 1]
+        for p in positions
+        if 1 <= p <= len(ordered_uuids)
+    }
+
+    wait_enabled = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes")
+    delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
+
+```
+
+The second block is inside the for uuid loop and actually establishes the waiting based upon the position_uuid_set derived above:
+
+```
+        # --------------------------------------------------------
+        # WAIT — allow user to modify AWS SG rules for drift testing
+        # The logic below is dictated by the earlier WAIT logic above right after the registry is defined (see above)
+        # --------------------------------------------------------
+        # --------------------------------------------------------
+        # WAIT — selective AWS SG edit window based upon the position specified in the .gitlab-ci.yml ENV variable
+        # READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS
+        # --------------------------------------------------------
+        should_wait = (
+            wait_enabled and
+            (not position_uuid_set or uuid in position_uuid_set)
+        )
+
+        if should_wait:
+            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
+                  f"(UUID={uuid}, public_ip={public_ip})")
+            time.sleep(delay)
+
+        if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
+            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY_MODULE2E", "0"))
+            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
+                  f"(UUID={uuid}, public_ip={public_ip})")
+            time.sleep(delay)
+```
 
 
 
