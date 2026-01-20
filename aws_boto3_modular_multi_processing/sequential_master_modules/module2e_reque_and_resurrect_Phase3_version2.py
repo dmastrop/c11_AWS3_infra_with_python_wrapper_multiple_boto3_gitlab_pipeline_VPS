@@ -576,6 +576,24 @@ def apply_sg_state_module2e(region=None):
       7. Write drift + remediation artifacts
     """
 
+    # NOTE: module2e currently assumes a single global SG (one latest.json and one delta_delete.json),
+    # because module2 only writes one SG_RULES state and one delta_delete file.
+    #
+    # When we move to multi‑SG architectures (different SGs per process or per node),
+    # this logic MUST evolve so that:
+    #   - each SG_ID has its own latest_<SGID>.json
+    #   - each SG_ID has its own delta_delete_<SGID>.json
+    #   - and the SG_STATE reapply/revoke/drift/remediation is done using the
+    #     correct pair of files for the specific SG_ID(s) attached to this node.
+    #
+    # For now, since only one SG exists, we safely load the global latest.json and
+    # delta_delete.json from S3 for every node.
+    # A lot of the specifics of this design is in the README. The code is being designed from 
+    # the ground up to accomodate SG_ID per process and multiple SG_IDs per processs so that
+    # a SG routing network overlay type paradigm will be possible.
+
+
+
     print("[module2e_SG_STATE] Starting SG_STATE replay for module2e resurrection candidates")
 
     # ------------------------------------------------------------
