@@ -772,7 +772,8 @@ def apply_sg_state_module2e(region=None):
         for sg_id in sg_ids:
             drift = detect_sg_drift_with_delta(ec2, sg_id, latest_rules, delta_delete)
 
-            drift_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_module2e.json"
+            drift_artifact = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_module2e.json"
+            #drift_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_module2e.json"
             with open(drift_artifact, "w") as f:
                 json.dump(drift, f, indent=2)
 
@@ -819,7 +820,8 @@ def apply_sg_state_module2e(region=None):
                     pass
 
             # Write remediation artifact
-            rem_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2e.json"
+            rem_artifact   = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_remediated_module2e.json"
+            #rem_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2e.json"
             with open(rem_artifact, "w") as f:
                 json.dump({
                     "original_drift": drift,
