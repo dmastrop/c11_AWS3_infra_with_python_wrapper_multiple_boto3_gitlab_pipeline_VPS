@@ -3150,7 +3150,9 @@ The propagation delay occurs per process and tagged with the PID in the print to
             f"max_retry_observed={max_retry_observed} → no extra delay"
         )
 ```
-XXXXXXXX
+
+
+
 
 #### E. Module2e code changes (resurrection candidates, rebooted nodes and SG rule reapply to all resurreciton candidates)
 
@@ -3189,6 +3191,276 @@ Also note that the reboot code in module2e and the thread resurreciton code in m
 the manifest rules to the security group in module2e is just a straight forward replay of the rules on the security group. The AWS
 backend will then propagate the rules to the nodes themselves.
 
+
+The complete SG_STATE code including drift detection and drift remediation is added to module2e as a function apply_sg_state_module2e: 
+
+```
+
+# =====================================================================
+#  SG_STATE replay + drift detection + remediation for module2e
+# =====================================================================
+
+def apply_sg_state_module2e(region=None):
+    """
+    Reapply SG_STATE to each resurrection candidate in
+    resurrection_module2e_registry_rebooted.json.
+
+    Steps:
+      1. Load registry
+      2. Load latest.json + delta_delete.json from S3
+      3. For each node:
+            - resolve instance_id
+            - describe_instances → get SG IDs
+            - Step 4a: authorize-add all rules in latest.json
+            - Step 4b: revoke all rules in delta_delete.json
+      4. WAIT (READY_FOR_AWS_SG_EDITS_MODULE2E)
+      5. Step 5: drift detection
+      6. Step 5b: remediation if needed
+      7. Write drift + remediation artifacts
+    """
+
+    # NOTE: module2e currently assumes a single global SG (one latest.json and one delta_delete.json),
+    # because module2 only writes one SG_RULES state and one delta_delete file.
+    #
+    # When we move to multi‑SG architectures (different SGs per process or per node),
+    # this logic MUST evolve so that:
+    #   - each SG_ID has its own latest_<SGID>.json
+    #   - each SG_ID has its own delta_delete_<SGID>.json
+    #   - and the SG_STATE reapply/revoke/drift/remediation is done using the
+    #     correct pair of files for the specific SG_ID(s) attached to this node.
+    #
+    # For now, since only one SG exists, we safely load the global latest.json and
+    # delta_delete.json from S3 for every node.
+    # A lot of the specifics of this design is in the README. The code is being designed from 
+    # the ground up to accomodate SG_ID per process and multiple SG_IDs per processs so that
+    # a SG routing network overlay type paradigm will be possible.
+
+
+
+    print("[module2e_SG_STATE] Starting SG_STATE replay for module2e resurrection candidates")
+
+    # ------------------------------------------------------------
+    # Load registry
+    # ------------------------------------------------------------
+    registry_path = "/aws_EC2/logs/resurrection_module2e_registry_rebooted.json"
+    if not os.path.exists(registry_path):
+        print(f"[module2e_SG_STATE] No registry found at {registry_path}")
+        return
+
+    with open(registry_path, "r") as f:
+        registry = json.load(f)
+
+    # ------------------------------------------------------------
+    # Load latest.json + delta_delete.json directly from S3
+    # ------------------------------------------------------------
+    s3 = boto3.client("s3")
+    bucket = os.getenv("SG_RULES_S3_BUCKET")
+
+    latest_key = "state/sg_rules/latest.json"
+    delta_key = "state/sg_rules/delta_delete.json"
+
+    latest_rules = json.loads(
+        s3.get_object(Bucket=bucket, Key=latest_key)["Body"].read().decode("utf-8")
+    )
+    delta_delete = json.loads(
+        s3.get_object(Bucket=bucket, Key=delta_key)["Body"].read().decode("utf-8")
+    )
+
+    print(f"[module2e_SG_STATE] Loaded latest.json ({len(latest_rules)} rules)")
+    print(f"[module2e_SG_STATE] Loaded delta_delete.json ({len(delta_delete)} rules)")
+
+    # ------------------------------------------------------------
+    # AWS EC2 client
+    # ------------------------------------------------------------
+    ec2 = boto3.client("ec2", region_name=region or os.getenv("region_name"))
+
+    # ------------------------------------------------------------
+    # Iterate through resurrection candidates
+    # ------------------------------------------------------------
+    for uuid, entry in registry.items():
+        public_ip = entry.get("public_ip")
+        private_ip = entry.get("private_ip")
+
+        print(f"\n[module2e_SG_STATE] Processing UUID={uuid}, public_ip={public_ip}")
+
+        # --------------------------------------------------------
+        # Resolve instance_id if missing
+        # --------------------------------------------------------
+        instance_id = entry.get("instance_id")
+        if not instance_id:
+            instance_id = resolve_instance_id(
+                public_ip=public_ip,
+                private_ip=private_ip,
+                region=region
+            )
+            if not instance_id:
+                print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+                      f"NO instance_id found → skipping SG_STATE")
+                continue
+
+        # --------------------------------------------------------
+        # Describe instance → get SG IDs
+        # --------------------------------------------------------
+        try:
+            resp = ec2.describe_instances(InstanceIds=[instance_id])
+            inst = resp["Reservations"][0]["Instances"][0]
+            sg_ids = [sg["GroupId"] for sg in inst.get("SecurityGroups", [])]
+        except Exception as e:
+            print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+                  f"ERROR describing instance: {e}")
+            continue
+
+        print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: SG IDs = {sg_ids}")
+
+        # --------------------------------------------------------
+        # Step 4a — Apply latest.json rules
+        # --------------------------------------------------------
+        for sg_id in sg_ids:
+            print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+                  f"Applying Step 4a (authorize) to SG {sg_id}")
+
+            for rule in latest_rules:
+                try:
+                    ec2.authorize_security_group_ingress(
+                        GroupId=sg_id,
+                        IpProtocol=rule["protocol"],
+                        FromPort=int(rule["port"]),
+                        ToPort=int(rule["port"]),
+                        CidrIp=rule["cidr"]
+                    )
+                except Exception:
+                    pass  # ignore duplicates
+
+        # --------------------------------------------------------
+        # Step 4b — Revoke delta_delete rules
+        # --------------------------------------------------------
+        for sg_id in sg_ids:
+            print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+                  f"Applying Step 4b (revoke) to SG {sg_id}")
+
+            for rule in delta_delete:
+                try:
+                    ec2.revoke_security_group_ingress(
+                        GroupId=sg_id,
+                        IpProtocol=rule["protocol"],
+                        FromPort=int(rule["port"]),
+                        ToPort=int(rule["port"]),
+                        CidrIp=rule["cidr"]
+                    )
+                except Exception:
+                    pass  # ignore if already removed
+
+        # --------------------------------------------------------
+        # WAIT — allow user to modify AWS SG rules for drift testing
+        # --------------------------------------------------------
+        if os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes"):
+            delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
+            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
+                  f"(UUID={uuid}, public_ip={public_ip})")
+            time.sleep(delay)
+
+        # --------------------------------------------------------
+        # Step 5 — Drift detection
+        # --------------------------------------------------------
+        for sg_id in sg_ids:
+            drift = detect_sg_drift_with_delta(ec2, sg_id, latest_rules, delta_delete)
+
+            drift_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_module2e.json"
+            with open(drift_artifact, "w") as f:
+                json.dump(drift, f, indent=2)
+
+            print(f"[module2e_SG_STATE] Wrote drift artifact → {drift_artifact}")
+
+            # ----------------------------------------------------
+            # Step 5b — Remediation
+            # ----------------------------------------------------
+            missing = drift["drift_missing (Ports that SHOULD be on AWS but are NOT)"]
+            stale = drift["drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)"]
+
+            if not missing and not stale:
+                print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+                      f"No remediation required")
+                continue
+
+            print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+                  f"Remediation required → missing={missing}, stale={stale}")
+
+            # Missing → authorize-add each missing rule
+            for proto, port, cidr in missing:
+                try:
+                    ec2.authorize_security_group_ingress(
+                        GroupId=sg_id,
+                        IpProtocol=proto,
+                        FromPort=int(port),
+                        ToPort=int(port),
+                        CidrIp=cidr
+                    )
+                except Exception:
+                    pass
+
+            # Stale → revoke each stale rule
+            for proto, port, cidr in stale:
+                try:
+                    ec2.revoke_security_group_ingress(
+                        GroupId=sg_id,
+                        IpProtocol=proto,
+                        FromPort=int(port),
+                        ToPort=int(port),
+                        CidrIp=cidr
+                    )
+                except Exception:
+                    pass
+
+            # Write remediation artifact
+            rem_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2e.json"
+            with open(rem_artifact, "w") as f:
+                json.dump({
+                    "original_drift": drift,
+                    "remediation_success": True,
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }, f, indent=2)
+
+            print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
+```
+
+
+In order to make this new function importable in the master_script_spawn.py file  (in spawn mode multi-processing) it needs to be 
+added as shown below:
+
+```
+if __name__ == "__main__":
+    main()
+    # Version 2 of module2e
+    # Post processing reboot function after main() for the multi-threaded version of the reboot code. This also decouples
+    # the reboot code from the handler code (for example, process_ghost handler).
+    # region could be pulled from env
+    batch_reboot_registry(region=os.getenv("region_name"))
+    apply_sg_state_module2e(region=os.getenv("region_name")) # module2e SG_STATE code function above
+```
+
+
+
+
+Then the logic needs to be added to the master_script_spawn.py file as shown below: 
+
+```
+    # Special case for module2e (Phase3 requeue + reboot)
+    if module_name == "module2e_reque_and_resurrect_Phase3_version2":
+        # Run module2e main()
+        if hasattr(module, "main") and callable(module.main):
+            module.main()
+
+        # Run the post-processing reboot function
+        if hasattr(module, "batch_reboot_registry") and callable(module.batch_reboot_registry):
+            module.batch_reboot_registry(region=os.getenv("region_name"))   ## make sure to import os at the top!!
+
+        # Run the SG_STATE replay function (new)      <<< THIS HAS BEEN ADDED
+        if hasattr(module, "apply_sg_state_module2e") and callable(module.apply_sg_state_module2e):
+            module.apply_sg_state_module2e(region=os.getenv("region_name"))
+
+        logging.critical(f"Completed module script: {module_script_path}")
+        return
+```
 
 
 
