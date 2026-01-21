@@ -555,8 +555,8 @@ applied deterministically and uniquely to each process.
 
 
 
-#### Test6: Drift detection of AWS rule deviation from SG_RULES, in module2
 
+#### Wait code for drift detection and remedication validation testing in module2
 
 The instrumentation for testing the various drift scnearios is simple. Add a wait ENV variable to the module2 code in between the 
 multiprocessing.Pool line that calls tomcat_worker_wrapper in main(), and the code that follows (which will be the main() SG_STATE 
@@ -608,7 +608,7 @@ Then the code in module2 main() is added right here:
     finally:
 ```
 
-
+#### Test6: Drift detection of AWS rule deviation from SG_RULES, in module2
 
 
 #### Test7: Drift remediation testing (self-healing), module2
@@ -627,12 +627,128 @@ Then the code in module2 main() is added right here:
 #### Test8: The security group rules reapply post reboot in module2e prior to resurrection
 
 Make sure that all of the rules in the mainifest are applied to the security group in module2e after the ghost nodes have been
-rebooted and area healthy.
+rebooted and are healthy.
+
+
+#### Wait code for module2e drift detection and remediation testing
+
+
+Similar to module2, module2e drift detection testing requires putting in a wait before the SG_STATE drift code so that changes can
+be made in the AWS security group rule(s) to induce drift and remediation. 
+
+The wait code for module2e is signficantly different from that of module2.   Module2's wait code is in between the exit from 
+multiprocessing.Pool's call to tomcat_worker_wrapper so that all of the process worker threads have completed their respective thread
+operations.   The wait code is placed after multiprocessing.Pool in main() of module2, and before the SG_STATE code in main(). It is 
+simple code as presented in Test section above for module2 drift detection and remediation validation testing.
+
+As noted in the previous UPDATE, the module2e has no process awareness and is not multi-processed. It works off of the threads that are
+present in the module2e registry.   Module2e SG_STATE code has to iterate through each node in a sequential fashion in a loop based upon
+each registr_entry uuid. This is because resurrection candidates in module2e registry can be from any process, and in the future, there
+will be process specific sg_ids assigned (The code is not in there yet, but will be).   So the loop has to be designed this way because each
+thread (uuid) can have its own unique sg_id(s) assigned to it. As they are iterated through, one by one, the SG_STATE code is performed
+to replay the latest.json and delta_delete.json files on the SG attached to the uuid's node and update/refresh the nodes SG rule state prior 
+to module2f resurrection.  Thus the wait must be uuid thread specific.  The code below was presented in the previosu UPDATE in the code 
+review section, and is presented here again for clarity on what code the validation testing is using.
+
+The code permits selective waits injected into the for uuid loop in module2e so that selective drift can be induced at the per thread
+level.  Given that in the base test there are 8 ghosts, waiting on each one of the ghost uuids will take a long time and serve no 
+benefits. The code permits a wait on, for example, the first thread and the third thread, etc.  Note that currently there is only 1 sg_id
+assigned to all the nodes, so any wait induced drift in thread1, for example, will be remediated, and thread2 will then see the correct
+SG state and there will be no drift from that point forward.  That is the nature of this testing.
+
+This is the section from the previous UPDATE, in the code review section regarding this design. This code has been tested and works
+very well.
+The ENV variable READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS is used to designate which uuids (threads) will have a wait period that can
+be used to test drift detection and remediation.
+
+##### Deterministic per node wait code to facilitate validation testing of drift and remediation in module2e
+
+Given that module2e iterates through the module2e registry nodes one by one, the wait code has to be a bit creative to 
+facilitate testing for drift detection and remediation. 
+
+
+Note that there is an intentional wait state in between step4a/4b and step5/5b so that drift can be artificially induced to test
+the drift detection and remediation logs. Since the loop is a per node iteration this option needs to include node specificity so
+that not all the node loops will incur the wait (to save a lot of time). During the wait, a drift_missing or a stale drift can
+be induced to test the detection and remedication for the SG attached to that specific node. 
+
+Add the ENV variables to the .gitlab-ci.yml file:
+
+```
+    # Same as above but for module2e delay.
+    READY_FOR_AWS_SG_EDITS_MODULE2E: "true"
+    READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY: "120"
+    READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS: "1,4,5"
+    ## For postions, if there are 8 ghosts in the module2e registry the '1,4,5" will select the first, fourth and fifth registry_entrys
+    ## in the module2e registry for the wait. All the others will not wait. The code for this is in module2e.
+
+    # Delay for module2e drift detection 
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E='${READY_FOR_AWS_SG_EDITS_MODULE2E} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY='${READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY} >> .env
+    - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS='${READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS} >> .env
+```
+
+
+```
+The first block of code here establishes the position_uuid_set
+
+   # ------------------------------------------------------------
+    # Load registry
+    # ------------------------------------------------------------
+    registry_path = "/aws_EC2/logs/resurrection_module2e_registry_rebooted.json"
+    if not os.path.exists(registry_path):
+        print(f"[module2e_SG_STATE] No registry found at {registry_path}")
+        return
+
+    with open(registry_path, "r") as f:
+        registry = json.load(f)
+
+    # ------------------------------------------------------------
+    # Build ordered UUID list for position-based WAIT logic
+    # The WAIT logic is inserted between steps 4 and 5 below
+    # The ENV vars are all in .gitlab-ci.yml file.
+    # ------------------------------------------------------------
+    ordered_uuids = list(registry.keys())
+
+    positions_raw = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS", "")
+    positions = {int(p.strip()) for p in positions_raw.split(",") if p.strip().isdigit()}
+
+    # Convert 1-indexed positions to UUIDs
+    position_uuid_set = {
+        ordered_uuids[p - 1]
+        for p in positions
+        if 1 <= p <= len(ordered_uuids)
+    }
+
+    wait_enabled = os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E", "false").lower() in ("1", "true", "yes")
+    delay = int(os.getenv("READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY", "0"))
+
+```
+
+The second block is inside the for uuid loop and actually establishes the waiting based upon the position_uuid_set derived above:
+
+```
+        # --------------------------------------------------------
+        # WAIT — allow user to modify AWS SG rules for drift testing
+        # The logic below is dictated by the earlier WAIT logic above right after the registry is defined (see above)
+        # --------------------------------------------------------
+        # --------------------------------------------------------
+        # WAIT — selective AWS SG edit window based upon the position specified in the .gitlab-ci.yml ENV variable
+        # READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS
+        # --------------------------------------------------------
+        should_wait = (
+            wait_enabled and
+            (not position_uuid_set or uuid in position_uuid_set)
+        )
+
+        if should_wait:
+            print(f"[module2e_SG_STATE] WAITING {delay}s before drift detection "
+                  f"(UUID={uuid}, public_ip={public_ip})")
+            time.sleep(delay)
+```
 
 
 #### Test9: stale drift case in module2e with remediation
-
-
 
 #### Test10: missing drift case in module2e with remediation
 
