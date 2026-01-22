@@ -664,13 +664,15 @@ def resurrection_install_tomcat(
     if instance_id is None:
         base_tags.append("no_instance_id_context")
  
-
+    # SSH_REFACTOR: remove these 2 lines. The refactor will do a per attempt loop ssh client (and close)
     # SSH connect with bounded retries + a stub watchdog on final attempt only
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    #ssh = paramiko.SSHClient()
+    #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     ssh_connected = False
-    ssh_success = False
+    status_tagged = False # added for SSH_REFACTOR
+    registry_entry_created = False # added for SSH_REFACTOR
+    ssh_success = False  # temp flag to suppress the stub at the end. A setting of true will bypass the stub at the end.
 
     for attempt in range(max_ssh_attempts):
         try:
@@ -697,16 +699,103 @@ def resurrection_install_tomcat(
                 except Exception as e:
                     print(f"[RESURRECTION][{ip}] Watchdog exception: {e}")
 
-            threading.Thread(target=_watchdog, daemon=True).start()
+            threading.Thread(target=_watchdog, daemon=True).start() # uses the above function
+            
+            # SSH_REFACTOR replace these 4 lines with the block below this.
+            #ssh.connect(ip, port, username, key_filename=key_path, timeout=45)
+            #ssh_connected = True
+            #ssh_success = True
+            #break
 
-            ssh.connect(ip, port, username, key_filename=key_path, timeout=45)
+            # SSH_REFACTOR
+            ssh = paramiko.SSHClient() # new SSH client per attempt loop
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            ssh_port = port  # avoid variable shadowing. The port is set via function args above (22)
+
+            ssh.connect(
+                hostname=ip,
+                port=ssh_port,
+                username=username,
+                key_filename=key_path,
+                timeout=30,
+                banner_timeout=30,
+                auth_timeout=30,
+            )
+
             ssh_connected = True
             ssh_success = True
             break
 
+
+
+        # SSH_REFACTOR:replace these except blocks with the full paramiko exception taxonomy
+        
+        #except paramiko.ssh_exception.NoValidConnectionsError as e:
+        #    print(f"[{ip}] SSH NoValidConnectionsError attempt {attempt+1}: {e}")
+        #    if attempt == (max_ssh_attempts - 1):
+        #        registry_entry = {
+        #            "status": "install_failed",
+        #            "attempt": attempt,
+        #            "pid": multiprocessing.current_process().pid,
+        #            "thread_id": threading.get_ident(),
+        #            "thread_uuid": thread_uuid,
+        #            "public_ip": ip,
+        #            "private_ip": private_ip,
+        #            "timestamp": str(datetime.utcnow()),
+        #            "tags": base_tags + ["ssh_exception", "NoValidConnectionsError", str(e)]
+        #        }
+        #        return ip, private_ip, registry_entry
+        #    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+
+        #except EOFError as e:
+        #    print(f"[{ip}] SSH EOFError attempt {attempt+1}: {e}")
+        #    if attempt == (max_ssh_attempts - 1):
+        #        registry_entry = {
+        #            "status": "install_failed",
+        #            "attempt": attempt,
+        #            "pid": multiprocessing.current_process().pid,
+        #            "thread_id": threading.get_ident(),
+        #            "thread_uuid": thread_uuid,
+        #            "public_ip": ip,
+        #            "private_ip": private_ip,
+        #            "timestamp": str(datetime.utcnow()),
+        #            "tags": base_tags + ["eof_error", "ssh_failure"]
+        #        }
+        #        return ip, private_ip, registry_entry
+        #    time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+
+
+
+
+        # SSH_REFACTOR: new full paramiko exception taxonomy: close ssh, tag with base_tags, return registry_entry on final attempt, retry otherwise
+
+        except TimeoutError as e:
+            try: ssh.close()
+            except: pass
+
+            if attempt == max_ssh_attempts - 1:
+                registry_entry = {
+                    "status": "install_failed",
+                    "attempt": attempt,
+                    "pid": multiprocessing.current_process().pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": base_tags + ["ssh_timeout", "TimeoutError", str(e)],
+                }
+                return ip, private_ip, registry_entry
+
+            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+            continue
+
         except paramiko.ssh_exception.NoValidConnectionsError as e:
-            print(f"[{ip}] SSH NoValidConnectionsError attempt {attempt+1}: {e}")
-            if attempt == (max_ssh_attempts - 1):
+            try: ssh.close()
+            except: pass
+
+            if attempt == max_ssh_attempts - 1:
                 registry_entry = {
                     "status": "install_failed",
                     "attempt": attempt,
@@ -716,14 +805,18 @@ def resurrection_install_tomcat(
                     "public_ip": ip,
                     "private_ip": private_ip,
                     "timestamp": str(datetime.utcnow()),
-                    "tags": base_tags + ["ssh_exception", "NoValidConnectionsError", str(e)]
+                    "tags": base_tags + ["ssh_exception", "NoValidConnectionsError", str(e)],
                 }
                 return ip, private_ip, registry_entry
-            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
 
-        except EOFError as e:
-            print(f"[{ip}] SSH EOFError attempt {attempt+1}: {e}")
-            if attempt == (max_ssh_attempts - 1):
+            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+            continue
+
+        except paramiko.ssh_exception.AuthenticationException as e:
+            try: ssh.close()
+            except: pass
+
+            if attempt == max_ssh_attempts - 1:
                 registry_entry = {
                     "status": "install_failed",
                     "attempt": attempt,
@@ -733,14 +826,93 @@ def resurrection_install_tomcat(
                     "public_ip": ip,
                     "private_ip": private_ip,
                     "timestamp": str(datetime.utcnow()),
-                    "tags": base_tags + ["eof_error", "ssh_failure"]
+                    "tags": base_tags + ["ssh_exception", "AuthenticationException", str(e)],
                 }
                 return ip, private_ip, registry_entry
-            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
 
-    if not ssh_success:
-        # Early exit stub (rare): connection loop finished but didn’t set ssh_success
-        pid = multiprocessing.current_process().pid
+            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+            continue
+
+        except paramiko.ssh_exception.SSHException as e:
+            try: ssh.close()
+            except: pass
+
+            if attempt == max_ssh_attempts - 1:
+                registry_entry = {
+                    "status": "install_failed",
+                    "attempt": attempt,
+                    "pid": multiprocessing.current_process().pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": base_tags + ["ssh_exception", "SSHException", str(e)],
+                }
+                return ip, private_ip, registry_entry
+
+            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+            continue
+
+        except Exception as e:
+            try: ssh.close()
+            except: pass
+
+            if attempt == max_ssh_attempts - 1:
+                registry_entry = {
+                    "status": "install_failed",
+                    "attempt": attempt,
+                    "pid": multiprocessing.current_process().pid,
+                    "thread_id": threading.get_ident(),
+                    "thread_uuid": thread_uuid,
+                    "public_ip": ip,
+                    "private_ip": private_ip,
+                    "timestamp": str(datetime.utcnow()),
+                    "tags": base_tags + ["ssh_exception", "UnexpectedException", str(e)],
+                }
+                return ip, private_ip, registry_entry
+
+            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+            continue
+
+    #### else used with the for attempt in range(5) loop and try block above
+    else:
+        registry_entry = {
+            "status": "ssh_retry_failed",
+            "attempt": -1,
+            "pid": multiprocessing.current_process().pid,
+            "thread_id": threading.get_ident(),
+            "thread_uuid": thread_uuid,
+            "public_ip": ip,
+            "private_ip": private_ip,
+            "timestamp": str(datetime.utcnow()),
+            "tags": base_tags + ["ssh_retry_failed"],
+        }
+        return ip, private_ip, registry_entry
+
+
+
+    # SSH_REFACTOR replace this with module2 style stub guard further below.
+    #if not ssh_success:
+    #    # Early exit stub (rare): connection loop finished but didn’t set ssh_success
+    #    pid = multiprocessing.current_process().pid
+    #    stub_entry = {
+    #        "status": "stub",
+    #        "attempt": -1,
+    #        "pid": pid,
+    #        "thread_id": threading.get_ident(),
+    #        "thread_uuid": thread_uuid,
+    #        "public_ip": ip,
+    #        "private_ip": private_ip,
+    #        "timestamp": str(datetime.utcnow()),
+    #        "tags": base_tags + ["ssh_init_failed", "early_exit"]
+    #    }
+    #    return ip, private_ip, stub_entry
+
+    # SSH_REFACTOR replace the above with this new stub guard from module2:
+    if not status_tagged and not registry_entry_created and not ssh_success:
+    pid = multiprocessing.current_process().pid
+    if pid:
         stub_entry = {
             "status": "stub",
             "attempt": -1,
@@ -750,9 +922,17 @@ def resurrection_install_tomcat(
             "public_ip": ip,
             "private_ip": private_ip,
             "timestamp": str(datetime.utcnow()),
-            "tags": base_tags + ["ssh_init_failed", "early_exit"]
+            "tags": base_tags + ["stub", "early_exit", "ssh_init_failed"],
         }
         return ip, private_ip, stub_entry
+
+    #### END of the for attempt in range(5) block #####
+
+
+
+
+
+
 
     # Replay commands: whitelist-driven logic; strace exit overrides; adaptive watchdogs per stream
     try:
