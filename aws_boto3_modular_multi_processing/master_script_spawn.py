@@ -533,6 +533,7 @@ def reque_and_resurrect():
     run_module("/aws_EC2/sequential_master_modules/module2e_reque_and_resurrect_Phase3_version2.py")
 
 
+
 ##### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function
 #def resurrection_install_tomcat():
 #    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat.py")    
@@ -541,11 +542,14 @@ def reque_and_resurrect():
 #def resurrection_install_tomcat():
 #    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded.py")
 
-#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. THis is the multi-threaded version and supports ghost ips
+##### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. THis is the multi-threaded version and supports ghost ips
+#def resurrection_install_tomcat():
+#    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py")
+
+
+#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. This is version2 but with the new refactored SSH connect code from module2
 def resurrection_install_tomcat():
-    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version3.py")
 
 
 ## modules 3-11:
