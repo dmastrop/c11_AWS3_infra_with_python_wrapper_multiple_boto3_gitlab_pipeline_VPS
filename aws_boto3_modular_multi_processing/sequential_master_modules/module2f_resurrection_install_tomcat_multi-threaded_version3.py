@@ -910,9 +910,9 @@ def resurrection_install_tomcat(
     #    return ip, private_ip, stub_entry
 
     # SSH_REFACTOR replace the above with this new stub guard from module2:
+
     if not status_tagged and not registry_entry_created and not ssh_success:
-    pid = multiprocessing.current_process().pid
-    if pid:
+        pid = multiprocessing.current_process().pid
         stub_entry = {
             "status": "stub",
             "attempt": -1,
@@ -925,6 +925,7 @@ def resurrection_install_tomcat(
             "tags": base_tags + ["stub", "early_exit", "ssh_init_failed"],
         }
         return ip, private_ip, stub_entry
+
 
     #### END of the for attempt in range(5) block #####
 
