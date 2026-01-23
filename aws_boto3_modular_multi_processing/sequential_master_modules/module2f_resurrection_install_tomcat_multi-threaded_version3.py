@@ -636,7 +636,7 @@ def resurrection_install_tomcat(
     port=22,
     max_ssh_attempts=5,
     res_uuid=None,
-    extra_tags=None
+    extra_tags=None # see below. extra_tags are the orignal tags from module2e registry. These will be added to base_tags (see below)
 ):
     """
     Replay a previously captured command set to resurrect a failed thread.
@@ -655,6 +655,12 @@ def resurrection_install_tomcat(
 
     # Thread UUID (stable across a single resurrection run)
     thread_uuid = res_uuid or uuid.uuid4().hex[:8]
+    
+    # extend the base_tags with the extra_tags which is imported as an argument from the registry that is defined in main()
+    # When main() calls this function, those extra_tags (original tags) are imported through the extra_tags arg above so that
+    # they can be added to the new tags, and the historical forensics is intact. This updated base_tags now includes the 
+    # original tags from the module2e registry that has been imported by main(), the calling function.
+
     base_tags = ["resurrection_attempt", "module2f"]
     if extra_tags:
         base_tags.extend(extra_tags)
@@ -1082,7 +1088,7 @@ def resurrection_install_tomcat(
                                     "private_ip": private_ip,
                                     "timestamp": str(datetime.utcnow()),
                                     "tags": base_tags + [
-                                        *(tags or []),
+                                        #*(tags or []), ## This is not required as base_tags has already been extended. See extra_tags
                                         "silent_failure",
                                         command,
                                         f"command_retry_{attempt + 1}",
@@ -1414,7 +1420,7 @@ def main():
             ip = entry.get("public_ip")
             private_ip = entry.get("private_ip")
             replayed_commands = entry.get("replayed_commands", [])
-            extra_tags = entry.get("tags", [])
+            extra_tags = entry.get("tags", []) # extra_tags is used to carry over the original tags from the previous module2e import
             res_uuid = uuid
 
             # Reuse the original PID from module2e for forensic continuity
@@ -1467,7 +1473,7 @@ def main():
                 port=int(os.getenv("port", "22")),
                 max_ssh_attempts=int(os.getenv("max_ssh_attempts", "5")),
                 res_uuid=res_uuid,
-                extra_tags=extra_tags
+                extra_tags=extra_tags #send the original tags to the function resurrection_instalL_tomcat with extra_tags arg
             )
             future_map[future] = (uuid, pid, ip, private_ip, instance_id, extra_tags)
 
