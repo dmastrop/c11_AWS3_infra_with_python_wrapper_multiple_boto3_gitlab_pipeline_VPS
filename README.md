@@ -748,9 +748,55 @@ The second block is inside the for uuid loop and actually establishes the waitin
 ```
 
 
-#### Test9: stale drift case in module2e with remediation
+#### Test9: stale drift (revoke failed) case in module2e with remediation
+
+This test is performed in a very methodical fashion. Remove a port (9000) in the SG_RULES of module2. Module2 will detect this and remove
+the port from the AWS SG. There will be no drift at this point.  The test is running 16 sucessful nodes and 8 injected ghost nodes (but
+using real AWS EC2 instances that will actually be resurrected).  The 8 ghost nodes will be selected as resurrection candidates and will
+reach module2e SG_STATE code. The security group will be reapplied by design to each resurrection candidate (the 8 ghost threads).
+
+ Steps:
+      1. Load registry
+      2. Load latest.json + delta_delete.json from S3
+      3. For each node:
+            - resolve instance_id
+            - describe_instances → get SG IDs
+            - Step 4a: authorize-add all rules in latest.json
+            - Step 4b: revoke all rules in delta_delete.json
+      4. WAIT (READY_FOR_AWS_SG_EDITS_MODULE2E)
+      5. Step 5: drift detection
+      6. Step 5b: remediation if needed
+      7. Write drift + remediation artifacts
+
+The WAIT code, reviewed in the previous section, is for the testing so that I can induce intentional drift. In this case, the port that
+was revoked in module2 and then replayed again in module2e, will be added back to simulate a drift (stale port that should have successfully
+been removed but is still in the AWS SG). The wait is currently set to wait on the first ghost thread (uuid1) and that is where the 
+drift will be induced. The drift will be detected and then the code will remediate the SG by removing the port successfully this time.
+At that point drift detection runs again and confirmed that the port is now deleted from the SG. .  
+
+Because multiple sg_ids per process have not been implemented, there is currently only one sg_id for all 8 ghosts so the successive
+security group reapply of the state will find no drift in the rest of the threads (uuids) and hence no remediation will be done. 
+
+The gitlab_console logs traces below and the json files at the end of the pipeline run will be used to confirm all of this. 
+
+
+
 
 #### Test10: missing drift case in module2e with remediation
+
+This test uses the same basic test setup as the stale drift (revoke failed) test case above. However in this case during the uuid1 wait
+state, a port will be removed from the AWS SG that is tracked in the currnt SG_RULES state.   This will cause a drift for a missing 
+port in the uuid1 first thread SG replay.   Once the drift is detected, the code will remediate the missing port by adding it back to 
+the AWS SG. Like the stale test case above, the subsequent threads (uuid2 through uuid8) will not see any drift because the single SG
+has been remediated during the frist thread's SG state apply.   Once again thisi s becuase multiple sg_ids per process has not been 
+implemented yet.
+
+See the gitlab log traces and json file contents below.
+
+
+
+
+
 
 #### Test11: HYBRID futures crashes (16) with * ghosts
 
