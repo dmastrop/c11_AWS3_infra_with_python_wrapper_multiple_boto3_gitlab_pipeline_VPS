@@ -287,7 +287,7 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 
 
 
-#### Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker()
+#### Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker() (module2)
 
 This is verified by grepping  [SECURITY GROUP], and [RETRY_METRIC] in the gitlab console logs.
 This is just a small sampling of some of the rules while they are being applied to the security group for some of the 
@@ -375,7 +375,7 @@ RETRY] Duplicate rule detected on attempt 2
 ```
 
 
-#### Test2: Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above
+#### Test2: Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above (module2)
 
 Note this is making sure the rule application is working in tomcat_worker() using the SG_RULES list. The next section below
 will validate the manifest json file.
@@ -449,7 +449,7 @@ This has been empirically verified.
 
 
 
-#### Test3: Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above
+#### Test3: Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above 
 
 This can be seen once the pipeline completes. The json file is named orchestration_sg_rules_module2.json and the contents look
 like this (this one was done prior to port 5557 rule being added to the SG_RULES list)
@@ -547,10 +547,116 @@ applied deterministically and uniquely to each process.
 
 
 
-#### Test4: Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file
+#### Test4: Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file (module2)
 
 
-#### Test5: Revoke (remove/delete)a rule in the SG_RULES
+#### Test5: Revoke (remove/delete)a rule in the SG_RULES of module2
+
+The port 9000 has been removed from the SG_RULES list in module2. The SG_RULES is the desired state (pipeline N+1).
+
+Here is a portion of the gitlab console logs for the current pipeline N+1. The current pipeline N+1 has SG_RULES as the desired state. 
+The latest.json file at this point has the previous state from pipeline N. Thus the port that has been removed is detected and this is now
+added to the delta_delete.json file. This is done per process. In the future, each process may or may not have a unique sg_id(s) for its
+nodes and in that case there will be a delta_delete.json file for each process's sg_id(s). Right now it is just one sg_id and so one 
+delta_delete.json that is harmlessly overwritten by each processs. The delta_delete.json will be used in module2e to apply the same desired
+state to the resurrection candidates prior to module2f resurrection.  This is all working very well. 
+
+```
+[utils_sg_state] Loaded previous SG_RULES from s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE][PID 14] Loaded previous SG_RULES from S3: 17 rules
+[utils_sg_state] compute_delta_delete → 1 rules to delete
+[utils_sg_state] DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 14] Computed delta_delete: 1 rules to delete
+[SG_STATE][PID 14]   DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[utils_sg_state] Loaded previous SG_RULES from s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE][PID 18] Loaded previous SG_RULES from S3: 17 rules
+[utils_sg_state] compute_delta_delete → 1 rules to delete
+[utils_sg_state] DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 18] Computed delta_delete: 1 rules to delete
+[SG_STATE][PID 18]   DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[utils_sg_state] Loaded previous SG_RULES from s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE][PID 16] Loaded previous SG_RULES from S3: 17 rules
+[utils_sg_state] compute_delta_delete → 1 rules to delete
+[utils_sg_state] DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 16] Computed delta_delete: 1 rules to delete
+[SG_STATE][PID 16]   DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[utils_sg_state] Loaded previous SG_RULES from s3://c11-sg-rules-state/state/sg_rules/latest.json
+[utils_sg_state] Loaded previous SG_RULES from s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE][PID 15] Loaded previous SG_RULES from S3: 17 rules
+[utils_sg_state] compute_delta_delete → 1 rules to delete
+[utils_sg_state] DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 15] Computed delta_delete: 1 rules to delete
+[SG_STATE][PID 15]   DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 13] Loaded previous SG_RULES from S3: 17 rules
+[utils_sg_state] compute_delta_delete → 1 rules to delete
+[utils_sg_state] DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 13] Computed delta_delete: 1 rules to delete
+[SG_STATE][PID 13]   DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[utils_sg_state] Loaded previous SG_RULES from s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE][PID 17] Loaded previous SG_RULES from S3: 17 rules
+[utils_sg_state] compute_delta_delete → 1 rules to delete
+[utils_sg_state] DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][PID 17] Computed delta_delete: 1 rules to delete
+[SG_STATE][PID 17]   DELTA_DELETE → {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[utils_sg_state] Uploaded delta_delete → s3://c11-sg-rules-state/state/sg_rules/delta_delete.json
+[utils_sg_state] Delta count saved: 1
+[SG_STATE][PID 13] Saved delta_delete to S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Loading delta_delete.json from S3 for this process…
+[utils_sg_state] Uploaded delta_delete → s3://c11-sg-rules-state/state/sg_rules/delta_delete.json
+[utils_sg_state] Delta count saved: 1
+[SG_STATE][PID 16] Saved delta_delete to S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Loading delta_delete.json from S3 for this process…
+[utils_sg_state] Uploaded delta_delete → s3://c11-sg-rules-state/state/sg_rules/delta_delete.json
+[utils_sg_state] Delta count saved: 1
+[SG_STATE][PID 18] Saved delta_delete to S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Loading delta_delete.json from S3 for this process…
+[utils_sg_state] Uploaded delta_delete → s3://c11-sg-rules-state/state/sg_rules/delta_delete.json
+[utils_sg_state] Delta count saved: 1
+[SG_STATE][PID 17] Saved delta_delete to S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Loading delta_delete.json from S3 for this process…
+[utils_sg_state] Uploaded delta_delete → s3://c11-sg-rules-state/state/sg_rules/delta_delete.json
+[utils_sg_state] Delta count saved: 1
+[SG_STATE][PID 14] Saved delta_delete to S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Loading delta_delete.json from S3 for this process…
+[utils_sg_state] Uploaded delta_delete → s3://c11-sg-rules-state/state/sg_rules/delta_delete.json
+[utils_sg_state] Delta count saved: 1
+[SG_STATE][PID 15] Saved delta_delete to S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Loading delta_delete.json from S3 for this process…
+[SG_STATE] Loaded 1 delta_delete rules from S3 bucket 'c11-sg-rules-state'
+[SG_STATE] Normalized delta_delete rules: [('tcp', 9000, '0.0.0.0/0')]
+
+```
+
+This is the port 9000 that is being removed from the module2 SG_RULES list. The retries are because module2 is multi-processed and this is
+necessary to ensure that all processes are at the correct SG state prior to command execution on the nodes. 
+
+```
+[RETRY] Wrapper invoked for revoke_security_group_ingress with max_retries=15
+[RETRY][SYNTHETIC] Injecting synthetic RequestLimitExceeded for revoke_security_group_ingress
+[Retry 1] RequestLimitExceeded. Retrying in 1.80s...
+[SG_STATE] Successfully removed obsolete port 9000 from sg_id=sg-0a1f89717193f7896
+[SG_STATE] RETRY_METRIC sg_id=sg-0a1f89717193f7896, port=9000 → retry_count=1, max_retry_observed=1
+[SG_STATE][SUMMARY][PID 13] applied=16, deleted=1, duplicate_skipped=0, absent_skipped=0
+[WATCHDOG METRIC] [PID 13] Final max_retry_observed = 1
+[Dynamic Watchdog] [PID 13] instance_type=t2.micro, node_count=16, max_retry_observed=1 → WATCHDOG_TIMEOUT=20s
+[SG_PROPAGATION_DELAY] [PID 13] max_retry_observed=1 → no extra delay
+[TRACE][tomcat_worker] Preparing to invoke threaded_install via run_test
+[TRACE][tomcat_worker] Instance count for this chunk: 2
+[RETRY] Attempt 2 for revoke_security_group_ingress (args=(), kwargs={'GroupId': 'sg-0a1f89717193f7896', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': 9000, 'ToPort': 9000, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]})
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+[install_tomcat] expected command count is : 5
+should_wrap matched: True → Command: bash -c 'echo "hello world" > /tmp/testfile'
+[install_tomcat] expected command count is : 5
+[DEBUG] Preparing install_tomcat for 2 instances with WATCHDOG_TIMEOUT=20
+[SG_STATE] Successfully removed obsolete port 9000 from sg_id=sg-0a1f89717193f7896
+[SG_STATE] RETRY_METRIC sg_id=sg-0a1f89717193f7896, port=9000 → retry_count=1, max_retry_observed=1
+```
+
+
+The latest.json file will be updated with the removed port once module2 process level execution completes.
+The delta_delete.json file has the port 9000 included in it so that module2e can apply SG state correctly as well once the resurrection 
+candidates are rebooted. (module2e uses this updated latest.json and the delta_delete.json file to get the SG state to the desired
+state for the resurreciton candidates).  This must be done prior to resurrection in module2f.
 
 
 
