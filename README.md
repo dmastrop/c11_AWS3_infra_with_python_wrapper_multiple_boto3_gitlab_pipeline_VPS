@@ -309,6 +309,9 @@ This segmentation mirrors how large-scale systems isolate workloads.
 |  ...              |     |  ...              |     |  ...              |
 +-------------------+     +-------------------+     +-------------------+
 ```
+---
+
+[Back to top](#table-of-contents)
 
 ---
 
@@ -339,6 +342,10 @@ Each thread maintains:
 
 ---
 
+[Back to top](#table-of-contents)
+
+---
+
 ### **3. Security Groups as Policy Overlays**
 
 Security groups (SGs) are mapped **independently and uniquely** across processes, forming a software‑defined network fabric.
@@ -357,6 +364,10 @@ Process C (DB)   → SG-DB
 - Per‑segment remediation  
 - Per‑segment health scoring  
 - ML‑driven SG propagation modeling  
+
+---
+
+[Back to top](#table-of-contents)
 
 ---
 
@@ -398,6 +409,10 @@ Because every command is tagged with:
 
 ---
 
+[Back to top](#table-of-contents)
+
+---
+
 ### **5. Topological Mapping Capabilities**
 
 Because the architecture is fundamentally process‑based, it maps cleanly onto many topologies.
@@ -432,6 +447,10 @@ Because the architecture is fundamentally process‑based, it maps cleanly onto 
 
 ---
 
+[Back to top](#table-of-contents)
+
+---
+
 ### **6. ML-Ready Telemetry**
 
 The system already produces the structured data needed for ML.
@@ -449,6 +468,10 @@ The system already produces the structured data needed for ML.
 #### **Why this works**
 
 Because every event is tagged and structured, the system forms a **causal graph** of the entire orchestration lifecycle.
+
+---
+
+[Back to top](#table-of-contents)
 
 ---
 
@@ -477,6 +500,10 @@ Because every event is tagged and structured, the system forms a **causal graph*
 
 ---
 
+[Back to top](#table-of-contents)
+
+---
+
 ### **8. Summary**
 
 This project is not just an EC2 automation tool. It is a **general-purpose distributed orchestration platform** with:
@@ -489,6 +516,10 @@ This project is not just an EC2 automation tool. It is a **general-purpose distr
 - drift detection and remediation  
 - resurrection and self-healing  
 - ML-ready telemetry  
+
+---
+
+[Back to top](#table-of-contents)
 
 ---
 
@@ -579,8 +610,11 @@ The system becomes:
 - predictive over time  
 
 
+---
 
+[Back to top](#table-of-contents)
 
+---
 
 
 
