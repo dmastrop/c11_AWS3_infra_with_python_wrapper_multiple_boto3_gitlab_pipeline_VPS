@@ -818,9 +818,12 @@ Add the ENV variables to the .gitlab-ci.yml file:
 ```
 
 
-```
+
 The first block of code here establishes the position_uuid_set
 
+
+
+```
    # ------------------------------------------------------------
     # Load registry
     # ------------------------------------------------------------
