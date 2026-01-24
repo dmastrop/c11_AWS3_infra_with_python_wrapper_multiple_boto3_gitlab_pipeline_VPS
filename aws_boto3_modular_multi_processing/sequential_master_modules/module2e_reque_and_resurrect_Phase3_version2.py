@@ -819,17 +819,58 @@ def apply_sg_state_module2e(region=None):
                 except Exception:
                     pass
 
-            # Write remediation artifact
-            rem_artifact   = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_remediated_module2e.json"
-            #rem_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2e.json"
+            ## Write remediation artifact
+
+            #rem_artifact   = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_remediated_module2e.json"
+
+            ##rem_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2e.json"
+            #with open(rem_artifact, "w") as f:
+            #    json.dump({
+            #        "original_drift": drift,
+            #        "remediation_success": True,
+            #        "timestamp": datetime.utcnow().isoformat() + "Z"
+            #    }, f, indent=2)
+
+            #print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
+            
+
+
+            # --- NEW: re-run drift detection after remediation ---
+            drift_after = detect_sg_drift_with_delta(
+                ec2,
+                sg_id,
+                latest_rules,
+                delta_delete
+            )
+
+            # --- NEW: remediation_success flag ---
+            remediation_success = (
+                not drift_after.get("drift_missing (Ports that SHOULD be on AWS but are NOT)", [])
+                and not drift_after.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)", [])
+            )
+
+            # --- NEW: write full remediation artifact (module2 format) ---
+            rem_artifact = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_remediated_module2e.json"
+
+            rem_payload = {
+                "original_drift": drift,
+                "remediation_actions": (
+                    [f"Re-applied SG_RULES and delta_delete for missing ports: {missing}"] if missing else []
+                ) + (
+                    [f"Revoked stale ports: {stale}"] if stale else []
+                ),
+                "drift_after_remediation": drift_after,
+                "remediation_success": remediation_success,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+
             with open(rem_artifact, "w") as f:
-                json.dump({
-                    "original_drift": drift,
-                    "remediation_success": True,
-                    "timestamp": datetime.utcnow().isoformat() + "Z"
-                }, f, indent=2)
+                json.dump(rem_payload, f, indent=2)
 
             print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
+
+
+
 
 
 

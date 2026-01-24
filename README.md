@@ -4176,71 +4176,92 @@ def apply_sg_state_module2e(region=None):
 
 
 
-        # --------------------------------------------------------
-        # Step 5 — Drift detection
-        # --------------------------------------------------------
-        for sg_id in sg_ids:
-            drift = detect_sg_drift_with_delta(ec2, sg_id, latest_rules, delta_delete)
 
-            drift_artifact = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_module2e.json"
-            #drift_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_module2e.json"
-            with open(drift_artifact, "w") as f:
-                json.dump(drift, f, indent=2)
+	# --------------------------------------------------------
+	# Step 5 — Drift detection
+	# --------------------------------------------------------
+	for sg_id in sg_ids:
+	    drift = detect_sg_drift_with_delta(ec2, sg_id, latest_rules, delta_delete)
 
-            print(f"[module2e_SG_STATE] Wrote drift artifact → {drift_artifact}")
+	    drift_artifact = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_module2e.json"
+	    with open(drift_artifact, "w") as f:
+		json.dump(drift, f, indent=2)
 
-            # ----------------------------------------------------
-            # Step 5b — Remediation
-            # ----------------------------------------------------
-            missing = drift["drift_missing (Ports that SHOULD be on AWS but are NOT)"]
-            stale = drift["drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)"]
+	    print(f"[module2e_SG_STATE] Wrote drift artifact → {drift_artifact}")
 
-            if not missing and not stale:
-                print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
-                      f"No remediation required")
-                continue
+	    # ----------------------------------------------------
+	    # Step 5b — Remediation
+	    # ----------------------------------------------------
+	    missing = drift["drift_missing (Ports that SHOULD be on AWS but are NOT)"]
+	    stale = drift["drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)"]
 
-            print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
-                  f"Remediation required → missing={missing}, stale={stale}")
+	    if not missing and not stale:
+		print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+		      f"No remediation required")
+		continue
 
-            # Missing → authorize-add each missing rule
-            for proto, port, cidr in missing:
-                try:
-                    ec2.authorize_security_group_ingress(
-                        GroupId=sg_id,
-                        IpProtocol=proto,
-                        FromPort=int(port),
-                        ToPort=int(port),
-                        CidrIp=cidr
-                    )
-                except Exception:
-                    pass
+	    print(f"[module2e_SG_STATE] UUID={uuid}, public_ip={public_ip}: "
+		  f"Remediation required → missing={missing}, stale={stale}")
 
-            # Stale → revoke each stale rule
-            for proto, port, cidr in stale:
-                try:
-                    ec2.revoke_security_group_ingress(
-                        GroupId=sg_id,
-                        IpProtocol=proto,
-                        FromPort=int(port),
-                        ToPort=int(port),
-                        CidrIp=cidr
-                    )
-                except Exception:
-                    pass
+	    # Missing → authorize-add each missing rule
+	    for proto, port, cidr in missing:
+		try:
+		    ec2.authorize_security_group_ingress(
+			GroupId=sg_id,
+			IpProtocol=proto,
+			FromPort=int(port),
+			ToPort=int(port),
+			CidrIp=cidr
+		    )
+		except Exception:
+		    pass
 
-            # Write remediation artifact
-            rem_artifact   = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_remediated_module2e.json"
-            #rem_artifact = f"/aws_EC2/logs/sg_state_drift_SGID_{sg_id}_remediated_module2e.json"
-            with open(rem_artifact, "w") as f:
-                json.dump({
-                    "original_drift": drift,
-                    "remediation_success": True,
-                    "timestamp": datetime.utcnow().isoformat() + "Z"
-                }, f, indent=2)
+	    # Stale → revoke each stale rule
+	    for proto, port, cidr in stale:
+		try:
+		    ec2.revoke_security_group_ingress(
+			GroupId=sg_id,
+			IpProtocol=proto,
+			FromPort=int(port),
+			ToPort=int(port),
+			CidrIp=cidr
+		    )
+		except Exception:
+		    pass
 
-            print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
+	    # --- NEW: re-run drift detection after remediation ---
+	    drift_after = detect_sg_drift_with_delta(
+		ec2,
+		sg_id,
+		latest_rules,
+		delta_delete
+	    )
 
+	    # --- NEW: remediation_success flag ---
+	    remediation_success = (
+		not drift_after.get("drift_missing (Ports that SHOULD be on AWS but are NOT)", [])
+		and not drift_after.get("drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)", [])
+	    )
+
+	    # --- NEW: write full remediation artifact (module2 format) ---
+	    rem_artifact = f"/aws_EC2/logs/sg_state_drift_{uuid}_{sg_id}_remediated_module2e.json"
+
+	    rem_payload = {
+		"original_drift": drift,
+		"remediation_actions": (
+		    [f"Re-applied SG_RULES and delta_delete for missing ports: {missing}"] if missing else []
+		) + (
+		    [f"Revoked stale ports: {stale}"] if stale else []
+		),
+		"drift_after_remediation": drift_after,
+		"remediation_success": remediation_success,
+		"timestamp": datetime.utcnow().isoformat() + "Z"
+	    }
+
+	    with open(rem_artifact, "w") as f:
+		json.dump(rem_payload, f, indent=2)
+
+	    print(f"[module2e_SG_STATE] Wrote remediation artifact → {rem_artifact}")
 
 
 ```
