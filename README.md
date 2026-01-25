@@ -265,10 +265,11 @@ STATUS_TAGS = {
 
 ---
 
-## PREFACE UPDATE: **Extensibility & Topological Mapping Architecture (v4.1)**  
+## PREFACE UPDATE: **Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)**  
 *A forward‑looking overview of how this orchestration system generalizes into a topology‑aware, ML‑ready control plane.*
 
 ---
+
 
 ### **Table of Contents**
 
@@ -280,7 +281,12 @@ STATUS_TAGS = {
 - [6. ML-Ready Telemetry](#6-ml-ready-telemetry)  
 - [7. Cross-Links to Existing Modules](#7-cross-links-to-existing-modules)  
 - [8. Summary](#8-summary)  
-- [9. Control-Plane Loop: SG_STATE → Command Pipeline → Resurrection](#9-control-plane-loop-sg_state--command-pipeline--resurrection)
+- [9. Control-Plane Loop: SG_STATE → Command Pipeline → Resurrection](#9-control-plane-loop-sg_state--command-pipeline--resurrection)  
+- [10. Bucket Handler Architecture](#10-bucket-handler-architecture)  
+- [11. Phase 3 Resurrection Engine (module2e + module2f)](#11-phase-3-resurrection-engine-module2e--module2f)  
+- [12. Command Plan Architecture](#12-command-plan-architecture)  
+- [13. Ghost Architecture (module2b → module2d)](#13-ghost-architecture-module2b--module2d)  
+- [14. Registry Lineage Across Modules](#14-registry-lineage-across-modules)
 
 ---
 
@@ -309,6 +315,7 @@ This segmentation mirrors how large-scale systems isolate workloads.
 |  ...              |     |  ...              |     |  ...              |
 +-------------------+     +-------------------+     +-------------------+
 ```
+
 ---
 
 [Back to top](#table-of-contents)
@@ -358,6 +365,14 @@ Process B (App)  → SG-App
 Process C (DB)   → SG-DB
 ```
 
+Each SG is:
+
+- deterministic  
+- tagged  
+- drift‑checked  
+- remediated  
+- lineage‑preserved  
+
 #### **Capabilities Enabled**
 
 - Per‑segment drift detection  
@@ -382,9 +397,27 @@ The command execution pipeline is:
 - resurrection‑capable  
 - fully tagged  
 
-This makes it a **universal workload injector** capable of installing or configuring anything.
+#### **Currently Supported Workload Types**
 
-#### **Why this matters**
+- apt  
+- systemctl / systemd units  
+- custom scripts  
+- configuration management  
+- application deployments  
+- arbitrary shell pipelines  
+- strace‑wrapped commands  
+- background jobs  
+- brittle commands requiring forensic tracing  
+
+#### **Future Support (Planned)**
+
+- yum *  
+- dnf *  
+- helm *  
+- kubectl apply *  
+- docker run *  
+
+#### **Why this is relevant**
 
 Because every command is tagged with:
 
@@ -483,6 +516,7 @@ Because every event is tagged and structured, the system forms a **causal graph*
 - Before/after snapshots  
 - Per‑SG lineage  
 - Propagation delay modeling  
+- Serial SG_STATE replay per UUID (Phase 3)  
 
 #### **Resurrection Module (module2f)**
 - Node health checks  
@@ -517,6 +551,16 @@ This project is not just an EC2 automation tool. It is a **general-purpose distr
 - resurrection and self-healing  
 - ML-ready telemetry  
 
+Because the architecture is based on processes and tagging, it can be extended to model:
+
+- network topology  
+- application topology  
+- security topology  
+- operational topology  
+- ML-driven predictive control  
+
+This positions the system as a foundation for a future **self-healing, topology-aware, ML-augmented orchestration layer**.
+
 ---
 
 [Back to top](#table-of-contents)
@@ -524,6 +568,8 @@ This project is not just an EC2 automation tool. It is a **general-purpose distr
 ---
 
 ### **9. Control-Plane Loop: SG_STATE → Command Pipeline → Resurrection**
+
+This section illustrates how the system’s major components form a **closed-loop control plane**, similar to Kubernetes controllers and service mesh reconciliation loops.
 
 #### **High-Level Diagram**
 
@@ -577,15 +623,13 @@ This project is not just an EC2 automation tool. It is a **general-purpose distr
 Artifacts feed back into **both** SG_STATE *and* the Resurrection Engine.
 
 #### **SG_STATE consumes:**
-
 - `drift_after`  
 - `remediation_success`  
 - SG propagation delay metrics  
 - per-SG lineage  
 - before/after drift snapshots  
 
-#### **Resurrection Engine consumes:**  
-
+#### **Resurrection Engine consumes:**
 - module2 artifacts  
 - module2b ghost GitLab console logs scan  
 - module2c process registry GitLab console logs scan  
@@ -609,12 +653,135 @@ The system becomes:
 - topology-aware  
 - predictive over time  
 
+---
+
+[Back to top](#table-of-contents)
+
+---
+
+### **10. Bucket Handler Architecture (module2e)**
+
+The bucket handler architecture classifies each failed or incomplete thread into deterministic resurrection categories.
+
+#### **Buckets**
+
+- idx1 futures crash  
+- post‑exec future crash  
+- generic install_failed  
+- stub  
+- ghost  
+- hybrid crash modes  
+- with more to come
+
+#### **Inputs**
+
+- registry tags  
+- SG lineage  
+- command lineage  
+- ghost classification  
+- exit semantics  
+- retry lineage  
+- strace lineage  
+
+#### **Outputs**
+
+- replayed command set  
+- reboot requirements  (reboots are multi-threaded)
+- SG_STATE replay requirements  
+- resurrection routing  (how to handle the resurrection itself, for example is a reboot required prior to resurrection in module2f?)
 
 ---
 
 [Back to top](#table-of-contents)
 
 ---
+
+### **11. Phase 3 Resurrection Engine (module2e + module2f)**
+
+Phase 3 is the resurrection layer that restores failed threads using deterministic replay.
+Resurrections are multi-threaded
+
+
+#### **module2e**
+
+- bucketization  
+- resurrection registry  
+- reboot pipeline (ThreadPoolExecutor; multi-threaded)  
+- SG_STATE replay (serial per UUID)  (this is by design, because of the possibilty of multi and unique sg_ids per process and because
+SG_STATE replay per uuid is not a long process. There is no need to multi-thread this and it would create potential issues).
+- drift remediation  
+
+#### **module2f**
+
+- multi-threaded resurrection  
+- strace‑wrapped command replay  
+- whitelist filtering  
+- exit semantics  
+- retry lineage  
+- ghost context tagging  
+
+---
+
+[Back to top](#table-of-contents)
+
+---
+
+### **12. Command Plan Architecture**
+
+The command plan architecture preserves the exact command lineage for resurrection via registry_entry tagging performed by module2e
+
+- write_command_plan  
+- wrapped_commands  
+- replayed_commands  
+- strace wrapper  
+- command lineage preservation for precise replay in module2f
+
+---
+
+[Back to top](#table-of-contents)
+
+---
+
+### **13. Ghost Architecture (module2b → module2d)**
+
+The ghost pipeline identifies, classifies, and prepares ghost nodes for resurrection.
+
+- ghost detection from console logs  
+- ghost IP extraction  
+- private IP enrichment  
+- synthetic ghost registry (this is not the same as synthetic ghost injection that is done for testing. This is a synthetic registry that is
+create for each node, because ghosts by definition have no process originated registry) 
+- gatekeeper classification  
+- ghost resurrection logic  
+
+---
+
+[Back to top](#table-of-contents)
+
+---
+
+### **14. Registry Lineage Across Modules**
+
+```
+module2 → module2b → module2c → module2d → module2e → module2f
+```
+
+Each stage adds:
+
+- tags  
+- resurrection_reason  
+- reboot_context  
+- SG_STATE lineage  
+- command lineage  
+- ghost lineage  
+
+---
+
+[Back to top](#table-of-contents)
+
+---
+
+
 
 
 
