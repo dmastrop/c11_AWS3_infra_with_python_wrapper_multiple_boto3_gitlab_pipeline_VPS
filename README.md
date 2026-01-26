@@ -1253,9 +1253,12 @@ code over the same round of test scenarios
 | **C** | Stale rule | ok
 | **D** | Ignored drift | ok |
 
-drift_missing  (Ports that SHOULD be on AWS but are NOT
+drift_missing  (Ports that SHOULD be on AWS but are NOT)
+
 drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 
+
 drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                       
+
 drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        
 
 ##### Test6.A
@@ -2461,9 +2464,9 @@ See the gitlab log traces and json file contents below.
 
 
 
+#### Test11: Ignored drift case in module2e (no remediation required)
 
-
-#### Test11: HYBRID futures crashes (16) with * ghosts
+#### Test12: HYBRID futures crashes (16) with * ghosts
 
 
 
