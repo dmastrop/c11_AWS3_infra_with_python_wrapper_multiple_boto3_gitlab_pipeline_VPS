@@ -1240,10 +1240,374 @@ Then the code in module2 main() is added right here:
     finally:
 ```
 
-#### Test6: Drift detection of AWS rule deviation from SG_RULES, in module2
+#### Test6: Drift detection of AWS rule deviation from SG_RULES, in module2, using wait code of module2
 
-WIP
+This first set of tests is to just validate the drift detection code, not the remedication code. Test7 below will verify the remediation 
+code over the same round of test scenarios
 
+
+| Test | Scenario | Validated |
+|------|----------|-----------|
+| **A** | No drift | ok
+| **B** | Missing rule | ok
+| **C** | Stale rule | ok
+| **D** | Ignored drift | ok |
+
+drift_missing  (Ports that SHOULD be on AWS but are NOT
+drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 
+drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                       
+drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        
+
+##### Test6.A
+
+This is a baseline test with no drift except on the ports that AWS has that SG_RULES do not have (not tracked by state) or ports AWS
+has that we ignore.(These can be different under certain scenarios like TestD)
+
+
+
+```
+SG_STATE] RETRY_METRIC sg_id=sg-0a1f89717193f7896, port=4010 → retry_count=1, max_retry_observed=1
+[SG_STATE][SUMMARY][PID 14] applied=21, deleted=0, duplicate_skipped=0, absent_skipped=0
+
+[utils_sg_state] Uploaded SG_RULES to s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE] Saved current SG_RULES to S3 (21 rules)
+[SG_STATE] Starting SG drift detection (Step 5)
+[SG_STATE] Loaded delta_delete from S3 (0 rules)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing         = []
+[utils_sg_state]   drift_extra_filtered  = []
+[utils_sg_state]   drift_extra_raw       = [('tcp', 443, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored         = [('tcp', 443, '0.0.0.0/0')]
+[SG_STATE] Drift artifact written: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+[TRACE][aggregator] Starting disk-based aggregation…
+[TRACE][aggregator] Wrote final JSON to /aws_EC2/logs/final_aggregate_execution_run_registry.json
+[TRACE][aggregator] Final registry summary:
+  total: 16
+  install_success: 16
+  install_failed: 0
+  stub: 0
+  no_tags: 0
+```
+This is the contents of the sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+
+```
+{
+  "drift_missing": [],
+  "drift_extra_filtered": [],
+  "drift_extra_raw": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+##### Test6.B
+These are the gitlab console logs from the test B. In the wait window a SG_RULES port is removed from the AWS SG, generating a 
+drift_missing drift scenario. The self-remediation code was not in place at the time (see Test7 further below).
+
+This is the gitlab console logs. The wait window is encountered first. 
+Removed port 8080 during the window.
+
+
+```
+SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now
+[SG_STATE][READY_FOR_AWS_EDITS] Pausing for 120 seconds to allow AWS SG modifications...
+
+
+
+[SG_STATE] Starting SG drift detection (Step 5)
+[SG_STATE] Loaded delta_delete from S3 (0 rules)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = [('tcp', 8080, '0.0.0.0/0')]
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0')]
+[SG_STATE] Drift artifact written: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+[TRACE][aggregator] Starting disk-based aggregation…
+[TRACE][aggregator] Wrote final JSON to /aws_EC2/logs/final_aggregate_execution_run_registry.json
+[TRACE][aggregator] Final registry summary:
+  total: 16
+  install_success: 16
+  install_failed: 0
+  stub: 0
+  no_tags: 0
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Injected real ghost IPs into aggregate_gold_ips: ['100.26.61.156', '100.52.245.152', '107.21.179.219',
+
+```
+
+sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+
+```
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [
+    [
+      "tcp",
+      8080,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+
+
+##### Test6.C
+
+In this test, port 9003 is removed from SG_RULES in module2 to define the new state. The port is revoked by the AWS API and removed
+from the AWS SG. During the wait window the port is added back to the AWS SG. This creates a drift, whereby a  port that should have
+been removed on AWS has failed to be removed. This is known as a stale port situation. In Test7 further below, this will be remediated.
+
+The gitlab console logs are below: 
+```
+[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: ['sg-0a1f89717193f7896']
+[module2_orchestration_level_SG_manifest] Wrote SG rule manifest to /aws_EC2/logs/orchestration_sg_rules_module2.json
+[utils_sg_state] Uploaded SG_RULES to s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE] Saved current SG_RULES to S3 (19 rules)
+[SG_STATE] Starting SG drift detection (Step 5)
+[SG_STATE] Loaded delta_delete from S3 (1 rules)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = [('tcp', 9003, '0.0.0.0/0')]
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 9003, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0')]
+[SG_STATE] Drift artifact written: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+[TRACE][aggregator] Starting disk-based aggregation…
+```
+
+
+sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+
+```
+{
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [
+    [
+      "tcp",
+      9003,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9003,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+
+
+##### Test6.D
+
+
+This is a generic test where additonal ports are added to AWS that are not included in the the SG_RULES list tracked by 
+module2.
+
+The current SG_RULES list at the time of this test is:
+
+Ports 22,80, 443, 4000 through 4010 (each one in a separate rule), 5556 5557 8080 9000 9001 and 9002
+
+During the wait period ports 3000-3010 are added to AWS SG (not to SG_RULES state).
+
+These will show up as follows in the drift shown below. (NOTE: these ports will not have to be remediated because they are not
+tracked by the SG_RULES state machine of module2. This is by design, and this drift metric is only for informational purposes and not
+for remediation purposes, as weill be seen in Test7)
+
+
+The drift detection finds the ports 3000-3010 as designed:
+
+```
+module2_orchestration_level_SG_manifest] Wrote SG rule manifest to /aws_EC2/logs/orchestration_sg_rules_module2.json
+[utils_sg_state] Uploaded SG_RULES to s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE] Saved current SG_RULES to S3 (19 rules)
+[SG_STATE] Starting SG drift detection (Step 5)
+[SG_STATE] Loaded delta_delete from S3 (0 rules)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[SG_STATE] Drift artifact written: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+```
+
+
+sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+```
+{
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+
+
+ 
 #### Test7: Drift remediation testing (self-healing), module2
 
 | Test | Scenario | Validated |
@@ -1263,7 +1627,7 @@ Make sure that all of the rules in the mainifest are applied to the security gro
 rebooted and are healthy.
 
 The gitlab console logs are below for one of the 8 resurrection ghost thread candidates. This thread did not detect drift or require
-remediation after the application of the rules in Steps 4a and 4b.
+remediation after the application of the rules in Steps 4a and 4b, as there was no drift in this particular test.
 
 
 
