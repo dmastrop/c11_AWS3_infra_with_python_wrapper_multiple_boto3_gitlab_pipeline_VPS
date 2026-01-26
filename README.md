@@ -806,7 +806,8 @@ For space issues and brevity, all the testing and test cases could not be includ
 show all the features of the implemenation are presented in detail in this UPDATE.
 
 The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestration_level_SG_manifest], [SG_STATE], 
-[SG_PROPAGATION_DELAY], [uitls_sg_state], [SPAWN_MODE], [SG_STATE_SELF_HEAL], [READY_FOR_AWS_EDITS], [and several others.
+[SG_PROPAGATION_DELAY], [uitls_sg_state], [SPAWN_MODE], [SG_STATE_SELF_HEAL], [READY_FOR_AWS_EDITS], 
+[READY_FOR_AWS_EDITS_MODULE2E], and several others.
 
 
 
@@ -2935,6 +2936,19 @@ The second block is inside the for uuid loop and actually establishes the waitin
 
 #### Test9: stale drift (revoke failed) case in module2e with remediation
 
+The tests performed to validate the module2e SG_STATE drift and remediation code are very similar to those that were done for module2
+in the earlier tests.
+
+
+| Test | Scenario | Validated |
+|------|----------|-----------|
+| **A** | No drift | Baseline correctness |
+| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
+| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
+| **D** | Ignored drift | No action | <<<<< No remediation is required in this case
+
+The test for this section is TestC in the table above.
+
 This test is performed in a very methodical fashion. Remove a port (9000) in the SG_RULES of module2. Module2 will detect this and remove
 the port from the AWS SG. There will be no drift at this point.  The test is running 16 sucessful nodes and 8 injected ghost nodes (but
 using real AWS EC2 instances that will actually be resurrected).  The 8 ghost nodes will be selected as resurrection candidates and will
@@ -3576,7 +3590,7 @@ For example:
 This is true for the rest of the threads.
 
 
-In the end all 8 ghost threads were resurrected. The .188.218 uuid1 thread is shown below from the module2f registry:
+In the end all 8 ghost threads were resurrected. The .49.170 uuid1 thread is shown below from the module2f registry:
 
 
 ```
@@ -3619,6 +3633,16 @@ the AWS SG. Like the stale test case above, the subsequent threads (uuid2 throug
 has been remediated during the frist thread's SG state apply.   Once again thisi s becuase multiple sg_ids per process has not been 
 implemented yet.
 
+This is the TestB in the table below:
+
+| Test | Scenario | Validated |
+|------|----------|-----------|
+| **A** | No drift | Baseline correctness |
+| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
+| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
+| **D** | Ignored drift | No action | <<<<< No remediation is required in this case
+
+
 The code steps are:
 
  Steps:
@@ -3635,11 +3659,66 @@ The code steps are:
       7. Write drift + remediation artifacts
 
 See the gitlab log traces and json file contents below.
+The port that is removed on AWS SG is the port 4000 from the SG_RULES SG_STATE of module2:
+
+```
+    {"protocol": "tcp", "port": 4000, "cidr": "0.0.0.0/0"},   <<<< This port will be removed on the AWS SG but will remain here in SG_RULES
+    {"protocol": "tcp", "port": 4001, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4002, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4003, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4004, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4005, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4006, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4007, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4008, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4009, "cidr": "0.0.0.0/0"},
+    {"protocol": "tcp", "port": 4010, "cidr": "0.0.0.0/0"},
+]
+```
+
 
 
 
 
 #### Test11: Ignored drift case in module2e (no remediation required)
+
+
+This test is performed by simply adding  several ports to the AWS SG from the AWS Web console prior to starting the test or during the 
+wait period. This will cause the drift code to detect several ignored ports that are not tracked by the SG state machine (SG_RULES of
+module2).
+
+This is TestD in the table below
+
+
+| Test | Scenario | Validated |
+|------|----------|-----------|
+| **A** | No drift | Baseline correctness |
+| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
+| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
+| **D** | Ignored drift | No action | <<<<< No remediation is required in this case
+
+
+No remediation is required in this case as these extra ports are not tracked by state. The drift detection is for informational 
+purposes only. 
+
+As always, the steps in module2e follow the same patern.  In this test case there will be no remediation files (for the uuids that
+are the resurrection candidates), only drift json files (1 for each uuid/thread).
+
+Steps:
+      1. Load registry
+      2. Load latest.json + delta_delete.json from S3
+      3. For each node:
+            - resolve instance_id
+            - describe_instances → get SG IDs
+            - Step 4a: authorize-add all rules in latest.json
+            - Step 4b: revoke all rules in delta_delete.json
+      4. WAIT (READY_FOR_AWS_SG_EDITS_MODULE2E)
+      5. Step 5: drift detection
+      6. Step 5b: remediation if needed
+      7. Write drift + remediation artifacts
+
+
+
 
 #### Test12: HYBRID futures crashes (16) with 8 ghosts, 24 total module2e threads, stale drift induced, with remediation on all 24 threads
 
