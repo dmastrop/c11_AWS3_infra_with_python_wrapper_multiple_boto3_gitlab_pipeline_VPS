@@ -1613,14 +1613,987 @@ sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
  
 #### Test7: Drift remediation testing (self-healing), module2
 
+These tests below are the exact same tests in the Test6 section above, except now the remediation code has been added in.
+A complete code design and review was presented in the previous UPDATE.
+
+Just to reiterate the drift metrics:
+
+drift_missing  (Ports that SHOULD be on AWS but are NOT)
+
+drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)
+
+drift_extra_raw (All ports AWS has that SG_RULES does NOT include)
+
+drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)
+
+
 | Test | Scenario | Validated |
 |------|----------|-----------|
 | **A** | No drift | Baseline correctness |
-| **B** | Missing rule | Reapply logic | <<<< remediation required
-| **C** | Stale rule | Revoke logic | <<<< remediation required
-| **D** | Ignored drift | No action |
+| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
+| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
+| **D** | Ignored drift | No action | <<<<< No remediation is required in this case 
 
-WIP
+##### Test7.B (missing rule remediated)
+
+Here the port 8080 has been removed from the AWS SG during the wait period. Because port 8080 is in the SG_RULES of module2 it is
+part of the state. This will cause a drift_missing, a port that should be on AWS but is not. This is an induced out of state missing
+drift.   The remediation code detects this and adds the port back to the AWS SG using the AWS API (authorize). 
+
+Once the port is added back (remediated the drift), the drift is run again towards the end of the logs below, to verify that there is
+no longer any drift. 
+
+The remediation in this case was successful. 
+
+
+The gitlab console logs are below:
+
+```
+[SG_STATE] Saved current SG_RULES to S3 (19 rules)
+[SG_STATE] Starting SG drift detection (Step 5)
+[SG_STATE] Loaded delta_delete from S3 (0 rules)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = [('tcp', 8080, '0.0.0.0/0')]
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[SG_STATE] Drift artifact written: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+[SG_STATE][SELF_HEAL] Self-heal enabled. Evaluating drift for corrective action...
+[SG_STATE][SELF_HEAL] Missing ports detected (Ports that SHOULD be on AWS but are NOT): [('tcp', 8080, '0.0.0.0/0')]
+[SG_STATE][SELF_HEAL] Re-applying SG_RULES and delta_delete to correct missing ports...
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 22, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 80, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Successfully applied rule {'protocol': 'tcp', 'port': 8080, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 5556, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 5557, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 9000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 9001, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 9002, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4000, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4001, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4002, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4003, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4004, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4005, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4006, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4007, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4008, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4009, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Rule already exists: {'protocol': 'tcp', 'port': 4010, 'cidr': '0.0.0.0/0'}
+[SG_STATE][SELF_HEAL] Re-running drift detection to verify correction...
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[SG_STATE][SELF_HEAL] Missing ports successfully corrected.
+[SG_STATE][SELF_HEAL] Wrote remediated drift artifact: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_remediated_module2.json
+[TRACE][aggregator] Starting disk-based aggregation…
+
+```
+Note at the end of the logs above that tha drift is run again after remedidation and the drift_missing is no longer showing port 8080.
+
+This is the drift json log file sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+
+```
+{
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [
+    [
+      "tcp",
+      8080,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+This is the drift remediation json log file sg_state_drift_SGID_sg-0a1f89717193f7896_remediated_module2.json
+
+The important lines are highlighted with <<<<<<<<<
+
+```
+{
+  "original_drift": {
+    "drift_missing (Ports that SHOULD be on AWS but are NOT)": [   <<<<<<<<<<<<<<<
+      [
+        "tcp",
+        8080,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+    "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ]
+  },
+  "remediation_actions": [
+    "Re-applied SG_RULES and delta_delete for missing ports: [('tcp', 8080, '0.0.0.0/0')]"<<<<<<
+  ],
+  "drift_after_remediation": {
+    "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],   <<<<<<<<<<<<<<<<<<<< No longer missing
+    "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+    "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ]
+  },
+  "remediation_success": true   <<<<<<<<<<<<
+}
+```
+
+
+
+
+##### Test7.C (revoked rule that failed revocation is remediated and revoked successfully)
+
+The test below is performed by removing port 9001 in SG_RULES. The state machine correctly removes the port on the AWS SG.
+During the wait period the revoked port 9001 is added back to the AWS SG creating a drift 
+drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 
+
+This is a stale port that should have been removed but is still on AWS SG and thus creates a drift.
+
+The drift is detected and subsequently remediated as shown below.  The remediation uses the same AWS API revoke method to remove
+the port successfully.
+
+
+The giltab console logs are below:
+```
+[module2_orchestration_level_SG_manifest] SG IDs discovered for manifest: ['sg-0a1f89717193f7896']
+[module2_orchestration_level_SG_manifest] Wrote SG rule manifest to /aws_EC2/logs/orchestration_sg_rules_module2.json
+[utils_sg_state] Uploaded SG_RULES to s3://c11-sg-rules-state/state/sg_rules/latest.json
+[SG_STATE] Saved current SG_RULES to S3 (17 rules)
+[SG_STATE] Starting SG drift detection (Step 5)
+[SG_STATE] Loaded delta_delete from S3 (1 rules)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = [('tcp', 9001, '0.0.0.0/0')]
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[SG_STATE] Drift artifact written: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+
+
+[SG_STATE][SELF_HEAL] Self-heal enabled. Evaluating drift for corrective action...
+[SG_STATE][SELF_HEAL] Stale ports detected (Ports that ARE on AWS but SHOULD have been deleted): [('tcp', 9001, '0.0.0.0/0')]
+[SG_STATE][SELF_HEAL] Attempting single-pass revoke of stale ports...
+[SG_STATE][SELF_HEAL] Re-running drift detection to verify stale ports were removed...
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0')]
+[SG_STATE][SELF_HEAL] Stale ports successfully removed.
+[SG_STATE][SELF_HEAL] Wrote remediated drift artifact: /aws_EC2/logs/sg_state_drift_SGID_sg-0a1f89717193f7896_remediated_module2.json
+[TRACE][aggregator] Starting disk-based aggregation…
+```
+
+The port is emprically verifed on AWS Web console as being removed (9001 no longer present)
+
+
+The drift json file is below sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
+```
+{
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [
+    [
+      "tcp",
+      9001,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9001,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+
+
+
+The drift remediation json file is below sg_state_drift_SGID_sg-0a1f89717193f7896_remediated_module2.json
+
+Note the remediation is successful. Relevenat parts are hightlighted with <<<<<<<<<
+
+```
+  "original_drift": {
+    "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+    "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [  <<<<<<<<<<<<<<<<<
+      [
+        "tcp",
+        9001,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9001,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ]
+  },
+  "remediation_actions": [
+    "Revoked stale ports: [('tcp', 9001, '0.0.0.0/0')]"   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  ],
+  "drift_after_remediation": {
+    "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+    "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],  <<<<<<<<<<<<<<<<< successful remediation
+    "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ]
+    ]
+  },
+  "remediation_success": true   <<<<<<<<<<<<<
+}
+```
+
+The port is emprically verified on AWS web console as successfully being removed and no longer present.
+
+
+
+
+
+
+##### Test7.D
+
+
 
 
 
