@@ -3658,6 +3658,8 @@ The code steps are:
       6. Step 5b: remediation if needed
       7. Write drift + remediation artifacts
 
+
+
 See the gitlab log traces and json file contents below.
 The port that is removed on AWS SG is the port 4000 from the SG_RULES SG_STATE of module2:
 
