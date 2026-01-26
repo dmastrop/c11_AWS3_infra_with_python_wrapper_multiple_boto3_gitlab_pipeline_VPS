@@ -2466,7 +2466,18 @@ See the gitlab log traces and json file contents below.
 
 #### Test11: Ignored drift case in module2e (no remediation required)
 
-#### Test12: HYBRID futures crashes (16) with * ghosts
+#### Test12: HYBRID futures crashes (16) with 8 ghosts, 24 total module2e threads, stale drift induced, with remediation on all 24 threads
+
+Just to note again, the iteration through the module2e resurrection candidate nodes is done on a per uuid/thread basis because in the 
+future the code will support unique sg_id(s) across each process, so the resurrection candidates, being from different processes, will
+have different drift/remediation requirements based upon their sg_id(s).
+
+The serial iteration through the nodes does not need to be multi-threaded because sg_id apply/revoke, drift and remediation are quick
+operations. (The rebooting in module2e is multi-threaded and the resurrection of the threads in module2f is multi-threaded because these
+operations are time consuming).
+
+
+
 
 
 
