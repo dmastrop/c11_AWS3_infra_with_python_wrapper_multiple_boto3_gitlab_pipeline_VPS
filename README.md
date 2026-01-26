@@ -1627,14 +1627,14 @@ drift_extra_raw (All ports AWS has that SG_RULES does NOT include)
 
 drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)
 
-
+```
 | Test | Scenario | Validated |
 |------|----------|-----------|
 | **A** | No drift | Baseline correctness |
 | **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
 | **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
 | **D** | Ignored drift | No action | <<<<< No remediation is required in this case 
-
+```
 ##### Test7.B (missing rule remediated)
 
 Here the port 8080 has been removed from the AWS SG during the wait period. Because port 8080 is in the SG_RULES of module2 it is
@@ -2939,21 +2939,21 @@ The second block is inside the for uuid loop and actually establishes the waitin
 The tests performed to validate the module2e SG_STATE drift and remediation code are very similar to those that were done for module2
 in the earlier tests.
 
-
+```
 | Test | Scenario | Validated |
 |------|----------|-----------|
 | **A** | No drift | Baseline correctness |
 | **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
 | **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
 | **D** | Ignored drift | No action | <<<<< No remediation is required in this case
-
+```
 The test for this section is TestC in the table above.
 
 This test is performed in a very methodical fashion. Remove a port (9000) in the SG_RULES of module2. Module2 will detect this and remove
 the port from the AWS SG. There will be no drift at this point.  The test is running 16 sucessful nodes and 8 injected ghost nodes (but
 using real AWS EC2 instances that will actually be resurrected).  The 8 ghost nodes will be selected as resurrection candidates and will
 reach module2e SG_STATE code. The security group will be reapplied by design to each resurrection candidate (the 8 ghost threads).
-
+```
  Steps:
       1. Load registry
       2. Load latest.json + delta_delete.json from S3
@@ -2966,7 +2966,7 @@ reach module2e SG_STATE code. The security group will be reapplied by design to 
       5. Step 5: drift detection
       6. Step 5b: remediation if needed
       7. Write drift + remediation artifacts
-
+```
 The WAIT code, reviewed in the previous section, is for the testing so that I can induce intentional drift. In this case, the port that
 was revoked in module2 and then replayed again in module2e, will be added back to simulate a drift (stale port that should have successfully
 been removed but is still in the AWS SG). The wait is currently set to wait on the first ghost thread (uuid1) and that is where the 
@@ -3634,17 +3634,17 @@ has been remediated during the frist thread's SG state apply.   Once again thisi
 implemented yet.
 
 This is the TestB in the table below:
-
+```
 | Test | Scenario | Validated |
 |------|----------|-----------|
 | **A** | No drift | Baseline correctness |
 | **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
 | **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
 | **D** | Ignored drift | No action | <<<<< No remediation is required in this case
-
+```
 
 The code steps are:
-
+```
  Steps:
       1. Load registry
       2. Load latest.json + delta_delete.json from S3
@@ -3657,7 +3657,7 @@ The code steps are:
       5. Step 5: drift detection
       6. Step 5b: remediation if needed
       7. Write drift + remediation artifacts
-
+```
 
 
 See the gitlab log traces and json file contents below.
@@ -3691,21 +3691,21 @@ module2).
 
 This is TestD in the table below
 
-
+```
 | Test | Scenario | Validated |
 |------|----------|-----------|
 | **A** | No drift | Baseline correctness |
 | **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
 | **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
 | **D** | Ignored drift | No action | <<<<< No remediation is required in this case
-
+```
 
 No remediation is required in this case as these extra ports are not tracked by state. The drift detection is for informational 
 purposes only. 
 
 As always, the steps in module2e follow the same patern.  In this test case there will be no remediation files (for the uuids that
 are the resurrection candidates), only drift json files (1 for each uuid/thread).
-
+```
 Steps:
       1. Load registry
       2. Load latest.json + delta_delete.json from S3
@@ -3718,7 +3718,7 @@ Steps:
       5. Step 5: drift detection
       6. Step 5b: remediation if needed
       7. Write drift + remediation artifacts
-
+```
 
 
 
