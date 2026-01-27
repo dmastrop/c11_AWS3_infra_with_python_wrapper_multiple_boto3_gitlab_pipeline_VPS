@@ -1243,7 +1243,7 @@ state for the resurreciton candidates).  This must be done prior to resurrection
 
 
 
-#### Wait code for drift detection and remedication validation testing in module2
+#### Wait code for drift detection and remediation validation testing in module2
 
 The instrumentation for testing the various drift scnearios is simple. Add a wait ENV variable to the module2 code in between the 
 multiprocessing.Pool line that calls tomcat_worker_wrapper in main(), and the code that follows (which will be the main() SG_STATE 
