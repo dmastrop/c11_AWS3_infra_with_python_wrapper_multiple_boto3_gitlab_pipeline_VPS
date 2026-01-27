@@ -3700,6 +3700,43 @@ The gitlab console logs are below:
 
 
 
+Module2 json files:
+Because the drift injection is at module2e, the module2 will produce a drift json but it will not show the drift_missing. The 
+drift_missing will not be induced until module2e during the uuid1 wait phase.  So there will only be a single drift json file
+for module2, and no remediation json file.
+
+
+
+
+Module2e json files:
+Because there are 8 ghosts in this test there will be one drift json file per uuid/thread, so 8 drift json files for the 8 ghosts in
+module2e registry (resurrection candidates).
+
+In addtion the first uuid will generate a remediation event so there will be one drift remediation json file for that first uuid.
+The rest of the uuids will not remediate because the first thread will have remediated the problem on AWS (adding the port 4000 back to
+the AWS SG)).
+
+This is the uuid1 module2e drift json file: 
+xxxxx
+
+
+
+
+
+
+The rest of the threads (uuid2 through uuid8) produce a similar drift json file.
+
+
+
+This is the single drift remediation json file:
+xxxxx
+This has the details of the remediation that occurs during the uuid1 thread phase 
+
+
+
+
+
+
 
 #### Test11: Ignored drift case in module2e (no remediation required)
 
