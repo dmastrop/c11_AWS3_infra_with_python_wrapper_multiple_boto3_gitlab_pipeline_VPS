@@ -1627,15 +1627,21 @@ drift_extra_raw (All ports AWS has that SG_RULES does NOT include)
 
 drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)
 
-```
-| Test | Scenario | Validated |
-|------|----------|-----------|
-| **A** | No drift | Baseline correctness |
-| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
-| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
-| **D** | Ignored drift | No action | <<<<< No remediation is required in this case 
-```
-##### Test7.B (missing rule remediated)
+
+| Test | Scenario | Validated | Notes |
+|------|----------|-----------|-------|
+| **A** | No drift | Baseline correctness |  |
+| **B** | Missing rule | Reapply logic | remediation required for drift_missing |
+| **C** | Stale rule | Revoke logic | remediation required for drift_extra_filtered |
+| **D** | Ignored drift | No action | no remediation required |
+
+
+
+
+##### Test7.A (baseline test), module2
+
+
+##### Test7.B (missing rule remediated), module2
 
 Here the port 8080 has been removed from the AWS SG during the wait period. Because port 8080 is in the SG_RULES of module2 it is
 part of the state. This will cause a drift_missing, a port that should be on AWS but is not. This is an induced out of state missing
@@ -2113,7 +2119,7 @@ The important lines are highlighted with <<<<<<<<<
 
 
 
-##### Test7.C (revoked rule that failed revocation is remediated and revoked successfully)
+##### Test7.C (revoked rule that failed revocation is remediated and revoked successfully), module2
 
 The test below is performed by removing port 9001 in SG_RULES. The state machine correctly removes the port on the AWS SG.
 During the wait period the revoked port 9001 is added back to the AWS SG creating a drift 
@@ -2592,7 +2598,7 @@ The port is emprically verified on AWS web console as successfully being removed
 
 
 
-##### Test7.D (ignored ports are added to AWS SG and no remediation is required since they are not part of the state)
+##### Test7.D (ignored ports are added to AWS SG and no remediation is required since they are not part of the state), module2
 
 
 This test is performed by adding several ports to the AWS SG that are not in the SG_RULES module2 state.   These rules will
@@ -2939,13 +2945,17 @@ The second block is inside the for uuid loop and actually establishes the waitin
 The tests performed to validate the module2e SG_STATE drift and remediation code are very similar to those that were done for module2
 in the earlier tests.
 
-```
-| Test | Scenario | Validated |
-|------|----------|-----------|
-| **A** | No drift | Baseline correctness |
-| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
-| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
-| **D** | Ignored drift | No action | <<<<< No remediation is required in this case
+
+| Test | Scenario | Validated | Notes |
+|------|----------|-----------|-------|
+| **A** | No drift | Baseline correctness |  |
+| **B** | Missing rule | Reapply logic | remediation required for drift_missing |
+| **C** | Stale rule | Revoke logic | remediation required for drift_extra_filtered |
+| **D** | Ignored drift | No action | no remediation required |
+
+
+
+
 ```
 The test for this section is TestC in the table above.
 
@@ -3634,14 +3644,17 @@ has been remediated during the frist thread's SG state apply.   Once again thisi
 implemented yet.
 
 This is the TestB in the table below:
-```
-| Test | Scenario | Validated |
-|------|----------|-----------|
-| **A** | No drift | Baseline correctness |
-| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
-| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
-| **D** | Ignored drift | No action | <<<<< No remediation is required in this case
-```
+
+
+| Test | Scenario | Validated | Notes |
+|------|----------|-----------|-------|
+| **A** | No drift | Baseline correctness |  |
+| **B** | Missing rule | Reapply logic | remediation required for drift_missing |
+| **C** | Stale rule | Revoke logic | remediation required for drift_extra_filtered |
+| **D** | Ignored drift | No action | no remediation required |
+
+
+
 
 The code steps are:
 ```
@@ -3691,14 +3704,15 @@ module2).
 
 This is TestD in the table below
 
-```
-| Test | Scenario | Validated |
-|------|----------|-----------|
-| **A** | No drift | Baseline correctness |
-| **B** | Missing rule | Reapply logic | <<<< remediation required for drift_missing
-| **C** | Stale rule | Revoke logic | <<<< remediation required for drift_extra_filtered
-| **D** | Ignored drift | No action | <<<<< No remediation is required in this case
-```
+| Test | Scenario | Validated | Notes |
+|------|----------|-----------|-------|
+| **A** | No drift | Baseline correctness |  |
+| **B** | Missing rule | Reapply logic | remediation required for drift_missing |
+| **C** | Stale rule | Revoke logic | remediation required for drift_extra_filtered |
+| **D** | Ignored drift | No action | no remediation required |
+
+
+
 
 No remediation is required in this case as these extra ports are not tracked by state. The drift detection is for informational 
 purposes only. 
