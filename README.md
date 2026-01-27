@@ -810,6 +810,31 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 [READY_FOR_AWS_EDITS_MODULE2E], and several others.
 
 
+### Table of Contents — Validation Tests
+
+- [Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker() (module2)](#test1-refactoring-of-the-tomcat_worker-application-of-the-rules-to-the-security-group-for-each-process-call-to-tomcat_worker-module2)
+
+- [Test2: Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above (module2)](#test2-add-a-rule-for-port-5557-to-the-sg_rules-and-make-sure-that-it-is-applied-to-the--nodes-using-the-same-logs-above-module2)
+
+- [Test3: Manifest creation in module2, make sure all the current SG_RULES are incorporated into the manifest file including the newly added port 5557 rule above](#test3-manifest-creation-in-module2-make-sure-all-the-current-sg_rules-are-incorporated-into-the-manifest-file-including-the-newly-added-port-5557-rule-above)
+
+- [Test4: Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file (module2)](#test4-add-another-rule-to-the-sg_rules-make-sure-that-it-is-applied-ot-the-nodes-and-also-added-to-the-manifest-file-module2)
+
+- [Test5: Revoke (remove/delete)a rule in the SG_RULES of module2](#test5-revoke-removedeletea-rule-in-the-sg_rules-of-module2)
+
+- [Test6: Drift detection of AWS rule deviation from SG_RULES, in module2, using wait code of module2](#test6-drift-detection-of-aws-rule-deviation-from-sg_rules-in-module2-using-wait-code-of-module2)
+
+- [Test7: Drift remediation testing (self-healing), module2](#test7-drift-remediation-testing-self-healing-module2)
+
+- [Test8: The security group rules reapply post reboot in module2e prior to resurrection](#test8-the-security-group-rules-reapply-post-reboot-in-module2e-prior-to-resurrection)
+
+- [Test9: stale drift (revoke failed) case in module2e with remediation](#test9-stale-drift-revoke-failed-case-in-module2e-with-remediation)
+
+- [Test10: missing drift case in module2e with remediation](#test10-missing-drift-case-in-module2e-with-remediation)
+
+- [Test11: Ignored drift case in module2e (no remediation required)](#test11-ignored-drift-case-in-module2e-no-remediation-required)
+
+- [Test12: HYBRID futures crashes (16) with 8 ghosts, 24 total module2e threads, stale drift induced, with remediation on all 24 threads](#test12-hybrid-futures-crashes-16-with-8-ghosts-24-total-module2e-threads-stale-drift-induced-with-remediation-on-all-24-threads)
 
 
 
