@@ -2980,8 +2980,6 @@ in the earlier tests.
 
 
 
-
-```
 The test for this section is TestC in the table above.
 
 This test is performed in a very methodical fashion. Remove a port (9000) in the SG_RULES of module2. Module2 will detect this and remove
