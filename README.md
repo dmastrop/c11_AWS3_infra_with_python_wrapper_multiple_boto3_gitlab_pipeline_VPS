@@ -3637,11 +3637,14 @@ In the end all 8 ghost threads were resurrected. The .49.170 uuid1 thread is sho
 #### Test10: missing drift case in module2e with remediation
 
 This test uses the same basic test setup as the stale drift (revoke failed) test case above. However in this case during the uuid1 wait
-state, a port will be removed from the AWS SG that is tracked in the currnt SG_RULES state.   This will cause a drift for a missing 
+state, a port will be removed from the AWS SG that is tracked in the current SG_RULES state.   This will cause a drift for a missing 
 port in the uuid1 first thread SG replay.   Once the drift is detected, the code will remediate the missing port by adding it back to 
 the AWS SG. Like the stale test case above, the subsequent threads (uuid2 through uuid8) will not see any drift because the single SG
 has been remediated during the frist thread's SG state apply.   Once again thisi s becuase multiple sg_ids per process has not been 
 implemented yet.
+For this test 7 synthetic ghosts were used (instead of the normal 8 that I typically use).
+
+This will test the authorize AWS API remediation path. 
 
 This is the TestB in the table below:
 
@@ -3690,6 +3693,10 @@ The port that is removed on AWS SG is the port 4000 from the SG_RULES SG_STATE o
     {"protocol": "tcp", "port": 4010, "cidr": "0.0.0.0/0"},
 ]
 ```
+
+The gitlab console logs are below: 
+
+
 
 
 
