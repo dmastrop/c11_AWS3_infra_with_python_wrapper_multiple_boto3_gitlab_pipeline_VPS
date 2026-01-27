@@ -811,6 +811,7 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 
 
 ### Table of Contents — Validation Tests
+<a name="top"></a>
 
 - [Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker() (module2)](#test1-refactoring-of-the-tomcat_worker-application-of-the-rules-to-the-security-group-for-each-process-call-to-tomcat_worker-module2)
 
@@ -822,11 +823,15 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 
 - [Test5: Revoke (remove/delete)a rule in the SG_RULES of module2](#test5-revoke-removedeletea-rule-in-the-sg_rules-of-module2)
 
+- [Wait code for drift detection and remediation validation testing in module2](#wait-code-for-drift-detection-and-remediation-validation-testing-in-module2)
+
 - [Test6: Drift detection of AWS rule deviation from SG_RULES, in module2, using wait code of module2](#test6-drift-detection-of-aws-rule-deviation-from-sg_rules-in-module2-using-wait-code-of-module2)
 
 - [Test7: Drift remediation testing (self-healing), module2](#test7-drift-remediation-testing-self-healing-module2)
 
 - [Test8: The security group rules reapply post reboot in module2e prior to resurrection](#test8-the-security-group-rules-reapply-post-reboot-in-module2e-prior-to-resurrection)
+
+- [Wait code for module2e drift detection and remediation testing](#wait-code-for-module2e-drift-detection-and-remediation-testing)
 
 - [Test9: stale drift (revoke failed) case in module2e with remediation](#test9-stale-drift-revoke-failed-case-in-module2e-with-remediation)
 
@@ -925,6 +930,11 @@ RETRY] Duplicate rule detected on attempt 2
 [TRACE][tomcat_worker] Instance count for this chunk: 2
 [RETRY] Duplicate rule detected on attempt 2
 ```
+---
+
+[Back to top](#top)
+
+
 
 
 #### Test2: Add a rule for port 5557 to the SG_RULES and make sure that it is applied to the  nodes using the same logs above (module2)
@@ -997,6 +1007,12 @@ function was explained in great detail in the previous UPDATE.
 This can be empirically verified on the AWS console, by looking at the rules in the security group. There is an added rule for
 this port 5557 added to the security group specified by the security group id used on the nodes for the execution run.
 This has been empirically verified.
+
+---
+
+[Back to top](#top)
+
+
 
 
 
@@ -1097,9 +1113,19 @@ rules in the SG at a per process level using the SG_RULES variable list. This SG
 as a single source of truth. The SG_RULES will be expanded in the future to be a manifest of many security groups that can be 
 applied deterministically and uniquely to each process.
 
+---
+
+[Back to top](#top)
+
+
 
 
 #### Test4: Add another rule to the SG_RULES, make sure that it is applied ot the nodes, and also added to the manifest file (module2)
+
+---
+
+[Back to top](#top)
+
 
 
 #### Test5: Revoke (remove/delete)a rule in the SG_RULES of module2
@@ -1210,6 +1236,9 @@ The delta_delete.json file has the port 9000 included in it so that module2e can
 candidates are rebooted. (module2e uses this updated latest.json and the delta_delete.json file to get the SG state to the desired
 state for the resurreciton candidates).  This must be done prior to resurrection in module2f.
 
+---
+
+[Back to top](#top)
 
 
 
@@ -1265,6 +1294,12 @@ Then the code in module2 main() is added right here:
 
     finally:
 ```
+---
+
+[Back to top](#top)
+
+
+
 
 #### Test6: Drift detection of AWS rule deviation from SG_RULES, in module2, using wait code of module2
 
@@ -1634,6 +1669,9 @@ sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
 }
 ```
 
+---
+
+[Back to top](#top)
 
 
  
@@ -2809,6 +2847,9 @@ sg_state_drift_SGID_sg-0a1f89717193f7896_module2.json
 }
 
 ```
+---
+
+[Back to top](#top)
 
 
 
@@ -2842,6 +2883,12 @@ module2e_SG_STATE] Processing UUID=ghost_107_23_24_140, public_ip=107.23.24.140
 
 
 ```
+---
+
+[Back to top](#top)
+
+
+
 
 
 #### Wait code for module2e drift detection and remediation testing
@@ -2963,6 +3010,12 @@ The second block is inside the for uuid loop and actually establishes the waitin
                   f"(UUID={uuid}, public_ip={public_ip})")
             time.sleep(delay)
 ```
+---
+
+[Back to top](#top)
+
+
+
 
 
 #### Test9: stale drift (revoke failed) case in module2e with remediation
@@ -3657,6 +3710,14 @@ In the end all 8 ghost threads were resurrected. The .49.170 uuid1 thread is sho
 
 ```
 
+
+---
+
+[Back to top](#top)
+
+
+
+
 #### Test10: missing drift case in module2e with remediation
 
 This test uses the same basic test setup as the stale drift (revoke failed) test case above. However in this case during the uuid1 wait
@@ -3759,6 +3820,12 @@ This has the details of the remediation that occurs during the uuid1 thread phas
 
 
 
+---
+
+[Back to top](#top)
+
+
+
 
 
 #### Test11: Ignored drift case in module2e (no remediation required)
@@ -3800,6 +3867,12 @@ Steps:
       7. Write drift + remediation artifacts
 ```
 
+---
+
+[Back to top](#top)
+
+
+
 
 
 #### Test12: HYBRID futures crashes (16) with 8 ghosts, 24 total module2e threads, stale drift induced, with remediation on all 24 threads
@@ -3814,6 +3887,9 @@ operations are time consuming).
 
 
 
+---
+
+[Back to top](#top)
 
 
 
