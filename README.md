@@ -3642,7 +3642,7 @@ port in the uuid1 first thread SG replay.   Once the drift is detected, the code
 the AWS SG. Like the stale test case above, the subsequent threads (uuid2 through uuid8) will not see any drift because the single SG
 has been remediated during the frist thread's SG state apply.   Once again thisi s becuase multiple sg_ids per process has not been 
 implemented yet.
-For this test 7 synthetic ghosts were used (instead of the normal 8 that I typically use).
+For this test 8 synthetic ghosts were used 
 
 This will test the authorize AWS API remediation path. 
 
@@ -3676,12 +3676,11 @@ The code steps are:
 ```
 
 
-See the gitlab log traces and json file contents below.
-The port that is removed on AWS SG is the port 4000 from the SG_RULES SG_STATE of module2:
+The port that is removed on AWS SG is the port 4001 from the SG_RULES SG_STATE of module2: (the port will remain in SG_RULES)
 
 ```
-    {"protocol": "tcp", "port": 4000, "cidr": "0.0.0.0/0"},   <<<< This port will be removed on the AWS SG but will remain here in SG_RULES
-    {"protocol": "tcp", "port": 4001, "cidr": "0.0.0.0/0"},
+
+    {"protocol": "tcp", "port": 4001, "cidr": "0.0.0.0/0"},<<<< This port will be removed on the AWS SG but will remain here in SG_RULES
     {"protocol": "tcp", "port": 4002, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 4003, "cidr": "0.0.0.0/0"},
     {"protocol": "tcp", "port": 4004, "cidr": "0.0.0.0/0"},
