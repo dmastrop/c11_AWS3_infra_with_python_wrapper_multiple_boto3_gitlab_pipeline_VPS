@@ -4462,6 +4462,272 @@ Steps:
       6. Step 5b: remediation if needed
       7. Write drift + remediation artifacts
 ```
+The ports added in this test case were ports 10000 and 10001.
+
+
+Add ports 10000 and 10001 to AWS SG 
+These will be added to the ignored ports drift but will not require remediation. 
+
+
+```
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-0815a2359509a9c4f
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-0b36ce4a327e1baff
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-0a2ff16c99121478b
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-0e0c94c3151e90280
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-0cde69b5b78e743ce
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-07b544d5a56e0b0d2
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-087315df8a4666887
+[module2e2] Applying post-reboot grace delay of 20s for InstanceId=i-0b41c361279bb6e61
+[module2e2] Wrote reboot-annotated registry to /aws_EC2/logs/resurrection_module2e_registry_rebooted.json
+[module2e_SG_STATE] Starting SG_STATE replay for module2e resurrection candidates
+DEBUG WAIT ENABLED RAW = true
+[module2e_SG_STATE] Loaded latest.json (16 rules)
+[module2e_SG_STATE] Loaded delta_delete.json (0 rules)
+
+[module2e_SG_STATE] Processing UUID=ghost_34_226_222_116, public_ip=34.226.222.116
+[module2e_SG_STATE] UUID=ghost_34_226_222_116, public_ip=34.226.222.116: SG IDs = ['sg-0a1f89717193f7896']
+[module2e_SG_STATE] UUID=ghost_34_226_222_116, public_ip=34.226.222.116: Applying Step 4a (authorize) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] UUID=ghost_34_226_222_116, public_ip=34.226.222.116: Applying Step 4b (revoke) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] WAITING 120s before drift detection (UUID=ghost_34_226_222_116, public_ip=34.226.222.116)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote drift artifact → /aws_EC2/logs/sg_state_drift_ghost_34_226_222_116_sg-0a1f89717193f7896_module2e.json
+
+
+[module2e_SG_STATE] UUID=ghost_34_226_222_116, public_ip=34.226.222.116: No remediation required
+
+
+
+[module2e_SG_STATE] Processing UUID=ghost_18_209_101_103, public_ip=18.209.101.103
+[module2e_SG_STATE] UUID=ghost_18_209_101_103, public_ip=18.209.101.103: SG IDs = ['sg-0a1f89717193f7896']
+[module2e_SG_STATE] UUID=ghost_18_209_101_103, public_ip=18.209.101.103: Applying Step 4a (authorize) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] UUID=ghost_18_209_101_103, public_ip=18.209.101.103: Applying Step 4b (revoke) to SG sg-0a1f89717193f7896
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote drift artifact → /aws_EC2/logs/sg_state_drift_ghost_18_209_101_103_sg-0a1f89717193f7896_module2e.json
+[module2e_SG_STATE] UUID=ghost_18_209_101_103, public_ip=18.209.101.103: No remediation required
+```
+
+
+
+
+There is one drift json file for module2
+
+
+
+There are 8 drift json log files for module2e
+They all look similar like the one below
+Note that port 10000 and 10001 has been added to the drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE) and drift_extra_raw (All ports AWS has that SG_RULES does NOT include)
+No remediation is required and occurs in any of the 8 ghost threads.
+
+```
+{
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9990,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9991,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10001,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9990,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9991,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10001,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+```
+
+
+Here is one of the 8 ghost registry_entrys after module2f resurrection processing:
+
+```
+  "ghost_34_226_222_116": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2026-01-28 03:54:37.600616",
+    "pid": 18,
+    "thread_id": 124004161554112,
+    "thread_uuid": "ghost_34_226_222_116",
+    "public_ip": "34.226.222.116",
+    "private_ip": "172.31.44.191",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-0815a2359509a9c4f",
+      "reboot_context:initiated",
+      "reboot_context:ready",
+      "reboot_context:grace_period:20s",
+      "installation_completed"
+    ]
+  },
+```
+
+
 
 
 
