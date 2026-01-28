@@ -3086,6 +3086,13 @@ logs/sg_state_drift_*_module2e.json: found 9 matching artifact files and directo
 
 This is the drift json file for the uuid1 ghost:
 sg_state_drift_ghost_98_93_49_170_sg-0a1f89717193f7896_module2e.json
+
+
+Each of the other 7 ghost threads have a similar drift json files but the drift_extra_filtered drift in those files is an empty list because
+the  uuid1 thread remediates the stale port entry so the rest of the threads never see it.
+
+This is by design and validates the rest of the code flow for this test.
+
 ```
 {
   "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
@@ -4455,6 +4462,8 @@ Steps:
       6. Step 5b: remediation if needed
       7. Write drift + remediation artifacts
 ```
+
+
 
 ---
 
