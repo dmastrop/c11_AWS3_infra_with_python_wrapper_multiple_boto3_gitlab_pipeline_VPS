@@ -461,40 +461,40 @@ deploy:
 
 
 
-  ###########################################################################
-  # WORKSPACE LOGS RESET (MANUAL)
-  #
-  # GitLab Runner reuses the SAME workspace directory across pipelines.
-  # This includes the /logs directory on the VPS:
-  #
-  #   /var/lib/gitlab-runner/builds/<runner>/<project>/logs/
-  #   /var/lib/gitlab-runner/builds/REWWJWjnu/0/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3/logs
-  # Even when before_script deletes logs/*, GitLab Runner RESTORES the
-  # previous workspace BEFORE before_script runs. This means stale files
-  # (like ghost_pool.json) can persist across pipelines and poison the next run.
-  #
-  # This manual job deletes ONLY the logs directory in the GitLab Runner
-  # workspace. It does NOT delete the entire workspace, and it does NOT
-  # affect the repo clone or any code. It simply ensures that the NEXT
-  # pipeline starts with a clean logs directory.
-  #
-  # Use this job when:
-  #   - ghost_pool.json becomes corrupted
-  #   - stale drift artifacts persist
-  #   - any log-based state contaminates the next pipeline
-  #
-  # This job runs at the end of Pipeline N so that Pipeline N+1 starts clean.
-  # It is manual on purpose — you click it only when needed.
-  ###########################################################################
-
-reset_logs:
-  stage: cleanup
-  script:
-    - echo "Resetting logs directory on GitLab Runner workspace..."
-    - sudo rm -rf /var/lib/gitlab-runner/builds/REWWJWjnu/0/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3/logs/*
-  when: manual
-  allow_failure: false
-
+      #  ###########################################################################
+      #  # WORKSPACE LOGS RESET (MANUAL)
+      #  #
+      #  # GitLab Runner reuses the SAME workspace directory across pipelines.
+      #  # This includes the /logs directory on the VPS:
+      #  #
+      #  #   /var/lib/gitlab-runner/builds/<runner>/<project>/logs/
+      #  #   /var/lib/gitlab-runner/builds/REWWJWjnu/0/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3/logs
+      #  # Even when before_script deletes logs/*, GitLab Runner RESTORES the
+      #  # previous workspace BEFORE before_script runs. This means stale files
+      #  # (like ghost_pool.json) can persist across pipelines and poison the next run.
+      #  #
+      #  # This manual job deletes ONLY the logs directory in the GitLab Runner
+      #  # workspace. It does NOT delete the entire workspace, and it does NOT
+      #  # affect the repo clone or any code. It simply ensures that the NEXT
+      #  # pipeline starts with a clean logs directory.
+      #  #
+      #  # Use this job when:
+      #  #   - ghost_pool.json becomes corrupted
+      #  #   - stale drift artifacts persist
+      #  #   - any log-based state contaminates the next pipeline
+      #  #
+      #  # This job runs at the end of Pipeline N so that Pipeline N+1 starts clean.
+      #  # It is manual on purpose — you click it only when needed.
+      #  ###########################################################################
+      #
+      #reset_logs:
+      #  stage: cleanup
+      #  script:
+      #    - echo "Resetting logs directory on GitLab Runner workspace..."
+      #    - sudo rm -rf /var/lib/gitlab-runner/builds/REWWJWjnu/0/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3/logs/*
+      #  when: manual
+      #  allow_failure: false
+      #
 
 
 
