@@ -8040,6 +8040,31 @@ def main():
 
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
 
+        #def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4","ghost5","ghost6","ghost7","ghost8")):
+        #    session = boto3.Session(
+        #        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        #        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        #        region_name=os.getenv("region_name")
+        #    )
+        #    ec2 = session.client("ec2")
+        #    filters = [{"Name": "tag:Name", "Values": list(names)}]
+        #    resp = ec2.describe_instances(Filters=filters)
+
+        #    ghosts = []
+        #    for reservation in resp["Reservations"]:
+        #        for inst in reservation["Instances"]:
+        #            ghosts.append({
+        #                "PublicIpAddress": inst.get("PublicIpAddress"),
+        #                "PrivateIpAddress": inst.get("PrivateIpAddress"),
+        #                "InstanceId": inst["InstanceId"]
+        #            })
+        #    return ghosts
+
+        ##### Test out this def fetch_ghost_instances with more safeguards in it to ensure ghost nodes are in running state and to 
+        ##### NOT include ghost AWS nodes that have missing ips. Otherwise the ghost_pool.json file can get into a corrupted state when it 
+        ##### is created after this call to fetch_ghost_instances
+
+
         def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4","ghost5","ghost6","ghost7","ghost8")):
             session = boto3.Session(
                 aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
@@ -8047,18 +8072,46 @@ def main():
                 region_name=os.getenv("region_name")
             )
             ec2 = session.client("ec2")
-            filters = [{"Name": "tag:Name", "Values": list(names)}]
+
+            # Only return ghosts that are actually RUNNING
+            filters = [
+                {"Name": "tag:Name", "Values": list(names)},
+                {"Name": "instance-state-name", "Values": ["running"]}
+            ]
+
             resp = ec2.describe_instances(Filters=filters)
 
             ghosts = []
+            skipped = []
+
             for reservation in resp["Reservations"]:
                 for inst in reservation["Instances"]:
+                    pub = inst.get("PublicIpAddress")
+                    priv = inst.get("PrivateIpAddress")
+                    iid = inst["InstanceId"]
+
+                    # Skip ghosts that are missing IPs (stopped, shutting-down, or transient)
+                    if not pub or not priv:
+                        skipped.append(iid)
+                        continue
+
                     ghosts.append({
-                        "PublicIpAddress": inst.get("PublicIpAddress"),
-                        "PrivateIpAddress": inst.get("PrivateIpAddress"),
-                        "InstanceId": inst["InstanceId"]
+                        "PublicIpAddress": pub,
+                        "PrivateIpAddress": priv,
+                        "InstanceId": iid
                     })
+
+            # Deterministic ordering (avoid pool jitter)
+            ghosts.sort(key=lambda g: g["InstanceId"])
+
+            if skipped:
+                print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Skipped {len(skipped)} ghosts with missing IPs: {skipped}")
+
             return ghosts
+
+
+
+
 
         real_ghosts = fetch_ghost_instances()
 
