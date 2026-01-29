@@ -8035,6 +8035,8 @@ def main():
 
 # --- VERSION2: For INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS:  Define real ghosts and write pool to disk. Must be at top of main() prior to multiprocessing.Pool call to tomcat_worker  ---
 # This version automatically gets the ips using the AWS API. Note ghost_pool.json will have public ip, private ip, and instance_id
+# Note this is at top of main() so that we can be sure that the ghost_pool.json is populated before tomcat_worker process calls where 
+# the ips are actually injected into each process (1 ghost ip per process).
 
     if os.getenv("INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS", "false").lower() in ["1", "true"]:
 
