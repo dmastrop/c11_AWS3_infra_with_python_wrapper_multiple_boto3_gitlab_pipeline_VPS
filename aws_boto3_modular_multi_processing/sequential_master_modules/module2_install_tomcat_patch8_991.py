@@ -8064,8 +8064,54 @@ def main():
         ##### NOT include ghost AWS nodes that have missing ips. Otherwise the ghost_pool.json file can get into a corrupted state when it 
         ##### is created after this call to fetch_ghost_instances
 
+        ###### Version 1 
+        #def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4","ghost5","ghost6","ghost7","ghost8")):
+        #    session = boto3.Session(
+        #        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        #        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        #        region_name=os.getenv("region_name")
+        #    )
+        #    ec2 = session.client("ec2")
 
-        def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4","ghost5","ghost6","ghost7","ghost8")):
+        #    # Only return ghosts that are actually RUNNING
+        #    filters = [
+        #        {"Name": "tag:Name", "Values": list(names)},
+        #        {"Name": "instance-state-name", "Values": ["running"]}
+        #    ]
+
+        #    resp = ec2.describe_instances(Filters=filters)
+
+        #    ghosts = []
+        #    skipped = []
+
+        #    for reservation in resp["Reservations"]:
+        #        for inst in reservation["Instances"]:
+        #            pub = inst.get("PublicIpAddress")
+        #            priv = inst.get("PrivateIpAddress")
+        #            iid = inst["InstanceId"]
+
+        #            # Skip ghosts that are missing IPs (stopped, shutting-down, or transient)
+        #            if not pub or not priv:
+        #                skipped.append(iid)
+        #                continue
+
+        #            ghosts.append({
+        #                "PublicIpAddress": pub,
+        #                "PrivateIpAddress": priv,
+        #                "InstanceId": iid
+        #            })
+
+        #    # Deterministic ordering (avoid pool jitter)
+        #    ghosts.sort(key=lambda g: g["InstanceId"])
+
+        #    if skipped:
+        #        print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Skipped {len(skipped)} ghosts with missing IPs: {skipped}")
+
+        #    return ghosts
+
+        ##### Version 2
+        def fetch_ghost_instances(names=("ghost1","ghost2","ghost3","ghost4",
+                                         "ghost5","ghost6","ghost7","ghost8")):
             session = boto3.Session(
                 aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
@@ -8073,42 +8119,56 @@ def main():
             )
             ec2 = session.client("ec2")
 
-            # Only return ghosts that are actually RUNNING
+            # Only consider instances that are tagged correctly *and* in running state
             filters = [
                 {"Name": "tag:Name", "Values": list(names)},
-                {"Name": "instance-state-name", "Values": ["running"]}
+                {"Name": "instance-state-name", "Values": ["running"]},
             ]
-
             resp = ec2.describe_instances(Filters=filters)
 
             ghosts = []
-            skipped = []
+            skipped_no_public_ip = []
+            skipped_non_running = []  # defensive, in case AWS ever returns more than we asked for
 
-            for reservation in resp["Reservations"]:
-                for inst in reservation["Instances"]:
-                    pub = inst.get("PublicIpAddress")
-                    priv = inst.get("PrivateIpAddress")
-                    iid = inst["InstanceId"]
+            for reservation in resp.get("Reservations", []):
+                for inst in reservation.get("Instances", []):
+                    state = inst.get("State", {}).get("Name")
+                    public_ip = inst.get("PublicIpAddress")
+                    private_ip = inst.get("PrivateIpAddress")
+                    instance_id = inst.get("InstanceId", "unknown")
 
-                    # Skip ghosts that are missing IPs (stopped, shutting-down, or transient)
-                    if not pub or not priv:
-                        skipped.append(iid)
+                    # Extra guard: if somehow we see non-running here, track it
+                    if state != "running":
+                        skipped_non_running.append((instance_id, state))
+                        continue
+
+                    # Hard guard: never put a None PublicIpAddress into ghost_pool.json
+                    if not public_ip:
+                        skipped_no_public_ip.append(instance_id)
                         continue
 
                     ghosts.append({
-                        "PublicIpAddress": pub,
-                        "PrivateIpAddress": priv,
-                        "InstanceId": iid
+                        "PublicIpAddress": public_ip,
+                        "PrivateIpAddress": private_ip,
+                        "InstanceId": instance_id,
                     })
 
-            # Deterministic ordering (avoid pool jitter)
-            ghosts.sort(key=lambda g: g["InstanceId"])
+            # Console visibility so you can correlate with AWS console later
+            print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] fetch_ghost_instances: "
+                  f"selected={len(ghosts)} skipped_no_public_ip={len(skipped_no_public_ip)} "
+                  f"skipped_non_running={len(skipped_non_running)}")
 
-            if skipped:
-                print(f"[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Skipped {len(skipped)} ghosts with missing IPs: {skipped}")
+            if skipped_no_public_ip:
+                print("[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Skipped instances with no PublicIpAddress:")
+                for iid in skipped_no_public_ip:
+                    print(f"  - InstanceId={iid}")
+
+            if skipped_non_running:
+                print("[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Skipped instances not in running state:")
+                for iid, st in skipped_non_running:
+                    print(f"  - InstanceId={iid} State={st}")
 
             return ghosts
-
 
 
 
