@@ -929,6 +929,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 ---
 
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -6086,6 +6087,7 @@ the implementation.
 
 
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -9075,6 +9077,7 @@ The second block is inside the for uuid loop and actually establishes the waitin
 
 
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -9606,6 +9609,7 @@ def run_module(module_script_path):
 
 ```
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 51: Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)
@@ -14931,6 +14935,7 @@ The change for the INPUT file for module2f was made in a previous update when th
 MODULE2E_FILE = "resurrection_module2e_registry_rebooted.json"
 ```
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
