@@ -10270,6 +10270,7 @@ resurrection due to a fatal installion error on the ubuntu apt installation.
 The relevant gitlab console logs are extensive and are available upon request.  They can be used for any forensic analysis of the failed
 or successful threads.
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
