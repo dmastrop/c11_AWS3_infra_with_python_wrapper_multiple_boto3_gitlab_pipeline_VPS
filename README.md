@@ -135,6 +135,10 @@ artifact logs per pipeline)
 
 ## Latest milestone updates in this README:
 
+NOTE: A few of these Updates are hyperlinked to the content. All the updates are in this README and the hyperlinks to their content is a work in progress.
+
+
+
 - Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
 
 - Update part 22: implementation of adaptive WATCHDOG_TIMEOUT
