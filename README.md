@@ -4897,6 +4897,1188 @@ operations. (The rebooting in module2e is multi-threaded and the resurrection of
 operations are time consuming).
 
 
+##### Basic test scenario
+
+In this test in addtion to injected ghost threads (8), the 16 native nodes are intentionally crashed with injected code.
+The crashes are futures thread crashes. There are two types of crashes that are instigated  by the code by enabling the ENV
+variiable in .gitlab-ci.yml below:
+
+```
+FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH: "true"  # this uses the pid which is somewhat deterministic in a 16 node test to 
+      # activate half of the processes with a futures crash after the first command and the other half of the processes with a futures
+      # crash after all the commands have succeeded. This tests the gatekeeper stats code implemenented in module2d. This 
+      # activates FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG crash for half of the processes and activates 
+      # FORCE_TOMCAT_FAIL_IDX1_REAL_TAG for the other half of the processes. If this is used with the 512 node test only a few of 
+      # the processes will get futures crashes which is also a good partial test. This is true with any test that uses > 16 nodes.
+      # NOTE: If setting HYBRID above to true, best to set the other 2 (IDX1 and POSTINSTALL) to false.
+```
+
+
+The code to do this is located in module2:
+
+
+```
+        ##### This is for a hybrid crash with half of the processes getting a futures crash after the first command and the
+        ##### other half of the processes getting the futures crash after all of the commands have executed successfully.
+        ##### This is used to test the gatekeeper stats code in module2d
+        ##### Set the FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH to true in the .gitlab-ci.yml file to activate this.
+
+
+        pid = multiprocessing.current_process().pid
+
+
+        # Activate hybrid crash simulation only if explicitly enabled
+        if os.getenv("FORCE_TOMCAT_FAIL_HYBRID_FUTURES_CRASH", "false").lower() in ("1", "true"):
+            if pid in [12, 13, 14]:
+                # Simulate IDX1 crash — early failure, no post-install success tag
+                os.environ["FORCE_TOMCAT_FAIL_IDX1_REAL_TAG"] = "true"
+                os.environ["FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG"] = "false"
+
+            elif pid in [15, 16, 17]:
+                # Simulate post-install crash — all commands succeed, tag inserted
+                os.environ["FORCE_TOMCAT_FAIL_IDX1_REAL_TAG"] = "false"
+                os.environ["FORCE_TOMCAT_FAIL_POSTINSTALL_REAL_TAG"] = "true"
+```
+The pids 12,13,14 are futures crashed with the IDX1 crash, a crash that occcurs after the first command executes in the thread
+
+The pids 15,16,17 are futures crashed with the post install futures crash which occurs after all of the command set executes in
+the thread (essentially a successful installation on the node).
+
+So in the test below, with 16 native nodes (and 8 ghosts), the pids that were assigned by the multiprocessing.Pool are the following
+
+13,13,14,14,15,16,17,18.  The repeats are due to pid reuse durin gthe connection pooling phase that occurs for the last 2 processes
+
+In this test there are 2 threads per process.  16 total nodes/threads across 8 processes, the last 2 processes being pooled (that cause
+the pid reuse of pid13 and pid14).
+
+One of the processes in the test actually used pid18 which is not covered by the crash code above, so the threads in this process pid18
+were native install_success. This leads to a very good mix of 8 ghosts, 2 native_install_success, and as we will see 8 IDX1 futures
+crashed threads and 6 post install success futures crashes.  So the resurrection gatekeeper logic testing will also be tested for this
+SG_STATE drift and remediation test (more on that in a section below).
+
+##### The native install_success threads (2)
+
+The registry_entrys of the natiive install_threads are  shown below:
+
+These are from the module2d registry processing, so note the gatekepper decision is not to resurrect, i.e. gatekeeper_blocked
+
+```
+  "3603804e": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2026-01-30 00:25:44.897169",
+    "pid": 18,
+    "thread_id": 130961803052736,
+    "thread_uuid": "3603804e",
+    "public_ip": "54.226.137.162",
+    "private_ip": "172.31.18.25",
+    "tags": [
+      "install_success",
+      "installation_completed",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Install succeeded"
+  },
+  "ceaba531": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2026-01-30 00:26:00.023927",
+    "pid": 18,
+    "thread_id": 130961792566976,
+    "thread_uuid": "ceaba531",
+    "public_ip": "98.93.65.126",
+    "private_ip": "172.31.17.27",
+    "tags": [
+      "install_success",
+      "installation_completed",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Install succeeded"
+  }
+```
+
+
+Because these are natively install_success they will be gatekeeper_blocked from the resurrection code and will never be 
+resurrection candidates. So they will not appear in the module2e registry and thus will not have SG replay with the SG_STATE code
+of module2e (which is the primary area of testing with this test case).
+
+##### The post install success futures crash threads
+
+There are 6 of these in accordance with the crash instigation code above. These occur on pids 15,16,17, so a total of 6 threads.
+
+Once such registry_entry, for example is shown below at module2d stage. These threads also do not make it into the module2e 
+registry because the resurrection gatekeeper filters them out as they esstentially have a working command installation (all commands
+executed on the threads, and they crashed afterwards). So the nodes themselves are in good functional shape and there is no need
+to resurrect and re-execute the commands on these threads.
+
+
+Note the tagging on this one. The module2d gatekeeper code tags this as gatekeeper_blocked correctly because 
+install_success_achieved_before_crash. (crash occurs after command set has fully executed on the nodes).
+
+```
+  "3ce641eb": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 16,
+    "thread_id": 124258115525504,
+    "thread_uuid": "3ce641eb",
+    "public_ip": "54.163.46.32",
+    "private_ip": "172.31.29.221",
+    "timestamp": "2026-01-30 00:25:37.656586",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "install_success_achieved_before_crash",
+      "gatekeeper_blocked"
+    ],
+    "resurrection_reason": "Crash occurred post-install: resurrection not needed"
+  },
+```
+
+Because these never make it into the module2e registry, they will not encounter the SG replay SG_STATE code of module2e (the primary
+area of testing for this test case).
+
+
+##### The IDX1 futures crashes that occur after the first command executes
+
+These occurred in pids 12,13,14. There was no pid12 assigned processes in this test. There were pids 13,13,14,14 (repeats due to 
+process pooling on 2 of the 8 processes).  Since there are 2 threads per process this is a total of 8 IDX1 futures crashed threads.
+
+An example of one of these threads from module2d is shown below:
+
+```
+  "1163e59d": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 130591719938944,
+    "thread_uuid": "1163e59d",
+    "public_ip": "54.160.200.123",
+    "private_ip": "172.31.22.1",
+    "timestamp": "2026-01-30 00:20:57.494040",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect"
+    ],
+    "resurrection_reason": "Tagged with future_exception"
+  },
+```
+ 
+Note the difference in the tags on this one when compared to the previous install_success_before_crash (the 6 presented earlier)
+
+The gatekeeper correctly tags with gatekeeper_resurrect as these nodes are in a failed installation state and need to be resurrected.
+
+These 8 threads will appear in the module2e registry and they will encounter the SG replay SG_STATE code of module2e where intentional
+drift will be incited on the uuid1 first thread or uuid2 second thread.  So these thread will be an integral part of the final
+SG_STATE module2e verification for drift and remediation.
+
+
+##### The 8 ghost threads
+
+
+As usual there are 8 ghost threads that are synthetically injected at the process layer (1 per process; so a total of 8). 
+These are the same type of registry_entrys as in previous tests. One such registry_entry is shown below:
+```
+  "ghost_3_81_148_44": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": null,
+    "thread_uuid": "ghost_3_81_148_44",
+    "public_ip": "3.81.148.44",
+    "private_ip": "172.31.39.192",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect"
+    ],
+    "process_index": null,
+    "resurrection_reason": "Ghost entry: resurrection always attempted"
+  },
+```
+
+Ghost threads are always resurrected, so these 8 threds will make it into the module2e registry as well.
+So including the 8 IDX1 futures crashed threads + the 8 ghost threads there will be total of 16 threads that will be processed by
+module2e and the SG_STATE replay code in there. This is where the drift will be induced, much like the other tests.
+
+
+##### Module2e IDX1 and ghost thread examples
+
+
+The module2e will selectively reboot the ghost nodes (the ghost bucket handler will direct the code to do so), whereas the 
+IDX1 futures crashed threads will not and do not need to be rebooted.
+As noted above there will be 8 ghost threads and 8 IDX1 threads in the module2e registy. This is the focus are of this test where
+drift in the SG is induced and remediation occurs.
+
+
+After reboot sample registry_entrys look like this:
+
+
+IDX1 futures crashed thread:(the same thread presented earlier in module2d, but now module2e processed)
+Note the tagging and command list set this thread up for easy resurrection by module2f
+
+```
+  "1163e59d": {
+    "status": "install_failed",
+    "attempt": -1,
+    "pid": 14,
+    "thread_id": 130591719938944,
+    "thread_uuid": "1163e59d",
+    "public_ip": "54.160.200.123",
+    "private_ip": "172.31.22.1",
+    "timestamp": "2026-01-30 00:20:57.494040",
+    "tags": [
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection"
+    ],
+    "resurrection_reason": [
+      "Tagged with future_exception",
+      "Idx1 futures crash detected, requeued with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ]
+  },
+```
+
+
+The ghost threads are similarly processed, but note that these threads have been rebooted. See the reboot-context tags below. So they
+are well set up to be resurrected by module2f. 
+```
+  "ghost_3_81_148_44": {
+    "status": "ghost",
+    "attempt": -1,
+    "pid": 17,
+    "thread_id": null,
+    "thread_uuid": "ghost_3_81_148_44",
+    "public_ip": "3.81.148.44",
+    "private_ip": "172.31.39.192",
+    "timestamp": null,
+    "tags": [
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-09ce8e840dd3773e5",
+      "reboot_context:initiated",
+      "reboot_context:ready",
+      "reboot_context:grace_period:20s"
+    ],
+    "process_index": null,
+    "resurrection_reason": [
+      "Ghost entry: resurrection always attempted",
+      "Ghost entry: resurrection always attempted with full command set"
+    ],
+    "replayed_commands": [
+      "sudo DEBIAN_FRONTEND=noninteractive apt update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive apt install -y tomcat9",
+      "strace -f -e write,execve -o /tmp/trace.log bash -c 'echo \"hello world\" > /tmp/testfile' 2>/dev/null && cat /tmp/trace.log >&2",
+      "sudo systemctl start tomcat9",
+      "sudo systemctl enable tomcat9"
+    ],
+    "pre_resurrection_reboot_required": true,
+    "timestamp_reboot_stage": "2026-01-30T00:28:45.388115Z"
+  },
+
+
+
+```
+
+
+
+In addition, both IDX1 and ghost threads have had the SG replayed on them by the SG_STATE code and any drift has been remediated prior 
+to module2f.
+
+
+##### module2f registry_entrys (IDX1 and ghosts)
+
+For completeness sake, the registry_entrys and stats are presented for some of the module2f threads that have been resurrected.
+The same threads that were followed from above:
+
+
+
+The former IDX1 futures crashed thread:
+
+```
+  "1163e59d": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2026-01-30 00:47:39.219933",
+    "pid": 14,
+    "thread_id": 124630983509696,
+    "thread_uuid": "1163e59d",
+    "public_ip": "54.160.200.123",
+    "private_ip": "172.31.22.1",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "install_failed",
+      "future_exception",
+      "RuntimeError",
+      "ip_rehydrated",
+      "gatekeeper_resurrect",
+      "skip_synthetic_future_crash_on_resurrection",
+      "installation_completed"
+    ]
+  },
+```
+The former ghost thread: 
+```
+  "ghost_3_81_148_44": {
+    "status": "install_success",
+    "attempt": 0,
+    "timestamp": "2026-01-30 00:46:30.510314",
+    "pid": 17,
+    "thread_id": 124630232729280,
+    "thread_uuid": "ghost_3_81_148_44",
+    "public_ip": "3.81.148.44",
+    "private_ip": "172.31.39.192",
+    "tags": [
+      "resurrection_attempt",
+      "module2f",
+      "ghost",
+      "no_ssh_attempt",
+      "gatekeeper_resurrect",
+      "reboot_context:resolved_instance_id:i-09ce8e840dd3773e5",
+      "reboot_context:initiated",
+      "reboot_context:ready",
+      "reboot_context:grace_period:20s",
+      "installation_completed"
+    ]
+  },
+```
+
+So it is important to note that in real life ghosts the thread_uuid will not be of the form ghost_x_y_z_a as shown above.
+That is where the contextual tagging comes into play. The tags can differentiate between the IDX1 future crashed thread above
+(the tags clearly indicate this), vs. the ghost thread (ghost is included in teh tags field). This will be extremely helpful
+once ML is engaged to analyze these types of issues, correlating the gitlab console logs with the type/resurrection bucket type and
+the reason for why the thread had to be resurrected. ML will have a very complete cotextual knowledge of the the threads history and
+can use this information deterministically to characterize the behavior of threads.
+
+The stats for module2f provide the verification that all 16 threads have been successfully resurrected:
+```
+{
+  "resurrected_total_threads": 16,
+  "resurrected_install_success": 16,
+  "resurrected_install_failed": 0,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "13.216.249.126",
+    "13.218.213.176",
+    "184.73.105.90",
+    "204.236.209.35",
+    "3.81.148.44",
+    "3.90.165.223",
+    "3.95.20.245",
+    "34.229.13.70",
+    "44.223.35.167",
+    "54.160.200.123",
+    "54.198.83.134",
+    "54.226.174.218",
+    "54.227.180.239",
+    "54.81.136.192",
+    "98.83.106.51",
+    "98.94.15.34"
+  ],
+  "resurrection_success_rate_percent": 100.0
+}
+```
+
+
+
+#### SG replay SG_STATE drift and remediation code verification in module2e (the main point of this testing)
+
+This section detals the main purpose of this test, to verify the SG replay and SG_STATE code in module2e by inducing SG drift in 
+the SG at uuid1 (the first thread that is serially processed by the SG_STATE machine in module), so that it is detected in module2e
+and then remediated prior to the serial replay on the rest of the 15 threads. As noted above, there are 8 ghost threads and 8 IDX1 
+futures crashed threads.
+
+Early on in module2 the ghost threads are "discovered". These are real AWS nodes that are used to simulate teh 8 ghosts at the process
+level (1 ghost per process is injected as a ghost in the code). The reason for using real AWS nodes is so that the module2e reboot and
+module2f resurrection code can be realistically exercised, thus verifying all aspects of the code flow to completion. 
+
+```
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] fetch_ghost_instances: selected=8 skipped_no_public_ip=0 skipped_non_running=0
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0d23aebaed3be8394 Public=184.73.105.90 Private=172.31.40.130
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0020cbe18e88e3c9d Public=98.83.106.51 Private=172.31.35.209
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0a16358398a00b61a Public=13.218.213.176 Private=172.31.43.141
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0ea6793680b425531 Public=3.90.165.223 Private=172.31.43.111
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-09ce8e840dd3773e5 Public=3.81.148.44 Private=172.31.39.192
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-0713bb6b27c5e490f Public=13.216.249.126 Private=172.31.46.56
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-03d4b91dbc9da013d Public=54.198.83.134 Private=172.31.46.158
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Discovered ghost instance InstanceId=i-05976a6de97a74a63 Public=54.81.136.192 Private=172.31.47.4
+[INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS] Initialized /aws_EC2/logs/ghost_pool.json with 8 entries
+exclude_instance_id: i-0aaaa1aa8907a9b78
+```
+
+
+
+
+As noted above:
+
+The resurrection code looks good
+8 idx1 thread crashes and 8 ghosts are selected for resurrection and the 6 post install crashes are not
+This is determined by a gitlab log console real time scan during module2c and module2d processing
+
+As noted above there There are  a total of 14 threads in the module2e registry 
+The stats are noted in the gitlab console logs below (also there is a json file post pipeline artifact that presents this in more
+detail)
+```
+[module2d.4] ✅ Resurrection rate = resurrected / (resurrection candidates + ghost candidates)
+[module2d.4] ✅ Gatekeeper rate = resurrected / (total threads + ghost IPs)
+[module2d.4] Resurrected: 16, Blocked: 8, Total: 24
+[module2d.4] Resurrection Rate: 72.73%. <<< This is 16/22. 2 of them are install_success and are not resurrection candiates
+[module2d.4] Gatekeeper Rate: 66.67%. <<<< this is 16/24
+```
+
+So this is the setup going into the SG_STATE code in module2e. 16 threads:
+
+
+
+Module2e has the resurrection bucketization code and as shown below the categorization is correct.
+8 IDX1 threads, 6 post install futures crashed threads, and 8 ghosts. The handlers in module2e attach the proper tags to 
+each thread registry_entry at this point
+
+
+The resurrection bucketization . There are actually 2 that install_success right off, so only 6 post_install_success and 2 install_success and then 8 idx1 and 8 ghosts.    The already_install_success shows 0 because they are not seledted for resurrection candidates since they did not crash at all (unlike post install success which requires further processing by module2e) 
+```
+[module2e_logging] By bucket counts: {'idx1': {'resurrection_candidates': 8, 'ghost_candidates': 0, 'selected_for_resurrection': 8}, 'post_exec_future_crash': {'resurrection_candidates': 6, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'already_install_success': {'resurrection_candidates': 0, 'ghost_candidates': 0, 'selected_for_resurrection': 0}, 'ghost': {'resurrection_candidates': 0, 'ghost_candidates': 8, 'selected_for_resurrection': 8}}
+```
+
+In total there are 22 resurrection candidates as shown above but 6 of them (post install success futures crashes) are ruled out 
+by further logic and do not need to be resurrected. Only 16 threads remain after this. 
+
+
+As proof of this, earlier in module2d the gatekeeper separated out the 8 IDX1 threads from the 8 post install success threads.
+```
+[module2d.1] ✅ Resurrecting UUID 1163e59d (IP: 54.160.200.123) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 66fa8e0e (IP: 54.227.180.239) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 3ce641eb (IP: 54.163.46.32) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 8b67201f (IP: 98.94.1.20) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID d34c165f (IP: 35.175.178.243) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 60ab2c52 (IP: 54.87.136.159) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ✅ Resurrecting UUID 15e3c3ba (IP: 44.223.35.167) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID b281840c (IP: 54.226.174.218) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 0ad4cdd2 (IP: 204.236.209.35) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID 0df12107 (IP: 3.95.20.245) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 2a9a5481 (IP: 100.31.207.75) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ⛔ Blocking UUID 68ccee7b (IP: 54.209.201.62) — Reason: Crash occurred post-install: resurrection not needed
+[module2d.1] ✅ Resurrecting UUID d5e2083f (IP: 34.229.13.70) — Reason: Tagged with future_exception
+[module2d.1] ✅ Resurrecting UUID e8daabbd (IP: 98.94.15.34) — Reason: Tagged with future_exception
+[module2d.1] ⛔ Blocking UUID 3603804e (IP: 54.226.137.162) — Reason: Install succeeded
+[module2d.1] ⛔ Blocking UUID ceaba531 (IP: 98.93.65.126) — Reason: Install succeeded
+[module2d.1] Registry resurrection complete.
+[module2d.1] Total resurrected: 8
+[module2d.1] Total blocked: 8
+```
+
+
+In module2e, once the bucket handlers have separated the IDX1 threads from the ghosts, only the ghosts are rebooted:
+
+```
+[module2e2] Reboot targets: 8
+[utils] Reboot initiated for i-09ce8e840dd3773e5
+[utils] Reboot initiated for i-0ea6793680b425531
+[utils] Reboot initiated for i-0020cbe18e88e3c9d
+[utils] Reboot initiated for i-0d23aebaed3be8394
+[utils] Reboot initiated for i-03d4b91dbc9da013d
+[utils] Reboot initiated for i-05976a6de97a74a63
+[utils] Reboot initiated for i-0713bb6b27c5e490f
+[utils] Instance i-0ea6793680b425531 passed 2/2 checks
+[utils] Reboot initiated for i-0a16358398a00b61a
+```
+
+
+
+There is an intentional 120 second wait state before uuid1 and uuid4 processing in module2e so that i can inject the drift between
+one or both of these threads.
+In this test, I missed uuid1 and induced the drift at uuid2  
+
+
+
+Here is uuid1 SG_STATE processing:
+
+```
+[module2e_SG_STATE] UUID=1163e59d, public_ip=54.160.200.123: Applying Step 4b (revoke) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] WAITING 120s before drift detection (UUID=1163e59d, public_ip=54.160.200.123)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote drift artifact → /aws_EC2/logs/sg_state_drift_1163e59d_sg-0a1f89717193f7896_module2e.json
+[module2e_SG_STATE] UUID=1163e59d, public_ip=54.160.200.123: No remediation required
+```
+
+Here is uuid2 SG_STATE processing where the drift was induced by removing port 4000 from the SG on AWS creating a drift_missing of 
+port 4000 with the original SG_RULES desired state.
+
+```
+[module2e_SG_STATE] Processing UUID=66fa8e0e, public_ip=54.227.180.239
+[module2e_SG_STATE] UUID=66fa8e0e, public_ip=54.227.180.239: SG IDs = ['sg-0a1f89717193f7896']
+[module2e_SG_STATE] UUID=66fa8e0e, public_ip=54.227.180.239: Applying Step 4a (authorize) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] UUID=66fa8e0e, public_ip=54.227.180.239: Applying Step 4b (revoke) to SG sg-0a1f89717193f7896
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = [('tcp', 4000, '0.0.0.0/0')]
+
+
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote drift artifact → /aws_EC2/logs/sg_state_drift_66fa8e0e_sg-0a1f89717193f7896_module2e.json
+```
+
+Here the remediation code detects the drift_missing. The drift is corrected (in this case by invoking the AWS API authorize method
+to add the port back to AWS that is missing from the SG_STATE), and then drift is run again to verify that there is indeed no
+more drift. The port was emprically verified by going on to AWS SG and seeing the 4000 added back. 
+
+This detailed intelligence of the drift and remediation process to align to SG_STATE can be exploited by ML in Phase4.
+
+
+```
+[module2e_SG_STATE] UUID=66fa8e0e, public_ip=54.227.180.239: Remediation required → missing=[('tcp', 4000, '0.0.0.0/0')], stale=[]
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote remediation artifact → /aws_EC2/logs/sg_state_drift_66fa8e0e_sg-0a1f89717193f7896_remediated_module2e.json
+```
+
+
+
+The rest of the uuids uuid3 -uuid16 are processed serially as mentioned several times before and because the drift induced at uuid2
+is immediately remediated, uuid3 -uuid16 encounter no drift and thus no remediation is required.
+By the way the uuid2 thread is one of the IDX1 futures crashed threads but a ghost thread would be treated the same. Thes SG_STATE
+code is agnostic to the type of resurrection bucket thread that it is dealing with. 
+
+
+Here are uuids 3 and 4:
+
+```
+[module2e_SG_STATE] Processing UUID=15e3c3ba, public_ip=44.223.35.167
+[module2e_SG_STATE] UUID=15e3c3ba, public_ip=44.223.35.167: SG IDs = ['sg-0a1f89717193f7896']
+[module2e_SG_STATE] UUID=15e3c3ba, public_ip=44.223.35.167: Applying Step 4a (authorize) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] UUID=15e3c3ba, public_ip=44.223.35.167: Applying Step 4b (revoke) to SG sg-0a1f89717193f7896
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote drift artifact → /aws_EC2/logs/sg_state_drift_15e3c3ba_sg-0a1f89717193f7896_module2e.json
+[module2e_SG_STATE] UUID=15e3c3ba, public_ip=44.223.35.167: No remediation required
+
+
+
+[module2e_SG_STATE] Processing UUID=b281840c, public_ip=54.226.174.218
+[module2e_SG_STATE] UUID=b281840c, public_ip=54.226.174.218: SG IDs = ['sg-0a1f89717193f7896']
+[module2e_SG_STATE] UUID=b281840c, public_ip=54.226.174.218: Applying Step 4a (authorize) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] UUID=b281840c, public_ip=54.226.174.218: Applying Step 4b (revoke) to SG sg-0a1f89717193f7896
+[module2e_SG_STATE] WAITING 120s before drift detection (UUID=b281840c, public_ip=54.226.174.218)
+[utils_sg_state] Starting drift detection for SG sg-0a1f89717193f7896
+[utils_sg_state] Drift results for SG sg-0a1f89717193f7896:
+[utils_sg_state]   drift_missing  (Ports that SHOULD be on AWS but are NOT)                                  = []
+[utils_sg_state]   drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)                 = []
+[utils_sg_state]   drift_extra_raw (All ports AWS has that SG_RULES does NOT include)                        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[utils_sg_state]   drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)        = [('tcp', 443, '0.0.0.0/0'), ('tcp', 3000, '0.0.0.0/0'), ('tcp', 3001, '0.0.0.0/0'), ('tcp', 3002, '0.0.0.0/0'), ('tcp', 3003, '0.0.0.0/0'), ('tcp', 3004, '0.0.0.0/0'), ('tcp', 3005, '0.0.0.0/0'), ('tcp', 3006, '0.0.0.0/0'), ('tcp', 3007, '0.0.0.0/0'), ('tcp', 3008, '0.0.0.0/0'), ('tcp', 3009, '0.0.0.0/0'), ('tcp', 3010, '0.0.0.0/0'), ('tcp', 9990, '0.0.0.0/0'), ('tcp', 9991, '0.0.0.0/0'), ('tcp', 10000, '0.0.0.0/0'), ('tcp', 10001, '0.0.0.0/0')]
+[module2e_SG_STATE] Wrote drift artifact → /aws_EC2/logs/sg_state_drift_b281840c_sg-0a1f89717193f7896_module2e.json
+[module2e_SG_STATE] UUID=b281840c, public_ip=54.226.174.218: No remediation required
+```
+
+
+The rest of the threads are the same. No remediation. 
+There are a total of 16 threads that are SG_STATE replayed which is the 8 ghosts and the 8 idx1 crashes. The 2 install_success are not resurrection candidates. The 6 post_install_success crashes are resurrection candidates but are not selected for resurrection by the gatekeeper because they are running fine. 
+So 16 SG_STATE replays is exactly correct with the uuid2 one having drift and remediation. Uuid1 does not have drift and so no remediation and uuid3-16 have the drift corrected so no remediation required on those as well.
+
+
+##### SG_STATE drift and remediation json log file analysis.
+
+
+The json log file artifacts are produced after the pipeline completes and these can be used for post run forensic analysis.
+
+
+
+The module2 drift is ok because I don't induce drift until uuid2 of module2e.
+
+The module2e has 16 drift json files as expected.
+
+The uuid2 one is here:
+
+sg_state_drift_66fa8e0e_sg-0a1f89717193f7896_module2e.json
+
+
+It is on an idx1 crash thread (not a ghost like before) which is fine. 
+
+I know it is not a ghost because ghosts have thread_uuid synthetically generated with the word ghost in the title of the json.
+
+
+Here are the contents of this uuid2 idx1 crash drift json file:
+
+
+You can see the drift_missing in the file with that port 4000 that I removed. 
+
+(I verified that the 4000 is back on AWS SG since it has since been remediated)
+```
+{
+  "drift_missing (Ports that SHOULD be on AWS but are NOT)": [
+    [
+      "tcp",
+      4000,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+  "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9990,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9991,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10001,
+      "0.0.0.0/0"
+    ]
+  ],
+  "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+    [
+      "tcp",
+      443,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3001,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3002,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3003,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3004,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3005,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3006,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3007,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3008,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3009,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      3010,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9990,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      9991,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10000,
+      "0.0.0.0/0"
+    ],
+    [
+      "tcp",
+      10001,
+      "0.0.0.0/0"
+    ]
+  ]
+}
+
+```
+
+
+
+
+Here is the remediation file for uuid2, the only thread with a remediation drift json file as expected
+
+You can see below that the remediation is a success: 
+
+```
+  "original_drift": {
+    "drift_missing (Ports that SHOULD be on AWS but are NOT)": [
+      [
+        "tcp",
+        4000,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+    "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9990,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9991,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10001,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9990,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9991,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10001,
+        "0.0.0.0/0"
+      ]
+    ]
+  },
+  "remediation_actions": [
+    "Re-applied SG_RULES and delta_delete for missing ports: [('tcp', 4000, '0.0.0.0/0')]"
+  ],
+  "drift_after_remediation": {
+    "drift_missing (Ports that SHOULD be on AWS but are NOT)": [],
+    "drift_extra_filtered (Ports that ARE on AWS but SHOULD have been deleted)": [],
+    "drift_extra_raw (All ports AWS has that SG_RULES does NOT include)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9990,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9991,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10001,
+        "0.0.0.0/0"
+      ]
+    ],
+    "drift_ignored (Ports AWS has that we IGNORE because they are not part of SG_STATE)": [
+      [
+        "tcp",
+        443,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3001,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3002,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3003,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3004,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3005,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3006,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3007,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3008,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3009,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        3010,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9990,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        9991,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10000,
+        "0.0.0.0/0"
+      ],
+      [
+        "tcp",
+        10001,
+        "0.0.0.0/0"
+      ]
+    ]
+  },
+  "remediation_success": true,
+  "timestamp": "2026-01-30T00:31:04.774184Z"
+}
+```
+
+
+
+The data and logs and the registry_entry tagging will provide a great deal of information and data for the ML Phase4 learning phase of
+the implementation.
+
+
+
+
 
 ---
 
