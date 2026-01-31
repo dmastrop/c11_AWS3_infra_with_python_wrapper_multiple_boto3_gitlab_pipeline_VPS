@@ -184,10 +184,7 @@ artifact logs per pipeline)
 
 - Update part 44 Phase 3f: Parts 3,4a: Requeing and resurrectng ghost threads
 
-- Update part 45 Phase 3g: Machine Learning (Phase4 ML) Preview
-  → [link](#updates-part-45-phase-3g-machine-learning-phase4-ml-preview)
-
-
+- [Update part 45 Phase 3g: Machine Learning (Phase4 ML) Preview](#updates-part-45-phase-3g-machine-learning-phase4-ml-preview)
 
 - Update part 46 Phase 3h: Parts 4b: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging
 
