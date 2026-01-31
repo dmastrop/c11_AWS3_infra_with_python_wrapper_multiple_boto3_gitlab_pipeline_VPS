@@ -113,7 +113,7 @@ deploy:
       # gitlab console log scan, and it can then create the aggregate_ghost_deteail.json ghost entry which will then be 
       # synthetically modified to registry_entry format in module2d so that it can be processed by the gatekeeper.
 
-    INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS: "true"  # this injection is similar to INJECT_POST_THREAD_GHOSTS but allows for real node public ips (and private ips)
+    INJECT_POST_THREAD_GHOSTS_REAL_PUBLIC_IPS: "false"  # this injection is similar to INJECT_POST_THREAD_GHOSTS but allows for real node public ips (and private ips)
       # to be used. The code is very similar to the INJECT_POST_THREAD_GHOSTS. The injections are made in tomcat_worker at the process level (1 ghost ip
       # per process), written to disk (1 ip per json file) and then main() retrieves the ip addresses from disk and assimilates and aggregates them from the process 
       # level into the aggregate_gold_ips which is then used in the downstream modules (synthetic ghost registry creation, etc)
@@ -159,11 +159,11 @@ deploy:
     # This is for enabling the delay between multiprocessing.Pool and the SG rule drift logic so that AWS rules can be changed 
     # to test the drift logic. 120 seconds should be enough time. THe logic and code is in module2 and will also be ported to module2e  
     # This code is in module2
-    READY_FOR_AWS_SG_EDITS: "true"
+    READY_FOR_AWS_SG_EDITS: "false"
     READY_FOR_AWS_SG_EDITS_DELAY: "120"
 
     # Same as above but for module2e delay.
-    READY_FOR_AWS_SG_EDITS_MODULE2E: "true"
+    READY_FOR_AWS_SG_EDITS_MODULE2E: "false"
     READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY: "120"
     READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS: "1,4"
     ## For postions, if there are 8 ghosts in the module2e registry the '1,4,5" will select the first, fourth and fifth registry_entrys
@@ -183,8 +183,8 @@ deploy:
     - echo 'image_id=ami-0f9de6e2d2f067fca' >> .env
     - echo 'instance_type=t2.micro' >> .env
     - echo 'key_name=generic_keypair_for_python_testing' >> .env
-    - echo 'min_count=16' >> .env
-    - echo 'max_count=16' >> .env
+    - echo 'min_count=512' >> .env
+    - echo 'max_count=512' >> .env
     - echo 'AWS_PEM_KEY='${AWS_PEM_KEY} >> .env
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
