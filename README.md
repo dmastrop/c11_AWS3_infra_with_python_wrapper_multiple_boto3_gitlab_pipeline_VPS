@@ -133,7 +133,7 @@ artifact logs per pipeline)
 
 
 
-## Latest milestone updates to refer to below:
+## Latest milestone updates in this README:
 
 - Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
 
@@ -194,17 +194,17 @@ artifact logs per pipeline)
 
 - Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population
 
-- Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent
+- [Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent](#updates-part-50-phase-3l-nuances-of-security-group-rule-application-and-propagation-in-multi-processing-environments-using-aws-api-and-routing-fabric-design-for-sg-rule-intent)
 
-- Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)
+- [Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)](#updates-part-51-phase-3m-case-study-real-world-resurrection-event-with-empirical-validation-generic-resurrection-handler-bucket-type)
 
-- Update part 52 Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)
+- [Update part 52 Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)](#updates-part-52-phase-3n-implementation-of-spawn-multiprocessing-start_-method-in-the-python-package-default-is-forked)
 
-- Update part 53 Phase 3o: Part7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE) 
+- [Update part 53 Phase 3o: Part 7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)](#updates-part-53-phase-3o-part-7-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-using-s3-sg_state)
 
-- Update part 54 Phase 3p: Part8: Requeing and resurrecting ghost threads: Security group stateful design VALIDATION testing <<
+- [Update part 54 Phase 3p: Part 8: Requeing and resurrecting ghost threads: Security group rules stateful design VALIDATION testing](#updates-part-54-phase3p-part-8-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-validation-testing)
 
-- Preface Update: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)
+- [Preface Update: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)](#preface-update-extensibility--topological-mapping-architecture-and-resurrection-architecture-v45)
 
 
 << WORK IN PROGRESS
