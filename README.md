@@ -194,7 +194,7 @@ artifact logs per pipeline)
 
 - Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population
 
-- [Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent](#updates-part-50-phase-3l-nuances-of-security-group-rule-application-and-propagation-in-multi-processing-environments-using-aws-api-and-routing-fabric-design-for-sg-rule-intent)
+- [Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent](#updates-part-50-phase-3L-nuances-of-security-group-rule-application-and-propagation-in-multi-processing-environments-using-aws-api-and-routing-fabric-design-for-sg-rule-intent)
 
 - [Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)](#updates-part-51-phase-3m-case-study-real-world-resurrection-event-with-empirical-validation-generic-resurrection-handler-bucket-type)
 
