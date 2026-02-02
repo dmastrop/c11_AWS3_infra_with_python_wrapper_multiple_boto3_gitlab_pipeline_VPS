@@ -8875,6 +8875,24 @@ def main():
             print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
 
 
+
+
+    ##### This is to catch the control plan endpoint failure that happens with the SG_STATE code in tomcat worker when run by
+    ##### multiprocessing.Pool.When this happens several processes can be affected and the threads end up ghosted. This only
+    ##### happens with hyper-scaling, for example with 512 processes of 1 thread each. 
+    ##### Without the except block below the finally block below executes but module2 then aborts and the next line, 
+    ##### the call to aggregate_process_stats() never runs and the aggregate_process_stats.json file is not produced and 
+    ##### module2e, which uses the aggregate_process_stats.json does not run and the pipeline aborts early.
+    ##### With this execption a message like 
+    #####  [CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: EndpointConnectionError: ... will be printed out 
+    ##### and the aggregate_process_stats() function will be called and the ghosts will be processed by modules2e and 2f and they 
+    ##### will be resurrected, i.e. full recovery
+    except Exception as e:
+        print(f"[CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: {type(e).__name__}: {e}")
+
+
+
+
     finally:
 
         ## Insert the "write SG rule manifest" here after all the processes exit and before teh aggregator code below
