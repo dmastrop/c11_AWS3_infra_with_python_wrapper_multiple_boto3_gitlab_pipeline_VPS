@@ -8225,7 +8225,9 @@ def main():
             "unique_missing_ips_ghosts": set()
         }
 
-        ### Step 3: Aggregate Metrics
+        ### Step 3: Aggregate Metrics FROM per-process stats at this point. This will need to be augmented by step3b if the 
+        ### process itself crashes as with [CONTROL_PLANE_ENDPOINT_FAILURE] which can occur right before this function is called.
+
         for stat in all_stats:
             summary["total_threads"] += stat.get("process_total", 0)
             summary["total_success"] += stat.get("process_success", 0)
@@ -8236,6 +8238,56 @@ def main():
             summary["unique_seen_ips"].update(stat.get("seen_ips", []))
             summary["unique_assigned_ips_golden"].update(stat.get("assigned_ips_golden", []))
             summary["unique_missing_ips_ghosts"].update(stat.get("missing_ips_ghosts", []))
+
+
+        ### Step 3b: Augment ghosts from global artifact (handles crashed processes)
+        ### This code is required for the [CONTROL_PLANE_ENDPOINT_FAILURE} exception block for multiprocessing.Pool
+        ### When a control plane endpoint failure happens within a process (inside tomcat_worker which is called by the 
+        ### multiprocessing.Pool) the process level stats are completely lost. As such all the threads in that process become ghosts, 
+        ### essentially orphaned and missing ips relative to the golden orchestration ip list. They no longer have a pid or any type
+        ### of process registry (registry_entry per thread) to track them. Since the main() aggregate code aggregates the stats from 
+        ### each process stats json file (see above), and these processes have no process level json file, they can only be accounted
+        ### for by using the aggregate ghost counters and then performing a UNION on those that have process stats (there might be
+        ### ghosts that are ghosts for another reason other than this process crash) to restore and augment the stats  back up to
+        ### where they should be in terms of unique_missing_ips_ghosts list of ghost ips and the total_resurrection_ghost_candidates
+        ### count of ghost resurrection candidates. This issue is typically encountered only on hyper-scaling, for example 512 node test
+        ### where the SG_STATE code overhwhelms the AWS API endpoint (for authorize and revoke rules/ports on a SG). The process then
+        ### crashes. 
+
+        global_missing_path = os.path.join(log_dir, "missing_registry_ips_artifact.log")
+        global_missing_ips = set()
+
+        if os.path.exists(global_missing_path):
+            try:
+                with open(global_missing_path, "r") as f:
+                    for line in f:
+                        ip = line.strip()
+                        if ip:
+                            global_missing_ips.add(ip)
+            except Exception as e:
+                print(f"[AGGREGATOR_STATS] Failed to load global missing IPs from {global_missing_path}: {e}")
+
+        # Union per-process ghosts with global ghosts
+        per_process_missing = summary["unique_missing_ips_ghosts"]
+        all_missing = per_process_missing.union(global_missing_ips)
+
+        # Replace with the union
+        summary["unique_missing_ips_ghosts"] = all_missing
+
+        # Redefine ghost candidate count as the number of UNIQUE ghost IPs
+        summary["total_resurrection_ghost_candidates"] = len(all_missing)
+
+        ### NEW: Ghost source diagnostics
+        ghosts_from_process_stats = per_process_missing
+        ghosts_from_global_only = global_missing_ips - per_process_missing
+
+        summary["ghost_sources"] = {
+            "from_process_stats": len(ghosts_from_process_stats),
+            "from_global_only": len(ghosts_from_global_only),
+            "global_only_ips": sorted(ghosts_from_global_only),
+        }
+
+
 
         ### Step 4: Finalize and Write Output
         summary["unique_seen_ips"] = sorted(summary["unique_seen_ips"])
