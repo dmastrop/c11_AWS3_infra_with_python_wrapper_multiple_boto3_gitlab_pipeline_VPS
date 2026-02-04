@@ -8252,7 +8252,7 @@ def main():
         ### where they should be in terms of unique_missing_ips_ghosts list of ghost ips and the total_resurrection_ghost_candidates
         ### count of ghost resurrection candidates. This issue is typically encountered only on hyper-scaling, for example 512 node test
         ### where the SG_STATE code overhwhelms the AWS API endpoint (for authorize and revoke rules/ports on a SG). The process then
-        ### crashes. This code is required with hyper-scaled testing like with 512 nodes where there is a lot of AWS API congestion. 
+        ### crashes. This code is required with hyper-scaled testing like with 512 nodes where there is a lot of AWS API congestion 
 
         global_missing_path = os.path.join(log_dir, "missing_registry_ips_artifact.log")
         global_missing_ips = set()
