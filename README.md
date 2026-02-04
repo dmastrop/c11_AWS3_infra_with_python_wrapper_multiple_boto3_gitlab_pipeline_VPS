@@ -93,7 +93,7 @@ Testing is performed in a self-hosted GitLab DevOps pipeline using Docker contai
 
 •Phase 3 – Thread Healing & Adaptive Retry: Threads flagged in Phase 2 will be dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and potential thread override logic tuned to system state and swap conditions.
 
-•Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns.
+•Phase 4 – Machine Learning Integration: ML modules will ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns. AI/MCP integration for command set replay.
 
 
 Some features: 
@@ -128,7 +128,7 @@ artifact logs per pipeline)
 - Stateful security group rules implementation design
 - Stateful security group drift detection and auto-remediation
 - Adaptive orchestration logic with ML/LLM feedback hooks 
-
+- AI/MCP integration for command set replay
 
 
 
