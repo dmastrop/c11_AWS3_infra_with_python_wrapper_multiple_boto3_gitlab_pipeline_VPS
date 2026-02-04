@@ -176,27 +176,27 @@ NOTE: A few of these Updates are hyperlinked to the content. All the updates are
 
 - Update part 38 Phase 2v: PROCESS level, aggregate level, and gatekeeper stats reporting using the resurrection_monitor_patch8 process level information, module2 main(), and module2d
 
-- Update part 39 Phase3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning
+- [Update part 39 Phase3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning](#updates-part-39-phase-3a-introduction-to-phase3-requeing-and-resurrection-and-phase4-machine-learning)
 
-- Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach
+- [Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach](#updates-part-40-phase-3b-resurrecting-the-aws-status-health-check-12-nodes-using-an-ip-rehydration-approach)
 
-- Update part 41 Phase3c: Prototype: Requeing and resurrecting the IDX1 futures crashed threads
+- [Update part 41 Phase3c: Prototype: Requeing and resurrecting the IDX1 futures crashed threads](#updates-part-41-phase-3c-protyping-requeing-and-resurrecting-the-idx1-futures-crashed-threads)
 
-- Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and bucketization testing
+- [Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and bucketization testing](#updates-part-42-phase-3d-requeing-and-resurrecting-the-hybrid-futures-crashed-threads-install_success-and-bucketization-testing)
 
-- Update part 43 Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization. 
+- [Update part 43 Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization.](#updates-part-43-phase-3e-parts-1-and-2-requeing-and-resurrecting-ghost-threads-and-verifying-bucketization)
 
-- Update part 44 Phase 3f: Parts 3,4a: Requeing and resurrectng ghost threads
+- [Update part 44 Phase 3f: Parts 3,4a: Requeing and resurrecting ghost threads](#updates-part-44-phase-3f-parts-34a-requeing-and-resurrecting-ghost-threads)
 
 - [Update part 45 Phase 3g: Machine Learning (Phase4 ML) Preview](#updates-part-45-phase-3g-machine-learning-phase4-ml-preview)
 
-- Update part 46 Phase 3h: Parts 4b: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging
+- [Update part 46 Phase 3h: Parts 4b: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging](#updates-part-46-phase-3h-part-4b-requeing-and-resurrecting-ghost-threads-multi-threaded-reboot-and-reboot_context-tagging)
 
-- Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing
+- [Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing](#updates-part-47-phase-3i-parts-4c-and-5-requeing-and-resurrecting-ghost-threads-multi-threaded-reboot-specialized-validation-testing)
 
-- Update part 48 Phase 3j: 512 node regression test (no synthetic injections)
+- [Update part 48 Phase 3j: 512 node regression test (no synthetic injections)](#updates-part-48-phase-3j-512-node-regression-test-no-synthetic-injections)
 
-- Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population
+- [Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population](#updates-part-49-phase-3k-part-6-requeing-and-resurrecting-ghost-threads-private-ip-population)
 
 - [Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent](#updates-part-50-phase-3l-nuances-of-security-group-rule-application-and-propagation-in-multi-processing-environments-using-aws-api-and-routing-fabric-design-for-sg-rule-intent)
 
