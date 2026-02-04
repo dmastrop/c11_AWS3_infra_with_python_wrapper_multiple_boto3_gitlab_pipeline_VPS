@@ -138,6 +138,47 @@ artifact logs per pipeline)
 NOTE: A few of these Updates are hyperlinked to the content. All the updates are in this README and the hyperlinks to their content is a work in progress.
 
 
+- [Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level](#updates-part-21-phase-2g-write-to-disk-aggregator-in-main-working)
+
+- [Update part 22: implementation of adaptive WATCHDOG_TIMEOUT](#updates-part-22-watchdog_timeout-adaptive-mechanisms-in-hyper-scaling-process-benchmark-testing)
+
+- [Update part 23: implementation of the control plane Public IP orchestrator](#updates-part-23-implementation-of-the-control-plane-public-ip-orchestrator)
+
+- [Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection](#updates-part-24-phase-2h-resurrection_monitor_patch7d1-fix-for-the-ghost-json-logging-fix-using-instance_info-chunk-for-process-level-gold-ip-list-for-ghost-detection)
+
+- [Update part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function](#updates-part-25-phase-2i-refactoring-the-benchmark_ips-and-benchmark_ips_artifactlog-creation-in-resurrection_monitor_patch7d-with-a-modular-function)
+
+- [Update part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard](#updates-part-26-phase-2j-refactoring-the-aggregation-level-ghost-detection-code-with-the-chunks-in-main-as-gold-standard)
+
+- [Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing](#updates-part-27-phase-2k-stub-registry-creation-for-pseudo-ghosts-so-that-they-can-be-tagged-as-failed-and-resurrected-also-unification-of-code-with-thread_uuid-for-registry-indexing)
+
+- [Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes](#updates-part-28-phase-2l-refactoring-of-the-install_tomcat-and-the-read_output_with_watchdog-making-the-code-stream-agnostic-and-a-general-purpose-resilient-command-orchestrator-that-can-install-any-set-of-commands-on-the-ec2-nodes)
+
+- [Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator](#updates-part-29-phase-2m-refactoring-of-the-read_output_with_watchdog-and-install_tomcat-continued-whitelist-support-for-apt-and-bash-and-bash-like-commands-continue-making-the-code-stream-agnostic-and-a-general-purpose-resilient-command-orchestrator)
+
+- [Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff](#updates-part-30-phase-2n-refactoring-the-adaptive-watchdog-timeout-and-the-api-congestion-function-retry_with_backoff)
+
+- [Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper](#updates-part-31-phase-2o-fixing-the-empty-security_group_ids-list-with-hyper-scaling-tests-and-ensuring-that-the-security-group-list-is-chunked-as-sg_chunk-prior-to-engaging-multi-processingpool-and-calling-tomcat_worker_wrapper)
+
+- [Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing)](#updates-part-32-phase-2p-resurrection-code-overhaul-moving-code-out-of-install_tomat-and-into-resurrection_monitor_patch8-refactoring-resurrection-monitor-add-batch-ip-re-hydration-code-for-thread-futures-crashes-tomcat_worker-synthetic-thread-futures-crash-injection-testing)
+
+- [Update part 33 Phase 2q: The resurrection_monitor restructuring: Continue cleanup of the function and modularize the ghost detection code block into helper function detect_ghosts() at the PROCESS level](#updates-part-33-phase-2q-the-resurrection_monitor-restructuring-continue-cleanup-of-the-function-and-modularize-the-ghost-detection-code-block-into-helper-function-detect_ghosts-at-the-process-level)
+
+- [Update part 34 Phase 2r: Implemenation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing](#updates-part-34-phase-2r-implemenation-of-module2b-for-post-ghost-analysis-using-a-scan-analysis-of-module2-gitlab-console-logs-later-will-be-used-for-ml-lifecycle-and-pattern-discernment-and-synthetic-ghost-injection-testing)
+
+- [Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing](#updates-part-35-phase-2s-implementation-of-module2c-for-post-aggregate-registry-analysis-using-scan-analysis-of-module2-gitlab-console-logs-later-will-be-used-for-ml-lifecycle-and-synthetic-post-install-futures-crash-testing)
+
+- [Update part 36 Phase 2t: Implementation of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads](#updates-part-36-phase-2t-implementation-of-the-module2d-resurrection_gatekeeper-the-final-decision-maker-for-phase3-requeing-and-resurrection-of-problematic-threads)
+
+- [Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips](#updates-part-37-phase-2u-implementation-of-process-level-synthetic-ghost-ip-injection-for-testing-detect_ghosts-and-aggregate-and-process-level-logging-with-ghosts-ips)
+
+- [Update part 38 Phase 2v: PROCESS level, aggregate level, and gatekeeper stats reporting using the resurrection_monitor_patch8 process level information, module2 main(), and module2d](#updates-part-38-phase-2v-process-level-aggregate-level-and-gatekeeper-stats-reporting-using-the-resurrection_monitor_patch8-process-level-information-module2-main-and-module2d)
+
+
+
+
+
+
 
 - Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level
 
