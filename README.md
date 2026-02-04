@@ -10915,7 +10915,7 @@ An SSH to the example node above was done and it was empirically verified to hav
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -10944,7 +10944,7 @@ failures the swap will have to be squeezed. This testing will be deferred until 
 machine learning. ML will be able to learn quite a bit from the chaotic nature of the gitlab console logs under hyper-scaling testing
 and swap contention on the VPS host that is running the gitlab pipleine docker container.
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES part 47: Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing
 
@@ -15358,7 +15358,7 @@ MODULE2E_FILE = "resurrection_module2e_registry_rebooted.json"
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -17609,7 +17609,7 @@ module2d stats json sample:
 
 ```
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 43: Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization. 
@@ -18671,7 +18671,7 @@ Note that the registry_entry is now install_failed status instead of the stub fr
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -19966,7 +19966,7 @@ Note the sample ip address above (the .213 address) as one of the 16 resurrected
 
 ```
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 41: Phase 3c: Protyping: Requeing and resurrecting the IDX1 futures crashed threads
@@ -21467,7 +21467,7 @@ This aligns perfectly with the design:
 - `module2f` → actual resurrection outcomes, now summarized in `aggregate_resurrected_node_stats_module2f.json`.
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -22510,7 +22510,7 @@ For now the setting will be at 600 seconds for non-testing scenarios.
 
 ```
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -22736,7 +22736,7 @@ The chart and approach will change as testing during Phase3 proceeds, so this is
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -25090,7 +25090,7 @@ Metrics
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -26089,7 +26089,7 @@ The complete listing of all the aggregate and process level module2, 2b, 2c and 
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -27525,7 +27525,7 @@ resurrection_monitor_patch8.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 35: Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing
@@ -27927,7 +27927,7 @@ adaptive falure response to such problematic threads.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -28306,7 +28306,7 @@ resurrected (Phase3 of the project) and a fresh SSH and installation can be made
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -28492,7 +28492,7 @@ to PROCESS level stats reporting.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -30105,7 +30105,7 @@ The system is doing the following:
 - Tags synthetic crashes, rehydrated futures, and install success with forensic clarity
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -30858,7 +30858,7 @@ The watchdog timeout then reflects the contention penalty accordingly at the per
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -31517,7 +31517,7 @@ each node.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -32954,7 +32954,7 @@ files and json files. They are always reported as part of each pipeline run.
 - ✅ **Retry logic** is uniformly applied (`command_retry_3`) for all failed cases
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -33829,7 +33829,7 @@ to classify the status of the thread.
 See the next update above (Phase 2m) for the refactor of read_output_with_watchdog.
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing
@@ -34806,7 +34806,7 @@ That’s not a stub — it’s a **classified failure** with forensic traceabili
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -35080,7 +35080,7 @@ This code has been postively tested, but the negative test with actual ghosts wi
 I return to the hyper-scale process testing.  
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function
@@ -35248,7 +35248,7 @@ This has been tested an is working well.
 ```
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for PROCESS level GOLD ip list for ghost detection 
@@ -35505,7 +35505,7 @@ ghost files demonstrated (no files were created at the process level)
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -35851,7 +35851,7 @@ This is only a small portion of the module:
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES: part 22: WATCHDOG_TIMEOUT adaptive mechanisms in hyper-scaling process benchmark testing.
@@ -36338,7 +36338,7 @@ def run_test(test_name, func, *args,
 ```
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES: part 21: Phase 2g: write-to-disk aggregator in main (working)
@@ -37024,7 +37024,7 @@ above.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -37194,7 +37194,7 @@ main() code is below:
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -37921,7 +37921,7 @@ Minimal Impact Strategy
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: part 18: Phase2d: Patches 5 and 6 in resurrection_monitor for improved ghost tracking heuristics (Failed tomcat installs) AND 512/25 (487 concurrent; 25 pooled) process testing
 
@@ -38187,7 +38187,7 @@ failed_registry_ips.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: part 17: Phase2c: Add uuid to the benchmark process level logs and ramp up the testing to 480/25 with the updated Phase2 code
 
@@ -38233,7 +38233,7 @@ thread failures again so that we can implement the Phase3 code to resurrect the 
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -38552,7 +38552,7 @@ ThreadPoolExecutor as described above.
 
 
  
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -38933,7 +38933,7 @@ The fact that all 4 followed the same retry exhaustion pathway is good  news—i
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -39163,7 +39163,7 @@ if status != 0:
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -39368,7 +39368,7 @@ The initial refactored code, SSH REFACTOR 1, is below:
 
 ```
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES: part 12: Hyper-scaling of processes (250, 400+ processes), benchmark testing and VPS swap tuning
@@ -39410,7 +39410,7 @@ pooling vs. nonpooling. That way we can compare the two scenarios in a more cont
 the premliminary code for API batch processing was introduced in part 10 below.
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: part 11: Initial Key insights into process hyperscaling (150, 200, 250, 300, 400 concurrent processes) (more to follow)
 
@@ -39783,7 +39783,7 @@ The second item was the clearing of the gitlab docker container registry artifac
 ```
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES: BENCHMARKING: part 10: main() process and process pooling orchestration level logging infra
@@ -40122,7 +40122,7 @@ no pooling scenarios.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES: BENCHMARKING: part 9: exponential backoff on the authorize_security_group_ingress
@@ -40212,7 +40212,7 @@ VPS RAM utilization.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: BENCHMARKING part 8: Multi-processing logging for the pooled/queued processes as well. 
 
@@ -40279,7 +40279,7 @@ the wrapper function). No need to call it twice. Also added thread name to the s
 The code is now reliably logging 1 log file per process regardless of process type (pooled or non-pooled) and also creates an aggregate log file with all the log files in one file.
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: BENCHMARKING part 7: Advanced logging implementation to collect per process CPU, swap memory, etc during the benchmarking tests
 
@@ -40626,7 +40626,7 @@ def run_test(test_name, func, *args, min_sample_delay=50, max_sample_delay=250, 
         func(*args, **kwargs)
 ```
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: BENCHMARKING part 6: testing the multi-processing hyper-scaling with the pooling code
 
@@ -40660,7 +40660,7 @@ The code is all checked in at this time for this module2.
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: BENCHMARKING part5: 
 
@@ -40816,7 +40816,7 @@ changing the hardware, docker container distribution, etc.
 - Scale horizontally if needed (e.g., split the workload across multiple VPS containers or runners)
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -40855,7 +40855,7 @@ The system (6 vCPU core VPS + Docker + Linux scheduler) handles both models effi
 Also of note this scales well. There is no significant difference between 100 instance case and the 149 instance case as long as the chunk_size and number of threads are provisioned correctly for optimal processing (keep the chunk_size less than or equal to the number of threads).
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: BENCHMARKING part 2: Scaling issues to EC2 instances > 100
 
@@ -40905,7 +40905,7 @@ There does not appear to be any drag on the completion time with the 75 processe
 The processes are run in a docker container and I did not see the docker daemon remarkable stressed during the pipeline run.
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES: BENCHMARKING part1: Summary of benchmark findings for module 2 (mutli-processing and multi-threading)
 
@@ -40962,7 +40962,7 @@ Very roughly speaking all of the processes wrap up processing in about the last 
 
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES:
@@ -41137,7 +41137,7 @@ for process in processes:
     process.join()
 
 ```
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 ## UPDATES:
 
 Did extensive testing of the multi-processing vs. multi-threading environment for the master python file and also introduced the module 2 optimizations for the install tomcat module (with multi-processing and limit the multi-threading in the ThredPoolExecutor to 6, the number of VCPU cores on the VPS.
@@ -41159,7 +41159,7 @@ Next do 8 processes and 12 threads for each process in the ThreadPoolExecutor
 Modules 1 and 2 took 9:37
 
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 
@@ -41230,14 +41230,14 @@ Further detail in main():
         process.join()
 ```
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES:
 
 Running on 11 modules in multi-processing master script. This is running fine. This is using the function approach as well from the master script. Running on 6 processes because the VPS has 6 cores.
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 ## UPDATES:
 
 Now running all 11 modules in multi-threaded environment, with each of 11 modules running as a dedicated thread and grouping several of them for concurrency to speed up the infra rollout. The execu function call in the master python script ended up causing many scope related issues in the first 6 modules. I converted the entire script to a function call based multi-threading and wrapped all the python files in the package directory in dedicated function that is called from the master. The master python script is below for reference.   This runs very well all the way through without any scope related issues.
@@ -41339,7 +41339,7 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ## UPDATES:
 
@@ -41347,7 +41347,7 @@ Added back in all the other modules for the modularized project.  There are a to
 
 Moving the export of the instance ids and security group ids module to AFTER the tomcat installation module resolved another issue.  The export arrays were empty when this was executed as second module because the EC2 instances were not in fully running state. Once this was moved to the third module (non-multi-threaded), the fourth module which needs the instance id and security group id arrays started working.  This is because the second module (that is now the tomcat installation module) ensures that all EC2 instances are runnning and status checks are passed.  The fourth module, the manual ALB setup works fine now. After these changes the rest of the 11 modules ran fine including the beanstalk and RDS setups and the RDS jumphost as well as the wget stress EC2 generators for both the manual ALB and the beanstalk ALB instances (HTTP and HTTPS listeners).
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 ## UPDATES:
 
 Added large code changes for modulatization of the project, using packcage sequential_master_modules for the standalone python scripts.  master_script.py has non-parallelized version, and multi-threaded version and a multiprocessing version to optimize the deployment to AWS3. Broke off the RDS configuration from the beanstalk environment configuration as well so that can parallelize more effectively. RDS jumphost configuration added as well and it configures the RDS server with the basics for mydatabase.
@@ -41356,7 +41356,7 @@ There were several challenges encountered in making the threads 3 and 4 and 5 mu
 
 Also making the code multi-threaded caused a lot of scope issues with the functions in the modules that are multi-threaded. The import of the libraries had to be done in the functions themselves to alleviate the scope issues.
 
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 ## UPDATES:
 
 See below as well.
@@ -41384,7 +41384,7 @@ iam_client = session.client('iam')
 
 Also added HTTPS 443 listener to the elastic beanstalk ALB loadbalancer.  This requires a lot of code for the certificate. To get the SSL cert issues have to create a hosted domain in Route53 and add the A record of the DNS URL (CNAME) of the elastic beanstalk ALB loadbalancer, then once the CNAME is ready for the cert request add the CNAME to the Route53 hosted zone as a CNAME Record for DNS Validation of the cert so that it transitions into issued state. Once have the cert had to manually get the load_balancer_arn and target_group_arn of the existing ALB in the beanstalk environment and also use this newly issued certificate_arn to create the HTTPS 443 listener manually using the elbv2 boto3 class/method. The elasticbeanstalk method did not work for me.   
 Finally add HTTPS traffic to the wget traffic generator EC2 instance so that HTTP and HTTPS are simultaneously sent to the the beanstalk ALB.
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 ## ORIGINAL
 
 This python project creates an ALB on AWS using a target group of 50 EC2 instances running an installed tomcat.  THe listener 
@@ -41476,6 +41476,6 @@ https 2025-04-08T00:42:20.219465Z app/tomcat-load-balancer/d12d886025a14d3f 52.9
 https 2025-04-08T00:42:20.445742Z app/tomcat-load-balancer/d12d886025a14d3f 52.91.163.121:46204 172.31.88.90:8080 0.001 0.002 0.000 200 200 154 2118 "GET https://loadbalancer.holinessinloveofchrist.com:443/ HTTP/1.1" "Wget/1.21.2" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 arn:aws:elasticloadbalancing:us-east-1:590183769797:targetgroup/tomcat-target-group/21175dd5b85e97d7 "Root=1-67f470ec-762531377c53150428c829d1" "loadbalancer.holinessinloveofchrist.com" "arn:aws:acm:us-east-1:590183769797:certificate/6ab5d190-7f04-42a9-ba11-1e103388e7e3" 0 2025-04-08T00:42:20.443000Z "forward" "-" "-" "172.31.88.90:8080" "200" "-" "-" TID_0c5934f18f4d81489860565f1b94e0a1
 
 ```
-
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
