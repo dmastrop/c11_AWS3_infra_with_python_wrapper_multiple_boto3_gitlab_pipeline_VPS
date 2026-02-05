@@ -1471,7 +1471,7 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 
 - [Test12: HYBRID futures crashes (16) with 8 ghosts, 24 total module2e threads, stale drift induced, with remediation on all 24 threads](#test12-hybrid-futures-crashes-16-with-8-ghosts-24-total-module2e-threads-stale-drift-induced-with-remediation-on-all-24-threads)
 
-
+- [Test13: CONTROL_PLANE_ENDPOINT_FAILURE under 512‑node hyper‑scaling during SG_STATE code regression](#test13-control_plane_endpoint_failure-under-512-node-hyper-scaling-during-sg_state-code-regression)
 
 
 #### Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker() (module2)
@@ -6568,6 +6568,595 @@ the implementation.
 ---
 
 [Back to top](#top)
+
+
+
+
+
+
+
+
+
+
+#### Test13: CONTROL_PLANE_ENDPOINT_FAILURE under 512‑node hyper‑scaling during SG_STATE code regression
+
+##### **Introduction**
+
+This test validates the system’s resilience to a rare but severe AWS control‑plane failure that appears only under extreme concurrency — specifically when **multiprocessing.Pool** launches **512 processes**, each applying SG_STATE rules and performing SSH‑based installation.
+
+Under these conditions, AWS occasionally returns:
+
+```
+EndpointConnectionError: Could not connect to the endpoint URL: ...
+```
+
+This failure is catastrophic at the **process level**:
+
+- the entire worker process dies  
+- its in‑memory `process_registry` is lost  
+- its per‑process `process_stats_*.json` is never written  
+- its per‑process ghost file is never written  
+- the Pool raises an exception  
+- the main module2 pipeline aborts before calling `aggregate_process_stats()`  
+
+This results in:
+
+- missing ghost IPs  
+- missing resurrection candidates  
+- missing aggregate stats  
+- module2e and module2f never running  
+- early pipeline termination  
+
+---
+
+###### **Root Cause**
+
+The failure originates inside **tomcat_worker**, during SG_STATE replay, when the AWS control plane becomes overloaded by 512 concurrent API calls. The exception propagates out of the worker, through `tomcat_worker_wrapper`, and into the `multiprocessing.Pool.starmap()` call.
+
+Python’s multiprocessing semantics treat this as a fatal Pool error:
+
+- the `try:` block aborts  
+- the `finally:` block runs  
+- **but the next line after `finally:` is never executed**  
+
+This means:
+
+```
+aggregate_process_stats()
+```
+
+is silently skipped.
+
+---
+
+##### **Why module2e and module2f Never Ran (Before the Fix)**
+
+This failure wasn’t just a Pool crash — it created a **hard dependency break** that prevented the entire Phase 3 resurrection pipeline from executing.
+
+**module2e requires three inputs:**
+
+```
+registry = load_json("resurrection_gatekeeper_final_registry_module2d.json")
+command_plan = load_json("command_plan.json")
+
+# stats input lives in /aws_EC2/logs/statistics
+stats = load_json("aggregate_process_stats_gatekeeper_module2d.json", log_dir=STATISTICS_DIR)
+```
+
+The critical file is:
+
+```
+aggregate_process_stats_gatekeeper_module2d.json
+```
+
+This file is produced **from**:
+
+```
+aggregate_process_stats.json
+```
+
+which is written by that module2 function referred to above, that follows the multiprocessing.Pool code:
+
+```
+aggregate_process_stats()
+```
+
+inside **module2 main()**, immediately after the `try/finally` block that wraps the multprocessing Pool.
+
+**The key failure:**
+
+When the SG_STATE control‑plane failure kills one or more worker processes:
+
+- the Pool raises an exception  
+- the `finally:` block runs  
+- **but the call to `aggregate_process_stats()` never executes**  
+- therefore `aggregate_process_stats.json` is never created  
+- therefore `aggregate_process_stats_gatekeeper_module2d.json` is never created  
+- therefore module2e aborts immediately on startup  
+
+**module2e aborts with:**
+
+```
+FileNotFoundError: aggregate_process_stats_gatekeeper_module2d.json
+```
+
+**And because module2e never runs:**
+
+- module2f never runs  
+- no resurrection occurs  
+- no bucketization occurs  
+- no reboot_context tagging occurs  
+- no ghost resurrection occurs  
+- the pipeline terminates early  
+
+A single missing stats file prevented the entire Phase 3 resurrection engine from running.
+Several artifact log files for the pipeline execcution run never get published due to this.
+
+
+
+---
+
+##### **Fix Part 1 — Restoring Pipeline Flow**
+
+To ensure the pipeline continues even when the Pool crashes, an explicit `except` block was added between the `try:` and `finally:` blocks:
+
+```
+except Exception as e:
+    print(f"[CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: {type(e).__name__}: {e}")
+```
+
+This guarantees:
+
+- the exception is caught  
+- the pipeline does not abort  
+- the `finally:` block still runs  
+- **and the call to `aggregate_process_stats()` after the finally block *does* run**  
+
+This restores the missing stats file and unblocks module2e.
+
+Here is the complete code snippet from module2. The except block works very well. The same crash occurred on the subsequent 512 node
+test and this prevented the entire pipeline from aborting. However, another issue was uncovered which will be detailed in the next 
+section below (Fix Part 2)
+
+```
+    ##### CORE CALL TO THE WORKER THREADS tomcat_worker_wrapper. Wrapped for the process level logging!! ####
+    try:
+        with multiprocessing.Pool(processes=desired_count) as pool:
+            pool.starmap(tomcat_worker_wrapper, args_list)
+
+
+        # === SG_STATE: Safe window for AWS edits ===
+        #### ENV vars READY_FOR_AWS_SG_EDITS and READY_FOR_AWS_SG_EDITS_DELAY are in .gitlab-ci.yml file
+        print("[SG_STATE][READY_FOR_AWS_EDITS] All pooled processes complete — safe to modify AWS SG rules now")
+
+        # Optional delay for manual AWS edits (controlled by ENV)
+        ready_flag = os.getenv("READY_FOR_AWS_SG_EDITS", "false").lower()
+
+        if ready_flag in ("1", "true", "yes"):
+            delay_seconds = int(os.getenv("READY_FOR_AWS_SG_EDITS_DELAY", "120"))
+            print(f"[SG_STATE][READY_FOR_AWS_EDITS] Pausing for {delay_seconds} seconds to allow AWS SG modifications...")
+            time.sleep(delay_seconds)
+        else:
+            print("[SG_STATE][READY_FOR_AWS_EDITS] No delay requested — continuing immediately")
+
+
+
+
+    ##### This is to catch the control plan endpoint failure that happens with the SG_STATE code in tomcat worker when run by
+    ##### multiprocessing.Pool.When this happens several processes can be affected and the threads end up ghosted. This only
+    ##### happens with hyper-scaling, for example with 512 processes of 1 thread each. 
+    ##### Without the except block below the finally block below executes but module2 then aborts and the next line, 
+    ##### the call to aggregate_process_stats() never runs and the aggregate_process_stats.json file is not produced and 
+    ##### module2e, which uses the aggregate_process_stats.json does not run and the pipeline aborts early.
+    ##### With this execption a message like 
+    #####  [CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: EndpointConnectionError: ... will be printed out 
+    ##### and the aggregate_process_stats() function will be called and the ghosts will be processed by modules2e and 2f and they 
+    ##### will be resurrected, i.e. full recovery
+    except Exception as e:
+        print(f"[CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: {type(e).__name__}: {e}")
+
+
+
+
+    finally:
+        << A very very large block of code here is executed even without the except block as described above, but without the 
+        except block the next line following the finally block never gets executed. With the except block the
+        aggregate_process_stats() does get executed. This was tested and confirmed with a 512 node test >>>>>>
+
+    ####### This is the code to aggregate the process level stats. This calls the function below. The function in in main(). 
+    ####### See top of main() for the function
+
+    aggregate_process_stats()
+```
+
+
+
+---
+
+##### **Fix Part 2 — Restoring Missing Ghost Stats (Step 3b)**
+
+Even with the pipeline flow restored, the crashed process (and only this process) never wrote:
+
+- its `process_stats_*.json`  
+- its `resurrection_ghost_missing_*.json`  
+
+So `aggregate_process_stats()` still lacked ghost information for the crashed process.
+
+To fix this, **Step 3b** was added to `aggregate_process_stats()`:
+
+- load the global ghost artifact  
+- union it with per‑process ghost sets  
+- reconstruct the missing ghost entries  
+- produce a complete and correct aggregate stats file  
+
+This ensures that:
+
+- synthetic ghosts  
+- real ghosts  
+- ghosts from crashed processes  
+
+are all captured.
+
+**Step 3b Code Block**  
+
+Here is the complete Step 3b code block inserted between steps 3 and 4. THe complete aggregate_process_stats() function is shown
+below:
+
+```
+    #### This is the function to aggregate the process stats. This uses write-to-disk. Each process stat json file has been written
+    #### to disk in the resurrection_monitor_patch8() function (see the last part of the function)
+    #### This function below parses it and aggregates all the process level stats to an aggregate json file for the entire 
+    #### pipeline execution run
+    #### This function is called at the very end of main() after all logging, etc is complete.
+    def aggregate_process_stats(log_dir="/aws_EC2/logs"):
+
+        ### Step 1: Locate All `process_stats_*.json` Files
+        #stats_files = glob.glob(os.path.join(log_dir, "process_stats_*.json"))
+
+        stats_subdir = os.path.join(log_dir, "statistics")
+        stats_files = glob.glob(os.path.join(stats_subdir, "process_stats_*.json"))
+
+        all_stats = []
+
+        for path in stats_files:
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                    all_stats.append(data)
+            except Exception as e:
+                print(f"[AGGREGATOR_STATS] Failed to load {path}: {e}")
+
+        ### Step 2: Initialize Aggregation Counters
+        summary = {
+            "total_processes": len(all_stats),
+            "total_threads": 0,
+            "total_success": 0,
+            "total_failed_and_stubs": 0,
+            "total_resurrection_candidates": 0,
+            "total_resurrection_ghost_candidates": 0,
+            "unique_seen_ips": set(),
+            "unique_assigned_ips_golden": set(),
+            "unique_missing_ips_ghosts": set()
+
+        ### Step 3: Aggregate Metrics FROM per-process stats at this point. This will need to be augmented by step3b if the 
+        ### process itself crashes as with [CONTROL_PLANE_ENDPOINT_FAILURE] which can occur right before this function is called.
+
+        for stat in all_stats:
+            summary["total_threads"] += stat.get("process_total", 0)
+            summary["total_success"] += stat.get("process_success", 0)
+            summary["total_failed_and_stubs"] += stat.get("process_failed_and_stubs", 0)
+            summary["total_resurrection_candidates"] += stat.get("num_resurrection_candidates", 0)
+            summary["total_resurrection_ghost_candidates"] += stat.get("num_resurrection_ghost_candidates", 0)
+
+            summary["unique_seen_ips"].update(stat.get("seen_ips", []))
+            summary["unique_assigned_ips_golden"].update(stat.get("assigned_ips_golden", []))
+            summary["unique_missing_ips_ghosts"].update(stat.get("missing_ips_ghosts", []))
+
+        ### Step 3b: Augment ghosts from global artifact (handles crashed processes)
+        ### This code is required for the [CONTROL_PLANE_ENDPOINT_FAILURE} exception block for multiprocessing.Pool
+        ### When a control plane endpoint failure happens within a process (inside tomcat_worker which is called by the 
+        ### multiprocessing.Pool) the process level stats are completely lost. As such all the threads in that process become ghosts, 
+        ### essentially orphaned and missing ips relative to the golden orchestration ip list. They no longer have a pid or any type
+        ### of process registry (registry_entry per thread) to track them. Since the main() aggregate code aggregates the stats from 
+        ### each process stats json file (see above), and these processes have no process level json file, they can only be accounted
+        ### for by using the aggregate ghost counters and then performing a UNION on those that have process stats (there might be
+        ### ghosts that are ghosts for another reason other than this process crash) to restore and augment the stats  back up to
+        ### where they should be in terms of unique_missing_ips_ghosts list of ghost ips and the total_resurrection_ghost_candidates
+        ### count of ghost resurrection candidates. This issue is typically encountered only on hyper-scaling, for example 512 node test
+        ### where the SG_STATE code overhwhelms the AWS API endpoint (for authorize and revoke rules/ports on a SG). The process then
+        ### crashes. This code is required with hyper-scaled testing like with 512 nodes where there is a lot of AWS API congestion 
+
+        global_missing_path = os.path.join(log_dir, "missing_registry_ips_artifact.log")
+        global_missing_ips = set()
+
+        if os.path.exists(global_missing_path):
+            try:
+                with open(global_missing_path, "r") as f:
+                    for line in f:
+                        ip = line.strip()
+                        if ip:
+                            global_missing_ips.add(ip)
+            except Exception as e:
+                print(f"[AGGREGATOR_STATS] Failed to load global missing IPs from {global_missing_path}: {e}")
+
+        # Union per-process ghosts with global ghosts
+        per_process_missing = summary["unique_missing_ips_ghosts"]
+        all_missing = per_process_missing.union(global_missing_ips)
+
+        # Replace with the union
+        summary["unique_missing_ips_ghosts"] = all_missing
+
+        # Redefine ghost candidate count as the number of UNIQUE ghost IPs
+        summary["total_resurrection_ghost_candidates"] = len(all_missing)
+
+        ### NEW: Ghost source diagnostics
+        ghosts_from_process_stats = per_process_missing
+        ghosts_from_global_only = global_missing_ips - per_process_missing
+
+        summary["ghost_sources"] = {
+            "from_process_stats": len(ghosts_from_process_stats),
+            "from_global_only": len(ghosts_from_global_only),
+            "global_only_ips": sorted(ghosts_from_global_only),
+        }
+
+
+        ### Step 4: Finalize and Write Output
+        summary["unique_seen_ips"] = sorted(summary["unique_seen_ips"])
+        summary["unique_assigned_ips_golden"] = sorted(summary["unique_assigned_ips_golden"])
+        summary["unique_missing_ips_ghosts"] = sorted(summary["unique_missing_ips_ghosts"])
+
+        #output_path = os.path.join(log_dir, "aggregate_process_stats.json")
+        #with open(output_path, "w") as f:
+        #    json.dump(summary, f, indent=2)
+
+        output_path = os.path.join(stats_subdir, "aggregate_process_stats.json")
+        with open(output_path, "w") as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"[AGGREGATOR_STATS] Aggregate process stats written to: {output_path}")
+```
+
+---
+
+##### **Outcome**
+
+With both fixes in place:
+
+- the pipeline completes  
+- aggregate stats are produced including the missing ghosts stats if any of the processes crashed due to this bug  
+- module2e loads all required inputs  
+- module2e runs successfully  
+- module2f resurrects the missing threads  
+- the system achieves **full recovery** even under catastrophic process‑level failure  
+
+
+
+##### Gitlab console logs with the Fix1 in place with 512 node testing and CONTROL_PLAN_ENDPOINT_FAILURE process crash
+
+
+Note in this test the Fix2 was not in place, and the stats are illustrative of the problem of the missing ghost stat on that
+process that crashed. This stats cosmetic issue was addressed by Fix2 as noted above.  Only Fix1 was in place at the time
+of this test.
+
+
+During this test the first observation was the nice wide dispersion of adaptive watchdog timeouts indicating that there was
+considerable AWS API contention on this test.  Here are a few of the 511 calculated adaptive watchdog timeouts values. 
+They range from a baseline of 92 seconds all the way up to the max 122 seconds:
+
+
+```
+[WATCHDOG METRIC] [PID 231] Final max_retry_observed = 9
+[Dynamic Watchdog] [PID 231] instance_type=t2.micro, node_count=512, max_retry_observed=9 → WATCHDOG_TIMEOUT=110s
+
+
+
+[WATCHDOG METRIC] [PID 355] Final max_retry_observed = 14
+[Dynamic Watchdog] [PID 355] instance_type=t2.micro, node_count=512, max_retry_observed=14 → WATCHDOG_TIMEOUT=120s
+[SG_PROPAGATION_DELAY] [PID 355] max_retry_observed=14 → no extra delay
+
+
+[WATCHDOG METRIC] [PID 191] Final max_retry_observed = 13
+[Dynamic Watchdog] [PID 191] instance_type=t2.micro, node_count=512, max_retry_observed=13 → WATCHDOG_TIMEOUT=118s
+
+
+[WATCHDOG METRIC] [PID 29] Final max_retry_observed = 15
+[Dynamic Watchdog] [PID 29] instance_type=t2.micro, node_count=512, max_retry_observed=15 → WATCHDOG_TIMEOUT=122s
+
+
+[WATCHDOG METRIC] [PID 439] Final max_retry_observed = 15
+[Dynamic Watchdog] [PID 439] instance_type=t2.micro, node_count=512, max_retry_observed=15 → WATCHDOG_TIMEOUT=122s
+
+
+```
+
+Since there were only 511 of the 512 adaptive watchdog timeouts I knew that the crash was encountered in one of the processes:
+
+The module2 and module2d stats show the following:
+```
+{
+  "total_processes": 511,
+  "total_threads": 511,
+  "total_success": 506,
+  "total_failed_and_stubs": 5,   <<< The HYBRID crash injection causes 2 IDX1 futures crashes and 3 post install success futures crashes
+  "total_resurrection_candidates": 5,
+  "total_resurrection_ghost_candidates": 0,  <<<< This should be a count of 1, but is missing due to the second bug noted above. This is fixed by Fix2 (code presented above)
+```
+
+The bottom of the  module2d gatekeeper stats show this:
+
+```
+  ],
+  "unique_missing_ips_ghosts": [],  <<<< THIS IS MISSING THE GHOST IP. Fix2 is required to fix this.
+  "gatekeeper_resurrected": 3,
+  "gatekeeper_blocked": 509,
+  "gatekeeper_total": 512,
+  "gatekeeper_resurrection_rate_percent (resurrected/(resurrection candidates + ghost candidates))": 60.0,
+  "gatekeeper_rate_percent (resurrected/(total process threads + ghost ips))": 0.59
+```
+
+
+Clearly one node is not accounted for. That is the ghost node created by the process that crashed. 
+The total_resurrection_ghost_candidates should be a count of 1 but is zero. This is the cosmetic stats bug that the 
+Fix2 addresses (see next section below). IT is a cosmetic bug. We know this because the module2e stats correctly 
+bucketize the ghost:
+
+
+The post install success futures crashes correctly are not designated for resurrection. Only the IDX1 crashes (2) and the ghost (1)
+are flagged for resurrection.
+
+
+```
+{
+  "total_resurrection_candidates": 5,
+  "total_ghost_candidates": 1,
+  "selected_for_resurrection_total": 3,
+  "by_bucket_counts": {
+    "already_install_success": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "idx1": {
+      "resurrection_candidates": 2,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 2
+    },
+    "post_exec_future_crash": {
+      "resurrection_candidates": 3,
+      "ghost_candidates": 0,
+      "selected_for_resurrection": 0
+    },
+    "ghost": {
+      "resurrection_candidates": 0,
+      "ghost_candidates": 1,
+      "selected_for_resurrection": 1
+    }
+  },
+  "selected_for_resurrection_rate_overall": 50.0,
+  "timestamp": "2026-02-03T00:36:09.191249"
+}
+```
+
+
+Module2f shows that all 3 resurrected nodes were successful (2 IDX1 and 1 ghost). So functionally everything is back working even
+after the CONTROL_PLANE_ENDPOINT_FAILURE process crash. Just a commetic stats issue noted above.
+
+```
+{
+  "resurrected_total_threads": 3,
+  "resurrected_install_success": 3,
+  "resurrected_install_failed": 0,
+  "resurrected_stub": 0,
+  "resurrected_unique_seen_ips": [
+    "100.53.183.143",
+    "54.224.50.62", .   <<<< This is the ghost whose process crashed. It was successsfully resurrected now. 
+    "54.236.99.23"
+  ],
+  "resurrection_success_rate_percent": 100.0
+}
+```
+
+
+As a side note the SG_STATE drift json files were created. There was no intentional drift induced, so there are no 
+corresponding drift remedidation json files. But it is good to see that the SG_STATE code is still generating the drift json 
+files even after this crash.
+
+There is 1 drift json file for module2
+
+There are 3 drift json files for module2e, 1 for each resurrection candidate that required resurrection 
+
+
+2 hyrbrid SG_STATE drift json: 
+sg_state_drift_6c242334_sg-0a1f89717193f7896_module2e.json
+sg_state_drift_dcb03ecd_sg-0a1f89717193f7896_module2e.json
+
+1 ghost SG_STATE drift json: 
+sg_state_drift_ghost_54_224_50_62_sg-0a1f89717193f7896_module2e.json
+
+Here is the crash that was captured in the gitlab console logs. There is only 1 entry and this accounts for the 1 ghost. Had there
+been more than 1 process there would have been more ghosts:
+
+```
+[RESMON_8] ✅ Resurrection Candidate Monitor: No thread failures in process 257.
+[RESMON_8] Process stats written to: /aws_EC2/logs/statistics/process_stats_257_20260203T003536Z.json
+[POST-MONITOR METRIC] [PID 257] max_retry_observed = 13
+[CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: EndpointConnectionError: Could not connect to the endpoint URL: "https://ec2.us-east-1.amazonaws.com/"
+[module2_orchestration_level_SG_manifest] Controller instance to exclude: i-0aaaa1aa8907a9b78
+```
+
+So the code is working very well at catching this crash with that except block of Fix1 noted earlier.
+The code is reslient and resurrects the ghost and the 2 IDX1 crashes. The only remaining issue at this point was a cosmetic stats issue
+for the ghost count which is addressed by Fix2.
+I also SSH'ed into the resurrected ghost and it worked fine. 
+
+##### A review of the Fix1 from the code perspective:
+
+
+```
+try:
+    with multiprocessing.Pool(processes=desired_count) as pool:
+        pool.starmap(tomcat_worker_wrapper, args_list)
+except Exception as e:
+    print(f"[CONTROL_PLANE_ENDPOINT_FAILURE][module2] Pool execution aborted: {type(e).__name__}: {e}")
+finally:
+    # SG_STATE drift + aggregation + ghost artifacts
+    ...
+# <- this now always runs
+aggregate_process_stats()
+```
+
+what happens is:
+
+- **If no exception:** `starmap` completes, `finally` runs, then `aggregate_process_stats()` runs.
+- **If an exception (like `EndpointConnectionError`) is raised inside `starmap`:**
+  - The exception is caught by the `except` block, your `[CONTROL_PLANE_ENDPOINT_FAILURE][module2] ...` line is printed.
+  - The `finally` block still runs (SG_STATE drift artifact, aggregate registry, ghost artifacts, etc.).
+  - Because the exception is now *handled* (not re‑raised), execution continues and `aggregate_process_stats()` **does run** afterward—unlike the previous behavior where the exception propagated out of `main()` and skipped that last call.
+
+With this patch in place, the control‑plane flake can still kill one worker process, but it can’t prevent `aggregate_process_stats()` (and everything downstream in module2d/e/f) from running.
+And that is exactly what was seen in this test. 
+
+
+
+##### What Fix2 addresses
+
+In the test above, Fix2 would address the stats cosmetic issue of the missing ghost so that the following would appear in the 
+aggregate_process_stats.json file
+
+
+
+```
+"total_processes": 511,
+"total_threads": 511,
+"total_resurrection_ghost_candidates": 1,<<<<<<<<<<< This is count 1 now
+"unique_missing_ips_ghosts": [   <<<< This now has the ghost ip
+    "54.224.50.62"
+],
+"ghost_sources": {     <<<< This new block is added with the step 3b Fix2 code.
+    "from_process_stats": 0,   <<<< If the ghost count is sourced from a ghost whose process did NOT crash but it is a ghost for some other reason
+    "from_global_only": 1,    <<<<< New Fix2 code adds this ghost_sources block and in this case from_global_only indicates that the 
+ghost count had to be sourced from global counters since the process that owned this ip crashed.  from_process_stats is the normal
+means by which ghost counts will be sourced IF the processes that own them do not crash and they are ghosts for some other reason.
+    "global_only_ips": ["54.224.50.62"]
+}
+
+```
+And because the module2 stats json file builds upon the aggregate_process_stats.json file from module2, it will also have this 
+new additional ghost_sources block. This was confirmed during testing.
+
+Another important note is that when a process crashes all of the threads in that process will end up as ghosts, so the step 3b code
+need only augment the ghost reconciliation and not deal with install_failed or install_succes threads. Those will not co-exist 
+in the process's threads. They will all be ghosts and the code will reconcile the stats accordingly for this type of catastrophic
+crash.
+
+
+The subsequent 512 node test did not have a process crash but the new ghost_sources stats block did appear fine.  The next time this 
+does happen (and it will) the signature will look similar to the above in both the module2 and module2d stats json files.
+
+
+
+[Back to top](#top)
+
 
 
 
