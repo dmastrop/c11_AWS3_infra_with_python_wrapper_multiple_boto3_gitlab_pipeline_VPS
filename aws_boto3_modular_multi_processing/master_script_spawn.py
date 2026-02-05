@@ -547,9 +547,14 @@ def reque_and_resurrect():
 #    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version2.py")
 
 
-#### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. This is version2 but with the new refactored SSH connect code from module2
+##### This is module2f for the Phase3 resurrection_intall_tomcat worker thread function. This is version2 but with the new refactored SSH connect code from module2
+#def resurrection_install_tomcat():
+#    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version3.py")
+
+##### This is module2f with the client MCP integration
 def resurrection_install_tomcat():
-    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version3.py")
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4_MCP.py")
+
 
 
 ## modules 3-11:
