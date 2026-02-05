@@ -1471,7 +1471,7 @@ The logs should be grepped for [SECURITY GROUP], RETRY_METRIC, [module2_orchestr
 
 - [Test12: HYBRID futures crashes (16) with 8 ghosts, 24 total module2e threads, stale drift induced, with remediation on all 24 threads](#test12-hybrid-futures-crashes-16-with-8-ghosts-24-total-module2e-threads-stale-drift-induced-with-remediation-on-all-24-threads)
 
-- [Test13: CONTROL_PLANE_ENDPOINT_FAILURE under 512‑node hyper‑scaling during SG_STATE code regression](#test13-control_plane_endpoint_failure-under-512-node-hyper-scaling-during-sg_state-code-regression)
+- [Test13: CONTROL_PLANE_ENDPOINT_FAILURE under 512‑node hyper‑scaling during SG_STATE code regression](#test13-control_plane_endpoint_failure-under-512node-hyperscaling-during-sg_state-code-regression)
 
 
 #### Test1: Refactoring of the tomcat_worker() application of the rules to the security group for each process call to tomcat_worker() (module2)
