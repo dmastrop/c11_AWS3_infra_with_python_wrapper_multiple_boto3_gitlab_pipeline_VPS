@@ -7085,7 +7085,7 @@ been more than 1 process there would have been more ghosts:
 ```
 
 So the code is working very well at catching this crash with that except block of Fix1 noted earlier.
-The code is reslient and resurrects the ghost and the 2 IDX1 crashes. The only remaining issue at this point was a cosmetic stats issue
+The code is resilient and resurrects the ghost and the 2 IDX1 crashes. The only remaining issue at this point was a cosmetic stats issue
 for the ghost count which is addressed by Fix2.
 I also SSH'ed into the resurrected ghost and it worked fine. 
 
@@ -7148,6 +7148,17 @@ Another important note is that when a process crashes all of the threads in that
 need only augment the ghost reconciliation and not deal with install_failed or install_succes threads. Those will not co-exist 
 in the process's threads. They will all be ghosts and the code will reconcile the stats accordingly for this type of catastrophic
 crash.
+
+Step3b is only required when a process crashes, because in that scenario the entire process registry is lost and all threads in that process become ghosts. However, even when no process crashes, Step3b is still safe to run because the reconciliation is a set UNION between the global ghost list and the per‑process ghost lists. This guarantees no double counting — any overlap is naturally deduplicated. In non‑crash scenarios, the per‑process stats already contain the correct ghost count, and the union simply preserves that value.
+
+- Step3b always runs
+
+- But because it uses a set union, it cannot double‑count
+
+- Per‑process ghost stats dominate when processes didn’t crash
+
+- Global ghost stats only fill in the missing pieces when a process did crash
+
 
 
 The subsequent 512 node test did not have a process crash but the new ghost_sources stats block did appear fine.  The next time this 
