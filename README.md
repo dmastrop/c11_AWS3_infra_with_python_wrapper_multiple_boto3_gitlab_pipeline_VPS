@@ -396,7 +396,7 @@ deep into the module2b through 2f remediation and resurrection flow. It is not n
 issues.
 
 
-Tis Phase4a implementation becomes a layer where the LLM becomes a real‑time advisor for:
+This Phase4a implementation becomes a layer where the LLM becomes a real‑time advisor for:
 
 - command repair  
 - command rewriting  
@@ -487,7 +487,7 @@ But an AI‑guided replay engine can:
 And propose **state‑aware** recovery.
 
 
-#### Phase4a.2 module2f integration:
+#### Phase4a.1 module2f integration:
 
 To start off with, this will be integrated into module2f the multi-threaded resurrection engine.
 
@@ -579,7 +579,7 @@ It is the *strategist*.
 
 
 
-#### Phase4a.2 syntatic example with json
+#### Phase4a.1 syntatic example with json
 
 **The flow looks like this:**
 
@@ -675,7 +675,7 @@ As MCP integration evolves, the request/response schemas exchanged between modul
 - “Is this node behaving like a future ghost?”  
 - “Is this SG_STATE replay likely to fail?”  
 
-**AI/MCP = action (Phase4a)**  
+**AI/MCP = action (Phase4a: 4a.1 for module2f and 4a.2 for module2)**  
 - “What should I do *right now* to fix this?”  
 - “How do I safely replay this command?”  
 - “How do I clean up partial state?”  
@@ -696,7 +696,12 @@ Ultimately this will be:
 - and ML‑driven prediction  
 - and MCP‑based command rewriting  
 
+The architecture will be refined once the coding design and code review UPDATE is published. 
 
+This UPDATE provides a high level overview of how this Phase4a and Phase4b fits into the overall design.
+
+It clearly defines how the Phase4 code implementation will dramaticially improve how those Plane1 and Plane2 issues are dealt with, and
+why this code is absolutely required in a highly scalable orchestrator like this.
 
 
 
