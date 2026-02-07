@@ -1137,6 +1137,7 @@ def resurrection_install_tomcat(
                     time.sleep(5)  # keep this short in resurrection
                     break
 
+                # This is an exception within the for attempt loop for a command.
                 except Exception as e:
                     print(f"[{ip}] Exception during exec_command: {e}")
                     registry_entry = {
@@ -1157,8 +1158,17 @@ def resurrection_install_tomcat(
                     }
                     ssh.close()
                     return ip, private_ip, registry_entry
+             
+
+
+
+            #### End of for attempt loop
+
 
             # If retry loop exhausted without success, tag fail
+            # If it gets here then the command failed and one command failed is an install_failed.
+
+
             if not command_succeeded:
                 registry_entry = {
                     "status": "install_failed",
@@ -1175,6 +1185,10 @@ def resurrection_install_tomcat(
                 return ip, private_ip, registry_entry
 
         # All commands succeeded
+        # If it gets this far then the for attempt loops iterated all the way through without failure and all of the commands 
+        # succeeded. This is an install_success for the node.
+
+
         transport = ssh.get_transport()
         if transport:
             transport.close()
@@ -1193,6 +1207,15 @@ def resurrection_install_tomcat(
         }
         return ip, private_ip, registry_entry
 
+
+        ##### end of for idx loop
+
+
+    #### end of the try block
+
+
+
+    # This is an except block for the try block that has both for idx loop and for attempt retry loop.
     except Exception as e:
         try:
             ssh.close()
@@ -1210,6 +1233,10 @@ def resurrection_install_tomcat(
             "tags": base_tags + ["resurrection_unhandled_exception", type(e).__name__]
         }
         return ip, private_ip, registry_entry
+
+
+
+
 
 
 ####### orchestrator code: this code takes in the resurrection_module2e_registry.json which is already gatekeeper resurrect filtered
