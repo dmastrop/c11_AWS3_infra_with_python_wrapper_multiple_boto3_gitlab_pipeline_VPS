@@ -1184,13 +1184,12 @@ def resurrection_install_tomcat(
                 ssh.close()
                 return ip, private_ip, registry_entry
 
-        # All commands succeeded
-        # If it gets this far then the for attempt loops iterated all the way through without failure and all of the commands 
-        # succeeded. This is an install_success for the node.
 
         ##### End of the for idx loop
 
-
+        # All commands succeeded
+        # If it gets this far then the for attempt loops iterated all the way through without failure and all of the commands 
+        # succeeded over all the for idx commands. This is an install_success for the node.
 
         transport = ssh.get_transport()
         if transport:
