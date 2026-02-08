@@ -390,9 +390,15 @@ def reque_and_resurrect():
 #def resurrection_install_tomcat():
 #    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version3.py")
 
-##### THis is module2f for the MCP client integration into module2f
+###### This is module2f for the MCP client integration into module2f
+#def resurrection_install_tomcat():
+#    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4_MCP.py")
+
+##### THis is module2f for the MCP client integration into module2f. Before doing the integration need to fix the splice issue with module2f (missing code blocks)
 def resurrection_install_tomcat():
-    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4_MCP.py")
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4b_MCP.py")
+
+
 
 
 
