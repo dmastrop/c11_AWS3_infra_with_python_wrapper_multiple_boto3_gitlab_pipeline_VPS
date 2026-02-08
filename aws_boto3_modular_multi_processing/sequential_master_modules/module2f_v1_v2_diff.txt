@@ -1,0 +1,270 @@
+diff --git a/module2f_resurrection_install_tomcat_multi-threaded.py b/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+index da176c0..eb1ed19 100644
+--- a/module2f_resurrection_install_tomcat_multi-threaded.py
++++ b/module2f_resurrection_install_tomcat_multi-threaded_version2.py
+@@ -33,6 +33,45 @@ import ipaddress # used with the is_valid_ip helper function below. This functio
+ # futures crashes.
+ import glob # need this for the aggregate stats function aggregate_process_stats in main()
+ 
++## Imports from shared utilities (utils.py)
++#from utils import resolve_instance_id, _extract_instance_id
++
++# Shared helper functions live in sequential_master_modules/utils.py
++from sequential_master_modules.utils import (
++    resolve_instance_id,
++    _extract_instance_id,
++    log_ghost_context,
++    reboot_instance,
++    health_check_instance
++)
++
++
++# --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
++# This will test the instance_id present reboot and health check code added to the process_ghost handler in module2e
++# It is also used to test the no_instance_id logic in module2f
++# It needs to be included in both modules to provide instance_id consistency between the two modules as far as the testing is concerned.
++# There are two variants that are tested. One has an invalid instance_id format
++# The other is a valid instance_id format
++#resolve_instance_id = lambda **kwargs: "i-FAKE1234567890TEST"  ## invalid instance_id format. This will invoke Malformed from the AWS API
++#resolve_instance_id = lambda **kwargs: "i-033f7957281756224"   ## Valid instance_id format. This will invole InvalidInstanceID.NotFound from the AWS API
++
++
++
++# --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
++# Controlled by ENV variable in gitlab-ci.yml
++# Set INJECT_FAKE_INSTANCE_ID=true to activate
++# Set the FAKE_INSTANCE_ID in gitlab-ci.yml.  For example, i-033f7957281756224
++# Note that the FACKE_INSTANCE_ID format has to be "correct". Best to use a recently retired node instance_id. These are AWS cached after a while and
++# need to be refreshed with a more recent one periodically.
++  # For example, i-1234567890abcdef0 looks to be correct format but AWS API will return InvalidInstanceID.Malformed
++  # The i-033f7957281756224 is a recently retired node real instance_id and this worked prior to AWS caching it as no longer valid.
++  # While it worked it behaved in the code as a real instance_id (during reboot loop the watchdog had to timeout eventually since it is no longer atached
++  # to a node).  When it stopped working after AWS caching, AWS API flagged it as InvalidInstanceID.NotFound and this tests a different part of the python
++  # code.
++if os.getenv("INJECT_FAKE_INSTANCE_ID", "false").lower() in ("1", "true", "yes"):
++    fake_id = os.getenv("FAKE_INSTANCE_ID", "i-FAKE1234567890TEST")
++    resolve_instance_id = lambda **kwargs: fake_id
++    print(f"[TEST] Overriding resolve_instance_id → {fake_id}")
+ 
+ 
+ ## This is the whitelist code to be used in install_tomcat for categorizing the status of the registry_entry of the
+@@ -620,6 +659,12 @@ def resurrection_install_tomcat(
+     if extra_tags:
+         base_tags.extend(extra_tags)
+ 
++    # Annotate ghost context if instance_id is None (for analytics transparency)
++    # For example, with a synthetic ghost ip injection.
++    if instance_id is None:
++        base_tags.append("no_instance_id_context")
++ 
++
+     # SSH connect with bounded retries + a stub watchdog on final attempt only
+     ssh = paramiko.SSHClient()
+     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+@@ -991,7 +1036,16 @@ def resurrection_install_tomcat(
+ ####### are re-executed on the node, the node can be empirically tested via an SSH to see of the service(s) are actually running.
+ 
+ LOG_DIR = "/aws_EC2/logs"
+-MODULE2E_FILE = "resurrection_module2e_registry.json"
++
++#MODULE2E_FILE = "resurrection_module2e_registry.json"
++
++#### For multi-threaded version we need to use the post processed module2e json file where the registry_entrys designated for reboot prior to resurrection have
++#### been attempted reboot and the registry_entrys have the reboot_context tags now.  There will no longer be a ghost_context reboot tag used. The reboot_context
++#### will cover several different scenarios. Rebooting is now decoupled from the handlers such as process_ghost, so there is no longer a ghost_context reboot.
++MODULE2E_FILE = "resurrection_module2e_registry_rebooted.json"
++
++
++
+ 
+ def load_module2e_registry(path=os.path.join(LOG_DIR, MODULE2E_FILE)):
+     """
+@@ -1007,45 +1061,51 @@ def load_module2e_registry(path=os.path.join(LOG_DIR, MODULE2E_FILE)):
+         print(f"[module2f] module2e registry is empty. Skipping resurrection.")
+     return data
+ 
+-def resolve_instance_id(public_ip=None, private_ip=None, region=None):
+-    """
+-    Resolve the current InstanceId live from AWS.
+-    - Prefer public IP lookup (most stable for resurrection).
+-    - Fallback to private IP if public is missing.
+-    - This ensures we always get the *current* instance_id, even if IPs were recycled.
+-    """
+-    session = boto3.Session(region_name=region or os.getenv("region_name"))
+-    ec2 = session.client("ec2")
+ 
+-    # Try public IP filter first
+-    if public_ip:
+-        resp = ec2.describe_instances(
+-            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
+-        )
+-        iid = _extract_instance_id(resp)
+-        if iid: return iid
+-
+-    # Fallback: try private IP filter
+-    if private_ip:
+-        resp = ec2.describe_instances(
+-            Filters=[{"Name": "network-interface.addresses.private-ip-address",
+-                      "Values": [private_ip]}]
+-        )
+-        iid = _extract_instance_id(resp)
+-        if iid: return iid
+ 
+-    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
+-    return None
++## See utils.py file
++#def resolve_instance_id(public_ip=None, private_ip=None, region=None):
++#    """
++#    Resolve the current InstanceId live from AWS.
++#    - Prefer public IP lookup (most stable for resurrection).
++#    - Fallback to private IP if public is missing.
++#    - This ensures we always get the *current* instance_id, even if IPs were recycled.
++#    """
++#    session = boto3.Session(region_name=region or os.getenv("region_name"))
++#    ec2 = session.client("ec2")
++#
++#    # Try public IP filter first
++#    if public_ip:
++#        resp = ec2.describe_instances(
++#            Filters=[{"Name": "ip-address", "Values": [public_ip]}]
++#        )
++#        iid = _extract_instance_id(resp)
++#        if iid: return iid
++#
++#    # Fallback: try private IP filter
++#    if private_ip:
++#        resp = ec2.describe_instances(
++#            Filters=[{"Name": "network-interface.addresses.private-ip-address",
++#                      "Values": [private_ip]}]
++#        )
++#        iid = _extract_instance_id(resp)
++#        if iid: return iid
++#
++#    print(f"[module2f] InstanceId not found for IPs public={public_ip}, private={private_ip}")
++#    return None
++#
++#def _extract_instance_id(describe_resp):
++#    """
++#    Helper to pull InstanceId out of AWS describe_instances response.
++#    """
++#    for r in describe_resp.get("Reservations", []):
++#        for i in r.get("Instances", []):
++#            iid = i.get("InstanceId")
++#            if iid: return iid
++#    return None
++
++
+ 
+-def _extract_instance_id(describe_resp):
+-    """
+-    Helper to pull InstanceId out of AWS describe_instances response.
+-    """
+-    for r in describe_resp.get("Reservations", []):
+-        for i in r.get("Instances", []):
+-            iid = i.get("InstanceId")
+-            if iid: return iid
+-    return None
+ 
+ def get_watchdog_timeout_default():
+     """
+@@ -1183,21 +1243,36 @@ def main():
+             instance_id = entry.get("instance_id")
+             if not instance_id:
+                 instance_id = resolve_instance_id(public_ip=ip, private_ip=private_ip, region=region)
+-
++ 
++            # version1 of module2f:
++            #if not instance_id:
++            #    # If we still can't resolve, skip safely with a stub tag.
++            #    print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
++            #    results[uuid] = {
++            #        "status": "stub",
++            #        "attempt": -1,
++            #        "pid": pid,
++            #        "thread_uuid": uuid,
++            #        "public_ip": ip,
++            #        "private_ip": private_ip,
++            #        "timestamp": datetime.utcnow().isoformat(),
++            #        "tags": ["stub", "missing_instance_id"] + extra_tags
++            #    }
++            #    continue
++
++
++            # version2 of module2f: If there is no instance_id do not use the continue as above, but let the code flow into the submit future and execute
++            # the ThreadPoolExecutor on the node.  It is highly unusual if an AWS node InstanceId cannot be fetched, but with the synthetic ghost injection
++            # for code testing, this is in fact the case. We want the synthetically injected ghost ips to fail "naturally" with an install_failed SSH connect
++            # error in the TheadPoolExecutor call to resurrection_install_tomcat rather than stub the entry as above. The stub code block is commented out for
++            # this reason. In addtion tag the registry_entry accordingly with missing_instance_ip
+             if not instance_id:
+-                # If we still can't resolve, skip safely with a stub tag.
+-                print(f"[module2f] Skipping {ip} (UUID {uuid}): missing InstanceId.")
+-                results[uuid] = {
+-                    "status": "stub",
+-                    "attempt": -1,
+-                    "pid": pid,
+-                    "thread_uuid": uuid,
+-                    "public_ip": ip,
+-                    "private_ip": private_ip,
+-                    "timestamp": datetime.utcnow().isoformat(),
+-                    "tags": ["stub", "missing_instance_id"] + extra_tags
+-                }
+-                continue
++                print(f"[module2f] Proceeding without InstanceId for {ip} (UUID {uuid}). Will attempt SSH and log clean failure if any.")
++                extra_tags = (extra_tags or []) + ["missing_instance_id"]
++                # do not use a continue after this. Let the code flow into the ThreadPoolExecutor call to resurrection_install_tomcat below.
++
++
++
+ 
+             # === [LOG ADDITION] Start of resurrection for this node ===
+             print(f"[module2f][INFO] Starting resurrection for InstanceID={instance_id}, PublicIP={ip}")
+@@ -1227,8 +1302,21 @@ def main():
+                 # Ensure PID continuity in the registry entry
+                 reg["pid"] = pid
+                 results[uuid] = reg
++            
++
++            # when this exception hits  with a synthetic ghost ip it is because:
++            #- The ghost threads timed out inside `resurrection_install_tomcat`.
++            #- That exception propagated out of the function without building a registry entry.
++            #- The `Future` is now marked **finished with an exception**.
++            #- `as_completed` yields it immediately. (the for block above)
++            #- The call to `future.result()`, Python re‑raises the exception that was stored in the `Future`.
++            #- This `try/except` block in main() is then hit — not because the future is still running, but because it finished *unsuccessfully*.
++
+             except Exception as e:
+                 print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
++                tags = ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
++                if instance_id is None:
++                    tags.append("no_instance_id_context")   # ensure ghost context survives if there is a timeout in the resurrection_install_tomcat
+                 results[uuid] = {
+                     "status": "install_failed",
+                     "attempt": -1,
+@@ -1237,9 +1325,26 @@ def main():
+                     "public_ip": ip,
+                     "private_ip": private_ip,
+                     "timestamp": datetime.utcnow().isoformat(),
+-                    "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
++                    "tags": tags
+                 }
+ 
++
++            #except Exception as e:
++            #    print(f"[module2f] Resurrection failed for {ip} (UUID {uuid}): {e}")
++            #    results[uuid] = {
++            #        "status": "install_failed",
++            #        "attempt": -1,
++            #        "pid": pid,
++            #        "thread_uuid": uuid,
++            #        "public_ip": ip,
++            #        "private_ip": private_ip,
++            #        "timestamp": datetime.utcnow().isoformat(),
++            #        "tags": ["install_failed", "module2f_exception", type(e).__name__] + extra_tags
++            #    }
++
++
++
++
+     # Persist results to disk
+     out_path = os.path.join(LOG_DIR, "module2f_resurrection_results.json")
+     with open(out_path, "w") as f:
