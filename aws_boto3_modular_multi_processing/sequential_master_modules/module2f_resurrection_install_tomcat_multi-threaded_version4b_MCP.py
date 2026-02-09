@@ -1095,7 +1095,7 @@ def resurrection_install_tomcat(
                                         f"exit_status_{exit_status}",
                                         "exit_status_nonzero_stderr_blank"
                                     ]
-                                }
+                                }
                             ssh.close()
                             return ip, private_ip, registry_entry
                         else:
