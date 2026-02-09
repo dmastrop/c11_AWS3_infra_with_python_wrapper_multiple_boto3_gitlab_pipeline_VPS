@@ -1293,6 +1293,12 @@ def resurrection_install_tomcat(
 
 
 
+
+                #### Insert AI/MCP HOOK HERE before the except block below ####
+
+
+
+
                 # This is an exception within the for attempt loop for a command for the try block inside of the for attempt loop
                 except Exception as e:
                     print(f"[{ip}] Exception during exec_command: {e}")
@@ -1392,7 +1398,7 @@ def resurrection_install_tomcat(
         return ip, private_ip, registry_entry
 
 
-
+##### end of def resurrection_install_tomcat
 
 
 
