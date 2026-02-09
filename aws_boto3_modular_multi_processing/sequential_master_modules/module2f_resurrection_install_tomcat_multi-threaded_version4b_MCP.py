@@ -1095,7 +1095,7 @@ def resurrection_install_tomcat(
                                         f"exit_status_{exit_status}",
                                         "exit_status_nonzero_stderr_blank"
                                     ]
-                                }
+                                }
                             ssh.close()
                             return ip, private_ip, registry_entry
                         else:
@@ -1116,26 +1116,182 @@ def resurrection_install_tomcat(
                                 "private_ip": private_ip,
                                 "timestamp": str(datetime.utcnow()),
                                 "tags": base_tags + [
-                                    "stderr_detected",
+                                
+                                    "stderr_detected",  ##### MODULE2 spliced in code and refactored. Starts here. This needs to be refactored for module2f. Do as minimal edits as possible and leave in the comments so I can identify this. 
                                     command,
                                     f"command_retry_{attempt + 1}",
-                                    "exit_status_zero",
+                                    "exit_status_zero",   # We know exit_status is zero here.
                                     "non_whitelisted_stderr",
-                                    *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],
-                                    *stderr_output.strip().splitlines()[:25]
+                                    *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # First few lines for traceability.
+                                    *stderr_output.strip().splitlines()[:25]  # Snapshot for traceability.
                                 ]
                             }
+                            #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
                             ssh.close()
                             return ip, private_ip, registry_entry
                         else:
-                            print(f"[{ip}] Unexpected stderr — retrying...")
+                            print(f"[{ip}] ⚠️ Unexpected strace stderr — retrying attempt {attempt + 1}")
+                            #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
+                    ###############################################
+                    ############ non-strace logic: #################    
+
+
+                    #print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
+
+
+                    # 🔍 Case 1: Non-zero exit status — failure or stub
+                    if exit_status != 0:
+                        if attempt == RETRY_LIMIT - 1:
+                            pid = multiprocessing.current_process().pid
+                            thread_id = threading.get_ident()
+                            timestamp = str(datetime.utcnow())
+
+                            if stderr_output.strip():
+                                registry_entry = {
+                                    "status": "install_failed",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": thread_id,
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": timestamp,
+                                    "tags": base_tags + [
+                                    #"tags": [
+                                        "fatal_exit_nonzero",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        f"exit_status_{exit_status}",
+                                        "stderr_present",
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for forensic trace
+                                        *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
+                                    ]
+                                }
+                            else:
+                                registry_entry = {
+                                    "status": "stub",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": thread_id,
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": timestamp,
+                                    "tags": base_tags + [
+                                    #"tags": [
+                                        "silent_failure",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        f"exit_status_{exit_status}",
+                                        "exit_status_nonzero_stderr_blank"
+                                    ]
+                                }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Non-zero exit — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
+
+                    # 🔍 Case 2: Zero exit but non-whitelisted stderr — unexpected failure
+                    elif non_whitelisted_lines:
+                        if attempt == RETRY_LIMIT - 1:
+                            pid = multiprocessing.current_process().pid
+                            thread_id = threading.get_ident()
+                            timestamp = str(datetime.utcnow())
+
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": -1,
+                                "pid": pid,
+                                "thread_id": thread_id,
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": timestamp,
+                                "tags": base_tags + [
+                                #"tags": [      ## END of Module2 splice
+
+                                        "stderr_detected",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        "exit_status_zero",
+                                        "non_whitelisted_stderr",
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],
+                                        *stderr_output.strip().splitlines()[:25]
+                                    ]
+                                }
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+                            else:
+                                print(f"[{ip}] Unexpected stderr — retrying...")
+                                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                                continue
 
                     # Success
                     command_succeeded = True
                     time.sleep(5)  # keep this short in resurrection
                     break
+
+
+
+
+                    #### Another splice from module2 starts here ####
+                    
+                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ## and failed registry entries uniless all retries have been exhausted
+                    # ⚠️ Unexpected stderr — retry instead of exiting
+                    if stderr_output.strip():
+                        if attempt == RETRY_LIMIT - 1:
+                            print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": -1,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "tags": base_tags + [
+                                #"tags": [
+                                    "stderr_detected",
+                                    command,
+                                    f"command_retry_{attempt + 1}",  # e.g. command_retry_3
+                                    *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
+                                ]
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
+
+                    ##### Continue the module2 splice into module2f ###### 
+                    ##### BLOCK5(5) Command succeeded default.
+
+                    print(f"[{ip}] ✅ Command succeeded.")
+                    ## set the command_succeeded flag to True if installation of the command x of 4 succeeded
+                    ## this will gate the install_failed registry_entry following this "for attempt" block
+                    ## The successful install can then proceed to the next for idx command (outer loop) and once
+                    ## the for idx loop is done it will proceed through the code to the registry_entry install_succeeded
+                    
+                    command_succeeded = True
+                    
+                    #if "strace" in command:  ## clear trace2
+                    #    ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before next command for strace
+
+                    time.sleep(20)
+                    break  # Success. This is a break out of the for attempt loop. The install_failed registry_entry logic
+                    # is gated so that it will not fire if there is this break for Success
+
+                    ##### end the module2 splice into module2f #######
+
+
+
 
                 # This is an exception within the for attempt loop for a command for the try block inside of the for attempt loop
                 except Exception as e:
