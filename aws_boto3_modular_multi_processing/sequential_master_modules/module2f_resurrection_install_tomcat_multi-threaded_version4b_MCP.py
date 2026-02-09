@@ -1223,12 +1223,12 @@ def resurrection_install_tomcat(
                                         *stderr_output.strip().splitlines()[:25]
                                     ]
                                 }
-                                ssh.close()
-                                return ip, private_ip, registry_entry
-                            else:
-                                print(f"[{ip}] Unexpected stderr — retrying...")
-                                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                                continue
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+                        else:
+                            print(f"[{ip}] Unexpected stderr — retrying...")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
 
                     # Success
                     command_succeeded = True
