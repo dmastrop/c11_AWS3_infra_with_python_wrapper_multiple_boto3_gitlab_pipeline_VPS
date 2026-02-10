@@ -933,11 +933,18 @@ def resurrection_install_tomcat(
         return ip, private_ip, stub_entry
 
 
-    #### END of the for attempt in range(5) block #####
+    #### END of the SSH for attempt in range(5) block #####
 
 
 
-
+    ##### initialize the following for the AI/MCP hook that has been inserted inside the for attempt loop (that is inside the for idx
+    ##### loop below). These will be used in the AI/MCP hook code, and will be used for tagging the install_success and install_failed
+    ##### cases when AI/MCP has or has not been invoked on a command to rescue the resurrection of  the node.
+    ai_invoked = False
+    ai_context = None
+    ai_plan = None
+    ai_fallback = False
+    ai_commands = []
 
 
 
