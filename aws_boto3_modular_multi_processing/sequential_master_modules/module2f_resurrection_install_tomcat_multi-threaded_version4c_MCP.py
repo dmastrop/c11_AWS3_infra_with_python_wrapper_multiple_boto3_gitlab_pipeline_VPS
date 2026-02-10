@@ -46,6 +46,55 @@ from sequential_master_modules.utils import (
 )
 
 
+##### Insertion of MCP CLient AI Request Sender block for the AI/MCP code integration
+# ------------------------------------------------------------
+# MCP CLIENT (AI Request Sender)
+# ------------------------------------------------------------
+# This object lives INSIDE module2f.
+# It is responsible for sending JSON context to the AI Gateway
+# and receiving the AI-generated recovery plan.
+#
+# module2f → MCPClient → AI Gateway → LLM → AI Gateway → MCPClient → module2f
+#
+# MCPClient NEVER interprets anything. It only:
+#   - serializes context
+#   - sends it to the AI Gateway
+#   - receives the plan
+#   - returns it to module2f
+#
+# module2f is the ONLY component that decides what to do with the plan.
+# ------------------------------------------------------------
+
+from my_mcp_client import MCPClient
+# ^ This is thePython file that implements the MCPClient class.
+#   This file is created in the repo (my_mcp_client.py).
+#   It will define and contain a simple class that wraps requests.post().
+
+# Create a global MCP client instance.
+# This object will be reused for every AI request.
+mcp = MCPClient(
+    base_url="http://localhost:8000",   # AI Gateway Service URL
+    schema_version="1.0"                # Optional versioning for future compatibility
+)
+
+def ask_ai_for_recovery(context: dict):
+    """
+    Send the failure context to the AI Gateway Service
+    and return the AI-generated recovery plan.
+
+    module2f calls THIS function inside the retry loop
+    ONLY on the final failed attempt.
+    """
+    # mcp.send() performs:
+    #   - JSON serialization
+    #   - POST to http://localhost:8000/recover
+    #   - returns parsed JSON from the AI Gateway
+    return mcp.send(context)
+
+
+
+
+
 # --- TEST OVERRIDE: inject fake InstanceId for ghosts ---
 # This will test the instance_id present reboot and health check code added to the process_ghost handler in module2e
 # It is also used to test the no_instance_id logic in module2f
@@ -1353,6 +1402,12 @@ def resurrection_install_tomcat(
                     # --------------------------------------------------------
                     print(f"AI_MCP_HOOK[{ip}] 🔍 Invoking AI/MCP recovery engine...")
                     plan = ask_ai_for_recovery(context)
+                    # The ask_ai_for_recovery function is defined inside the MCP Client (AI Request Sender block) that is
+                    # at the top of this module2f.   
+                    # The AI Request Sender block uses the my_mcp_client.py Class definition so that mcp.send(context) can
+                    # be forwarded to teh AI Gateway service that is running locally on port 8000. The AI Gateway service
+                    # then forwards the context to the AI/LLM for consultation and a plan.
+
 
                     # --------------------------------------------------------
                     # 3. Record AI invocation for tagging later
