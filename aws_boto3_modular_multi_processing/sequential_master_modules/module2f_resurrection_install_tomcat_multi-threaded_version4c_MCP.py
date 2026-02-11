@@ -66,9 +66,11 @@ from sequential_master_modules.utils import (
 # ------------------------------------------------------------
 
 from my_mcp_client import MCPClient
-# ^ This is thePython file that implements the MCPClient class.
+# ^ This is the Python file that implements the MCPClient class.
 #   This file is created in the repo (my_mcp_client.py).
 #   It will define and contain a simple class that wraps requests.post().
+#   The class has a method .send in it. The mcp.send() below is used to send/forward the context
+#   to the AI Gateway Service (ai_gateway_service.py file in the repo)
 
 # Create a global MCP client instance.
 # This object will be reused for every AI request.
@@ -90,7 +92,11 @@ def ask_ai_for_recovery(context: dict):
     #   - POST to http://localhost:8000/recover
     #   - returns parsed JSON from the AI Gateway
     return mcp.send(context)
-
+## NOTE that the AI/MCP HOOK  is inside the def resurrection_install_tocmat function and is
+## only activated on the last iteration of the command retry and only after all standard code heuristics have been 
+## used to try to execute the command on the node. The AI/MCP HOOK is the last resort. It calls the 
+## ask_ai_for_recovery function using the class defined above to send the context request to the AI Gateway Service
+## which is in the python ai_gateway_service.py file in the repo.
 
 
 
