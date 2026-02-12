@@ -1603,8 +1603,35 @@ def resurrection_install_tomcat(
 
 
                 # This is an exception within the for attempt loop for a command for the try block inside of the for attempt loop
+                #except Exception as e:
+                #    print(f"[{ip}] Exception during exec_command: {e}")
+                #    registry_entry = {
+                #        "status": "install_failed",
+                #        "attempt": -1,
+                #        "pid": multiprocessing.current_process().pid,
+                #        "thread_id": threading.get_ident(),
+                #        "thread_uuid": thread_uuid,
+                #        "public_ip": ip,
+                #        "private_ip": private_ip,
+                #        "timestamp": str(datetime.utcnow()),
+                #        "tags": base_tags + [
+                #            "install_for_attempt_loop_abort",
+                #            f"exception_{type(e).__name__}",
+                #            command,
+                #            f"command_retry_{attempt + 1}"
+                #        ]
+                #    }
+                #    ssh.close()
+                #    return ip, private_ip, registry_entry
+             
+                # This is an exception within the for-attempt loop for a command
+                # for the try block inside of the for-attempt loop (POST-HOOK)
                 except Exception as e:
                     print(f"[{ip}] Exception during exec_command: {e}")
+
+                    # AI/MCP tag and ai_meta integration
+                    ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
+
                     registry_entry = {
                         "status": "install_failed",
                         "attempt": -1,
@@ -1614,16 +1641,17 @@ def resurrection_install_tomcat(
                         "public_ip": ip,
                         "private_ip": private_ip,
                         "timestamp": str(datetime.utcnow()),
+                        "ai_metadata": ai_meta,  # AI/MCP integration
                         "tags": base_tags + [
                             "install_for_attempt_loop_abort",
                             f"exception_{type(e).__name__}",
                             command,
                             f"command_retry_{attempt + 1}"
-                        ]
+                        ] + ai_tags,  # AI/MCP integration
                     }
+
                     ssh.close()
                     return ip, private_ip, registry_entry
-             
 
 
 
@@ -1634,7 +1662,24 @@ def resurrection_install_tomcat(
             # If it gets here then the command failed and one command failed is an install_failed.
 
 
+            #if not command_succeeded:
+            #    registry_entry = {
+            #        "status": "install_failed",
+            #        "attempt": -1,
+            #        "pid": multiprocessing.current_process().pid,
+            #        "thread_id": threading.get_ident(),
+            #        "thread_uuid": thread_uuid,
+            #        "public_ip": ip,
+            #        "private_ip": private_ip,
+            #        "timestamp": str(datetime.utcnow()),
+            #        "tags": base_tags + [f"install_failed_command_{idx}", original_command]
+            #    }
+            #    ssh.close()
+            #    return ip, private_ip, registry_entry
+            
+            # AI/MCP tag and ai_meta integration
             if not command_succeeded:
+                ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
                 registry_entry = {
                     "status": "install_failed",
                     "attempt": -1,
@@ -1644,13 +1689,43 @@ def resurrection_install_tomcat(
                     "public_ip": ip,
                     "private_ip": private_ip,
                     "timestamp": str(datetime.utcnow()),
-                    "tags": base_tags + [f"install_failed_command_{idx}", original_command]
+                    "ai_metadata": ai_meta,  # AI/MCP integration
+                    "tags": base_tags + [
+                        f"install_failed_command_{idx}",
+                        original_command
+                    ] + ai_tags,  # AI/MCP integration
                 }
                 ssh.close()
                 return ip, private_ip, registry_entry
 
 
+
+
         ##### End of the for idx loop
+
+        ## All commands succeeded
+        ## If it gets this far then the for attempt loops iterated all the way through without failure and all of the commands 
+        ## succeeded over all the for idx commands. This is an install_success for the node.
+
+        #transport = ssh.get_transport()
+        #if transport:
+        #    transport.close()
+        #ssh.close()
+
+        #registry_entry = {
+        #    "status": "install_success",
+        #    "attempt": 0,
+        #    "timestamp": str(datetime.utcnow()),
+        #    "pid": multiprocessing.current_process().pid,
+        #    "thread_id": threading.get_ident(),
+        #    "thread_uuid": thread_uuid,
+        #    "public_ip": ip,
+        #    "private_ip": private_ip,
+        #    "tags": base_tags + ["installation_completed"] + ([non_shell_failure_tag] if non_shell_failure_tag else [])
+        #}
+        #return ip, private_ip, registry_entry
+
+
 
         # All commands succeeded
         # If it gets this far then the for attempt loops iterated all the way through without failure and all of the commands 
@@ -1661,6 +1736,9 @@ def resurrection_install_tomcat(
             transport.close()
         ssh.close()
 
+        # AI/MCP tag and ai_meta integration
+        ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
+
         registry_entry = {
             "status": "install_success",
             "attempt": 0,
@@ -1670,23 +1748,49 @@ def resurrection_install_tomcat(
             "thread_uuid": thread_uuid,
             "public_ip": ip,
             "private_ip": private_ip,
-            "tags": base_tags + ["installation_completed"] + ([non_shell_failure_tag] if non_shell_failure_tag else [])
+            "ai_metadata": ai_meta,  # AI/MCP integration
+            "tags": base_tags + ["installation_completed"] + (
+                [non_shell_failure_tag] if non_shell_failure_tag else []
+            ) + ai_tags,  # AI/MCP integration
         }
+
         return ip, private_ip, registry_entry
-
-
 
 
     #### end of the try block
 
 
 
-    # This is an except block for the try block that has both for idx loop and for attempt retry loop.
+    ## This is an except block for the try block that has both for idx loop and for attempt retry loop.
+    #except Exception as e:
+    #    try:
+    #        ssh.close()
+    #    except Exception:
+    #        pass
+    #    registry_entry = {
+    #        "status": "install_failed",
+    #        "attempt": -1,
+    #        "pid": multiprocessing.current_process().pid,
+    #        "thread_id": threading.get_ident(),
+    #        "thread_uuid": thread_uuid,
+    #        "public_ip": ip,
+    #        "private_ip": private_ip,
+    #        "timestamp": str(datetime.utcnow()),
+    #        "tags": base_tags + ["resurrection_unhandled_exception", type(e).__name__]
+    #    }
+    #    return ip, private_ip, registry_entry
+
+
+    # This is an except block for the try block that has both the for-idx loop and the for-attempt retry loop.
     except Exception as e:
         try:
             ssh.close()
         except Exception:
             pass
+
+        # AI/MCP tag and ai_meta integration
+        ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
+
         registry_entry = {
             "status": "install_failed",
             "attempt": -1,
@@ -1696,8 +1800,13 @@ def resurrection_install_tomcat(
             "public_ip": ip,
             "private_ip": private_ip,
             "timestamp": str(datetime.utcnow()),
-            "tags": base_tags + ["resurrection_unhandled_exception", type(e).__name__]
+            "ai_metadata": ai_meta,  # AI/MCP integration
+            "tags": base_tags + [
+                "resurrection_unhandled_exception",
+                type(e).__name__
+            ] + ai_tags,  # AI/MCP integration
         }
+
         return ip, private_ip, registry_entry
 
 
