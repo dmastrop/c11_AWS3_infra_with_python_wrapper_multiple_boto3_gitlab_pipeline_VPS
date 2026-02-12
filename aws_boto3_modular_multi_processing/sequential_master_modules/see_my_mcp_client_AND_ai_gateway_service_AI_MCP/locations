@@ -1,0 +1,8 @@
+Locations for the my_mcp_client.pdf and the ai_gatewway_service.py are in the ../sequential_master_modules directly along with
+modules 2 through 2f and the utility helper functions files:
+
+utils.py
+utils_sg_state.py
+
+
+Module1 is restart_the_EC_multiple_instances_with_client_method_DEBUG.py

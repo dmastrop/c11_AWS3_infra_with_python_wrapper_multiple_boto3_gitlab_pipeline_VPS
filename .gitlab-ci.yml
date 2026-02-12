@@ -189,6 +189,8 @@ deploy:
     - echo 'DB_USERNAME='${DB_USERNAME} >> .env
     - echo 'DB_PASSWORD='${DB_PASSWORD} >> .env
 
+    - echo 'API_KEY='${API_KEY} >> .env    # this is used for the AI/MCP Phase4a integration project in module2 and module2f. This is for communication from the AI Request Sender to the AI Gateway Service to the LLM. The AI Gateway Service will use this API_KEY to communicate with the LLM (OPEN AI GPT in this case).
+
     - echo 'SG_RULES_S3_BUCKET=c11-sg-rules-state' >> .env  # this is for the stateful SG implementation in module2 and 2e
 
 

@@ -3,7 +3,13 @@
 # ------------------------------------------------------------
 # This is a SEPARATE PROCESS that is run  manually or via CI:
 #
-#   python ai_gateway_service.py
+#   python ai_gateway_service.py run natively on the VPS will not work. FastAPI apps must be served by an ASGI server
+#   The best way to do this on the VPS is to do the following
+#   On the VPS do: pip install uvicorn fastapi
+#   Then on the VPS do: uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000
+#   This will start the AI Gateway Service (FastAPI) on a ASGI server locally on the VPS
+#   This will start the port 8000 locally on the VPS.
+#
 # 
 # Alternatively start it during the gitlab pipeline run using the following in the .gitlab-ci.yml file:
 # It has to be started BEFORE any of the python modules run
@@ -11,11 +17,12 @@
 #    - pip install fastapi uvicorn requests
 #    - nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
 #    - sleep 3
-#This:
-
-#- launches the gateway in the background  
-#- keeps it running during the job  
-#- ensures module2f can reach it  
+# This:
+#
+# - launches the gateway in the background  
+# - keeps it running during the job  
+# - ensures module2f can reach it  
+#
 #  For gitlab CI Use **uvicorn**, not:
 #       python ai_gateway_service.py
 #  because FastAPI apps must be served by an ASGI server.
@@ -42,7 +49,10 @@ app = FastAPI()
 LLM_API = "https://api.openai.com/v1/chat/completions"
 
 # The API key for the LLM
-API_KEY = "api-key"   # <-- replace with real key or load from env
+#API_KEY = "api-key"   # <-- replace with real key or load from env
+API_KEY = os.getenv("API_KEY") # this is the OpenAPI API_KEY in the variables for this gitlab pipeline.
+
+
 
 # ------------------------------------------------------------
 # Define the expected POST body using Pydantic

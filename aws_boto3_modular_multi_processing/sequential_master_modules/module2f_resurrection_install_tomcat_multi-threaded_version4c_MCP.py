@@ -1003,6 +1003,63 @@ def resurrection_install_tomcat(
 
 
 
+    # ------------------------------------------------------------
+    # AI/MCP tagging helper (no control-flow changes)
+    # This will be used in the registry_entrys that are towards the end of the for attempt in range loop, at the end of the 
+    # for idx loop and for the try block exception registry_entry outside of the for attempt and for idx loops
+    # This loop runs POST AI/MCP HOOK, after AI has had a chance to work on the command for the thread. It will append ai
+    # related tags (see above variable) and ai related registry fields as well for forensics. ai_meta will be used to add
+    # the fields and ai_tags will be used to append the tags to existing tags.
+    # ------------------------------------------------------------
+    def _build_ai_metadata_and_tags():
+        """
+        Build a compact AI metadata dict and tag list for registry_entry.
+        - Does NOT change control flow.
+        - Safe to call from any registry_entry block.
+        """
+        ai_meta = {
+            "ai_invoked": ai_invoked,
+            "ai_fallback": ai_fallback,
+            "ai_plan_action": ai_plan.get("action") if isinstance(ai_plan, dict) else None,
+            "ai_commands": ai_commands[:] if isinstance(ai_commands, list) else [],
+        }
+
+        ai_tags = []
+
+        # High-level flags
+        if ai_invoked:
+            ai_tags.append("ai_invoked_true")
+        else:
+            ai_tags.append("ai_invoked_false")
+
+        if ai_fallback:
+            ai_tags.append("ai_fallback_true")
+
+        if isinstance(ai_plan, dict) and ai_plan.get("action"):
+            ai_tags.append(f"ai_plan_action:{ai_plan.get('action')}")
+
+        # Per-command AI assistance markers
+        # Expectation: ai_commands is a list of dicts or strings.
+        # If dict: look for {"command": "...", "ai_assisted": bool}
+        # If string: assume AI-assisted command string.
+        for entry in ai_meta["ai_commands"]:
+            if isinstance(entry, dict):
+                cmd = entry.get("command")
+                assisted = entry.get("ai_assisted", False)
+                if cmd and assisted:
+                    ai_tags.append(f"ai_assisted:*{cmd}*")
+            elif isinstance(entry, str):
+                # Conservative: treat plain strings as AI-assisted commands
+                ai_tags.append(f"ai_assisted:*{entry}*")
+
+        return ai_meta, ai_tags
+    # ------------------------------------------------------------
+
+
+
+
+
+
     # Replay commands: whitelist-driven logic; strace exit overrides; adaptive watchdogs per stream
     try:
         for idx, command in enumerate(replayed_commands):
