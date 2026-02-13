@@ -2,10 +2,8 @@ import requests
 import json
 
 
-    """
-    Minimal client used by module2f to send context to the AI Gateway Service.
-    This class intentionally contains no multiprocessing or threading logic.
-    """
+# Minimal client used by module2f to send context to the AI Gateway Service.
+# This class intentionally contains no multiprocessing or threading logic.
 
 class MCPClient:
     def __init__(self, base_url, schema_version="1.0"):
@@ -13,9 +11,8 @@ class MCPClient:
         self.schema_version = schema_version
 
     def send(self, context: dict):
-        """
-        Send context to the AI Gateway Service and return the plan.
-        """
+        #Send context to the AI Gateway Service and return the plan.
+        
         try:
             response = requests.post(
                 f"{self.base_url}/recover",
