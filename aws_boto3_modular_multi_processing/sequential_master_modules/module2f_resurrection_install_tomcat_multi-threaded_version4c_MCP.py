@@ -1413,191 +1413,191 @@ def resurrection_install_tomcat(
 
 
 
-                #### Insert AI/MCP HOOK HERE before the except block below ####
+                    #### Insert AI/MCP HOOK HERE before the except block below ####
 
-                # ------------------------------------------------------------
-                # AI/MCP HOOK — ONLY ON FINAL FAILED ATTEMPT
-                # ------------------------------------------------------------
-                # Conditions for invoking AI:
-                #   • exit_status != 0  → command failed
-                #   • attempt == RETRY_LIMIT - 1 → this is the FINAL retry
-                #   • stderr/whitelist logic above has already run
-                #   • module2f is about to classify this as install_failed
-                #
-                # This is the LAST CHANCE before module2f gives up.
-                # ------------------------------------------------------------
-                if exit_status != 0 and attempt == RETRY_LIMIT - 1:
-
-                    # --------------------------------------------------------
-                    # 1. Build the AI context payload
-                    # --------------------------------------------------------
-                    # This captures EVERYTHING the AI needs to reason:
-                    #   - command that failed
-                    #   - stdout/stderr
-                    #   - exit status
-                    #   - retry count
-                    #   - instance metadata
-                    #   - OS info (if available)
-                    #   - command history (if available)
-                    #   - original module2e tags (extra_tags)
+                    # ------------------------------------------------------------
+                    # AI/MCP HOOK — ONLY ON FINAL FAILED ATTEMPT
+                    # ------------------------------------------------------------
+                    # Conditions for invoking AI:
+                    #   • exit_status != 0  → command failed
+                    #   • attempt == RETRY_LIMIT - 1 → this is the FINAL retry
+                    #   • stderr/whitelist logic above has already run
+                    #   • module2f is about to classify this as install_failed
                     #
-                    # NOTE: These variables (os_info, command_history, extra_tags)
-                    #       must already exist in module2f or be set to None.
-                    # --------------------------------------------------------
-                    context = {
-                        "command": original_command,
-                        "stdout": stdout_output,
-                        "stderr": stderr_output,
-                        "exit_status": exit_status,
-                        "attempt": attempt + 1,
-                        "instance_id": instance_id,
-                        "ip": ip,
-                        "tags": extra_tags,
-                        "os_info": globals().get("os_info", None),
-                        "history": globals().get("command_history", None),
-                    }
+                    # This is the LAST CHANCE before module2f gives up.
+                    # ------------------------------------------------------------
+                    if exit_status != 0 and attempt == RETRY_LIMIT - 1:
 
-                    # --------------------------------------------------------
-                    # 2. Call the AI Gateway Service through the MCP client
-                    # --------------------------------------------------------
-                    # ask_ai_for_recovery() → MCPClient.send() → POST /recover
-                    # The AI Gateway forwards context to the LLM and returns a plan.
-                    # --------------------------------------------------------
-                    print(f"AI_MCP_HOOK[{ip}] 🔍 Invoking AI/MCP recovery engine...")
-                    plan = ask_ai_for_recovery(context)
-                    # The ask_ai_for_recovery function is defined inside the MCP Client (AI Request Sender block) that is
-                    # at the top of this module2f.   
-                    # The AI Request Sender block uses the my_mcp_client.py Class definition so that mcp.send(context) can
-                    # be forwarded to teh AI Gateway service that is running locally on port 8000. The AI Gateway service
-                    # then forwards the context to the AI/LLM for consultation and a plan.
+                        # --------------------------------------------------------
+                        # 1. Build the AI context payload
+                        # --------------------------------------------------------
+                        # This captures EVERYTHING the AI needs to reason:
+                        #   - command that failed
+                        #   - stdout/stderr
+                        #   - exit status
+                        #   - retry count
+                        #   - instance metadata
+                        #   - OS info (if available)
+                        #   - command history (if available)
+                        #   - original module2e tags (extra_tags)
+                        #
+                        # NOTE: These variables (os_info, command_history, extra_tags)
+                        #       must already exist in module2f or be set to None.
+                        # --------------------------------------------------------
+                        context = {
+                            "command": original_command,
+                            "stdout": stdout_output,
+                            "stderr": stderr_output,
+                            "exit_status": exit_status,
+                            "attempt": attempt + 1,
+                            "instance_id": instance_id,
+                            "ip": ip,
+                            "tags": extra_tags,
+                            "os_info": globals().get("os_info", None),
+                            "history": globals().get("command_history", None),
+                        }
+
+                        # --------------------------------------------------------
+                        # 2. Call the AI Gateway Service through the MCP client
+                        # --------------------------------------------------------
+                        # ask_ai_for_recovery() → MCPClient.send() → POST /recover
+                        # The AI Gateway forwards context to the LLM and returns a plan.
+                        # --------------------------------------------------------
+                        print(f"AI_MCP_HOOK[{ip}] 🔍 Invoking AI/MCP recovery engine...")
+                        plan = ask_ai_for_recovery(context)
+                        # The ask_ai_for_recovery function is defined inside the MCP Client (AI Request Sender block) that is
+                        # at the top of this module2f.   
+                        # The AI Request Sender block uses the my_mcp_client.py Class definition so that mcp.send(context) can
+                        # be forwarded to teh AI Gateway service that is running locally on port 8000. The AI Gateway service
+                        # then forwards the context to the AI/LLM for consultation and a plan.
 
 
-                    # --------------------------------------------------------
-                    # 3. Record AI invocation for tagging later
-                    # --------------------------------------------------------
-                    ai_invoked = True
-                    ai_context = context
-                    ai_plan = plan
+                        # --------------------------------------------------------
+                        # 3. Record AI invocation for tagging later
+                        # --------------------------------------------------------
+                        ai_invoked = True
+                        ai_context = context
+                        ai_plan = plan
 
-                    # --------------------------------------------------------
-                    # 4. Detect fallback conditions
-                    # --------------------------------------------------------
-                    # The MCP client returns:
-                    #   {"error": "...", "action": "fallback"}
-                    # when:
-                    #   - AI Gateway is down
-                    #   - HTTP error
-                    #   - timeout
-                    #   - invalid JSON
-                    #
-                    # In fallback mode:
-                    #   • DO NOT apply any plan
-                    #   • Continue with native module2f logic
-                    # --------------------------------------------------------
-                    if plan is None or plan.get("action") == "fallback" or "error" in plan:
-                        print(f"AI_MCP_HOOK[{ip}] ⚠️ AI fallback triggered — continuing with native logic.")
-                        ai_fallback = True
-                        # DO NOT return here — allow module2f to classify failure normally
-                        # (the install_failed block below will tag ai_fallback)
-                    else:
-                        # ----------------------------------------------------
-                        # 5. AI returned a valid plan — apply it
-                        # ----------------------------------------------------
-                        action = plan.get("action")
-                        print(f"AI_MCP_HOOK[{ip}] 🤖 AI plan received: action={action}")
-
-                        # ----------------------------------------------------
-                        # ACTION: cleanup_and_retry
-                        # ----------------------------------------------------
-                        if action == "cleanup_and_retry":
-                            cleanup_cmds = plan.get("cleanup", [])
-                            retry_cmd = plan.get("retry")
-
-                            # Track commands for tagging
-                            ai_commands.extend(cleanup_cmds)
-                            if retry_cmd:
-                                ai_commands.append(retry_cmd)
-
-                            # ------------------------------------------------
-                            # 5A. Run cleanup commands
-                            # ------------------------------------------------
-                            for ccmd in cleanup_cmds:
-                                print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
-                                cin, cout, cerr = ssh.exec_command(ccmd, timeout=60)
-                                cout.channel.settimeout(WATCHDOG_TIMEOUT)
-                                cerr.channel.settimeout(WATCHDOG_TIMEOUT)
-                                _co, _cs = read_output_with_watchdog(cout, "STDOUT", ip, WATCHDOG_TIMEOUT)
-                                _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
-
-                            # ------------------------------------------------
-                            # 5B. Run retry command
-                            # ------------------------------------------------
-                            if retry_cmd:
-                                print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {retry_cmd}")
-                                rin, rout, rerr = ssh.exec_command(retry_cmd, timeout=60)
-                                rout.channel.settimeout(WATCHDOG_TIMEOUT)
-                                rerr.channel.settimeout(WATCHDOG_TIMEOUT)
-
-                                r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
-                                r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
-                                r_exit = rout.channel.recv_exit_status()
-
-                                print(f"AI_MCP_HOOK[{ip}] AI retry exit={r_exit}")
-
-                                # ------------------------------------------------
-                                # 5C. Re-evaluate success using SAME logic as module2f
-                                # ------------------------------------------------
-                                if r_exit == 0 and not r_stderr.strip():
-                                    print(f"AI_MCP_HOOK[{ip}] 🎉 AI successfully repaired the command!")
-                                    command_succeeded = True
-                                    break  # break out of attempt loop
-                                else:
-                                    print(f"AI_MCP_HOOK[{ip}] ❌ AI retry failed — falling back to native logic.")
-                                    # DO NOT break — allow module2f to classify failure normally
-
-                        # ----------------------------------------------------
-                        # ACTION: retry_with_modified_command
-                        # ----------------------------------------------------
-                        elif action == "retry_with_modified_command":
-                            new_cmd = plan.get("retry")
-                            if new_cmd:
-                                ai_commands.append(new_cmd)
-                                print(f"AI_MCP_HOOK[{ip}] 🔁 AI modified retry: {new_cmd}")
-
-                                rin, rout, rerr = ssh.exec_command(new_cmd, timeout=60)
-                                rout.channel.settimeout(WATCHDOG_TIMEOUT)
-                                rerr.channel.settimeout(WATCHDOG_TIMEOUT)
-
-                                r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
-                                r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
-                                r_exit = rout.channel.recv_exit_status()
-
-                                if r_exit == 0 and not r_stderr.strip():
-                                    print(f"AI_MCP_HOOK[{ip}] 🎉 AI modified command succeeded!")
-                                    command_succeeded = True
-                                    break
-                                else:
-                                    print(f"AI_MCP_HOOK[{ip}] ❌ AI modified retry failed — falling back to native logic.")
-
-                        # ----------------------------------------------------
-                        # ACTION: abort
-                        # ----------------------------------------------------
-                        elif action == "abort":
-                            print(f"AI_MCP_HOOK[{ip}] 🛑 AI instructed abort — tagging failure.")
-                            ai_commands.append("abort")
-                            # Let module2f classify failure normally
-
-                        # ----------------------------------------------------
-                        # Unknown action
-                        # ----------------------------------------------------
-                        else:
-                            print(f"AI_MCP_HOOK[{ip}] ⚠️ Unknown AI action '{action}' — ignoring plan.")
+                        # --------------------------------------------------------
+                        # 4. Detect fallback conditions
+                        # --------------------------------------------------------
+                        # The MCP client returns:
+                        #   {"error": "...", "action": "fallback"}
+                        # when:
+                        #   - AI Gateway is down
+                        #   - HTTP error
+                        #   - timeout
+                        #   - invalid JSON
+                        #
+                        # In fallback mode:
+                        #   • DO NOT apply any plan
+                        #   • Continue with native module2f logic
+                        # --------------------------------------------------------
+                        if plan is None or plan.get("action") == "fallback" or "error" in plan:
+                            print(f"AI_MCP_HOOK[{ip}] ⚠️ AI fallback triggered — continuing with native logic.")
                             ai_fallback = True
-                            # Continue with native logic
+                            # DO NOT return here — allow module2f to classify failure normally
+                            # (the install_failed block below will tag ai_fallback)
+                        else:
+                            # ----------------------------------------------------
+                            # 5. AI returned a valid plan — apply it
+                            # ----------------------------------------------------
+                            action = plan.get("action")
+                            print(f"AI_MCP_HOOK[{ip}] 🤖 AI plan received: action={action}")
 
-                # ------------------------------------------------------------
-                # END OF AI/MCP HOOK
-                # ------------------------------------------------------------
+                            # ----------------------------------------------------
+                            # ACTION: cleanup_and_retry
+                            # ----------------------------------------------------
+                            if action == "cleanup_and_retry":
+                                cleanup_cmds = plan.get("cleanup", [])
+                                retry_cmd = plan.get("retry")
+
+                                # Track commands for tagging
+                                ai_commands.extend(cleanup_cmds)
+                                if retry_cmd:
+                                    ai_commands.append(retry_cmd)
+
+                                # ------------------------------------------------
+                                # 5A. Run cleanup commands
+                                # ------------------------------------------------
+                                for ccmd in cleanup_cmds:
+                                    print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
+                                    cin, cout, cerr = ssh.exec_command(ccmd, timeout=60)
+                                    cout.channel.settimeout(WATCHDOG_TIMEOUT)
+                                    cerr.channel.settimeout(WATCHDOG_TIMEOUT)
+                                    _co, _cs = read_output_with_watchdog(cout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                                    _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+
+                                # ------------------------------------------------
+                                # 5B. Run retry command
+                                # ------------------------------------------------
+                                if retry_cmd:
+                                    print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {retry_cmd}")
+                                    rin, rout, rerr = ssh.exec_command(retry_cmd, timeout=60)
+                                    rout.channel.settimeout(WATCHDOG_TIMEOUT)
+                                    rerr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                                    r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                                    r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+                                    r_exit = rout.channel.recv_exit_status()
+
+                                    print(f"AI_MCP_HOOK[{ip}] AI retry exit={r_exit}")
+
+                                    # ------------------------------------------------
+                                    # 5C. Re-evaluate success using SAME logic as module2f
+                                    # ------------------------------------------------
+                                    if r_exit == 0 and not r_stderr.strip():
+                                        print(f"AI_MCP_HOOK[{ip}] 🎉 AI successfully repaired the command!")
+                                        command_succeeded = True
+                                        break  # break out of attempt loop
+                                    else:
+                                        print(f"AI_MCP_HOOK[{ip}] ❌ AI retry failed — falling back to native logic.")
+                                        # DO NOT break — allow module2f to classify failure normally
+
+                            # ----------------------------------------------------
+                            # ACTION: retry_with_modified_command
+                            # ----------------------------------------------------
+                            elif action == "retry_with_modified_command":
+                                new_cmd = plan.get("retry")
+                                if new_cmd:
+                                    ai_commands.append(new_cmd)
+                                    print(f"AI_MCP_HOOK[{ip}] 🔁 AI modified retry: {new_cmd}")
+
+                                    rin, rout, rerr = ssh.exec_command(new_cmd, timeout=60)
+                                    rout.channel.settimeout(WATCHDOG_TIMEOUT)
+                                    rerr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                                    r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                                    r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+                                    r_exit = rout.channel.recv_exit_status()
+
+                                    if r_exit == 0 and not r_stderr.strip():
+                                        print(f"AI_MCP_HOOK[{ip}] 🎉 AI modified command succeeded!")
+                                        command_succeeded = True
+                                        break
+                                    else:
+                                        print(f"AI_MCP_HOOK[{ip}] ❌ AI modified retry failed — falling back to native logic.")
+
+                            # ----------------------------------------------------
+                            # ACTION: abort
+                            # ----------------------------------------------------
+                            elif action == "abort":
+                                print(f"AI_MCP_HOOK[{ip}] 🛑 AI instructed abort — tagging failure.")
+                                ai_commands.append("abort")
+                                # Let module2f classify failure normally
+
+                            # ----------------------------------------------------
+                            # Unknown action
+                            # ----------------------------------------------------
+                            else:
+                                print(f"AI_MCP_HOOK[{ip}] ⚠️ Unknown AI action '{action}' — ignoring plan.")
+                                ai_fallback = True
+                                # Continue with native logic
+
+                    # ------------------------------------------------------------
+                    # END OF AI/MCP HOOK
+                    # ------------------------------------------------------------
 
 
 
