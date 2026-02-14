@@ -737,7 +737,8 @@ very complex module2.
 
 
 
-WIP.
+WIP.  The early testing on this looks good. A separate UPDATE with the detailed architectural design and code implemenation 
+will be presented. The high level architecture presented in this UPDATE was adhered to through the design. 
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
