@@ -1639,6 +1639,35 @@ def resurrection_install_tomcat(
 
 
                     ######## COMMENT OUT THE AI/MCP HOOK HERE AND USE THE HELPER FUNCTION DEFINED ABOVE ###########
+                    if exit_status != 0 and attempt == RETRY_LIMIT - 1:
+                        # ------------------------------------------------------------
+                        # AI/MCP HOOK (via helper)
+                        # ------------------------------------------------------------
+                        result = _invoke_ai_hook(
+                            original_command=original_command,
+                            stdout_output=stdout_output,
+                            stderr_output=stderr_output,
+                            exit_status=exit_status,
+                            attempt=attempt,
+                            instance_id=instance_id,
+                            ip=ip,
+                            extra_tags=extra_tags,
+                            ssh=ssh
+                        )
+
+                        # If AI fixed the command → mark success and break out of attempt loop
+                        if result["ai_fixed"]:
+                            stdout_output = result["new_stdout"]
+                            stderr_output = result["new_stderr"]
+                            exit_status = result["new_exit_status"]
+                            command_succeeded = True
+                            break
+
+                        # If AI ran but failed → allow native logic to classify failure normally
+                        # (install_failed block below will run because command_succeeded still set to False)
+                        stdout_output = result["new_stdout"]
+                        stderr_output = result["new_stderr"]
+                        exit_status = result["new_exit_status"]
 
 
 
