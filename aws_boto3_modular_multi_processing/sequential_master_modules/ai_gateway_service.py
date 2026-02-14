@@ -76,6 +76,11 @@ def recover(request: RecoveryRequest):
 
     # Extract context from AI Request Sender POST to this AI Gateway Service
     context = request.context
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+
+
 
     # --------------------------------------------------------
     # Forward the context to the LLM
@@ -112,6 +117,9 @@ def recover(request: RecoveryRequest):
             },
             json={
                 "model": "gpt-5",
+                "temperature": 0,
+                "response_format": {"type": "json_object"},
+
                 "messages": [
                     {
                         "role": "system",
@@ -146,9 +154,38 @@ def recover(request: RecoveryRequest):
 
         # If HTTP status is not 2xx, raise exception and print the error using except block below.
         response.raise_for_status()
+        plan = response.json()
+        # --------------------------------------------------------
+        # Validate LLM plan schema
+        # --------------------------------------------------------
+        allowed_actions = {
+            "cleanup_and_retry",
+            "retry_with_modified_command",
+            "abort",
+            "fallback",
+        }
 
-        # Return the LLM's JSON response back to module2f
-        return response.json()
+        # Must be a dict
+        if not isinstance(plan, dict):
+            return {"error": "Invalid plan format", "action": "fallback"}
+
+        action = plan.get("action")
+
+        # Validate action
+        if action not in allowed_actions:
+            return {"error": "Invalid or missing action", "action": "fallback"}
+
+        # Validate cleanup
+        if "cleanup" in plan and not isinstance(plan["cleanup"], list):
+            return {"error": "Invalid cleanup field", "action": "fallback"}
+
+        # Validate retry
+        if "retry" in plan and not isinstance(plan["retry"], str):
+            return {"error": "Invalid retry field", "action": "fallback"}
+
+        # If we reach here, plan is valid
+        return plan        # Return the LLM's JSON response back to module2f
+        #return response.json()
 
     except Exception as e:
         # If anything goes wrong, return fallback
