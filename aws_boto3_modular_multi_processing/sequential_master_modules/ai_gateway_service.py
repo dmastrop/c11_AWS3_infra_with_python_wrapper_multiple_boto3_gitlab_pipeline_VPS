@@ -81,6 +81,29 @@ def recover(request: RecoveryRequest):
     # Forward the context to the LLM
     # --------------------------------------------------------
     try:
+        ##### TESTING
+        #response = requests.post(
+        #    LLM_API,
+        #    headers={
+        #        "Authorization": f"Bearer {API_KEY}",
+        #        "Content-Type": "application/json"
+        #    },
+        #    json={
+        #        "model": "gpt-5",   # or whatever model you use
+        #        "messages": [
+        #            {"role": "system", "content": "You are a recovery engine."},
+
+        #            # The context from module2f is embedded here.
+        #            # The LLM sees the entire failure context.
+        #            {"role": "user", "content": str(context)}
+        #        ]
+        #    },
+        #    timeout=15
+        #)
+
+        ###### The real deal setup is here ######
+        # This is the plan schema for the action responses for the schema in accordance with the MCP Client (AI Request Sender)
+        # in module2f. This has the acceptable action responses as I coded it in the AI/MCP HOOK function in module2f.
         response = requests.post(
             LLM_API,
             headers={
@@ -88,17 +111,38 @@ def recover(request: RecoveryRequest):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "gpt-5",   # or whatever model you use
+                "model": "gpt-5",
                 "messages": [
-                    {"role": "system", "content": "You are a recovery engine."},
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a recovery engine.\n\n"
+                            "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
+                            "{\n"
+                            "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                            "  \"cleanup\": [string],   # optional\n"
+                            "  \"retry\": string        # optional\n"
+                            "}\n\n"
+                            "Rules:\n"
+                            "- ALWAYS choose one of the allowed actions.\n"
+                            "- NEVER return text outside the JSON.\n"
+                            "- NEVER explain your reasoning.\n"
+                            "- Use \"fallback\" if you cannot produce a valid plan.\n"
+                        )
+                    },
 
                     # The context from module2f is embedded here.
                     # The LLM sees the entire failure context.
-                    {"role": "user", "content": str(context)}
+                    {
+                        "role": "user",
+                        "content": str(context)
+                    }
                 ]
             },
             timeout=15
         )
+
+
 
         # If HTTP status is not 2xx, raise exception and print the error using except block below.
         response.raise_for_status()
