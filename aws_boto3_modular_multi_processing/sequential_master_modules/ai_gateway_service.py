@@ -42,6 +42,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
+import os
+
 
 app = FastAPI()
 
@@ -183,8 +185,8 @@ def recover(request: RecoveryRequest):
         if "retry" in plan and not isinstance(plan["retry"], str):
             return {"error": "Invalid retry field", "action": "fallback"}
 
-        # If we reach here, plan is valid
-        return plan        # Return the LLM's JSON response back to module2f
+        # If we reach here, plan is valid and return to the LLM
+        return plan
         #return response.json()
 
     except Exception as e:
