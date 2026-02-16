@@ -995,6 +995,8 @@ def resurrection_install_tomcat(
     ##### initialize the following for the AI/MCP hook that has been inserted inside the for attempt loop (that is inside the for idx
     ##### loop below). These will be used in the AI/MCP hook code, and will be used for tagging the install_success and install_failed
     ##### cases when AI/MCP has or has not been invoked on a command to rescue the resurrection of  the node.
+    ##### There are referred to as persistent state variables.
+
     ai_invoked = False
     ai_context = None
     ai_plan = None
@@ -1007,9 +1009,9 @@ def resurrection_install_tomcat(
     # AI/MCP tagging helper (no control-flow changes)
     # This will be used in the registry_entrys that are towards the end of the for attempt in range loop, at the end of the 
     # for idx loop and for the try block exception registry_entry outside of the for attempt and for idx loops
-    # This loop runs POST AI/MCP HOOK, after AI has had a chance to work on the command for the thread. It will append ai
-    # related tags (see above variable) and ai related registry fields as well for forensics. ai_meta will be used to add
-    # the fields and ai_tags will be used to append the tags to existing tags.
+    # This function runs POST AI/MCP HOOK, after AI has had a chance to work on the command for the thread. It will create the 
+    # ai_tags and ai_meta lists and variables so that they can easily be added to the tags field of the registry_entry and 
+    # added as an ai metadata field in the registry_entry.
     # ------------------------------------------------------------
     def _build_ai_metadata_and_tags():
         """
@@ -1074,6 +1076,20 @@ def resurrection_install_tomcat(
 
         Returns a dict describing the outcome:
 
+
+        (Below are control-flow variables in contrast to the nonlocal persistent state variables that are mutated directly
+        The control-flow variables are returned from this HOOK helper functon and help control the program flow given the status
+        of the ai helper application to the command. The persistent state variables on the other hand, help integrate the 
+        ai/mcp state into the registry_entry via tags and ai-metadata fields.
+        
+        The key difference between the two are that control-flow variables are required since the HOOK is now a helper function
+        and not inline in the def resurrection_install_tomcat function.  The control-flow variables must be returned by this
+        HOOK helper so that module2f can use this information to continue program flow correctly for the thread.
+        The persistent state variables are mutated directly since they are nonlocal in this HOOK helper. They do not need to 
+        be returned to the calling function like the control-flow variables.)
+
+        These are the control-flow variables
+
             {
                 "ai_ran": True/False,
                 "ai_fixed": True/False,
@@ -1083,17 +1099,192 @@ def resurrection_install_tomcat(
                 "new_stderr": "...",
                 "new_exit_status": int,
             }
+        
+            This  HOOK is no longer inline
+            So the caller needs a way to know:
 
+                Did AI fix the command?
+
+                Should I break the attempt loop?
+
+                Should I continue retrying?
+
+                Should I fall back to native logic?
+
+                What is the updated stdout/stderr/exit_status?
+
+                Persistent vars cannot answer these questions.
+
+            Why is stedout/stderr/exti_status required as a return control-flow variable??
+            Because the HOOK is no longer inline, the caller would otherwise lose:
+
+                the retry command’s stdout
+
+                the retry command’s stderr
+
+                the retry command’s exit status
+
+                These are needed for:
+                heuristics
+
+                classification
+
+                registry entries
+
+                exception handlers
+
+                post‑mortem debugging
+
+                So the helper must return them.
+
+            Example of how the control-flow variables will be used by the caller:
+                if result["ai_fixed"]:
+                    stdout_output = result["new_stdout"]
+                    stderr_output = result["new_stderr"]
+                    exit_status = result["new_exit_status"]
+                    command_succeeded = True
+                    break
+
+
+
+        These are the persistent state ai/mcp variables:
+
+            nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands    
+            
+            These will be used to mutate the registry_entry and update it to what ai/mcp has done in terms of command execution 
+            on the thread/registry_entry
+
+            _build_ai_metadata_and_tags() reads these persistent state variables later and incorprates them into the 
+            registry_entry using the ai_tags and ai_meta variables and lists.
+        
+            Example of how the persistent state variables are used to integrate into the registry_entry of a given thread:
+            
+                ai_meta, ai_tags = _build_ai_metadata_and_tags()
+
+                Inside that helper: 
+                    ai_meta = {
+                        "ai_invoked": ai_invoked,
+                        "ai_fallback": ai_fallback,
+                        "ai_plan_action": ai_plan.get("action"),
+                        "ai_commands": ai_commands[:],
+                    }
+            These live outside the HOOK helper and survive across:
+
+                attempts
+
+                commands
+
+                heuristic blocks
+
+                the entire resurrection run
+
+
+        Why persistent vars cannot replace control‑flow vars
+            Persistent vars indicate:
+
+            “AI was invoked at some point”
+
+            “Here is the plan AI chose”
+
+            “Here are the commands AI ran”
+
+            “AI fallback happened”
+
+            But they do not indicate:
+
+            “Did AI fix this command?”
+
+            “Should I break the loop?”
+
+            “Should I continue retrying?”
+
+            “What is the updated exit status?”
+
+            “What is the updated stderr?”
+
+            Those are control‑flow decisions, not metadata.
+
+
+        Why control‑flow vars cannot replace persistent vars
+            Control‑flow vars are ephemeral:
+
+            They only apply to the current HOOK invocation
+
+            They do not survive across commands
+
+            They do not survive across attempts
+
+            They do not survive across heuristic blocks
+
+            They are not used for tagging
+
+            Persistent vars are the opposite:
+
+            They survive across the entire resurrection run
+
+            They are used for tagging
+
+            They are used for metadata
+
+            They are used for forensic lineage
+
+
+        Complete code flow example:
+            
+            Step 1- HOOK helper (this function) runs:
+            
+            The HOOK helper mutates these persistent state variables directly as nonlocals:
+                ai_invoked = True
+                ai_plan = plan
+                ai_fallback = False
+                ai_commands.append(...)
+
+            The helper returns these control-flow variables:
+                {
+                    "ai_ran": True,
+                    "ai_fixed": True,
+                    "new_stdout": "...",
+                    "new_stderr": "",
+                    "new_exit_status": 0
+                }
+
+
+            Step 2-  he caller uses these conrol-flow variables like this: (the persistent variables cannot control code flow like this)
+            
+            if result["ai_fixed"]:
+                stdout_output = result["new_stdout"]
+                stderr_output = result["new_stderr"]
+                exit_status = result["new_exit_status"]
+                command_succeeded = True
+                break
+
+
+            Step 3- Later the install_success block is run assuming the rest of the commands succeed in the command list
+            
+            The following code is used to append ai/mcp tags to the registry_entry for the thread, as well as ai metadata to the 
+            registry_entry for the thread.
+
+            ai_meta, ai_tags = _build_ai_metadata_and_tags()
+
+            ai_meta = {
+                "ai_invoked": ai_invoked,
+                "ai_fallback": ai_fallback,
+                "ai_plan_action": ai_plan.get("action"),
+                "ai_commands": ai_commands[:],
+            }
+
+
+         
         This helper:
             - Builds context
             - Calls ask_ai_for_recovery()
-            - Updates ai_invoked, ai_plan, ai_fallback, ai_commands
+            - Updates ai_invoked, ai_plan, ai_fallback, ai_commands (persistent state variables) directly
             - Applies cleanup_and_retry or retry_with_modified_command
             - Re-runs the command through the SAME SSH connection
-            - Returns updated outputs for classification
+            - Returns updated outputs for classification and returns control-flow variables to the caller.
         """
 
-        nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands
+        nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands  # These are the persistent state variables
 
         # --------------------------------------------------------
         # 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
