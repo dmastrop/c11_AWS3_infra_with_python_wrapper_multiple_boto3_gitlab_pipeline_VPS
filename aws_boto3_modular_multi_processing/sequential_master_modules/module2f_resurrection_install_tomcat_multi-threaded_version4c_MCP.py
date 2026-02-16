@@ -1638,7 +1638,10 @@ def resurrection_install_tomcat(
 
 
 
-                    ######## COMMENT OUT THE AI/MCP HOOK HERE AND USE THE HELPER FUNCTION DEFINED ABOVE ###########
+                    ######## COMMENT OUT THE AI/MCP HOOK HERE AND USE THE HELPER FUNCTION _invoke_ai_hook ###########
+                    ######## This permits us to reuse the AI/MCP HOOK in all the heuristic failure registry_entrys as 
+                    ######## well to cover all of the heuristic command failure scenarios with AI/MCP assistance.
+                    ######## Covers both strace and non-strace wrapped commands.
                     if exit_status != 0 and attempt == RETRY_LIMIT - 1:
                         # ------------------------------------------------------------
                         # AI/MCP HOOK (via helper)
@@ -1671,7 +1674,8 @@ def resurrection_install_tomcat(
 
 
 
-                    ## Commented out
+                    ## Commented out original inline AI/MCP HOOK that was inline and ported it to the helper function 
+                    ## _invoke_ai_hook
                     ##### Insert AI/MCP HOOK HERE before the except block below ####
 
                     ## ------------------------------------------------------------
