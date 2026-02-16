@@ -738,7 +738,10 @@ very complex module2.
 
 
 WIP.  The early testing on this looks good. A separate UPDATE with the detailed architectural design and code implemenation 
-will be presented. The high level architecture presented in this UPDATE was adhered to through the design. 
+will be presented. The high level architecture presented in this UPDATE was adhered to throughout the design and formal
+code implementation. This will greatly impove the error tolerance and recoverablitliy of the command Plane1 type issues. 
+This will resolve the difficult to resolve idempotency issue as well. 
+
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
