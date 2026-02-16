@@ -1353,6 +1353,11 @@ def resurrection_install_tomcat(
                     exit_status = stdout.channel.recv_exit_status()
 
                     tags = []
+                    
+
+
+                    ###### strace logic begins ######
+
                     if "strace" in command and not stderr_output.strip():
                         # Extract trace_path from command
                         try:
@@ -1399,10 +1404,62 @@ def resurrection_install_tomcat(
                         stdout_lines = stdout_output.strip().splitlines()
                         stdout_blacklisted_lines = [line for line in stdout_lines if not is_whitelisted_line(line)]
 
-                    # Non-zero exit => fail (final), else retry
-                    if exit_status != 0:
-                        if attempt == RETRY_LIMIT - 1:
-                            if stderr_output.strip():
+                        
+
+
+                        ###### strace heuristic failure blocks #########
+                        # Non-zero exit => fail (final), else retry
+                        if exit_status != 0:
+                            if attempt == RETRY_LIMIT - 1:
+                                if stderr_output.strip():
+                                    registry_entry = {
+                                        "status": "install_failed",
+                                        "attempt": -1,
+                                        "pid": multiprocessing.current_process().pid,
+                                        "thread_id": threading.get_ident(),
+                                        "thread_uuid": thread_uuid,
+                                        "public_ip": ip,
+                                        "private_ip": private_ip,
+                                        "timestamp": str(datetime.utcnow()),
+                                        "tags": base_tags + [
+                                            "fatal_exit_nonzero",
+                                            command,
+                                            f"command_retry_{attempt + 1}",
+                                            f"exit_status_{exit_status}",
+                                            "stderr_present",
+                                            *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],
+                                            *stderr_output.strip().splitlines()[:25]
+                                        ]
+                                    }
+                                else:
+                                    registry_entry = {
+                                        "status": "stub",
+                                        "attempt": -1,
+                                        "pid": multiprocessing.current_process().pid,
+                                        "thread_id": threading.get_ident(),
+                                        "thread_uuid": thread_uuid,
+                                        "public_ip": ip,
+                                        "private_ip": private_ip,
+                                        "timestamp": str(datetime.utcnow()),
+                                        "tags": base_tags + [
+                                            #*(tags or []), ## This is not required as base_tags has already been extended. See extra_tags
+                                            "silent_failure",
+                                            command,
+                                            f"command_retry_{attempt + 1}",
+                                            f"exit_status_{exit_status}",
+                                            "exit_status_nonzero_stderr_blank"
+                                        ]
+                                    }
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+                            else:
+                                print(f"[{ip}] Non-zero exit — retrying...")
+                                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                                continue
+
+                        # Zero exit, but non-whitelisted stderr => fail on final attempt, else retry
+                        if non_whitelisted_lines:
+                            if attempt == RETRY_LIMIT - 1:
                                 registry_entry = {
                                     "status": "install_failed",
                                     "attempt": -1,
@@ -1413,74 +1470,32 @@ def resurrection_install_tomcat(
                                     "private_ip": private_ip,
                                     "timestamp": str(datetime.utcnow()),
                                     "tags": base_tags + [
-                                        "fatal_exit_nonzero",
+                                    
+                                        "stderr_detected",  ##### MODULE2 spliced in code and refactored. Starts here. This needs to be refactored for module2f. Do as minimal edits as possible and leave in the comments so I can identify this. 
                                         command,
                                         f"command_retry_{attempt + 1}",
-                                        f"exit_status_{exit_status}",
-                                        "stderr_present",
-                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],
-                                        *stderr_output.strip().splitlines()[:25]
+                                        "exit_status_zero",   # We know exit_status is zero here.
+                                        "non_whitelisted_stderr",
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # First few lines for traceability.
+                                        *stderr_output.strip().splitlines()[:25]  # Snapshot for traceability.
                                     ]
                                 }
+                                #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
+                                ssh.close()
+                                return ip, private_ip, registry_entry
                             else:
-                                registry_entry = {
-                                    "status": "stub",
-                                    "attempt": -1,
-                                    "pid": multiprocessing.current_process().pid,
-                                    "thread_id": threading.get_ident(),
-                                    "thread_uuid": thread_uuid,
-                                    "public_ip": ip,
-                                    "private_ip": private_ip,
-                                    "timestamp": str(datetime.utcnow()),
-                                    "tags": base_tags + [
-                                        #*(tags or []), ## This is not required as base_tags has already been extended. See extra_tags
-                                        "silent_failure",
-                                        command,
-                                        f"command_retry_{attempt + 1}",
-                                        f"exit_status_{exit_status}",
-                                        "exit_status_nonzero_stderr_blank"
-                                    ]
-                                }
-                            ssh.close()
-                            return ip, private_ip, registry_entry
-                        else:
-                            print(f"[{ip}] Non-zero exit — retrying...")
-                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                            continue
+                                print(f"[{ip}] ⚠️ Unexpected strace stderr — retrying attempt {attempt + 1}")
+                                #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
+                                time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                                continue
+                    
+                    ###### End of strace if block and strace logic #########
 
-                    # Zero exit, but non-whitelisted stderr => fail on final attempt, else retry
-                    if non_whitelisted_lines:
-                        if attempt == RETRY_LIMIT - 1:
-                            registry_entry = {
-                                "status": "install_failed",
-                                "attempt": -1,
-                                "pid": multiprocessing.current_process().pid,
-                                "thread_id": threading.get_ident(),
-                                "thread_uuid": thread_uuid,
-                                "public_ip": ip,
-                                "private_ip": private_ip,
-                                "timestamp": str(datetime.utcnow()),
-                                "tags": base_tags + [
-                                
-                                    "stderr_detected",  ##### MODULE2 spliced in code and refactored. Starts here. This needs to be refactored for module2f. Do as minimal edits as possible and leave in the comments so I can identify this. 
-                                    command,
-                                    f"command_retry_{attempt + 1}",
-                                    "exit_status_zero",   # We know exit_status is zero here.
-                                    "non_whitelisted_stderr",
-                                    *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # First few lines for traceability.
-                                    *stderr_output.strip().splitlines()[:25]  # Snapshot for traceability.
-                                ]
-                            }
-                            #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
-                            ssh.close()
-                            return ip, private_ip, registry_entry
-                        else:
-                            print(f"[{ip}] ⚠️ Unexpected strace stderr — retrying attempt {attempt + 1}")
-                            #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
-                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                            continue
+
+
+
                     ###############################################
-                    ############ non-strace logic: #################    
+                    ############ non-strace heursitic logic: #################    
 
 
                     #print(f"[{ip}] ✅ Final exit_status used for registry logic: {exit_status}")
@@ -1574,6 +1589,12 @@ def resurrection_install_tomcat(
                             print(f"[{ip}] Unexpected stderr — retrying...")
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
+
+                    ##### end of non-strace logic ##########
+
+
+
+
 
                     # Success
                     command_succeeded = True
