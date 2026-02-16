@@ -1249,7 +1249,7 @@ def resurrection_install_tomcat(
                 }
 
 
-            Step 2-  he caller uses these conrol-flow variables like this: (the persistent variables cannot control code flow like this)
+            Step 2-  The caller uses these conrol-flow variables like this: (the persistent variables cannot control code flow like this)
             
             if result["ai_fixed"]:
                 stdout_output = result["new_stdout"]
@@ -1265,7 +1265,10 @@ def resurrection_install_tomcat(
             registry_entry for the thread.
 
             ai_meta, ai_tags = _build_ai_metadata_and_tags()
-
+            
+            The helper _build_ai_metadata_and_tags can now read the mutated persistent state vars (from Step1 above) and 
+            create the ai_meta list: 
+            
             ai_meta = {
                 "ai_invoked": ai_invoked,
                 "ai_fallback": ai_fallback,
@@ -1273,8 +1276,15 @@ def resurrection_install_tomcat(
                 "ai_commands": ai_commands[:],
             }
 
-
+            The merged_tags can then be incorporated into the install_success registry_entry with the following, noting that NO
+            historical forensic lineage/information has been lost from the original registry_entry tags:
+                
+                merged_tags = base_tags + [‘installation_completed’] + registry_entry[‘tags’] + ai_tags
+            
+            Likewise, the ai_meta can be added as a field to the install_success registry_entry    
          
+
+
         This helper:
             - Builds context
             - Calls ask_ai_for_recovery()
