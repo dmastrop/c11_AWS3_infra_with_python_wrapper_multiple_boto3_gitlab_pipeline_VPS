@@ -2395,14 +2395,13 @@ def resurrection_install_tomcat(
             transport.close()
         ssh.close()
 
-        # Pull AI metadata and AI tags from persistent state produced by 
-        # 
+        # Pull AI metadata and AI tags from persistent state
         ai_meta, ai_tags = _build_ai_metadata_and_tags()
 
         # Start building the merged tag list
         merged_tags = base_tags + ["installation_completed"]
 
-        "P064# Preserve non-shell failure tag if present
+        # Preserve non-shell failure tag if present
         if non_shell_failure_tag:
             merged_tags.append(non_shell_failure_tag)
 
