@@ -701,12 +701,28 @@ def resurrection_install_tomcat(
 
     Returns: (ip, private_ip, registry_entry)
     """
+    
+
     import uuid
     import paramiko
     from datetime import datetime
     import threading
     import multiprocessing
     import time
+
+    # -------------------------------------------------------------------------
+    # This variable persists across the entire function and is used to store
+    # the heuristic registry entry ONLY when AI successfully repairs a heuristic
+    # failure. It must be defined here (top-level of the function) so that it
+    # survives breaks out of the retry loop and remains visible to the final
+    # install_success block. This is part of the larger AI/MCP integration into
+    # module2f. This variable will be used throughout all of the heuristic failure
+    # AI/MCP refactoring.
+    # -------------------------------------------------------------------------
+    heuristic_registry_entry_for_ai_command_success = None
+
+
+
 
     # Thread UUID (stable across a single resurrection run)
     thread_uuid = res_uuid or uuid.uuid4().hex[:8]
@@ -1517,10 +1533,70 @@ def resurrection_install_tomcat(
                     print(f"[{ip}] STDOUT: '{stdout_output.strip()}'")
                     print(f"[{ip}] STDERR: '{stderr_output.strip()}'")
 
-                    # Known heuristic: apt missing package strings (kept minimal here)
+
+
+                    ## COMMENT OUT this block and replace with the same heuristic but with AI/MCP integration (see below)
+                    ## Known heuristic: apt missing package strings (kept minimal here)
+                    #if "E: Package 'tomcat9'" in stderr_output:
+                    #    if attempt == RETRY_LIMIT - 1:
+                    #        registry_entry = {
+                    #            "status": "install_failed",
+                    #            "attempt": -1,
+                    #            "pid": multiprocessing.current_process().pid,
+                    #            "thread_id": threading.get_ident(),
+                    #            "thread_uuid": thread_uuid,
+                    #            "public_ip": ip,
+                    #            "private_ip": private_ip,
+                    #            "timestamp": str(datetime.utcnow()),
+                    #            "tags": base_tags + [
+                    #                "fatal_package_missing",
+                    #                command,
+                    #                f"command_retry_{attempt + 1}",
+                    #                *stderr_output.strip().splitlines()[:12]
+                    #            ]
+                    #        }
+                    #        ssh.close()
+                    #        return ip, private_ip, registry_entry
+                    #    else:
+                    #        print(f"[{ip}] Package missing — retrying...")
+                    #        time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    #        continue
+
+
+
+
+
+                    # -------------------------------------------------------------------------
+                    # Heuristic Block #1 with AI/MCP integration: Missing apt package (e.g., tomcat9)
+                    #
+                    # IMPORTANT NOTE ABOUT CONTROL FLOW AND VARIABLE SCOPE:
+                    # -----------------------------------------------------
+                    # This block constructs a heuristic failure registry entry. If AI fails to
+                    # repair the issue, we RETURN immediately — which exits the ENTIRE function.
+                    #
+                    # HOWEVER:
+                    # If AI *fixes* the issue, we BREAK out of the retry loop instead of returning.
+                    # A break continues execution of the outer loops and eventually reaches the
+                    # install_success block.
+                    #
+                    # Because of this:
+                    #   - We CANNOT return the heuristic registry entry when AI fixes the issue.
+                    #   - We MUST preserve the heuristic registry entry so install_success can
+                    #     merge its tags into the final success registry entry.
+                    #
+                    # Therefore:
+                    #   - We define `heuristic_registry_entry_for_ai_command_success` at the TOP
+                    #     of the function (outside all loops) so it survives the break.
+                    #   - We assign to it here ONLY when AI successfully repairs the heuristic
+                    #     failure.
+                    # -------------------------------------------------------------------------
+
                     if "E: Package 'tomcat9'" in stderr_output:
+
                         if attempt == RETRY_LIMIT - 1:
-                            registry_entry = {
+
+                            # Build the heuristic failure registry entry
+                            heuristic_registry_entry = {
                                 "status": "install_failed",
                                 "attempt": -1,
                                 "pid": multiprocessing.current_process().pid,
@@ -1533,15 +1609,64 @@ def resurrection_install_tomcat(
                                     "fatal_package_missing",
                                     command,
                                     f"command_retry_{attempt + 1}",
-                                    *stderr_output.strip().splitlines()[:12]
-                                ]
+                                    *stderr_output.strip().splitlines()[:12],
+                                ],
                             }
+
+                            # ------------------------------------------------------------
+                            # Step 5b: Invoke AI/MCP HOOK for this heuristic failure (_invoke_ai_hook())
+                            # ------------------------------------------------------------
+                            extra_tags = heuristic_registry_entry["tags"]
+                            result = _invoke_ai_hook(
+                                original_command=original_command,
+                                stdout_output=stdout_output,
+                                stderr_output=stderr_output,
+                                exit_status=exit_status,
+                                attempt=attempt,
+                                instance_id=instance_id,
+                                ip=ip,
+                                extra_tags=extra_tags,
+                                ssh=ssh,
+                            )
+
+                            # ------------------------------------------------------------
+                            # CASE A: AI FIXED THE HEURISTIC FAILURE
+                            # ------------------------------------------------------------
+                            if result["ai_fixed"]:
+                                # Update outputs with AI-repaired results
+                                stdout_output = result["new_stdout"]
+                                stderr_output = result["new_stderr"]
+                                exit_status = result["new_exit_status"]
+
+                                command_succeeded = True
+
+                                # Preserve the heuristic registry entry for install_success.
+                                # This variable is defined at the TOP of the function so it
+                                # survives the break and is visible to install_success.
+                                heuristic_registry_entry_for_ai_command_success = heuristic_registry_entry
+
+                                # DO NOT RETURN — returning would exit the entire function.
+                                # We break so the idx loop continues and install_success runs.
+                                break
+
+                            # ------------------------------------------------------------
+                            # CASE B: AI FAILED TO FIX THE HEURISTIC FAILURE
+                            # ------------------------------------------------------------
+                            ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                            heuristic_registry_entry["ai_metadata"] = ai_meta
+                            heuristic_registry_entry["tags"].extend(ai_tags)
+
                             ssh.close()
-                            return ip, private_ip, registry_entry
+                            return ip, private_ip, heuristic_registry_entry
+
                         else:
                             print(f"[{ip}] Package missing — retrying...")
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
+
+
+
+
 
                     # Whitelist filtering
                     stderr_lines = stderr_output.strip().splitlines()
