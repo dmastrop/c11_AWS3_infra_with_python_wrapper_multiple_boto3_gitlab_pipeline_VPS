@@ -1737,72 +1737,11 @@ def resurrection_install_tomcat(
                         
 
                         ## COMMENT OUT this block and replace with AI/MCP refactored code (see below)
-                        ## Non-zero exit => fail (final), else retry
-                        #if exit_status != 0:
-                        #    if attempt == RETRY_LIMIT - 1:
-                        #        if stderr_output.strip():
-                        #            registry_entry = {
-                        #                "status": "install_failed",
-                        #                "attempt": -1,
-                        #                "pid": multiprocessing.current_process().pid,
-                        #                "thread_id": threading.get_ident(),
-                        #                "thread_uuid": thread_uuid,
-                        #                "public_ip": ip,
-                        #                "private_ip": private_ip,
-                        #                "timestamp": str(datetime.utcnow()),
-                        #                "tags": base_tags + [
-                        #                    "fatal_exit_nonzero",
-                        #                    command,
-                        #                    f"command_retry_{attempt + 1}",
-                        #                    f"exit_status_{exit_status}",
-                        #                    "stderr_present",
-                        #                    *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],
-                        #                    *stderr_output.strip().splitlines()[:25]
-                        #                ]
-                        #            }
-                        #        else:
-                        #            registry_entry = {
-                        #                "status": "stub",
-                        #                "attempt": -1,
-                        #                "pid": multiprocessing.current_process().pid,
-                        #                "thread_id": threading.get_ident(),
-                        #                "thread_uuid": thread_uuid,
-                        #                "public_ip": ip,
-                        #                "private_ip": private_ip,
-                        #                "timestamp": str(datetime.utcnow()),
-                        #                "tags": base_tags + [
-                        #                    #*(tags or []), ## This is not required as base_tags has already been extended. See extra_tags
-                        #                    "silent_failure",
-                        #                    command,
-                        #                    f"command_retry_{attempt + 1}",
-                        #                    f"exit_status_{exit_status}",
-                        #                    "exit_status_nonzero_stderr_blank"
-                        #                ]
-                        #            }
-                        #        ssh.close()
-                        #        return ip, private_ip, registry_entry
-                        #    else:
-                        #        print(f"[{ip}] Non-zero exit — retrying...")
-                        #        time.sleep(SLEEP_BETWEEN_ATTEMPTS)
-                        #        continue
-
-
-
-                        ###### Heuristic Block #2 with AI/MCP integration: strace fatal_exit_nonzero ######
-                        # NOTE:
-                        #   See Heuristic Block #1 for the full explanation of:
-                        #     - why we cannot return on AI-fixed cases,
-                        #     - why we must preserve the heuristic registry entry,
-                        #     - why the persistent variable is defined at the top of the function.
-                        #   This block follows the same Step 5b pattern with shorter comments.
-
+                        # Non-zero exit => fail (final), else retry
                         if exit_status != 0:
-
                             if attempt == RETRY_LIMIT - 1:
-
-                                # Build the heuristic failure registry entry
                                 if stderr_output.strip():
-                                    heuristic_registry_entry = {
+                                    registry_entry = {
                                         "status": "install_failed",
                                         "attempt": -1,
                                         "pid": multiprocessing.current_process().pid,
@@ -1818,12 +1757,12 @@ def resurrection_install_tomcat(
                                             f"exit_status_{exit_status}",
                                             "stderr_present",
                                             *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]],
-                                            *stderr_output.strip().splitlines()[:25],
-                                        ],
+                                            *stderr_output.strip().splitlines()[:25]
+                                        ]
                                     }
                                 else:
-                                    heuristic_registry_entry = {
-                                        "status": "install_failed",
+                                    registry_entry = {
+                                        "status": "stub",
                                         "attempt": -1,
                                         "pid": multiprocessing.current_process().pid,
                                         "thread_id": threading.get_ident(),
@@ -1832,51 +1771,16 @@ def resurrection_install_tomcat(
                                         "private_ip": private_ip,
                                         "timestamp": str(datetime.utcnow()),
                                         "tags": base_tags + [
+                                            #*(tags or []), ## This is not required as base_tags has already been extended. See extra_tags
                                             "silent_failure",
                                             command,
                                             f"command_retry_{attempt + 1}",
                                             f"exit_status_{exit_status}",
-                                            "exit_status_nonzero_stderr_blank",
-                                        ],
+                                            "exit_status_nonzero_stderr_blank"
+                                        ]
                                     }
-
-                                # ------------------------------------------------------------
-                                # Step 5b: Invoke AI/MCP HOOK for this heuristic failure
-                                # ------------------------------------------------------------
-                                extra_tags = heuristic_registry_entry["tags"]
-                                result = _invoke_ai_hook(
-                                    original_command=original_command,
-                                    stdout_output=stdout_output,
-                                    stderr_output=stderr_output,
-                                    exit_status=exit_status,
-                                    attempt=attempt,
-                                    instance_id=instance_id,
-                                    ip=ip,
-                                    extra_tags=extra_tags,
-                                    ssh=ssh,
-                                )
-
-                                # CASE A: AI FIXED THE FAILURE
-                                if result["ai_fixed"]:
-                                    stdout_output = result["new_stdout"]
-                                    stderr_output = result["new_stderr"]
-                                    exit_status = result["new_exit_status"]
-
-                                    command_succeeded = True
-
-                                    # Preserve heuristic tags for install_success
-                                    heuristic_registry_entry_for_ai_command_success = heuristic_registry_entry
-
-                                    break  # DO NOT RETURN — see Block #1 for full explanation
-
-                                # CASE B: AI FAILED TO FIX THE FAILURE
-                                ai_meta, ai_tags = _build_ai_metadata_and_tags()
-                                heuristic_registry_entry["ai_metadata"] = ai_meta
-                                heuristic_registry_entry["tags"].extend(ai_tags)
-
                                 ssh.close()
-                                return ip, private_ip, heuristic_registry_entry
-
+                                return ip, private_ip, registry_entry
                             else:
                                 print(f"[{ip}] Non-zero exit — retrying...")
                                 time.sleep(SLEEP_BETWEEN_ATTEMPTS)
@@ -1884,9 +1788,18 @@ def resurrection_install_tomcat(
 
 
 
+                        ##### Heuristic Block #2 with AI/MCP integration: strace fatal_exit_nonzero ######
+                        # NOTE:
+                        #   See Heuristic Block #1 for the full explanation of:
+                        #     - why we cannot return on AI-fixed cases,
+                        #     - why we must preserve the heuristic registry entry,
+                        #     - why the persistent variable is defined at the top of the function.
+                        #   This block follows the same Step 5b pattern with shorter comments.
 
 
 
+
+                        # COMMENT OUT the heuristic3 code below for the AI/MCP refactored code below 
                         # Zero exit, but non-whitelisted stderr => fail on final attempt, else retry
                         if non_whitelisted_lines:
                             if attempt == RETRY_LIMIT - 1:
@@ -1918,7 +1831,19 @@ def resurrection_install_tomcat(
                                 #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up before retry
                                 time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                                 continue
-                    
+
+
+                        ###### Heuristic Block #3 with AI/MCP integration: strace zero-exit + non-whitelisted stderr ######
+                        # NOTE:
+                        #   See Heuristic Block #1 for the full explanation of:
+                        #     - break vs return semantics,
+                        #     - why we must preserve heuristic registry entries,
+                        #     - why the persistent variable is defined at the top of the function.
+                        #   This block follows the same Step 5b pattern with shorter comments.
+
+
+
+
                     ###### End of strace if block and strace logic #########
 
 
