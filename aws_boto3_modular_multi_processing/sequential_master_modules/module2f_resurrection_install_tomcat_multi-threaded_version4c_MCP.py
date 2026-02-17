@@ -2341,13 +2341,84 @@ def resurrection_install_tomcat(
         # If it gets this far then the for attempt loops iterated all the way through without failure and all of the commands 
         # succeeded over all the for idx commands. This is an install_success for the node.
 
+
+        ## COMMENT out this block for the AI/MCP refactored block further below
+        #transport = ssh.get_transport()
+        #if transport:
+        #    transport.close()
+        #ssh.close()
+
+        ## AI/MCP tag and ai_meta integration
+        #ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
+
+        #registry_entry = {
+        #    "status": "install_success",
+        #    "attempt": 0,
+        #    "timestamp": str(datetime.utcnow()),
+        #    "pid": multiprocessing.current_process().pid,
+        #    "thread_id": threading.get_ident(),
+        #    "thread_uuid": thread_uuid,
+        #    "public_ip": ip,
+        #    "private_ip": private_ip,
+        #    "ai_metadata": ai_meta,  # AI/MCP integration
+        #    "tags": base_tags + ["installation_completed"] + (
+        #        [non_shell_failure_tag] if non_shell_failure_tag else []
+        #    ) + ai_tags,  # AI/MCP integration
+        #}
+
+        #return ip, private_ip, registry_entry
+
+
+
+
+
+        # -------------------------------------------------------------------------
+        # INSTALL SUCCESS BLOCK with AI/MCP refactoring for heuristic failures
+        # -------------------------------------------------------------------------
+        # If execution reaches this point, then:
+        #   - All commands in all idx iterations have succeeded, OR
+        #   - A heuristic failure occurred but AI successfully repaired it and the
+        #     retry-for-idx loop continued normally (meaning all commands in all
+        #     idx iterations ultimately succeeded).
+        # IMPORTANT:
+        #   - If AI repaired a heuristic failure, the variable
+        #       heuristic_registry_entry_for_ai_command_success
+        #     will contain the ORIGINAL heuristic registry entry (with its tags).
+        #   - We must merge those heuristic tags into the final install_success
+        #     registry entry to preserve full forensic lineage.
+        #   - The main objective is to preserve the forensic lineage of the original
+        #     heuristic failure after AI/MCP repair.
+        # -------------------------------------------------------------------------
+
         transport = ssh.get_transport()
         if transport:
             transport.close()
         ssh.close()
 
-        # AI/MCP tag and ai_meta integration
-        ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
+        # Pull AI metadata and AI tags from persistent state produced by 
+        # 
+        ai_meta, ai_tags = _build_ai_metadata_and_tags()
+
+        # Start building the merged tag list
+        merged_tags = base_tags + ["installation_completed"]
+
+        "P064# Preserve non-shell failure tag if present
+        if non_shell_failure_tag:
+            merged_tags.append(non_shell_failure_tag)
+
+        # -------------------------------------------------------------------------
+        # Merge heuristic tags IF AND ONLY IF:
+        #   - A heuristic failure occurred, AND
+        #   - AI successfully repaired it (meaning we broke out of the retry loop),
+        #   - AND the heuristic registry entry was preserved earlier.
+        # -------------------------------------------------------------------------
+        if heuristic_registry_entry_for_ai_command_success:
+            merged_tags.extend(
+                heuristic_registry_entry_for_ai_command_success.get("tags", [])
+            )
+
+        # Always append AI tags last
+        merged_tags.extend(ai_tags)
 
         registry_entry = {
             "status": "install_success",
@@ -2358,13 +2429,15 @@ def resurrection_install_tomcat(
             "thread_uuid": thread_uuid,
             "public_ip": ip,
             "private_ip": private_ip,
-            "ai_metadata": ai_meta,  # AI/MCP integration
-            "tags": base_tags + ["installation_completed"] + (
-                [non_shell_failure_tag] if non_shell_failure_tag else []
-            ) + ai_tags,  # AI/MCP integration
+            "ai_metadata": ai_meta,
+            "tags": merged_tags,
         }
 
         return ip, private_ip, registry_entry
+
+
+
+
 
 
     #### end of the try block
