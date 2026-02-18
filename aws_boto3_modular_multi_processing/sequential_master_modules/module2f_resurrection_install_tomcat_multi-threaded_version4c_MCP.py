@@ -2496,6 +2496,15 @@ def resurrection_install_tomcat(
                         # ------------------------------------------------------------
                         # AI/MCP HOOK (via helper)
                         # ------------------------------------------------------------
+                        
+                        # Normalize extra_tags for the top-level hook so the hook always receives a list.
+                        # Include base_tags for telemetry consistency and dedupe while preserving order.
+                        #- `dict.fromkeys(...)` preserves order and removes duplicates (Python 3.7+).  
+                        #- If `base_tags` is always defined, the `or []` guards are harmless but optional.  
+                        #- This keeps the top‑level hook consistent with the heuristic calls that pass `registry_entry["tags"]`.
+
+                        extra_tags_for_hook = list(dict.fromkeys((base_tags or []) + (extra_tags or [])))
+
                         result = _invoke_ai_hook(
                             original_command=original_command,
                             stdout_output=stdout_output,
@@ -2504,9 +2513,21 @@ def resurrection_install_tomcat(
                             attempt=attempt,
                             instance_id=instance_id,
                             ip=ip,
-                            extra_tags=extra_tags,
+                            extra_tags=extra_tags_for_hook,
                             ssh=ssh
                         )
+
+                        #result = _invoke_ai_hook(
+                        #    original_command=original_command,
+                        #    stdout_output=stdout_output,
+                        #    stderr_output=stderr_output,
+                        #    exit_status=exit_status,
+                        #    attempt=attempt,
+                        #    instance_id=instance_id,
+                        #    ip=ip,
+                        #    extra_tags=extra_tags,
+                        #    ssh=ssh
+                        #)
 
                         # If AI fixed the command → mark success and break out of attempt loop
                         if result["ai_fixed"]:
