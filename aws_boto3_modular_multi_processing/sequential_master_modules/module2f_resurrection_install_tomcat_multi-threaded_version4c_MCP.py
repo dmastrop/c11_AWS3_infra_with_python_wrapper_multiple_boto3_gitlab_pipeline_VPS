@@ -2350,8 +2350,41 @@ def resurrection_install_tomcat(
 
                     #### Another splice from module2 starts here ####
                     
-                    ## Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
-                    ## and failed registry entries uniless all retries have been exhausted
+                    ### Modify the above to fail ONLY if it is the LAST attempt> we do not want to prematurely create stubs
+                    ### and failed registry entries uniless all retries have been exhausted
+                    ## ⚠️ Unexpected stderr — retry instead of exiting
+                    #if stderr_output.strip():
+                    #    if attempt == RETRY_LIMIT - 1:
+                    #        print(f"[{ip}] ❌ Unexpected stderr on final attempt — tagging failure")
+                    #        registry_entry = {
+                    #            "status": "install_failed",
+                    #            "attempt": -1,
+                    #            "pid": multiprocessing.current_process().pid,
+                    #            "thread_id": threading.get_ident(),
+                    #            "thread_uuid": thread_uuid,
+                    #            "public_ip": ip,
+                    #            "private_ip": private_ip,
+                    #            "timestamp": str(datetime.utcnow()),
+                    #            "tags": base_tags + [
+                    #            #"tags": [
+                    #                "stderr_detected",
+                    #                command,
+                    #                f"command_retry_{attempt + 1}",  # e.g. command_retry_3
+                    #                *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
+                    #            ]
+                    #        }
+                    #        ssh.close()
+                    #        return ip, private_ip, registry_entry
+                    #    else:
+                    #        print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
+                    #        time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                    #        continue
+
+
+
+
+                    ##### Heuristic Block #6 with AI/MCP integration  ######
+                    ## Modify the above to fail ONLY if it is the LAST attempt — do not create stubs prematurely
                     # ⚠️ Unexpected stderr — retry instead of exiting
                     if stderr_output.strip():
                         if attempt == RETRY_LIMIT - 1:
@@ -2366,19 +2399,71 @@ def resurrection_install_tomcat(
                                 "private_ip": private_ip,
                                 "timestamp": str(datetime.utcnow()),
                                 "tags": base_tags + [
-                                #"tags": [
                                     "stderr_detected",
                                     command,
                                     f"command_retry_{attempt + 1}",  # e.g. command_retry_3
                                     *stderr_output.strip().splitlines()[:12]  # snapshot for traceability
                                 ]
                             }
+
+                            # ------------------------------------------------------------
+                            # Step 5b: Invoke AI/MCP HOOK for this heuristic failure (_invoke_ai_hook())
+                            # ------------------------------------------------------------
+                            # We call the AI hook here on the final attempt. If the AI repairs
+                            # the outputs we must NOT return immediately — instead we set the
+                            # persistent registry variable and break so install_success runs.
+                            extra_tags = registry_entry["tags"]
+                            result = _invoke_ai_hook(
+                                original_command=original_command,
+                                stdout_output=stdout_output,
+                                stderr_output=stderr_output,
+                                exit_status=exit_status,
+                                attempt=attempt,
+                                instance_id=instance_id,
+                                ip=ip,
+                                extra_tags=extra_tags,
+                                ssh=ssh,
+                            )
+
+                            # ------------------------------------------------------------
+                            # CASE A: AI FIXED THE HEURISTIC FAILURE
+                            # ------------------------------------------------------------
+                            if result["ai_fixed"]:
+                                # Update outputs with AI-repaired results
+                                stdout_output = result["new_stdout"]
+                                stderr_output = result["new_stderr"]
+                                exit_status = result["new_exit_status"]
+
+                                command_succeeded = True
+
+                                # Preserve the heuristic registry entry for install_success.
+                                # This variable is defined at the TOP of the function so it
+                                # survives the break and is visible to install_success.
+                                heuristic_registry_entry_for_ai_command_success = registry_entry
+
+                                # DO NOT RETURN — returning would exit the entire function.
+                                # We break so the idx loop continues and install_success runs.
+                                break
+
+                            # ------------------------------------------------------------
+                            # CASE B: AI FAILED TO FIX THE HEURISTIC FAILURE
+                            # ------------------------------------------------------------
+                            # Attach AI metadata and tags for forensic/telemetry purposes,
+                            # then close SSH and return the registry entry as a failure.
+                            ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                            registry_entry["ai_metadata"] = ai_meta
+                            registry_entry["tags"].extend(ai_tags)
+
                             ssh.close()
                             return ip, private_ip, registry_entry
                         else:
                             print(f"[{ip}] ⚠️ Unexpected stderr — retrying attempt {attempt + 1}")
                             time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                             continue
+
+
+
+
 
                     ##### Continue the module2 splice into module2f ###### 
                     ##### BLOCK5(5) Command succeeded default.
