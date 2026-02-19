@@ -399,11 +399,13 @@ g##### This is module2f for the MCP client integration into module2f
 #    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4b_MCP.py")
 
 
-##### THis is module2f for the MCP client integration into module2f. Adding the HOOK into module2f and other stuff for AI/MCP integration
+###### THis is module2f for the MCP client integration into module2f. Adding the HOOK into module2f and other stuff for AI/MCP integration
+#def resurrection_install_tomcat():
+#    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4c_MCP.py")
+
+##### This is module2f with client MCP integration, rename withtout hyphens for pytest 
 def resurrection_install_tomcat():
-    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi-threaded_version4c_MCP.py")
-
-
+    run_module("/aws_EC2/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py")
 
 
 ## modules 3-11:
