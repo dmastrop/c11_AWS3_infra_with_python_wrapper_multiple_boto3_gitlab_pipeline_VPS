@@ -6,10 +6,15 @@ import paramiko
 #    resurrection_install_tomcat,
 #)
 
+#from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
+#    resurrection_install_tomcat,
+#)
+
+import aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP as m2f
+
 from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
     resurrection_install_tomcat,
 )
-
 
 
 
@@ -81,10 +86,19 @@ def test_ai_hook_ai_fixed(monkeypatch):
             "new_exit_status": 0,
         }
 
-    monkeypatch.setattr(
-        "sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP._invoke_ai_hook",
-        fake_ai_hook,
-    )
+    monkeypatch.setattr(m2f, "_invoke_ai_hook", fake_ai_hook)
+
+
+
+    #monkeypatch.setattr(
+    #    "sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP._invoke_ai_hook",
+    #    fake_ai_hook,
+    #)
+
+
+
+
+
 
     # Fake metadata builder — aligned with your real persistent state semantics
     def fake_meta():
