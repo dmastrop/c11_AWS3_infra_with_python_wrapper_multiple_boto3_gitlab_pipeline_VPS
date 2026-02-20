@@ -7,9 +7,13 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 # Absolute path to the correct package root
 PACKAGE_ROOT = os.path.join(ROOT, "aws_boto3_modular_multi_processing")
 
-# 1. Remove any shadow copies of sequential_master_modules
-sys.path = [p for p in sys.path if "sequential_master_modules" not in p]
+# Remove ONLY shadow paths that end with sequential_master_modules
+sys.path = [
+    p for p in sys.path
+    if not p.endswith("sequential_master_modules")
+]
 
-# 2. Ensure the correct package root is FIRST
-sys.path.insert(0, PACKAGE_ROOT)
+# Ensure the correct package root is FIRST
+if PACKAGE_ROOT not in sys.path:
+    sys.path.insert(0, PACKAGE_ROOT)
 
