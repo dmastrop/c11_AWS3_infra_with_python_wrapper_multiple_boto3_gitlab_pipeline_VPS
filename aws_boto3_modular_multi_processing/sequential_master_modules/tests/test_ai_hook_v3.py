@@ -2,9 +2,16 @@ import pytest
 import types
 import paramiko
 
-from sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
+#from sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
+#    resurrection_install_tomcat,
+#)
+
+from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
     resurrection_install_tomcat,
 )
+
+
+
 
 # ---------------------------------------------------------------------
 # Fake SSH object — prevents real SSH connections or commands
