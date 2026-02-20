@@ -1367,7 +1367,7 @@ def resurrection_install_tomcat(
             cleanup_cmds = plan.get("cleanup", [])
             retry_cmd = plan.get("retry")
 
-            # Track commands for tagging
+            # Track commands for tagging. Always append to the existing ai_commands so that a complete history is in the tags
             ai_commands.extend(cleanup_cmds)
             if retry_cmd:
                 ai_commands.append(retry_cmd)
@@ -1425,7 +1425,7 @@ def resurrection_install_tomcat(
                 }
 
         # --------------------------------------------------------
-        # ACTION: retry_with_modified_command (IDENTICAL)
+        # ACTION: retry_with_modified_command (IDENTICAL). Always append to the existing ai_comamands list.
         # --------------------------------------------------------
         if action == "retry_with_modified_command":
             new_cmd = plan.get("retry")
@@ -1465,7 +1465,7 @@ def resurrection_install_tomcat(
                 }
 
         # --------------------------------------------------------
-        # ACTION: abort (IDENTICAL)
+        # ACTION: abort (IDENTICAL). Always append to the existin ai_commands list
         # --------------------------------------------------------
         if action == "abort":
             print(f"AI_MCP_HOOK[{ip}] 🛑 AI instructed abort — tagging failure.")
