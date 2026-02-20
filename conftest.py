@@ -1,11 +1,11 @@
 import sys
 import os
 
-PACKAGE_ROOT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "aws_boto3_modular_multi_processing"
-)
+# Absolute path to the directory containing the package
+ROOT = os.path.dirname(os.path.abspath(__file__))
 
-if PACKAGE_ROOT not in sys.path:
-    sys.path.insert(0, PACKAGE_ROOT)
+PACKAGE_ROOT = os.path.join(ROOT, "aws_boto3_modular_multi_processing")
+
+# Ensure the package root is FIRST on sys.path
+sys.path.insert(0, PACKAGE_ROOT)
 
