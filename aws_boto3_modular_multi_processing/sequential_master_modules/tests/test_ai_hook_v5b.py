@@ -11,6 +11,13 @@ from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resur
     resurrection_install_tomcat,
 )
 
+
+# debugs for SSH issue
+print("DEBUG: module2f SSHClient =", m2f.SSHClient)
+print("DEBUG: module2f paramiko =", m2f.paramiko)
+
+
+
 ## ---------------------------------------------------------------------
 ## Fake SSH object — prevents real SSH connections or commands
 ## ---------------------------------------------------------------------
