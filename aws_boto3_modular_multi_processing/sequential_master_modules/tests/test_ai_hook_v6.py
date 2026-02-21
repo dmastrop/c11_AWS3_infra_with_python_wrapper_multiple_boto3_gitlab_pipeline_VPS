@@ -2,14 +2,14 @@ import types
 import paramiko
 import sys
 
-# ---------------------------------------------------------------------
-# 0. Import module2f cleanly
-# ---------------------------------------------------------------------
-import aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP as m2f
-
-from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
-    resurrection_install_tomcat,
-)
+## ---------------------------------------------------------------------
+## 0. Import module2f cleanly
+## ---------------------------------------------------------------------
+#import aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP as m2f
+#
+#from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP import (
+#    resurrection_install_tomcat,
+#)
 
 
 ## debugs for SSH issue
@@ -158,36 +158,49 @@ def make_plan_unknown():
 # ---------------------------------------------------------------------
 # TEST 1 — AI FIXED → install_success
 # ---------------------------------------------------------------------
+
 def test_ai_hook_ai_fixed(monkeypatch):
-
-
-    print("DEBUG: module2f file =", m2f.__file__)
-    print("DEBUG: m2f.paramiko =", m2f.paramiko)
-    print("DEBUG: m2f.paramiko.__file__ =", m2f.paramiko.__file__)
-
-
-
-
-    # Fake SSH: retry succeeds (exit_status=0, no stderr)
-    #fake_ssh = FakeSSH(stdout_data="AI repaired stdout", stderr_data="", exit_status=0)
-    # Fix the FakeSSH to use new SSH class above. First fail then succeed based upon the AI_FIXED in the AI command retry
+    # -----------------------------
+    # 1. Fake SSH client
+    # -----------------------------
     fake_ssh = FakeSSH()
 
+    # -----------------------------
+    # 2. Fake Paramiko module
+    #    Must be defined INSIDE the test
+    # -----------------------------
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
 
-    # Monkeypatch Paramiko SSHClient constructor
-    #monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
-    #monkeypatch.setattr(m2f.paramiko, "SSHClient", lambda *args, **kwargs: fake_ssh)
-    fake_paramiko = FakeParamikoModule(fake_ssh)
-    monkeypatch.setattr(m2f, "paramiko", fake_paramiko)
+        class AutoAddPolicy:
+            pass
 
+    # -----------------------------
+    # 3. Monkeypatch REAL paramiko BEFORE importing module2f
+    # -----------------------------
+    monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+    monkeypatch.setattr("paramiko.AutoAddPolicy", FakeParamikoModule.AutoAddPolicy)
 
-    # Monkeypatch ask_ai_for_recovery to return a "fixed" plan
-    def fake_ask_ai_for_recovery(context):
-        return make_plan_ai_fixed()
+    # -----------------------------
+    # 4. Import module2f AFTER patching paramiko
+    # -----------------------------
+    import importlib
+    m2f = importlib.reload(
+        importlib.import_module(
+            "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+        )
+    )
 
-    monkeypatch.setattr(m2f, "ask_ai_for_recovery", fake_ask_ai_for_recovery)
+    # -----------------------------
+    # 5. Monkeypatch ask_ai_for_recovery
+    # -----------------------------
+    monkeypatch.setattr(m2f, "ask_ai_for_recovery", lambda ctx: make_plan_ai_fixed())
 
-    result = resurrection_install_tomcat(
+    # -----------------------------
+    # 6. Run the function
+    # -----------------------------
+    result = m2f.resurrection_install_tomcat(
         ip="1.2.3.4",
         private_ip="10.0.0.1",
         instance_id="i-test",
@@ -196,15 +209,67 @@ def test_ai_hook_ai_fixed(monkeypatch):
         extra_tags=["from_module2e"],
     )
 
+    # -----------------------------
+    # 7. Assertions (your originals restored)
+    # -----------------------------
     assert isinstance(result, tuple)
     _, _, registry = result
 
-    # install_success block assertions
     assert registry["status"] == "install_success"
     assert registry["ai_metadata"]["ai_invoked"] is True
     assert "installation_completed" in registry["tags"]
-    # We expect at least one AI tag
+
+    # At least one AI tag must be present
     assert any(tag.startswith("ai_") for tag in registry["tags"])
+
+
+#def test_ai_hook_ai_fixed(monkeypatch):
+#
+#
+#    print("DEBUG: module2f file =", m2f.__file__)
+#    print("DEBUG: m2f.paramiko =", m2f.paramiko)
+#    print("DEBUG: m2f.paramiko.__file__ =", m2f.paramiko.__file__)
+#
+#
+#
+#
+#    # Fake SSH: retry succeeds (exit_status=0, no stderr)
+#    #fake_ssh = FakeSSH(stdout_data="AI repaired stdout", stderr_data="", exit_status=0)
+#    # Fix the FakeSSH to use new SSH class above. First fail then succeed based upon the AI_FIXED in the AI command retry
+#    fake_ssh = FakeSSH()
+#
+#
+#    # Monkeypatch Paramiko SSHClient constructor
+#    #monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+#    #monkeypatch.setattr(m2f.paramiko, "SSHClient", lambda *args, **kwargs: fake_ssh)
+#    fake_paramiko = FakeParamikoModule(fake_ssh)
+#    monkeypatch.setattr(m2f, "paramiko", fake_paramiko)
+#
+#
+#    # Monkeypatch ask_ai_for_recovery to return a "fixed" plan
+#    def fake_ask_ai_for_recovery(context):
+#        return make_plan_ai_fixed()
+#
+#    monkeypatch.setattr(m2f, "ask_ai_for_recovery", fake_ask_ai_for_recovery)
+#
+#    result = resurrection_install_tomcat(
+#        ip="1.2.3.4",
+#        private_ip="10.0.0.1",
+#        instance_id="i-test",
+#        WATCHDOG_TIMEOUT=5,
+#        replayed_commands=MINIMAL_COMMANDS,
+#        extra_tags=["from_module2e"],
+#    )
+#
+#    assert isinstance(result, tuple)
+#    _, _, registry = result
+#
+#    # install_success block assertions
+#    assert registry["status"] == "install_success"
+#    assert registry["ai_metadata"]["ai_invoked"] is True
+#    assert "installation_completed" in registry["tags"]
+#    # We expect at least one AI tag
+#    assert any(tag.startswith("ai_") for tag in registry["tags"])
 
 
 # ---------------------------------------------------------------------
