@@ -140,6 +140,17 @@ def make_plan_unknown():
 # ---------------------------------------------------------------------
 
 def test_ai_hook_ai_fixed(monkeypatch):
+    
+
+    import sys
+
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+
+
     # 1. Fake SSH client
     fake_ssh = FakeSSH()
 
@@ -160,12 +171,18 @@ def test_ai_hook_ai_fixed(monkeypatch):
     m2f = importlib.import_module(
         "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
     )
+    # DEBUG: what does module2f see *before* patch?
+    print("DEBUG BEFORE PATCH: m2f.paramiko =", m2f.paramiko)
 
     # 4. Patch module2f.paramiko BEFORE reloading
     monkeypatch.setattr(m2f, "paramiko", fake_paramiko)
+    # DEBUG: what does module2f see *after* patch?
+    print("DEBUG AFTER PATCH: m2f.paramiko =", m2f.paramiko)
 
     # 5. Reload module2f so it picks up the patched paramiko
     m2f = importlib.reload(m2f)
+    # DEBUG: what does module2f see *after reload*?
+    print("DEBUG AFTER RELOAD: m2f.paramiko =", m2f.paramiko)
 
 
 
