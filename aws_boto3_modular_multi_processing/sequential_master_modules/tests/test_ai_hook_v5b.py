@@ -115,6 +115,15 @@ from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resur
 #    def close(self):
 #        pass
 
+class FakeParamikoModule:
+    def __init__(self, fake_ssh):
+        self._fake_ssh = fake_ssh
+
+    def SSHClient(self):
+        return self._fake_ssh
+
+    class AutoAddPolicy:
+        pass
 
 
 class FakeSSH:
@@ -269,7 +278,9 @@ def test_ai_hook_ai_fixed(monkeypatch):
 
     # Monkeypatch Paramiko SSHClient constructor
     #monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
-    monkeypatch.setattr(m2f.paramiko, "SSHClient", lambda *args, **kwargs: fake_ssh)
+    #monkeypatch.setattr(m2f.paramiko, "SSHClient", lambda *args, **kwargs: fake_ssh)
+    fake_paramiko = FakeParamikoModule(fake_ssh)
+    monkeypatch.setattr(m2f, "paramiko", fake_paramiko)
 
 
     # Monkeypatch ask_ai_for_recovery to return a "fixed" plan
