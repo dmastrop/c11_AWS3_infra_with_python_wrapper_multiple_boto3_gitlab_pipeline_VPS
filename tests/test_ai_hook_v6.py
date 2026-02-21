@@ -173,8 +173,17 @@ def test_ai_hook_ai_fixed(monkeypatch):
         "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
     )
 
+    print("DEBUG: ask_ai_for_recovery =", m2f.ask_ai_for_recovery)
+    print("DEBUG: _invoke_ai_hook =", getattr(m2f, "_invoke_ai_hook", None))
+    print("DEBUG: _create_ssh_client =", getattr(m2f, "_create_ssh_client", None))
+
+
+
     # 4. Patch ask_ai_for_recovery
     monkeypatch.setattr(m2f, "ask_ai_for_recovery", lambda ctx: make_plan_ai_fixed())
+
+
+    print("DEBUG: calling resurrection_install_tomcat now")
 
     # 5. Run the function
     result = m2f.resurrection_install_tomcat(
@@ -185,6 +194,9 @@ def test_ai_hook_ai_fixed(monkeypatch):
         replayed_commands=MINIMAL_COMMANDS,
         extra_tags=["from_module2e"],
     )
+
+    print("DEBUG: registry =", registry)
+
 
     # 6. Assertions
     assert isinstance(result, tuple)
