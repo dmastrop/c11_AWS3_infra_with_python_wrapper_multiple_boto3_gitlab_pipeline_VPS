@@ -12,10 +12,13 @@ from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resur
 )
 
 
-# debugs for SSH issue
-print("DEBUG: module2f file =", m2f.__file__)
-print("DEBUG: module2f SSHClient =", m2f.SSHClient)
-print("DEBUG: module2f paramiko =", m2f.paramiko)
+## debugs for SSH issue
+#print("DEBUG: m2f.paramiko =", m2f.paramiko)
+#print("DEBUG: m2f.paramiko.__file__ =", m2f.paramiko.__file__)
+#
+#print("DEBUG: module2f file =", m2f.__file__)
+#print("DEBUG: module2f SSHClient =", m2f.SSHClient)
+#print("DEBUG: module2f paramiko =", m2f.paramiko)
 
 
 
@@ -249,6 +252,14 @@ def make_plan_unknown():
 # TEST 1 — AI FIXED → install_success
 # ---------------------------------------------------------------------
 def test_ai_hook_ai_fixed(monkeypatch):
+
+
+    print("DEBUG: module2f file =", m2f.__file__)
+    print("DEBUG: m2f.paramiko =", m2f.paramiko)
+    print("DEBUG: m2f.paramiko.__file__ =", m2f.paramiko.__file__)
+
+
+
 
     # Fake SSH: retry succeeds (exit_status=0, no stderr)
     #fake_ssh = FakeSSH(stdout_data="AI repaired stdout", stderr_data="", exit_status=0)
