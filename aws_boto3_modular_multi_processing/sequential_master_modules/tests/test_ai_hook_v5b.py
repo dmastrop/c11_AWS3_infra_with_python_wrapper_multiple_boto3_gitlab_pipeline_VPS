@@ -47,54 +47,122 @@ from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resur
 #        self.closed = True
 
 
+#class FakeSSH:
+#    """
+#    FakeSSH_v2:
+#    - Fails the ORIGINAL command ("echo test")
+#    - Succeeds the AI retry command ("echo AI_FIXED")
+#    - Implements enough of Paramiko's channel API to avoid watchdog triggers
+#    """
+#
+#    def __init__(self):
+#        self.call_count = 0  # track original vs retry
+#
+#    def exec_command(self, command, timeout=None):
+#        self.call_count += 1
+#
+#        # -------------------------------
+#        # ORIGINAL COMMAND (first call)
+#        # -------------------------------
+#        if "AI_FIXED" not in command:
+#            stdout_data = ""
+#            stderr_data = "synthetic error"
+#            exit_status = 1
+#
+#        # -------------------------------
+#        # AI RETRY COMMAND (second call)
+#        # -------------------------------
+#        else:
+#            stdout_data = "AI repaired stdout"
+#            stderr_data = ""
+#            exit_status = 0
+#
+#        # Build stdout/stderr objects
+#        stdout = types.SimpleNamespace(
+#            read=lambda: stdout_data.encode(),
+#        )
+#        stderr = types.SimpleNamespace(
+#            read=lambda: stderr_data.encode(),
+#        )
+#
+#        # Build a realistic channel object
+#        channel = types.SimpleNamespace(
+#            recv_exit_status=lambda: exit_status,
+#            exit_status_ready=lambda: True,
+#            recv_ready=lambda: True,
+#            settimeout=lambda *_args, **_kwargs: None,
+#        )
+#
+#        stdout.channel = channel
+#        stderr.channel = channel
+#
+#        return None, stdout, stderr
+#
+#    def get_transport(self):
+#        return None
+#
+#    def close(self):
+#        pass
+
+
+
 class FakeSSH:
     """
-    FakeSSH_v2:
-    - Fails the ORIGINAL command ("echo test")
-    - Succeeds the AI retry command ("echo AI_FIXED")
+    FakeSSH_v4:
+    - ORIGINAL command ("echo test") → fail
+    - AI retry command ("echo AI_FIXED") → succeed
     - Implements enough of Paramiko's channel API to avoid watchdog triggers
     """
 
     def __init__(self):
-        self.call_count = 0  # track original vs retry
+        self.call_count = 0
 
     def exec_command(self, command, timeout=None):
         self.call_count += 1
 
-        # -------------------------------
         # ORIGINAL COMMAND (first call)
-        # -------------------------------
         if "AI_FIXED" not in command:
             stdout_data = ""
             stderr_data = "synthetic error"
             exit_status = 1
 
-        # -------------------------------
         # AI RETRY COMMAND (second call)
-        # -------------------------------
         else:
             stdout_data = "AI repaired stdout"
             stderr_data = ""
             exit_status = 0
 
-        # Build stdout/stderr objects
-        stdout = types.SimpleNamespace(
-            read=lambda: stdout_data.encode(),
-        )
-        stderr = types.SimpleNamespace(
-            read=lambda: stderr_data.encode(),
-        )
-
-        # Build a realistic channel object
-        channel = types.SimpleNamespace(
+        # -----------------------------
+        # stdout object + channel
+        # -----------------------------
+        stdout_channel = types.SimpleNamespace(
             recv_exit_status=lambda: exit_status,
             exit_status_ready=lambda: True,
             recv_ready=lambda: True,
+            recv=lambda size: stdout_data.encode(),   # ⭐ REQUIRED
             settimeout=lambda *_args, **_kwargs: None,
         )
 
-        stdout.channel = channel
-        stderr.channel = channel
+        stdout = types.SimpleNamespace(
+            read=lambda: stdout_data.encode(),
+            channel=stdout_channel,
+        )
+
+        # -----------------------------
+        # stderr object + channel
+        # -----------------------------
+        stderr_channel = types.SimpleNamespace(
+            recv_exit_status=lambda: exit_status,
+            exit_status_ready=lambda: True,
+            recv_ready=lambda: True,
+            recv=lambda size: stderr_data.encode(),   # ⭐ REQUIRED
+            settimeout=lambda *_args, **_kwargs: None,
+        )
+
+        stderr = types.SimpleNamespace(
+            read=lambda: stderr_data.encode(),
+            channel=stderr_channel,
+        )
 
         return None, stdout, stderr
 
@@ -103,9 +171,6 @@ class FakeSSH:
 
     def close(self):
         pass
-
-
-
 
 
 
@@ -184,7 +249,9 @@ def test_ai_hook_ai_fixed(monkeypatch):
 
 
     # Monkeypatch Paramiko SSHClient constructor
-    monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+    #monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+    monkeypatch.setattr(m2f.paramiko, "SSHClient", lambda *args, **kwargs: fake_ssh)
+
 
     # Monkeypatch ask_ai_for_recovery to return a "fixed" plan
     def fake_ask_ai_for_recovery(context):
