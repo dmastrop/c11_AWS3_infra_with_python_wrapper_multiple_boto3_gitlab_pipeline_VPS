@@ -139,17 +139,17 @@ def make_plan_unknown():
 # TEST 1 — AI FIXED → install_success
 # ---------------------------------------------------------------------
 
+
 def test_ai_hook_ai_fixed(monkeypatch):
-    
-
     import sys
+    import paramiko
+    import importlib
 
+    # ⭐ Force a clean import of module2f
     sys.modules.pop(
         "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
         None
     )
-
-
 
     # 1. Fake SSH client
     fake_ssh = FakeSSH()
@@ -164,32 +164,19 @@ def test_ai_hook_ai_fixed(monkeypatch):
 
     fake_paramiko = FakeParamikoModule()
 
+    # ⭐ Patch GLOBAL paramiko BEFORE importing module2f
+    monkeypatch.setattr(paramiko, "SSHClient", fake_paramiko.SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", fake_paramiko.AutoAddPolicy)
 
-    #import importlib
-
-    # 3. Import module2f *first* so we can patch its attributes directly
+    # 3. Import module2f AFTER patching global paramiko
     m2f = importlib.import_module(
         "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
     )
-    # DEBUG: what does module2f see *before* patch?
-    print("DEBUG BEFORE PATCH: m2f.paramiko =", m2f.paramiko)
 
-    # 4. Patch module2f.paramiko BEFORE reloading
-    monkeypatch.setattr(m2f, "paramiko", fake_paramiko)
-    # DEBUG: what does module2f see *after* patch?
-    print("DEBUG AFTER PATCH: m2f.paramiko =", m2f.paramiko)
-
-    # 5. Reload module2f so it picks up the patched paramiko
-    m2f = importlib.reload(m2f)
-    # DEBUG: what does module2f see *after reload*?
-    print("DEBUG AFTER RELOAD: m2f.paramiko =", m2f.paramiko)
-
-
-
-    # 6. Patch ask_ai_for_recovery
+    # 4. Patch ask_ai_for_recovery
     monkeypatch.setattr(m2f, "ask_ai_for_recovery", lambda ctx: make_plan_ai_fixed())
 
-    # 7. Run the function
+    # 5. Run the function
     result = m2f.resurrection_install_tomcat(
         ip="1.2.3.4",
         private_ip="10.0.0.1",
@@ -199,14 +186,87 @@ def test_ai_hook_ai_fixed(monkeypatch):
         extra_tags=["from_module2e"],
     )
 
-    # 8. Assertions
+    # 6. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
 
+    # ⭐ Your original assertions restored
     assert registry["status"] == "install_success"
     assert registry["ai_metadata"]["ai_invoked"] is True
     assert "installation_completed" in registry["tags"]
     assert any(tag.startswith("ai_") for tag in registry["tags"])
+
+
+
+
+#def test_ai_hook_ai_fixed(monkeypatch):
+#    
+#
+#    import sys
+#
+#    sys.modules.pop(
+#        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+#        None
+#    )
+#
+#
+#
+#    # 1. Fake SSH client
+#    fake_ssh = FakeSSH()
+#
+#    # 2. Fake Paramiko module
+#    class FakeParamikoModule:
+#        def SSHClient(self):
+#            return fake_ssh
+#
+#        class AutoAddPolicy:
+#            pass
+#
+#    fake_paramiko = FakeParamikoModule()
+#
+#
+#    #import importlib
+#
+#    # 3. Import module2f *first* so we can patch its attributes directly
+#    m2f = importlib.import_module(
+#        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+#    )
+#    # DEBUG: what does module2f see *before* patch?
+#    print("DEBUG BEFORE PATCH: m2f.paramiko =", m2f.paramiko)
+#
+#    # 4. Patch module2f.paramiko BEFORE reloading
+#    monkeypatch.setattr(m2f, "paramiko", fake_paramiko)
+#    # DEBUG: what does module2f see *after* patch?
+#    print("DEBUG AFTER PATCH: m2f.paramiko =", m2f.paramiko)
+#
+#    # 5. Reload module2f so it picks up the patched paramiko
+#    m2f = importlib.reload(m2f)
+#    # DEBUG: what does module2f see *after reload*?
+#    print("DEBUG AFTER RELOAD: m2f.paramiko =", m2f.paramiko)
+#
+#
+#
+#    # 6. Patch ask_ai_for_recovery
+#    monkeypatch.setattr(m2f, "ask_ai_for_recovery", lambda ctx: make_plan_ai_fixed())
+#
+#    # 7. Run the function
+#    result = m2f.resurrection_install_tomcat(
+#        ip="1.2.3.4",
+#        private_ip="10.0.0.1",
+#        instance_id="i-test",
+#        WATCHDOG_TIMEOUT=5,
+#        replayed_commands=MINIMAL_COMMANDS,
+#        extra_tags=["from_module2e"],
+#    )
+#
+#    # 8. Assertions
+#    assert isinstance(result, tuple)
+#    _, _, registry = result
+#
+#    assert registry["status"] == "install_success"
+#    assert registry["ai_metadata"]["ai_invoked"] is True
+#    assert "installation_completed" in registry["tags"]
+#    assert any(tag.startswith("ai_") for tag in registry["tags"])
 
 
 
