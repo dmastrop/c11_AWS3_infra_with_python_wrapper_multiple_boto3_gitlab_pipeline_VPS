@@ -1,17 +1,6 @@
 import types
 import importlib
 
-# Import helpers from THIS directory, not the old path
-from tests.test_ai_hook_v6 import (
-    FakeSSH,
-    MINIMAL_COMMANDS,
-    make_plan_ai_fixed,
-    make_plan_ai_failed,
-    make_plan_fallback,
-    make_plan_abort,
-    make_plan_unknown,
-)
-
 
 
 
@@ -165,7 +154,7 @@ def test_ai_hook_ai_fixed(monkeypatch):
     fake_paramiko = FakeParamikoModule()
 
 
-    import importlib
+    #import importlib
 
     # 3. Import module2f *first* so we can patch its attributes directly
     m2f = importlib.import_module(
