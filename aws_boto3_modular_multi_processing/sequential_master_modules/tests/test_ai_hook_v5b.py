@@ -13,6 +13,7 @@ from aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resur
 
 
 # debugs for SSH issue
+print("DEBUG: module2f file =", m2f.__file__)
 print("DEBUG: module2f SSHClient =", m2f.SSHClient)
 print("DEBUG: module2f paramiko =", m2f.paramiko)
 
