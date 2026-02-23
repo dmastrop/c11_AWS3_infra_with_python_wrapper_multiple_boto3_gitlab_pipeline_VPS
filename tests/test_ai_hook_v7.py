@@ -329,6 +329,7 @@ def test_ai_hook_ai_failed(monkeypatch):
         extra_tags=["from_module2e"],
     )
 
+
     # 5. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
@@ -336,10 +337,27 @@ def test_ai_hook_ai_failed(monkeypatch):
     # install_failed block assertions
     assert registry["status"] == "install_failed"
     assert registry["ai_metadata"]["ai_invoked"] is True
-    # The natural install_failed block adds tags like:
-    #   "install_failed_command_0"
-    assert any(tag.startswith("install_failed_command_") for tag in registry["tags"])
 
+    tags = registry["tags"]
+
+    # Heuristic 4 tags MUST be present
+    assert "fatal_exit_nonzero" in tags
+    assert "stderr_present" in tags
+
+    # The original command should appear
+    assert "echo test" in tags
+
+    # Retry count tag (command_retry_3 for RETRY_LIMIT=3)
+    assert any(tag.startswith("command_retry_") for tag in tags)
+
+    # Exit status tag
+    assert any(tag.startswith("exit_status_") for tag in tags)
+
+    # Non‑whitelisted stderr material
+    assert any(tag.startswith("nonwhitelisted_material:") for tag in tags)
+
+    # Raw stderr snapshot lines (synthetic error)
+    assert any("synthetic error" in tag for tag in tags)
 
 
 
