@@ -15,7 +15,16 @@ class FakeSSH:
     def __init__(self):
         self.call_count = 0
 
-    def exec_command(self, command, timeout=None):
+def set_missing_host_key_policy(self, policy):
+    # Paramiko normally stores the policy; we don't need it. This fixes an SSH execption that is encounted during module2f
+    # SSH connection setup loop.
+    self._policy = policy
+
+def connect(self, *args, **kwargs):
+    # No-op: FakeSSH doesn't need to establish a real connection
+    return None
+
+def exec_command(self, command, timeout=None):
         self.call_count += 1
 
         # ORIGINAL COMMAND (first call)
