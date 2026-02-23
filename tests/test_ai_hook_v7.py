@@ -15,60 +15,60 @@ class FakeSSH:
     def __init__(self):
         self.call_count = 0
 
-def set_missing_host_key_policy(self, policy):
-    # Paramiko normally stores the policy; we don't need it. This fixes an SSH execption that is encounted during module2f
-    # SSH connection setup loop.
-    self._policy = policy
+    def set_missing_host_key_policy(self, policy):
+        # Paramiko normally stores the policy; we don't need it. This fixes an SSH execption that is encounted during module2f
+        # SSH connection setup loop.
+        self._policy = policy
 
-def connect(self, *args, **kwargs):
-    # No-op: FakeSSH doesn't need to establish a real connection
-    return None
+    def connect(self, *args, **kwargs):
+        # No-op: FakeSSH doesn't need to establish a real connection
+        return None
 
-def exec_command(self, command, timeout=None):
+    def exec_command(self, command, timeout=None):
         self.call_count += 1
 
         # ORIGINAL COMMAND (first call)
         if "AI_FIXED" not in command:
-            stdout_data = ""
-            stderr_data = "synthetic error"
-            exit_status = 1
+        stdout_data = ""
+        stderr_data = "synthetic error"
+        exit_status = 1
 
         # AI RETRY COMMAND (second call)
         else:
-            stdout_data = "AI repaired stdout"
-            stderr_data = ""
-            exit_status = 0
+        stdout_data = "AI repaired stdout"
+        stderr_data = ""
+        exit_status = 0
 
         # -----------------------------
         # stdout object + channel
         # -----------------------------
         stdout_channel = types.SimpleNamespace(
-            recv_exit_status=lambda: exit_status,
-            exit_status_ready=lambda: True,
-            recv_ready=lambda: True,
-            recv=lambda size: stdout_data.encode(),   # ⭐ REQUIRED
-            settimeout=lambda *_args, **_kwargs: None,
+        recv_exit_status=lambda: exit_status,
+        exit_status_ready=lambda: True,
+        recv_ready=lambda: True,
+        recv=lambda size: stdout_data.encode(),   # ⭐ REQUIRED
+        settimeout=lambda *_args, **_kwargs: None,
         )
 
         stdout = types.SimpleNamespace(
-            read=lambda: stdout_data.encode(),
-            channel=stdout_channel,
+        read=lambda: stdout_data.encode(),
+        channel=stdout_channel,
         )
 
         # -----------------------------
         # stderr object + channel
         # -----------------------------
         stderr_channel = types.SimpleNamespace(
-            recv_exit_status=lambda: exit_status,
-            exit_status_ready=lambda: True,
-            recv_ready=lambda: True,
-            recv=lambda size: stderr_data.encode(),   # ⭐ REQUIRED
-            settimeout=lambda *_args, **_kwargs: None,
+        recv_exit_status=lambda: exit_status,
+        exit_status_ready=lambda: True,
+        recv_ready=lambda: True,
+        recv=lambda size: stderr_data.encode(),   # ⭐ REQUIRED
+        settimeout=lambda *_args, **_kwargs: None,
         )
 
         stderr = types.SimpleNamespace(
-            read=lambda: stderr_data.encode(),
-            channel=stderr_channel,
+        read=lambda: stderr_data.encode(),
+        channel=stderr_channel,
         )
 
         return None, stdout, stderr
