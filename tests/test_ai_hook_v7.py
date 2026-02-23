@@ -235,22 +235,92 @@ def test_ai_hook_ai_fixed(monkeypatch):
 
 
 
+## ---------------------------------------------------------------------
+## TEST 2 — AI FAILED → install_failed
+## ---------------------------------------------------------------------
+#def test_ai_hook_ai_failed(monkeypatch):
+#
+#    # Fake SSH: retry fails (exit_status=1, stderr present)
+#    fake_ssh = FakeSSH(stdout_data="", stderr_data="still failing", exit_status=1)
+#
+#    monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+#
+#    def fake_ask_ai_for_recovery(context):
+#        return make_plan_ai_failed()
+#
+#    monkeypatch.setattr(m2f, "ask_ai_for_recovery", fake_ask_ai_for_recovery)
+#
+#    result = resurrection_install_tomcat(
+#        ip="1.2.3.4",
+#        private_ip="10.0.0.1",
+#        instance_id="i-test",
+#        WATCHDOG_TIMEOUT=5,
+#        replayed_commands=MINIMAL_COMMANDS,
+#        extra_tags=["from_module2e"],
+#    )
+#
+#    assert isinstance(result, tuple)
+#    _, _, registry = result
+#
+#    # install_failed block assertions
+#    assert registry["status"] == "install_failed"
+#    assert registry["ai_metadata"]["ai_invoked"] is True
+#    # The natural install_failed block adds tags like:
+#    #   "install_failed_command_0"
+#    assert any(tag.startswith("install_failed_command_") for tag in registry["tags"])
+
+
+
+
 # ---------------------------------------------------------------------
-# TEST 2 — AI FAILED → install_failed
+# TEST 2 — AI FAILED → install_failed refactored to use the MCPClient (my_mcp_client.py) as the monkeypatched point
 # ---------------------------------------------------------------------
 def test_ai_hook_ai_failed(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client   # NEW: patch the MCP client directly
 
-    # Fake SSH: retry fails (exit_status=1, stderr present)
-    fake_ssh = FakeSSH(stdout_data="", stderr_data="still failing", exit_status=1)
+    # Force a clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
 
-    monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+    # 1. Fake SSH client: same FakeSSH as Test 1
+    #    For this test, the AI retry command ("echo AI_FAILED") should still fail,
+    #    and our FakeSSH already treats anything NOT containing "AI_FIXED" as a failure.
+    fake_ssh = FakeSSH()
 
-    def fake_ask_ai_for_recovery(context):
+    # 2. Fake Paramiko module
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+
+        class AutoAddPolicy:
+            pass
+
+    fake_paramiko = FakeParamikoModule()
+
+    # Patch GLOBAL paramiko BEFORE importing module2f
+    monkeypatch.setattr(paramiko, "SSHClient", fake_paramiko.SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", fake_paramiko.AutoAddPolicy)
+
+    # Patch MCPClient.send so _invoke_ai_hook receives the "failed" plan
+    # This enables injection at the lowest python code level prior to actual rollout of the AI/MCP actual call to the
+    # AI Gateway Service and call to LLM. 
+    def fake_send(self, context):
         return make_plan_ai_failed()
 
-    monkeypatch.setattr(m2f, "ask_ai_for_recovery", fake_ask_ai_for_recovery)
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
 
-    result = resurrection_install_tomcat(
+    # 3. Import module2f AFTER patching global paramiko + MCPClient
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # 4. Run the function
+    result = m2f.resurrection_install_tomcat(
         ip="1.2.3.4",
         private_ip="10.0.0.1",
         instance_id="i-test",
@@ -259,6 +329,7 @@ def test_ai_hook_ai_failed(monkeypatch):
         extra_tags=["from_module2e"],
     )
 
+    # 5. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
 
@@ -268,6 +339,9 @@ def test_ai_hook_ai_failed(monkeypatch):
     # The natural install_failed block adds tags like:
     #   "install_failed_command_0"
     assert any(tag.startswith("install_failed_command_") for tag in registry["tags"])
+
+
+
 
 
 # ---------------------------------------------------------------------

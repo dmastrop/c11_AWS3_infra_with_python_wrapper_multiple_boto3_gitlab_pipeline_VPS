@@ -1,0 +1,121 @@
+USE venv at this location:
+(latestenv) ubuntu@ip-172-31-81-160:~/course11_devops_startup/tmp_ansible_venv/latestenv$ pwd
+/home/ubuntu/course11_devops_startup/tmp_ansible_venv/latestenv
+
+
+
+The pytest test files are located here: 
+
+(latestenv) ubuntu@ip-172-31-81-160:~/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/tests$ pytest --version
+pytest 9.0.2
+
+
+
+(latestenv) ubuntu@ip-172-31-81-160:~/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/tests$ python -V
+Python 3.12.5
+
+
+pytest is only installed on this venv. Won't be able to run pytest directly on the controller native python env. by design.
+
+
+
+Run the pytest FROM this directory (it must be run from this directory, otherwise the imports will fail):
+
+
+(latestenv) ubuntu@ip-172-31-81-160:~/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE$ pwd
+/home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
+
+
+Introductory tests:
+
+Test1
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
+
+Test2
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_failed
+
+Test3
+
+Test4
+
+Test5
+
+
+
+
+
+Sample outputs: (Note the registry_entry on each test)
+
+Test1
+(latestenv) ubuntu@ip-172-31-81-160:~/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE$ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
+====================================================== test session starts =======================================================
+platform linux -- Python 3.12.5, pytest-9.0.2, pluggy-1.6.0 -- /home/ubuntu/course11_devops_startup/tmp_ansible_venv/latestenv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
+collected 1 item                                                                                                                 
+
+tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed DEBUG: ask_ai_for_recovery = <function ask_ai_for_recovery at 0x73543f5e2200>
+DEBUG: _invoke_ai_hook = None
+DEBUG: _create_ssh_client = None
+DEBUG: calling resurrection_install_tomcat now
+[1.2.3.4] [2026-02-23 22:48:26.141370] Replay 1/1: echo test (Attempt 1)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+[1.2.3.4] ⚠️ Non-zero exit — retrying attempt 1
+[1.2.3.4] [2026-02-23 22:48:31.147161] Replay 1/1: echo test (Attempt 2)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] �� Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+[1.2.3.4] ⚠️ Non-zero exit — retrying attempt 2
+[1.2.3.4] [2026-02-23 22:48:36.147744] Replay 1/1: echo test (Attempt 3)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+AI_MCP_HOOK[1.2.3.4] 🔍 Invoking AI/MCP recovery engine...
+AI_MCP_HOOK[1.2.3.4] �� AI plan received: action=retry_with_modified_command
+AI_MCP_HOOK[1.2.3.4] 🔁 AI modified retry: echo AI_FIXED
+[1.2.3.4] 📥 Watchdog read: 18 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 18 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+AI repaired stdoutAI repaired stdout
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🎉 AI modified command succeeded!
+DEBUG: registry = {'status': 'install_success', 'attempt': 0, 'timestamp': '2026-02-23 22:48:36.148342', 'pid': 2627658, 'thread_id': 126805731777600, 'thread_uuid': '54451ffb', 'public_ip': '1.2.3.4', 'private_ip': '10.0.0.1', 'ai_metadata': {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': ['echo AI_FIXED']}, 'tags': ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:retry_with_modified_command', 'ai_assisted:*echo AI_FIXED*']}
+PASSED
+
+======================================================== warnings summary ========================================================
+tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
+  /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py:2099: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = str(datetime.utcnow())
+
+tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
+  /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py:2949: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": str(datetime.utcnow()),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================================= 1 passed, 2 warnings in 10.36s =================================================
