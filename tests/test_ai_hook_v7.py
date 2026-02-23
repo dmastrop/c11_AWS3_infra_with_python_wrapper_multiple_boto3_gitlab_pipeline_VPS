@@ -223,7 +223,7 @@ def test_ai_hook_ai_fixed(monkeypatch):
 
     print("DEBUG: registry =", registry)
 
-    # ⭐ Your original assertions restored
+    # original assertions restored
     assert registry["status"] == "install_success"
     assert registry["ai_metadata"]["ai_invoked"] is True
     assert "installation_completed" in registry["tags"]
