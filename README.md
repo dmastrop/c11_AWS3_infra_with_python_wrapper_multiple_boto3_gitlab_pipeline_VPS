@@ -745,7 +745,7 @@ The whitebox testing is using pytest with a monkeypatch at the lowest level (the
 Request Sender in the forthcoming Code UPDATE) exercising all of the python AI/MCP HOOK code breadth.   
 Following the whitebox pytest testing with all permutations of AI "plans", the AI Gateway Service will be started so that
 real life commands can be extensively tested against the code.  Throughout the pytest and real life testing, the 
-registry_entrys will be tested for incorporation of the ai_tags and ai_metadata. So far the code is looking very good. 
+registry_entrys will be tested for validation of the ai_tags and ai_metadata. So far the code is looking very good. 
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
