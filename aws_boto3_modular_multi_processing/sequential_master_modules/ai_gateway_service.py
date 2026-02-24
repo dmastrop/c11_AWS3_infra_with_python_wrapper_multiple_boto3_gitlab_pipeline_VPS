@@ -150,6 +150,40 @@ def recover(request: RecoveryRequest):
                             "    • operations that risk data loss or node instability\n"
                             "    • commands that cannot be undone or rolled back\n"
                             "  When returning \"abort\", do NOT propose a retry command.\n"
+                            "\n"
+                            "- Use \"fallback\" when you cannot produce a valid or safe recovery plan.\n"
+                            "  Fallback conditions include:\n"
+                            "    • insufficient information in the failure context\n"
+                            "    • ambiguous or contradictory signals about system state\n"
+                            "    • inability to determine a safe retry command\n"
+                            "    • uncertainty about whether a retry would cause harm\n"
+                            "    • detection of malformed, incomplete, or unexpected context fields\n"
+                            "    • any situation where you cannot confidently choose another action\n"
+                            "  When returning \"fallback\", do NOT propose cleanup or retry commands.\n"
+                            "\n"
+                            "- Use \"cleanup_and_retry\" when the failure can be resolved by removing\n"
+                            "  temporary files, stale locks, partial installations, or other artifacts\n"
+                            "  that may be blocking successful execution.\n"
+                            "  Cleanup-and-retry conditions include:\n"
+                            "    • leftover PID files or lock files\n"
+                            "    • partially installed packages or corrupted temp directories\n"
+                            "    • stale processes that must be terminated before retrying\n"
+                            "    • insufficient disk space that can be reclaimed safely\n"
+                            "    • any reversible condition where cleanup restores a safe state\n"
+                            "  When returning \"cleanup_and_retry\", provide a list of cleanup commands\n"
+                            "  in the \"cleanup\" field, and a retry command in the \"retry\" field.\n"
+                            "\n"
+                            "- Use \"retry_with_modified_command\" when the failure can be resolved by\n"
+                            "  adjusting the original command rather than performing cleanup.\n"
+                            "  Modified‑command conditions include:\n"
+                            "    • missing flags or arguments required for successful execution\n"
+                            "    • incorrect package names, service names, or paths\n"
+                            "    • commands that need elevated privileges (e.g., adding sudo)\n"
+                            "    • dependency installation commands that must be adjusted\n"
+                            "    • retrying with safer or more explicit parameters\n"
+                            "    • replacing a failing subcommand with a corrected version\n"
+                            "  When returning \"retry_with_modified_command\", provide exactly one\n"
+                            "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
                         )
                     },
 
@@ -162,9 +196,9 @@ def recover(request: RecoveryRequest):
                 ]
 
 
-
             },    # end of json block construct. Lots of nesting here!!
             timeout=15
+        
         )  # end of request response post block
 
 
