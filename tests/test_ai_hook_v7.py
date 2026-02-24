@@ -334,6 +334,8 @@ def test_ai_hook_ai_failed(monkeypatch):
     assert isinstance(result, tuple)
     _, _, registry = result
 
+    print("DEBUG: registry =", registry)
+
     # install_failed block assertions
     assert registry["status"] == "install_failed"
     assert registry["ai_metadata"]["ai_invoked"] is True
