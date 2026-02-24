@@ -111,6 +111,22 @@ def recover(request: RecoveryRequest):
         ###### The real deal setup is here ######
         # This is the plan schema for the action responses for the schema in accordance with the MCP Client (AI Request Sender)
         # in module2f. This has the acceptable action responses as I coded it in the AI/MCP HOOK function in module2f.
+        
+
+        #### **AI/MCP Recovery Engine Contract Overview**
+        #
+        #The AI/MCP Recovery Engine introduces a deterministic, contract‑driven layer of intelligence into the module2f retry 
+        #loop. Instead of guessing how to fix a failure, the LLM is constrained to return one of four explicitly defined 
+        #recovery actions: `cleanup_and_retry`, `retry_with_modified_command`, `abort`, or `fallback`. Each action has a 
+        #well‑defined semantic meaning, strict validation rules, and a predictable execution path inside module2f. This contract 
+        #ensures that AI‑assisted recovery behaves safely, consistently, and transparently, even in complex or ambiguous 
+        #failure scenarios. The system prompt embedded in the AI Gateway Service encodes the full behavioral contract, allowing 
+        #the LLM to reason about failures while remaining fully bounded by the schema and rules enforced by module2f and the 
+        #MCP Client. This design keeps the recovery engine both powerful and safe, while making the entire AI layer testable, 
+        #auditable, and easy to document.
+
+
+
         response = requests.post(
             LLM_API,
             headers={
