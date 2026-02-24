@@ -68,6 +68,41 @@ class MCPClient:
             "schema_version": self.schema_version,
             "context": context,
         }
+        
+        # ------------------------------------------------------------------
+        # AI Gateway Request Behavior (Timeouts, HTTP Errors, and Fallback)
+        # ------------------------------------------------------------------
+        # This client enforces a strict timeout (currently 30 seconds) on the
+        # HTTP request to the AI Gateway Service. If the gateway is down,
+        # unreachable, slow, or hangs without responding, `requests.post()`
+        # will raise a Timeout or ConnectionError. Any such exception is
+        # caught below and converted into:
+        #
+        #     {"action": "fallback", "error": "..."}
+        #
+        # The same fallback behavior applies to ALL non‑2xx HTTP responses.
+        # The call to `resp.raise_for_status()` will raise an HTTPError for
+        # any 4xx or 5xx status code. This ensures that:
+        #
+        #   - 404 Not Found
+        #   - 500 Internal Server Error
+        #   - 503 Service Unavailable
+        #   - any other non‑200 response
+        #
+        # are treated as AI fallback conditions. Module2f will then continue
+        # with native failure classification (Heuristic 4) while tagging the
+        # registry with ai_fallback=True.
+        #
+        # Summary:
+        #   • Timeout  → fallback
+        #   • ConnectionError → fallback
+        #   • Non‑200 HTTP → fallback
+        #   • Invalid JSON → fallback
+        #
+        # This guarantees that the AI/MCP hook never blocks indefinitely and
+        # that module2f always receives a deterministic plan object.
+        # ------------------------------------------------------------------
+
 
         try:
             print("[AI_MCP] Sending context to AI Gateway Service...")
