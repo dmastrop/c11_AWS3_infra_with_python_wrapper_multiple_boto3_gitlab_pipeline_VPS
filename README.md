@@ -1699,7 +1699,7 @@ Thus from both perspectives the design is highly deterministic.
 
 
 ### **Flow Diagram 1 — AI/MCP Hook Control‑Flow (module2f) With Control‑Flow + Persistent State Notes**
-
+```
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │                       module2f Retry Loop                             │
@@ -1848,7 +1848,7 @@ Thus from both perspectives the design is highly deterministic.
                  ┌────────────────────────────────────────────┐
                  │  Return final registry tuple               │
                  └────────────────────────────────────────────┘
-
+```
 
 
 ### **Flow Diagram 2 — Control‑Flow vs. Persistent State Variables**
@@ -1979,7 +1979,7 @@ Final output:
 
 This is the complete forensic record of the recovery attempt.
 
-
+```
 
 
 
