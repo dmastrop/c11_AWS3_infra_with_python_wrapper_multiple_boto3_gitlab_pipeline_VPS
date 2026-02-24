@@ -124,7 +124,7 @@ def recover(request: RecoveryRequest):
         #the LLM to reason about failures while remaining fully bounded by the schema and rules enforced by module2f and the 
         #MCP Client. This design keeps the recovery engine both powerful and safe, while making the entire AI layer testable, 
         #auditable, and easy to document.
-
+        # If the fix involves more than one comamnd to resolve it it will use the action cleanup_and_retry.
 
 
         response = requests.post(
