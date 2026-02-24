@@ -122,6 +122,7 @@ def recover(request: RecoveryRequest):
                 "temperature": 0,
                 "response_format": {"type": "json_object"},
 
+
                 "messages": [
                     {
                         "role": "system",
@@ -138,6 +139,17 @@ def recover(request: RecoveryRequest):
                             "- NEVER return text outside the JSON.\n"
                             "- NEVER explain your reasoning.\n"
                             "- Use \"fallback\" if you cannot produce a valid plan.\n"
+                            "\n"
+                            "- Use \"abort\" when the command or system state is unsafe or non‑recoverable.\n"
+                            "  Abort conditions include (but are not limited to):\n"
+                            "    • destructive commands (e.g., deleting system files)\n"
+                            "    • non‑idempotent operations that cannot be safely retried\n"
+                            "    • dependency conflicts that cannot be resolved automatically\n"
+                            "    • corrupted or inconsistent system state\n"
+                            "    • security violations (credentials or secrets exposed)\n"
+                            "    • operations that risk data loss or node instability\n"
+                            "    • commands that cannot be undone or rolled back\n"
+                            "  When returning \"abort\", do NOT propose a retry command.\n"
                         )
                     },
 
@@ -148,9 +160,12 @@ def recover(request: RecoveryRequest):
                         "content": str(context)
                     }
                 ]
-            },
+
+
+
+            },    # end of json block construct. Lots of nesting here!!
             timeout=15
-        )
+        )  # end of request response post block
 
 
 
