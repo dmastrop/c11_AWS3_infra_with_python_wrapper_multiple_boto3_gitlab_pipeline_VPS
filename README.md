@@ -1478,10 +1478,10 @@ This contract ensures that AI‑assisted recovery is predictable, testable, and 
 
 
 
----
-The following 2 sections offer 2 different perspectives on the high level code design to convey how the code flows from and
+
+### The following 2 sections offer 2 different perspectives on the high level code design to convey how the code flows from and
 to the AI/MCP hook.
----
+
 
 ### **AI Plan Validation & AI Metadata Integration in module2f (Perspective 1)**
 
@@ -1676,7 +1676,9 @@ These fields allow downstream systems to understand:
 This metadata is essential for observability, debugging, and ML ingestion.
 
 
-NOTE: AI tags are merged as well into the registry, as noted in the previous section.
+Note: AI tags are merged as well into the registry, as noted in the previous section.
+
+
 ---
 
 #### **5. Deterministic Outcomes (as stated in the previous section)**
