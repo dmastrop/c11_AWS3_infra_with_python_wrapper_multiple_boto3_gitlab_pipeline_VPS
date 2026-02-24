@@ -405,7 +405,7 @@ def test_ai_hook_ai_fallback(monkeypatch):
     import importlib
     import my_mcp_client   # NEW: patch the MCP client directly
 
-    # ⭐ Force a clean import of module2f
+    # Force a clean import of module2f
     sys.modules.pop(
         "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
         None
@@ -424,11 +424,11 @@ def test_ai_hook_ai_fallback(monkeypatch):
 
     fake_paramiko = FakeParamikoModule()
 
-    # ⭐ Patch GLOBAL paramiko BEFORE importing module2f
+    # Patch GLOBAL paramiko BEFORE importing module2f
     monkeypatch.setattr(paramiko, "SSHClient", fake_paramiko.SSHClient)
     monkeypatch.setattr(paramiko, "AutoAddPolicy", fake_paramiko.AutoAddPolicy)
 
-    # ⭐ Patch MCPClient.send to return a FALLBACK plan
+    # Patch MCPClient.send to return a FALLBACK plan
     def fake_send(self, context):
         return make_plan_fallback()
 
@@ -475,21 +475,82 @@ def test_ai_hook_ai_fallback(monkeypatch):
 
 
 
+## ---------------------------------------------------------------------
+## TEST 4 — AI ABORT → tagged failure
+## ---------------------------------------------------------------------
+#def test_ai_hook_ai_abort(monkeypatch):
+#
+#    fake_ssh = FakeSSH(stdout_data="", stderr_data="synthetic error", exit_status=1)
+#
+#    monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+#
+#    def fake_ask_ai_for_recovery(context):
+#        return make_plan_abort()
+#
+#    monkeypatch.setattr(m2f, "ask_ai_for_recovery", fake_ask_ai_for_recovery)
+#
+#    result = resurrection_install_tomcat(
+#        ip="1.2.3.4",
+#        private_ip="10.0.0.1",
+#        instance_id="i-test",
+#        WATCHDOG_TIMEOUT=5,
+#        replayed_commands=MINIMAL_COMMANDS,
+#        extra_tags=["from_module2e"],
+#    )
+#
+#    assert isinstance(result, tuple)
+#    _, _, registry = result
+#
+#    # Abort should still be a failure, but with AI metadata present
+#    assert registry["ai_metadata"]["ai_invoked"] is True
+#    assert "ai_" in "".join(registry["tags"])
+
+
 # ---------------------------------------------------------------------
 # TEST 4 — AI ABORT → tagged failure
 # ---------------------------------------------------------------------
 def test_ai_hook_ai_abort(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client   # NEW: patch the MCP client directly
 
-    fake_ssh = FakeSSH(stdout_data="", stderr_data="synthetic error", exit_status=1)
+    # ⭐ Force a clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
 
-    monkeypatch.setattr("paramiko.SSHClient", lambda *args, **kwargs: fake_ssh)
+    # 1. Fake SSH client (same behavior as Test 1–3)
+    fake_ssh = FakeSSH()
 
-    def fake_ask_ai_for_recovery(context):
+    # 2. Fake Paramiko module
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+
+        class AutoAddPolicy:
+            pass
+
+    fake_paramiko = FakeParamikoModule()
+
+    # ⭐ Patch GLOBAL paramiko BEFORE importing module2f
+    monkeypatch.setattr(paramiko, "SSHClient", fake_paramiko.SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", fake_paramiko.AutoAddPolicy)
+
+    # ⭐ Patch MCPClient.send to return an ABORT plan
+    def fake_send(self, context):
         return make_plan_abort()
 
-    monkeypatch.setattr(m2f, "ask_ai_for_recovery", fake_ask_ai_for_recovery)
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
 
-    result = resurrection_install_tomcat(
+    # 3. Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # 4. Run the function
+    result = m2f.resurrection_install_tomcat(
         ip="1.2.3.4",
         private_ip="10.0.0.1",
         instance_id="i-test",
@@ -498,12 +559,33 @@ def test_ai_hook_ai_abort(monkeypatch):
         extra_tags=["from_module2e"],
     )
 
+    # 5. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
 
-    # Abort should still be a failure, but with AI metadata present
+    print("DEBUG: registry =", registry)
+
+    # AI metadata checks
     assert registry["ai_metadata"]["ai_invoked"] is True
-    assert "ai_" in "".join(registry["tags"])
+    assert registry["ai_metadata"]["ai_fallback"] is False
+    assert registry["ai_metadata"]["ai_plan_action"] == "abort"
+
+    tags = registry["tags"]
+
+    # Heuristic 4 tags MUST be present
+    assert "fatal_exit_nonzero" in tags
+    assert "stderr_present" in tags
+    assert "echo test" in tags
+    assert any(tag.startswith("command_retry_") for tag in tags)
+    assert any(tag.startswith("exit_status_") for tag in tags)
+    assert any(tag.startswith("nonwhitelisted_material:") for tag in tags)
+    assert any("synthetic error" in tag for tag in tags)
+
+    # AI abort tag
+    assert any("ai_plan_action:abort" in tag for tag in tags)
+
+
+
 
 
 # ---------------------------------------------------------------------
