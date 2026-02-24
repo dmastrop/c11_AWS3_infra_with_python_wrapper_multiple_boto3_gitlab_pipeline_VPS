@@ -1437,7 +1437,17 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 ## UPDATES part 55: Phase4a.1: AI/MCP Hook Integration into module2f, the resurrection engine
 
+### Introduction
 
+See this link below for a high level overview of where this Phase4a.1 falls into this project as a whole.
+
+- [Preface Update2: Phase4a AI/MCP incorporation and Phase4b ML for prediction/anomaly detection High Level Overview](#preface-update2-phase4a-aimcp-incorporation-and-phase4b-ml-for-predictionanomaly-detection-high-level-overview)
+
+This UPDATE is a Work In Progress. The sections below a the framework for the documentation of the architectural design of the 
+code for this AI/MCP integration into the module2f resurrection engine.
+There are a lot of moving pieces in the impelementation and the sections below will be expounded upon along with the relevant
+code. The testing is going very well. The whitebox testing is being done with pytest. Almost all of the code is complete and
+committed.
 
 
 
