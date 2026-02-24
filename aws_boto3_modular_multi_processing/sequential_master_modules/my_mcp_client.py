@@ -125,6 +125,33 @@ class MCPClient:
             print("[AI_MCP] Received valid response from AI Gateway")
             return data
 
+
+        # ------------------------------------------------------------------
+        # Exception Handling and Fallback Behavior
+        # ------------------------------------------------------------------
+        # Any exception raised during the HTTP request or response parsing
+        # is treated as an AI fallback condition. This includes:
+        #
+        #   • Timeout (AI Gateway slow or non-responsive)
+        #   • ConnectionError (Gateway down, DNS failure, refused connection)
+        #   • HTTPError (non‑2xx status codes raised by raise_for_status())
+        #   • JSON decoding errors (invalid or empty response body)
+        #   • Any unexpected runtime exception
+        #
+        # All such failures are converted into a deterministic fallback plan:
+        #
+        #     {"action": "fallback", "error": "<exception message>"}
+        #
+        # Module2f interprets this as:
+        #   ai_invoked=True, ai_fallback=True, ai_fixed=False
+        #
+        # This guarantees:
+        #   • The AI/MCP hook never blocks indefinitely.
+        #   • Module2f always receives a valid plan object.
+        #   • The system degrades gracefully when the AI layer is unavailable.
+        # ------------------------------------------------------------------
+
+
         except Exception as e:
             # Any network error, timeout, HTTP error, or JSON error
             print(f"[AI_MCP] ERROR: Exception talking to AI Gateway: {e}")
