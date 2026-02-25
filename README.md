@@ -2503,7 +2503,7 @@ The following diagram expands the high‑level linear flow into a complete archi
 
 ---
 
-#### Control‑flow vs persistent state variables
+### Control‑flow vs persistent state variables
 
 Inside `resurrection_install_tomcat`, the AI/MCP HOOK uses a clean separation between **control‑flow variables** and **persistent state variables**:
 
@@ -2535,7 +2535,7 @@ This separation is crucial:
 
 ---
 
-#### Development history: Steps 1–5b and Step 6 (formalized)
+### Development history: Steps 1–5b and Step 6 (formalized)
 
 **Step 1 – Initial inline MCP/AI HOOK prototype**  
 - The first version of the AI/MCP HOOK logic was implemented inline inside `resurrection_install_tomcat`.  
