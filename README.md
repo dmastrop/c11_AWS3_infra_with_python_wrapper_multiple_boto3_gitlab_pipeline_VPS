@@ -2750,6 +2750,249 @@ The registry entry reflects **all** AI involvement across the entire resurrectio
 
 
 
+### **AI Gateway Service and the LLM Recovery Contract**
+
+
+
+
+---
+
+### **AI Gateway Service and the LLM Recovery Contract**
+
+This section addresses the following topics:
+
+- What the AI Gateway Service is  
+- Why it exists  
+- How it is started (VPS vs GitLab CI)  
+- How it interacts with the AI Request Sender  
+- How it forwards context to the LLM  
+- How the LLM is constrained by the recovery contract  
+- Why the contract is the “glue” between module2f and the LLM  
+- How the HOOK applies the plan  
+- What the Gateway does *not* do (it never executes commands)  
+- How schema validation and fallback behavior work  
+
+---
+
+
+#### **What the AI Gateway Service is**
+
+The AI Gateway Service is the central relay between module2f and the LLM. It is a lightweight FastAPI application that runs as a **separate process** and exposes a single endpoint:
+
+```
+POST /recover
+```
+
+This service receives the failure context from module2f (via the AI Request Sender), forwards it to the LLM along with a strict behavioral contract, and returns the LLM’s structured recovery plan. The Gateway never executes commands itself — it only routes information and enforces the contract that governs how the LLM must behave.
+
+---
+
+#### **Why the AI Gateway Service Exists**
+
+module2f never talks to the LLM directly. This separation provides:
+
+- **Isolation** — The LLM is never exposed to internal module2f structures.  
+- **Security** — API keys and LLM access stay inside the Gateway process.  
+- **Determinism** — The Gateway enforces strict schema validation and fallback rules.  
+- **Testability** — The AI Request Sender can be monkeypatched in pytest without touching the LLM.  
+- **Contract enforcement** — The Gateway embeds the full recovery contract into the system prompt.
+
+The Gateway is the **glue** between module2f and the LLM. It ensures that the LLM always returns one of the four allowed recovery actions and never produces unbounded or unsafe output.
+
+---
+
+#### **How the Gateway Is Started (VPS vs GitLab CI)**
+
+The Gateway must run **before** any module2f code executes.
+
+**Preferred: Start inside the GitLab CI container**
+
+This avoids installing FastAPI/uvicorn on the VPS and keeps the production environment clean and stable.
+
+Example `.gitlab-ci.yml`:
+
+```yaml
+before_script:
+  - pip install fastapi uvicorn requests
+  - nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
+  - sleep 3
+```
+
+This:
+
+- Installs FastAPI + uvicorn inside the CI container  
+- Starts the Gateway in the background  
+- Ensures module2f can reach it at `http://localhost:8000`  
+- Avoids modifying the VPS  
+
+**Alternative: Start manually on the VPS (not preferred)**
+
+```bash
+pip install fastapi uvicorn
+uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000
+```
+
+This works, but the preference is to avoid adding packages to the VPS unless absolutely necessary.
+
+---
+
+#### **The Recovery Contract: How the LLM Knows What to Do**
+
+The most important part of the Gateway is the **system prompt** it sends to the LLM. This prompt encodes the entire recovery contract — the rules that constrain the LLM’s behavior and ensure deterministic, safe, testable output.
+
+The LLM is required to return **exactly one** of the following actions:
+
+- `cleanup_and_retry`
+- `retry_with_modified_command`
+- `abort`
+- `fallback`
+
+Each action has strict semantics:
+
+**1. cleanup_and_retry**
+Used when the failure can be resolved by removing temporary files, stale locks, partial installations, or other reversible artifacts.
+
+The LLM must return:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": ["..."],
+  "retry": "..."
+}
+```
+
+**2. retry_with_modified_command**
+Used when the original command needs correction (missing flags, wrong package name, missing sudo, etc.).
+
+The LLM must return:
+
+```json
+{
+  "action": "retry_with_modified_command",
+  "retry": "..."
+}
+```
+
+**3. abort**
+Used when the system state is unsafe or non‑recoverable:
+
+- destructive commands  
+- corrupted system state  
+- dependency conflicts  
+- security violations  
+- non‑idempotent operations  
+- anything that risks node stability  
+
+The LLM must **not** propose cleanup or retry commands.
+
+**4. fallback**
+Used when the LLM cannot confidently choose another action:
+
+- insufficient context  
+- ambiguous signals  
+- malformed or unexpected fields  
+- uncertainty about safety  
+
+The LLM must return:
+
+```json
+{ "action": "fallback" }
+```
+
+---
+
+#### **How the Gateway Enforces the Contract**
+
+After receiving the LLM’s response, the Gateway performs strict schema validation:
+
+- `action` must be one of the four allowed values  
+- `cleanup` must be a list if present  
+- `retry` must be a string if present  
+- Any violation results in:
+
+```json
+{ "error": "...", "action": "fallback" }
+```
+
+This ensures module2f never receives malformed or unsafe plans.
+
+---
+
+#### **How the Gateway Interacts With the AI Request Sender**
+
+The flow is:
+
+```
+module2f → ask_ai_for_recovery → MCPClient.send → AI Gateway → LLM
+LLM → AI Gateway → MCPClient.send → module2f → _invoke_ai_hook
+```
+
+The Gateway:
+
+- Receives the context  
+- Embeds it into the system prompt  
+- Sends it to the LLM  
+- Validates the returned plan  
+- Returns the plan to the AI Request Sender  
+
+The Gateway **never executes commands**.  
+Execution happens inside `_invoke_ai_hook` using the same SSH connection module2f already established.
+
+---
+
+#### **How the HOOK Applies the Plan**
+
+The HOOK (`_invoke_ai_hook`) is the component that:
+
+- Builds the context  
+- Calls `ask_ai_for_recovery()`  
+- Updates persistent state (`ai_invoked`, `ai_plan_action`, `ai_fallback`, `ai_commands`)  
+- Applies cleanup or retry commands  
+- Re‑runs commands through SSH  
+- Returns control‑flow variables to the caller  
+
+The Gateway only provides the plan.  
+The HOOK is what actually **executes** the plan.
+
+---
+
+#### **Error Handling and Fallback Behavior**
+
+If:
+
+- the LLM API is unreachable  
+- the API key is missing  
+- the HTTP request fails  
+- the LLM returns invalid JSON  
+- the schema is violated  
+
+…the Gateway returns:
+
+```json
+{ "error": "...", "action": "fallback" }
+```
+
+This ensures module2f always receives a bounded, safe response.
+
+---
+
+#### **Why This Contract Matters**
+
+This contract is the **intelligence boundary** between module2f and the LLM.
+
+It ensures:
+
+- deterministic behavior  
+- safe recovery actions  
+- predictable control‑flow  
+- testability via pytest  
+- auditability via registry metadata  
+- clean separation of responsibilities  
+
+The Gateway gives the LLM the “rules of the game,” and the HOOK applies the resulting plan to the node.
+
+Together, they form a **bounded, deterministic AI recovery engine**.
 
 
 
@@ -8570,7 +8813,7 @@ what happens is:
 
 - **If no exception:** `starmap` completes, `finally` runs, then `aggregate_process_stats()` runs.
 - **If an exception (like `EndpointConnectionError`) is raised inside `starmap`:**
-  - The exception is caught by the `except` block, your `[CONTROL_PLANE_ENDPOINT_FAILURE][module2] ...` line is printed.
+  - The exception is caught by the `except` block, and the `[CONTROL_PLANE_ENDPOINT_FAILURE][module2] ...` line is printed.
   - The `finally` block still runs (SG_STATE drift artifact, aggregate registry, ghost artifacts, etc.).
   - Because the exception is now *handled* (not re‑raised), execution continues and `aggregate_process_stats()` **does run** afterward—unlike the previous behavior where the exception propagated out of `main()` and skipped that last call.
 
@@ -12911,7 +13154,7 @@ Instead:
 
 - The SG is a **shared object** in AWS.
 - Instances attach to the SG.
-- When you modify the SG (e.g., add port 22), AWS **propagates** the rule to all attached instances.
+- When one modifies the SG (e.g., add port 22), AWS **propagates** the rule to all attached instances.
 - Propagation is **asynchronous** and not instantaneous.
 
 This means:
