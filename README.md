@@ -2627,7 +2627,7 @@ thus facilitating the import of the my_mcp_client.py.
 
 ### Real life validation
 
-This will be providing in the next UPDATE.
+This will be provided in the next UPDATE.
 
 The key is to limit the number of nodes as they will all intentionally fail with very challenging command sets. Module2 does 
 not have the AI/MCP HOOK code integration yet, so all the nodes will fail to this module2f implementation. Module2f, although
