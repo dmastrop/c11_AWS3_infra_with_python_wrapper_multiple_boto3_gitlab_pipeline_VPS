@@ -2043,9 +2043,9 @@ This is the AI equivalent of a circuit breaker.
 
 ---
 
-How module2f handles ABORT (the code will be presented in a section below)
+Example of how module2f handles ABORT (the full code will be presented in a section below)
 
-Inside `_invoke_ai_hook`, the logic is:
+Inside `_invoke_ai_hook` (called from module2f def resurrection_install_tomcat function), the logic is:
 
 - `ai_invoked = True`
 - `ai_plan_action = "abort"`
@@ -2055,7 +2055,7 @@ Inside `_invoke_ai_hook`, the logic is:
   - `ai_invoked_true`
   - `ai_plan_action:abort`
   - `ai_assisted:*<whatever>*` (if any commands were suggested)
-- The underlying failure classification is still **Heuristic‑4** (in your test case)
+- The underlying failure classification is  **Heuristic‑4** in the module2f code
 
 So the registry for abort looks almost identical to fallback, except:
 
@@ -2063,6 +2063,60 @@ So the registry for abort looks almost identical to fallback, except:
 - `ai_plan_action = "abort"`
 
 ---
+
+Thus, 
+**Abort = AI explicitly tells module2f to stop.**
+
+It is used when:
+
+- Continuing is unsafe  
+- The command is harmful  
+- The system is in a corrupted state  
+- The AI detects a condition that cannot be fixed  
+- The AI determines retrying is pointless or dangerous  
+- The AI Gateway returns a valid plan with `"action": "abort"`
+
+Fallback is “I can’t help.”  
+
+Abort is “STOP — do not continue.”
+
+As noted earlier, the LLM will be instructed to act this very specific way by the contract as it is stipulated in the 
+AI Gateway Service code (ai_gateway_service.py)
+
+
+#### What scenarios produce an **AI ABORT**?
+
+In this system, **abort** is not a network failure, not a timeout, not a malformed plan.  
+Those all map to **fallback**.
+
+**Abort** is the AI saying:
+
+> “I understand the situation, and I am explicitly instructing you to STOP.  
+> Do not retry. Do not continue.  
+> This operation is unsafe or invalid.”
+> I know this by the contract that is instructing me.
+
+This is the AI’s **circuit breaker**.
+
+Specific typical real‑world abort scenarios:
+
+- The AI detects a **dangerous command** (e.g., `rm -rf /`, overwriting system files).
+- The AI detects a **corrupted state** where continuing could cause damage.
+- The AI determines the node is in a **non‑recoverable state**.
+- The AI sees a **dependency conflict** that cannot be resolved safely.
+- The AI sees a **security violation** (e.g., credentials printed to stdout).
+- The AI sees a **misconfiguration** that requires human intervention.
+- The AI determines the command is **not idempotent** and retrying could break the system.
+- The AI determines the command is **not reversible** and should not be attempted again.
+
+Once again, in short:
+
+Fallback = “I can’t help — continue with native logic.”  
+Abort = “COMPLETELY STOP — do not continue at all.”
+
+
+
+
 
 
 
