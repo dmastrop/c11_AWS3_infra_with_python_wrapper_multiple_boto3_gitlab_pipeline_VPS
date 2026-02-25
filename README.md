@@ -2164,9 +2164,11 @@ The AI Gateway Service runs locally on `127.0.0.1:8000` and will be started from
 tcp 0 0 127.0.0.1:8000 0.0.0.0:* LISTEN
 ```
 However, running it directly on the VPS involves adding packages and so to isolate the software required from the VPS this AI Gateway Service will be started from within the gitlab pipeline using the .gitlab-ci.yml file and the additional packages required will be installed on the docker container at pipeline runtime. This will be done as part of Step6 of the code implementation strategy reviewed in a section further below.
----
 
-### High‑level flow between the four actors
+
+
+
+#### High‑level flow between the four actors
 
 - **module2f** exposes context (command, stdout, stderr, exit code, tags, history).  
 - **AI Request Sender (MCPClient)** sends that context to the **AI Gateway Service**.  
@@ -2183,7 +2185,7 @@ Key identity mapping:
 
 ---
 
-### Detailed architecture and control‑flow/persistent‑state diagram
+#### Detailed architecture and control‑flow/persistent‑state diagram
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -2295,34 +2297,34 @@ Key identity mapping:
 │   # Control‑flow vars (local return values):                                │
 │   #   ai_ran, ai_failed, ai_fixed, ai_fallback,                             │
 │   #   new_stdout, new_stderr, new_exit_status                               │
-│                                                                            │
+│                                                                             │
 │   ai_ran = True                                                             │
-│                                                                            │
+│                                                                             │
 │   # Call AI Request Sender                                                  │
 │   plan = ask_ai_for_recovery(context)                                       │
-│                                                                            │
+│                                                                             │
 │   ai_invoked = True                                                         │
 │   ai_plan_action = plan.get("action")                                       │
-│                                                                            │
+│                                                                             │
 │   if plan.get("action") == "cleanup_and_retry":                             │
 │       # run cleanup + retry via existing SSH connection                     │
 │       # collect new_stdout, new_stderr, new_exit_status                     │
 │       # decide ai_fixed vs ai_failed based on exit_status                   │
 │       ...                                                                   │
 │       ai_commands.append(plan.get("retry"))                                 │
-│                                                                            │
+│                                                                             │
 │   elif plan.get("action") == "retry_with_modified_command":                 │
 │       # run modified command, collect outputs                               │
 │       ...                                                                   │
 │       ai_commands.append(plan.get("retry"))                                 │
-│                                                                            │
+│                                                                             │
 │   elif plan.get("action") == "abort":                                       │
 │       ai_failed = True                                                      │
-│                                                                            │
+│                                                                             │
 │   elif plan.get("action") == "fallback" or plan.get("error"):               │
 │       ai_fallback = True                                                    │
 │       ai_failed   = True                                                    │
-│                                                                            │
+│                                                                             │
 │   # Return control‑flow vars to resurrection_install_tomcat                 │
 │   return (ai_ran, ai_failed, ai_fixed, ai_fallback,                         │
 │           new_stdout, new_stderr, new_exit_status)                          │
@@ -2391,7 +2393,7 @@ Key identity mapping:
 
 ---
 
-### Control‑flow vs persistent state variables
+#### Control‑flow vs persistent state variables
 
 Inside `resurrection_install_tomcat`, the AI/MCP HOOK uses a clean separation between **control‑flow variables** and **persistent state variables**:
 
@@ -2423,7 +2425,7 @@ This separation is crucial:
 
 ---
 
-### Development history: Steps 1–5b and Step 6 (formalized)
+#### Development history: Steps 1–5b and Step 6 (formalized)
 
 **Step 1 – Initial inline MCP/AI HOOK prototype**  
 - The first version of the AI/MCP HOOK logic was implemented inline inside `resurrection_install_tomcat`.  
