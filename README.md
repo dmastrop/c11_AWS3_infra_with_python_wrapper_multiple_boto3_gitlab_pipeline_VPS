@@ -2185,7 +2185,97 @@ Key identity mapping:
 
 ---
 
-#### Detailed architecture and control‑flow/persistent‑state diagram
+#### **Flow Diagram 3: High‑Level Linear Flow Diagram (With Reference to All Major AI/MCP Functions + Variable Sets)**
+
+This diagram presents a clean, top‑down view of the AI/MCP integration, showing every major function involved in the flow.
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    HIGH‑LEVEL AI/MCP FLOW (LINEAR OVERVIEW)                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+module2f (Resurrection Engine)
+    │
+    │  • Detects final‑attempt failure inside resurrection_install_tomcat()
+    │  • Builds AI context (command, stdout, stderr, exit_status, tags, history)
+    │  • Calls AI/MCP HOOK helper:
+    │        _invoke_ai_hook(context)
+    │
+    │  _invoke_ai_hook(context):
+    │      • Calls ask_ai_for_recovery(context)
+    │      • Sets control‑flow variables:
+    │            ai_ran, ai_failed, ai_fixed, ai_fallback,
+    │            new_stdout, new_stderr, new_exit_status
+    │      • Mutates persistent state variables (nonlocal):
+    │            ai_invoked, ai_fallback, ai_plan_action, ai_commands
+    │      • Uses control‑flow vars to route execution:
+    │            → treat as fixed
+    │            → fallback to heuristics
+    │            → classify failure
+    │      • Persistent state vars later merged into registry via:
+    │            _build_ai_metadata_and_tags()
+    ▼
+AI Request Sender (MCPClient inside module2f)
+    │
+    │  ask_ai_for_recovery(context)
+    │      → implemented in module2f
+    │      → calls MCPClient.send(context)
+    │
+    │  MCPClient.send (from my_mcp_client.py):
+    │      • Serializes JSON
+    │      • POST http://localhost:8000/recover
+    │      • Returns structured plan or {"error": "...", "action": "fallback"}
+    ▼
+AI Gateway Service (FastAPI on port 8000, ai_gateway_service.py)
+    │
+    │  /recover endpoint:
+    │      • Receives JSON context
+    │      • Forwards context to LLM with system prompt + user message
+    ▼
+AI Brain (LLM)
+    │
+    │  • Performs reasoning
+    │  • Returns structured recovery plan:
+    │        { "action": "...", "cleanup": [...], "retry": "..." }
+    ▼
+AI Gateway Service
+    │
+    │  • Returns plan to AI Request Sender
+    ▼
+AI Request Sender (MCPClient)
+    │
+    │  • Returns plan to module2f
+    ▼
+module2f (Resurrection Engine)
+    │
+    │  _invoke_ai_hook(context)  (RETURN PATH)
+    │      • Sets control‑flow variables:
+    │            ai_ran, ai_failed, ai_fixed, ai_fallback,
+    │            new_stdout, new_stderr, new_exit_status
+    │      • Mutates persistent state variables (nonlocal):
+    │            ai_invoked, ai_fallback, ai_plan_action, ai_commands
+    │      • Uses control‑flow vars to route execution:
+    │            → treat as fixed
+    │            → fallback to heuristics
+    │            → classify failure
+    │      • Persistent state vars later merged into registry via:
+    │            _build_ai_metadata_and_tags()
+    │
+    │  • module2f selects registry path:
+    │        → install_success
+    │        → install_failed
+    │        → outer exception install_failed
+    │
+    │  • module2f merges persistent state vars:
+    │        ai_metadata + ai_tags
+    ▼
+registry_entry (final JSON returned to master process)
+```
+
+
+
+
+#### **Flow Diagram 4: Detailed architecture and control‑flow/persistent‑state diagram**
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
