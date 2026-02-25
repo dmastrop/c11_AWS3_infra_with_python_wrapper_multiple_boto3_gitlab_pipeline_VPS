@@ -1437,7 +1437,28 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 ## UPDATES part 55: Phase4a.1: AI/MCP Hook Integration into module2f, the resurrection engine
 
-### Introduction
+
+
+### **Table of Contents**
+
+- [Introduction](#introduction)
+- [AI/MCP Recovery Engine Contract Overview](#aimcp-recovery-engine-contract-overview)
+- [AI/MCP Recovery Actions](#aimcp-recovery-actions)
+- [The following 2 sections present different perspectives on how the calls to and from the AI/MCP HOOK operate](#the-following-2-sections-present-different-perspectives-on-how-the-calls-to-and-from-the-aimcp-hook-operate)
+- [AI Plan Validation & AI Metadata Integration in module2f (Perspective 1)](#ai-plan-validation--ai-metadata-integration-in-module2f-perspective-1)
+- [AI/MCP Hook Control‑Flow in module2f (Perspective 2)](#aimcp-hook-controlflow-in-module2f-perspective-2)
+- [Flow Diagram 1 — AI/MCP Hook Control‑Flow (module2f) With Control‑Flow + Persistent State Notes](#flow-diagram-1--aimcp-hook-controlflow-module2f-with-controlflow--persistent-state-notes)
+- [Flow Diagram 2 — Control‑Flow vs. Persistent State Variables](#flow-diagram-2--controlflow-vs-persistent-state-variables)
+- [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
+- [High level MCPClient, MCPServer architectural overview (includes Flow Diagrams 3 and 4)](#high-level-mcpclient-mcpserver-architectural-overview-includes-flow-diagrams-3-and-4)
+- [Control‑flow vs persistent state variables with Examples](#controlflow-vs-persistent-state-variables-with-examples)
+- [AI Gateway Service and the LLM Recovery Contract (includes Flow Diagram 5)](#ai-gateway-service-and-the-llm-recovery-contract-includes-flow-diagram-5)
+- [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step-6-formalized)
+- [Code Review](#code-review)
+- [Pytest validation](#pytest-validation)
+- [Real-life validation](#real-life-validation)
+
+### **Introduction**
 
 See this link below for a high level overview of where this Phase4a.1 falls into this project as a whole.
 
@@ -1984,7 +2005,7 @@ This is the complete forensic record of the recovery attempt.
 
 ```
 
-### **Differences between the abort and fallaback contract actions**
+### **Differences between the abort and fallback contract actions**
 
 As noted earlier: 
 The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
@@ -3084,7 +3105,7 @@ module2f (Resurrection Engine)
     │      • Uses persistent state vars to build registry entries
     ▼
 registry_entry (install_success / install_failed
-
+```
 
 
 
@@ -3180,7 +3201,7 @@ thus facilitating the import of the my_mcp_client.py.
 
 
 
-### **Real life validation**
+### **Real-life validation**
 
 This will be provided in the next UPDATE.
 
