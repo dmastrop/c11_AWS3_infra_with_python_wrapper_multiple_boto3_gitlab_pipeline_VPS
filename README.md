@@ -2503,7 +2503,13 @@ The following diagram expands the high‑level linear flow into a complete archi
 
 ---
 
-### Control‑flow vs persistent state variables
+### Control‑flow vs persistent state variables with Examples
+
+
+#### Introduction
+
+Given how crucial these 2 types of variables are to the AI/MCP HOOK design and code flow, its worth a moment to 
+present the differences between the 2 variables again, and add some examples to make the concept clear.
 
 Inside `resurrection_install_tomcat`, the AI/MCP HOOK uses a clean separation between **control‑flow variables** and **persistent state variables**:
 
@@ -2532,6 +2538,222 @@ This separation is crucial:
 
 - Control‑flow variables are **ephemeral** and drive the immediate path through the retry loop and heuristics.  
 - Persistent state variables are **durable** and become part of the audit trail in the registry JSON (ai_metadata + ai_tags).
+
+#### **Deep‑Dive Examples: How Control‑Flow and Persistent State Variables Actually Behave**
+
+The following examples illustrate exactly how these two classes of variables behave inside `module2f`, why both are required, and how they interact with the retry loop, heuristics, and registry assembly.
+
+---
+
+##### **Example 1 — AI fixes the command on the final attempt**
+
+**Inside `_invoke_ai_hook`**
+
+```python
+ai_invoked = True
+ai_plan_action = "cleanup_and_retry"
+ai_commands.append("sudo dpkg --configure -a")
+```
+
+These are **persistent state mutations**.
+
+Then the helper returns:
+
+```python
+{
+    "ai_ran": True,
+    "ai_fixed": True,
+    "ai_failed": False,
+    "ai_fallback": False,
+    "new_stdout": "...",
+    "new_stderr": "",
+    "new_exit_status": 0
+}
+```
+
+These are **control‑flow signals**.
+
+**Caller behavior**
+
+```python
+if result["ai_fixed"]:
+    stdout_output = result["new_stdout"]
+    stderr_output = result["new_stderr"]
+    exit_status = result["new_exit_status"]
+    command_succeeded = True
+    break
+```
+
+**Later, in `install_success`**
+
+```python
+ai_meta, ai_tags = _build_ai_metadata_and_tags()
+```
+
+This sees:
+
+- `ai_invoked=True`
+- `ai_plan_action="cleanup_and_retry"`
+- `ai_commands=["sudo dpkg --configure -a"]`
+
+Because the helper mutated these via `nonlocal`.
+
+**Result:**  
+The registry entry correctly records that AI fixed the command and what it did.
+
+---
+
+##### **Example 2 — AI runs but fails (fallback)**
+
+**Inside `_invoke_ai_hook`**
+
+```python
+ai_invoked = True
+ai_fallback = True
+ai_plan_action = "fallback"
+```
+
+Then returns:
+
+```python
+{
+    "ai_ran": True,
+    "ai_fixed": False,
+    "ai_failed": True,
+    "ai_fallback": True,
+    "new_stdout": "...",
+    "new_stderr": "same error",
+    "new_exit_status": 1
+}
+```
+
+**Caller behavior**
+
+```python
+# AI ran but did not fix → allow native logic to classify failure
+stdout_output = result["new_stdout"]
+stderr_output = result["new_stderr"]
+exit_status = result["new_exit_status"]
+```
+
+**Later, in `install_failed`**
+
+`_build_ai_metadata_and_tags()` sees:
+
+- `ai_invoked=True`
+- `ai_fallback=True`
+- `ai_plan_action="fallback"`
+
+**Result:**  
+The registry entry shows that AI was invoked but fell back to native logic.
+
+---
+
+##### **Example 3 — Why control‑flow vars must return stdout/stderr/exit_status**
+
+When the HOOK was inline, the retry command ran *inside* the attempt loop, so the caller already had:
+
+- `stdout_output`
+- `stderr_output`
+- `exit_status`
+
+After extraction into a helper, the caller loses visibility unless the helper returns them.
+
+This is essential for:
+
+- exception handlers  
+- heuristic blocks  
+- registry assembly  
+- post‑mortem debugging  
+
+Example:
+
+```python
+except Exception as e:
+    # stderr_output here may come from the AI retry command
+    registry_entry = {
+        "status": "install_failed",
+        "tags": [..., stderr_output, ...]
+    }
+```
+
+Without returning `new_stderr`, the registry would contain **stale** stderr — a forensic error.
+
+---
+
+##### **Example 4 — Why persistent state cannot replace control‑flow**
+
+Persistent state tells you:
+
+- “AI was invoked at some point”
+- “Here is the plan AI chose”
+- “Here are the commands AI ran”
+
+But it does **not** tell you:
+
+- “Did AI fix *this* command?”
+- “Should I break the attempt loop?”
+- “Should I continue to the next command?”
+- “Should I fall back to heuristics?”
+- “What is the updated exit status?”
+
+These are **immediate decisions**, not metadata.
+
+That’s why the helper must return:
+
+```python
+ai_fixed
+ai_failed
+ai_fallback
+new_stdout
+new_stderr
+new_exit_status
+```
+
+These are **per‑call signals**, not persistent state.
+
+---
+
+##### **Example 5 — Why persistent state must be mutated via `nonlocal`inside the _invoke_ai_hook helper function**
+
+Because persistent state must survive across:
+
+- multiple commands  
+- multiple attempts  
+- multiple heuristic blocks  
+- the entire run of `resurrection_install_tomcat`  
+
+Example:
+
+- Command 1 triggers AI → `ai_invoked=True`, `ai_commands=[...]`
+- Command 2 does not trigger AI → state persists
+- Command 3 triggers AI again → `ai_commands` grows
+
+At the end:
+
+```python
+ai_meta, ai_tags = _build_ai_metadata_and_tags()
+```
+
+The registry entry reflects **all** AI involvement across the entire resurrection process.
+
+---
+
+##### **Summary**
+
+- **Control‑flow vars** = per‑call signals used by the caller to decide what to do next.  
+- **Persistent state vars** = long‑lived AI metadata used for registry entries and forensic lineage.  
+- Both are required because the HOOK is no longer inline.  
+- Returning stdout/stderr/exit_status is essential for correctness and traceability.  
+- Mutating persistent state via `nonlocal` ensures the registry reflects the full AI history.
+
+
+
+
+
+
+
+
 
 ---
 
