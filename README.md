@@ -1462,6 +1462,14 @@ The AI/MCP Recovery Engine introduces a deterministic, contract‑driven layer o
 
 The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
 
+The actions are defined in great detail in the AI Gatewway Service (ai_gateay_service.py). The code in the AI Gateway Service 
+dictate how the LLM is instructed  to respond (act) when presented with a current command situation that is failing in its 
+current form. The response actions are listed in the table below, with some examples given in the last column "When It's Used".
+
+The Code Review section in this UPDATE will present the code involved in instructing the LLM to act in a manner indicated in the
+table below.
+
+
 | **Action**                     | **Purpose**                                                                 | **When It’s Used**                                                                                   | **Fields Required**                     |
 |-------------------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|------------------------------------------|
 | `retry_with_modified_command` | Correct the original command and retry.                                     | Missing flags, wrong paths, incorrect package names, privilege issues, safer parameters needed.       | `retry` (single corrected command)       |
@@ -1472,14 +1480,10 @@ The AI/MCP Recovery Engine operates under a strict, contract‑driven schema tha
 This contract ensures that AI‑assisted recovery is predictable, testable, and safe. Module2f validates every plan, MCPClient enforces timeouts and HTTP‑error fallback, and the system prompt encodes the full semantics of each action. Together, these layers create a recovery engine that is both powerful and bounded.
 
 
+ 
 
 
-
-
-
-
-
-### The following 2 sections offer 2 different perspectives on the high level code design to convey how the code flows from and to the AI/MCP hook.
+### The following 2 sections offer 2 different perspectives on the high level code design to convey how the code calls to and from the AI/MCP hook function.
 
 
 ### **AI Plan Validation & AI Metadata Integration in module2f (Perspective 1)**
@@ -1571,11 +1575,10 @@ The control‑flow inside module2f is intentionally explicit and transparent. Ev
 
 Control‑flow variables determine *what module2f does next*. They are short‑lived, local to the retry loop, and never written to the registry directly. Examples include:
 
-- `ai_invoked`  
+- `ai_ran`  
 - `ai_fallback`  
 - `ai_fixed`  
 - `ai_failed`  
-- `ai_plan_action`  
 - `new_stdout`, `new_stderr`, `new_exit_status`  
 
 These variables drive the execution path:
@@ -1821,7 +1824,7 @@ Thus from both perspectives the design is highly deterministic.
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │        CONTROL‑FLOW VARIABLES DRIVE FINAL REGISTRY ROUTING           │
-│  (ai_fixed, ai_failed, ai_fallback, ai_plan_action, new_stdout, etc.)│
+│  (ai_ran, ai_fixed, ai_failed, ai_fallback, new_stdout, etc.)│
 │  These are ephemeral and used ONLY to determine which registry path  │
 │  to assemble — they are NOT persisted.                               │
 └──────────────────────────────────────────────────────────────────────┘
@@ -1879,11 +1882,10 @@ These variables exist ONLY to determine what module2f should do next.
 They are NOT persisted, NOT returned, and NOT part of the registry.
 
 Examples:
-    ai_invoked
+    ai_ran
     ai_fallback
     ai_fixed
     ai_failed
-    ai_plan_action
     new_stdout
     new_stderr
     new_exit_status
@@ -1981,6 +1983,107 @@ Final output:
 This is the complete forensic record of the recovery attempt.
 
 ```
+
+### Differences between the abort and fallaback contract actions
+
+As noted earlier: 
+The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
+
+The actions are defined in great detail in the AI Gatewway Service (ai_gateay_service.py). The code in the AI Gateway Service
+dictate how the LLM is instructed  to respond (act) when presented with a current command situation that is failing in its
+current form. 
+
+The contract actions are: retry_with_modified_command, cleanup_and_retry, fallback, and abort.
+
+This section will describe the subtle differences between teh fallback action and the abort action parts of the contract with 
+the LLM.
+
+ 
+Fallback means:
+
+- AI was invoked  
+- AI *could not* produce a valid plan  
+- AI is telling module2f:  
+  **“I can’t help — continue with native logic.”**
+
+Examples:
+
+- AI Gateway unreachable  
+- Timeout  
+- Invalid JSON  
+- Unknown action  
+- AI returns `"action": "fallback"`  
+- AI returns garbage  
+- AI returns nothing  
+
+Fallback is a *graceful degradation* path.
+
+---
+ 
+Abort means:
+
+- AI was invoked  
+- AI *did* understand the situation  
+- AI is explicitly telling module2f:  
+  **“Stop. Do not retry. Do not continue.  
+  This operation should be aborted.”**
+
+Examples:
+
+- AI detects a dangerous command  
+- AI detects a destructive operation  
+- AI detects a dependency conflict that cannot be resolved  
+- AI determines the system is in an unsafe state  
+- AI determines continuing could corrupt the node  
+- AI returns `"action": "abort"`
+
+Abort is a *safety stop*.
+
+This is the AI equivalent of a circuit breaker.
+
+---
+
+How module2f handles ABORT (the code will be presented in a section below)
+
+Inside `_invoke_ai_hook`, the logic is:
+
+- `ai_invoked = True`
+- `ai_plan_action = "abort"`
+- `ai_fallback = False`
+- No retry is attempted
+- module2f returns a **failure registry entry**, tagged with:
+  - `ai_invoked_true`
+  - `ai_plan_action:abort`
+  - `ai_assisted:*<whatever>*` (if any commands were suggested)
+- The underlying failure classification is still **Heuristic‑4** (in your test case)
+
+So the registry for abort looks almost identical to fallback, except:
+
+- `ai_fallback = False`
+- `ai_plan_action = "abort"`
+
+---
+
+
+
+### High level MCPClient, MCPServer architectural overview
+
+
+Prior to reviewing the code blocks in detail, it is important to understand the MCPClient/MCPServer is this particular 
+project, as the names can often be very confusing relative to code function. Once the major block participants are understood,
+the code blocks and their relative functions will make sense.
+
+The high level overview presented here:
+
+- [Preface Update2: Phase4a AI/MCP incorporation and Phase4b ML for prediction/anomaly detection High Level Overview](#preface-update2-phase4a-aimcp-incorporation-and-phase4b-ml-for-predictionanomaly-detection-high-level-overview)
+
+... was presented in accordance to the MCP engineering standard.   This section applies that framework to the specific 
+code in this project and the objectives that need to be accomplished by the code to perform AI assisted command remediation 
+during node installation failures. 
+
+
+
+
 
 
 
