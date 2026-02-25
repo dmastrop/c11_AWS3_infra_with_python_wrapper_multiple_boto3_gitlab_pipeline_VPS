@@ -1453,7 +1453,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [High level MCPClient, MCPServer architectural overview (includes Flow Diagrams 3 and 4)](#high-level-mcpclient-mcpserver-architectural-overview-includes-flow-diagrams-3-and-4)
 - [Control‑flow vs persistent state variables with Examples](#controlflow-vs-persistent-state-variables-with-examples)
 - [AI Gateway Service and the LLM Recovery Contract (includes Flow Diagram 5)](#ai-gateway-service-and-the-llm-recovery-contract-includes-flow-diagram-5)
-- [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step-6-formalized)
+- [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps-15b-and-step-6-formalized)
 - [Code Review](#code-review)
 - [Pytest validation](#pytest-validation)
 - [Real-life validation](#real-life-validation)
