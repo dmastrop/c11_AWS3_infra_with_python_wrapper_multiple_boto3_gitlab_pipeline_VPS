@@ -1483,7 +1483,7 @@ This contract ensures that AI‑assisted recovery is predictable, testable, and 
  
 
 
-### **The following 2 sections offer 2 different perspectives on the high level code design to convey how the code calls to and from the AI/MCP hook function**
+### **The following 2 sections present different perspectives on how the calls to and from the AI/MCP HOOK operate**
 
 
 ### **AI Plan Validation & AI Metadata Integration in module2f (Perspective 1)**
