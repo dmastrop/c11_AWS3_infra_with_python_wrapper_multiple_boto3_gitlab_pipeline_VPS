@@ -1483,7 +1483,7 @@ This contract ensures that AI‑assisted recovery is predictable, testable, and 
  
 
 
-### The following 2 sections offer 2 different perspectives on the high level code design to convey how the code calls to and from the AI/MCP hook function.
+### **The following 2 sections offer 2 different perspectives on the high level code design to convey how the code calls to and from the AI/MCP hook function**
 
 
 ### **AI Plan Validation & AI Metadata Integration in module2f (Perspective 1)**
@@ -1984,7 +1984,7 @@ This is the complete forensic record of the recovery attempt.
 
 ```
 
-### Differences between the abort and fallaback contract actions
+### **Differences between the abort and fallaback contract actions**
 
 As noted earlier: 
 The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
@@ -2120,7 +2120,7 @@ Abort = “COMPLETELY STOP — do not continue at all.”
 
 
 
-### High level MCPClient, MCPServer architectural overview
+### **High level MCPClient, MCPServer architectural overview (includes Flow Diagrams 3 and 4)**
 
 
 Prior to reviewing the code blocks in detail, it is important to understand the MCPClient/MCPServer is this particular 
@@ -2503,7 +2503,7 @@ The following diagram expands the high‑level linear flow into a complete archi
 
 ---
 
-### Control‑flow vs persistent state variables with Examples
+### **Control‑flow vs persistent state variables with Examples**
 
 
 #### Introduction
@@ -2750,14 +2750,13 @@ The registry entry reflects **all** AI involvement across the entire resurrectio
 
 
 
-### **AI Gateway Service and the LLM Recovery Contract**
 
 
 
 
 ---
 
-### **AI Gateway Service and the LLM Recovery Contract**
+### **AI Gateway Service and the LLM Recovery Contract (includes Flow Diagram 5)**
 
 This section addresses the following topics:
 
@@ -2994,13 +2993,104 @@ The Gateway gives the LLM the “rules of the game,” and the HOOK applies the 
 
 Together, they form a **bounded, deterministic AI recovery engine**.
 
+#### **Flow Diagram 5: AI Gateway Service Contract Flow Diagram**
+
+
+The diagram below illustrates the complete end‑to‑end contract pipeline that governs AI‑assisted recovery inside module2f. It shows how _invoke_ai_hook builds the failure context and calls ask_ai_for_recovery, how the AI Request Sender (MCPClient.send) transports that context to the AI Gateway Service, how the Gateway enforces the recovery contract and validates the LLM’s response, and how the HOOK applies the resulting plan through the existing SSH connection. This flow highlights the two critical boundaries in the system — contract enforcement (LLM must obey the schema) and schema validation (Gateway ensures correctness) — and makes clear that the Gateway never executes commands. Execution happens exclusively inside module2f, while the Gateway provides the structured intelligence needed to guide recovery.
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         AI/MCP RECOVERY CONTRACT FLOW                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+module2f (Resurrection Engine)
+    │
+    │  _invoke_ai_hook(context)
+    │      • Builds failure context
+    │      • Calls ask_ai_for_recovery(context)
+    │      • Mutates persistent state vars:
+    │            ai_invoked, ai_plan_action, ai_fallback, ai_commands
+    │      • Applies cleanup_and_retry or retry_with_modified_command
+    │      • Executes commands through SAME SSH connection
+    │      • Returns control‑flow vars:
+    │            ai_ran, ai_fixed, ai_failed, ai_fallback,
+    │            new_stdout, new_stderr, new_exit_status
+    ▼
+AI Request Sender (MCPClient inside module2f)
+    │
+    │  ask_ai_for_recovery(context)
+    │      → MCPClient.send(context)
+    │
+    │  MCPClient.send (my_mcp_client.py)
+    │      • Serializes JSON
+    │      • POST /recover to AI Gateway
+    │      • Receives structured plan or fallback
+    ▼
+AI Gateway Service (FastAPI, ai_gateway_service.py)
+    │
+    │  /recover endpoint
+    │      • Receives context
+    │      • Embeds full recovery contract into system prompt
+    │      • Forwards request to LLM
+    │
+    │──────────────────────────────────────────────────────────────────────────
+    │   CONTRACT ENFORCEMENT BOUNDARY (LLM must obey the schema)
+    │──────────────────────────────────────────────────────────────────────────
+    │
+    │  LLM must return EXACTLY one action:
+    │      cleanup_and_retry
+    │      retry_with_modified_command
+    │      abort
+    │      fallback
+    │
+    │  LLM must follow strict rules:
+    │      • No text outside JSON
+    │      • No explanations
+    │      • No unsafe commands
+    │      • No malformed fields
+    │      • fallback if uncertain
+    ▼
+AI Brain (LLM)
+    │
+    │  • Reads system prompt (contract)
+    │  • Reads user message (context)
+    │  • Produces structured recovery plan
+    ▼
+AI Gateway Service
+    │
+    │──────────────────────────────────────────────────────────────────────────
+    │   SCHEMA VALIDATION BOUNDARY (Gateway enforces correctness)
+    │──────────────────────────────────────────────────────────────────────────
+    │
+    │  • Validate action ∈ {cleanup_and_retry, retry_with_modified_command,
+    │                       abort, fallback}
+    │  • Validate cleanup is list (if present)
+    │  • Validate retry is string (if present)
+    │  • On ANY violation → {"error": "...", "action": "fallback"}
+    ▼
+AI Request Sender (MCPClient)
+    │
+    │  • Returns plan to _invoke_ai_hook
+    ▼
+module2f (Resurrection Engine)
+    │
+    │  _invoke_ai_hook(context)  (RETURN PATH)
+    │      • Updates persistent state vars
+    │      • Applies cleanup or retry commands
+    │      • Returns control‑flow vars to caller
+    │
+    │  resurrection_install_tomcat:
+    │      • Uses control‑flow vars to route execution
+    │      • Uses persistent state vars to build registry entries
+    ▼
+registry_entry (install_success / install_failed
 
 
 
 
 ---
 
-### Development history: Steps 1–5b and Step 6 (formalized)
+### **Development history: Steps 1–5b and Step 6 (formalized)**
 
 **Step 1 – Initial inline MCP/AI HOOK prototype**  
 - The first version of the AI/MCP HOOK logic was implemented inline inside `resurrection_install_tomcat`.  
@@ -3054,7 +3144,7 @@ Together, they form a **bounded, deterministic AI recovery engine**.
 
 
 
-### Code Review
+### **Code Review**
 
 
 #### Introduction to Code Review
@@ -3073,7 +3163,7 @@ With the full implementation now laid out, the next phase focuses on validating 
 
 
 
-### Pytest validation
+### **Pytest validation**
 
 #### Introduction: Pytest Overview and Testing Strategy
 
@@ -3090,7 +3180,7 @@ thus facilitating the import of the my_mcp_client.py.
 
 
 
-### Real life validation
+### **Real life validation**
 
 This will be provided in the next UPDATE.
 
