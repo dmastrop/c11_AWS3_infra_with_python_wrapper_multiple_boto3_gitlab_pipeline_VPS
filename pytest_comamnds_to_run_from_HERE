@@ -42,6 +42,13 @@ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_abort
 
 
 Test5
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_unknown_action
+
+Test6
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_success
+
+Test7
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
 
 
 
