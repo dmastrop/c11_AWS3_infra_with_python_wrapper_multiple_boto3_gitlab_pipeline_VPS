@@ -86,7 +86,7 @@ Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection 
 
 
 
-Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 800 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across hundreds of AWS instances as part of a broader infrastructure automation suite.
+Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 800 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across thousands of AWS instances as part of a broader infrastructure automation suite.
 Testing is performed in a self-hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency. 
 
 •Phase 2 – Resurrection Logic : Integrated watchdog and retry-aware monitoring to detect silent thread stalls. Resurrection registry captures failure candidates for postmortem logging and sets the foundation for adaptive thread recovery.
@@ -129,7 +129,9 @@ artifact logs per pipeline)
 - Stateful security group drift detection and auto-remediation
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 - AI/MCP integration for command set replay
-
+- MCPClient/MCPService based architecture
+- AI Gateway Service for LLM integration
+- AI/MCP HOOK integration into modules
 
 
 
