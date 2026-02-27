@@ -1040,6 +1040,7 @@ def resurrection_install_tomcat(
             "ai_fallback": ai_fallback,
             "ai_plan_action": ai_plan.get("action") if isinstance(ai_plan, dict) else None,
             "ai_commands": ai_commands[:] if isinstance(ai_commands, list) else [],
+            "ai_failed_command": ai_failed_command, # This is incorporating the failed retry command into the ai_metadata for the cleanup_and retry contract action. It is a persistent state variable like the other four.
         }
 
         ai_tags = []
@@ -1310,7 +1311,13 @@ def resurrection_install_tomcat(
             - Returns updated outputs for classification and returns control-flow variables to the caller.
         """
 
-        nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands  # These are the persistent state variables
+        nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands, ai_failed_command  
+        # These are the persistent state variables that are incorporated into the ai_metadata in the registry_entry
+        
+        ai_failed_command = None  
+        # This needs to be initialized to None. It will be used to record the failed retry command. This is useful because the
+        # cleanup_and_retry contract action can support multiple retry commands.
+
 
         # --------------------------------------------------------
         # 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
@@ -1509,6 +1516,7 @@ def resurrection_install_tomcat(
                 # ------------------------------------------------
                 if r_exit != 0 or r_stderr.strip():
                     print(f"AI_MCP_HOOK[{ip}] ❌ Retry command failed — aborting retry sequence.")
+                    ai_failed_command = rcmd  ## NEW. Record the failed retry command. This will be added to ai_metadata
                     return {
                         "ai_ran": True,
                         "ai_fixed": False,
