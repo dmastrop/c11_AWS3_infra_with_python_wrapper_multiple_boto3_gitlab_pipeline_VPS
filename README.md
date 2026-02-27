@@ -2292,7 +2292,7 @@ module2f (Resurrection Engine)
     │            ai_ran, ai_failed, ai_fixed, ai_fallback,
     │            new_stdout, new_stderr, new_exit_status
     │      • Mutates persistent state variables (nonlocal):
-    │            ai_invoked, ai_fallback, ai_plan_action, ai_commands
+    │            ai_invoked, ai_fallback, ai_plan_action, ai_commands, ai_failed_command
     │      • Uses control‑flow vars to route execution:
     │            → treat as fixed
     │            → fallback to heuristics
@@ -2388,8 +2388,8 @@ The following diagram expands the high‑level linear flow into a complete archi
         │                                                               │
         │               elif ai_failed or ai_fallback:                  │
         │                   # Fall back to native failure classification│
-        │                   # Heuristic 4, for example
-        │                   # install_failed path
+        │                   # Heuristic 4, for example                  │
+        │                   # install_failed path                       │
         │                   pass                                        │
         │                                                               │
         │       except Exception as e:                                  │
@@ -2424,8 +2424,8 @@ The following diagram expands the high‑level linear flow into a complete archi
         │     ai_invoked=ai_invoked,                                    │
         │     ai_fallback=ai_fallback,                                  │
         │     ai_plan_action=ai_plan_action,                            │
-        │     ai_commands=ai_commands,
-        │     ai_failed_command=ai_failed_command,
+        │     ai_commands=ai_commands,                                  │
+        │     ai_failed_command=ai_failed_command,                      │
         │ )                                                             │
         │                                                               │
         │ return ip, private_ip, registry_entry                         │
@@ -3209,7 +3209,7 @@ With the full implementation now laid out, the next phase focuses on validating 
 
 The pytest suite serves as the verification layer for the entire AI/MCP integration. Because the recovery pipeline spans multiple components—`module2f`, the AI Request Sender (`my_mcp_client.py`), the AI Gateway Service (`ai_gateway_service.py`), and the AI/MCP HOOK (`_invoke_ai_hook`)—the tests are designed to validate not only individual functions but also the interactions between them. Each test isolates a specific recovery scenario by monkeypatching the AI Request Sender at the lowest deterministic point (`MCPClient.send`), allowing the suite to simulate AI‑generated plans without invoking the real AI Gateway Service or LLM.
 
-The tests exercise all control‑flow outcomes (`ai_fixed`, `ai_failed`, `ai_fallback`, etc.`) and verify that persistent state variables (`ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`, `ai_failed_command`) propagate correctly into the final registry entries. They also confirm that heuristic logic, retry loops, and failure classifications behave identically whether AI assistance is present or not. By validating these behaviors under controlled conditions, the pytest suite ensures that the AI/MCP integration is deterministic, predictable, and ready for real‑world command testing once the AI Gateway Service is activated in the GitLab pipeline.
+The tests exercise all control‑flow outcomes (`ai_fixed`, `ai_failed`, `ai_fallback`, etc.) and verify that persistent state variables (`ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`, `ai_failed_command`) propagate correctly into the final registry entries. They also confirm that heuristic logic, retry loops, and failure classifications behave identically whether AI assistance is present or not. By validating these behaviors under controlled conditions, the pytest suite ensures that the AI/MCP integration is deterministic, predictable, and ready for real‑world command testing once the AI Gateway Service is activated in the GitLab pipeline.
 
 Getting the pytest was a bit challenging as there were several import issues since the functions in the code are highly nested 
 and the git repo structure is nested as well. As noted above, the was to apply the monkeypatch to the AI Request Sender at the lowest deterministic point (`MCPClient.send`) defined in the MCPClient class my_mcp_client.py. A dummy version is used for the pytest
