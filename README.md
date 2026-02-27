@@ -3176,7 +3176,7 @@ registry_entry (install_success / install_failed with embedded ai_tags and ai_me
 - This refactor allowed the HOOK to be called from multiple locations (heuristic failures, exception paths, `install_success` and generic `install_failed` paths) while keeping behavior deterministic and testable.  
 - pytest became a critical part of validating this design, including the decision to monkeypatch `my_mcp_client.MCPClient.send` as the lowest‑level, deterministic injection point.
 
-**Step 6 – Auto‑start AI Gateway Service from `.gitlab-ci.yml` **  
+**Step 6 – Auto‑start AI Gateway Service from `.gitlab-ci.yml`**  
 - The next step is to have the GitLab pipeline automatically start the AI Gateway Service before running module2f.  
 - This will turn the architecture into a fully integrated, end‑to‑end system:  
   - GitLab job → start AI Gateway Service → run module2f with AI/MCP HOOK enabled → collect registry JSON with AI metadata and tags.  
