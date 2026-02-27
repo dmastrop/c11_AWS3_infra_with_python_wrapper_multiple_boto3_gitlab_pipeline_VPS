@@ -1009,16 +1009,19 @@ def resurrection_install_tomcat(
 
 
     ##### initialize the following for the AI/MCP hook that has been inserted inside the for attempt loop (that is inside the for idx
-    ##### loop below). These will be used in the AI/MCP hook code, and will be used for tagging the install_success and install_failed
-    ##### cases when AI/MCP has or has not been invoked on a command to rescue the resurrection of  the node.
-    ##### There are referred to as persistent state variables.
+    ##### loop below). These will be used in the AI/MCP hook code, and will be used for tagging the install_success and
+    ##### install_failed cases when AI/MCP has or has not been invoked on a command to rescue the resurrection of  the node.
+    ##### There are referred to as persistent state variables. These will be integrated into the ai_metadata of the
+    ##### registry_entry by the _build_ai_metadata_and_tags function 
 
     ai_invoked = False
     ai_context = None
     ai_plan = None
     ai_fallback = False
     ai_commands = []
-
+    ai_failed_command = None  
+    # ai_failed_command needs to be initialized to None. It will be used to record the failed retry command. This is useful because the
+    # cleanup_and_retry contract action can support multiple retry commands.
 
 
     # ------------------------------------------------------------
@@ -1313,10 +1316,7 @@ def resurrection_install_tomcat(
 
         nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands, ai_failed_command  
         # These are the persistent state variables that are incorporated into the ai_metadata in the registry_entry
-        
-        ai_failed_command = None  
-        # This needs to be initialized to None. It will be used to record the failed retry command. This is useful because the
-        # cleanup_and_retry contract action can support multiple retry commands.
+        # Make sure it inialilze these outside of the def _invoke_ai_hook function (this function)        
 
 
         # --------------------------------------------------------
@@ -1577,6 +1577,11 @@ def resurrection_install_tomcat(
                     }
 
                 print(f"AI_MCP_HOOK[{ip}] ❌ AI modified retry failed — falling back to native logic.")
+                
+                ai_failed_command = new_cmd # This retry_with_modified_command contract action can only have one command but
+                # since the ai_failed_command has been added to metadata add it for this contract as well (it is already added to
+                # the cleanup_and_retry_contract action). This will provide conistency. 
+                
                 return {
                     "ai_ran": True,
                     "ai_fixed": False,
