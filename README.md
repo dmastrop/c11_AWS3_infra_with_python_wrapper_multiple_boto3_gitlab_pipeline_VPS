@@ -1629,7 +1629,7 @@ Persistent state variables are the long‑lived fields that ultimately populate 
 - `public_ip`, `private_ip`  
 - `thread_id`, `thread_uuid`  
 - `tags`  
-- `ai_metadata`  (`ai_invoked`  `ai_fallback`  `ai_plan_action`  `ai_commands` )
+- `ai_metadata`  (`ai_invoked`  `ai_fallback`  `ai_plan_action`  `ai_commands` `ai_failed_command`)
 
  
 These variables are not used to control execution. Instead, they capture:
