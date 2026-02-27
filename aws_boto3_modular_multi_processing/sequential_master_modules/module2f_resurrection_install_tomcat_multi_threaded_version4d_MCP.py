@@ -3067,8 +3067,8 @@ def resurrection_install_tomcat(
             "thread_uuid": thread_uuid,
             "public_ip": ip,
             "private_ip": private_ip,
-            "ai_metadata": ai_meta,
             "tags": merged_tags,
+            "ai_metadata": ai_meta,
         }
 
         return ip, private_ip, registry_entry
