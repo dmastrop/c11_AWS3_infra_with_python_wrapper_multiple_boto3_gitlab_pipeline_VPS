@@ -50,7 +50,9 @@ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_ret
 Test7
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
 
+Test7b
 
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure_command1
 
 
 
