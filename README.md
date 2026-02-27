@@ -1499,7 +1499,7 @@ table below.
 | **Action**                     | **Purpose**                                                                 | **When It’s Used**                                                                                   | **Fields Required**                     |
 |-------------------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|------------------------------------------|
 | `retry_with_modified_command` | Correct the original command and retry.                                     | Missing flags, wrong paths, incorrect package names, privilege issues, safer parameters needed.       | `retry` (single corrected command)       |
-| `cleanup_and_retry`           | Perform cleanup steps, then retry.                                          | Stale locks, partial installs, corrupted temp dirs, leftover PID files, insufficient disk space.      | `cleanup` (list of commands), `retry`    |
+| `cleanup_and_retry`           | Perform cleanup steps, then retry.                                          | Stale locks, partial installs, corrupted temp dirs, leftover PID files, insufficient disk space.      | `cleanup` (list of commands), `retry` (list of commands)   |
 | `abort`                       | Stop immediately; unsafe or non‑recoverable state.                          | Destructive commands, non‑idempotent operations, corrupted state, security violations, irreversible ops. | None (must NOT include retry/cleanup)    |
 | `fallback`                    | AI cannot produce a safe or valid plan; defer to native logic.              | Ambiguous context, insufficient information, malformed fields, uncertainty about safe recovery.       | None                                     |
 
@@ -1552,6 +1552,7 @@ Regardless of success or failure, module2f merges AI metadata into the final reg
 | `ai_fallback` | Whether the AI plan was ignored or invalid |
 | `ai_plan_action` | The action returned by the LLM |
 | `ai_commands` | Cleanup or retry commands proposed by the AI |
+| `ai_failed_command` | AI Retry command that failed |
 
 These fields allow downstream systems to understand:
 
@@ -1559,6 +1560,7 @@ These fields allow downstream systems to understand:
 - whether AI helped or failed  
 - what commands the AI proposed  
 - which recovery path was taken  
+- what AI command if any failed by the retry
 
 #### **4. Tag Merging**
 
