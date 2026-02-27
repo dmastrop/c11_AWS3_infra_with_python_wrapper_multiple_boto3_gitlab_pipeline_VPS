@@ -1536,7 +1536,7 @@ This layered validation ensures that module2f never executes a plan that violate
 Once validated, module2f routes the plan to one of four deterministic execution paths:
 
 - **retry_with_modified_command** → execute the corrected command once  
-- **cleanup_and_retry** → run cleanup commands, then retry  
+- **cleanup_and_retry** → run cleanup commands, then retry command(s) 
 - **abort** → stop immediately and tag the failure  
 - **fallback** → ignore the plan and continue with native logic  
 
@@ -1552,7 +1552,7 @@ Regardless of success or failure, module2f merges AI metadata into the final reg
 | `ai_fallback` | Whether the AI plan was ignored or invalid |
 | `ai_plan_action` | The action returned by the LLM |
 | `ai_commands` | Cleanup or retry commands proposed by the AI |
-| `ai_failed_command` | AI Retry command that failed |
+| `ai_failed_command` | The AI retry command that failed |
 
 These fields allow downstream systems to understand:
 
@@ -1641,7 +1641,8 @@ These variables are not used to control execution. Instead, they capture:
 - what the AI proposed  
 - which path was taken  
 - what commands were executed  
-- what the final outcome was  
+- what the final outcome was
+- what command failed, if any  
 
 This distinction and separation between control‑flow and persistent state is what makes the system auditable and safe.
 
@@ -1695,6 +1696,7 @@ Regardless of success or failure, module2f merges AI metadata into the registry:
 - `ai_fallback`  
 - `ai_plan_action`  
 - `ai_commands`  
+- `ai_failed_command`
 
 These fields allow downstream systems to understand:
 
@@ -1706,7 +1708,7 @@ These fields allow downstream systems to understand:
 This metadata is essential for observability, debugging, and ML ingestion.
 
 
-Note: AI tags are merged as well into the registry, as noted in the previous section.
+Note: AI tags are merged as well into the registry, as noted in the previous section (Perspective 1).
 
 
 ---
@@ -1826,7 +1828,7 @@ Thus from both perspectives the design is highly deterministic.
                                  ▼
                          ┌────────────────────────────┐
                          │  Run cleanup commands       │
-                         │  Retry original/modified    │
+                         │  Retry original or modified │
                          └────────────────────────────┘
 
                  ┌────────────────────────────────────────────┐
@@ -1863,14 +1865,14 @@ Thus from both perspectives the design is highly deterministic.
 └──────────────────────────────────────────────────────────────────────┘
 
                  ┌────────────────────────────────────────────┐
-                 │  Merge persistent state variables           │
+                 │  Merge persistent state variables          │
                  │  (status, attempt, timestamps, IPs, etc.)  │
                  └───────────────────┬────────────────────────┘
                                      ▼
                  ┌────────────────────────────────────────────┐
                  │  Merge AI metadata (PERSISTENT STATE)      │
                  │  ai_invoked, ai_fallback, ai_plan_action,  │
-                 │  ai_commands                                │
+                 │  ai_commands, ai_failed_command            │
                  └───────────────────┬────────────────────────┘
                                      ▼
                  ┌────────────────────────────────────────────┐
@@ -1954,6 +1956,7 @@ Examples:
         ai_fallback
         ai_plan_action
         ai_commands
+        ai_failed_command
 
 Flow:
     ┌──────────────────────────────────────────────────────────────┐
@@ -2162,7 +2165,7 @@ The high level overview presented here:
 ... was presented in accordance to the MCP engineering standard.   This section applies that framework to the specific 
 code in this project and the objectives that need to be accomplished by the code to perform AI assisted command remediation 
 during node installation failures. The terms used in this section are used throughout the comments in the code when referring
-to certain code blocks and code functions. The code was developed from the ground up, with the understanding persented in
+to certain code blocks and code functions. The code was developed from the ground up, with the understanding presented in
 this section.
 
 
@@ -2243,7 +2246,7 @@ module2f (Resurrection Engine)
     │            ai_ran, ai_failed, ai_fixed, ai_fallback,
     │            new_stdout, new_stderr, new_exit_status
     │      • Mutates persistent state variables (nonlocal):
-    │            ai_invoked, ai_fallback, ai_plan_action, ai_commands
+    │            ai_invoked, ai_fallback, ai_plan_action, ai_commands, ai_failed_command
     │      • Uses control‑flow vars to route execution:
     │            → treat as fixed
     │            → fallback to heuristics
@@ -2385,7 +2388,8 @@ The following diagram expands the high‑level linear flow into a complete archi
         │                                                               │
         │               elif ai_failed or ai_fallback:                  │
         │                   # Fall back to native failure classification│
-        │                   # Heuristic 4 / install_failed path         │
+        │                   # Heuristic 4, for example
+        │                   # install_failed path
         │                   pass                                        │
         │                                                               │
         │       except Exception as e:                                  │
@@ -2420,7 +2424,8 @@ The following diagram expands the high‑level linear flow into a complete archi
         │     ai_invoked=ai_invoked,                                    │
         │     ai_fallback=ai_fallback,                                  │
         │     ai_plan_action=ai_plan_action,                            │
-        │     ai_commands=ai_commands                                   │
+        │     ai_commands=ai_commands,
+        │     ai_failed_command=ai_failed_command,
         │ )                                                             │
         │                                                               │
         │ return ip, private_ip, registry_entry                         │
@@ -2429,9 +2434,11 @@ The following diagram expands the high‑level linear flow into a complete archi
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ AI/MCP HOOK helper inside module2f                                          │
 │ def _invoke_ai_hook(context):                                               │
-│   nonlocal ai_invoked, ai_fallback, ai_plan_action, ai_commands             │
+│   nonlocal ai_invoked, ai_fallback, ai_plan_action, ai_commands,            │
+│            ai_failed_command                                                │
 │   # Persistent state vars (nonlocal):                                       │
-│   #   ai_invoked, ai_fallback, ai_plan_action, ai_commands                  │
+│   #   ai_invoked, ai_fallback, ai_plan_action, ai_commands,                 │
+│   #   ai_failed_command                                                     │
 │   # Control‑flow vars (local return values):                                │
 │   #   ai_ran, ai_failed, ai_fixed, ai_fallback,                             │
 │   #   new_stdout, new_stderr, new_exit_status                               │
@@ -2561,6 +2568,7 @@ Inside `resurrection_install_tomcat`, the AI/MCP HOOK uses a clean separation be
   - `ai_fallback`  
   - `ai_plan_action`  
   - `ai_commands` (the AI‑assisted remediation commands that were actually run)
+  - `ai_failed_command` (the AI-assisted command, if any,  that failed during retry)
 
 This separation is crucial:
 
@@ -2763,7 +2771,7 @@ At the end:
 ai_meta, ai_tags = _build_ai_metadata_and_tags()
 ```
 
-The registry entry reflects **all** AI involvement across the entire resurrection process.
+The registry entry reflects **all** AI involvement across the entire resurrection process, and all of the AI commands.
 
 ---
 
@@ -2878,6 +2886,7 @@ Each action has strict semantics:
 
 **1. cleanup_and_retry**
 Used when the failure can be resolved by removing temporary files, stale locks, partial installations, or other reversible artifacts.
+Multiple AI cleanup commands and multiple AI retry commands can be utilized if required.
 
 The LLM must return:
 
@@ -2885,7 +2894,7 @@ The LLM must return:
 {
   "action": "cleanup_and_retry",
   "cleanup": ["..."],
-  "retry": "..."
+  "retry": ["..."]
 }
 ```
 
@@ -2935,7 +2944,7 @@ After receiving the LLM’s response, the Gateway performs strict schema validat
 
 - `action` must be one of the four allowed values  
 - `cleanup` must be a list if present  
-- `retry` must be a string if present  
+- `retry` must be a list or string if present (cleanup_and_retry will normalize the retry command(s) to a list because it supports multiple retry commands) 
 - Any violation results in:
 
 ```json
@@ -2946,7 +2955,7 @@ This ensures module2f never receives malformed or unsafe plans.
 
 ---
 
-#### **How the Gateway Interacts With the AI Request Sender**
+#### **How the Gateway Interacts With the AI Request Sender (MCPClient)**
 
 The flow is:
 
@@ -2964,6 +2973,7 @@ The Gateway:
 - Returns the plan to the AI Request Sender  
 
 The Gateway **never executes commands**.  
+
 Execution happens inside `_invoke_ai_hook` using the same SSH connection module2f already established.
 
 ---
@@ -2974,12 +2984,13 @@ The HOOK (`_invoke_ai_hook`) is the component that:
 
 - Builds the context  
 - Calls `ask_ai_for_recovery()`  
-- Updates persistent state (`ai_invoked`, `ai_plan_action`, `ai_fallback`, `ai_commands`)  
-- Applies cleanup or retry commands  
+- Updates persistent state (`ai_invoked`, `ai_plan_action`, `ai_fallback`, `ai_commands`, `ai_failed_commmand`) and nonlocal variables 
+- Applies cleanup and retry commands (cleanup_and_retry) OR retry command (retry_with_modified_command)  
 - Re‑runs commands through SSH  
 - Returns control‑flow variables to the caller  
 
 The Gateway only provides the plan.  
+
 The HOOK is what actually **executes** the plan.
 
 ---
@@ -3017,7 +3028,8 @@ It ensures:
 - auditability via registry metadata  
 - clean separation of responsibilities  
 
-The Gateway gives the LLM the “rules of the game,” and the HOOK applies the resulting plan to the node.
+The Gateway gives the LLM the “rules of the game,” and the HOOK applies the resulting plan (relayed from the LLM through the
+Gateway) to the node.
 
 Together, they form a **bounded, deterministic AI recovery engine**.
 
@@ -3037,7 +3049,7 @@ module2f (Resurrection Engine)
     │      • Builds failure context
     │      • Calls ask_ai_for_recovery(context)
     │      • Mutates persistent state vars:
-    │            ai_invoked, ai_plan_action, ai_fallback, ai_commands
+    │            ai_invoked, ai_plan_action, ai_fallback, ai_commands, ai_failed_command
     │      • Applies cleanup_and_retry or retry_with_modified_command
     │      • Executes commands through SAME SSH connection
     │      • Returns control‑flow vars:
@@ -3111,7 +3123,7 @@ module2f (Resurrection Engine)
     │      • Uses control‑flow vars to route execution
     │      • Uses persistent state vars to build registry entries
     ▼
-registry_entry (install_success / install_failed
+registry_entry (install_success / install_failed with embedded ai_tags and ai_metadata)
 ```
 
 
@@ -3160,11 +3172,11 @@ registry_entry (install_success / install_failed
 - Because the HOOK is now a separate function, it must return explicit **control‑flow variables** to the caller:  
   - `ai_ran`, `ai_failed`, `ai_fixed`, `ai_fallback`, `new_stdout`, `new_stderr`, `new_exit_status`.  
 - At the same time, `_invoke_ai_hook` mutates **persistent state variables** as nonlocal:  
-  - `ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`.  
+  - `ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`, `ai_failed_command`
 - This refactor allowed the HOOK to be called from multiple locations (heuristic failures, exception paths, `install_success` and generic `install_failed` paths) while keeping behavior deterministic and testable.  
 - pytest became a critical part of validating this design, including the decision to monkeypatch `my_mcp_client.MCPClient.send` as the lowest‑level, deterministic injection point.
 
-**Step 6 – Auto‑start AI Gateway Service from `.gitlab-ci.yml` (planned)**  
+**Step 6 – Auto‑start AI Gateway Service from `.gitlab-ci.yml` **  
 - The next step is to have the GitLab pipeline automatically start the AI Gateway Service before running module2f.  
 - This will turn the architecture into a fully integrated, end‑to‑end system:  
   - GitLab job → start AI Gateway Service → run module2f with AI/MCP HOOK enabled → collect registry JSON with AI metadata and tags.  
@@ -3197,7 +3209,7 @@ With the full implementation now laid out, the next phase focuses on validating 
 
 The pytest suite serves as the verification layer for the entire AI/MCP integration. Because the recovery pipeline spans multiple components—`module2f`, the AI Request Sender (`my_mcp_client.py`), the AI Gateway Service (`ai_gateway_service.py`), and the AI/MCP HOOK (`_invoke_ai_hook`)—the tests are designed to validate not only individual functions but also the interactions between them. Each test isolates a specific recovery scenario by monkeypatching the AI Request Sender at the lowest deterministic point (`MCPClient.send`), allowing the suite to simulate AI‑generated plans without invoking the real AI Gateway Service or LLM.
 
-The tests exercise all control‑flow outcomes (`ai_fixed`, `ai_failed`, `ai_fallback`) and verify that persistent state variables (`ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`) propagate correctly into the final registry entries. They also confirm that heuristic logic, retry loops, and failure classifications behave identically whether AI assistance is present or not. By validating these behaviors under controlled conditions, the pytest suite ensures that the AI/MCP integration is deterministic, predictable, and ready for real‑world command testing once the AI Gateway Service is activated in the GitLab pipeline.
+The tests exercise all control‑flow outcomes (`ai_fixed`, `ai_failed`, `ai_fallback`, etc.`) and verify that persistent state variables (`ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`, `ai_failed_command`) propagate correctly into the final registry entries. They also confirm that heuristic logic, retry loops, and failure classifications behave identically whether AI assistance is present or not. By validating these behaviors under controlled conditions, the pytest suite ensures that the AI/MCP integration is deterministic, predictable, and ready for real‑world command testing once the AI Gateway Service is activated in the GitLab pipeline.
 
 Getting the pytest was a bit challenging as there were several import issues since the functions in the code are highly nested 
 and the git repo structure is nested as well. As noted above, the was to apply the monkeypatch to the AI Request Sender at the lowest deterministic point (`MCPClient.send`) defined in the MCPClient class my_mcp_client.py. A dummy version is used for the pytest
