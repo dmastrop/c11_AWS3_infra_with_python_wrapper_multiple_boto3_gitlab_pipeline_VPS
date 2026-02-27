@@ -1360,20 +1360,111 @@ def resurrection_install_tomcat(
         action = plan.get("action")
         print(f"AI_MCP_HOOK[{ip}] �� AI plan received: action={action}")
 
+
+
+
+
+
+        ## --------------------------------------------------------
+        ## ACTION: cleanup_and_retry VERSION1 single retry command support
+        ## --------------------------------------------------------
+        #if action == "cleanup_and_retry":
+        #    cleanup_cmds = plan.get("cleanup", [])
+        #    retry_cmd = plan.get("retry")
+
+        #    # Track commands for tagging. Always append to the existing ai_commands so that a complete history is in the tags
+        #    ai_commands.extend(cleanup_cmds)
+        #    if retry_cmd:
+        #        ai_commands.append(retry_cmd)
+
+        #    # ----------------------------------------------------
+        #    # 5A. Run cleanup commands (IDENTICAL)
+        #    # ----------------------------------------------------
+        #    for ccmd in cleanup_cmds:
+        #        print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
+        #        cin, cout, cerr = ssh.exec_command(ccmd, timeout=60)
+        #        cout.channel.settimeout(WATCHDOG_TIMEOUT)
+        #        cerr.channel.settimeout(WATCHDOG_TIMEOUT)
+        #        _co, _cs = read_output_with_watchdog(cout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+        #        _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+
+        #    # ----------------------------------------------------
+        #    # 5B. Run retry command (IDENTICAL)
+        #    # ----------------------------------------------------
+        #    if retry_cmd:
+        #        print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {retry_cmd}")
+        #        rin, rout, rerr = ssh.exec_command(retry_cmd, timeout=60)
+        #        rout.channel.settimeout(WATCHDOG_TIMEOUT)
+        #        rerr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+        #        r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+        #        r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+        #        r_exit = rout.channel.recv_exit_status()
+
+        #        print(f"AI_MCP_HOOK[{ip}] AI retry exit={r_exit}")
+
+        #        # ------------------------------------------------
+        #        # 5C. Re-evaluate success using SAME logic
+        #        # ------------------------------------------------
+        #        if r_exit == 0 and not r_stderr.strip():
+        #            print(f"AI_MCP_HOOK[{ip}] 🎉 AI successfully repaired the command!")
+        #            return {
+        #                "ai_ran": True,
+        #                "ai_fixed": True,
+        #                "ai_failed": False,
+        #                "ai_fallback": False,
+        #                "new_stdout": r_stdout,
+        #                "new_stderr": r_stderr,
+        #                "new_exit_status": r_exit,
+        #            }
+
+        #        print(f"AI_MCP_HOOK[{ip}] ❌ AI retry failed — falling back to native logic.")
+        #        return {
+        #            "ai_ran": True,
+        #            "ai_fixed": False,
+        #            "ai_failed": True,
+        #            "ai_fallback": False,
+        #            "new_stdout": r_stdout,
+        #            "new_stderr": r_stderr,
+        #            "new_exit_status": r_exit,
+        #        }
+
+
+
+
         # --------------------------------------------------------
-        # ACTION: cleanup_and_retry
+        # ACTION: cleanup_and_retry  (VERSION2: UPDATED FOR MULTIPLE RETRIES)
         # --------------------------------------------------------
         if action == "cleanup_and_retry":
             cleanup_cmds = plan.get("cleanup", [])
-            retry_cmd = plan.get("retry")
-
-            # Track commands for tagging. Always append to the existing ai_commands so that a complete history is in the tags
-            ai_commands.extend(cleanup_cmds)
-            if retry_cmd:
-                ai_commands.append(retry_cmd)
+            retry_cmds = plan.get("retry", [])
 
             # ----------------------------------------------------
-            # 5A. Run cleanup commands (IDENTICAL)
+            # Normalize retry_cmds to a list
+            # The contract allows retry to be a single string or a list.
+            # We convert a single string into a list of one element.
+            # ----------------------------------------------------
+            if isinstance(retry_cmds, str):
+                retry_cmds = [retry_cmds]
+
+            # ----------------------------------------------------
+            # Track commands for tagging and ai_metadata
+            # Cleanup commands are appended individually.
+            # Retry commands are also appended individually (NOT as a list).
+            # This ensures proper tagging and forensic traceability.
+            # ----------------------------------------------------
+            ai_commands.extend(cleanup_cmds)
+            ai_commands.extend(retry_cmds)
+
+            # ----------------------------------------------------
+            # 5A. Run cleanup commands
+            #
+            # Cleanup is "best effort" and does NOT determine success/failure.
+            # Rationale:
+            #   - Cleanup commands often fail harmlessly (e.g., file already removed).
+            #   - Cleanup is not the repair; retry is the repair.
+            #   - Cleanup failures do not imply the system is unrecoverable.
+            #   - Therefore cleanup failures are ignored and retry proceeds.
             # ----------------------------------------------------
             for ccmd in cleanup_cmds:
                 print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
@@ -1384,11 +1475,21 @@ def resurrection_install_tomcat(
                 _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
 
             # ----------------------------------------------------
-            # 5B. Run retry command (IDENTICAL)
+            # 5B. Run retry commands (UPDATED FOR MULTIPLE COMMANDS)
+            #
+            # Retry commands are executed sequentially.
+            # If ANY retry command fails (non-zero exit OR stderr present),
+            # the entire cleanup_and_retry action fails immediately.
+            #
+            # Only if ALL retry commands succeed do we return ai_fixed=True.
             # ----------------------------------------------------
-            if retry_cmd:
-                print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {retry_cmd}")
-                rin, rout, rerr = ssh.exec_command(retry_cmd, timeout=60)
+            last_stdout = ""
+            last_stderr = ""
+            last_exit = 1
+
+            for rcmd in retry_cmds:
+                print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {rcmd}")
+                rin, rout, rerr = ssh.exec_command(rcmd, timeout=60)
                 rout.channel.settimeout(WATCHDOG_TIMEOUT)
                 rerr.channel.settimeout(WATCHDOG_TIMEOUT)
 
@@ -1396,33 +1497,47 @@ def resurrection_install_tomcat(
                 r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
                 r_exit = rout.channel.recv_exit_status()
 
+                # Save last outputs for return payload
+                last_stdout = r_stdout
+                last_stderr = r_stderr
+                last_exit = r_exit
+
                 print(f"AI_MCP_HOOK[{ip}] AI retry exit={r_exit}")
 
                 # ------------------------------------------------
-                # 5C. Re-evaluate success using SAME logic
+                # Immediate failure on ANY retry command failure
                 # ------------------------------------------------
-                if r_exit == 0 and not r_stderr.strip():
-                    print(f"AI_MCP_HOOK[{ip}] 🎉 AI successfully repaired the command!")
+                if r_exit != 0 or r_stderr.strip():
+                    print(f"AI_MCP_HOOK[{ip}] ❌ Retry command failed — aborting retry sequence.")
                     return {
                         "ai_ran": True,
-                        "ai_fixed": True,
-                        "ai_failed": False,
+                        "ai_fixed": False,
+                        "ai_failed": True,
                         "ai_fallback": False,
-                        "new_stdout": r_stdout,
-                        "new_stderr": r_stderr,
-                        "new_exit_status": r_exit,
+                        "new_stdout": last_stdout,
+                        "new_stderr": last_stderr,
+                        "new_exit_status": last_exit,
                     }
 
-                print(f"AI_MCP_HOOK[{ip}] ❌ AI retry failed — falling back to native logic.")
-                return {
-                    "ai_ran": True,
-                    "ai_fixed": False,
-                    "ai_failed": True,
-                    "ai_fallback": False,
-                    "new_stdout": r_stdout,
-                    "new_stderr": r_stderr,
-                    "new_exit_status": r_exit,
-                }
+            # ----------------------------------------------------
+            # 5C. If we reach here, ALL retry commands succeeded
+            # ----------------------------------------------------
+            print(f"AI_MCP_HOOK[{ip}] 🎉 All retry commands succeeded — AI repaired the command!")
+            return {
+                "ai_ran": True,
+                "ai_fixed": True,
+                "ai_failed": False,
+                "ai_fallback": False,
+                "new_stdout": last_stdout,
+                "new_stderr": last_stderr,
+                "new_exit_status": last_exit,
+            }
+
+
+
+
+
+
 
         # --------------------------------------------------------
         # ACTION: retry_with_modified_command (IDENTICAL). Always append to the existing ai_comamands list.
