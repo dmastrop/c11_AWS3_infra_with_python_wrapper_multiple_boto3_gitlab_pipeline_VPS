@@ -923,7 +923,7 @@ def test_ai_hook_cleanup_and_retry_success(monkeypatch):
 
 
 # ---------------------------------------------------------------------
-# TEST 7 — CLEANUP_AND_RETRY → cleanup succeeds, retry still fails
+# TEST 7 — CLEANUP_AND_RETRY → cleanup succeeds, retry second command (last command) fails
 # ---------------------------------------------------------------------
 def test_ai_hook_cleanup_and_retry_failure(monkeypatch):
     import sys
@@ -1023,3 +1023,103 @@ def test_ai_hook_cleanup_and_retry_failure(monkeypatch):
 
 
 
+# ---------------------------------------------------------------------
+# TEST 7B — CLEANUP_AND_RETRY → cleanup succeeds, retry first command fails
+# ---------------------------------------------------------------------
+def test_ai_hook_cleanup_and_retry_failure_command1(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # ⭐ Force a clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # Script for FakeSSH2:
+    # This has the stdout, stderr and exit_code tuple in response to the corresponding commands that are sent by using the fake plan
+    # - 3 original failures
+    # - 2 cleanup successes
+    # - 2 retry commands, last one fails
+    script = [
+        # Original command failures (3 attempts)
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        # Cleanup commands (2 commands) → success
+        ("", "", 0),
+        ("", "", 0),
+        
+        ("AI_RETRY_1 still failing", "cleanup retry failed", 1), # First retry command fails
+        ("AI_RETRY_2 ok", "", 0),   # this will never be executed
+
+        ## Retry commands (2 commands) → first ok, second fails
+        #("AI_RETRY_1 ok", "", 0),
+        #("AI_RETRY_2 still failing", "cleanup retry failed", 1),
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+
+        class AutoAddPolicy:
+            pass
+
+    fake_paramiko = FakeParamikoModule()
+
+    # Patch GLOBAL paramiko BEFORE importing module2f
+    monkeypatch.setattr(paramiko, "SSHClient", fake_paramiko.SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", fake_paramiko.AutoAddPolicy)
+
+    # Patch MCPClient.send to return cleanup_and_retry FAILURE plan
+    def fake_send(self, context):
+        return make_plan_cleanup_and_retry_failure()
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    assert isinstance(result, tuple)
+    _, _, registry = result
+
+    print("DEBUG: registry (cleanup_and_retry failure) =", registry)
+
+    # We expect overall failure
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] == "cleanup_and_retry"
+
+    ai_commands = registry["ai_metadata"]["ai_commands"]
+    # Still expect all cleanup + retry commands to be recorded
+    assert len(ai_commands) == 4
+    assert any("AI_RETRY_1" in cmd for cmd in ai_commands)
+    assert any("AI_RETRY_2" in cmd for cmd in ai_commands)
+
+    tags = registry["tags"]
+
+    # Heuristic 4 tags MUST be present (final retry failed)
+    assert "fatal_exit_nonzero" in tags
+    assert "stderr_present" in tags
+    assert any(tag.startswith("command_retry_") for tag in tags)
+    assert any(tag.startswith("exit_status_") for tag in tags)
+    #assert any("cleanup retry failed" in tag for tag in tags)
+
+    # AI tagging
+    assert any("ai_plan_action:cleanup_and_retry" in tag for tag in tags)
