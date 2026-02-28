@@ -1459,6 +1459,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [Control‑flow vs persistent state variables with Examples](#controlflow-vs-persistent-state-variables-with-examples)
 - [AI Gateway Service and the LLM Recovery Contract (includes Flow Diagram 5)](#ai-gateway-service-and-the-llm-recovery-contract-includes-flow-diagram-5)
 - [Differences between the retry_with_modified_command and cleanup_and_retry contract actions](#differences-between-the-retry_with_modified_command-and-cleanup_and_retry-contract-actions)
+- [Idempotency Failures and the Correct AI/MCP Contract Action](#idempotency-failures-and-the-correct-aimcp-contract-action)
 - [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
 - [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step6-formalized)
 - [Code Review](#code-review)
@@ -3167,6 +3168,148 @@ If cleanup failures were ever needed for debugging, they appear in the live logs
 - The registry entry remains compact, stable, and forensic by recording only persistent state, not transient control-flow details.
 
 
+
+### **Idempotency Failures and the Correct AI/MCP Contract Action**
+
+Idempotency failures were one of the original motivations for integrating the AI/MCP HOOK into module2f. These failures are notoriously difficult to classify using static whitelists or simple heuristics because they often present as “errors” even though the underlying condition is *not fatal* and can be resolved safely.
+
+#### **Why idempotency is hard to detect with whitelists or heuristics**
+
+Idempotency failures frequently produce stderr output that looks like a real error:
+
+- “package is already installed”
+- “directory already exists”
+- “service is already running”
+- “resource busy”
+- “lock is held by PID …”
+- “nothing to do”
+- “file exists”
+- “unit already enabled”
+- “operation not permitted” (when the operation is redundant)
+
+These messages:
+
+- vary across OS distributions  
+- vary across package managers  
+- vary across versions  
+- often include misleading exit codes  
+- often include partial or noisy stderr  
+
+Heuristic 4 (non‑strace fatal_exit_nonzero) cannot reliably distinguish:
+
+- a *true* fatal error  
+- from a *benign* idempotency condition  
+- from a *recoverable* environmental residue problem  
+
+This is why idempotency was the first real-world case where the AI/MCP HOOK proved necessary.
+
+---
+
+#### **Which contract action should the LLM use for idempotency failures?**
+
+**`cleanup_and_retry` is the correct contract action for idempotency issues.**
+
+Idempotency failures almost always arise from **environmental residue**, not incorrect commands.
+
+Examples:
+
+- A package is “already installed” but partially broken  
+- A lock file remains from a previous run  
+- A service is already running  
+- A directory already exists  
+- A previous installation left behind temp files  
+- A stale PID prevents a new process from starting  
+- A previous run created partial state that must be cleaned  
+
+These are **exactly** the conditions `cleanup_and_retry` is designed for.
+
+---
+
+#### **How the LLM should respond to idempotency symptoms**
+
+When the LLM detects idempotency indicators such as:
+
+- “already installed”  
+- “already exists”  
+- “nothing to do”  
+- “resource busy”  
+- “lock is held by PID …”  
+- “directory not empty”  
+- “service already running”  
+- “package is in a half-installed state”  
+
+…it should return a plan of the form:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "... cleanup commands ..."
+  ],
+  "retry": [
+    "... retry commands ..."
+  ]
+}
+```
+
+The cleanup commands restore a safe state; the retry commands reattempt the operation.
+
+---
+
+#### **Why not use `retry_with_modified_command` for idempotency?**
+
+Because idempotency is **not caused by a bad command**.  
+It is caused by **state**.
+
+Retrying with a modified command would:
+
+- not remove stale locks  
+- not clear partial installs  
+- not fix corrupted temp directories  
+- not stop stale processes  
+- not reclaim disk space  
+- not restore a clean environment  
+
+`retry_with_modified_command` is appropriate only when the *command itself* is wrong — not when the environment is inconsistent.
+
+---
+
+#### **How module2f handles idempotency under `cleanup_and_retry`**
+
+- Cleanup commands are **best-effort**  
+- Cleanup failures **never** determine the final outcome  
+- Retry commands **always** run  
+- Only retry failures determine success/failure  
+- `ai_failed_command` records the retry command that failed  
+- Cleanup stderr/exit codes are not persisted (control-flow only)
+
+This mirrors real-world recovery engines (systemd, Kubernetes, Ansible, Chef):  
+cleanup prepares the environment; retry determines the outcome.
+
+---
+
+#### **Why cleanup failures are not persisted**
+
+Persisting cleanup failures would:
+
+- confuse users (cleanup failure ≠ action failure)  
+- bloat registry entries  
+- break the separation between control-flow and persistent state  
+- require a second persistent variable (`ai_cleanup_failed_command`)  
+- complicate the contract unnecessarily  
+
+Cleanup failures appear in the **live logs**, which is the correct place for transient control-flow information.
+
+---
+
+#### **Summary**
+
+- Idempotency failures are caused by **environmental residue**, not incorrect commands.  
+- The correct contract action is **`cleanup_and_retry`**.  
+- Cleanup commands restore a safe state; retry commands determine success.  
+- Cleanup failures do not abort the plan and are not persisted.  
+- Retry failures are decisive and recorded via `ai_failed_command`.  
+- This design keeps registry entries compact, stable, and forensic.
 
 
 
