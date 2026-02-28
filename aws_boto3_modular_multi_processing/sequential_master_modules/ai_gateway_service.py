@@ -156,6 +156,8 @@ def recover(request: RecoveryRequest):
                             "- NEVER explain your reasoning.\n"
                             "- Use \"fallback\" if you cannot produce a valid plan.\n"
                             "\n"
+                            
+
                             "- Use \"abort\" when the command or system state is unsafe or non‑recoverable.\n"
                             "  Abort conditions include (but are not limited to):\n"
                             "    • destructive commands (e.g., deleting system files)\n"
@@ -167,6 +169,8 @@ def recover(request: RecoveryRequest):
                             "    • commands that cannot be undone or rolled back\n"
                             "  When returning \"abort\", do NOT propose a retry command.\n"
                             "\n"
+                            
+
                             "- Use \"fallback\" when you cannot produce a valid or safe recovery plan.\n"
                             "  Fallback conditions include:\n"
                             "    • insufficient information in the failure context\n"
@@ -177,6 +181,8 @@ def recover(request: RecoveryRequest):
                             "    • any situation where you cannot confidently choose another action\n"
                             "  When returning \"fallback\", do NOT propose cleanup or retry commands.\n"
                             "\n"
+                            
+
                             "- Use \"cleanup_and_retry\" when the failure can be resolved by removing\n"
                             "  temporary files, stale locks, partial installations, or other artifacts\n"
                             "  that may be blocking successful execution.\n"
@@ -197,6 +203,24 @@ def recover(request: RecoveryRequest):
                             "  the entire cleanup_and_retry action is considered failed immediately.\n"
                             "  Only if all retry commands succeed is the action considered successful.\n"
                             "\n"
+                            
+
+                            "- Idempotency‑related failures MUST use \"cleanup_and_retry\".\n"
+                            "  Idempotency conditions include (but are not limited to):\n"
+                            "    • \"already installed\"\n"
+                            "    • \"already exists\"\n"
+                            "    • \"nothing to do\"\n"
+                            "    • \"resource busy\"\n"
+                            "    • \"lock is held by PID ...\"\n"
+                            "    • \"directory not empty\"\n"
+                            "    • \"service already running\"\n"
+                            "    • \"package is in a half-installed state\"\n"
+                            "  These failures are caused by environmental residue, not incorrect commands.\n"
+                            "  When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup\n"
+                            "  commands that restore a safe state, followed by one or more retry commands.\n"
+                            "\n"
+
+
                             "- Use \"retry_with_modified_command\" when the failure can be resolved by\n"
                             "  adjusting the original command rather than performing cleanup.\n"
                             "  Modified‑command conditions include:\n"

@@ -55,8 +55,28 @@ Test7 cleanup_and_retry_failure on second command (last retry command)
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
 
 Test7b cleanup_and_retry_failure on first command (first retry command)
-
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure_command1
+
+
+Test7c
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry_success
+
+
+Test7d
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure
+
+Test7e
+
+
+Test7f
+
+
+Test7g
+
+
+Test7h
+
+
 
 
 
