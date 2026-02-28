@@ -221,6 +221,14 @@ def recover(request: RecoveryRequest):
                             "\n"
 
 
+                            "- The \"cleanup\" field may be an empty list when no cleanup steps are required.\n"
+                            "  In such cases, you may still use \"cleanup_and_retry\" to provide one or more\n"
+                            "  retry commands in the \"retry\" field. This is appropriate when the environment\n"
+                            "  is already in a safe state and only the retry commands are needed to repair\n"
+                            "  the failure.\n"
+                            "\n"
+
+
                             "- Use \"retry_with_modified_command\" when the failure can be resolved by\n"
                             "  adjusting the original command rather than performing cleanup.\n"
                             "  Modified‑command conditions include:\n"
