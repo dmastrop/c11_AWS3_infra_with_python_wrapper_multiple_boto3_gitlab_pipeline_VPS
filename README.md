@@ -1445,6 +1445,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 
 ### **Table of Contents**
+<a name="top"></a>
 
 - [Introduction](#introduction)
 - [AI/MCP Recovery Engine Contract Overview](#aimcp-recovery-engine-contract-overview)
@@ -3418,7 +3419,7 @@ in the tags of the effected threads/regsitry_entrys can be verified. The code is
 AI/MCP HOOK integration will be done as a part of Phase4a.2 of this project. (Module2f integration is this current Phase4a.1)
 
 
-
+[Back to top](#top)
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
