@@ -1457,7 +1457,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [High level MCPClient, MCPServer architectural overview (includes Flow Diagrams 3 and 4)](#high-level-mcpclient-mcpserver-architectural-overview-includes-flow-diagrams-3-and-4)
 - [Control‑flow vs persistent state variables with Examples](#controlflow-vs-persistent-state-variables-with-examples)
 - [AI Gateway Service and the LLM Recovery Contract (includes Flow Diagram 5)](#ai-gateway-service-and-the-llm-recovery-contract-includes-flow-diagram-5)
-- [Differences between the `retry_with_modified_command` and `cleanup_and_retry` contract actions](#differences-between-the-retry_with_modified_command-and-cleanup_and_retry-contract-actions)
+- [Differences between the retry_with_modified_command and cleanup_and_retry contract actions](#differences-between-the-retry_with_modified_command-and-cleanup_and_retry-contract-actions)
 - [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
 - [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step6-formalized)
 - [Code Review](#code-review)
@@ -3001,7 +3001,7 @@ registry_entry (install_success / install_failed with embedded ai_tags and ai_me
 
 
 
-### **Differences between the `retry_with_modified_command` and `cleanup_and_retry` contract actions**
+### **Differences between the retry_with_modified_command and cleanup_and_retry contract actions**
 
 The two most commonly used AI/MCP recovery actions are **`retry_with_modified_command`** and **`cleanup_and_retry`**. Both actions attempt to repair a failing command, but they operate on fundamentally different assumptions about *why* the failure occurred and *what type of intervention* is required to restore a safe, executable state.
 
@@ -3170,7 +3170,7 @@ If cleanup failures were ever needed for debugging, they appear in the live logs
 
 
 
-
+---
 
 ### **Differences between the abort and fallback contract actions**
 
