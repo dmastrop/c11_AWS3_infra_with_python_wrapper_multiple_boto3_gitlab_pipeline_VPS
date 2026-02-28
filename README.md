@@ -1454,10 +1454,11 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [AI/MCP Hook Control‑Flow in module2f (Perspective 2)](#aimcp-hook-controlflow-in-module2f-perspective-2)
 - [Flow Diagram 1 — AI/MCP Hook Control‑Flow (module2f) With Control‑Flow + Persistent State Notes](#flow-diagram-1--aimcp-hook-controlflow-module2f-with-controlflow--persistent-state-notes)
 - [Flow Diagram 2 — Control‑Flow vs. Persistent State Variables](#flow-diagram-2--controlflow-vs-persistent-state-variables)
-- [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
 - [High level MCPClient, MCPServer architectural overview (includes Flow Diagrams 3 and 4)](#high-level-mcpclient-mcpserver-architectural-overview-includes-flow-diagrams-3-and-4)
 - [Control‑flow vs persistent state variables with Examples](#controlflow-vs-persistent-state-variables-with-examples)
 - [AI Gateway Service and the LLM Recovery Contract (includes Flow Diagram 5)](#ai-gateway-service-and-the-llm-recovery-contract-includes-flow-diagram-5)
+- [Differences between the `retry_with_modified_command` and `cleanup_and_retry` contract actions](#differences-between-the-retry_with_modified_command-and-cleanup_and_retry-contract-actions)
+- [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
 - [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step6-formalized)
 - [Code Review](#code-review)
 - [Pytest validation](#pytest-validation)
@@ -2015,135 +2016,6 @@ This is the complete forensic record of the recovery attempt.
 
 ```
 
-### **Differences between the abort and fallback contract actions**
-
-As noted earlier: 
-The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
-
-The actions are defined in great detail in the AI Gatewway Service (ai_gateay_service.py). The code in the AI Gateway Service
-dictate how the LLM is instructed  to respond (act) when presented with a current command situation that is failing in its
-current form. 
-
-The contract actions are: retry_with_modified_command, cleanup_and_retry, fallback, and abort.
-
-This section will describe the subtle differences between teh fallback action and the abort action parts of the contract with 
-the LLM.
-
- 
-Fallback means:
-
-- AI was invoked  
-- AI *could not* produce a valid plan  
-- AI is telling module2f:  
-  **“I can’t help — continue with native logic.”**
-
-Examples:
-
-- AI Gateway unreachable  
-- Timeout  
-- Invalid JSON  
-- Unknown action  
-- AI returns `"action": "fallback"`  
-- AI returns garbage  
-- AI returns nothing  
-
-Fallback is a *graceful degradation* path.
-
----
- 
-Abort means:
-
-- AI was invoked  
-- AI *did* understand the situation  
-- AI is explicitly telling module2f:  
-  **“Stop. Do not retry. Do not continue.  
-  This operation should be aborted.”**
-
-Examples:
-
-- AI detects a dangerous command  
-- AI detects a destructive operation  
-- AI detects a dependency conflict that cannot be resolved  
-- AI determines the system is in an unsafe state  
-- AI determines continuing could corrupt the node  
-- AI returns `"action": "abort"`
-
-Abort is a *safety stop*.
-
-This is the AI equivalent of a circuit breaker.
-
----
-
-Example of how module2f handles ABORT (the full code will be presented in a section below)
-
-Inside `_invoke_ai_hook` (called from module2f def resurrection_install_tomcat function), the logic is:
-
-- `ai_invoked = True`
-- `ai_plan_action = "abort"`
-- `ai_fallback = False`
-- No retry is attempted
-- module2f returns a **failure registry entry**, tagged with:
-  - `ai_invoked_true`
-  - `ai_plan_action:abort`
-  - `ai_assisted:*<whatever>*` (if any commands were suggested)
-- The underlying failure classification is  **Heuristic‑4** in the module2f code
-
-So the registry for abort looks almost identical to fallback, except:
-
-- `ai_fallback = False`
-- `ai_plan_action = "abort"`
-
----
-
-Thus, 
-**Abort = AI explicitly tells module2f to stop.**
-
-It is used when:
-
-- Continuing is unsafe  
-- The command is harmful  
-- The system is in a corrupted state  
-- The AI detects a condition that cannot be fixed  
-- The AI determines retrying is pointless or dangerous  
-- The AI Gateway returns a valid plan with `"action": "abort"`
-
-Fallback is “I can’t help.”  
-
-Abort is “STOP — do not continue.”
-
-As noted earlier, the LLM will be instructed to act this very specific way by the contract as it is stipulated in the 
-AI Gateway Service code (ai_gateway_service.py)
-
-
-#### What scenarios produce an **AI ABORT**?
-
-In this system, **abort** is not a network failure, not a timeout, not a malformed plan.  
-Those all map to **fallback**.
-
-**Abort** is the AI saying:
-
-> “I understand the situation, and I am explicitly instructing you to STOP.  
-> Do not retry. Do not continue.  
-> This operation is unsafe or invalid.”
-> I know this by the contract that is instructing me.
-
-This is the AI’s **circuit breaker**.
-
-Specific typical real‑world abort scenarios:
-
-- The AI detects a **dangerous command** (e.g., `rm -rf /`, overwriting system files).
-- The AI detects a **corrupted state** where continuing could cause damage.
-- The AI determines the node is in a **non‑recoverable state**.
-- The AI sees a **dependency conflict** that cannot be resolved safely.
-- The AI sees a **security violation** (e.g., credentials printed to stdout).
-- The AI sees a **misconfiguration** that requires human intervention.
-- The AI determines the command is **not idempotent** and retrying could break the system.
-- The AI determines the command is **not reversible** and should not be attempted again.
-
-Once again, in short:
-
-Fallback = “I can’t help — continue with native logic.”  
-Abort = “COMPLETELY STOP — do not continue at all.”
 
 
 
@@ -3126,6 +2998,309 @@ module2f (Resurrection Engine)
 registry_entry (install_success / install_failed with embedded ai_tags and ai_metadata)
 ```
 
+
+
+
+### **Differences between the `retry_with_modified_command` and `cleanup_and_retry` contract actions**
+
+The two most commonly used AI/MCP recovery actions are **`retry_with_modified_command`** and **`cleanup_and_retry`**. Both actions attempt to repair a failing command, but they operate on fundamentally different assumptions about *why* the failure occurred and *what type of intervention* is required to restore a safe, executable state.
+
+This section explains the conceptual, behavioral, and forensic differences between the two actions, including how module2f executes them, how failures are classified, and how persistent AI metadata is recorded.
+
+---
+
+#### **1. Conceptual Purpose**
+
+**`retry_with_modified_command` — Fix the command itself**
+This action is used when the *original command is incorrect* and must be replaced with a corrected version. Typical scenarios include:
+
+- Missing flags or required arguments  
+- Incorrect package names, service names, or paths  
+- Commands requiring elevated privileges (e.g., adding `sudo`)  
+- Dependency installation commands that need adjustment  
+- Retrying with safer or more explicit parameters  
+- Replacing a failing subcommand with a corrected version  
+
+The AI returns **exactly one** corrected command in the `"retry"` field.
+
+**`cleanup_and_retry` — Fix the environment, then retry**
+This action is used when the *environment is in a bad state* and must be cleaned before retrying. Typical scenarios include:
+
+- Leftover PID files or lock files  
+- Partially installed packages  
+- Corrupted temporary directories  
+- Stale processes blocking execution  
+- Insufficient disk space that can be safely reclaimed  
+- Any reversible condition where cleanup restores a safe state  
+
+The AI returns:
+
+- A list of **cleanup commands**  
+- A list of **one or more retry commands**  
+
+Cleanup prepares the environment; retry attempts the repaired command sequence.
+
+---
+
+#### **2. Execution Model in module2f**
+
+**`retry_with_modified_command` — Single-shot retry**
+- Exactly **one** modified command is executed.  
+- If it succeeds → `install_success`.  
+- If it fails (non-zero exit or stderr) → the AI attempt is marked failed and module2f falls back to native failure classification.  
+- Persistent metadata records:
+  - `ai_commands = ["<modified command>"]`
+  - `ai_failed_command = "<modified command>"` (only if it failed)
+
+**`cleanup_and_retry` — Multi-step, multi-command sequence**
+Execution proceeds in three phases:
+
+1. **Cleanup phase**  
+   - All cleanup commands are executed sequentially.  
+   - Cleanup commands are **best-effort**:  
+     - Their failures **do not** abort the plan.  
+     - Their stderr/exit codes are **not** persisted.  
+     - Retry commands always run afterward.
+
+2. **Retry phase**  
+   - Retry commands are executed sequentially.  
+   - If **any** retry command fails (non-zero exit or stderr):  
+     - The entire action fails immediately.  
+     - `ai_failed_command` is set to the failing retry command.  
+     - No further retry commands are executed.
+
+3. **Success condition**  
+   - Only if **all** retry commands succeed is the action considered successful.
+
+Persistent metadata records:
+
+- `ai_commands = [cleanup1, cleanup2, retry1, retry2, ...]`
+- `ai_failed_command = <retry command that failed>`  
+- `ai_failed_command = None` if all retry commands succeeded
+
+---
+
+#### **3. Failure Semantics**
+
+**`retry_with_modified_command`**
+- Only one command is executed.  
+- Failure of that command → AI attempt fails.  
+- module2f falls back to native heuristic classification.  
+- Registry entry:  
+  - `status = "install_failed"`  
+  - `ai_failed_command = "<modified command>"`
+
+**`cleanup_and_retry`**
+- Cleanup failures **never** determine the final outcome.  
+- Only retry command failures determine success/failure.  
+- Registry entry:  
+  - `status = "install_success"` if all retry commands succeed  
+  - `status = "install_failed"` if any retry command fails  
+  - `ai_failed_command = "<retry command>"` for retry failures  
+  - `ai_failed_command = None` for success  
+
+This mirrors real-world recovery behavior: cleanup is preparatory; retry is decisive.
+
+---
+
+#### **4. Persistent State vs. Control-Flow State**
+
+**Persistent state recorded in registry entries**
+Both actions record:
+
+- `ai_invoked`  
+- `ai_fallback`  
+- `ai_plan_action`  
+- `ai_commands`  
+- `ai_failed_command`  
+
+**Control-flow state (NOT persisted)**
+- Cleanup stderr  
+- Cleanup exit codes  
+- Retry stderr  
+- Retry exit codes  
+- Intermediate stdout/stderr  
+- Watchdog output  
+
+These values influence control-flow but are intentionally excluded from persistent state to keep registry entries compact, stable, and forensic.
+
+---
+
+#### **5. Why cleanup failures are not persisted**
+
+Cleanup commands are **best-effort** and do not determine the final outcome. Persisting cleanup failures would:
+
+- Confuse users (cleanup failure ≠ action failure)  
+- Pollute registry entries with noisy stderr  
+- Break the clean separation between control-flow and persistent state  
+- Inflate registry size unnecessarily  
+
+Only retry commands determine success/failure, so only retry failures are persisted via `ai_failed_command`.
+
+If cleanup failures were ever needed for debugging, they appear in the live logs — the correct place for transient control-flow information.
+
+---
+
+#### **6. Summary Comparison Table**
+
+| Aspect | `retry_with_modified_command` | `cleanup_and_retry` |
+|-------|--------------------------------|----------------------|
+| Purpose | Fix the command | Fix the environment, then retry |
+| Cleanup commands | None | One or more |
+| Retry commands | Exactly one | One or more |
+| Cleanup failures | Not applicable | Ignored (best-effort) |
+| Retry failures | Abort immediately | Abort immediately |
+| Success condition | Modified command succeeds | All retry commands succeed |
+| ai_commands | `[modified_cmd]` | `[cleanup1, cleanup2, retry1, retry2, ...]` |
+| ai_failed_command | Modified command (if failed) | Retry command that failed |
+| Persistent cleanup failure tracking | No | No (by design) |
+
+---
+
+#### **7. Key Takeaways**
+
+- `retry_with_modified_command` is a **single-shot correction** of the original command.  
+- `cleanup_and_retry` is a **multi-step recovery sequence** that repairs the environment before retrying.  
+- Cleanup failures are **never** persisted and **never** determine the final outcome.  
+- Retry failures are **always** decisive and recorded via `ai_failed_command`.  
+- The registry entry remains compact, stable, and forensic by recording only persistent state, not transient control-flow details.
+
+
+
+
+
+
+
+
+### **Differences between the abort and fallback contract actions**
+
+As noted earlier: 
+The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
+
+The actions are defined in great detail in the AI Gatewway Service (ai_gateay_service.py). The code in the AI Gateway Service
+dictate how the LLM is instructed  to respond (act) when presented with a current command situation that is failing in its
+current form. 
+
+The contract actions are: retry_with_modified_command, cleanup_and_retry, fallback, and abort.
+
+This section will describe the subtle differences between teh fallback action and the abort action parts of the contract with 
+the LLM.
+
+ 
+Fallback means:
+
+- AI was invoked  
+- AI *could not* produce a valid plan  
+- AI is telling module2f:  
+  **“I can’t help — continue with native logic.”**
+
+Examples:
+
+- AI Gateway unreachable  
+- Timeout  
+- Invalid JSON  
+- Unknown action  
+- AI returns `"action": "fallback"`  
+- AI returns garbage  
+- AI returns nothing  
+
+Fallback is a *graceful degradation* path.
+
+---
+ 
+Abort means:
+
+- AI was invoked  
+- AI *did* understand the situation  
+- AI is explicitly telling module2f:  
+  **“Stop. Do not retry. Do not continue.  
+  This operation should be aborted.”**
+
+Examples:
+
+- AI detects a dangerous command  
+- AI detects a destructive operation  
+- AI detects a dependency conflict that cannot be resolved  
+- AI determines the system is in an unsafe state  
+- AI determines continuing could corrupt the node  
+- AI returns `"action": "abort"`
+
+Abort is a *safety stop*.
+
+This is the AI equivalent of a circuit breaker.
+
+---
+
+Example of how module2f handles ABORT (the full code will be presented in a section below)
+
+Inside `_invoke_ai_hook` (called from module2f def resurrection_install_tomcat function), the logic is:
+
+- `ai_invoked = True`
+- `ai_plan_action = "abort"`
+- `ai_fallback = False`
+- No retry is attempted
+- module2f returns a **failure registry entry**, tagged with:
+  - `ai_invoked_true`
+  - `ai_plan_action:abort`
+  - `ai_assisted:*<whatever>*` (if any commands were suggested)
+- The underlying failure classification is  **Heuristic‑4** in the module2f code
+
+So the registry for abort looks almost identical to fallback, except:
+
+- `ai_fallback = False`
+- `ai_plan_action = "abort"`
+
+---
+
+Thus, 
+**Abort = AI explicitly tells module2f to stop.**
+
+It is used when:
+
+- Continuing is unsafe  
+- The command is harmful  
+- The system is in a corrupted state  
+- The AI detects a condition that cannot be fixed  
+- The AI determines retrying is pointless or dangerous  
+- The AI Gateway returns a valid plan with `"action": "abort"`
+
+Fallback is “I can’t help.”  
+
+Abort is “STOP — do not continue.”
+
+As noted earlier, the LLM will be instructed to act this very specific way by the contract as it is stipulated in the 
+AI Gateway Service code (ai_gateway_service.py)
+
+
+#### What scenarios produce an **AI ABORT**?
+
+In this system, **abort** is not a network failure, not a timeout, not a malformed plan.  
+Those all map to **fallback**.
+
+**Abort** is the AI saying:
+
+> “I understand the situation, and I am explicitly instructing you to STOP.  
+> Do not retry. Do not continue.  
+> This operation is unsafe or invalid.”
+> I know this by the contract that is instructing me.
+
+This is the AI’s **circuit breaker**.
+
+Specific typical real‑world abort scenarios:
+
+- The AI detects a **dangerous command** (e.g., `rm -rf /`, overwriting system files).
+- The AI detects a **corrupted state** where continuing could cause damage.
+- The AI determines the node is in a **non‑recoverable state**.
+- The AI sees a **dependency conflict** that cannot be resolved safely.
+- The AI sees a **security violation** (e.g., credentials printed to stdout).
+- The AI sees a **misconfiguration** that requires human intervention.
+- The AI determines the command is **not idempotent** and retrying could break the system.
+- The AI determines the command is **not reversible** and should not be attempted again.
+
+Once again, in short:
+
+Fallback = “I can’t help — continue with native logic.”  
+Abort = “COMPLETELY STOP — do not continue at all.”
 
 
 ---

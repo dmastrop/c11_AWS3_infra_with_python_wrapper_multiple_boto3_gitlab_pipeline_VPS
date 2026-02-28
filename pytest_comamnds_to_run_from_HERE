@@ -28,29 +28,33 @@ Run the pytest FROM this directory (it must be run from this directory, otherwis
 
 Introductory tests:
 
-Test1
+
+All tests
+pytest -v -s --capture=no tests/test_ai_hook_v7.py
+
+Test1 retry_with_modified_command success
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
 
-Test2
+Test2 retry_with_modified_command fail
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_failed
 
-Test3
+Test3 faillback
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fallback
 
-Test4
+Test4 abort
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_abort
 
 
-Test5
+Test5 unknown
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_unknown_action
 
-Test6
+Test6 cleanup_and_retry_success
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_success
 
-Test7
+Test7 cleanup_and_retry_failure on second command (last retry command)
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
 
-Test7b
+Test7b cleanup_and_retry_failure on first command (first retry command)
 
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure_command1
 
