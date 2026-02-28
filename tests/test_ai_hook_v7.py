@@ -1288,7 +1288,7 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure(monkeypatch):
     # FakeSSH2.call_count should be 3 original + 2 cleanup + 2 retry = 7
     assert fake_ssh.call_count == 7
 
-    `
+    
 
 
 
