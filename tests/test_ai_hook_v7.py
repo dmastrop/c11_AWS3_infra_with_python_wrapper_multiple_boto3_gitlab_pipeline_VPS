@@ -1291,4 +1291,89 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure(monkeypatch):
     
 
 
+# ---------------------------------------------------------------------
+# TEST 7E — CLEANUP_AND_RETRY → cleanup fails, retry1 fails → install_failed
+# ---------------------------------------------------------------------
+def test_ai_hook_cleanup_and_retry_cleanup_failure_retry1_failure(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script:
+    # - 3 original failures
+    # - cleanup1 fails, cleanup2 succeeds
+    # - retry1 fails, retry2 never runs
+    script = [
+        ("", "synthetic error", 1),   # original 1
+        ("", "synthetic error", 1),   # original 2
+        ("", "synthetic error", 1),   # original 3
+        ("", "cleanup failed", 1),    # cleanup1 fails
+        ("", "", 0),                  # cleanup2 succeeds
+        ("AI_RETRY_1 still failing", "cleanup retry failed", 1),  # retry1 fails
+        # retry2 never executed
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+        class AutoAddPolicy:
+            pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Use same plan as pytest7d (cleanup + retry)
+    def fake_send(self, context):
+        return make_plan_cleanup_and_retry_failure()
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules.module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    assert isinstance(result, tuple)
+    _, _, registry = result
+
+    print("DEBUG: registry (cleanup_and_retry cleanup failure + retry1 failure) =", registry)
+
+    # Expect overall failure
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] == "cleanup_and_retry"
+
+    # ai_failed_command must be retry1
+    assert registry["ai_metadata"]["ai_failed_command"] == "echo AI_RETRY_1"
+
+    # All cleanup + retry commands recorded
+    ai_commands = registry["ai_metadata"]["ai_commands"]
+    assert len(ai_commands) == 4
+    assert "rm -f /var/lib/dpkg/lock" in ai_commands[0]
+    assert "rm -f /var/lib/dpkg/lock-frontend" in ai_commands[1]
+    assert "echo AI_RETRY_1" in ai_commands[2]
+    assert "echo AI_RETRY_2" in ai_commands[3]
+
+    # FakeSSH2.call_count should be:
+    # 3 original + 2 cleanup + 1 retry = 6
+    assert fake_ssh.call_count == 6
 
