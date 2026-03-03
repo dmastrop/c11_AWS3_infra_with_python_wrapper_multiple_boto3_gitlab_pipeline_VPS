@@ -2449,6 +2449,28 @@ This separation is crucial:
 - Control‑flow variables are **ephemeral** and drive the immediate path through the retry loop and heuristics.  
 - Persistent state variables are **durable** and become part of the audit trail in the registry JSON (ai_metadata + ai_tags).
 
+
+
+#### **No naming collision with ai_fallback**
+
+Astute readers will have noticed that there is a persistent state variable named ai_fallback and also a control-flow variable
+named ai_fallback.   However, given that the persistent state variables are explicitly defined as nonlocal in the 
+_invoke_ai_hook function, python creates a separate namespace for the persistent state variable ai_fallback that is 
+separte from the local control-flow state variable ai_fallback that is returned by _invoke_ai_hook.
+
+In terms of the technical coding:
+
+- `result["ai_fallback"]` is a **dict key** returned by `_invoke_ai_hook()`. (This is the control-flow variable)
+
+- `ai_fallback` (nonlocal) is a **persistent state variable** used by `_build_ai_metadata_and_tags()`.
+
+They live in **different namespaces** and never overwrite each other.
+
+So the naming collision is **safe**, as long as ai_fallback is propagated into the persistent state when needed.
+
+
+
+
 #### **Deep‑Dive Examples: How Control‑Flow and Persistent State Variables Actually Behave**
 
 The following examples illustrate exactly how these two classes of variables behave inside `module2f`, why both are required, and how they interact with the retry loop, heuristics, and registry assembly.
