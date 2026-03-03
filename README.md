@@ -3548,19 +3548,31 @@ is created that runs off of a predetermined script. The script is fed into the t
 calling pytest test function itself that has the responsibility of monkeypatching the paramiko SSH prior to calling the main 
 function that is under test, def resurrection_install_tomcat.
 
+FakeSSH2 is not just a more advanced FakeSSH — it is a deterministic command‑response engine. It allows the test to specify *exactly* how each SSH call behaves, in order, regardless of which command string module2f sends.
+
+
 Once ssh is monkeypatched by the pytest test function, any call to ssh from within def resurrection_install_tomcat uses this
 predetermined script to dictate the responses that ssh will give to a predetermined command list (that is being tested).
 
 In addtion to monkeypatching the ssh, the MCPClient is also monkeypatched (more on that below).
 
+The pytest tests monkeypatch two independent layers: (1) the SSH execution layer, which simulates how each command behaves, and (2) the AI/MCP contract layer, which controls what cleanup/retry plan the AI returns. Together, these two layers allow the test to deterministically drive every branch of the module2f logic.
+
+- FakeSSH/FakeSSH2 controls what happens when module2f executes SSH commands 
+- MCPClient monkeypatch controls what AI plan module2f receives
+
+
 With the ssh, the first command is the native original command and then there are any number of cleanup commands and retry commands 
 that are from the monkeypatched fake contract plan that is provided by the monkeypatched MCPClient (mcp.send() is monkeypatched
-to send a fake contract plan that is specified in the pytest file. (The fake contract plan is from a helper function in the pytest
+to send a fake contract plan that is specified in the pytest file. The fake contract plan is from a helper function in the pytest
 file). 
 
 Thus the pytest test generates the predetermined commands and the script that is fed into the FakeSSH generates
 predetermined responses for each of those commands,  that can be varied to test the various code paths of the AI/MCP HOOK and the
 registry failure heuristic code paths of the calling function def resurrection_install_tomcat. 
+
+A good way to think about these tests is: **The pytest function decides what commands will be sent (via the fake AI plan), and FakeSSH2 decides what each command returns.**  Module2f (def resurrection_install_tomcat) simply reacts to those inputs, and the test asserts that the reaction is correct.
+
 
 The pytest code is a bit complex but the end result exercises the code paths just as if it was a real life test. 
 
@@ -3599,8 +3611,15 @@ be something like this:
     ]
 ```
 
-So the original commands that are sent to the resurrection_install_tomcat will get the synthetic error stderr with exit_code1 for
-3 successive tries. This will force the retry loop and heuristic failure logic in the resurrection function to call the AI/MCP 
+The original command (`echo test`) is always executed first and is intentionally configured to fail three times. This forces module2f into its heuristic failure path, guaranteeing that the AI/MCP hook is invoked.
+
+FakeSSH2 does not know or care which command is being executed — it only returns the next tuple in the script. This is why the test must ensure that the script length matches the expected number of SSH calls (dictated by the fake contract plan)for the scenario 
+being tested.
+
+So the original command that is sent to the resurrection_install_tomcat will get the synthetic error stderr with exit_code1 for
+3 successive tries. The number three is not arbitrary — it matches the RETRY_LIMIT inside module2f. If that limit changes in the future, the tests will need to update their FakeSSH2 scripts accordingly.
+
+This retry failure  will force the heuristic failure logic in the resurrection function to call the AI/MCP 
 HOOK function to get AI assisted help for the command. As mentioned above, this is where the second monkeypatch to the MCPClient
 comes into play. The mcp.send() is monkeypatched to send back a fake contract plan for clean_up_and_retry that looks something like 
 this:
@@ -3682,6 +3701,8 @@ code paths. The first is the original native command (this tests the retry loop 
 fucntion to failure, i.e. 3 times, so that the AI/MCP HOOK code is activated).   The second is the AI contract plan command or
 commands that test the AI/MCP HOOK ssh execution code and control-flow variable logic classification, that depends on 
 whether or not these AI related commands are successful.
+
+This design gives us full control over every branch of module2f’s logic without modifying the production code. It also ensures that the AI/MCP hook, the retry loop, the cleanup logic, the failure heuristics, and the registry metadata builder are all exercised exactly as they would be in a real deployment — just with deterministic inputs.
 
 
 
