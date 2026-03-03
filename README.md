@@ -3475,12 +3475,16 @@ Abort = “COMPLETELY STOP — do not continue at all.”
 
 ### **Advanced Architectural Note: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions**
 
+
+This section explains why the AI/MCP HOOK must remain a pure control‑flow component and why only the calling heuristics—not the HOOK—are allowed to mutate persistent AI state for derived fallback conditions such as cleanup‑only or missing‑retry scenarios.
+
+
 This section assumes that reader has a firm grasp on the following concepts that have been described earlier:
 
 - control‑flow variables  
 - persistent state variables  
-- the AI/MCP HOOK  
-- the heuristics failures in the def resurrection_install_tomcat function of module2f  
+- the AI/MCP HOOK (The actual code will be presented in the code review section) 
+- the heuristics failures in the def resurrection_install_tomcat function of module2f (The actual code will be presented in the code review section) 
 - the registry builder  def _build_ai_metadata_ai_tags
 
 
