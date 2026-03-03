@@ -26,56 +26,6 @@ Run the pytest FROM this directory (it must be run from this directory, otherwis
 /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
 
 
-Introductory tests:
-
-
-All tests
-pytest -v -s --capture=no tests/test_ai_hook_v7.py
-
-Test1 retry_with_modified_command success
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
-
-Test2 retry_with_modified_command fail
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_failed
-
-Test3 faillback
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fallback
-
-Test4 abort
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_abort
-
-
-Test5 unknown
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_unknown_action
-
-Test6 cleanup_and_retry_success
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_success
-
-Test7 cleanup_and_retry_failure on second command (last retry command)
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
-
-Test7b cleanup_and_retry_failure on first command (first retry command)
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure_command1
-
-
-Test7c
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry_success
-
-
-Test7d
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure
-
-Test7e
-pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry1_failure
-
-Test7f
-
-
-Test7g
-
-
-Test7h
-
 
 
 
@@ -155,3 +105,69 @@ tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ================================================= 1 passed, 2 warnings in 10.36s =================================================
+
+
+
+
+
+
+
+
+
+Introductory tests:
+
+
+All tests
+pytest -v -s --capture=no tests/test_ai_hook_v7.py
+
+Test1 retry_with_modified_command success
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fixed
+
+Test2 retry_with_modified_command fail
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_failed
+
+Test3 faillback
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_fallback
+
+Test4 abort
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_abort
+
+
+Test5 unknown
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_ai_unknown_action
+
+Test6 cleanup_and_retry_success
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_success
+
+Test7 cleanup_and_retry_failure on second command (last retry command)
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
+
+Test7b cleanup_and_retry_failure on first command (first retry command)
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure_command1
+
+
+Test7c
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry_success
+
+
+Test7d
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure
+
+Test7e
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_failure_retry1_failure
+
+Test7f
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_fallback_cleanup_only
+
+Test7g.1
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_retry_only_success
+
+Test7g.2
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_retry_only_failure
+
+Test7h
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_cleanup_present_retry_empty
+
+
+
+

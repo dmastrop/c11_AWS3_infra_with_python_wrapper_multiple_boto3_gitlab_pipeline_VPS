@@ -1494,6 +1494,22 @@ def resurrection_install_tomcat(
             last_stderr = ""
             last_exit = 1
 
+            # ------------------------------------------------
+            # If retry list is empty → fallback
+            # ------------------------------------------------
+            if not retry_cmds:
+                print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry commands provided — fallback.")
+                return {
+                    "ai_ran": True,
+                    "ai_fixed": False,
+                    "ai_failed": False,
+                    "ai_fallback": True,
+                    "new_stdout": last_stdout,
+                    "new_stderr": last_stderr,
+                    "new_exit_status": last_exit,
+                }
+
+
             for rcmd in retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {rcmd}")
                 rin, rout, rerr = ssh.exec_command(rcmd, timeout=60)
@@ -1552,6 +1568,24 @@ def resurrection_install_tomcat(
         # --------------------------------------------------------
         if action == "retry_with_modified_command":
             new_cmd = plan.get("retry")
+            
+            # --------------------------------------------------------
+            # If retry command is missing → fallback
+            # --------------------------------------------------------
+            if not new_cmd:
+                print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry command provided — fallback.")
+                return {
+                    "ai_ran": True,
+                    "ai_fixed": False,
+                    "ai_failed": False,
+                    "ai_fallback": True,
+                    "new_stdout": "",
+                    "new_stderr": "",
+                    "new_exit_status": 1,
+                }
+
+
+
             if new_cmd:
                 ai_commands.append(new_cmd)
                 print(f"AI_MCP_HOOK[{ip}] 🔁 AI modified retry: {new_cmd}")
