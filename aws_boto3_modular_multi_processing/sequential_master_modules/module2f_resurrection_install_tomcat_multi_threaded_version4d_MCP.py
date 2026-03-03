@@ -1314,6 +1314,61 @@ def resurrection_install_tomcat(
             - Returns updated outputs for classification and returns control-flow variables to the caller.
         """
 
+
+        # ====================================================================================================
+        # IMPORTANT ARCHITECTURAL NOTE ABOUT FALLBACK HANDLING
+        # ----------------------------------------------------------------------------------------------------
+        # The AI/MCP HOOK returns *control‑flow* information to the caller. It does NOT directly mutate the
+        # persistent AI state variables (ai_fallback, ai_failed, ai_fixed, etc.) EXCEPT for explicit contract
+        # actions: "fallback", "unknown", and "abort".
+        #
+        # Why?
+        # ----
+        # Because the HOOK does not know the caller’s context. The HOOK is intentionally pure:
+        #   - It receives inputs.
+        #   - It executes the AI plan.
+        #   - It returns a control‑flow dict describing what happened.
+        #   - It does NOT decide how the caller should classify the result.
+        #
+        # The persistent state variables (ai_fallback, ai_failed, ai_fixed, ai_commands, ai_failed_command)
+        # belong to the CALLER (the heuristic block), not the HOOK. The caller uses these persistent variables
+        # to build ai_metadata and ai_tags for the registry entry.
+        #
+        # Native contract actions ("fallback", "unknown", "abort") *ARE* allowed to mutate persistent state,
+        # because they are explicit instructions from the AI plan. These are not derived conditions.
+        #
+        # HOWEVER:
+        # --------
+        # cleanup_and_retry fallback (retry list empty) and retry_with_modified_command fallback (retry missing)
+        # are *derived conditions*, not explicit contract actions. The HOOK cannot mutate persistent state for
+        # these cases, because:
+        #
+        #   1. The HOOK does not know which heuristic block invoked it.
+        #   2. The caller may choose to classify fallback differently depending on context.
+        #   3. Mutating persistent state inside the HOOK would cause cross‑heuristic contamination.
+        #   4. The HOOK must remain a pure function that returns control‑flow, not registry metadata.
+        #
+        # Therefore:
+        # ----------
+        # For derived fallback conditions, the HOOK returns:
+        #       {"ai_fallback": True, ...}
+        # but DOES NOT set the persistent ai_fallback variable.
+        #
+        # It is the responsibility of the CALLER (heuristic block) to:
+        #   - detect result["ai_fallback"] == True
+        #   - set the persistent ai_fallback = True
+        #   - build ai_metadata and ai_tags accordingly
+        #   - classify the registry entry as a native failure with fallback tagging
+        #
+        # This preserves the architecture:
+        #       HOOK → returns control‑flow
+        #       heuristic block → interprets control‑flow
+        #       persistent state → set by heuristic block
+        #       metadata builder → reads persistent state
+        #
+        # ====================================================================================================
+
+
         nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands, ai_failed_command  
         # These are the persistent state variables that are incorporated into the ai_metadata in the registry_entry
         # Make sure it inialilze these outside of the def _invoke_ai_hook function (this function)        
