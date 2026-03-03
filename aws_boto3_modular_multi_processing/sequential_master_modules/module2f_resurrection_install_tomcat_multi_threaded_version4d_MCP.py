@@ -2338,17 +2338,39 @@ def resurrection_install_tomcat(
                                 # We break so the idx loop continues and install_success runs.
                                 break
 
+
                             # ------------------------------------------------------------
-                            # CASE B: AI FAILED TO FIX THE HEURISTIC FAILURE
+                            # CASE B: AI FALLBACK CASE
+                            # ------------------------------------------------------------
+                            # Derived fallback (e.g., cleanup_and_retry with empty retry list, OR retry_with_modified_command with empty command
+                            # list).
+                            # The HOOK does NOT set persistent ai_fallback for derived conditions.(for native fallback, abort, or
+                            # unknown contract actions we DO set persistent ai_fallback in the AI/MCP HOOK).
+                            # We must set ai_fallback=True here so the metadata builder records fallback correctly.
+                            elif result.get("ai_fallback"):
+                                ai_fallback = True
+                                ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                                registry_entry["ai_metadata"] = ai_meta
+                                registry_entry["tags"].extend(ai_tags)
+                                registry_entry["tags"].append("ai_fallback")
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+                            
+                            # ------------------------------------------------------------
+                            # CASE C: AI FAILED TO FIX THE HEURISTIC FAILURE
                             # ------------------------------------------------------------
                             # Attach AI metadata and tags for forensic/telemetry purposes,
                             # then close SSH and return the registry entry as a failure.
-                            ai_meta, ai_tags = _build_ai_metadata_and_tags()
-                            registry_entry["ai_metadata"] = ai_meta
-                            registry_entry["tags"].extend(ai_tags)
 
-                            ssh.close()
-                            return ip, private_ip, registry_entry
+                            else:
+                                # AI failed
+                                ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                                registry_entry["ai_metadata"] = ai_meta
+                                registry_entry["tags"].extend(ai_tags)
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+
+
                         else:
                             # Non-final attempt: log and retry after a short sleep.
                             print(f"[{ip}] ⚠️ Non-zero exit — retrying attempt {attempt + 1}")
