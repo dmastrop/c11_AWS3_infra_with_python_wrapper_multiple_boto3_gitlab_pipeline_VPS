@@ -1461,6 +1461,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [Differences between the retry_with_modified_command and cleanup_and_retry contract actions](#differences-between-the-retry_with_modified_command-and-cleanup_and_retry-contract-actions)
 - [Idempotency Failures and the Correct AI/MCP Contract Action](#idempotency-failures-and-the-correct-aimcp-contract-action)
 - [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
+- [Advanced Architectural Note: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions](#advanced-architectural-note-why-the-aimcp-hook-does-not-mutate-persistent-state-for-derived-fallback-conditions)
 - [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step6-formalized)
 - [Code Review](#code-review)
 - [Pytest validation](#pytest-validation)
@@ -3472,7 +3473,7 @@ Abort = “COMPLETELY STOP — do not continue at all.”
 
 ---
 
-### **Advanced Architectural Note: Why the HOOK Does Not Mutate Persistent State for Derived Fallback Conditions**
+### **Advanced Architectural Note: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions**
 
 This section assumes that reader has a firm grasp on the following concepts that have been described earlier:
 
