@@ -3677,7 +3677,11 @@ even the integration code of ai_tags and ai_metadata by the _build_ai_metadata_a
 is not tested is the actual call to the LLM through the AI Gateway Service (this will be tested with the real-life testing
 that will follow pytest testing).
 
-
+In the discussion above, it is important to note that there are two basic "types" of commands that are testing different 
+code paths. The first is the original native command (this tests the retry loop in the def resurrection_install_ tomacat
+fucntion to failure, i.e. 3 times, so that the AI/MCP HOOK code is activated).   The second is the AI contract plan command or
+commands that test the AI/MCP HOOK ssh execution code and control-flow variable logic classification, that depends on 
+whether or not these AI related commands are successful.
 
 
 
