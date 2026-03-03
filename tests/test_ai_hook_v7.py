@@ -363,6 +363,14 @@ def test_ai_hook_ai_fixed(monkeypatch):
     # 6. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
+    
+
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
 
     print("DEBUG: registry =", registry)
 
@@ -477,6 +485,12 @@ def test_ai_hook_ai_failed(monkeypatch):
     assert isinstance(result, tuple)
     _, _, registry = result
 
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+    
     print("DEBUG: registry =", registry)
 
     # install_failed block assertions
@@ -595,6 +609,13 @@ def test_ai_hook_ai_fallback(monkeypatch):
     # 5. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
 
     print("DEBUG: registry =", registry)
 
@@ -705,6 +726,13 @@ def test_ai_hook_ai_abort(monkeypatch):
     # 5. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
 
     print("DEBUG: registry =", registry)
 
@@ -821,6 +849,13 @@ def test_ai_hook_ai_unknown_action(monkeypatch):
     # 5. Assertions
     assert isinstance(result, tuple)
     _, _, registry = result
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
 
     print("DEBUG: registry =", registry)
 
@@ -921,6 +956,13 @@ def test_ai_hook_cleanup_and_retry_success(monkeypatch):
     assert isinstance(result, tuple)
     _, _, registry = result
 
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
+
     print("DEBUG: registry (cleanup_and_retry success) =", registry)
 
     # We expect overall success
@@ -1013,6 +1055,13 @@ def test_ai_hook_cleanup_and_retry_failure(monkeypatch):
 
     assert isinstance(result, tuple)
     _, _, registry = result
+
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
 
     print("DEBUG: registry (cleanup_and_retry failure) =", registry)
 
@@ -1118,6 +1167,12 @@ def test_ai_hook_cleanup_and_retry_failure_command1(monkeypatch):
 
     assert isinstance(result, tuple)
     _, _, registry = result
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
 
     print("DEBUG: registry (cleanup_and_retry failure) =", registry)
 
@@ -1209,6 +1264,13 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry_success(monkeypatch):
     assert isinstance(result, tuple)
     _, _, registry = result
 
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
+
     print("DEBUG: registry (cleanup_and_retry cleanup failure + retry success) =", registry)
 
     # Expect overall success
@@ -1290,6 +1352,13 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure(monkeypatch):
 
     assert isinstance(result, tuple)
     _, _, registry = result
+
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
 
     print("DEBUG: registry (cleanup_and_retry cleanup failure + retry failure) =", registry)
 
@@ -1374,6 +1443,13 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry1_failure(monkeypatch):
 
     assert isinstance(result, tuple)
     _, _, registry = result
+
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
 
     print("DEBUG: registry (cleanup_and_retry cleanup failure + retry1 failure) =", registry)
 
