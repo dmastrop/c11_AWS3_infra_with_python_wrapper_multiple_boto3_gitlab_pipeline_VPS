@@ -366,7 +366,7 @@ def test_ai_hook_ai_fixed(monkeypatch):
     
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest1) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -486,7 +486,7 @@ def test_ai_hook_ai_failed(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest2) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -611,7 +611,7 @@ def test_ai_hook_ai_fallback(monkeypatch):
     _, _, registry = result
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest3) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -728,7 +728,7 @@ def test_ai_hook_ai_abort(monkeypatch):
     _, _, registry = result
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest4) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -851,7 +851,7 @@ def test_ai_hook_ai_unknown_action(monkeypatch):
     _, _, registry = result
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest5) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -957,7 +957,7 @@ def test_ai_hook_cleanup_and_retry_success(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest6) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1057,7 +1057,7 @@ def test_ai_hook_cleanup_and_retry_failure(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1169,7 +1169,7 @@ def test_ai_hook_cleanup_and_retry_failure_command1(monkeypatch):
     _, _, registry = result
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7B) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1265,7 +1265,7 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry_success(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7C) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1354,7 +1354,7 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry_failure(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7D) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1446,7 +1446,7 @@ def test_ai_hook_cleanup_and_retry_cleanup_failure_retry1_failure(monkeypatch):
 
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7e) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1538,7 +1538,7 @@ def test_ai_hook_cleanup_and_retry_fallback_cleanup_only(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7F) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1623,7 +1623,7 @@ def test_ai_hook_cleanup_and_retry_retry_only_success(monkeypatch):
     _, _, registry = result
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7G.1) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1703,7 +1703,7 @@ def test_ai_hook_cleanup_and_retry_retry_only_failure(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7G.2) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1785,7 +1785,7 @@ def test_ai_hook_cleanup_and_retry_cleanup_present_retry_empty(monkeypatch):
     _, _, registry = result
     
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7H) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
@@ -1875,7 +1875,7 @@ def test_ai_hook_cleanup_and_retry_empty_cleanup_empty_retry(monkeypatch):
     _, _, registry = result
 
     # Print registry for debugging
-    print("\n===== REGISTRY ENTRY (7F) =====")
+    print("\n===== REGISTRY ENTRY (pytest7I) =====")
     for k, v in registry.items():
         print(f"{k}: {v}")
     print("================================\n")
