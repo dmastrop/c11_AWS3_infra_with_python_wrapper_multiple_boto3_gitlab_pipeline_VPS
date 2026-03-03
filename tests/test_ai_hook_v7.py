@@ -1461,6 +1461,12 @@ def test_ai_hook_cleanup_and_retry_fallback_cleanup_only(monkeypatch):
 
     _, _, registry = result
 
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+
     # Assertions
     assert registry["status"] == "install_failed"
     assert registry["ai_metadata"]["ai_invoked"] is True
@@ -1539,6 +1545,12 @@ def test_ai_hook_cleanup_and_retry_retry_only_success(monkeypatch):
     )
 
     _, _, registry = result
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
 
     # Assertions
     assert registry["status"] == "install_success"
@@ -1614,6 +1626,12 @@ def test_ai_hook_cleanup_and_retry_retry_only_failure(monkeypatch):
 
     _, _, registry = result
 
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+    
     # Assertions
     assert registry["status"] == "install_failed"
     assert registry["ai_metadata"]["ai_invoked"] is True
@@ -1689,6 +1707,12 @@ def test_ai_hook_cleanup_and_retry_cleanup_present_retry_empty(monkeypatch):
     )
 
     _, _, registry = result
+    
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
 
     # Assertions
     assert registry["status"] == "install_failed"
@@ -1774,6 +1798,12 @@ def test_ai_hook_cleanup_and_retry_empty_cleanup_empty_retry(monkeypatch):
 
     _, _, registry = result
 
+    # Print registry for debugging
+    print("\n===== REGISTRY ENTRY (7F) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("================================\n")
+    
     # -------------------------
     # Assertions
     # -------------------------
