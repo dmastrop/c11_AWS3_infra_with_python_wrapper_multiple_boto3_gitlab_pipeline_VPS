@@ -3531,8 +3531,155 @@ The pytest suite serves as the verification layer for the entire AI/MCP integrat
 The tests exercise all control‑flow outcomes (`ai_fixed`, `ai_failed`, `ai_fallback`, etc.) and verify that persistent state variables (`ai_invoked`, `ai_fallback`, `ai_plan_action`, `ai_commands`, `ai_failed_command`) propagate correctly into the final registry entries. They also confirm that heuristic logic, retry loops, and failure classifications behave identically whether AI assistance is present or not. By validating these behaviors under controlled conditions, the pytest suite ensures that the AI/MCP integration is deterministic, predictable, and ready for real‑world command testing once the AI Gateway Service is activated in the GitLab pipeline.
 
 Getting the pytest was a bit challenging as there were several import issues since the functions in the code are highly nested 
-and the git repo structure is nested as well. As noted above, the was to apply the monkeypatch to the AI Request Sender at the lowest deterministic point (`MCPClient.send`) defined in the MCPClient class my_mcp_client.py. A dummy version is used for the pytest
-thus facilitating the import of the my_mcp_client.py.
+and the git repo structure is nested as well. As noted above, the key was to apply the monkeypatch to the AI Request Sender at the 
+lowest deterministic point (`MCPClient.send`) defined in the MCPClient class my_mcp_client.py. A dummy version is used for the
+pytest thus facilitating the import of the my_mcp_client.py.  The other critical component to the design of the pytest tests is
+to create a FakeSSH class, so that the paramiko SSHClient can easily be monkeypatched as well. 
+
+
+#### General pytest test case approach and pytest code mechanics
+
+With the FakeSSH monkeypatch, the FakeSSH class has logic to separate out the original native command that tests the
+retry loop in the code, and the AI RETRY command that is utilized if all the original command retries fail. The FakeSSH
+generates the specified response (stdout, stderr and the exit_status) to elicit the desired path in the code to test. 
+The FakeSSH is very effective for single command AI/MCP HOOK contract plans, but for the cleanup_and_retry AI/MCP contract plan,
+that supports multiple cleanup and retry commands, the approach is radically different. For this a new FakeSSH2 (version 2) class
+is created that runs off of a predetermined script. The script is fed into the the FakeSSH2 as an argument. The script is in the
+calling pytest test function itself that has the responsibility of monkeypatching the paramiko SSH prior to calling the main 
+function that is under test, def resurrection_install_tomcat.
+
+Once ssh is monkeypatched by the pytest test function, any call to ssh from within def resurrection_install_tomcat uses this
+predetermined script to dictate the responses that ssh will give to a predetermined command list (that is being tested).
+
+In addtion to monkeypatching the ssh, the MCPClient is also monkeypatched (more on that below).
+
+With the ssh, the first command is the native original command and then there are any number of cleanup commands and retry commands 
+that are from the monkeypatched fake contract plan that is provided by the monkeypatched MCPClient (mcp.send() is monkeypatched
+to send a fake contract plan that is specified in the pytest file. (The fake contract plan is from a helper function in the pytest
+file). 
+
+Thus the pytest test generates the predetermined commands and the script that is fed into the FakeSSH generates
+predetermined responses for each of those commands,  that can be varied to test the various code paths of the AI/MCP HOOK and the
+registry failure heuristic code paths of the calling function def resurrection_install_tomcat. 
+
+The pytest code is a bit complex but the end result exercises the code paths just as if it was a real life test. 
+
+In the FakeSSH2 class the script is consumed with:
+```
+    def __init__(self, script):
+        """
+        :param script: list of (stdout_data, stderr_data, exit_status)
+                       one entry per SSH exec_command() call.
+        """
+        self.call_count = 0
+        self.script = script
+```
+The general approach of the pytest test function is to call the resurrection_install_tomcat function of module2f with the original
+command. The resurrection_install_tomcat function will natively invoke ssh which will call the FakeSSH or FakeSSH2 class 
+monkeypatch. In the more complex cleanup_and_retry contract plan, an example script that is fed to the FakeSSH2 class would 
+be something like this: 
+
+```
+# Script for FakeSSH2:
+    # This has the stdout, stderr and exit_code tuple in response to the corresponding commands that are sent by using the fake plan
+    # - 3 original failures
+    # - 2 cleanup successes
+    # - 2 retry commands, last one fails
+    script = [
+        # Original command failures (3 attempts)
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        # Cleanup commands (2 commands) → success
+        ("", "", 0),
+        ("", "", 0),
+        # Retry commands (2 commands) → first ok, second fails
+        ("AI_RETRY_1 ok", "", 0),
+        ("AI_RETRY_2 still failing", "cleanup retry failed", 1),
+    ]
+```
+
+So the original commands that are sent to the resurrection_install_tomcat will get the synthetic error stderr with exit_code1 for
+3 successive tries. This will force the retry loop and heuristic failure logic in the resurrection function to call the AI/MCP 
+HOOK function to get AI assisted help for the command. As mentioned above, this is where the second monkeypatch to the MCPClient
+comes into play. The mcp.send() is monkeypatched to send back a fake contract plan for clean_up_and_retry that looks something like 
+this:
+
+
+```
+ pytest7 These are the plan cleanup and retry commands sent to the node
+def make_plan_cleanup_and_retry_failure():
+    # Same plan shape; FakeSSH2 script will control failure vs success
+    return {
+        "action": "cleanup_and_retry",
+        "cleanup": [
+            "rm -f /var/lib/dpkg/lock",
+            "rm -f /var/lib/dpkg/lock-frontend",
+        ],
+        "retry": [
+            "echo AI_RETRY_1",
+            "echo AI_RETRY_2",
+        ],
+    }
+```
+
+So the AI/MCP HOOK that has been called (def _invoke_ai_hook) calls the function ask_ai_for_recovery which invokes a monkey
+patched mcp_send and gets the fake plan above, in this example. 
+
+The AI/MCP HOOK then proceeds to invoke ssh (which is monkeypatched) with the cleanup and retry commands in the fake plan above.
+Because the ssh is monkeypatched with the FakeSSH2 class, each command that is executed from cleanup and retry will get the 
+predetermined responses in the script that were fed into the FakeSSH2 class. In this case, the two cleanup commands will
+get the following stdout, stderr, exit_code responses (as shown earlier, above)
+```
+        # Cleanup commands (2 commands) → success
+        ("", "", 0),
+        ("", "", 0),
+```
+
+And the 2 retry commands above (echo AI_RETRY_1 and echo AI_RETRY2) will get the following stdout, stderr, exit_code responses
+
+```
+        # Retry commands (2 commands) → first ok, second fails
+        ("AI_RETRY_1 ok", "", 0),
+        ("AI_RETRY_2 still failing", "cleanup retry failed", 1),
+```
+
+Now, note that the second retry command is configured to fail.  Inside the AI/MCP HOOK this will cause a very specific 
+set of control-flow variables to be set. In this example they will be set as follows:
+
+
+```
+                # ------------------------------------------------
+                # Immediate failure on ANY retry command failure
+                # ------------------------------------------------
+                if r_exit != 0 or r_stderr.strip():
+                    print(f"AI_MCP_HOOK[{ip}] ❌ Retry command failed — aborting retry sequence.")
+                    ai_failed_command = rcmd  ## NEW. Record the failed retry command. This will be added to ai_metadata
+                    return {
+                        "ai_ran": True,
+                        "ai_fixed": False,
+                        "ai_failed": True,
+                        "ai_fallback": False,
+                        "new_stdout": last_stdout,
+                        "new_stderr": last_stderr,
+                        "new_exit_status": last_exit,
+                    }
+```
+
+
+These control-flow variables are returned to the AI/MCP HOOK"s calling function which is in a heuristic4 failure block of
+def resurrection_install_tomcat. These control-flow variables will be used by the def resurrection_install_tomcat function
+to create a registry_entry with a status of install_failed along with all of the historical tags (including ai_tags) as well
+as ai_metadata that has the information of what AI tried and what happened when it attempted to correct the problem.
+
+Thus, the entire def resurrection_install_tomcat code flow is tested, all of the AI/MCP HOOK function code flow is tested, and 
+even the integration code of ai_tags and ai_metadata by the _build_ai_metadata_and_tags is tested. The only thing that 
+is not tested is the actual call to the LLM through the AI Gateway Service (this will be tested with the real-life testing
+that will follow pytest testing).
+
+
+
+
 
 
 #### Pytest tests
