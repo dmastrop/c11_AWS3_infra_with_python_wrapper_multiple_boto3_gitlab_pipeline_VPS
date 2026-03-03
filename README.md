@@ -3469,6 +3469,67 @@ Fallback = “I can’t help — continue with native logic.”
 Abort = “COMPLETELY STOP — do not continue at all.”
 
 
+
+---
+
+### **Advanced Architectural Note: Why the HOOK Does Not Mutate Persistent State for Derived Fallback Conditions**
+
+This section assumes that reader has a firm grasp on the following concepts that have been described earlier:
+
+- control‑flow variables  
+- persistent state variables  
+- the AI/MCP HOOK  
+- the heuristics failures in the def resurrection_install_tomcat function of module2f  
+- the registry builder  def _build_ai_metadata_ai_tags
+
+
+
+The AI/MCP HOOK is intentionally designed as a *pure control‑flow component*. It receives inputs, executes the AI plan, and returns a dictionary describing what happened. It does **not** decide how the caller should classify the result, and it does **not** directly mutate the persistent AI state variables except in very specific cases.
+
+Inside the HOOK, several persistent state variables are declared as `nonlocal` (for example: `ai_invoked`, `ai_plan`, `ai_fallback`, `ai_commands`, `ai_failed_command`). These variables are used later by the caller to build `ai_metadata` and `ai_tags` for the registry entry. However, the HOOK is only allowed to mutate these persistent variables when the AI plan contains an **explicit contract action** that unambiguously instructs the system how to classify the result. These explicit actions are:
+
+- `"fallback"`  
+- `"unknown"`  
+- `"abort"`  
+
+These are *native* contract actions. They are not derived conditions. They represent direct instructions from the AI plan, and therefore the HOOK is allowed to set persistent state for them.
+
+In contrast, some situations inside the HOOK represent **derived fallback conditions**, not explicit contract actions. For example:
+
+- In `cleanup_and_retry`, the retry list may be empty.  
+- In `retry_with_modified_command`, the retry command may be missing.  
+
+These situations are not explicit instructions from the AI plan. They are semantic fallbacks inferred by the HOOK based on the structure of the plan. Because these are derived conditions, the HOOK cannot decide how the caller wants to classify them. The HOOK does not know which heuristic block invoked it, and it does not know whether the caller intends to treat this as a native failure, a retryable condition, a telemetry‑only event, or something else. If the HOOK were to mutate persistent state for these derived conditions, it would risk contaminating other heuristics or misclassifying the failure.
+
+For this reason, the HOOK returns a control‑flow dictionary such as:
+
+```
+{"ai_fallback": True, ...}
+```
+
+but does **not** set the persistent `ai_fallback` variable for derived fallback cases.
+
+It is the responsibility of the **caller** (the heuristic block) to:
+
+- detect that the HOOK returned `ai_fallback=True`
+- set the persistent `ai_fallback = True`
+- build `ai_metadata` and `ai_tags` accordingly
+- classify the registry entry as a native failure with fallback tagging
+
+This preserves the architectural separation of responsibilities:
+
+- **The HOOK returns control‑flow.**  
+- **The heuristic block interprets control‑flow.**  
+- **The heuristic block sets persistent state.**  
+- **The metadata builder reads persistent state.**
+
+This design ensures that the HOOK remains pure and context‑independent, while the calling code retains full control over how failures, fallbacks, and AI‑assisted outcomes are classified and recorded.
+
+
+
+
+
+
 ---
 
 ### **Development history: Steps 1–5b and Step 6 (formalized)**
