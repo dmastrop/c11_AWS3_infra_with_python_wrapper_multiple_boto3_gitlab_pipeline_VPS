@@ -290,6 +290,17 @@ def make_plan_retry_only():
         ],
     }
 
+# retry_with_modified_command with no command
+def make_plan_retry_modified_empty():
+    return {
+        "action": "retry_with_modified_command",
+        "retry": ""
+    }
+
+
+
+
+
 
 
 # ---------------------------------------------------------------------
@@ -1899,4 +1910,88 @@ def test_ai_hook_cleanup_and_retry_empty_cleanup_empty_retry(monkeypatch):
 
     # Only the 3 original attempts should have executed
     assert fake_ssh.call_count == 3
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 8 — retry_with_modified_command with no command  → install_failed with fallback
+# ---------------------------------------------------------------------
+def make_plan_retry_modified_empty():
+    return {
+        "action": "retry_with_modified_command",
+        "retry": ""
+    }
+
+def test_ai_hook_retry_modified_empty(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH1: original command fails, but no retry command will be executed
+    fake_ssh = FakeSSH()   # <-- FIXED
+
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+        class AutoAddPolicy:
+            pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Patch MCPClient.send → retry_with_modified_command but empty retry
+    def fake_send(self, context):
+        return make_plan_retry_modified_empty()
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest8) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("====================================\n")
+
+    # Assertions
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] == "retry_with_modified_command"
+    assert registry["ai_metadata"]["ai_commands"] == []
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+
+    tags = registry["tags"]
+    assert "ai_fallback_true" in tags
+    assert "ai_fallback" in tags
+    assert "ai_plan_action:retry_with_modified_command" in tags
+
+
+
+
+
 
