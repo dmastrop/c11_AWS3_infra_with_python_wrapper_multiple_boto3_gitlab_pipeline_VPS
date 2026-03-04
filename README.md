@@ -3531,6 +3531,122 @@ This preserves the architectural separation of responsibilities:
 This design ensures that the HOOK remains pure and context‑independent, while the calling code retains full control over how failures, fallbacks, and AI‑assisted outcomes are classified and recorded.
 
 
+#### **AI Fallback Tags: Why Both `ai_fallback_true` and `ai_fallback` Exist**
+
+
+This section explains the distinction between metadata‑level fallback state and registry‑level fallback classification, and why the system produces both ai_fallback_true and ai_fallback tags.
+
+Under certain scenarios (for example, the cleanup_and_retry contract action with cleanup commands and NO retry commands, creating a fallback
+sitution), a registry_entry can look like this (from a pytest test case; it is not structured like a typical registry_entry in json format):
+
+```
+status: install_failed
+attempt: -1
+pid: 2724414
+thread_id: 132944993119296
+thread_uuid: e42302a3
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-03 23:51:45.221902
+
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_fallback']
+
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
+```
+
+Note that there are 2 tags that resemble one another: ai_fallback_true and ai_fallback (The last tag in the sample above).
+
+
+The recovery engine produces **two different fallback indicators**, and both are intentional. They come from different layers of the system and serve different purposes. Understanding the distinction requires understanding the separation between **persistent state variables** and **control‑flow variables** inside the AI/MCP HOOK and the calling heuristics.
+
+**1. `ai_fallback_true` — Metadata‑Level Tag (Persistent State)**
+
+This tag is generated inside the AI metadata builder:
+
+```
+if ai_fallback:
+    ai_tags.append("ai_fallback_true")
+```
+
+It reflects the value of the **persistent state variable** `ai_fallback`, which is maintained by the calling heuristic block. This variable is set when the heuristic determines that the AI/MCP HOOK has entered a fallback condition.
+
+This tag answers the question:
+
+> **“Did the AI hook itself fall back?”**
+
+It is used for:
+
+- telemetry  
+- analytics  
+- debugging  
+- post‑mortem analysis  
+- consistency with other `ai_*` metadata fields  
+
+This tag is part of the **AI metadata**, not the registry’s top‑level tag list.
+
+**2. `ai_fallback` — Registry‑Level Tag (Control‑Flow Classification)**
+
+This tag is added directly by the heuristic block:
+
+```
+registry_entry["tags"].append("ai_fallback")
+```
+
+It reflects the **control‑flow classification** of the registry entry. When the heuristic determines that the AI/MCP HOOK returned a fallback condition (e.g., cleanup succeeded but retry list was empty), it classifies the entire registry entry as a fallback failure.
+
+This tag answers the question:
+
+> **“Was this registry entry classified as a fallback failure?”**
+
+It is used for:
+
+- filtering registry entries  
+- searching logs  
+- grouping fallback failures  
+- matching historical behavior and earlier test expectations  
+
+This tag is part of the **registry entry’s top‑level tags**, not the metadata.
+
+**3. Why Both Tags Are Needed**
+
+Although they look similar, they represent **different layers of the architecture**:
+
+| Tag | Layer | Meaning | Source |
+|------|--------|-----------|---------|
+| **`ai_fallback_true`** | AI metadata | Persistent AI state indicates fallback | `_build_ai_metadata_and_tags()` |
+| **`ai_fallback`** | Registry tags | Registry entry classified as fallback | heuristic block |
+
+These two tags answer **different questions**:
+
+- `ai_fallback_true` → “Did the AI hook fall back?”  
+- `ai_fallback` → “Was the registry entry classified as fallback?”  
+
+They are not duplicates. They are complementary.
+
+**4. Relationship to Persistent State vs. Control‑Flow Variables**
+
+- The HOOK returns **control‑flow variables** such as `{"ai_fallback": True}`.  
+- The heuristic block interprets these control‑flow variables and sets the **persistent state variable** `ai_fallback = True`.  
+- The metadata builder reads the persistent state variable and generates `ai_fallback_true`.  
+- The heuristic block adds the registry‑level tag `ai_fallback`.
+
+Thus, this is fully consistent with the main section: T
+
+his preserves the architectural separation:
+
+- **HOOK → returns control‑flow**  
+- **Heuristic → interprets control‑flow and sets persistent state**  
+- **Metadata builder → reads persistent state**  
+- **Registry → records final classification**  
+
+This design ensures that fallback is represented consistently across:
+
+- AI metadata  
+- registry tags  
+- analytics  
+- test expectations  
+- future heuristics  
+
 
 
 
