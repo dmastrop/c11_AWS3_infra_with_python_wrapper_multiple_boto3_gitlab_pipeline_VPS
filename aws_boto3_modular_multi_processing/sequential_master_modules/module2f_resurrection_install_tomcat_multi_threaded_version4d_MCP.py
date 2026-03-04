@@ -2885,11 +2885,51 @@ def resurrection_install_tomcat(
                             command_succeeded = True
                             break
 
+
+                        # ------------------------------------------------------------
+                        # CASE B: AI FALLBACK CASE
+                        # ------------------------------------------------------------
+                        # Derived fallback (e.g., cleanup_and_retry with empty retry list, OR
+                        # retry_with_modified_command with empty command list).
+                        # The HOOK does NOT set persistent ai_fallback for derived conditions.
+                        # We must set ai_fallback=True here so the metadata builder records
+                        # fallback correctly.
+                        elif result.get("ai_fallback"):
+                            ai_fallback = True
+                            ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                            registry_entry = {
+                                "status": "install_failed",
+                                "attempt": -1,
+                                "pid": multiprocessing.current_process().pid,
+                                "thread_id": threading.get_ident(),
+                                "thread_uuid": thread_uuid,
+                                "public_ip": ip,
+                                "private_ip": private_ip,
+                                "timestamp": str(datetime.utcnow()),
+                                "ai_metadata": ai_meta,
+                                "tags": base_tags + [
+                                    f"install_failed_command_{idx}",
+                                    original_command
+                                ] + ai_tags + ["ai_fallback"],
+                            }
+                            ssh.close()
+                            return ip, private_ip, registry_entry
+
+                        # ------------------------------------------------------------
+                        # CASE C: AI FAILED TO FIX THE FAILURE
+                        # ------------------------------------------------------------
+                        # DO NOT RETURN HERE.
+                        # Preserve the original behavior: update stdout/stderr/exit_status
+                        # and allow the outer failure block to build the registry entry.
                         # If AI ran but failed → allow native logic to classify failure normally
                         # (install_failed block below will run because command_succeeded still set to False)
-                        stdout_output = result["new_stdout"]
-                        stderr_output = result["new_stderr"]
-                        exit_status = result["new_exit_status"]
+                        else:    
+                            stdout_output = result["new_stdout"]
+                            stderr_output = result["new_stderr"]
+                            exit_status = result["new_exit_status"]
+                            # fall through — command_succeeded remains False
+
+
 
 
 
@@ -3160,6 +3200,7 @@ def resurrection_install_tomcat(
             #    return ip, private_ip, registry_entry
             
             # AI/MCP tag and ai_meta integration
+            # This is the install_failed fall through registry_entry if no explicit heuristic failure is encountered
             if not command_succeeded:
                 ai_meta, ai_tags = _build_ai_metadata_and_tags()  # AI/MCP helper function
                 registry_entry = {
