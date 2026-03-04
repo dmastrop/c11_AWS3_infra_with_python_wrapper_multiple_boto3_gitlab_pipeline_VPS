@@ -3536,6 +3536,8 @@ This design ensures that the HOOK remains pure and context‑independent, while 
 
 This section explains the distinction between metadata‑level fallback state and registry‑level fallback classification, and why the system produces both ai_fallback_true and ai_fallback tags.
 
+
+
 Under certain scenarios (for example, the cleanup_and_retry contract action with cleanup commands and NO retry commands, creating a fallback
 sitution), a registry_entry can look like this (from a pytest test case; it is not structured like a typical registry_entry in json format):
 
@@ -3630,9 +3632,9 @@ They are not duplicates. They are complementary.
 - The metadata builder reads the persistent state variable and generates `ai_fallback_true`.  
 - The heuristic block adds the registry‑level tag `ai_fallback`.
 
-Thus, this is fully consistent with the main section: T
+Thus, this is fully consistent with the main section:
 
-his preserves the architectural separation:
+This preserves the architectural separation:
 
 - **HOOK → returns control‑flow**  
 - **Heuristic → interprets control‑flow and sets persistent state**  
