@@ -1461,7 +1461,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [Differences between the retry_with_modified_command and cleanup_and_retry contract actions](#differences-between-the-retry_with_modified_command-and-cleanup_and_retry-contract-actions)
 - [Idempotency Failures and the Correct AI/MCP Contract Action](#idempotency-failures-and-the-correct-aimcp-contract-action)
 - [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
-- [Advanced Architectural Note: AI Derived Fallback Conditions](#advanced-architectural-note-ai-derived-fallback_conditions)
+- [Advanced Architectural Note: AI Derived Fallback Conditions](#advanced-architectural-note-ai-derived-fallback-conditions)
 - [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step6-formalized)
 - [Code Review](#code-review)
 - [Pytest validation](#pytest-validation)
