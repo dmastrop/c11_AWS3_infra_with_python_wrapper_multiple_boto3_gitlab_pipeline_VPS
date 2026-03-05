@@ -3721,11 +3721,11 @@ If there are valid commands left over after normalization they will be executed 
 ai_fallback.
 
 The three typical cases from above are: 
-
+```
 retry = ["echo OK", "   "]     → NOT fallback (this will be an install_success if the echo OK command succeeds)
 retry = ["echo FAIL", "   "]   → NOT fallback (ai_failed, if the echo FAIL command fails)
 retry = ["   ", "echo OK"]     → NOT fallback (this will be an install_success if the echo OK command succeeds)
-
+```
 In the first and third case:
 - `ai_fixed=True`
 - HOOK returns success
