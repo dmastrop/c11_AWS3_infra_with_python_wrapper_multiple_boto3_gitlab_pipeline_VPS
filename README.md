@@ -3473,10 +3473,10 @@ Abort = “COMPLETELY STOP — do not continue at all.”
 
 ---
 
-### **Advanced Architectural Note: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions**
+### **Advanced Architectural Note: Derived Fallback Conditions**
 
 
-#### **Persistent State Muation and Dervied Fallaback Conditions** 
+#### **Persistent State Variable Mutation and Derived Fallback Conditions: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions** 
 
 This section explains why the AI/MCP HOOK must remain a pure control‑flow component and why only the calling heuristics—not the HOOK—are allowed to mutate persistent AI state for derived fallback conditions such as cleanup‑only or missing‑retry scenarios.
 
@@ -3743,7 +3743,7 @@ In the second case:
 - install_failed  
 
 
-#### **Derived fallback vs. Native organic fallback and the LLM contract actions**
+#### **Derived fallback vs. Native organic fallback contract action, and the LLM contract actions**
 
 
 **1. Derived fallback is ALWAYS handled in module2f (_invoke_ai_hook and the calling functino), not by the LLM**
@@ -3774,7 +3774,7 @@ The LLM **never** needs to know:
 
 Those are **derived fallback conditions**, and they are **purely code‑driven**.
 
-**2. The LLM contract definition in the AI Gateway Service  does NOT include “whitespace handling”**
+**2. The LLM contract definition in the AI Gateway Service (ai_gateway_service.py)  does NOT include “whitespace handling”**
 
 And it should not.
 
