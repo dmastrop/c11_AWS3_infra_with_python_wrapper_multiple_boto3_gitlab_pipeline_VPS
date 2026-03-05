@@ -1527,14 +1527,24 @@ def resurrection_install_tomcat(
             #   - Cleanup is not the repair; retry is the repair.
             #   - Cleanup failures do not imply the system is unrecoverable.
             #   - Therefore cleanup failures are ignored and retry proceeds.
+            #   - Even is None, or empty or whitespace, just normalize it, but it will not imply fallback contract action 
             # ----------------------------------------------------
-            for ccmd in cleanup_cmds:
+
+            normalized_cleanup_cmds = [     ## for an explanation of what this does see teh retry commands block further below(5B)
+                cmd for cmd in cleanup_cmds
+                if cmd is not None and str(cmd).strip()
+            ]
+
+
+            for ccmd in normalized_cleanup_cmds:
+            #for ccmd in cleanup_cmds:
                 print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
                 cin, cout, cerr = ssh.exec_command(ccmd, timeout=60)
                 cout.channel.settimeout(WATCHDOG_TIMEOUT)
                 cerr.channel.settimeout(WATCHDOG_TIMEOUT)
                 _co, _cs = read_output_with_watchdog(cout, "STDOUT", ip, WATCHDOG_TIMEOUT)
                 _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+
 
             # ----------------------------------------------------
             # 5B. Run retry commands (UPDATED FOR MULTIPLE COMMANDS)
