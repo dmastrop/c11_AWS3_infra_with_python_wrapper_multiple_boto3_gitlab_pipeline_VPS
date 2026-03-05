@@ -298,3 +298,47 @@ def recover(request: RecoveryRequest):
         # If anything goes wrong, return fallback
         return {"error": str(e), "action": "fallback"}
 
+
+
+
+
+##### Additional notes about the contract actions and LLM interaction ######
+
+
+#### **1. Derived fallback is ALWAYS handled in module2f, not by the LLM**
+# Derived fallback is an ai_fallback that is not from the native contract fallback action above
+# Derived fallback occurs, for example, if cleanup_and_retry has all retry commands that are blank or missing or None
+# This will result in install_failed and ai_fallback metadata, but the registry_entry will also have ai_plan_action of cleanup_and_retry
+# On the other hand, a native contract fallback will result in install_failed, have ai_fallback metadata, but will have ai_plan_action of
+# (native) fallback.
+
+#The LLM only emits:
+#
+#- `"action": "cleanup_and_retry"`
+#- `"action": "retry_with_modified_command"`
+#- `"action": "fallback"` (This is the native contract fallback action)
+#- `"action": "abort"`
+#- `"action": "some_unknown_action"`
+#
+#The LLM **never** needs to know:
+#
+#- what happens if retry is `None`
+#- what happens if retry is `"   "`
+#- what happens if retry is missing
+#- what happens if cleanup contains whitespace
+#- what happens if cleanup contains garbage
+#
+#Those are **derived fallback conditions**, and they are **purely code‑driven**.
+#
+#### **2. The LLM contract does NOT include “whitespace handling”**
+#
+#And it should not.
+#
+#The contract is:
+#
+#- If the LLM wants fallback → it emits `"action": "fallback"`
+#- If the LLM wants retry → it emits `"action": "retry_with_modified_command"` with a real command
+#- If the LLM wants cleanup_and_retry → it emits lists of real commands
+#
+#Everything else (missing keys, None, whitespace, malformed lists) is **not part of the LLM contract**.
+

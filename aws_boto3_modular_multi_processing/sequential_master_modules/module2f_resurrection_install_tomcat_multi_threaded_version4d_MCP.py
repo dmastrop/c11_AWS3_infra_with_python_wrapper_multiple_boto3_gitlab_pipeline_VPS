@@ -1570,12 +1570,43 @@ def resurrection_install_tomcat(
             # It basically normalizes these edge cases to empty so that the if not normalized_retry_cmds can be evaluated properly, i.e.
             # as failed and fallback and not simply failed.
             # Treat whitespace-only commands as empty, etc....
+
+            # --------------------------------------------------------
+            # IMPORTANT NOTE ABOUT RETRY FALLBACK LOGIC
+            #
+            # Fallback for cleanup_and_retry is *derived* and occurs
+            # only when ALL retry commands are invalid.
+            #
+            # A retry command is considered invalid if it is:
+            #   - None
+            #   - an empty string ""
+            #   - whitespace-only "   "
+            #   - a string that becomes empty after .strip()
+            #
+            # After normalization, if the retry list becomes empty,
+            # the HOOK triggers fallback immediately and does NOT
+            # attempt to execute any retry commands.
+            #
+            # If ANY retry command is valid (non-empty after strip),
+            # the HOOK will execute the retry sequence normally.
+            # This means mixed cases behave as follows:
+            #
+            #   retry = ["echo OK", "   "]     → NOT fallback
+            #   retry = ["echo FAIL", "   "]   → NOT fallback (ai_failed)
+            #   retry = ["   ", "echo OK"]     → NOT fallback
+            #
+            # Only when ALL retry commands are invalid does the HOOK
+            # return ai_fallback=True.
+            # --------------------------------------------------------
+
+
+
             normalized_retry_cmds = [
                 cmd for cmd in retry_cmds
                 if cmd is not None and str(cmd).strip()
             ]
             
-            if not normalized_retry_cmds:  # If the command is removed (empty) this will be true
+            if not normalized_retry_cmds:  # If the command is removed (empty) this will be true. If multiple commands they all have to be removed(empty) for this to be true. Otherwise the valid commands will be executed with the command execution block.
             #if not retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry commands provided — fallback.")
                 return {
