@@ -3756,6 +3756,18 @@ This will result in install_failed and ai_fallback metadata, but the registry_en
 On the other hand, a native contract fallback will result in install_failed, have ai_fallback metadata, but will have ai_plan_action of
 (native) fallback.
 
+**Native fallback**
+- ai_plan_action = `"fallback"`
+- ai_fallback = True  
+- install_failed  
+
+**Derived fallback**
+- ai_plan_action = `"cleanup_and_retry"` (or `"retry_with_modified_command"`)
+- ai_fallback = True  
+- install_failed  
+
+
+
 The LLM only emits:
 
 - `"action": "cleanup_and_retry"`
