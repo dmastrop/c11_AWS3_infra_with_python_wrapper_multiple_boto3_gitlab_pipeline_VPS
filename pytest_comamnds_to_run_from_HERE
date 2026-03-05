@@ -174,3 +174,14 @@ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_ret
 Test8
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_retry_modified_empty
 
+Test8b
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_retry_modified_missing
+
+
+Test8c
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_retry_modified_none
+
+
+Test8d
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_retry_modified_whitespace
+

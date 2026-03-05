@@ -1550,9 +1550,23 @@ def resurrection_install_tomcat(
             last_exit = 1
 
             # ------------------------------------------------
-            # If retry list is empty → fallback
+            # If retry list is empty → fallback (make sure to handle whitespace as well)
             # ------------------------------------------------
-            if not retry_cmds:
+            # This normalization below does the following:
+            # None → removed (empty) []
+            # " " → removed (empty) []
+            # "" → removed (empty) []
+            # "echo hi" → kept
+            # It basically normalizes these edge cases to empty so that the if not normalized_retry_cmds can be evaluated properly, i.e.
+            # as failed and fallback and not simply failed.
+            # Treat whitespace-only commands as empty, etc....
+            normalized_retry_cmds = [
+                cmd for cmd in retry_cmds
+                if cmd is not None and str(cmd).strip()
+            ]
+            
+            if not normalized_retry_cmds:  # If the command is removed (empty) this will be true
+            #if not retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry commands provided — fallback.")
                 return {
                     "ai_ran": True,
@@ -1625,9 +1639,25 @@ def resurrection_install_tomcat(
             new_cmd = plan.get("retry")
             
             # --------------------------------------------------------
-            # If retry command is missing → fallback
+            # If retry command is missing → fallback (make sure to handle whitespace as well)
             # --------------------------------------------------------
-            if not new_cmd:
+            
+            #new_cmd is missing → None → not new_cmd is True
+
+            #new_cmd is None explicitly → not new_cmd is True
+
+            #new_cmd is "" → not new_cmd is True
+
+            #new_cmd is " " → not new_cmd is False, but not str(new_cmd).strip() is True
+
+            #new_cmd is " \t\n " → strip → "" → True
+
+            #new_cmd is "echo hi" → strip → "echo hi" → False → valid command
+
+
+
+            #if not new_cmd:
+            if not new_cmd or not str(new_cmd).strip():    ## the not str(new_cmd) covers the whitespace " " case as well 
                 print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry command provided — fallback.")
                 return {
                     "ai_ran": True,
