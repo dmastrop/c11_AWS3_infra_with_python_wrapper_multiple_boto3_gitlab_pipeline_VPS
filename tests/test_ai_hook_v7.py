@@ -1919,6 +1919,253 @@ def test_ai_hook_cleanup_and_retry_empty_cleanup_empty_retry(monkeypatch):
 
 
 # ---------------------------------------------------------------------
+# TEST 7J — CLEANUP_AND_RETRY → cleanup empty, retry key missing → fallback
+# ---------------------------------------------------------------------
+
+def test_ai_hook_cleanup_and_retry_missing_retry_key(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # ⭐ Force a clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script: 3 original failures only
+    script = [
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+        class AutoAddPolicy:
+            pass
+
+    # Patch paramiko
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Patch MCPClient.send → retry key missing
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [],
+            # retry key intentionally omitted
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest7J) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("====================================\n")
+
+    # Assertions
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] == "cleanup_and_retry"
+    assert registry["ai_metadata"]["ai_fallback"] is True
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+    assert registry["ai_metadata"]["ai_commands"] == []
+
+    # Only original 3 attempts executed
+    assert fake_ssh.call_count == 3
+
+
+
+# ---------------------------------------------------------------------
+# TEST 7K — CLEANUP_AND_RETRY → cleanup empty, retry=None → fallback
+# ---------------------------------------------------------------------
+
+def test_ai_hook_cleanup_and_retry_retry_none(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # ⭐ Force a clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script: 3 original failures only
+    script = [
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+        class AutoAddPolicy:
+            pass
+
+    # Patch paramiko
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Patch MCPClient.send → retry=None
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [],
+            "retry": None,
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest7K) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("====================================\n")
+
+    # Assertions
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] == "cleanup_and_retry"
+    assert registry["ai_metadata"]["ai_fallback"] is True
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+    assert registry["ai_metadata"]["ai_commands"] == []
+
+    # Only original 3 attempts executed
+    assert fake_ssh.call_count == 3
+
+
+# ---------------------------------------------------------------------
+# TEST 7L — CLEANUP_AND_RETRY → cleanup empty, retry=["   "] → fallback
+# ---------------------------------------------------------------------
+
+def test_ai_hook_cleanup_and_retry_retry_whitespace(monkeypatch):
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # ⭐ Force a clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script: 3 original failures only
+    script = [
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self):
+            return fake_ssh
+        class AutoAddPolicy:
+            pass
+
+    # Patch paramiko
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Patch MCPClient.send → retry=["   "]
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [],
+            "retry": ["   "],   # whitespace-only retry command
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest7L) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("====================================\n")
+
+    # Assertions
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] == "cleanup_and_retry"
+    assert registry["ai_metadata"]["ai_fallback"] is True
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+    assert registry["ai_metadata"]["ai_commands"] == []
+
+    # Only original 3 attempts executed
+    assert fake_ssh.call_count == 3
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------
 # TEST 8 — retry_with_modified_command with no command  → install_failed with fallback
 # ---------------------------------------------------------------------
 def make_plan_retry_modified_empty():
