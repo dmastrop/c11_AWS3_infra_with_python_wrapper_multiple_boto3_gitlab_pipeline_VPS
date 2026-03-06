@@ -1685,8 +1685,8 @@ def resurrection_install_tomcat(
                     "new_exit_status": last_exit,
                 }
 
-
-            for rcmd in retry_cmds:
+            for rcmd in normalized_retry_cmds:
+            #for rcmd in retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {rcmd}")
                 rin, rout, rerr = ssh.exec_command(rcmd, timeout=60)
                 rout.channel.settimeout(WATCHDOG_TIMEOUT)
