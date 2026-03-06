@@ -4108,9 +4108,36 @@ whether or not these AI related commands are successful.
 This design gives us full control over every branch of module2f’s logic without modifying the production code. It also ensures that the AI/MCP hook, the retry loop, the cleanup logic, the failure heuristics, and the registry metadata builder are all exercised exactly as they would be in a real deployment — just with deterministic inputs.
 
 
+#### More on the design of the pytest test cases relative to the project scope
 
 
-#### Pytest tests
+The pytest test cases were specifically designed around the AI/MCP Hook integration into module2f and the return flow of the AI/MCP
+hook function _invoke_ai_hook() function relative to the calling blocks of code (mostly the failure heuristic blocks in module2f).
+
+The design took into consideration the following aspects of code testing:
+
+- Behavioral specifications of the system.
+
+- Tests that encode contract semantics.
+
+- Tests that encode LLM malformation scenarios.
+
+- Tests that encode synthetic vs real failure behavior.
+ 
+- Tests that encode ai_metadata expectations.
+
+The last one is done through several asserts, as will be shown in the Code revivew section below. This is one of the most important parts
+of the pytest testing because it validates the test as PASSED as opposed to FAILED, and ensures that the all important registry_entry
+ai_tagging and ai_metadata is consistent and accurate across a wide variety of test case scenarios and LLM contract actions.
+
+
+
+
+#### Pytest code review
+
+
+
+#### Pytest test matrix and test results
 
 
 
