@@ -1530,6 +1530,25 @@ def resurrection_install_tomcat(
             retry_cmds = plan.get("retry", [])
 
 
+
+            # ----------------------------------------------------
+            # CLEANUP NORMALIZATION PHILOSOPHY
+            #
+            # The LLM contract *requires* cleanup to be a list, but
+            # in practice the LLM may occasionally return a single
+            # string or even an invalid type (None, int, dict).
+            #
+            # Cleanup is "best effort" and does NOT affect fallback
+            # or success/failure classification. Therefore, we take
+            # a forgiving approach:
+            #
+            #   - If cleanup is a single string → convert to [string]
+            #   - If cleanup is invalid (None, int, dict) → convert to []
+            #
+            # This prevents crashes and allows cleanup to run safely
+            # without impacting the retry logic.
+            # ----------------------------------------------------
+
             # Cleanup GUARD #1 (see retry commands Guard1 for a full explanation on what this does)
             # Cleanup GUARD #2 (see retry commands Guard2 for a full explanation on what this does)
             # ----------------------------------------------------
@@ -1547,6 +1566,8 @@ def resurrection_install_tomcat(
 
 
 
+
+            #### retry_cmds Guards 1 and 2 ####
             # ----------------------------------------------------
             # GUARD #1: Normalize retry_cmds to a list. The LLM can return either a list or a single string so this is important.
             # We need to convert everything to a list prior to executing the commands.
@@ -1562,6 +1583,28 @@ def resurrection_install_tomcat(
             # code further down below.
             if not isinstance(retry_cmds, list):
                 retry_cmds = []
+
+
+
+            # ----------------------------------------------------
+            # IMPORTANT: Retry guards (SEE ABOVE) MUST run before we extend
+            # ai_commands or attempt any normalization.(see blocks much further below)
+            #
+            # Reason:
+            #   - retry_cmds may be None, a string, a dict, or other
+            #     invalid types returned by the LLM.
+            #   - ai_commands.extend(retry_cmds) will CRASH if
+            #     retry_cmds is not a list.
+            #   - The normalization list comprehension will also
+            #     CRASH if retry_cmds is not iterable.
+            #
+            # Therefore:
+            #   1. Convert single string → [string]
+            #   2. Convert invalid types → []
+            #
+            # Only AFTER these guards is retry_cmds guaranteed to be
+            # a safe list for tagging, normalization, and execution.
+            # ----------------------------------------------------
 
 
 
