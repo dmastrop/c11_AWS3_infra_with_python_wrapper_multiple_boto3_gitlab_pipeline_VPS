@@ -1498,16 +1498,72 @@ def resurrection_install_tomcat(
         # ACTION: cleanup_and_retry  (VERSION2: UPDATED FOR MULTIPLE RETRIES)
         # --------------------------------------------------------
         if action == "cleanup_and_retry":
+
+
+
+        ##### General high level ordering #####
+        ##### This gives a lot of lattitude to what the LLM may send back for cleanup commands and retry commands and will prevent
+        ##### this HOOK code from crashing with commands that have not been properly normalized
+        #####
+        #1. Get cleanup_cmds and retry_cmds
+        #
+        #2. CLEANUP GUARD 1 — convert string → list
+        #3. CLEANUP GUARD 2 — convert invalid → []
+        #
+        #4. RETRY GUARD 1 — convert string → list
+        #5. RETRY GUARD 2 — convert invalid → []
+        #
+        #6. Extend ai_commands  (safe now because both lists are valid)
+        #
+        #7. CLEANUP NORMALIZATION — remove None, "", whitespace
+        #8. Run cleanup commands
+        #
+        #9. RETRY NORMALIZATION — remove None, "", whitespace
+        #
+        #10. DERIVED FALLBACK CHECK — if normalized list empty → fallback
+        #
+        #11. Run retry commands
+
+
+
             cleanup_cmds = plan.get("cleanup", [])
             retry_cmds = plan.get("retry", [])
 
+
+            # Cleanup GUARD #1 (see retry commands Guard1 for a full explanation on what this does)
+            # Cleanup GUARD #2 (see retry commands Guard2 for a full explanation on what this does)
             # ----------------------------------------------------
-            # Normalize retry_cmds to a list
+            # CLEANUP GUARD 1 — convert single string → list. The LLM SHOULD always return a list for cleanup commands but if it does
+            # not this will guard against that and convert a single string to a list of single string.
+            # ----------------------------------------------------
+            if isinstance(cleanup_cmds, str):
+                cleanup_cmds = [cleanup_cmds]
+
+            # ----------------------------------------------------
+            # CLEANUP GUARD 2 — convert invalid types → empty list
+            # ----------------------------------------------------
+            if not isinstance(cleanup_cmds, list):
+                cleanup_cmds = []
+
+
+
+            # ----------------------------------------------------
+            # GUARD #1: Normalize retry_cmds to a list. The LLM can return either a list or a single string so this is important.
+            # We need to convert everything to a list prior to executing the commands.
             # The contract allows retry to be a single string or a list.
             # We convert a single string into a list of one element.
             # ----------------------------------------------------
             if isinstance(retry_cmds, str):
                 retry_cmds = [retry_cmds]
+
+            # GUARD #2: Convert None, numbers, dicts, etc. to empty list (NOTE: these are not single "string" that are addressed
+            # with GUARD1 above. single "string" will be converted to a list ["string"]). None (not "None") will pass thorugh Guard1
+            # and so None will fail here at Guard2 and be converted to an empty list [] so that it can be processed by the normalization
+            # code further down below.
+            if not isinstance(retry_cmds, list):
+                retry_cmds = []
+
+
 
             # ----------------------------------------------------
             # Track commands for tagging and ai_metadata
@@ -1517,6 +1573,10 @@ def resurrection_install_tomcat(
             # ----------------------------------------------------
             ai_commands.extend(cleanup_cmds)
             ai_commands.extend(retry_cmds)
+
+
+
+
 
             # ----------------------------------------------------
             # 5A. Run cleanup commands
@@ -1530,7 +1590,7 @@ def resurrection_install_tomcat(
             #   - Even is None, or empty or whitespace, just normalize it, but it will not imply fallback contract action 
             # ----------------------------------------------------
 
-            normalized_cleanup_cmds = [     ## for an explanation of what this does see teh retry commands block further below(5B)
+            normalized_cleanup_cmds = [     ## for an explanation of what this does see the retry commands block further below(5B)
                 cmd for cmd in cleanup_cmds
                 if cmd is not None and str(cmd).strip()
             ]
@@ -1559,14 +1619,15 @@ def resurrection_install_tomcat(
             last_stderr = ""
             last_exit = 1
 
+
             # ------------------------------------------------
             # If retry list is empty → fallback (make sure to handle whitespace as well)
             # ------------------------------------------------
             # This normalization below does the following:
-            # None → removed (empty) []
+            # None → removed (empty) [] <<<< This is taken care of by Guard #2
             # " " → removed (empty) []
             # "" → removed (empty) []
-            # "echo hi" → kept
+            # "echo hi" → kept   <<< This is taken care of by Guard #1
             # It basically normalizes these edge cases to empty so that the if not normalized_retry_cmds can be evaluated properly, i.e.
             # as failed and fallback and not simply failed.
             # Treat whitespace-only commands as empty, etc....
@@ -1591,9 +1652,9 @@ def resurrection_install_tomcat(
             # the HOOK will execute the retry sequence normally.
             # This means mixed cases behave as follows:
             #
-            #   retry = ["echo OK", "   "]     → NOT fallback
+            #   retry = ["echo OK", "   "]     → NOT fallback (if the command succeeds this will be install_success)
             #   retry = ["echo FAIL", "   "]   → NOT fallback (ai_failed)
-            #   retry = ["   ", "echo OK"]     → NOT fallback
+            #   retry = ["   ", "echo OK"]     → NOT fallback (if the command succeeds this will be install_success)
             #
             # Only when ALL retry commands are invalid does the HOOK
             # return ai_fallback=True.
@@ -1606,7 +1667,12 @@ def resurrection_install_tomcat(
                 if cmd is not None and str(cmd).strip()
             ]
             
-            if not normalized_retry_cmds:  # If the command is removed (empty) this will be true. If multiple commands they all have to be removed(empty) for this to be true. Otherwise the valid commands will be executed with the command execution block.
+            
+            ##### Derived fallback check:
+
+            if not normalized_retry_cmds:  
+            # If the command is removed (empty) this will be true. If multiple commands, they all have to be removed(empty) for this to be true. 
+            # Otherwise the valid commands will be executed with the command execution block. See comments above for test cases.
             #if not retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry commands provided — fallback.")
                 return {
