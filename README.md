@@ -3663,58 +3663,82 @@ occur with the retry_with_modified_command contract action or the cleanup_and_re
 
 This comment is from the cleanup_and_retry contract action code in the HOOk.
 ```
-# --------------------------------------------------------
-# IMPORTANT NOTE ABOUT RETRY FALLBACK LOGIC
-#
-# Fallback for cleanup_and_retry is *derived* and occurs
-# only when ALL retry commands are invalid.
-#
-# A retry command is considered invalid if it is:
-#   - None
-#   - an empty string ""
-#   - whitespace-only "   "
-#   - a string that becomes empty after .strip()
-#
-# After normalization, if the retry list becomes empty,
-# the HOOK triggers fallback immediately and does NOT
-# attempt to execute any retry commands.
-#
-# If ANY retry command is valid (non-empty after strip),
-# the HOOK will execute the retry sequence normally.
-# This means mixed cases behave as follows:
-#
-#   retry = ["echo OK", "   "]     → NOT fallback
-#   retry = ["echo FAIL", "   "]   → NOT fallback (ai_failed)
-#   retry = ["   ", "echo OK"]     → NOT fallback
-#
-# Only when ALL retry commands are invalid does the HOOK
-# return ai_fallback=True.
-# --------------------------------------------------------
+
+            # ------------------------------------------------
+            # If retry list is empty → fallback (make sure to handle whitespace as well)
+            # ------------------------------------------------
+            # This normalization below does the following:
+            # None → removed (empty) [] <<<< This is taken care of by Guard #2
+            # " " → removed (empty) []
+            # "" → removed (empty) []
+            # "echo hi" → kept   <<< This is taken care of by Guard #1
+            # It basically normalizes these edge cases to empty so that the if not normalized_retry_cmds can be evaluated properly, i.e.
+            # as failed and fallback and not simply failed.
+            # Treat whitespace-only commands as empty, etc....
+
+            # --------------------------------------------------------
+            # IMPORTANT NOTE ABOUT RETRY FALLBACK LOGIC
+            #
+            # Fallback for cleanup_and_retry is *derived* and occurs
+            # only when ALL retry commands are invalid.
+            #
+            # A retry command is considered invalid if it is:
+            #   - None
+            #   - an empty string ""
+            #   - whitespace-only "   "
+            #   - a string that becomes empty after .strip()
+            #
+            # After normalization, if the retry list becomes empty,
+            # the HOOK triggers fallback immediately and does NOT
+            # attempt to execute any retry commands.
+            #
+            # If ANY retry command is valid (non-empty after strip),
+            # the HOOK will execute the retry sequence normally.
+            # This means mixed cases behave as follows:
+            #
+            #   retry = ["echo OK", "   "]     → NOT fallback (if the command succeeds this will be install_success)
+            #   retry = ["echo FAIL", "   "]   → NOT fallback (ai_failed)
+            #   retry = ["   ", "echo OK"]     → NOT fallback (if the command succeeds this will be install_success)
+            #
+            # Only when ALL retry commands are invalid does the HOOK
+            # return ai_fallback=True.
+            # --------------------------------------------------------
+
+
+
 ```
 
 The normalization code strips out all of the variant cases described above (whitespaces, empty-string, None, etc)
 If there is nothing left (blank) after normalization the code will immediately go to a derived fallback as shown below:
 
 ```
+
             normalized_retry_cmds = [
                 cmd for cmd in retry_cmds
                 if cmd is not None and str(cmd).strip()
             ]
 
-            if not normalized_retry_cmds:  
-            # If the command is removed (empty) this will be true. If multiple commands they all have to be removed(empty) for this to be true. 
-            # Otherwise the valid commands will be executed with the command execution block. 
+
+            ##### Derived fallback check:
+
+            if not normalized_retry_cmds:
+            # If the command is removed (empty) this will be true. If multiple commands, they all have to be removed(empty) for this to be true. 
+            # Otherwise the valid commands will be executed with the command execution block. See comments above for test cases.
             #if not retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry commands provided — fallback.")
                 return {
                     "ai_ran": True,
                     "ai_fixed": False,
                     "ai_failed": False,
-                    "ai_fallback": True,   <<<<<<<<<<<<<<<<
+                    "ai_fallback": True,
                     "new_stdout": last_stdout,
                     "new_stderr": last_stderr,
                     "new_exit_status": last_exit,
                 }
+
+            for rcmd in normalized_retry_cmds: <<<<retry_cmds EXECUTION BLOCK FOLLOWS>>>>
+
+
 
 ```
 If there are valid commands left over after normalization they will be executed with the command execution block and not designated 
@@ -3741,6 +3765,28 @@ In the second case:
 - HOOK returns ai_failed  
 - Heuristic 4 (or whatever heurisic has been encountered) classifies as AI‑assisted failure  
 - install_failed  
+
+
+If there are no valid commands after normalization the pseduo-registry_entry (pytest) will look like this with the ai_fallback ai_metadata
+persistent state variable set to True.
+
+```
+===== REGISTRY ENTRY (pytest7I) =====
+status: install_failed
+attempt: -1
+pid: 2726301
+thread_id: 126959963073600
+thread_uuid: dde09528
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-04 00:48:26.755112
+
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_fallback']
+
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': [], 'ai_failed_command': None}
+================================
+```
+
 
 
 #### **Derived fallback vs. Native organic fallback contract action, and the LLM contract actions**
