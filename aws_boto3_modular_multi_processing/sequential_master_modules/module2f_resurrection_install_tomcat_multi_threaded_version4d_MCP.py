@@ -1513,12 +1513,13 @@ def resurrection_install_tomcat(
         #4. RETRY GUARD 1 — convert string → list
         #5. RETRY GUARD 2 — convert invalid → []
         #
-        #6. Extend ai_commands  (safe now because both lists are valid)
+        #6. Extend ai_commands FOR cleanup commands  (safe now because list is valid)
         #
         #7. CLEANUP NORMALIZATION — remove None, "", whitespace
         #8. Run cleanup commands
         #
         #9. RETRY NORMALIZATION — remove None, "", whitespace
+        #9b. Extend ai_commands FOR retry commands (safe now because list is valid and also normalization converts whitespace,etc to [])
         #
         #10. DERIVED FALLBACK CHECK — if normalized list empty → fallback
         #
@@ -1611,11 +1612,11 @@ def resurrection_install_tomcat(
             # ----------------------------------------------------
             # Track commands for tagging and ai_metadata
             # Cleanup commands are appended individually.
-            # Retry commands are also appended individually (NOT as a list).
+            # Retry commands are also appended individually (NOT as a list). Retry command have to be done after retry normalization
             # This ensures proper tagging and forensic traceability.
             # ----------------------------------------------------
             ai_commands.extend(cleanup_cmds)
-            ai_commands.extend(retry_cmds)
+            #ai_commands.extend(retry_cmds) # must be done after retry normalization using the normalized_retry_cmds 
 
 
 
@@ -1710,7 +1711,19 @@ def resurrection_install_tomcat(
                 if cmd is not None and str(cmd).strip()
             ]
             
+            # ----------------------------------------------------
+            # Track commands for tagging and ai_metadata
+            # Retry commands are also appended individually (NOT as a list). Retry command have to be done after retry normalization
+            # This ensures proper tagging and forensic traceability.
+            # ----------------------------------------------------
+            #ai_commands.extend(retry_cmds) # must be done after retry normalization using the normalized_retry_cmds 
+            # Record only valid retry commands for ai_metadata
             
+            ai_commands.extend(normalized_retry_cmds)
+             
+
+
+
             ##### Derived fallback check:
 
             if not normalized_retry_cmds:  
