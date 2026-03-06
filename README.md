@@ -4171,18 +4171,48 @@ not have the AI/MCP HOOK code integration yet, so all the nodes will fail to thi
 multi-threaded, is NOT multi-processed like module2 and is not designed to handle 100s or 1000s of nodes like module2 is. 
 So the test will have a limited number of nodes. The commands will be strategically designed in the following manner:
 
-commands that fail in predictable ways
-commands that fail in unpredictable ways
-commands that require cleanup
-commands that require rewriting
-commands that require skipping
-commands that require dependency installation
-commands that require state introspection
+- commands that fail in predictable ways
+- commands that fail in unpredictable ways
+- commands that require cleanup
+- commands that require rewriting
+- commands that require skipping
+- commands that require dependency installation
+- commands that require state introspection
 
 Part of the testing must include multiple AI/MCP HOOK assisted commands so that the "stacking" of the ai commands listed
 in the tags of the effected threads/regsitry_entrys can be verified. The code is designed to handle this.
 
-AI/MCP HOOK integration will be done as a part of Phase4a.2 of this project. (Module2f integration is this current Phase4a.1)
+This is where the AI/MCP HOOK code will really be put to the test. Currently the AI Gateway Service (ai_gateway_service.py) is pinned 
+to use GPT-5, but based upon how the real life testing goes, it might need to be upgraded to GPT-5.3, etc.
+
+```
+           json={
+                "model": "gpt-5",
+                "temperature": 0,
+                "response_format": {"type": "json_object"},
+```
+
+Real‑life testing is where:
+
+- concurrency
+- timing
+- network jitter
+- SSH behavior
+- AWS node variability
+- real stderr
+- real stdout
+- real exit codes
+- real failures
+- real race conditions
+- real multi‑node orchestration
+
+…all collide with the newly integrated AI/MCP HOOK for the command set execution on the node, using a real LLM through the 
+AI Gateway Service.
+
+
+
+
+AI/MCP HOOK integration into the much larger module2 will be done as a part of Phase4a.2 of this project. (Module2f integration is this current Phase4a.1)
 
 
 [Back to top](#top)
