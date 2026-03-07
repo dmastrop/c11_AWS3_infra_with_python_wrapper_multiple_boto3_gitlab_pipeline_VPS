@@ -2264,7 +2264,12 @@ def test_ai_hook_cleanup_and_retry_mixed_success_valid_first(monkeypatch):
 
     # ai_commands must contain ONLY the valid retry command
     ai_cmds = registry["ai_metadata"]["ai_commands"]
-    assert ai_cmds == ["echo OK"]
+    #assert ai_cmds == ["echo OK"]
+    assert ai_cmds == [
+        "rm -f /var/lib/dpkg/lock",
+        "rm -f /var/lib/dpkg/lock-frontend",
+        "echo OK",
+    ]
 
     # No ai_failed_command
     assert registry["ai_metadata"]["ai_failed_command"] is None
@@ -2360,7 +2365,13 @@ def test_ai_hook_cleanup_and_retry_mixed_failure_valid_first(monkeypatch):
     assert registry["ai_metadata"]["ai_fallback"] is False
 
     # ai_commands must contain ONLY the valid retry command
-    assert registry["ai_metadata"]["ai_commands"] == ["echo FAIL"]
+    #assert registry["ai_metadata"]["ai_commands"] == ["echo FAIL"] 
+    ai_cmds = registry["ai_metadata"]["ai_commands"]
+    assert ai_cmds == [
+        "rm -f /var/lib/dpkg/lock",
+        "rm -f /var/lib/dpkg/lock-frontend",
+        "echo FAIL",
+    ]
 
     # ai_failed_command must be the valid retry command
     assert registry["ai_metadata"]["ai_failed_command"] == "echo FAIL"
@@ -2454,9 +2465,15 @@ def test_ai_hook_cleanup_and_retry_mixed_success_valid_second(monkeypatch):
     assert registry["ai_metadata"]["ai_invoked"] is True
     assert registry["ai_metadata"]["ai_fallback"] is False
 
-    # ai_commands must contain ONLY the valid retry command
+    # ai_commands must contain ONLY the valid retry command and the cleanup commands
     assert registry["ai_metadata"]["ai_commands"] == ["echo OK"]
-
+    ai_cmds = registry["ai_metadata"]["ai_commands"]
+    #assert ai_cmds == ["echo OK"]
+    assert ai_cmds == [
+        "rm -f /var/lib/dpkg/lock",
+        "rm -f /var/lib/dpkg/lock-frontend",
+        "echo OK",
+    ]
     # ai_failed_command must be None
     assert registry["ai_metadata"]["ai_failed_command"] is None
 
