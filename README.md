@@ -3540,8 +3540,9 @@ This section explains the distinction between metadata‑level fallback state an
 
 
 
-Under certain scenarios (for example, the cleanup_and_retry contract action with cleanup commands and NO retry commands, creating a fallback
-situation), a registry_entry can look like this (from a pytest test case; it is not structured like a typical registry_entry in json format):
+Under certain scenarios (for example, the cleanup_and_retry contract action with cleanup commands and NO retry commands, creating a derived
+fallback situation), a registry_entry can look like this (from a pytest test case; it is not structured like a typical registry_entry in json \
+format):
 
 ```
 status: install_failed
@@ -3654,7 +3655,7 @@ This design ensures that fallback is represented consistently across:
 
 **5. The ai_metadata  'ai_fallback': True**
 
-The pytest registry sample for a derived fallback situation as noted above:
+This is the pytest registry sample for a derived fallback situation as noted above:
 
 One knows that this is a derived fallback situation because the ai_metadata field has ai_plan_action as `cleanup_and_retry` and not `fallback'
 
@@ -3673,13 +3674,16 @@ tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero'
 ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
 ```
 
+
+
 Note that in addition to the persistent state tag ai_fallback_true and the control-flow variable tag ai_fallback, that the ai_metadata field has
 `ai_fallback`: True. This, like the persistent state tag ai_fallack_true, is a persistent state variable and is set by the 
-_build_ai_metadata_and_tags() function.
+_build_ai_metadata_and_tags() function. This is not a tag but rather part of the ai_metadata field in the registry_entry which is a list of
+all the raw persistent state variables.
 
 
 
-**6. The tagging and ai_metadata construction process from the Code point of view**
+#### **The tagging and ai_metadata construction process from the Code point of view**
 
 
 
@@ -3761,39 +3765,6 @@ So the alignment is:
 | registry tags | `"ai_fallback"` | Registry‑level classification |
 
 These are all aligned and represent the same underlying state, just at different layers.
-
-
-
-
-
-
-
-
-**7. A sample pytest registry_entry for an ai_plan_action of native fallback**
-
-A native fallback ai_plan_action will have ai_tags and ai_metadata that look very similar to the derived fallback registry_entry above, 
-except for one notable difference, the ai_plan_action will be set to fallback.
-
-
-```
-===== REGISTRY ENTRY (pytest3) =====
-status: install_failed
-attempt: -1
-pid: 2772175
-thread_id: 132123806497856
-thread_uuid: 2665c641
-public_ip: 1.2.3.4
-private_ip: 10.0.0.1
-timestamp: 2026-03-07 22:13:30.344989
-tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:fallback', 'ai_fallback']
-ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'fallback', 'ai_commands': [], 'ai_failed_command': None}
-
-```
-
-Note that the tags are still ai_fallback for the control-flow variable state, and ai_fallback_true for the persistent state variable, and also
-that the ai_metadata has the persistent state variable set to `ai_fallback`: True, but that the ai_plan_action is explicilty set to 
-fallback (as determined by the LLM and passed back to the AI Gateway Service as the 'plan'.  This is the primary way to differentiate a
-native fallback scenario from a derived fallback scenario.
 
 
 
@@ -3935,6 +3906,39 @@ tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero'
 ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': [], 'ai_failed_command': None}
 ================================
 ```
+
+
+#### **A sample pytest registry_entry for an ai_plan_action of native fallback**
+
+
+For completeness sake, this section presents a registry_entry for a native fallback contract action. 
+
+A native fallback ai_plan_action will have ai_tags and ai_metadata that look very similar to the derived fallback registry_entry above, 
+except for one notable difference, the ai_plan_action will be set to fallback.
+
+
+```
+===== REGISTRY ENTRY (pytest3) =====
+status: install_failed
+attempt: -1
+pid: 2772175
+thread_id: 132123806497856
+thread_uuid: 2665c641
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-07 22:13:30.344989
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:fallback', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'fallback', 'ai_commands': [], 'ai_failed_command': None}
+
+```
+
+Note that the tags are still ai_fallback for the control-flow variable state, and ai_fallback_true for the persistent state variable, and also
+that the ai_metadata has the persistent state variable set to `ai_fallback`: True, but that the ai_plan_action is explicilty set to 
+fallback (as determined by the LLM and passed back to the AI Gateway Service as the 'plan'.  This is the primary way to differentiate a
+native fallback scenario from a derived fallback scenario.
+
+
+
 
 
 
