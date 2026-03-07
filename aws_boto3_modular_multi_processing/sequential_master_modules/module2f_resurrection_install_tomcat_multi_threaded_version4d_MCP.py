@@ -1513,9 +1513,8 @@ def resurrection_install_tomcat(
         #4. RETRY GUARD 1 — convert string → list
         #5. RETRY GUARD 2 — convert invalid → []
         #
-        #6. Extend ai_commands FOR cleanup commands  (safe now because list is valid)
-        #
-        #7. CLEANUP NORMALIZATION — remove None, "", whitespace
+        #6. CLEANUP NORMALIZATION — remove None, "", whitespace
+        #7. Extend ai_commands FOR cleanup commands after cleanup normalization
         #8. Run cleanup commands
         #
         #9. RETRY NORMALIZATION — remove None, "", whitespace
@@ -1586,7 +1585,6 @@ def resurrection_install_tomcat(
                 retry_cmds = []
 
 
-
             # ----------------------------------------------------
             # IMPORTANT: Retry guards (SEE ABOVE) MUST run before we extend
             # ai_commands or attempt any normalization.(see blocks much further below)
@@ -1609,15 +1607,25 @@ def resurrection_install_tomcat(
 
 
 
+            #### normalize the cleanup commands ####
+            
+            normalized_cleanup_cmds = [     ## for an explanation of what this does see the retry commands block further below(5B)
+                cmd for cmd in cleanup_cmds
+                if cmd is not None and str(cmd).strip()
+            ]
+
+
+
             # ----------------------------------------------------
             # Track commands for tagging and ai_metadata
             # Cleanup commands are appended individually.
-            # Retry commands are also appended individually (NOT as a list). Retry command have to be done after retry normalization
+            # Retry commands are also appended individually (NOT as a list). Retry commands have to be done after retry normalization
+            # Cleanup commands also have to be appended after cleanup normalization
             # This ensures proper tagging and forensic traceability.
             # ----------------------------------------------------
-            ai_commands.extend(cleanup_cmds)
-            #ai_commands.extend(retry_cmds) # must be done after retry normalization using the normalized_retry_cmds 
-
+            
+            #ai_commands.extend(cleanup_cmds)
+            ai_commands.extend(normalized_cleanup_cmds)
 
 
 
@@ -1634,11 +1642,6 @@ def resurrection_install_tomcat(
             #   - Even is None, or empty or whitespace, just normalize it, but it will not imply fallback contract action 
             # ----------------------------------------------------
 
-            normalized_cleanup_cmds = [     ## for an explanation of what this does see the retry commands block further below(5B)
-                cmd for cmd in cleanup_cmds
-                if cmd is not None and str(cmd).strip()
-            ]
-
 
             for ccmd in normalized_cleanup_cmds:
             #for ccmd in cleanup_cmds:
@@ -1650,18 +1653,9 @@ def resurrection_install_tomcat(
                 _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
 
 
-            # ----------------------------------------------------
-            # 5B. Run retry commands (UPDATED FOR MULTIPLE COMMANDS)
-            #
-            # Retry commands are executed sequentially.
-            # If ANY retry command fails (non-zero exit OR stderr present),
-            # the entire cleanup_and_retry action fails immediately.
-            #
-            # Only if ALL retry commands succeed do we return ai_fixed=True.
-            # ----------------------------------------------------
-            last_stdout = ""
-            last_stderr = ""
-            last_exit = 1
+
+
+
 
 
             # ------------------------------------------------
@@ -1711,6 +1705,9 @@ def resurrection_install_tomcat(
                 if cmd is not None and str(cmd).strip()
             ]
             
+            
+
+
             # ----------------------------------------------------
             # Track commands for tagging and ai_metadata
             # Retry commands are also appended individually (NOT as a list). Retry command have to be done after retry normalization
@@ -1741,6 +1738,23 @@ def resurrection_install_tomcat(
                     "new_exit_status": last_exit,
                 }
 
+
+
+
+
+            # ----------------------------------------------------
+            # 5B. Run retry commands (UPDATED FOR MULTIPLE COMMANDS)
+            #
+            # Retry commands are executed sequentially.
+            # If ANY retry command fails (non-zero exit OR stderr present),
+            # the entire cleanup_and_retry action fails immediately.
+            #
+            # Only if ALL retry commands succeed do we return ai_fixed=True.
+            # ----------------------------------------------------
+            last_stdout = ""
+            last_stderr = ""
+            last_exit = 1
+           
             for rcmd in normalized_retry_cmds:
             #for rcmd in retry_cmds:
                 print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {rcmd}")
