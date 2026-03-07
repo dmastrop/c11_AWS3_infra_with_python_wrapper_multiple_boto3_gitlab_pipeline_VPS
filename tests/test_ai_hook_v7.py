@@ -2159,11 +2159,312 @@ def test_ai_hook_cleanup_and_retry_retry_whitespace(monkeypatch):
     assert fake_ssh.call_count == 3
 
 
+#####  end of TEST 7L
+
+# ---------------------------------------------------------------------
+# TEST 7M — CLEANUP_AND_RETRY → mixed retry commands, valid first → SUCCESS
+# ---------------------------------------------------------------------
+def test_ai_hook_cleanup_and_retry_mixed_success_valid_first(monkeypatch):
+    """
+    This test validates the core rule of cleanup_and_retry normalization:
+
+        Derived fallback occurs ONLY when *all* retry commands are invalid
+        after normalization. If ANY retry command is valid, fallback must NOT occur.
+
+    Normalization removes:
+        - whitespace-only commands
+        - empty strings
+        - None
+        - strings that become empty after strip()
+
+    Valid commands remain.
+
+    Therefore:
+        retry=["echo OK", "   "]  → normalized_retry_cmds=["echo OK"]
+        → NOT fallback
+        → retry sequence MUST execute
+        → FakeSSH2 controls success/failure
+        → ai_fallback=False
+        → ai_commands must contain ONLY the valid command ("echo OK")
+
+    This test includes cleanup commands as well, so the full pipeline is exercised.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # ⭐ Force clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script:
+    # 3 original failures + 2 cleanup successes + 1 valid retry success
+    script = [
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("echo OK", "", 0),   # retry succeeds
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Fake plan: cleanup + mixed retry commands
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo OK",   # valid
+                "   ",       # whitespace → removed by normalization
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4", private_ip="10.0.0.1",
+        instance_id="i-test", WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest7M) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("====================================\n")
+
+    # EXPECT SUCCESS
+    assert registry["status"] == "install_success"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+
+    # ai_commands must contain ONLY the valid retry command
+    ai_cmds = registry["ai_metadata"]["ai_commands"]
+    assert ai_cmds == ["echo OK"]
+
+    # No ai_failed_command
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 7N — CLEANUP_AND_RETRY → mixed retry commands, valid first → FAILURE
+# ---------------------------------------------------------------------
+def test_ai_hook_cleanup_and_retry_mixed_failure_valid_first(monkeypatch):
+    """
+    Same normalization rule as 7M:
+
+        retry=["echo FAIL", "   "] → normalized_retry_cmds=["echo FAIL"]
+
+    Because at least one valid command remains:
+        → NOT fallback
+        → retry sequence MUST execute
+        → FakeSSH2 determines failure
+        → install_failed
+        → ai_fallback=False
+        → ai_failed_command="echo FAIL"
+        → ai_commands=["echo FAIL"]
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script: retry fails
+    script = [
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("echo FAIL", "synthetic error", 1),   # retry fails
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Fake plan
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo FAIL",  # valid
+                "   ",        # whitespace → removed
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4", private_ip="10.0.0.1",
+        instance_id="i-test", WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest7N) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("====================================\n")
+
+    # EXPECT FAILURE
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+
+    # ai_commands must contain ONLY the valid retry command
+    assert registry["ai_metadata"]["ai_commands"] == ["echo FAIL"]
+
+    # ai_failed_command must be the valid retry command
+    assert registry["ai_metadata"]["ai_failed_command"] == "echo FAIL"
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 7O — CLEANUP_AND_RETRY → mixed retry commands, whitespace first → SUCCESS
+# ---------------------------------------------------------------------
+def test_ai_hook_cleanup_and_retry_mixed_success_valid_second(monkeypatch):
+    """
+    Same normalization rule:
+
+        retry=["   ", "echo OK"] → normalized_retry_cmds=["echo OK"]
+
+    Because at least one valid command remains:
+        → NOT fallback
+        → retry sequence MUST execute
+        → FakeSSH2 determines success
+        → install_success
+        → ai_fallback=False
+        → ai_commands=["echo OK"]
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script: retry succeeds
+    script = [
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("", "synthetic error", 1),
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("echo OK", "", 0),   # retry succeeds
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Fake plan
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "   ",       # whitespace → removed
+                "echo OK",   # valid
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4", private_ip="10.0.0.1",
+        instance_id="i-test", WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest7O) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("====================================\n")
+
+    # EXPECT SUCCESS
+    assert registry["status"] == "install_success"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+
+    # ai_commands must contain ONLY the valid retry command
+    assert registry["ai_metadata"]["ai_commands"] == ["echo OK"]
+
+    # ai_failed_command must be None
+    assert registry["ai_metadata"]["ai_failed_command"] is None
 
 
 
 
 
+#### End of Test7 suite
 
 # ---------------------------------------------------------------------
 # TEST 8 — retry_with_modified_command with no command  → install_failed with fallback
