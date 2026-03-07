@@ -1717,8 +1717,15 @@ def resurrection_install_tomcat(
             # Record only valid retry commands for ai_metadata
             
             ai_commands.extend(normalized_retry_cmds)
-             
+            
 
+
+
+
+            #Initialize this stuff here for the derived fallback check below and also for the run retry_cmds exection block below that
+            last_stdout = ""
+            last_stderr = ""
+            last_exit = 1
 
 
             ##### Derived fallback check:
@@ -1751,9 +1758,6 @@ def resurrection_install_tomcat(
             #
             # Only if ALL retry commands succeed do we return ai_fixed=True.
             # ----------------------------------------------------
-            last_stdout = ""
-            last_stderr = ""
-            last_exit = 1
            
             for rcmd in normalized_retry_cmds:
             #for rcmd in retry_cmds:
