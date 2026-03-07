@@ -2466,7 +2466,7 @@ def test_ai_hook_cleanup_and_retry_mixed_success_valid_second(monkeypatch):
     assert registry["ai_metadata"]["ai_fallback"] is False
 
     # ai_commands must contain ONLY the valid retry command and the cleanup commands
-    assert registry["ai_metadata"]["ai_commands"] == ["echo OK"]
+    #assert registry["ai_metadata"]["ai_commands"] == ["echo OK"]
     ai_cmds = registry["ai_metadata"]["ai_commands"]
     #assert ai_cmds == ["echo OK"]
     assert ai_cmds == [
