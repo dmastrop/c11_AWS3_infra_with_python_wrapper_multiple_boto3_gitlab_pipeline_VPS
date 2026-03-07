@@ -3934,7 +3934,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'fallba
 
 Note that the tags are still ai_fallback for the control-flow variable state, and ai_fallback_true for the persistent state variable, and also
 that the ai_metadata has the persistent state variable set to `ai_fallback`: True, but that the ai_plan_action is explicilty set to 
-fallback (as determined by the LLM and passed back to the AI Gateway Service as the 'plan'.  This is the primary way to differentiate a
+fallback (as determined by the LLM and passed back to the AI Gateway Service as the 'plan').  This is the primary way to differentiate a
 native fallback scenario from a derived fallback scenario.
 
 

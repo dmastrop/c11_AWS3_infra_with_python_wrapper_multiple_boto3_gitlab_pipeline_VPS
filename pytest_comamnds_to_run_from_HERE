@@ -109,7 +109,10 @@ Test7o
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_mixed_success_valid_second
 
 Test7p
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_whitespace_cleanup_and_retry_success
 
+Test7q
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_whitespace_cleanup_and_retry_fallback
 
 Test8
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_retry_modified_empty
