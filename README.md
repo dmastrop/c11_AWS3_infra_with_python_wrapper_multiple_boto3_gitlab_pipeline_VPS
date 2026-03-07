@@ -3131,7 +3131,7 @@ This mirrors real-world recovery behavior: cleanup is preparatory; retry is deci
 #### **4. Persistent State vs. Control-Flow State**
 
 **Persistent state recorded in registry entries**
-Both actions record:
+Both retry_with_modified_command and cleanup_and_retry conract actions record:
 
 - `ai_invoked`  
 - `ai_fallback`  
@@ -3634,9 +3634,8 @@ They are not duplicates. They are complementary.
 - The metadata builder reads the persistent state variable and generates `ai_fallback_true`.  
 - The heuristic block adds the registry‑level tag `ai_fallback`.
 
-Thus, this is fully consistent with the main section:
+Thus, this is fully consistent with the general flow explained in the first section above:
 
-This preserves the architectural separation:
 
 - **HOOK → returns control‑flow**  
 - **Heuristic → interprets control‑flow and sets persistent state**  
@@ -3650,6 +3649,156 @@ This design ensures that fallback is represented consistently across:
 - analytics  
 - test expectations  
 - future heuristics  
+
+
+
+**5. The ai_metadata  'ai_fallback': True**
+
+The pytest registry sample for a derived fallback situation as noted above:
+
+One knows that this is a derived fallback situation because the ai_metadata field has ai_plan_action as `cleanup_and_retry` and not `fallback'
+
+```
+status: install_failed
+attempt: -1
+pid: 2724414
+thread_id: 132944993119296
+thread_uuid: e42302a3
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-03 23:51:45.221902
+
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_fallback']
+
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
+```
+
+Note that in addition to the persistent state tag ai_fallback_true and the control-flow variable tag ai_fallback, that the ai_metadata field has
+`ai_fallback`: True. This, like the persistent state tag ai_fallack_true, is a persistent state variable and is set by the 
+_build_ai_metadata_and_tags() function.
+
+
+
+**6. The tagging and ai_metadata construction process from the Code point of view**
+
+
+
+Inside the HOOK return payload  
+The HOOK returns:
+
+```
+{"ai_fallback": True}
+```
+
+This is a control‑flow variable.  
+It tells the calling heuristic:
+
+> “The AI hook has entered fallback mode.”
+
+
+
+Inside the heuristic block  
+The heuristic receives that control‑flow variable and sets the persistent state variable:
+
+```
+ai_fallback = True
+```
+
+This persistent state variable is then passed into:
+
+- `_build_ai_metadata_and_tags()`  
+- the registry entry builder  
+- the tagging system  
+
+
+Inside `_build_ai_metadata_and_tags()`  
+The persistent state variable is read:
+
+```
+if ai_fallback:
+    ai_tags.append("ai_fallback_true")
+```
+
+This produces the persistent‑state tag:
+
+```
+ai_fallback_true
+```
+
+
+
+Inside the registry entry  
+The heuristic also adds the registry‑level classification tag:
+
+```
+ai_fallback
+```
+
+This is the control‑flow classification of the registry entry, not the AI hook.
+
+
+
+Inside `ai_metadata`  
+The persistent state variable is stored directly:
+
+```
+"ai_fallback": True
+```
+
+This is the metadata‑level representation of the same persistent state.
+
+---
+
+
+So the alignment is:
+
+| Layer | Variable / Tag | Meaning |
+|-------|----------------|---------|
+| HOOK return | `{"ai_fallback": True}` | Control‑flow signal from HOOK |
+| Heuristic persistent state | `ai_fallback = True` | Internal persistent state variable |
+| ai_metadata | `"ai_fallback": True` | Persistent state recorded in metadata |
+| ai_metadata tags | `"ai_fallback_true"` | Persistent state expressed as a tag |
+| registry tags | `"ai_fallback"` | Registry‑level classification |
+
+These are all aligned and represent the same underlying state, just at different layers.
+
+
+
+
+
+
+
+
+**7. A sample pytest registry_entry for an ai_plan_action of native fallback**
+
+A native fallback ai_plan_action will have ai_tags and ai_metadata that look very similar to the derived fallback registry_entry above, 
+except for one notable difference, the ai_plan_action will be set to fallback.
+
+
+```
+===== REGISTRY ENTRY (pytest3) =====
+status: install_failed
+attempt: -1
+pid: 2772175
+thread_id: 132123806497856
+thread_uuid: 2665c641
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-07 22:13:30.344989
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:fallback', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'fallback', 'ai_commands': [], 'ai_failed_command': None}
+
+```
+
+Note that the tags are still ai_fallback for the control-flow variable state, and ai_fallback_true for the persistent state variable, and also
+that the ai_metadata has the persistent state variable set to `ai_fallback`: True, but that the ai_plan_action is explicilty set to 
+fallback (as determined by the LLM and passed back to the AI Gateway Service as the 'plan'.  This is the primary way to differentiate a
+native fallback scenario from a derived fallback scenario.
+
+
+
+
+
 
 
 #### **Derived fallback conditions: A more in depth discussion**
