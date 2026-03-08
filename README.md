@@ -4313,6 +4313,29 @@ The pyests become a behavioral specification which rigorously tests the AI/LLM-b
 
 #### Pytest test matrix and test results
 
+The purpose of presenting all of the pytest validation results in a test matrix is so that the folloing information can be easily 
+represented and digested:
+
+
+
+- a single table of all test case variations and what each test case is validating
+- expected vs actual behavior
+- ai_metadata invariants
+- tag invariants
+- fallback vs success classification (derived fallback scnearios vs. organic fallback tests)
+- cleanup normalization behavior for cleanup command deviations sent from the LLM
+- retry normalization behavior for retry command deviations sent from the LLM
+- ai_commands ordering
+- ai_failed_command semantics
+
+
+
+
+
+
+
+
+
 
 
 ### **Real-life validation**
