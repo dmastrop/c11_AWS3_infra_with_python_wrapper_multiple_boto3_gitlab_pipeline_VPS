@@ -4327,6 +4327,8 @@ represented and digested:
 - retry normalization behavior for retry command deviations sent from the LLM
 - ai_commands ordering
 - ai_failed_command semantics
+- invocation of hook (invoke_ai_hook()) path origin (heuristic4 vs. heuristicx vs. passthrough)
+
 
 
 

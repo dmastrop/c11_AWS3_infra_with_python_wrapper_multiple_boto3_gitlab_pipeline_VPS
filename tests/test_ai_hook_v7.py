@@ -3004,3 +3004,106 @@ def test_ai_hook_retry_modified_whitespace(monkeypatch):
     assert "ai_fallback" in tags
     assert "ai_plan_action:retry_with_modified_command" in tags
 
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 9A — CLEANUP_AND_RETRY (passthrough HOOK) → mixed retry commands → SUCCESS
+# ---------------------------------------------------------------------
+def test_ai_hook_passthrough_cleanup_and_retry_success(monkeypatch):
+    """
+    Passthrough HOOK test (NOT heuristic4).
+
+    stderr is whitelisted ("Reading state information..."), so:
+        → non_whitelisted_lines = []
+        → heuristic4 does NOT fire
+        → HOOK is invoked from the TOP-LEVEL passthrough location
+
+    Behavior mirrors pytest7O:
+        retry=["   ", "echo OK"] → normalized_retry_cmds=["echo OK"]
+        cleanup succeeds
+        retry succeeds
+        install_success
+        ai_fallback=False
+        ai_failed_command=None
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script: retry succeeds, stderr whitelisted
+    script = [
+        ("", "Reading state information...", 1),
+        ("", "Reading state information...", 1),
+        ("", "Reading state information...", 1),
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("echo OK", "", 0),
+    ]
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # Fake plan
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "   ",      # whitespace → removed
+                "echo OK",  # valid
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4", private_ip="10.0.0.1",
+        instance_id="i-test", WATCHDOG_TIMEOUT=5,
+        replayed_commands=MINIMAL_COMMANDS,
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest9A) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("====================================\n")
+
+    # EXPECT SUCCESS
+    assert registry["status"] == "install_success"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+
+    # ai_commands must contain ONLY valid cleanup + valid retry
+    assert registry["ai_metadata"]["ai_commands"] == [
+        "rm -f /var/lib/dpkg/lock",
+        "rm -f /var/lib/dpkg/lock-frontend",
+        "echo OK",
+    ]
+
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+
