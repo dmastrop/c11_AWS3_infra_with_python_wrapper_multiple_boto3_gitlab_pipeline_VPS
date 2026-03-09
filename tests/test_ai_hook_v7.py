@@ -3009,16 +3009,13 @@ def test_ai_hook_retry_modified_whitespace(monkeypatch):
 
 
 # ---------------------------------------------------------------------
-# TEST 9A — CLEANUP_AND_RETRY (passthrough HOOK) → mixed retry commands → SUCCESS
+# TEST 9A — CLEANUP_AND_RETRY (heuristic#4 stub case that is reovered with AI) → mixed retry commands → SUCCESS
 # ---------------------------------------------------------------------
 def test_ai_hook_passthrough_cleanup_and_retry_success(monkeypatch):
     """
-    Passthrough HOOK test (NOT heuristic4).
+    Heuristic#4 stub case which is then recovered with AI.
 
-    stderr is whitelisted ("Reading state information..."), so:
-        → non_whitelisted_lines = []
-        → heuristic4 does NOT fire
-        → HOOK is invoked from the TOP-LEVEL passthrough location
+    stderr is blank
 
     Behavior mirrors pytest7O:
         retry=["   ", "echo OK"] → normalized_retry_cmds=["echo OK"]
@@ -3120,4 +3117,108 @@ def test_ai_hook_passthrough_cleanup_and_retry_success(monkeypatch):
     ]
 
     assert registry["ai_metadata"]["ai_failed_command"] is None
+
+
+
+# ---------------------------------------------------------------------
+# TEST 9A.2 — CLEANUP_AND_RETRY (heuristic#4 stub case) → AI FAIL → install_failed
+# ---------------------------------------------------------------------
+def test_ai_hook_passthrough_cleanup_and_retry_fail(monkeypatch):
+    """
+    Heuristic#4 stub case where AI is invoked but FAILS to repair the issue.
+
+    stderr is blank → triggers the stub branch of heuristic#4.
+    AI plan = cleanup_and_retry with VALID retry commands.
+    Cleanup succeeds.
+    Retry FAILS (exit_status=1).
+    AI returns ai_fixed=False, ai_fallback=False.
+    Final result = install_failed (native fallthrough block).
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script:
+    #   - 3 stub attempts (exit=1, stderr="")
+    #   - 2 cleanup successes
+    #   - 1 retry FAILURE (exit=1)
+    script = [
+        ("", "", 1),   # attempt 1 → stub
+        ("", "", 1),   # attempt 2 → stub
+        ("", "", 1),   # attempt 3 → stub → HOOK invoked
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("retry failed", "some retry error", 1),   # retry fails → ai_fixed=False
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # MCP plan: VALID retry command → NOT fallback
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo WILL_NOT_FIX",   # valid → hook will execute it
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=["echo test"],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest9A.2) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("=======================================\n")
+
+    # EXPECT FAILURE
+    assert registry["status"] == "install_failed"
+
+    # AI metadata checks
+    ai_meta = registry["ai_metadata"]
+    assert ai_meta["ai_invoked"] is True
+    assert ai_meta["ai_fallback"] is False
+    assert ai_meta["ai_failed_command"] == "echo WILL_NOT_FIX"
+
+    # Stub forensic tags must be present
+    tags = registry["tags"]
+    assert "silent_failure" in tags
+    assert "exit_status_nonzero_stderr_blank" in tags
+    assert "echo test" in tags
+
 

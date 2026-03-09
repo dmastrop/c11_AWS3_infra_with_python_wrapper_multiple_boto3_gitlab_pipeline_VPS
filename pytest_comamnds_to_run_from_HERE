@@ -133,7 +133,7 @@ Test9a
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_passthrough_cleanup_and_retry_success
 
 Test9b
-
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_passthrough_cleanup_and_retry_fail
 
 Test9c
 
