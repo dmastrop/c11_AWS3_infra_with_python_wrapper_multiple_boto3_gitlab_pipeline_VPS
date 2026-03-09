@@ -3206,8 +3206,12 @@ def test_ai_hook_passthrough_cleanup_and_retry_fail(monkeypatch):
     for k, v in registry.items(): print(f"{k}: {v}")
     print("=======================================\n")
 
-    # EXPECT FAILURE
-    assert registry["status"] == "install_failed"
+    # EXPECT stub and not install_failed. This is because this case is where there is no stderr output and exit status is 1
+    # So the organic registry_entry of stub status has to be retained if AI/MCP HOOK is unable to recover and fix the command. Stub
+    # is for failed commands that have no apparent cause (no stderr output is one case of a valid stub case).
+    #assert registry["status"] == "install_failed"
+    assert registry["status"] == "stub"
+
 
     # AI metadata checks
     ai_meta = registry["ai_metadata"]
