@@ -3042,14 +3042,28 @@ def test_ai_hook_passthrough_cleanup_and_retry_success(monkeypatch):
     )
 
     # FakeSSH2 script: retry succeeds, stderr whitelisted
+   
+
+    # Need to remove all stderr output to hit the fallback and not heuristic#4
     script = [
-        ("", "Reading state information...", 1),
-        ("", "Reading state information...", 1),
-        ("", "Reading state information...", 1),
+        ("", "", 1),
+        ("", "", 1),
+        ("", "", 1),
         ("cleanup1 ok", "", 0),
         ("cleanup2 ok", "", 0),
         ("echo OK", "", 0),
     ]
+
+    ## This will still hit the heuristic#4
+    #script = [
+    #    ("", "Reading state information...", 1),
+    #    ("", "Reading state information...", 1),
+    #    ("", "Reading state information...", 1),
+    #    ("cleanup1 ok", "", 0),
+    #    ("cleanup2 ok", "", 0),
+    #    ("echo OK", "", 0),
+    #]
+    
     fake_ssh = FakeSSH2(script)
 
     class FakeParamikoModule:
