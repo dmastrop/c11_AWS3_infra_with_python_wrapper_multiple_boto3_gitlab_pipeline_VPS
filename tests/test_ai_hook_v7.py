@@ -3226,3 +3226,198 @@ def test_ai_hook_passthrough_cleanup_and_retry_fail(monkeypatch):
     assert "echo test" in tags
 
 
+
+
+# ---------------------------------------------------------------------
+# TEST 9B — Heuristic5 (exit 0 + non‑whitelisted stderr) + AI success
+# ---------------------------------------------------------------------
+def test_ai_hook_heuristic5_success(monkeypatch):
+    """
+    Heuristic5: exit_status=0 + non‑whitelisted stderr.
+    AI plan = cleanup_and_retry.
+    Cleanup succeeds.
+    Retry succeeds.
+    Final result = install_success.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script:
+    #   - original command: exit=0 + dirty stderr 3 times→ heuristic5
+    #   - cleanup1 ok
+    #   - cleanup2 ok
+    #   - retry ok
+
+    script = [
+        ("", "DIRTY_ERROR_LINE", 0),   # attempt 1
+        ("", "DIRTY_ERROR_LINE", 0),   # attempt 2
+        ("", "DIRTY_ERROR_LINE", 0),   # attempt 3 → HOOK
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("retry ok", "", 0),
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # MCP plan: valid cleanup + retry → AI success
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo AI_RETRY_OK",
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=["echo test"],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest9B) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("=====================================\n")
+
+    # EXPECT SUCCESS
+    assert registry["status"] == "install_success"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+
+    # Heuristic5 tags must be merged into success tags
+    tags = registry["tags"]
+    assert "stderr_detected" in tags
+    assert "non_whitelisted_stderr" in tags
+    assert "exit_status_zero" in tags
+
+
+
+# ---------------------------------------------------------------------
+# TEST 9B.2 — Heuristic5 + AI fail → install_failed
+# ---------------------------------------------------------------------
+def test_ai_hook_heuristic5_fail(monkeypatch):
+    """
+    Heuristic5: exit_status=0 + non‑whitelisted stderr.
+    AI plan = cleanup_and_retry.
+    Cleanup succeeds.
+    Retry FAILS.
+    AI returns ai_fixed=False, ai_fallback=False.
+    Final result = install_failed.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # FakeSSH2 script:
+
+    script = [
+        ("", "DIRTY_ERROR_LINE", 0),   # attempt 1
+        ("", "DIRTY_ERROR_LINE", 0),   # attempt 2
+        ("", "DIRTY_ERROR_LINE", 0),   # attempt 3 → HOOK
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("retry failed", "retry error", 1),
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # MCP plan: valid retry → NOT fallback
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo WILL_NOT_FIX",
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=["echo test"],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest9B.2) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("=======================================\n")
+
+    # EXPECT FAILURE
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+    assert registry["ai_metadata"]["ai_failed_command"] == "echo WILL_NOT_FIX"
+
+    # Heuristic5 tags must be present
+    tags = registry["tags"]
+    assert "stderr_detected" in tags
+    assert "non_whitelisted_stderr" in tags
+    assert "exit_status_zero" in tags
+
