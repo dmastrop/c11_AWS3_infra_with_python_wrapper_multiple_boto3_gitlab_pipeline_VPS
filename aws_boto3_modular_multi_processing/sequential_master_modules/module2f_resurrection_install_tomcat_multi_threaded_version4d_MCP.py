@@ -2355,7 +2355,7 @@ def resurrection_install_tomcat(
                                     return ip, private_ip, registry_entry
 
                             else:
-                                print(f"[{ip}] Non-zero exit — retrying...")
+                                print(f"[{ip}] Non-zero exit in strace — retrying...")
                                 time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                                 continue
 

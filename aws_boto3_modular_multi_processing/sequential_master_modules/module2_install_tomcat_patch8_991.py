@@ -6512,7 +6512,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                 return ip, private_ip, registry_entry
 
                             else:
-                                print(f"[{ip}] ⚠️ Non-zero exit — retrying attempt {attempt + 1}")
+                                print(f"[{ip}] ⚠️ Non-zero exit in strace — retrying attempt {attempt + 1}")
                                 time.sleep(SLEEP_BETWEEN_ATTEMPTS)
                                 continue
 
