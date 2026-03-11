@@ -4724,9 +4724,25 @@ In the real life scenario this is done with the -o switch in the strace wrapped 
 ```
 strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2
 ```
+The strace command line example above does the following: 
+
+- Run bash -c 'fail' under strace
+- Write all strace output to /tmp/trace.log
+- Suppress the original command’s stderr (2>/dev/null) (it is usually not reliable even if present)
+- Inject the trace log into stderr (cat /tmp/trace.log >&2)
 
 
-The monkeypatch has to simulate the cat of the trace.log contents, since the command is not actually executed during the pytest test case,
+As noted earlier, the last part, the injection of the strace trace log ito the stderr was found to be very very unreliable. 
+So this necessitated that the /tmp/trace.log be cat and manually injected into a stderr variable:
+
+```
+                        trace_in, trace_out, trace_err = ssh.exec_command(f"cat {trace_path_extracted}")
+                        trace_output = trace_out.read().decode()
+                        stderr_output = trace_output
+```
+
+
+The monkeypatch has to simulate the cat of the trace.log contents, since the cat command is not actually executed during the pytest test case,
 and that is done with the second line in the script:
 ```
         (dirty_trace, "", 0),  # attempt 1: cat trace, note it is nonwhitelisted as dirty_trace 
@@ -4735,11 +4751,14 @@ and that is done with the second line in the script:
 dirty_trace represents a simulated strace error output that would in real life be stored in the /tmp/trace.log file.
 This is not in the STRACE_WHITELIST_REGEX list of whitelisted strace output in the module, and so this will be flagged as 
 nonwhitelisted material by the strace heuristic 2 and 3 code. This is how the heuristic2 and 3 code blocks are hit using the pytest
-monkeypatching. 
+monkeypatching. Note that we don't care about the stderr and the exit_status of 0 for the cat command itself. We just need the 
+stdout which has the dirty_trace, which can then be injected into the stderr as the error message for the strace command execution. This is
+the key to firing off the heuristic. (see the code below: if non_whitelisted_lines:.....) 
 
-The two lines are repeated 3 times to cause the code to flow into the heuristic and fail the node at RETRY_LIMIT -1. 
+The two script lines are repeated 3 times to cause the code to flow into the heuristic and fail the node at RETRY_LIMIT -1. 
 However, now the AI/MCP HOOK code is added so that on this last failure attempt the AI/MCP HOOK is invoked for one final attempt at trying to 
 get the command to execute by consulting with the LLM.
+
 This is how all of the heuristic pytest codes are invoked, but the strace requires this special monkeypatch of the FakeSSH2 script described
 above.
 
@@ -4786,7 +4805,7 @@ Here is where the heuristic#3 code path is, and note how the AI/MCP HOOK is invo
                                     <.........>
 ```
 At this point, the rest of the pytest executes just like the non-strace wrapper code tests.  The LLM reponse is simulated by the 
-monkeypatch to the mcpclient so that the LLM plan response is, for example:
+monkeypatch to the mcpclient so that the LLM fake plan response is, for example:
 
 ```
     # MCP plan: valid cleanup + retry → AI success
@@ -4806,6 +4825,9 @@ monkeypatch to the mcpclient so that the LLM plan response is, for example:
 
 These 2 cleanup commands and the retry command are responded to via the last 3 lines in the FakeSSH2 monkeypatch script shown earlier, to
 elicit the desired response (in this particular pytest test case an AI success and ultimately an install_success for the node status.
+
+
+
 
 
 
