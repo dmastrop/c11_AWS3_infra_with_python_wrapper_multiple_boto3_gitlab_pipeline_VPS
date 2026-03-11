@@ -142,8 +142,16 @@ Test9b.2
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic5_fail
 
 Test9c
-
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic3_success
 
 Test9c.2
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic3_fail
+
+Test9d
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic2_success
+
+
+Test9d.2
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic2_fail
 
 

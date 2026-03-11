@@ -3634,6 +3634,11 @@ def test_ai_hook_heuristic3_fail(monkeypatch):
     assert "exit_status_zero" in tags
     assert "non_whitelisted_trace" in tags
 
+
+
+
+
+
 # ---------------------------------------------------------------------
 # TEST 9D — Heuristic2 + AI success → install_success (stderr is present with the strace log error information)
 # ---------------------------------------------------------------------
