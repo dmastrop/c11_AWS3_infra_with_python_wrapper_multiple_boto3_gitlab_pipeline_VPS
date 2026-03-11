@@ -2704,6 +2704,8 @@ This section addresses the following topics:
 - What the Gateway does *not* do (it never executes commands)  
 - How schema validation and fallback behavior work  
 - How smart is the LLM compared to the whitelists?
+- Why the LLM still requires strace wrapped commands in certain circumstances
+
 
 ---
 
