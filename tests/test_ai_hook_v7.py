@@ -3421,3 +3421,216 @@ def test_ai_hook_heuristic5_fail(monkeypatch):
     assert "non_whitelisted_stderr" in tags
     assert "exit_status_zero" in tags
 
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 9C — Heuristic3 + AI success → install_success
+# ---------------------------------------------------------------------
+def test_ai_hook_heuristic3_success(monkeypatch):
+    """
+    Heuristic3: strace-wrapped command, exit=0, stderr empty,
+    but trace log contains non-whitelisted lines.
+    AI plan = cleanup_and_retry.
+    Cleanup succeeds.
+    Retry succeeds.
+    Final result = install_success.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # Synthetic dirty trace log (non-whitelisted)
+    dirty_trace = "1234 write(2, \"FATAL: bad thing\\n\", 18) = 18\n"
+
+    # FakeSSH2 script:
+    #   - 3 attempts of the strace wrapper → exit=0, stderr=""
+    #   - 3 trace reads (cat <trace_path>) → dirty trace
+    #   - cleanup1 ok
+    #   - cleanup2 ok
+    #   - retry ok
+    script = [
+        ("", "", 0),  # attempt 1: strace wrapper
+        (dirty_trace, "", 0),  # attempt 1: cat trace
+        ("", "", 0),  # attempt 2: strace wrapper
+        (dirty_trace, "", 0),  # attempt 2: cat trace
+        ("", "", 0),  # attempt 3: strace wrapper
+        (dirty_trace, "", 0),  # attempt 3: cat trace
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("retry ok", "", 0),
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # MCP plan: valid cleanup + retry → AI success
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo AI_RETRY_OK",
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # Run the function
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=[
+            # This MUST be a strace-wrapped command
+            "strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2"
+        ],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest9C) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("=====================================\n")
+
+    # EXPECT SUCCESS
+    assert registry["status"] == "install_success"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+
+    # Heuristic3 tags must be merged into success tags
+    tags = registry["tags"]
+    assert "strace_detected" in tags
+    assert "exit_status_zero" in tags
+    assert "non_whitelisted_trace" in tags
+
+
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 9C.2 — Heuristic3 + AI fail → install_failed
+# ---------------------------------------------------------------------
+def test_ai_hook_heuristic3_fail(monkeypatch):
+    """
+    Heuristic3: strace-wrapped command, exit=0, stderr empty,
+    but trace log contains non-whitelisted lines.
+    AI plan = cleanup_and_retry.
+    Cleanup succeeds.
+    Retry FAILS.
+    Final result = install_failed.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    dirty_trace = "1234 write(2, \"FATAL: bad thing\\n\", 18) = 18\n"
+
+    script = [
+        ("", "", 0),  # attempt 1: strace wrapper
+        (dirty_trace, "", 0),  # attempt 1: cat trace
+        ("", "", 0),  # attempt 2: strace wrapper
+        (dirty_trace, "", 0),  # attempt 2: cat trace
+        ("", "", 0),  # attempt 3: strace wrapper
+        (dirty_trace, "", 0),  # attempt 3: cat trace
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("retry failed", "retry error", 1),  # retry fails
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # MCP plan: valid retry → NOT fallback
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo WILL_NOT_FIX",
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=[
+            "strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2"
+        ],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest9C.2) =====")
+    for k, v in registry.items(): print(f"{k}: {v}")
+    print("=======================================\n")
+
+    # EXPECT FAILURE
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+    assert registry["ai_metadata"]["ai_failed_command"] == "echo WILL_NOT_FIX"
+
+    tags = registry["tags"]
+    assert "strace_detected" in tags
+    assert "exit_status_zero" in tags
+    assert "non_whitelisted_trace" in tags
+
+
