@@ -3528,9 +3528,12 @@ def test_ai_hook_heuristic3_success(monkeypatch):
 
     # Heuristic3 tags must be merged into success tags
     tags = registry["tags"]
-    assert "strace_detected" in tags
+    #assert "strace_detected" in tags
+    #assert "exit_status_zero" in tags
+    #assert "non_whitelisted_trace" in tags
+    assert "stderr_detected" in tags
+    assert "non_whitelisted_stderr" in tags
     assert "exit_status_zero" in tags
-    assert "non_whitelisted_trace" in tags
 
 
 
@@ -3630,9 +3633,12 @@ def test_ai_hook_heuristic3_fail(monkeypatch):
     assert registry["ai_metadata"]["ai_failed_command"] == "echo WILL_NOT_FIX"
 
     tags = registry["tags"]
-    assert "strace_detected" in tags
+    #assert "strace_detected" in tags
+    #assert "exit_status_zero" in tags
+    #assert "non_whitelisted_trace" in tags
+    assert "stderr_detected" in tags
+    assert "non_whitelisted_stderr" in tags
     assert "exit_status_zero" in tags
-    assert "non_whitelisted_trace" in tags
 
 
 
