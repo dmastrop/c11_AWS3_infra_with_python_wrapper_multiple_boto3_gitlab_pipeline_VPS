@@ -4646,6 +4646,169 @@ whether or not these AI related commands are successful.
 
 This design gives us full control over every branch of module2f’s logic without modifying the production code. It also ensures that the AI/MCP hook, the retry loop, the cleanup logic, the failure heuristics, and the registry metadata builder are all exercised exactly as they would be in a real deployment — just with deterministic inputs.
 
+The above approach is also very effective for testing the non-strace heuristic #4 and 5 failure blocks.  For testing the heuristic #2 and 3 
+strace failure blocks, the same general approach can be used but with some added logic to the FakeSSH2 script as descirbed in the next
+section below.
+
+
+
+#### Extending the pytest test cases to strace wrapped commands
+
+The strace wrapper is used for bash and bash-like commands, because these commands often have very little organic stderr output and the 
+exit_status is often incorrectly set to 0.  The strace wrapper logic in module2 and module2f wraps bash and bash-like commands so that 
+discernable log output can be collected by the python code that reads the output from a command sent to a node 
+(read_output_with_watchdog() function).
+
+The heuristic #2 and 3 are for failures that occur after reading the log output of the strace wrapped command.  These failures are
+based on very good deterministic log output provided by the strace wrapper of the command. The AI/MCP HOOK logic has also been added
+to these heuristic failures so that the LLM can try to get the strace wrapped command to work. 
+
+To test this with pytest, the approach in the previous section is still used, with the script providing the FakeSSH2 dummy replies
+to whatever plan cleanup/retry commands the LLM has suggested (Based upon whatever contract action the LLM has selected to use).
+However, to get the code to go into the strace block the initial command must be strace wrapped. This can be done in the pytest
+by using the following call to the resurrection_install_tomcat() function:
+
+
+```
+   result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=[
+            # This MUST be a strace-wrapped command otherwise heuristic3 will not be hit
+            "strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2"
+        ],
+        extra_tags=["from_module2e"],
+    )
+```
+
+Note that the replayed command is an strace wrapped command (in the normal code flow this is done in module2e prior to module2f; so
+module2f always has the bash or  bash-like command already strace wrapped)
+
+Once the command is strace wrapped the pytest will run the module2f code through the correct code path. In the strace code block there
+are two ssh connections made. One is the initial execution of the strace replayed_commands command (for example, the command above), 
+and then there is a second ssh execution of a cat of the strace log information.   The second command is done because during testing
+it was found that the pipe of the strace log data (with the >&2 in the strace command string above), was very very unreliable. As such
+the strace log data output is stored in a tmp log file and then this tmp log file is cat and the data is then injected into the 
+stderr output. This has to be done for every strace retry attempt (there are typically 3 to failure at the RETRY_LIMIT). Given this
+the FakeSSH2 script has to have the following format to effectively monkeypatch the ssh in this scenario:
+
+```
+    #   - retry ok
+    script = [
+        ("", "", 0),  # attempt 1: strace wrapper
+        (dirty_trace, "", 0),  # attempt 1: cat trace, note it is nonwhitelisted as dirty_trace
+        ("", "", 0),  # attempt 2: strace wrapper
+        (dirty_trace, "", 0),  # attempt 2: cat trace
+        ("", "", 0),  # attempt 3: strace wrapper
+        (dirty_trace, "", 0),  # attempt 3: cat trace
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+        ("retry ok", "", 0),
+    ]
+```
+
+
+Note that the first execution of the full strace wrapped command (replayed_commands in the snippet above), is monkeypatched with a
+ssh reply of no stdout and no stderr and and exit_status of 0. This is very typical of bash and bash-like commands that are strace
+wrapped. 
+```
+        ("", "", 0),  # attempt 1: strace wrapper
+```
+This represents the first ssh execution of the command.
+
+However the actual strace error log data is in the /tmp/trace.log that the strace command outputs to. This is what has the 
+error response (if any) from the command execution in a real life scenario.  
+In the real life scenario this is done with the -o switch in the strace wrapped command:
+```
+strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2
+```
+
+
+The monkeypatch has to simulate the cat of the trace.log contents, since the command is not actually executed during the pytest test case,
+and that is done with the second line in the script:
+```
+        (dirty_trace, "", 0),  # attempt 1: cat trace, note it is nonwhitelisted as dirty_trace 
+```
+
+dirty_trace represents a simulated strace error output that would in real life be stored in the /tmp/trace.log file.
+This is not in the STRACE_WHITELIST_REGEX list of whitelisted strace output in the module, and so this will be flagged as 
+nonwhitelisted material by the strace heuristic 2 and 3 code. This is how the heuristic2 and 3 code blocks are hit using the pytest
+monkeypatching. 
+
+The two lines are repeated 3 times to cause the code to flow into the heuristic and fail the node at RETRY_LIMIT -1. 
+However, now the AI/MCP HOOK code is added so that on this last failure attempt the AI/MCP HOOK is invoked for one final attempt at trying to 
+get the command to execute by consulting with the LLM.
+This is how all of the heuristic pytest codes are invoked, but the strace requires this special monkeypatch of the FakeSSH2 script described
+above.
+
+Here is where the heuristic#3 code path is, and note how the AI/MCP HOOK is invoked on the last retry to try to remediate the failed node.
+```
+
+                       # Zero exit, but non-whitelisted stderr => fail on final attempt, else retry
+                        if non_whitelisted_lines:
+                            if attempt == RETRY_LIMIT - 1:
+                                registry_entry = {
+                                    "status": "install_failed",
+                                    "attempt": -1,
+                                    "pid": multiprocessing.current_process().pid,
+                                    "thread_id": threading.get_ident(),
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": str(datetime.utcnow()),
+                                    "tags": base_tags + [
+                                        "stderr_detected",  ##### MODULE2 spliced in code and refactored. Starts here. This needs to be refactored for module2f. Do as minimal edits as possible and leave in the comments so I can identify this. 
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        "exit_status_zero",   # We know exit_status is zero here.
+                                        "non_whitelisted_stderr",
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # First few lines for traceability.
+                                        *stderr_output.strip().splitlines()[:25]  # Snapshot for traceability.
+                                    ]
+                                }
+                                #ssh.exec_command(f"rm -f /tmp/trace_{thread_uuid}.log")  # Clean up trace log
+
+                                # ------------------------------------------------------------
+                                # Step 5b: Invoke AI/MCP HOOK for this heuristic failure (_invoke_ai_hook())
+                                # ------------------------------------------------------------
+                                extra_tags = registry_entry["tags"]
+                                result = _invoke_ai_hook(
+                                    original_command=original_command,
+                                    stdout_output=stdout_output,
+                                    stderr_output=stderr_output,
+                                    exit_status=exit_status,
+                                    attempt=attempt,
+                                    instance_id=instance_id,
+                                    ip=ip,
+                                    extra_tags=extra_tags,
+                                    <.........>
+```
+At this point, the rest of the pytest executes just like the non-strace wrapper code tests.  The LLM reponse is simulated by the 
+monkeypatch to the mcpclient so that the LLM plan response is, for example:
+
+```
+    # MCP plan: valid cleanup + retry → AI success
+    def fake_send(self, context):
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "rm -f /var/lib/dpkg/lock",
+                "rm -f /var/lib/dpkg/lock-frontend",
+            ],
+            "retry": [
+                "echo AI_RETRY_OK",
+            ],
+        }
+```
+
+
+These 2 cleanup commands and the retry command are responded to via the last 3 lines in the FakeSSH2 monkeypatch script shown earlier, to
+elicit the desired response (in this particular pytest test case an AI success and ultimately an install_success for the node status.
+
+
+
 
 #### More on the design of the pytest test cases relative to the project scope
 

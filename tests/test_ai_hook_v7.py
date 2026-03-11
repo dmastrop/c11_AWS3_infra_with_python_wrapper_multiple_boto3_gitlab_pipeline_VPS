@@ -3461,7 +3461,7 @@ def test_ai_hook_heuristic3_success(monkeypatch):
     #   - retry ok
     script = [
         ("", "", 0),  # attempt 1: strace wrapper
-        (dirty_trace, "", 0),  # attempt 1: cat trace
+        (dirty_trace, "", 0),  # attempt 1: cat trace, note it is nonwhitelisted as dirty_trace
         ("", "", 0),  # attempt 2: strace wrapper
         (dirty_trace, "", 0),  # attempt 2: cat trace
         ("", "", 0),  # attempt 3: strace wrapper
@@ -3508,7 +3508,7 @@ def test_ai_hook_heuristic3_success(monkeypatch):
         instance_id="i-test",
         WATCHDOG_TIMEOUT=5,
         replayed_commands=[
-            # This MUST be a strace-wrapped command
+            # This MUST be a strace-wrapped command otherwise heuristic3 will not be hit
             "strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2"
         ],
         extra_tags=["from_module2e"],
@@ -3566,7 +3566,7 @@ def test_ai_hook_heuristic3_fail(monkeypatch):
 
     script = [
         ("", "", 0),  # attempt 1: strace wrapper
-        (dirty_trace, "", 0),  # attempt 1: cat trace
+        (dirty_trace, "", 0),  # attempt 1: cat trace, note that this is nonwhitelisted as dirty_trace
         ("", "", 0),  # attempt 2: strace wrapper
         (dirty_trace, "", 0),  # attempt 2: cat trace
         ("", "", 0),  # attempt 3: strace wrapper
@@ -3611,6 +3611,7 @@ def test_ai_hook_heuristic3_fail(monkeypatch):
         instance_id="i-test",
         WATCHDOG_TIMEOUT=5,
         replayed_commands=[
+            # This MUST be a strace-wrapped command otherwise heuristic3 will not be hit
             "strace -f -e write,execve -o /tmp/trace.log bash -c 'fail' 2>/dev/null && cat /tmp/trace.log >&2"
         ],
         extra_tags=["from_module2e"],
