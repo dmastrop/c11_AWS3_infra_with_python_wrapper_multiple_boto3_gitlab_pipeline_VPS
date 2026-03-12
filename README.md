@@ -5130,14 +5130,34 @@ into this registry_entry.
 
 That dirty_trace is:
 
-'''
+```
 'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18'
-'''
+```
 
 This pytest test case is one of the most complex in that it tests not only the AI/MCP HOOK code but also the strace logic and discernment for
 an ultimate heurstic#3 catch.
 
+1. Wrapper command runs  
+2. Watchdog shows empty stderr 
+3. Trace file is read  
+4. Dirty trace is shown  
+5. Heuristic3 retries 
+6. Repeat for attempts 2 and 3  
+7. AI/MCP HOOK fires  
+8. Cleanup commands succeed  
+9. Retry succeeds
+10.Registry entry confirms success
 
+It illustrates: 
+- the strace wrapper  
+- the retry loop  
+- the trace injection  
+- the dirty trace  
+- the AI/MCP HOOK  
+- the cleanup  
+- the retry  
+- the success  
+- the registry entry  
 
 
 
