@@ -4998,16 +4998,144 @@ elicit the desired response (in this particular pytest test case an AI success a
 
 Here is the pytest test output for this particular strace heuristic#3 failure. 
 Both install_success (where the AI retry command is successful) and the install_failed (where the AI retry command is not successful) were
-tested. The output below is for the install_success case.
+tested. The output below is for the install_success case. So the original command fails three times and the AI/MCP HOOK in then invoked and
+the AI assisted command resolves the issue resulting in an install_success registry_entry for the node.
+
 
 Embedded NOTES are added with the <<<<<<<
 
 
 
 ```
+============================================================== test session starts ===============================================================
+platform linux -- Python 3.12.5, pytest-9.0.2, pluggy-1.6.0 -- /home/ubuntu/course11_devops_startup/tmp_ansible_venv/latestenv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
+collected 1 item                                                                                                                                 
 
+tests/test_ai_hook_v7.py::test_ai_hook_heuristic3_success [1.2.3.4] [2026-03-12 02:14:11.455355] Replay 1/1: strace -f -e write,execve -o /tmp/trace_byop6g48.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_byop6g48.log >&2 (Attempt 1)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: ''         <<<< First original command execution FakeSSH2 monkeypatched
+[1.2.3.4] 🔍 Executing trace read: cat /tmp/trace_byop6g48.log
+[1.2.3.4] 🔍 Trace file contents:
+1234 write(2, "FATAL: bad thing\n", 18) = 18    <<<<< Second command that is ssh executed using the FakeSSH2 monkeypatch. This is the actual strace dirty_trace output that is injected into the stderr so that the heuristic#3 fires off
+
+[1.2.3.4] ⚠️ Unexpected strace stderr — retrying attempt 1
+[1.2.3.4] [2026-03-12 02:14:16.461571] Replay 1/1: strace -f -e write,execve -o /tmp/trace_dkei69tb.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_dkei69tb.log >&2 (Attempt 2)
+[1.2.3.4] �� Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: ''       <<<<< Second orignal command execution
+[1.2.3.4] 🔍 Executing trace read: cat /tmp/trace_dkei69tb.log
+[1.2.3.4] 🔍 Trace file contents:
+1234 write(2, "FATAL: bad thing\n", 18) = 18    <<<< The ssh cat on the strace log for the second command execution
+
+[1.2.3.4] ⚠️ Unexpected strace stderr — retrying attempt 2
+[1.2.3.4] [2026-03-12 02:14:21.462313] Replay 1/1: strace -f -e write,execve -o /tmp/trace_85obklwv.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_85obklwv.log >&2 (Attempt 3)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: ''      <<<<< Third original command execution
+[1.2.3.4] 🔍 Executing trace read: cat /tmp/trace_85obklwv.log
+[1.2.3.4] 🔍 Trace file contents:
+1234 write(2, "FATAL: bad thing\n", 18) = 18   <<<<< The ssh cat on the strace log for the third command execution
+
+AI_MCP_HOOK[1.2.3.4] 🔍 Invoking AI/MCP recovery engine...   AI/MCP HOOK invocation following the third failed attempt
+
+
+AI_MCP_HOOK[1.2.3.4] �� AI plan received: action=cleanup_and_retry   <<<<Fake LLM plan from the monkeypatched mcpclient
+
+
+AI_MCP_HOOK[1.2.3.4] 🧹 AI cleanup: rm -f /var/lib/dpkg/lock    <<<< First AI cleanup command. FakeSSH2 monkeypatches this
+[1.2.3.4] 📥 Watchdog read: 11 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 11 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+cleanup1 okcleanup1 ok
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🧹 AI cleanup: rm -f /var/lib/dpkg/lock-frontend    <<<< Second AI cleanup command. FakeSSH2 monkeypatches this
+[1.2.3.4] 📥 Watchdog read: 11 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 11 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+cleanup2 okcleanup2 ok
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🔁 AI retry: echo AI_RETRY_OK     <<<< First and only AI retry command.This is monkeypatched with FakeSSH2 to be successful
+[1.2.3.4] 📥 Watchdog read: 8 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 8 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+retry okretry ok
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] AI retry exit=0     <<<<< AI retry command is successful based upon the exit code/exit status of 0
+
+AI_MCP_HOOK[1.2.3.4] 🎉 All retry commands succeeded — AI repaired the command!
+
+===== REGISTRY ENTRY (pytest9C) =====
+status: install_success
+attempt: 0
+timestamp: 2026-03-12 02:14:21.463375
+pid: 2817088
+thread_id: 123895174171712
+thread_uuid: d90f313f
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'stderr_detected', "strace -f -e write,execve -o /tmp/trace_85obklwv.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_85obklwv.log >&2", 'command_retry_3', 'exit_status_zero', 'non_whitelisted_stderr', 'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18', '1234 write(2, "FATAL: bad thing\\n", 18) = 18', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK'], 'ai_failed_command': None}
+=====================================
+
+PASSED
+
+================================================================ warnings summary ================================================================
+tests/test_ai_hook_v7.py::test_ai_hook_heuristic3_success
+  /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py:2460: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": str(datetime.utcnow()),
+
+tests/test_ai_hook_v7.py::test_ai_hook_heuristic3_success
+  /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py:3590: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": str(datetime.utcnow()),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================= 1 passed, 2 warnings in 10.38s ========================================================
 ```
+NOTE that the tags include all the ai_tags and that the ai_metadata is appended to the registry_entry.
+NOTE that the non_whitelisted_material has the precise strace error code that has been injected into the stderr so that it can be integrated
+into this registry_entry. 
 
+That dirty_trace is:
+
+'''
+'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18'
+'''
+
+This pytest test case is one of the most complex in that it tests not only the AI/MCP HOOK code but also the strace logic and discernment for
+an ultimate heurstic#3 catch.
 
 
 
