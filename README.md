@@ -5230,6 +5230,53 @@ represented and digested:
 - ai_failed_command semantics
 - invocation of hook (invoke_ai_hook()) path origin (heuristic4 vs. heuristicx vs. passthrough)
 
+##### High level overview
+
+**AI/MCP Action Tests**
+1. Test 1 — AI FIXED → install_success  
+2. Test 2 — AI FAILED → install_failed  
+3. Test 3 — AI FALLBACK  
+4. Test 4 — AI ABORT  
+5. Test 5 — UNKNOWN ACTION  
+
+**cleanup_and_retry Tests**
+6. Test 6 — cleanup_and_retry_success  
+7. Test 7 — retry second command fails  
+8. Test 7B — retry first command fails  
+9. Test 7C — cleanup fails, retry succeeds  
+10. Test 7D — cleanup fails, retry fails  
+11. Test 7E — cleanup fails, retry1 fails  
+12. Test 7F — cleanup succeeds, retry empty → fallback  
+13. Test 7G.1 — cleanup empty, retry succeeds  
+14. Test 7G.2 — cleanup empty, retry fails  
+15. Test 7H — cleanup present, retry empty → fallback  
+16. Test 7I — cleanup empty, retry empty → fallback  
+17. Test 7J — cleanup empty, retry key missing → fallback  
+18. Test 7K — cleanup empty, retry=None → fallback  
+19. Test 7L — cleanup empty, retry whitespace → fallback  
+20. Test 7M — mixed retry, valid first → success  
+21. Test 7N — mixed retry, valid first → failure  
+22. Test 7O — mixed retry, whitespace first → success  
+23. Test 7P — whitespace cleanup + whitespace retry + valid → success  
+24. Test 7Q — whitespace cleanup + whitespace retry → fallback  
+
+**retry_modified Tests**
+25. Test 8 — retry_modified empty  
+26. Test 8B — retry_modified missing  
+27. Test 8C — retry_modified None  
+28. Test 8D — retry_modified whitespace  
+
+**Non-strace Heuristic Tests**
+29. Test 9A — Heuristic4 stub → AI success  
+30. Test 9A.2 — Heuristic4 stub → AI fail  
+31. Test 9B — Heuristic5 → AI success  
+32. Test 9B.2 — Heuristic5 → AI fail  
+
+**Strace Heuristic Tests**
+33. Test 9C — Heuristic3 → AI success  
+34. Test 9C.2 — Heuristic3 → AI fail  
+35. Test 9D — Heuristic2 → AI success  
+36. Test 9D.2 — Heuristic2 → AI fail  
 
 
 
