@@ -5233,6 +5233,7 @@ represented and digested:
 ##### High level overview
 
 **AI/MCP Action Tests**
+
 1. Test 1 — AI FIXED → install_success  
 2. Test 2 — AI FAILED → install_failed  
 3. Test 3 — AI FALLBACK  
@@ -5240,6 +5241,7 @@ represented and digested:
 5. Test 5 — UNKNOWN ACTION  
 
 **cleanup_and_retry Tests**
+
 6. Test 6 — cleanup_and_retry_success  
 7. Test 7 — retry second command fails  
 8. Test 7B — retry first command fails  
@@ -5261,18 +5263,21 @@ represented and digested:
 24. Test 7Q — whitespace cleanup + whitespace retry → fallback  
 
 **retry_modified Tests**
+
 25. Test 8 — retry_modified empty  
 26. Test 8B — retry_modified missing  
 27. Test 8C — retry_modified None  
 28. Test 8D — retry_modified whitespace  
 
 **Non-strace Heuristic Tests**
+
 29. Test 9A — Heuristic4 stub → AI success  
 30. Test 9A.2 — Heuristic4 stub → AI fail  
 31. Test 9B — Heuristic5 → AI success  
 32. Test 9B.2 — Heuristic5 → AI fail  
 
 **Strace Heuristic Tests**
+
 33. Test 9C — Heuristic3 → AI success  
 34. Test 9C.2 — Heuristic3 → AI fail  
 35. Test 9D — Heuristic2 → AI success  
