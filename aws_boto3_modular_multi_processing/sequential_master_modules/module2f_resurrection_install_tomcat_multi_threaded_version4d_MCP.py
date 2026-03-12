@@ -2144,6 +2144,13 @@ def resurrection_install_tomcat(
                         trace_in, trace_out, trace_err = ssh.exec_command(f"cat {trace_path_extracted}")
                         trace_output = trace_out.read().decode()
                         stderr_output = trace_output
+                        
+                        #### Add printout of the strace trace log. This will be done per retry loop on the strace wrapped command ####
+                        print(f"[{ip}] 🔍 Executing trace read: cat {trace_path_extracted}")
+                        print(f"[{ip}] 🔍 Trace file contents:\n{trace_output}")
+
+
+
 
                         # Find final exit status for shell PID, fallback to last seen if shell PID inference fails
                         exit_lines = re.findall(r"(\d+)\s+\+\+\+ exited with (\d+) \+\+\+", trace_output)

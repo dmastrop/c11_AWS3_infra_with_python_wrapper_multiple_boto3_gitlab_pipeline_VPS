@@ -6349,6 +6349,10 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
 
                         print(f"[{ip}] strace output:\n{trace_output}")
                         stderr_output = trace_output  # Inject strace output into stderr
+                        
+                        #### Print out the actual trace_output from the strace logs per strace command attempt ####
+                        print(f"[{ip}] 🔍 Trace file contents:\n{trace_output}")
+
 
                         # from the trace_output (injected into stderr_output) parse out the actual exit status of the 
                         # wrapped command and not of strace itself (which is based on 
