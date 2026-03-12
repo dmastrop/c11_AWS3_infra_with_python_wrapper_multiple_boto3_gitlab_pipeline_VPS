@@ -4071,7 +4071,7 @@ all the raw persistent state variables.
 
 
 
-#### **The tagging and ai_metadata construction process from the Code point of view**
+#### **The tagging and ai_metadata construction process from the Code point of view (fallback scenario)**
 
 
 
@@ -4570,7 +4570,7 @@ this:
 
 
 ```
- pytest7 These are the plan cleanup and retry commands sent to the node
+# pytest7 These are the faike simulated plan cleanup and retry commands sent to the hypothetical node
 def make_plan_cleanup_and_retry_failure():
     # Same plan shape; FakeSSH2 script will control failure vs success
     return {
@@ -4653,6 +4653,139 @@ strace failure blocks, the same general approach can be used but with some added
 section below.
 
 
+---
+
+
+Here is the complete output of this sample pytest7 test case scenario that was desribed above where it is  cleanup_and_retry_failure on 
+second command (last retry command), just as desicribed above:
+
+NOTES are embedded with the <<<<<<<<
+
+```
+============================================================== test session starts ===============================================================
+platform linux -- Python 3.12.5, pytest-9.0.2, pluggy-1.6.0 -- /home/ubuntu/course11_devops_startup/tmp_ansible_venv/latestenv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
+collected 1 item                                                                                                                                 
+
+tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure [1.2.3.4] [2026-03-11 23:46:29.484055] Replay 1/1: echo test (Attempt 1)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+[1.2.3.4] ⚠️ Non-zero exit — retrying attempt 1    <<< First intentional native command failure. Response from FakeSSH2 monkeypatch <<<<<<<<<
+[1.2.3.4] [2026-03-11 23:46:34.490151] Replay 1/1: echo test (Attempt 2)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+[1.2.3.4] ⚠️ Non-zero exit — retrying attempt 2 <<<< Second intentional native command failure. Response from FakeSSH2 monkeypatch <<<<<<<<
+[1.2.3.4] [2026-03-11 23:46:39.490712] Replay 1/1: echo test (Attempt 3)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error' <<< Third intentional native command failure now invokes the AI/MCP HOOK. Response is from FakeSSH2 monkeypatch
+
+
+AI_MCP_HOOK[1.2.3.4] 🔍 Invoking AI/MCP recovery engine... <<<< invocation of the _invoke_ai_hook() function for attempted recovery
+
+
+AI_MCP_HOOK[1.2.3.4] �� AI plan received: action=cleanup_and_retry  <<<<< fake plan is received from monkeypatched mcpclient
+
+
+AI_MCP_HOOK[1.2.3.4] 🧹 AI cleanup: rm -f /var/lib/dpkg/lock  <<<< execution of first cleanup command. The response is from FakeSSH2 script
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🧹 AI cleanup: rm -f /var/lib/dpkg/lock-frontend   <<<< execution of the second cleanup command. The response is from FakeSSH2 script
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🔁 AI retry: echo AI_RETRY_1    <<<< execution of the first retry command. The response is from FakeSSH2 script
+[1.2.3.4] 📥 Watchdog read: 13 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 13 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+AI_RETRY_1 okAI_RETRY_1 ok    <<<< we want the first retry command to succeed so that we can test the second retry command (see below)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+AI_MCP_HOOK[1.2.3.4] AI retry exit=0
+
+
+AI_MCP_HOOK[1.2.3.4] 🔁 AI retry: echo AI_RETRY_2  <<<< execution of the second retry command. The response is from FakeSSH2 script
+[1.2.3.4] 📥 Watchdog read: 24 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 24 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+AI_RETRY_2 still failingAI_RETRY_2 still failing  <<<< we intentionally fail the second AI retry command execution to force the desired code path
+[1.2.3.4] 📥 Watchdog read: 20 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 20 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+cleanup retry failedcleanup retry failed
+AI_MCP_HOOK[1.2.3.4] AI retry exit=1  <<<<<< exit status is 1 for failure on the second retry command
+AI_MCP_HOOK[1.2.3.4] ❌ Retry command failed — aborting retry sequence   <<<< code has correctly identified the failed command and will immediately create an install_failed registry_entry for the node
+
+
+<<<<< Note in the regisry_entry below, the ai_tags and ai_metadata. They are all checked with asserts in the pytest test code.
+
+
+===== REGISTRY ENTRY (pytest7) =====
+status: install_failed
+attempt: -1
+pid: 2814647
+thread_id: 129582933650496
+thread_uuid: 3579f389
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-11 23:46:39.491178
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}
+================================
+
+DEBUG: registry (cleanup_and_retry failure) = {'status': 'install_failed', 'attempt': -1, 'pid': 2814647, 'thread_id': 129582933650496, 'thread_uuid': '3579f389', 'public_ip': '1.2.3.4', 'private_ip': '10.0.0.1', 'timestamp': '2026-03-11 23:46:39.491178', 'tags': ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*'], 'ai_metadata': {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}}
+PASSED
+
+================================================================ warnings summary ================================================================
+tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
+  /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py:2592: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = str(datetime.utcnow())
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================= 1 passed, 1 warning in 10.37s ==========================================================
+
+```
+
+
+
+
+
 
 #### Extending the pytest test cases to strace wrapped commands
 
@@ -4697,6 +4830,15 @@ stderr output. This has to be done for every strace retry attempt (there are typ
 the FakeSSH2 script has to have the following format to effectively monkeypatch the ssh in this scenario:
 
 ```
+
+    # Synthetic dirty trace log (non-whitelisted)
+    dirty_trace = "1234 write(2, \"FATAL: bad thing\\n\", 18) = 18\n"
+
+    # FakeSSH2 script:
+    #   - 3 attempts of the strace wrapper → exit=0, stderr=""
+    #   - 3 trace reads (cat <trace_path>) → dirty trace
+    #   - cleanup1 ok
+    #   - cleanup2 ok
     #   - retry ok
     script = [
         ("", "", 0),  # attempt 1: strace wrapper
@@ -4708,8 +4850,13 @@ the FakeSSH2 script has to have the following format to effectively monkeypatch 
         ("cleanup1 ok", "", 0),
         ("cleanup2 ok", "", 0),
         ("retry ok", "", 0),
-    ]
 ```
+NOTE that the dirty_trace is the string: 
+```
+    dirty_trace = "1234 write(2, \"FATAL: bad thing\\n\", 18) = 18\n"
+```
+
+So this should appear in the pytest output when these types of strace pytests are run. 
 
 
 Note that the first execution of the full strace wrapped command (replayed_commands in the snippet above), is monkeypatched with a
@@ -4753,9 +4900,21 @@ and that is done with the second line in the script:
 dirty_trace represents a simulated strace error output that would in real life be stored in the /tmp/trace.log file.
 This is not in the STRACE_WHITELIST_REGEX list of whitelisted strace output in the module, and so this will be flagged as 
 nonwhitelisted material by the strace heuristic 2 and 3 code. This is how the heuristic2 and 3 code blocks are hit using the pytest
-monkeypatching. Note that we don't care about the stderr and the exit_status of 0 for the cat command itself. We just need the 
+monkeypatching. 
+
+Note that we don't care about the stderr and the exit_status of 0 for the cat command itself. We just need the 
 stdout which has the dirty_trace, which can then be injected into the stderr as the error message for the strace command execution. This is
 the key to firing off the heuristic. (see the code below: if non_whitelisted_lines:.....) 
+
+The dirty_trace is the string: 
+
+```
+"1234 write(2, \"FATAL: bad thing\\n\", 18) = 18\n" 
+```
+
+so this should appear as a response to the cat of the  strace logs by the FakeSSH2 in the pytest outupt when the test is run.
+
+
 
 The two script lines are repeated 3 times to cause the code to flow into the heuristic and fail the node at RETRY_LIMIT -1. 
 However, now the AI/MCP HOOK code is added so that on this last failure attempt the AI/MCP HOOK is invoked for one final attempt at trying to 
@@ -4764,7 +4923,12 @@ get the command to execute by consulting with the LLM.
 This is how all of the heuristic pytest codes are invoked, but the strace requires this special monkeypatch of the FakeSSH2 script described
 above.
 
-Here is where the heuristic#3 code path is, and note how the AI/MCP HOOK is invoked on the last retry to try to remediate the failed node.
+
+
+Here is where the strace heuristic#3 code path is, and note how the AI/MCP HOOK is invoked on the last retry to try to remediate the failed 
+initial native command:
+
+
 ```
 
                        # Zero exit, but non-whitelisted stderr => fail on final attempt, else retry
@@ -4827,6 +4991,22 @@ monkeypatch to the mcpclient so that the LLM fake plan response is, for example:
 
 These 2 cleanup commands and the retry command are responded to via the last 3 lines in the FakeSSH2 monkeypatch script shown earlier, to
 elicit the desired response (in this particular pytest test case an AI success and ultimately an install_success for the node status.
+
+
+
+---
+
+Here is the pytest test output for this particular strace heuristic#3 failure. 
+Both install_success (where the AI retry command is successful) and the install_failed (where the AI retry command is not successful) were
+tested. The output below is for the install_success case.
+
+Embedded NOTES are added with the <<<<<<<
+
+
+
+```
+
+```
 
 
 

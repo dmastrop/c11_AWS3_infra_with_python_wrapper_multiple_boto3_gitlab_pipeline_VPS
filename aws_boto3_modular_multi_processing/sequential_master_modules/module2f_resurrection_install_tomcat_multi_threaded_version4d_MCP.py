@@ -2136,6 +2136,40 @@ def resurrection_install_tomcat(
 
                     if "strace" in command and not stderr_output.strip():
                         # Extract trace_path from command
+
+                        ###############################################################################################################
+                        # NOTE ABOUT TRACE PATH EXTRACTION (module2f vs module2)
+                        #
+                        # module2f replays commands that were previously executed and recorded by module2e. These replayed commands
+                        # may be mutated, truncated, reformatted, or partially corrupted due to:
+                        #   - serialization/deserialization,
+                        #   - whitespace normalization,
+                        #   - earlier bugs,
+                        #   - human edits,
+                        #   - or LLM‑generated output.
+                        #
+                        # Because of this, the strace wrapper command may not always contain a clean, well‑formed "-o <trace_path>"
+                        # segment. If we blindly split on "-o", module2f could crash with IndexError or ValueError.
+                        #
+                        # To prevent this, module2f uses a defensive extraction:
+                        #
+                        #       try:
+                        #           trace_path_extracted = command.split("-o")[1].split()[0].strip()
+                        #       except Exception:
+                        #           trace_path_extracted = trace_path   # fallback to the current mutation
+                        #
+                        # This mutation‑protection logic is REQUIRED in module2f because it operates on *historical* commands that
+                        # may not be trustworthy.
+                        #
+                        # In contrast, module2 (the original executor) *constructs* the strace wrapper itself. It generates the
+                        # trace_path and injects it into the command, guaranteeing that "-o <trace_path>" is always present and
+                        # well‑formed. Therefore, module2 does NOT require this defensive extraction logic.
+                        #
+                        # Summary:
+                        #   - module2  : producer of clean strace commands → safe → no mutation protection needed
+                        #   - module2f : consumer of replayed commands     → unsafe → mutation protection required
+                        ###############################################################################################################
+
                         try:
                             trace_path_extracted = command.split("-o")[1].split()[0].strip()
                         except Exception:
