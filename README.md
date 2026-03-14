@@ -5288,7 +5288,7 @@ represented and digested:
 ##### Pytest test case matrix
 
 
-<table>
+<table style="table-layout:auto; width:100%;">
   <tr>
     <th>Test #</th>
     <th>Test Name</th>
@@ -5297,13 +5297,12 @@ represented and digested:
     <th>Retry</th>
     <th>Heuristic</th>
     <th>Strace?</th>
-    <th style="min-width:200px">Retry Loop Behavior</th>
+    <th style="min-width:200px; white-space:normal; word-break:break-word;">Retry Loop Behavior</th>
     <th>Expected Outcome</th>
-    <th style="min-width:200px; word-break:break-word;">Key Registry Tags</th>
-    <th style="min-width:200px; word-break:break-word;">AI Metadata (Key Fields)</th>
+    <th style="min-width:200px; white-space:normal; word-break:break-word;">Key Registry Tags</th>
+    <th style="min-width:200px; white-space:normal; word-break:break-word;">AI Metadata (Key Fields)</th>
   </tr>
-
-  <!-- ===================== ROW 1 ===================== -->
+<!-- ===================== ROW 1 ===================== -->
   <tr>
     <td><b>1</b></td>
     <td><b>AI FIXED → install_success</b></td>
@@ -5312,13 +5311,13 @@ represented and digested:
     <td><code>echo AI_FIXED</code></td>
     <td>None</td>
     <td>No</td>
-    <td>
+    <td style="white-space:normal; word-break:break-word;">
       exit≠0 + stderr present<br>
       → retry 3 times<br>
       → AI HOOK invoked
     </td>
     <td><code>install_success</code></td>
-    <td style="word-break:break-word;">
+    <td style="white-space:normal; word-break:break-word;">
       fatal_exit_nonzero,<br>
       exit_status_1,<br>
       stderr_present,<br>
@@ -5327,7 +5326,7 @@ represented and digested:
       ai_plan_action:retry_with_modified_command,<br>
       ai_assisted:*echo AI_FIXED*
     </td>
-    <td style="word-break:break-word;">
+    <td style="white-space:normal; word-break:break-word;">
       ai_invoked=True<br>
       ai_fallback=False<br>
       action=retry_with_modified_command<br>
@@ -5345,14 +5344,14 @@ represented and digested:
     <td><code>echo AI_FAILED</code></td>
     <td>None</td>
     <td>No</td>
-    <td>
+    <td style="white-space:normal; word-break:break-word;">
       exit≠0 + stderr present<br>
       → retry 3 times<br>
       → AI HOOK invoked<br>
       → AI modified retry fails
     </td>
     <td><code>install_failed</code></td>
-    <td style="word-break:break-word;">
+    <td style="white-space:normal; word-break:break-word;">
       fatal_exit_nonzero,<br>
       exit_status_1,<br>
       stderr_present,<br>
@@ -5361,7 +5360,7 @@ represented and digested:
       ai_plan_action:retry_with_modified_command,<br>
       ai_assisted:*echo AI_FAILED*
     </td>
-    <td style="word-break:break-word;">
+    <td style="white-space:normal; word-break:break-word;">
       ai_invoked=True<br>
       ai_fallback=False<br>
       action=retry_with_modified_command<br>
@@ -5369,8 +5368,6 @@ represented and digested:
       ai_failed_command='echo AI_FAILED'
     </td>
   </tr>
-
-</table>
 
 
 ### **Real-life validation**
