@@ -5368,7 +5368,7 @@ represented and digested:
       ai_failed_command='echo AI_FAILED'
     </td>
   </tr>
-
+</table>
 
 ### **Real-life validation**
 
