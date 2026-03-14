@@ -5293,7 +5293,7 @@ represented and digested:
 | Test # | Test Name | AI Action | Cleanup | Retry | Heuristic | Strace? | Retry Loop Behavior | Expected Outcome | Key Registry Tags | AI Metadata (Key Fields) |
 |--------|-----------|-----------|---------|--------|-----------|---------|----------------------|------------------|-------------------|---------------------------|
 | **1** | **AI FIXED → install_success** | `retry_with_modified_command` | None | `echo AI_FIXED` | None | No | <div>exit≠0 + stderr present<br>→ retry 3 times<br>→ AI HOOK invoked</div> | `install_success` | `fatal_exit_nonzero`, `exit_status_1`, `stderr_present`, `nonwhitelisted_material: synthetic errorsynthetic error`, `ai_invoked_true`, `ai_plan_action:retry_with_modified_command`, `ai_assisted:*echo AI_FIXED*` | <div>ai_invoked=True<br>ai_fallback=False<br>action=retry_with_modified_command<br>commands=['echo AI_FIXED']<br>ai_failed_command=None</div> |
-
+| **2** | **AI FAILED → install_failed** | `retry_with_modified_command` | None | `echo AI_FAILED` | None | No | <div>exit≠0 + stderr present<br>→ retry 3 times<br>→ AI HOOK invoked<br>→ AI modified retry fails</div> | `install_failed` | `fatal_exit_nonzero`, `exit_status_1`, `stderr_present`, `nonwhitelisted_material: synthetic errorsynthetic error`, `ai_invoked_true`, `ai_plan_action:retry_with_modified_command`, `ai_assisted:*echo AI_FAILED*` | <div>ai_invoked=True<br>ai_fallback=False<br>action=retry_with_modified_command<br>commands=['echo AI_FAILED']<br>ai_failed_command='echo AI_FAILED'</div> |
 
 
 
