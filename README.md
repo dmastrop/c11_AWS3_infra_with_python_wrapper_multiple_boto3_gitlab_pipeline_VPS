@@ -5288,13 +5288,89 @@ represented and digested:
 ##### Pytest test case matrix
 
 
+<table>
+  <tr>
+    <th>Test #</th>
+    <th>Test Name</th>
+    <th>AI Action</th>
+    <th>Cleanup</th>
+    <th>Retry</th>
+    <th>Heuristic</th>
+    <th>Strace?</th>
+    <th style="min-width:200px">Retry Loop Behavior</th>
+    <th>Expected Outcome</th>
+    <th>Key Registry Tags</th>
+    <th>AI Metadata (Key Fields)</th>
+  </tr>
 
+  <!-- ===================== ROW 1 ===================== -->
+  <tr>
+    <td><b>1</b></td>
+    <td><b>AI FIXED → install_success</b></td>
+    <td><code>retry_with_modified_command</code></td>
+    <td>None</td>
+    <td><code>echo AI_FIXED</code></td>
+    <td>None</td>
+    <td>No</td>
+    <td>
+      exit≠0 + stderr present<br>
+      → retry 3 times<br>
+      → AI HOOK invoked
+    </td>
+    <td><code>install_success</code></td>
+    <td>
+      fatal_exit_nonzero,<br>
+      exit_status_1,<br>
+      stderr_present,<br>
+      nonwhitelisted_material: synthetic errorsynthetic error,<br>
+      ai_invoked_true,<br>
+      ai_plan_action:retry_with_modified_command,<br>
+      ai_assisted:*echo AI_FIXED*
+    </td>
+    <td>
+      ai_invoked=True<br>
+      ai_fallback=False<br>
+      action=retry_with_modified_command<br>
+      commands=['echo AI_FIXED']<br>
+      ai_failed_command=None
+    </td>
+  </tr>
 
-| Test # | Test Name | AI Action | Cleanup | Retry | Heuristic | Strace? | Retry Loop Behavior | Expected Outcome | Key Registry Tags | AI Metadata (Key Fields) |
-|--------|-----------|-----------|---------|--------|-----------|---------|----------------------|------------------|-------------------|---------------------------|
-| **1** | **AI FIXED → install_success** | `retry_with_modified_command` | None | `echo AI_FIXED` | None | No | <div style="min-width:180px">exit≠0 + stderr present<br>→ retry 3 times<br>→ AI HOOK invoked</div> | `install_success` | `fatal_exit_nonzero`, `exit_status_1`, `stderr_present`, `nonwhitelisted_material: synthetic errorsynthetic error`, `ai_invoked_true`, `ai_plan_action:retry_with_modified_command`, `ai_assisted:*echo AI_FIXED*` | <div style="min-width:180px">ai_invoked=True<br>ai_fallback=False<br>action=retry_with_modified_command<br>commands=['echo AI_FIXED']<br>ai_failed_command=None</div> |
-| **2** | **AI FAILED → install_failed** | `retry_with_modified_command` | None | `echo AI_FAILED` | None | No | <div style="min-width:180px">exit≠0 + stderr present<br>→ retry 3 times<br>→ AI HOOK invoked<br>→ AI modified retry fails</div> | `install_failed` | `fatal_exit_nonzero`, `exit_status_1`, `stderr_present`, `nonwhitelisted_material: synthetic errorsynthetic error`, `ai_invoked_true`, `ai_plan_action:retry_with_modified_command`, `ai_assisted:*echo AI_FAILED*` | <div style="min-width:180px">ai_invoked=True<br>ai_fallback=False<br>action=retry_with_modified_command<br>commands=['echo AI_FAILED']<br>ai_failed_command='echo AI_FAILED'</div> |
+  <!-- ===================== ROW 2 ===================== -->
+  <tr>
+    <td><b>2</b></td>
+    <td><b>AI FAILED → install_failed</b></td>
+    <td><code>retry_with_modified_command</code></td>
+    <td>None</td>
+    <td><code>echo AI_FAILED</code></td>
+    <td>None</td>
+    <td>No</td>
+    <td>
+      exit≠0 + stderr present<br>
+      → retry 3 times<br>
+      → AI HOOK invoked<br>
+      → AI modified retry fails
+    </td>
+    <td><code>install_failed</code></td>
+    <td>
+      fatal_exit_nonzero,<br>
+      exit_status_1,<br>
+      stderr_present,<br>
+      nonwhitelisted_material: synthetic errorsynthetic error,<br>
+      ai_invoked_true,<br>
+      ai_plan_action:retry_with_modified_command,<br>
+      ai_assisted:*echo AI_FAILED*
+    </td>
+    <td>
+      ai_invoked=True<br>
+      ai_fallback=False<br>
+      action=retry_with_modified_command<br>
+      commands=['echo AI_FAILED']<br>
+      ai_failed_command='echo AI_FAILED'
+    </td>
+  </tr>
 
+</table>
 
 
 ### **Real-life validation**
