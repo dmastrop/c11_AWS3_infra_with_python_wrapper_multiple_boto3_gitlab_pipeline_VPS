@@ -5299,8 +5299,8 @@ represented and digested:
     <th>Strace?</th>
     <th style="min-width:200px">Retry Loop Behavior</th>
     <th>Expected Outcome</th>
-    <th>Key Registry Tags</th>
-    <th>AI Metadata (Key Fields)</th>
+    <th style="min-width:200px; word-break:break-word;">Key Registry Tags</th>
+    <th style="min-width:200px; word-break:break-word;">AI Metadata (Key Fields)</th>
   </tr>
 
   <!-- ===================== ROW 1 ===================== -->
@@ -5318,7 +5318,7 @@ represented and digested:
       → AI HOOK invoked
     </td>
     <td><code>install_success</code></td>
-    <td>
+    <td style="word-break:break-word;">
       fatal_exit_nonzero,<br>
       exit_status_1,<br>
       stderr_present,<br>
@@ -5327,7 +5327,7 @@ represented and digested:
       ai_plan_action:retry_with_modified_command,<br>
       ai_assisted:*echo AI_FIXED*
     </td>
-    <td>
+    <td style="word-break:break-word;">
       ai_invoked=True<br>
       ai_fallback=False<br>
       action=retry_with_modified_command<br>
@@ -5352,7 +5352,7 @@ represented and digested:
       → AI modified retry fails
     </td>
     <td><code>install_failed</code></td>
-    <td>
+    <td style="word-break:break-word;">
       fatal_exit_nonzero,<br>
       exit_status_1,<br>
       stderr_present,<br>
@@ -5361,7 +5361,7 @@ represented and digested:
       ai_plan_action:retry_with_modified_command,<br>
       ai_assisted:*echo AI_FAILED*
     </td>
-    <td>
+    <td style="word-break:break-word;">
       ai_invoked=True<br>
       ai_fallback=False<br>
       action=retry_with_modified_command<br>
