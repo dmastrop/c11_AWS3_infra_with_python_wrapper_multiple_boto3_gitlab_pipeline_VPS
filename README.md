@@ -5234,8 +5234,8 @@ represented and digested:
 
 **AI/MCP Action Tests**
 
-1. Test 1 — AI FIXED → install_success  
-2. Test 2 — AI FAILED → install_failed  
+1. Test 1 — AI FIXED → install_success (retry_with_modified_command) 
+2. Test 2 — AI FAILED → install_failed  (retry_with_modified_command)
 3. Test 3 — AI FALLBACK  
 4. Test 4 — AI ABORT  
 5. Test 5 — UNKNOWN ACTION  
@@ -5248,31 +5248,31 @@ represented and digested:
 9. Test 7C — cleanup fails, retry succeeds  
 10. Test 7D — cleanup fails, retry fails  
 11. Test 7E — cleanup fails, retry1 fails  
-12. Test 7F — cleanup succeeds, retry empty → fallback  
+12. Test 7F — cleanup succeeds, retry empty → fallback (derived fallback) 
 13. Test 7G.1 — cleanup empty, retry succeeds  
 14. Test 7G.2 — cleanup empty, retry fails  
-15. Test 7H — cleanup present, retry empty → fallback  
-16. Test 7I — cleanup empty, retry empty → fallback  
-17. Test 7J — cleanup empty, retry key missing → fallback  
-18. Test 7K — cleanup empty, retry=None → fallback  
-19. Test 7L — cleanup empty, retry whitespace → fallback  
+15. Test 7H — cleanup present, retry empty → fallback (derived_fallback)  
+16. Test 7I — cleanup empty, retry empty → fallback (derived_fallback)  
+17. Test 7J — cleanup empty, retry key missing → fallback (derived_fallback)
+18. Test 7K — cleanup empty, retry=None → fallback (derived_fallback)
+19. Test 7L — cleanup empty, retry whitespace → fallback (derived_fallback)
 20. Test 7M — mixed retry, valid first → success  
 21. Test 7N — mixed retry, valid first → failure  
 22. Test 7O — mixed retry, whitespace first → success  
 23. Test 7P — whitespace cleanup + whitespace retry + valid → success  
-24. Test 7Q — whitespace cleanup + whitespace retry → fallback  
+24. Test 7Q — whitespace cleanup + whitespace retry → fallback (derived_fallback)
 
-**retry_modified Tests**
+**retry_with_modified_command Tests**
 
-25. Test 8 — retry_modified empty  
-26. Test 8B — retry_modified missing  
-27. Test 8C — retry_modified None  
-28. Test 8D — retry_modified whitespace  
+25. Test 8 — retry_with_modified_command empty → derived fallback
+26. Test 8B — retry_with_modified_command  missing key → derived fallback
+27. Test 8C — retry_modified None → derived fallback
+28. Test 8D — retry_modified whitespace → derived fallback  
 
 **Non-strace Heuristic Tests**
 
 29. Test 9A — Heuristic4 stub → AI success  
-30. Test 9A.2 — Heuristic4 stub → AI fail  
+30. Test 9A.2 — Heuristic4 stub → AI fail (stub registry_entry)
 31. Test 9B — Heuristic5 → AI success  
 32. Test 9B.2 — Heuristic5 → AI fail  
 
