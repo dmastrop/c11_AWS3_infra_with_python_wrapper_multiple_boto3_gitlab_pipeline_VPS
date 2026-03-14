@@ -5302,7 +5302,8 @@ represented and digested:
     <th style="min-width:200px; white-space:normal; word-break:break-word;">Key Registry Tags</th>
     <th style="min-width:200px; white-space:normal; word-break:break-word;">AI Metadata (Key Fields)</th>
   </tr>
-<!-- ===================== ROW 1 ===================== -->
+
+  <!-- ===================== ROW 1 ===================== -->
   <tr>
     <td><b>1</b></td>
     <td><b>AI FIXED → install_success</b></td>
@@ -5312,9 +5313,9 @@ represented and digested:
     <td>None</td>
     <td>No</td>
     <td style="white-space:normal; word-break:break-word;">
-      exit≠0 + stderr present<br>
-      → retry 3 times<br>
-      → AI HOOK invoked
+      exit ≠ 0 + stderr present<br>
+      --> retry 3 times<br>
+      --> AI HOOK invoked
     </td>
     <td><code>install_success</code></td>
     <td style="white-space:normal; word-break:break-word;">
@@ -5345,10 +5346,10 @@ represented and digested:
     <td>None</td>
     <td>No</td>
     <td style="white-space:normal; word-break:break-word;">
-      exit≠0 + stderr present<br>
-      → retry 3 times<br>
-      → AI HOOK invoked<br>
-      → AI modified retry fails
+      exit ≠ 0 + stderr present<br>
+      --> retry 3 times<br>
+      --> AI HOOK invoked<br>
+      --> AI modified retry fails
     </td>
     <td><code>install_failed</code></td>
     <td style="white-space:normal; word-break:break-word;">
@@ -5368,6 +5369,7 @@ represented and digested:
       ai_failed_command='echo AI_FAILED'
     </td>
   </tr>
+
 </table>
 
 ### **Real-life validation**
