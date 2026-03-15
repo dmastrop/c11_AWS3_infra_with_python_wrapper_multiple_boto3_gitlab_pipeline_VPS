@@ -5291,101 +5291,93 @@ represented and digested:
 <div style="font-size:12px;">
 
 <table style="table-layout:auto; width:100%;">
-  <tr>
-    <th>Test #</th>
-    <th>Test Name</th>
-    <th>AI Action</th>
-    <th>Cleanup</th>
-    <th>Retry</th>
-    <th>Heuristic</th>
-    <th>Strace?</th>
-    <th style="min-width:200px; white-space:normal; word-break:break-word;">Retry Loop Behavior</th>
-    <th>Expected Outcome</th>
-    <th style="min-width:250px; white-space:normal; word-break:break-word;">Tags and AI Metadata</th>
-  </tr>
+<tr>
+<th>Test #</th>
+<th>Test Name</th>
+<th>AI Action</th>
+<th>Cleanup</th>
+<th>Retry</th>
+<th>Heuristic</th>
+<th>Strace?</th>
+<th style="min-width:200px; white-space:normal; word-break:break-word;">Retry Loop Behavior</th>
+<th>Expected Outcome</th>
+<th style="min-width:250px; white-space:normal; word-break:break-word;">Tags and AI Metadata</th>
+</tr>
 
-  <!-- ===================== ROW 1 ===================== -->
-  <tr>
-    <td><b>1</b></td>
-    <td><b>AI FIXED → install_success</b></td>
-    <td><code>retry_with_modified_command</code></td>
-    <td>None</td>
-    <td><code>echo AI_FIXED</code></td>
-    <td>None</td>
-    <td>No</td>
+<!-- ===================== ROW 1 ===================== -->
+<tr>
+<td><b>1</b></td>
+<td><b>AI FIXED → install_success</b></td>
+<td><code>retry_with_modified_command</code></td>
+<td>None</td>
+<td><code>echo AI_FIXED</code></td>
+<td>None</td>
+<td>No</td>
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr present<br>
+--> retry 3 times<br>
+--> AI HOOK invoked
+</td>
+<td><code>install_success</code></td>
+<td style="white-space:normal; word-break:break-word;">
+<b>Key Registry Tags:</b>
+<ul>
+<li>fatal_exit_nonzero</li>
+<li>exit_status_1</li>
+<li>stderr_present</li>
+<li>nonwhitelisted_material: synthetic errorsynthetic error</li>
+<li>ai_invoked_true</li>
+<li>ai_plan_action:retry_with_modified_command</li>
+<li>ai_assisted:*echo AI_FIXED*</li>
+</ul>
+<b>AI Metadata:</b>
+<ul>
+<li>ai_invoked=True</li>
+<li>ai_fallback=False</li>
+<li>action=retry_with_modified_command</li>
+<li>commands=['echo AI_FIXED']</li>
+<li>ai_failed_command=None</li>
+</ul>
+</td>
+</tr>
 
-    <td style="white-space:normal; word-break:break-word;">
-      exit ≠ 0 + stderr present<br>
-      --> retry 3 times<br>
-      --> AI HOOK invoked
-    </td>
-
-    <td><code>install_success</code></td>
-
-    <td style="white-space:normal; word-break:break-word;">
-      <b>Key Registry Tags:</b><br>
-      <ul>
-        <li>fatal_exit_nonzero</li>
-        <li>exit_status_1</li>
-        <li>stderr_present</li>
-        <li>nonwhitelisted_material: synthetic errorsynthetic error</li>
-        <li>ai_invoked_true</li>
-        <li>ai_plan_action:retry_with_modified_command</li>
-        <li>ai_assisted:*echo AI_FIXED*</li>
-      </ul>
-
-      <b>AI Metadata:</b><br>
-      <ul>
-        <li>ai_invoked=True</li>
-        <li>ai_fallback=False</li>
-        <li>action=retry_with_modified_command</li>
-        <li>commands=['echo AI_FIXED']</li>
-        <li>ai_failed_command=None</li>
-      </ul>
-    </td>
-  </tr>
-
-  <!-- ===================== ROW 2 ===================== -->
-  <tr>
-    <td><b>2</b></td>
-    <td><b>AI FAILED → install_failed</b></td>
-    <td><code>retry_with_modified_command</code></td>
-    <td>None</td>
-    <td><code>echo AI_FAILED</code></td>
-    <td>None</td>
-    <td>No</td>
-
-    <td style="white-space:normal; word-break:break-word;">
-      exit ≠ 0 + stderr present<br>
-      --> retry 3 times<br>
-      --> AI HOOK invoked<br>
-      --> AI modified retry fails
-    </td>
-
-    <td><code>install_failed</code></td>
-
-    <td style="white-space:normal; word-break:break-word;">
-      <b>Key Registry Tags:</b><br>
-      <ul>
-        <li>fatal_exit_nonzero</li>
-        <li>exit_status_1</li>
-        <li>stderr_present</li>
-        <li>nonwhitelisted_material: synthetic errorsynthetic error</li>
-        <li>ai_invoked_true</li>
-        <li>ai_plan_action:retry_with_modified_command</li>
-        <li>ai_assisted:*echo AI_FAILED*</li>
-      </ul>
-
-      <b>AI Metadata:</b><br>
-      <ul>
-        <li>ai_invoked=True</li>
-        <li>ai_fallback=False</li>
-        <li>action=retry_with_modified_command</li>
-        <li>commands=['echo AI_FAILED']</li>
-        <li>ai_failed_command='echo AI_FAILED'</li>
-      </ul>
-    </td>
-  </tr>
+<!-- ===================== ROW 2 ===================== -->
+<tr>
+<td><b>2</b></td>
+<td><b>AI FAILED → install_failed</b></td>
+<td><code>retry_with_modified_command</code></td>
+<td>None</td>
+<td><code>echo AI_FAILED</code></td>
+<td>None</td>
+<td>No</td>
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr present<br>
+--> retry 3 times<br>
+--> AI HOOK invoked<br>
+--> AI modified retry fails
+</td>
+<td><code>install_failed</code></td>
+<td style="white-space:normal; word-break:break-word;">
+<b>Key Registry Tags:</b>
+<ul>
+<li>fatal_exit_nonzero</li>
+<li>exit_status_1</li>
+<li>stderr_present</li>
+<li>nonwhitelisted_material: synthetic errorsynthetic error</li>
+<li>ai_invoked_true</li>
+<li>ai_plan_action:retry_with_modified_command</li>
+<li>ai_assisted:*echo AI_FAILED*</li>
+</ul>
+<b>AI Metadata:</b>
+<ul>
+<li>ai_invoked=True</li>
+<li>ai_fallback=False</li>
+<li>action=retry_with_modified_command</li>
+<li>commands=['echo AI_FAILED']</li>
+<li>ai_failed_command='echo AI_FAILED'</li>
+</ul>
+</td>
+</tr>
 
 </table>
 
