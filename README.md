@@ -5380,7 +5380,7 @@ ai_failed_command='echo AI_FAILED'
 </div>
 
 
-##### Pytest Tests regsitry_entrys
+##### Pytest Tests registry_entrys
 
 
 **pytest1 — AI FIXED → install_success**
