@@ -5316,7 +5316,7 @@ represented and digested:
 <td>No</td>
 
 <td style="white-space:normal; word-break:break-word;">
-exit ≠ 0 + stderr present&#8203; :: retry 3 times&#8203; :: AI HOOK invoked
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()
 </td>
 
 <td><code>install_success</code></td>
@@ -5351,7 +5351,7 @@ ai_failed_command=None
 <td>No</td>
 
 <td style="white-space:normal; word-break:break-word;">
-exit ≠ 0 + stderr present&#8203; :: retry 3 times&#8203; :: AI HOOK invoked&#8203; :: AI modified retry fails
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked&#8203; :: AI_modified_retry_fails()
 </td>
 
 <td><code>install_failed</code></td>
