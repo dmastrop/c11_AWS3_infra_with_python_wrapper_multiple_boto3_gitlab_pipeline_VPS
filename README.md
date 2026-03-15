@@ -5288,6 +5288,8 @@ represented and digested:
 ##### Pytest test case matrix
 
 
+<div style="font-size:12px;">
+
 <table style="table-layout:auto; width:100%;">
   <tr>
     <th>Test #</th>
@@ -5371,6 +5373,11 @@ represented and digested:
   </tr>
 
 </table>
+
+</div>
+
+
+
 
 ### **Real-life validation**
 
