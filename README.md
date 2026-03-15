@@ -5288,7 +5288,6 @@ represented and digested:
 ##### Pytest test case matrix
 
 
-
 <div style="font-size:12px;">
 
 <table style="table-layout:auto; width:100%;">
@@ -5304,11 +5303,7 @@ represented and digested:
 <th>Expected Outcome</th>
 <th style="min-width:200px; white-space:normal; word-break:break-word;">Key Registry Tags</th>
 <th style="min-width:200px; white-space:normal; word-break:break-word;">AI Metadata (Key Fields)</th>
-<th style="min-width:300px; white-space:pre-wrap; word-break:break-word;">Registry Entry</th>
 </tr>
-
-
-
 
 <!-- ===================== ROW 1 ===================== -->
 <tr>
@@ -5343,21 +5338,7 @@ action=retry_with_modified_command<br>
 commands=['echo AI_FIXED']<br>
 ai_failed_command=None
 </td>
-
-<td style="white-space:pre-wrap; word-break:break-word;">
-status: install_success
-attempt: 0
-timestamp: 2026-03-14 21:30:23.701531
-pid: 2837895
-thread_id: 125939569871936
-thread_uuid: 107fc8e4
-public_ip: 1.2.3.4
-private_ip: 10.0.0.1
-tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:retry_with_modified_command', 'ai_assisted:*echo AI_FIXED*']
-ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': ['echo AI_FIXED'], 'ai_failed_command': None}
-</td>
 </tr>
-
 
 <!-- ===================== ROW 2 ===================== -->
 <tr>
@@ -5391,19 +5372,6 @@ ai_fallback=False<br>
 action=retry_with_modified_command<br>
 commands=['echo AI_FAILED']<br>
 ai_failed_command='echo AI_FAILED'
-</td>
-
-<td style="white-space:pre-wrap; word-break:break-word;">
-status: install_failed
-attempt: -1
-pid: 2838970
-thread_id: 129470454615104
-thread_uuid: 68740834
-public_ip: 1.2.3.4
-private_ip: 10.0.0.1
-timestamp: 2026-03-14 22:30:22.096581
-tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:retry_with_modified_command', 'ai_assisted:*echo AI_FAILED*']
-ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': ['echo AI_FAILED'], 'ai_failed_command': 'echo AI_FAILED'}
 </td>
 </tr>
 
