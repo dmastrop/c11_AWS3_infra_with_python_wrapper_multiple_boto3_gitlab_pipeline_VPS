@@ -5382,6 +5382,8 @@ ai_failed_command='echo AI_FAILED'
 
 ##### Pytest Tests registry_entrys
 
+Click on arrow to expand each registry_entry
+
 
 **pytest1 — AI FIXED → install_success**
 
