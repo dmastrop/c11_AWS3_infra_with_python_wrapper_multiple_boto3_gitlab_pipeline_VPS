@@ -5572,6 +5572,674 @@ ai_failed_command='echo AI_RETRY_1'
 
 
 
+<!-- ===================== ROW 7C ===================== -->
+<tr>
+<td><b>7C</b></td>
+<td><b>cleanup_and_retry_cleanup_failure_retry_success → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+<td><code>echo AI_RETRY_1<br>echo AI_RETRY_2</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_two(2)_commands_partial_failure&#8203; :: retry_two(2)_commands_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo AI_RETRY_1*,<br>
+ai_assisted:*echo AI_RETRY_2*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+
+
+<!-- ===================== ROW 7D ===================== -->
+<tr>
+<td><b>7D</b></td>
+<td><b>cleanup_and_retry_cleanup_failure_retry_failure → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+<td><code>echo AI_RETRY_1<br>echo AI_RETRY_2</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_two(2)_commands_partial_failure&#8203; :: retry_two(2)_commands_partial_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo AI_RETRY_1*,<br>
+ai_assisted:*echo AI_RETRY_2*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2']<br>
+ai_failed_command='echo AI_RETRY_2'
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 7E ===================== -->
+<tr>
+<td><b>7E</b></td>
+<td><b>cleanup_and_retry_cleanup_failure_retry1_failure → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+<td><code>echo AI_RETRY_1<br>echo AI_RETRY_2</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_two(2)_commands_partial_failure&#8203; :: retry_two(2)_commands_first_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo AI_RETRY_1*,<br>
+ai_assisted:*echo AI_RETRY_2*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2']<br>
+ai_failed_command='echo AI_RETRY_1'
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 7F ===================== -->
+<tr>
+<td><b>7F</b></td>
+<td><b>cleanup_and_retry_fallback_cleanup_only → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+<td><code>None</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_two(2)_commands_success&#8203; :: derived_fallback (missing_retry_commands)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7G.1 ===================== -->
+<tr>
+<td><b>7G.1</b></td>
+<td><b>cleanup_and_retry_retry_only_success → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>None</code></td>
+<td><code>echo AI_RETRY_1<br>echo AI_RETRY_2</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_zero(0)_commands&#8203; :: retry_two(2)_commands_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*echo AI_RETRY_1*,<br>
+ai_assisted:*echo AI_RETRY_2*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['echo AI_RETRY_1', 'echo AI_RETRY_2']<br>
+ai_failed_command=None
+</td>
+</tr>
+```
+
+<!-- ===================== ROW 7G.2 ===================== -->
+<tr>
+<td><b>7G.2</b></td>
+<td><b>cleanup_and_retry_retry_only_failure → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>None</code></td>
+<td><code>echo AI_RETRY_1<br>echo AI_RETRY_2</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_zero(0)_commands&#8203; :: retry_two(2)_commands_first_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*echo AI_RETRY_1*,<br>
+ai_assisted:*echo AI_RETRY_2*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['echo AI_RETRY_1', 'echo AI_RETRY_2']<br>
+ai_failed_command='echo AI_RETRY_1'
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7H ===================== -->
+<tr>
+<td><b>7H</b></td>
+<td><b>cleanup_and_retry_cleanup_present_retry_empty → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+<td><code>None</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_two(2)_commands_success&#8203; :: derived_fallback (missing_retry_commands)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 7I ===================== -->
+<tr>
+<td><b>7I</b></td>
+<td><b>cleanup_and_retry_empty_cleanup_empty_retry → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>None</code></td>
+<td><code>None</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_zero(0)_commands&#8203; :: derived_fallback (missing_retry_commands)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7J ===================== -->
+<tr>
+<td><b>7J</b></td>
+<td><b>cleanup_and_retry_missing_retry_key → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>None</code></td>
+<td><code>None (retry key missing)</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_zero(0)_commands&#8203; :: derived_fallback (missing_retry_key)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 7K ===================== -->
+<tr>
+<td><b>7K</b></td>
+<td><b>cleanup_and_retry_retry_none → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>None</code></td>
+<td><code>None (retry=None)</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_zero(0)_commands&#8203; :: derived_fallback (retry_value_none)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7L ===================== -->
+<tr>
+<td><b>7L</b></td>
+<td><b>cleanup_and_retry_retry_whitespace → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+<td><code>None</code></td>
+<td><code>None (retry whitespace-only)</code></td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: cleanup_zero(0)_commands&#8203; :: derived_fallback (retry_whitespace_only)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 7M ===================== -->
+<tr>
+<td><b>7M</b></td>
+<td><b>cleanup_and_retry_mixed_success_valid_first → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+
+<td><code>echo OK</code><br><em>(mixed list normalized to valid-first)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+cleanup_two(2)_commands_success&#8203; :: 
+retry_mixed_list_normalized(valid_first)&#8203; :: 
+retry_command1_success(exit=0)
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7N ===================== -->
+<tr>
+<td><b>7N</b></td>
+<td><b>cleanup_and_retry_mixed_failure_valid_first → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+
+<td><code>echo FAIL</code><br><em>(mixed list normalized to valid-first)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+cleanup_two(2)_commands_success&#8203; :: 
+retry_mixed_list_normalized(valid_first)&#8203; :: 
+retry_command1_failure(exit=1)_abort
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo FAIL*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo FAIL']<br>
+ai_failed_command='echo FAIL'
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7O ===================== -->
+<tr>
+<td><b>7O</b></td>
+<td><b>cleanup_and_retry_mixed_success_valid_second → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code></td>
+
+<td><code>echo OK</code><br><em>(mixed list normalized; valid-second becomes first valid)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+cleanup_two(2)_commands_success&#8203; :: 
+retry_mixed_list_normalized(valid_second)&#8203; :: 
+retry_command1_success(exit=0)
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 7P ===================== -->
+<tr>
+<td><b>7P</b></td>
+<td><b>cleanup_and_retry_whitespace_cleanup_and_retry_success → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code><br>
+<em>(cleanup list contained whitespace; normalized to two valid commands)</em></td>
+
+<td><code>echo OK</code><br>
+<em>(retry list contained whitespace; normalized to one valid command)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+cleanup_whitespace_normalized(two_valid)_success&#8203; :: 
+retry_whitespace_normalized(valid_first)&#8203; :: 
+retry_command1_success(exit=0)
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 7Q ===================== -->
+<tr>
+<td><b>7Q</b></td>
+<td><b>cleanup_and_retry_whitespace_cleanup_and_retry_fallback → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td><code>rm -f /var/lib/dpkg/lock<br>rm -f /var/lib/dpkg/lock-frontend</code><br>
+<em>(cleanup list contained whitespace; normalized to two valid commands)</em></td>
+
+<td><em>None (retry list contained only whitespace; normalized to empty)</em></td>
+
+<td>None</td>
+<td>Yes (derived)</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+cleanup_whitespace_normalized(two_valid)_success&#8203; :: 
+retry_whitespace_normalized(empty)&#8203; :: 
+derived_fallback
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
 </table>
 
 </div>
