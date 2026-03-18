@@ -5450,6 +5450,47 @@ ai_failed_command=None
 </tr>
 
 
+
+<!-- ===================== ROW 5 ===================== -->
+<tr>
+<td><b>5</b></td>
+<td><b>UNKNOWN ACTION → install_failed</b></td>
+<td><code>some_unknown_action</code></td>
+<td>None</td>
+<td>None</td>
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: AI_HOOK_invoked _invoke_ai_hook()&#8203; :: AI_unknown_action_received (organic_fallback)
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:some_unknown_action,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=some_unknown_action<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+
+
 <!-- ===================== ROW 6 ===================== -->
 <tr>
 <td><b>6</b></td>
