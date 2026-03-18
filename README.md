@@ -5290,6 +5290,8 @@ represented and digested:
 
 <!--
    your entire original block here
+-->
+
 <div style="font-size:12px;">
 
 <table style="table-layout:auto; width:100%;">
@@ -5306,30 +5308,6 @@ represented and digested:
 <th style="min-width:200px; white-space:normal; word-break:break-word;">Key Registry Tags</th>
 <th style="min-width:200px; white-space:normal; word-break:break-word;">AI Metadata (Key Fields)</th>
 </tr>
--->
-
-
-<!-- TOP SCROLLBAR -->
-<div style="overflow-x:auto; height:20px;"></div>
-
-<!-- MAIN TABLE SCROLL CONTAINER -->
-<div style="overflow-x:auto; font-size:12px;">
-
-<table style="table-layout:auto; width:100%;">
-<tr>
-<th>Test #</th>
-<th>Test Name</th>
-<th>AI Action</th>
-<th>Cleanup</th>
-<th>Retry</th>
-<th>Heuristic</th>
-<th>Strace?</th>
-<th style="min-width:200px; white-space:normal; word-break:break-word;">Retry Loop Behavior</th>
-<th>Expected Outcome</th>
-<th style="min-width:200px; white-space:normal; word-break:break-word;">Key Registry Tags</th>
-<th style="min-width:200px; white-space:normal; word-break:break-word;">AI Metadata (Key Fields)</th>
-</tr>
-
 
 <!-- ===================== ROW 1 ===================== -->
 <tr>
