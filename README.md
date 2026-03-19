@@ -1440,6 +1440,16 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
+## UPDATES part 58: 
+
+
+## UPDATES part 57: Pytest validation of the AI/MCP Hook integration with test matrix (whitebox testing)
+
+
+
+
+
+
 ## UPDATES part 55: Phase4a.1: AI/MCP Hook Integration into module2f, the resurrection engine
 
 
@@ -1483,11 +1493,23 @@ committed.
 These sections below will be edited further as this UPDATED is completed.
 
 
+---
+
+[Back to top](#table-of-contents)
+
+---
+
 ### **AI/MCP Recovery Engine Contract Overview**
 
 The AI/MCP Recovery Engine introduces a deterministic, contract‑driven layer of intelligence into the module2f retry loop. Instead of guessing how to fix a failure, the LLM is constrained to return one of four explicitly defined recovery actions: `cleanup_and_retry`, `retry_with_modified_command`, `abort`, or `fallback`. Each action has a well‑defined semantic meaning, strict validation rules, and a predictable execution path inside module2f. This contract ensures that AI‑assisted recovery behaves safely, consistently, and transparently, even in complex or ambiguous failure scenarios. The system prompt embedded in the AI Gateway Service encodes the full behavioral contract, allowing the LLM to reason about failures while remaining fully bounded by the schema and rules enforced by module2f and the MCP Client. This design keeps the recovery engine both powerful and safe, while making the entire AI layer testable, auditable, and easy to document. If the fix involves more than one comamnd to resolve it it will use the action cleanup_and_retry.
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 ### **AI/MCP Recovery Actions**
 
 The AI/MCP Recovery Engine operates under a strict, contract‑driven schema that ensures deterministic and safe behavior during module2f recovery. The LLM is constrained to return one of four allowed actions, each with a clearly defined semantic meaning and execution path. These actions allow the AI to participate in recovery without ever stepping outside the boundaries enforced by module2f and the MCP Client.
@@ -1511,6 +1533,12 @@ This contract ensures that AI‑assisted recovery is predictable, testable, and 
 
 
  
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 
 
 ### **The following 2 sections present different perspectives on how the calls to and from the AI/MCP HOOK operate**
@@ -1591,6 +1619,12 @@ Because module2f:
 
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 
 
 
@@ -1735,6 +1769,12 @@ This design ensures that AI assistance enhances reliability without ever comprom
 Thus from both perspectives the design is highly deterministic.
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 
 ### **Flow Diagram 1 — AI/MCP Hook Control‑Flow (module2f) With Control‑Flow + Persistent State Notes**
 ```
@@ -1889,6 +1929,12 @@ Thus from both perspectives the design is highly deterministic.
 ```
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 ### **Flow Diagram 2 — Control‑Flow vs. Persistent State Variables**
 
 This diagram zooms in on the internal mechanics of module2f’s AI/MCP hook.  
@@ -2020,6 +2066,12 @@ This is the complete forensic record of the recovery attempt.
 ```
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 
 
 
@@ -2413,6 +2465,12 @@ The following diagram expands the high‑level linear flow into a complete archi
 
 ---
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 ### **Control‑flow vs persistent state variables with Examples**
 
 
@@ -2683,6 +2741,12 @@ The registry entry reflects **all** AI involvement across the entire resurrectio
 
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 
 
 
@@ -3409,6 +3473,12 @@ the logs that make it through this screening process are legitimate error logs a
 
 
 
+---
+
+[Back to top](#table-of-contents)
+
+---
+
 
 
 
@@ -3580,6 +3650,12 @@ If cleanup failures were ever needed for debugging, they appear in the live logs
 
 
 
+---
+
+[Back to top](#table-of-contents)
+
+---
+
 ### **Idempotency Failures and the Correct AI/MCP Contract Action**
 
 Idempotency failures were one of the original motivations for integrating the AI/MCP HOOK into module2f. These failures are notoriously difficult to classify using static whitelists or simple heuristics because they often present as “errors” even though the underlying condition is *not fatal* and can be resolved safely.
@@ -3727,6 +3803,12 @@ Cleanup failures appear in the **live logs**, which is the correct place for tra
 
 ---
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 ### **Differences between the abort and fallback contract actions**
 
 As noted earlier: 
@@ -3861,6 +3943,12 @@ Abort = “COMPLETELY STOP — do not continue at all.”
 
 ---
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 ### **Advanced Architectural Note: AI Derived Fallback Conditions**
 
 
@@ -4390,6 +4478,12 @@ Everything else (missing keys, None, whitespace, malformed lists) is **not part 
 
 
 
+---
+
+[Back to top](#table-of-contents)
+
+---
+
 
 ---
 
@@ -4447,6 +4541,12 @@ Everything else (missing keys, None, whitespace, malformed lists) is **not part 
 
 
 
+---
+
+[Back to top](#table-of-contents)
+
+---
+
 ### **Code Review**
 
 
@@ -4465,6 +4565,12 @@ With the full implementation now laid out, the next phase focuses on validating 
 
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 
 ### **Pytest validation**
 
@@ -6585,6 +6691,12 @@ AI Gateway Service.
 AI/MCP HOOK integration into the much larger module2 will be done as a part of Phase4a.2 of this project. (Module2f integration is this current Phase4a.1)
 
 
+
+---
+
+[Back to top](#table-of-contents)
+
+---
 [Back to top](#top)
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
