@@ -1481,6 +1481,7 @@ code. The testing is going very well. The whitebox testing is being done with py
 committed.
 
 These sections below will be edited further as this UPDATED is completed.
+
 [Back to top](#top-update55)
 
 
@@ -1517,6 +1518,7 @@ This contract ensures that AI‑assisted recovery is predictable, testable, and 
 
 
 ### **The following 2 sections present different perspectives on how the calls to and from the AI/MCP HOOK operate**
+
 [Back to top](#top-update55)
 
 
@@ -1893,6 +1895,7 @@ Thus from both perspectives the design is highly deterministic.
                  │  Return final registry tuple               │
                  └────────────────────────────────────────────┘
 ```
+
 [Back to top](#top-update55)
 
 
@@ -2025,6 +2028,7 @@ Final output:
 This is the complete forensic record of the recovery attempt.
 
 ```
+
 [Back to top](#top-update55)
 
 
@@ -2418,6 +2422,7 @@ The following diagram expands the high‑level linear flow into a complete archi
 │     return llm_response.json()                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
+
 [Back to top](#top-update55)
 
 ---
