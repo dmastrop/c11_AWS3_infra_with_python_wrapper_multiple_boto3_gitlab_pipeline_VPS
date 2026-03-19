@@ -6303,6 +6303,179 @@ ai_failed_command=None
 
 
 
+<!-- ===================== ROW 8 ===================== -->
+<tr>
+<td><b>8</b></td>
+<td><b>retry_modified_empty → install_failed</b></td>
+<td><code>retry_with_modified_command</code></td>
+
+<td><em>None (no cleanup phase for retry_with_modified_command)</em></td>
+
+<td><em>None (retry_modified list empty; normalized to empty)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+retry_modified_normalized(empty)&#8203; :: 
+derived_fallback
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:retry_with_modified_command,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=retry_with_modified_command<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 8B ===================== -->
+<tr>
+<td><b>8B</b></td>
+<td><b>retry_modified_missing → install_failed</b></td>
+<td><code>retry_with_modified_command</code></td>
+
+<td><em>None (no cleanup phase for retry_with_modified_command)</em></td>
+
+<td><em>None (retry_modified key missing; normalized to empty)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+retry_modified_missing_key_normalized(empty)&#8203; :: 
+derived_fallback
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:retry_with_modified_command,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=retry_with_modified_command<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+<!-- ===================== ROW 8C ===================== -->
+<tr>
+<td><b>8C</b></td>
+<td><b>retry_modified_none → install_failed</b></td>
+<td><code>retry_with_modified_command</code></td>
+
+<td><em>None (no cleanup phase for retry_with_modified_command)</em></td>
+
+<td><em>None (retry_modified=None; normalized to empty)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+retry_modified_none_normalized(empty)&#8203; :: 
+derived_fallback
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:retry_with_modified_command,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=retry_with_modified_command<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 8D ===================== -->
+<tr>
+<td><b>8D</b></td>
+<td><b>retry_modified_whitespace → install_failed</b></td>
+<td><code>retry_with_modified_command</code></td>
+
+<td><em>None (no cleanup phase for retry_with_modified_command)</em></td>
+
+<td><em>None (retry_modified contained only whitespace; normalized to empty)</em></td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_present&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked _invoke_ai_hook()&#8203; :: 
+retry_modified_whitespace_normalized(empty)&#8203; :: 
+derived_fallback
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic errorsynthetic error,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:retry_with_modified_command,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+action=retry_with_modified_command<br>
+commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+
 </table>
 
 </div>
