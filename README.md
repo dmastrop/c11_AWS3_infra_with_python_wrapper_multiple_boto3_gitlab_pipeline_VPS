@@ -445,7 +445,9 @@ The structured output streams and the coding that captures this is already integ
 
 [Back to top](#top-preface2)
 
-### Example of the MCP client to MCP server(module2 and 2f) flow
+
+### Example of the MCP client to MCP server (module2 and 2f) flow
+
 
 
 **1. A command fails**
