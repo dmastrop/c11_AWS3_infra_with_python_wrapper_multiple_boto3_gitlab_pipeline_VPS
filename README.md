@@ -280,9 +280,22 @@ STATUS_TAGS = {
 
 ---
 
+### **Table of Contents**
+<a name="top-preface2"></a>
+
+- [Introduction: Plane1 and Plane2 failures](#introduction-plane1-and-plane2-failures)
+- [Why Phase4 Now?](#why-phase4-now)
+- [High level code integration for Phase4a.1 and 4a.2 (AI/MCP client server architecture)](#high-level-code-integration-for-phase4a1-and-4a2-aimcp-client-server-architecture)
+- [Example of the MCP client to MCP server (module2 and 2f) flow](#example-of-the-mcp-client-to-mcp-server-module2-and-2f-flow)
+- [The issue of idempotency](#the-issue-of-idempotency)
+- [Phase4a.1 module2f integration](#phase4a1-module2f-integration)
+- [Phase4a.1 syntactic example with JSON](#phase4a1-syntactic-example-with-json)
+- [MCP Schema Versioning](#mcp-schema-versioning)
+- [High level summary of the Phase4 objectives: AI/MCP integration and ML](#high-level-summary-of-the-phase4-objectives-aimcp-integration-and-ml)
+- [Pre-emptive test design (Phase4a.1)](#pre-emptive-test-design-phase4a1)
 
 
-### Introduction
+### Introduction: Plane1 and Plane2 failures
 
 The Preface Update1 "Extensibility & Topological Mapping Architecture and Resurrection Architecture" 
 reviewed the extensibilty and topological mapping archecture and the resurrection architecture inherent in
@@ -375,6 +388,7 @@ still fail in trying to execute those commands on the entire fleet of nodes.
 Phase4b will then add the ML analystics to the logs and data that are produced during module2 through 2f execution for prediction and
 anomaly detection which will make dealing with the Plane2 issues even more robust.
 
+[Back to top](#top-preface2)
 
 
 
@@ -382,9 +396,10 @@ anomaly detection which will make dealing with the Plane2 issues even more robus
 
 The module2 → module2f pipeline has reached a level of maturity where the orchestration layer is stable, resilient, and well‑instrumented. SG_STATE replay, ghost detection, resurrection, drift remediation, and process/thread‑level fault handling are all functioning at scale. This creates the perfect foundation for Phase4: the system now produces rich, structured telemetry and deterministic registry artifacts, making it possible to introduce AI‑guided command recovery (Phase4a) and ML‑driven prediction/anomaly detection (Phase4b) without destabilizing the core architecture. The rich forensic traceability afforded by the extensive tagging in thread level registry_entrys was designed with this in mind. Phase4 builds on strength — not as a patch, but as a natural evolution of a system that is already robust. 
 
+[Back to top](#top-preface2)
 
 
-### High level code integration for Phase4a.1 and 4a.2
+### High level code integration for Phase4a.1 and 4a.2 (AI/MCP client server architecture)
 
 
 At a high level the MCP client will be integrated into the module2f and then module2
@@ -427,7 +442,9 @@ MCP will offer:
 
 The structured output streams and the coding that captures this is already integrated into modules2 and 2f.
 
-#### Example of the MCP client to MCP server(module2 and 2f) flow:
+[Back to top](#top-preface2)
+
+### Example of the MCP client to MCP server(module2 and 2f) flow:
 
 
 **1. A command fails**
@@ -472,7 +489,9 @@ LLM will excel at:
 - proposing safe recovery steps  
 - adapting to context  
 
-#### The issue of idempotency
+[Back to top](#top-preface2)
+
+### The issue of idempotency
 
 
 
@@ -495,8 +514,9 @@ But an AI‑guided replay engine can:
 
 And propose **state‑aware** recovery.
 
+[Back to top](#top-preface2)
 
-#### Phase4a.1 module2f integration:
+### Phase4a.1 module2f integration
 
 To start off with, this will be integrated into module2f the multi-threaded resurrection engine.
 
@@ -585,10 +605,11 @@ It is the *strategist*.
                  └──────────────────────────────────────────┘
 
 
+[Back to top](#top-preface2)
 
 
 
-#### Phase4a.1 syntatic example with json
+### Phase4a.1 syntatic example with json
 
 **The flow looks like this:**
 
@@ -668,27 +689,31 @@ The objective is to get the code to be as independent of human intervention as p
 find the root cause, the work effort can be very high if installing on 100s or 1000s of nodes, even if there are just a few 
 failures. Tracking them down is easy but manually remediating thm will take time.
 
+[Back to top](#top-preface2)
 
-#### MCP Schema Versioning
+
+### MCP Schema Versioning
 
 As MCP integration evolves, the request/response schemas exchanged between module2f/module2 and the AI will need versioning to ensure backward compatibility. Each MCP request should include a schema_version field (e.g., "schema_version": "1.0"), and the AI should return responses tagged with the same version. This allows the system to evolve safely over time — adding new fields, deprecating old ones, and supporting multiple MCP client versions during rollout.
 
+[Back to top](#top-preface2)
 
 
 
-### High level summary of the Phase4 objectives
+### High level summary of the Phase4 objectives: AI/MCP integration and ML
 
 
-**ML = prediction (Phase4b)**  
-- “Is this run trending toward a control‑plane failure?”  
-- “Is this node behaving like a future ghost?”  
-- “Is this SG_STATE replay likely to fail?”  
 
 **AI/MCP = action (Phase4a: 4a.1 for module2f and 4a.2 for module2)**  
 - “What should I do *right now* to fix this?”  
 - “How do I safely replay this command?”  
 - “How do I clean up partial state?”  
 - “How do I make this non‑idempotent command idempotent?”  
+
+**ML = prediction (Phase4b)**  
+- “Is this run trending toward a control‑plane failure?”  
+- “Is this node behaving like a future ghost?”  
+- “Is this SG_STATE replay likely to fail?”  
 
 Prediction without action is incomplete.  
 
@@ -712,7 +737,10 @@ This UPDATE provides a high level overview of how this Phase4a and Phase4b fits 
 It clearly defines how the Phase4 code implementation will dramaticially improve how those Plane1 and Plane2 issues are dealt with, and
 why this code is absolutely required in a highly scalable orchestrator like this.
 
+As noted earlier, Plane1 issues will be dealt with using the AI/MCP Hook integration. The Plane2 issues are already being very well addressed
+by the current code, but the ML analytics intgration will greatly enhance the predictability aspect of the current architecture.
 
+[Back to top](#top-preface2)
 
 
 ### Pre-emptive test design
@@ -741,12 +769,13 @@ The test deisgn will introduce:
 This will provide a fully hardened command suite to validate the MCP‑AI loop in  module2f prior to introducing the code into the
 very complex module2.
 
+[Back to top](#top-preface2)
 
 
 
-### WIP Update
+### Early prototype testing (Phase4a.1)
 
-WIP.  The early testing on this looks good. A separate UPDATE with the detailed architectural design and code implemenation 
+The early Phase4a.1 testing on this looks good. A separate UPDATE with the detailed architectural design and code implementation 
 will be presented. The high level architecture presented in this UPDATE was adhered to throughout the design and formal
 code implementation. This will greatly impove the error tolerance and recoverablitliy of the command Plane1 type issues. 
 This will resolve the difficult to resolve idempotency issue as well. 
@@ -760,6 +789,7 @@ See this UPDATE link below for a full Code Architectural and Design review as we
 in this Phase 4a.1 part of the project
 - [Update part 55 Phase 4a.1: AI/MCP Hook Integration into module2f, the resurrection engine](#updates-part-55-phase4a1-aimcp-hook-integration-into-module2f-the-resurrection-engine)
 
+[Back to top](#top-preface2)
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
