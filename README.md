@@ -289,10 +289,11 @@ STATUS_TAGS = {
 - [Example of the MCP client to MCP server (module2 and 2f) flow](#example-of-the-mcp-client-to-mcp-server-module2-and-2f-flow)
 - [The issue of idempotency](#the-issue-of-idempotency)
 - [Phase4a.1 module2f integration](#phase4a1-module2f-integration)
-- [Phase4a.1 syntactic example with JSON](#phase4a1-syntactic-example-with-json)
+- [Phase4a.1 syntatic example with json](#phase4a1-syntatic-example-with-json)
 - [MCP Schema Versioning](#mcp-schema-versioning)
 - [High level summary of the Phase4 objectives: AI/MCP integration and ML](#high-level-summary-of-the-phase4-objectives-aimcp-integration-and-ml)
 - [Pre-emptive test design (Phase4a.1)](#pre-emptive-test-design-phase4a1)
+- [Early prototype testing (Phase4a.1)](#early-prototype-testing-phase4a1)
 
 
 ### Introduction: Plane1 and Plane2 failures
