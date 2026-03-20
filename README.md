@@ -283,7 +283,7 @@ STATUS_TAGS = {
 
 ### **Table of Contents**
 <a name="top-preface2"></a>
-i
+
 - [Introduction to Plane1 and Plane2 failures](#introduction-to-plane1-and-plane2-failures)
 - [Why Phase4 Now?](#why-phase4-now)
 - [High level code integration for Phase4a.1 and 4a.2 (AI/MCP client server architecture)](#high-level-code-integration-for-phase4a1-and-4a2-aimcp-client-server-architecture)
