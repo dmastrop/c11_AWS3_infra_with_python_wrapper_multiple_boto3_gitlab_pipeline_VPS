@@ -779,6 +779,7 @@ in this Phase 4a.1 part of the project
 
 
 ### **Table of Contents**
+<a name="top-preface1"></a>
 
 - [1. Processes as Logical Network Segments](#1-processes-as-logical-network-segments)  
 - [2. Threads as Nodes: A Distributed Execution Fabric](#2-threads-as-nodes-a-distributed-execution-fabric)  
@@ -825,7 +826,8 @@ This segmentation mirrors how large-scale systems isolate workloads.
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -856,7 +858,8 @@ Each thread maintains:
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -889,7 +892,8 @@ Each SG is:
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -949,7 +953,8 @@ Because every command is tagged with:
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -987,7 +992,8 @@ Because the architecture is fundamentally process‑based, it maps cleanly onto 
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1011,7 +1017,8 @@ Because every event is tagged and structured, the system forms a **causal graph*
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1041,7 +1048,8 @@ Because every event is tagged and structured, the system forms a **causal graph*
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1070,7 +1078,7 @@ This positions the system as a foundation for a future **self-healing, topology-
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
 
 ---
 
@@ -1162,7 +1170,8 @@ The system becomes:
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1199,7 +1208,8 @@ The bucket handler architecture classifies each failed or incomplete thread into
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1229,7 +1239,8 @@ SG_STATE replay per uuid is not a long process. There is no need to multi-thread
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1245,7 +1256,8 @@ The command plan architecture preserves the exact command lineage for resurrecti
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1263,7 +1275,8 @@ create for each node, because ghosts by definition have no process originated re
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
@@ -1433,7 +1446,8 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 ---
 
-[Back to top](#table-of-contents)
+[Back to top](#top-preface1)
+
 
 ---
 
