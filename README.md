@@ -3561,6 +3561,439 @@ ai_failed_command=None
 </tr>
 
 
+<!-- ===================== ROW 9A ===================== -->
+<tr>
+<td><b>9A</b></td>
+<td><b>cleanup_and_retry → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo OK
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_blank&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+silent_failure,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+exit_status_nonzero_stderr_blank,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+
+
+<!-- ===================== ROW 9A.2 ===================== -->
+<tr>
+<td><b>9A.2</b></td>
+<td><b>cleanup_and_retry → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo WILL_NOT_FIX
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit ≠ 0 + stderr_blank&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+silent_failure,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+exit_status_nonzero_stderr_blank,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo WILL_NOT_FIX*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX']<br>
+ai_failed_command='echo WILL_NOT_FIX'
+</td>
+</tr>
+
+<!-- ===================== ROW 9B ===================== -->
+<tr>
+<td><b>9B</b></td>
+<td><b>cleanup_and_retry (stderr-triggered) → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo AI_RETRY_OK
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+stderr_present + exit=0&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+stderr_detected,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_zero,<br>
+non_whitelisted_stderr,<br>
+nonwhitelisted_material: DIRTY_ERROR_LINEDIRTY_ERROR_LINE,<br>
+DIRTY_ERROR_LINEDIRTY_ERROR_LINE,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo AI_RETRY_OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+<!-- ===================== ROW 9B.2 ===================== -->
+<tr>
+<td><b>9B.2</b></td>
+<td><b>cleanup_and_retry (stderr-triggered) → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo WILL_NOT_FIX
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+stderr_present + exit=0&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+stderr_detected,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_zero,<br>
+non_whitelisted_stderr,<br>
+nonwhitelisted_material: DIRTY_ERROR_LINEDIRTY_ERROR_LINE,<br>
+DIRTY_ERROR_LINEDIRTY_ERROR_LINE,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo WILL_NOT_FIX*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX']<br>
+ai_failed_command='echo WILL_NOT_FIX'
+</td>
+</tr>
+
+
+<!-- ===================== ROW 9C ===================== -->
+<tr>
+<td><b>9C</b></td>
+<td><b>cleanup_and_retry (strace-triggered) → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo AI_RETRY_OK
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+strace_stderr_present + exit=0&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+stderr_detected,<br>
+strace -f -e write,execve -o /tmp/trace_eqr8txwl.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_eqr8txwl.log >&2,<br>
+command_retry_3,<br>
+exit_status_zero,<br>
+non_whitelisted_stderr,<br>
+nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo AI_RETRY_OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 9C.2 ===================== -->
+<tr>
+<td><b>9C.2</b></td>
+<td><b>cleanup_and_retry (strace-triggered) → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo WILL_NOT_FIX
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+strace_stderr_present + exit=0&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+stderr_detected,<br>
+strace -f -e write,execve -o /tmp/trace_e8ug8hte.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_e8ug8hte.log >&2,<br>
+command_retry_3,<br>
+exit_status_zero,<br>
+non_whitelisted_stderr,<br>
+nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo WILL_NOT_FIX*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX']<br>
+ai_failed_command='echo WILL_NOT_FIX'
+</td>
+</tr>
+
+
+
+<!-- ===================== ROW 9D ===================== -->
+<tr>
+<td><b>9D</b></td>
+<td><b>cleanup_and_retry (strace-exit-triggered) → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo AI_RETRY_OK
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+strace_exit_nonzero&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+fatal_exit_nonzero,<br>
+strace -f -e write,execve -o /tmp/trace_69wa3ai7.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_69wa3ai7.log >&2,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo AI_RETRY_OK*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK']<br>
+ai_failed_command=None
+</td>
+</tr>
+
+<!-- ===================== ROW 9D.2 ===================== -->
+<tr>
+<td><b>9D.2</b></td>
+<td><b>cleanup_and_retry (strace-exit-triggered) → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+rm -f /var/lib/dpkg/lock<br>
+rm -f /var/lib/dpkg/lock-frontend
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo WILL_NOT_FIX
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+strace_exit_nonzero&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+fatal_exit_nonzero,<br>
+strace -f -e write,execve -o /tmp/trace_jha0hfr6.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_jha0hfr6.log >&2,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+1234 write(2, "FATAL: bad thing\n", 18) = 18,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock*,<br>
+ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*,<br>
+ai_assisted:*echo WILL_NOT_FIX*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+action=cleanup_and_retry<br>
+commands=['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX']<br>
+ai_failed_command='echo WILL_NOT_FIX'
+</td>
+</tr>
 
 
 </table>
