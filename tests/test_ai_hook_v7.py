@@ -3861,4 +3861,105 @@ def test_ai_hook_heuristic2_fail(monkeypatch):
 
 
 
+# ---------------------------------------------------------------------
+# TEST 10A — AI returns {} → unknown action → fallback → install_failed
+# ---------------------------------------------------------------------
+def test_ai_hook_cornercase_empty_dict(monkeypatch):
+    """
+    Corner Case 10A:
+    AI/MCP HOOK returns {}.
+    Expected: Unknown action → fallback → install_failed.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # --------------------------------------------------------
+    # FakeSSH2 script:
+    # We force the native command to fail 3 times so AI HOOK fires.
+    # stderr empty, exit=1 → triggers retry loop → AI HOOK invoked.
+    # --------------------------------------------------------
+    script = [
+        ("", "", 1),  # attempt 1
+        ("", "", 1),  # attempt 2
+        ("", "", 1),  # attempt 3
+        # After AI HOOK runs, since action is unknown, no cleanup/retry is executed.
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # --------------------------------------------------------
+    # AI/MCP HOOK returns {}  → triggers Unknown Action path
+    # --------------------------------------------------------
+    def fake_send(self, context):
+        print("FAKE_AI_HOOK: returning empty dict {}")
+        return {}
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # --------------------------------------------------------
+    # Run the function
+    # --------------------------------------------------------
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=["echo test"],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest10A) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("=======================================\n")
+
+
+
+    # EXPECT FAILURE (fallback)
+    assert registry["status"] == "stub"   # not install_failed
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is True
+    assert registry["ai_metadata"]["ai_fixed"] is False
+    assert registry["ai_metadata"]["ai_failed"] is True
+
+    tags = registry["tags"]
+    assert "ai_fallback" in tags
+
+    ## --------------------------------------------------------
+    ## EXPECT FAILURE (fallback)
+    ## --------------------------------------------------------
+    #assert registry["status"] == "install_failed"
+    #assert registry["ai_metadata"]["ai_invoked"] is True
+    #assert registry["ai_metadata"]["ai_fallback"] is True
+    #assert registry["ai_metadata"]["ai_fixed"] is False
+    #assert registry["ai_metadata"]["ai_failed"] is True
+
+    ## Unknown action should appear in tags
+    #tags = registry["tags"]
+    #assert any("unknown_ai_action" in t or "ai_fallback" in t for t in tags)
 

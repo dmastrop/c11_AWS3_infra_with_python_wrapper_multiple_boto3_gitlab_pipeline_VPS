@@ -1402,6 +1402,7 @@ def resurrection_install_tomcat(
 
         # --------------------------------------------------------
         # 3. Detect fallback conditions (IDENTICAL TO ORIGINAL)
+        # This is considered a native fallback and not a derived fallback.
         # --------------------------------------------------------
         if plan is None or plan.get("action") == "fallback" or "error" in plan:
             print(f"AI_MCP_HOOK[{ip}] ⚠️ AI fallback triggered — continuing with native logic.")
@@ -1893,7 +1894,7 @@ def resurrection_install_tomcat(
                 }
 
         # --------------------------------------------------------
-        # ACTION: abort (IDENTICAL). Always append to the existin ai_commands list
+        # ACTION: abort (IDENTICAL). Always append to the existing ai_commands list
         # --------------------------------------------------------
         if action == "abort":
             print(f"AI_MCP_HOOK[{ip}] 🛑 AI instructed abort — tagging failure.")
@@ -1909,7 +1910,8 @@ def resurrection_install_tomcat(
             }
 
         # --------------------------------------------------------
-        # Unknown action (IDENTICAL)
+        # Unknown action (IDENTICAL). Continue with native failure logic in calling function.
+        # This is considered a native fallback and not a derived fallback.
         # --------------------------------------------------------
         print(f"AI_MCP_HOOK[{ip}] ⚠️ Unknown AI action '{action}' — ignoring plan.")
         ai_fallback = True

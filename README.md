@@ -7747,6 +7747,40 @@ The contract is:
 
 Everything else (missing keys, None, whitespace, malformed lists) is **not part of the LLM contract**.
 
+
+
+
+#### Summary of Native fallback vs. Derived fallback
+
+
+**Native Fallback (LLM‑driven)**  
+- AI returns `{"action": "fallback"}`  
+- AI returns `{}`  
+- AI returns malformed plan  
+- AI returns unknown action (Note this is the official contract action "unknown" in the AI/MCP HOOK code)  
+- AI returns plan with `"error"`  
+- AI returns and ai_plan_action of `None`  
+- The fallback is caused by the AI plan itself
+
+**Derived Fallback (code‑driven)**  
+- retry empty  
+- retry whitespace  
+- retry missing  
+- retry None  
+- cleanup empty  
+- cleanup whitespace  
+- retry exit≠0  
+- retry stderr non‑empty  
+- cleanup exit≠0  
+- cleanup stderr non‑empty  
+
+This is a clean, symmetric classification.
+
+
+
+
+
+
 [Back to top](#top-update55)
 
 

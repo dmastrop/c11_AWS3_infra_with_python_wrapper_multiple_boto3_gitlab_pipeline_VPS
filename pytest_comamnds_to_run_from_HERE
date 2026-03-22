@@ -154,4 +154,5 @@ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic2_succ
 Test9d.2
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_heuristic2_fail
 
-
+Test10a corner case1
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_empty_dict
