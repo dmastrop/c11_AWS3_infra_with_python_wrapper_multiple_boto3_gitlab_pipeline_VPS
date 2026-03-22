@@ -3940,18 +3940,37 @@ def test_ai_hook_cornercase_empty_dict(monkeypatch):
 
 
 
-    # EXPECT FAILURE (fallback)
-    assert registry["status"] == "stub"   # not install_failed
+    # EXPECT FAILURE (fallback) Rev3
+    assert registry["status"] == "stub"
     assert registry["ai_metadata"]["ai_invoked"] is True
     assert registry["ai_metadata"]["ai_fallback"] is True
-    assert registry["ai_metadata"]["ai_fixed"] is False
-    assert registry["ai_metadata"]["ai_failed"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] is None
+    assert registry["ai_metadata"]["ai_commands"] == []
+    assert registry["ai_metadata"]["ai_failed_command"] is None
 
-    tags = registry["tags"]
-    assert "ai_fallback" in tags
+
+    assert "ai_fallback" in registry["tags"]
+    assert "ai_fallback_true" in registry["tags"]
+
+
+
+
+
+    ## EXPECT FAILURE (fallback) Rev2
+    #assert registry["status"] == "stub"   # not install_failed
+    #assert registry["ai_metadata"]["ai_invoked"] is True
+    #assert registry["ai_metadata"]["ai_fallback"] is True
+    #assert registry["ai_metadata"]["ai_fixed"] is False
+    #assert registry["ai_metadata"]["ai_failed"] is True
+
+    #tags = registry["tags"]
+    #assert "ai_fallback" in tags
+
+
+
 
     ## --------------------------------------------------------
-    ## EXPECT FAILURE (fallback)
+    ## EXPECT FAILURE (fallback) Rev1
     ## --------------------------------------------------------
     #assert registry["status"] == "install_failed"
     #assert registry["ai_metadata"]["ai_invoked"] is True
