@@ -2370,7 +2370,13 @@ represented and digested:
 35. Test 9D — Heuristic2 → AI success  
 36. Test 9D.2 — Heuristic2 → AI fail  
 
+** Corner Case Tests**
 
+37. Test 10A AI returns `{}` | unknown action → fallback → **install_failed** |
+38. Test 10B wrong types | unknown action → fallback → **install_failed** |
+39. Test 10C cleanup stderr | cleanup still OK → retry runs → retry determines success/failure |
+40. Test 10D retry stderr (harmless) | stderr present → retry failure → **install_failed** |
+41. Test 10E retry stderr (dirty) | stderr present → retry failure → **install_failed** |
 
 #### Pytest test case matrix (Note: due to the width of the matrix, to scroll to right use mouse cursor and pull to the right)
 
@@ -4164,6 +4170,14 @@ The entire pytest code suite is below. This includes all of the following tests 
 34. Test 9C.2 — Heuristic3 → AI fail  
 35. Test 9D — Heuristic2 → AI success  
 36. Test 9D.2 — Heuristic2 → AI fail 
+
+** Corner Case Tests**
+
+37. Test 10A AI returns `{}` | unknown action → fallback → **install_failed** |
+38. Test 10B wrong types | unknown action → fallback → **install_failed** |
+39. Test 10C cleanup stderr | cleanup still OK → retry runs → retry determines success/failure |
+40. Test 10D retry stderr (harmless) | stderr present → retry failure → **install_failed** |
+41. Test 10E retry stderr (dirty) | stderr present → retry failure → **install_failed** |
 
 
 
