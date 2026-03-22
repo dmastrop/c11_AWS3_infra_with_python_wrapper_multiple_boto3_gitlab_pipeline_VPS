@@ -3956,29 +3956,101 @@ def test_ai_hook_cornercase_empty_dict(monkeypatch):
 
 
 
-    ## EXPECT FAILURE (fallback) Rev2
-    #assert registry["status"] == "stub"   # not install_failed
-    #assert registry["ai_metadata"]["ai_invoked"] is True
-    #assert registry["ai_metadata"]["ai_fallback"] is True
-    #assert registry["ai_metadata"]["ai_fixed"] is False
-    #assert registry["ai_metadata"]["ai_failed"] is True
+# ---------------------------------------------------------------------
+# TEST 10B — AI returns wrong types → unknown action → fallback → stub
+# ---------------------------------------------------------------------
+def test_ai_hook_cornercase_wrong_types(monkeypatch):
+    """
+    Corner Case 10B:
+    AI/MCP HOOK returns a dict with wrong types.
+    Expected: Unknown action → fallback → stub.
+    """
 
-    #tags = registry["tags"]
-    #assert "ai_fallback" in tags
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
 
+    # Force clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
 
+    # --------------------------------------------------------
+    # FakeSSH2 script:
+    # Force native command to fail 3 times so AI HOOK fires.
+    # --------------------------------------------------------
+    script = [
+        ("", "", 1),  # attempt 1
+        ("", "", 1),  # attempt 2
+        ("", "", 1),  # attempt 3
+    ]
 
+    fake_ssh = FakeSSH2(script)
 
-    ## --------------------------------------------------------
-    ## EXPECT FAILURE (fallback) Rev1
-    ## --------------------------------------------------------
-    #assert registry["status"] == "install_failed"
-    #assert registry["ai_metadata"]["ai_invoked"] is True
-    #assert registry["ai_metadata"]["ai_fallback"] is True
-    #assert registry["ai_metadata"]["ai_fixed"] is False
-    #assert registry["ai_metadata"]["ai_failed"] is True
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
 
-    ## Unknown action should appear in tags
-    #tags = registry["tags"]
-    #assert any("unknown_ai_action" in t or "ai_fallback" in t for t in tags)
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # --------------------------------------------------------
+    # AI/MCP HOOK returns WRONG TYPES
+    # Examples:
+    #   {"action": 123}
+    #   {"cleanup": "not a list"}
+    #   {"retry": {"nested": "object"}}
+    # Any of these should trigger unknown action → fallback.
+    # --------------------------------------------------------
+    def fake_send(self, context):
+        print("FAKE_AI_HOOK: returning wrong types")
+        return {
+            "action": 123,              # invalid type
+            "cleanup": "not-a-list",    # invalid type
+            "retry": {"bad": "object"}  # invalid type
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # --------------------------------------------------------
+    # Run the function
+    # --------------------------------------------------------
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=["echo test"],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest10B) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("=======================================\n")
+
+    # --------------------------------------------------------
+    # EXPECT NATIVE FALLBACK → stub
+    # --------------------------------------------------------
+    assert registry["status"] == "stub"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is True
+    assert registry["ai_metadata"]["ai_plan_action"] is None
+    assert registry["ai_metadata"]["ai_commands"] == []
+    assert registry["ai_metadata"]["ai_failed_command"] is None
+
+    tags = registry["tags"]
+    assert "ai_fallback" in tags
+    assert "ai_fallback_true" in tags
 
