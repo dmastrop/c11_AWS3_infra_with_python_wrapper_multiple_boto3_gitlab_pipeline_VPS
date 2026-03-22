@@ -2370,7 +2370,7 @@ represented and digested:
 35. Test 9D — Heuristic2 → AI success  
 36. Test 9D.2 — Heuristic2 → AI fail  
 
-** Corner Case Tests**
+**Corner Case Tests**
 
 37. Test 10A AI returns `{}` | unknown action → fallback → **install_failed** |
 38. Test 10B wrong types | unknown action → fallback → **install_failed** |
@@ -4171,7 +4171,7 @@ The entire pytest code suite is below. This includes all of the following tests 
 35. Test 9D — Heuristic2 → AI success  
 36. Test 9D.2 — Heuristic2 → AI fail 
 
-** Corner Case Tests**
+**Corner Case Tests**
 
 37. Test 10A AI returns `{}` | unknown action → fallback → **install_failed** |
 38. Test 10B wrong types | unknown action → fallback → **install_failed** |
