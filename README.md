@@ -4051,6 +4051,53 @@ ai_failed_command=None
 
 
 
+<!-- ===================== ROW 10B ===================== -->
+<tr>
+<td><b>10B</b></td>
+<td><b>AI plan = wrong types → unknown action → native fallback → stub</b></td>
+<td><code>123</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+None
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+None
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit_status_nonzero_stderr_blank&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: unknown_action&#8203; :: native_fallback
+</td>
+
+<td><code>stub</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+silent_failure,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+exit_status_nonzero_stderr_blank,<br>
+ai_invoked_true,<br>
+ai_fallback_true,<br>
+ai_plan_action:123,<br>
+ai_fallback
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=True<br>
+ai_plan_action=123<br>
+ai_commands=[]<br>
+ai_failed_command=None
+</td>
+</tr>
 
 
 
