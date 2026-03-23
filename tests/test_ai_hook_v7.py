@@ -4176,6 +4176,11 @@ def test_ai_hook_cornercase_cleanup_stderr_retry_success(monkeypatch):
     assert any("ai_assisted:*echo RETRY_FIXED*" in t for t in tags)
 
 
+
+
+
+
+
 # ---------------------------------------------------------------------
 # TEST 10D — retry stderr (harmless) → retry failure → install_failed
 # ---------------------------------------------------------------------
@@ -4295,4 +4300,122 @@ def test_ai_hook_cornercase_retry_stderr_harmless(monkeypatch):
     assert any("ai_assisted:*echo RETRY_HARMLESS*" in t for t in tags)
 
 
+
+
+
+
+
+# ---------------------------------------------------------------------
+# TEST 10E — retry stderr (dirty) → retry failure → install_failed
+# ---------------------------------------------------------------------
+def test_ai_hook_cornercase_retry_stderr_dirty(monkeypatch):
+    """
+    Corner Case 10E:
+    Cleanup succeeds.
+    Retry command produces *dirty* stderr (e.g., FATAL).
+    Under current Phase4a.1 rules, ANY stderr on retry = failure.
+    Expected: install_failed.
+    """
+
+    import sys
+    import paramiko
+    import importlib
+    import my_mcp_client
+
+    # Force clean import of module2f
+    sys.modules.pop(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP",
+        None
+    )
+
+    # --------------------------------------------------------
+    # FakeSSH2 script:
+    # 3 native failures → AI HOOK invoked
+    # cleanup1: exit=0
+    # cleanup2: exit=0
+    # retry1:   exit=0 but stderr="FATAL: something bad"
+    # --------------------------------------------------------
+    script = [
+        ("", "synthetic error", 1),   # attempt 1
+        ("", "synthetic error", 1),   # attempt 2
+        ("", "synthetic error", 1),   # attempt 3
+
+        ("cleanup1 ok", "", 0),
+        ("cleanup2 ok", "", 0),
+
+        ("retry dirty", "FATAL: something bad", 0),  # dirty stderr → failure
+    ]
+
+    fake_ssh = FakeSSH2(script)
+
+    class FakeParamikoModule:
+        def SSHClient(self): return fake_ssh
+        class AutoAddPolicy: pass
+
+    monkeypatch.setattr(paramiko, "SSHClient", FakeParamikoModule().SSHClient)
+    monkeypatch.setattr(paramiko, "AutoAddPolicy", FakeParamikoModule().AutoAddPolicy)
+
+    # --------------------------------------------------------
+    # AI/MCP HOOK plan: cleanup_and_retry
+    # --------------------------------------------------------
+    def fake_send(self, context):
+        print("FAKE_AI_HOOK: retry stderr (dirty)")
+        return {
+            "action": "cleanup_and_retry",
+            "cleanup": [
+                "echo CLEANUP1",
+                "echo CLEANUP2",
+            ],
+            "retry": [
+                "echo RETRY_DIRTY",
+            ],
+        }
+
+    monkeypatch.setattr(my_mcp_client.MCPClient, "send", fake_send)
+
+    # Import module2f AFTER patching
+    m2f = importlib.import_module(
+        "aws_boto3_modular_multi_processing.sequential_master_modules."
+        "module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP"
+    )
+
+    # --------------------------------------------------------
+    # Run the function
+    # --------------------------------------------------------
+    result = m2f.resurrection_install_tomcat(
+        ip="1.2.3.4",
+        private_ip="10.0.0.1",
+        instance_id="i-test",
+        WATCHDOG_TIMEOUT=5,
+        replayed_commands=["echo test"],
+        extra_tags=["from_module2e"],
+    )
+
+    _, _, registry = result
+
+    print("\n===== REGISTRY ENTRY (pytest10E) =====")
+    for k, v in registry.items():
+        print(f"{k}: {v}")
+    print("=======================================\n")
+
+    # --------------------------------------------------------
+    # EXPECT FAILURE (retry stderr → failure)
+    # --------------------------------------------------------
+    assert registry["status"] == "install_failed"
+    assert registry["ai_metadata"]["ai_invoked"] is True
+    assert registry["ai_metadata"]["ai_fallback"] is False
+    assert registry["ai_metadata"]["ai_plan_action"] == "cleanup_and_retry"
+
+    cmds = registry["ai_metadata"]["ai_commands"]
+    assert cmds == ["echo CLEANUP1", "echo CLEANUP2", "echo RETRY_DIRTY"]
+
+    assert registry["ai_metadata"]["ai_failed_command"] == "echo RETRY_DIRTY"
+
+    tags = registry["tags"]
+    assert "ai_invoked_true" in tags
+    assert "ai_plan_action:cleanup_and_retry" in tags
+    assert any("ai_assisted:*echo CLEANUP1*" in t for t in tags)
+    assert any("ai_assisted:*echo CLEANUP2*" in t for t in tags)
+    assert any("ai_assisted:*echo RETRY_DIRTY*" in t for t in tags)
 
