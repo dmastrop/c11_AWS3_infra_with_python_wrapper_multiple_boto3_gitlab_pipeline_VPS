@@ -160,3 +160,6 @@ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_empt
 Test10b corner case2
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_wrong_types
 
+Test10c corner case3
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_cleanup_stderr_retry_success
+
