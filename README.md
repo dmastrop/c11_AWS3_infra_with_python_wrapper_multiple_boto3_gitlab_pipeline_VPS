@@ -4100,6 +4100,60 @@ ai_failed_command=None
 </tr>
 
 
+<!-- ===================== ROW 10C ===================== -->
+<tr>
+<td><b>10C</b></td>
+<td><b>cleanup stderr → retry succeeds → install_success</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo CLEANUP1<br>
+echo CLEANUP2
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo RETRY_FIXED
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+exit_status_nonzero_stderr_blank&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_success
+</td>
+
+<td><code>install_success</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+installation_completed,<br>
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+silent_failure,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+exit_status_nonzero_stderr_blank,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*echo CLEANUP1*,<br>
+ai_assisted:*echo CLEANUP2*,<br>
+ai_assisted:*echo RETRY_FIXED*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+ai_plan_action=cleanup_and_retry<br>
+ai_commands=['echo CLEANUP1', 'echo CLEANUP2', 'echo RETRY_FIXED']<br>
+ai_failed_command=None
+</td>
+</tr>
 
 
 </table>
