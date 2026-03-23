@@ -163,3 +163,7 @@ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_wron
 Test10c corner case3
 pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_cleanup_stderr_retry_success
 
+
+Test 10d corner case4
+pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cornercase_retry_stderr_harmless
+
