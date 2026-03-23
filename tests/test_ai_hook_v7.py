@@ -4202,21 +4202,22 @@ def test_ai_hook_cornercase_retry_stderr_harmless(monkeypatch):
 
     # --------------------------------------------------------
     # FakeSSH2 script:
-    # 3 native failures → AI HOOK invoked
+    # 3 native failures → AI HOOK invoked. Make sure to use stderr content to that heuristic4 goes to install_failed and not stub
     # cleanup1: exit=0
     # cleanup2: exit=0
     # retry1:   exit=0 but stderr="harmless warning"
     # --------------------------------------------------------
     script = [
-        ("", "", 1),   # attempt 1
-        ("", "", 1),   # attempt 2
-        ("", "", 1),   # attempt 3
+        ("", "synthetic error", 1),   # attempt 1
+        ("", "synthetic error", 1),   # attempt 2
+        ("", "synthetic error", 1),   # attempt 3
 
         ("cleanup1 ok", "", 0),
         ("cleanup2 ok", "", 0),
 
         ("retry harmless", "harmless warning", 0),  # stderr → failure
     ]
+
 
     fake_ssh = FakeSSH2(script)
 
