@@ -4156,6 +4156,62 @@ ai_failed_command=None
 </tr>
 
 
+
+
+<!-- ===================== ROW 10D ===================== -->
+<tr>
+<td><b>10D</b></td>
+<td><b>retry stderr (harmless) → retry failure → install_failed</b></td>
+<td><code>cleanup_and_retry</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo CLEANUP1<br>
+echo CLEANUP2
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+echo RETRY_HARMLESS
+</td>
+
+<td>None</td>
+<td>No</td>
+
+<td style="white-space:normal; word-break:break-word;">
+fatal_exit_nonzero&#8203; :: retry_three(3)_times&#8203; :: 
+AI_HOOK_invoked&#8203; :: cleanup_and_retry&#8203; :: 
+cleanup1_ok&#8203; :: cleanup2_ok&#8203; :: retry_failure
+</td>
+
+<td><code>install_failed</code></td>
+
+<td style="white-space:normal; word-break:break-word;">
+resurrection_attempt,<br>
+module2f,<br>
+from_module2e,<br>
+fatal_exit_nonzero,<br>
+echo test,<br>
+command_retry_3,<br>
+exit_status_1,<br>
+stderr_present,<br>
+nonwhitelisted_material: synthetic error,<br>
+synthetic error,<br>
+ai_invoked_true,<br>
+ai_plan_action:cleanup_and_retry,<br>
+ai_assisted:*echo CLEANUP1*,<br>
+ai_assisted:*echo CLEANUP2*,<br>
+ai_assisted:*echo RETRY_HARMLESS*
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+ai_invoked=True<br>
+ai_fallback=False<br>
+ai_plan_action=cleanup_and_retry<br>
+ai_commands=['echo CLEANUP1', 'echo CLEANUP2', 'echo RETRY_HARMLESS']<br>
+ai_failed_command='echo RETRY_HARMLESS'
+</td>
+</tr>
+
+
 </table>
 
 </div>
