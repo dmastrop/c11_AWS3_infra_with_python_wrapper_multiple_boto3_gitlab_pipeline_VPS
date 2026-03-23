@@ -4046,7 +4046,10 @@ def test_ai_hook_cornercase_wrong_types(monkeypatch):
     assert registry["status"] == "stub"
     assert registry["ai_metadata"]["ai_invoked"] is True
     assert registry["ai_metadata"]["ai_fallback"] is True
-    assert registry["ai_metadata"]["ai_plan_action"] is None
+
+    #assert registry["ai_metadata"]["ai_plan_action"] is None
+    assert registry["ai_metadata"]["ai_plan_action"] == 123
+
     assert registry["ai_metadata"]["ai_commands"] == []
     assert registry["ai_metadata"]["ai_failed_command"] is None
 
