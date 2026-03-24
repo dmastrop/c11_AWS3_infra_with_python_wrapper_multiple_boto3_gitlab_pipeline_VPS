@@ -9,9 +9,9 @@ RUN echo "Default shell: $(readlink /bin/sh)"
 RUN apt-get update && apt-get install -y bash
 
 
-#COPY ./aws_boto3_modular_multi_processing /aws_EC2
+COPY ./aws_boto3_modular_multi_processing /aws_EC2
 
-COPY . /aws_EC2
+#COPY . /aws_EC2
 # this is to accomodate the pytest test stage. The pytest test cases are in root and so if container runs them, the entire
 # root repo has to be copied over to the container.
 
@@ -19,18 +19,18 @@ COPY . /aws_EC2
 
 
 
-#RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # fix the path to requirements.txt now that entire root directory of repo is copied over into container for test stage pytest 
 # CI integration
-RUN pip install --no-cache-dir -r aws_boto3_modular_multi_processing/requirements.txt
+#RUN pip install --no-cache-dir -r aws_boto3_modular_multi_processing/requirements.txt
 
 
 
 
 
 # Install pytest for the test stage that will run the pytest test cases
-RUN pip install pytest
+#RUN pip install pytest
 
 
 
@@ -50,20 +50,19 @@ RUN pip install pytest
 
 
 
-###### These are prior to changing the COPY entire repo above for the test stage for pytest integration. Note the path.
 ########### use for multi-processing forked version
 #CMD ["python", "master_script.py"]
 
 ############ use for multi-processing spawn version
-#CMD ["python", "master_script_spawn.py"]
+CMD ["python", "master_script_spawn.py"]
 
 
 
-####### USE THIS:
+######## Does not work
 ####### These are for after changing teh COPY command to copy over the entire root repo directory for pytest test stage CI test integraion
 ########### use for multi-processing forked version
 #CMD ["python", "aws_boto3_modular_multi_processing/master_script.py"]
 
 ############ use for multi-processing spawn version
-CMD ["python", "aws_boto3_modular_multi_processing/master_script_spawn.py"]
+#CMD ["python", "aws_boto3_modular_multi_processing/master_script_spawn.py"]
 
