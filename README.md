@@ -4612,9 +4612,11 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 ```
 
 
-**pytest7I — cleanup_and_retry → fallback → install_failed**
 
 </details>
+
+
+
 
 **pytest7I — cleanup_and_retry → fallback → install_failed**
 
