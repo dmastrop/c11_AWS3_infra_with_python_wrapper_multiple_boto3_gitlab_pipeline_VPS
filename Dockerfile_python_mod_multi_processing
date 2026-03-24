@@ -10,13 +10,24 @@ RUN apt-get update && apt-get install -y bash
 
 
 #COPY ./aws_boto3_modular_multi_processing /aws_EC2
+
 COPY . /aws_EC2
 # this is to accomodate the pytest test stage. The pytest test cases are in root and so if container runs them, the entire
 # root repo has to be copied over to the container.
 
 
 
-RUN pip install --no-cache-dir -r requirements.txt
+
+
+#RUN pip install --no-cache-dir -r requirements.txt
+
+# fix the path to requirements.txt now that entire root directory of repo is copied over into container for test stage pytest 
+# CI integration
+RUN pip install --no-cache-dir -r aws_boto3_modular_multi_processing/requirements.txt
+
+
+
+
 
 # Install pytest for the test stage that will run the pytest test cases
 RUN pip install pytest
