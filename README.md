@@ -4326,7 +4326,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'retry
 
 </details>
 
-
+**pytest3 — fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest3</b></summary>
@@ -4348,6 +4348,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'fallba
 
 </details>
 
+**pytest4 — abort → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest4</b></summary>
@@ -4369,7 +4370,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'abort
 
 </details>
 
-
+**pytest5 — unknown action → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest5</b></summary>
@@ -4391,6 +4392,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'some_u
 
 </details>
 
+**pytest6 — cleanup_and_retry → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest6</b></summary>
@@ -4412,7 +4414,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7 — cleanup_and_retry → retry2 fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7</b></summary>
@@ -4434,7 +4436,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7B — cleanup_and_retry → retry1 fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7B</b></summary>
@@ -4456,7 +4458,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7C — cleanup_and_retry → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest7C</b></summary>
@@ -4478,7 +4480,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7D — cleanup_and_retry → retry2 fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7D</b></summary>
@@ -4500,7 +4502,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7E — cleanup_and_retry → retry1 fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7E</b></summary>
@@ -4522,7 +4524,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7F — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7F</b></summary>
@@ -4545,7 +4547,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 </details>
 
 
-
+**pytest7G.1 — cleanup_and_retry → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest7G.1</b></summary>
@@ -4567,7 +4569,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7G.2 — cleanup_and_retry → retry1 fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7G.2</b></summary>
@@ -4589,7 +4591,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7H — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7H</b></summary>
@@ -4609,9 +4611,12 @@ tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero'
 ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
 ```
 
+
+**pytest7I — cleanup_and_retry → fallback → install_failed**
+
 </details>
 
-
+**pytest7I — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7I</b></summary>
@@ -4633,7 +4638,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 
 </details>
 
-
+**pytest7J — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7J</b></summary>
@@ -4655,7 +4660,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 
 </details>
 
-
+**pytest7K — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7K</b></summary>
@@ -4678,7 +4683,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 </details>
 
 
-
+**pytest7L — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7L</b></summary>
@@ -4700,7 +4705,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 
 </details>
 
-
+**pytest7M — cleanup_and_retry → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest7M</b></summary>
@@ -4722,7 +4727,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7N — cleanup_and_retry → retry fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7N</b></summary>
@@ -4744,7 +4749,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7O — cleanup_and_retry → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest7O</b></summary>
@@ -4766,7 +4771,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7P — cleanup_and_retry → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest7P</b></summary>
@@ -4788,7 +4793,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest7Q — cleanup_and_retry → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest7Q</b></summary>
@@ -4810,7 +4815,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 
 </details>
 
-
+**pytest8 — retry_with_modified_command → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest8</b></summary>
@@ -4832,7 +4837,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_
 
 </details>
 
-
+**pytest8B — retry_with_modified_command → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest8B</b></summary>
@@ -4854,7 +4859,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_
 
 </details>
 
-
+**pytest8C — retry_with_modified_command → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest8C</b></summary>
@@ -4876,7 +4881,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_
 
 </details>
 
-
+**pytest8D — retry_with_modified_command → fallback → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest8D</b></summary>
@@ -4898,6 +4903,10 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_
 
 </details>
 
+
+
+**pytest9A — cleanup_and_retry → silent_failure → retry success → install_success**
+
 <details>
 <summary><b>View registry_entry for pytest9A</b></summary>
 
@@ -4918,7 +4927,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest9A.2 — cleanup_and_retry → silent_failure → retry fails → stub**
 
 <details>
 <summary><b>View registry_entry for pytest9A.2</b></summary>
@@ -4940,7 +4949,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest9B — cleanup_and_retry → stderr_detected → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest9B</b></summary>
@@ -4963,6 +4972,8 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 </details>
 
 
+**pytest9B.2 — cleanup_and_retry → stderr_detected → retry fails → install_failed**
+
 <details>
 <summary><b>View registry_entry for pytest9B.2</b></summary>
 
@@ -4983,7 +4994,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest9C — cleanup_and_retry → strace stderr → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest9C</b></summary>
@@ -5005,7 +5016,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest9C.2 — cleanup_and_retry → strace stderr → retry fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest9C.2</b></summary>
@@ -5027,7 +5038,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest9D — cleanup_and_retry → fatal_exit_nonzero → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest9D</b></summary>
@@ -5049,7 +5060,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest9D.2 — cleanup_and_retry → fatal_exit_nonzero → retry fails → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest9D.2</b></summary>
@@ -5072,6 +5083,8 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 </details>
 
 
+**pytest10A — AI returns {} → fallback → stub**
+
 <details>
 <summary><b>View registry_entry for pytest10A</b></summary>
 
@@ -5092,7 +5105,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': None, '
 
 </details>
 
-
+**pytest10B — wrong types → fallback → stub**
 
 <details>
 <summary><b>View registry_entry for pytest10B</b></summary>
@@ -5115,7 +5128,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 123, 'a
 </details>
 
 
-
+**pytest10C — cleanup stderr → retry success → install_success**
 
 <details>
 <summary><b>View registry_entry for pytest10C</b></summary>
@@ -5137,7 +5150,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
-
+**pytest10D — retry stderr (harmless) → retry failure → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest10D</b></summary>
@@ -5159,6 +5172,9 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'clean
 
 </details>
 
+
+
+**pytest10E — retry stderr (dirty) → retry failure → install_failed**
 
 <details>
 <summary><b>View registry_entry for pytest10E</b></summary>
