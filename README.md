@@ -4327,6 +4327,865 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'retry
 </details>
 
 
+
+<details>
+<summary><b>View registry_entry for pytest3</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2772175
+thread_id: 132123806497856
+thread_uuid: 2665c641
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-07 22:13:30.344989
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:fallback', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'fallback', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+<details>
+<summary><b>View registry_entry for pytest4</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922125
+thread_id: 135802224356416
+thread_uuid: 7e1ac6d3
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:33:30.302496
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:abort', 'ai_assisted:*abort*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'abort', 'ai_commands': ['abort'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest5</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 1ebfde60
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:35:43.198048
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:some_unknown_action', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'some_unknown_action', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+<details>
+<summary><b>View registry_entry for pytest6</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:35:53.203112
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: b91edeee
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 1dd848fa
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:36:03.207179
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7B</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: a8615e5a
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:36:13.220577
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_1'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7C</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:36:23.226554
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 833cc457
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7D</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 2e166a13
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:36:33.230876
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7E</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: ac21f6b5
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:36:43.235519
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_1'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7F</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 6c394c96
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:36:53.240209
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7G.1</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:37:03.247109
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 1322bb60
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7G.2</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 3bab1486
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:37:13.254251
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_1'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7H</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 256ce9c7
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:37:23.258954
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7I</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: bb7978ca
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:37:33.263360
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7J</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: b2722a69
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:37:43.267512
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7K</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: c7419789
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:37:53.271617
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7L</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: a301d38e
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:38:03.275716
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7M</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:38:13.285773
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 010dfcde
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7N</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 2f59f8b4
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:38:23.290330
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo FAIL*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo FAIL'], 'ai_failed_command': 'echo FAIL'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7O</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:38:33.295534
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: d5a5fd4f
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7P</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:38:43.300141
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 1989f2c7
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest7Q</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 0d859141
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:38:53.304207
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest8</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 5b9f6a12
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:39:03.308801
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:retry_with_modified_command', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest8B</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 3f4885f1
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:39:13.314077
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:retry_with_modified_command', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest8C</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: dd40ccfd
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:39:23.318735
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:retry_with_modified_command', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest8D</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 42fc8ee3
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:39:33.322897
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:retry_with_modified_command', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'retry_with_modified_command', 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+<details>
+<summary><b>View registry_entry for pytest9A</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:39:43.327022
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 701185f4
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'silent_failure', 'echo test', 'command_retry_3', 'exit_status_1', 'exit_status_nonzero_stderr_blank', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest9A.2</b></summary>
+
+<br>
+
+```
+status: stub
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: a8986f75
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:39:53.330592
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'silent_failure', 'echo test', 'command_retry_3', 'exit_status_1', 'exit_status_nonzero_stderr_blank', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo WILL_NOT_FIX*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX'], 'ai_failed_command': 'echo WILL_NOT_FIX'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest9B</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:40:03.335896
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: bee2f49d
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'stderr_detected', 'echo test', 'command_retry_3', 'exit_status_zero', 'non_whitelisted_stderr', 'nonwhitelisted_material: DIRTY_ERROR_LINEDIRTY_ERROR_LINE', 'DIRTY_ERROR_LINEDIRTY_ERROR_LINE', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+<details>
+<summary><b>View registry_entry for pytest9B.2</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 4839799b
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:40:13.346202
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'stderr_detected', 'echo test', 'command_retry_3', 'exit_status_zero', 'non_whitelisted_stderr', 'nonwhitelisted_material: DIRTY_ERROR_LINEDIRTY_ERROR_LINE', 'DIRTY_ERROR_LINEDIRTY_ERROR_LINE', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo WILL_NOT_FIX*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX'], 'ai_failed_command': 'echo WILL_NOT_FIX'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest9C</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:40:23.352258
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 37c23c6a
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'stderr_detected', "strace -f -e write,execve -o /tmp/trace_kvnlottd.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_kvnlottd.log >&2", 'command_retry_3', 'exit_status_zero', 'non_whitelisted_stderr', 'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18', '1234 write(2, "FATAL: bad thing\\n", 18) = 18', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest9C.2</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: cc160ce7
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:40:33.356527
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'stderr_detected', "strace -f -e write,execve -o /tmp/trace_8lvlahmn.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_8lvlahmn.log >&2", 'command_retry_3', 'exit_status_zero', 'non_whitelisted_stderr', 'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18', '1234 write(2, "FATAL: bad thing\\n", 18) = 18', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo WILL_NOT_FIX*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX'], 'ai_failed_command': 'echo WILL_NOT_FIX'}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest9D</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:40:43.361795
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 91556873
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', "strace -f -e write,execve -o /tmp/trace_wifvwnpk.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_wifvwnpk.log >&2", 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18', '1234 write(2, "FATAL: bad thing\\n", 18) = 18', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_OK*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_OK'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest9D.2</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 9f55f654
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:40:53.366284
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', "strace -f -e write,execve -o /tmp/trace_1dnzdo18.log bash -c 'fail' 2>/dev/null && cat /tmp/trace_1dnzdo18.log >&2", 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: 1234 write(2, "FATAL: bad thing\\n", 18) = 18', '1234 write(2, "FATAL: bad thing\\n", 18) = 18', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo WILL_NOT_FIX*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo WILL_NOT_FIX'], 'ai_failed_command': 'echo WILL_NOT_FIX'}
+```
+
+</details>
+
+
+<details>
+<summary><b>View registry_entry for pytest10A</b></summary>
+
+<br>
+
+```
+status: stub
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 0c3374af
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:41:03.370427
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'silent_failure', 'echo test', 'command_retry_3', 'exit_status_1', 'exit_status_nonzero_stderr_blank', 'ai_invoked_true', 'ai_fallback_true', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': None, 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest10B</b></summary>
+
+<br>
+
+```
+status: stub
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 1f41ce77
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:41:13.375144
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'silent_failure', 'echo test', 'command_retry_3', 'exit_status_1', 'exit_status_nonzero_stderr_blank', 'ai_invoked_true', 'ai_fallback_true', 'ai_plan_action:123', 'ai_fallback']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 123, 'ai_commands': [], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+
+<details>
+<summary><b>View registry_entry for pytest10C</b></summary>
+
+<br>
+
+```
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:41:23.381572
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 1ad07e06
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'silent_failure', 'echo test', 'command_retry_3', 'exit_status_1', 'exit_status_nonzero_stderr_blank', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*echo CLEANUP1*', 'ai_assisted:*echo CLEANUP2*', 'ai_assisted:*echo RETRY_FIXED*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['echo CLEANUP1', 'echo CLEANUP2', 'echo RETRY_FIXED'], 'ai_failed_command': None}
+```
+
+</details>
+
+
+
+<details>
+<summary><b>View registry_entry for pytest10D</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: 84c78ad3
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:41:33.385524
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*echo CLEANUP1*', 'ai_assisted:*echo CLEANUP2*', 'ai_assisted:*echo RETRY_HARMLESS*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['echo CLEANUP1', 'echo CLEANUP2', 'echo RETRY_HARMLESS'], 'ai_failed_command': 'echo RETRY_HARMLESS'}
+```
+
+</details>
+
+
+<details>
+<summary><b>View registry_entry for pytest10E</b></summary>
+
+<br>
+
+```
+status: install_failed
+attempt: -1
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: ffc95dab
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-23 23:41:43.390060
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*echo CLEANUP1*', 'ai_assisted:*echo CLEANUP2*', 'ai_assisted:*echo RETRY_DIRTY*']
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['echo CLEANUP1', 'echo CLEANUP2', 'echo RETRY_DIRTY'], 'ai_failed_command': 'echo RETRY_DIRTY'}
+```
+
+</details>
+
+
+
+
+
+
+
 [Back to top](#top-update56)
 
 
