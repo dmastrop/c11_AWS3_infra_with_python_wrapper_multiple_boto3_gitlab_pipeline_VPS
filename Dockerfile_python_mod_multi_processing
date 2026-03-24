@@ -48,12 +48,22 @@ RUN pip install pytest
 #CMD ["python", "-u", "master_sequential_for_docker_run_in_linux_order_with_variable_delays_USE_AWS3_ONLY_debug_PARALLEL_THREAD.py"]
 
 
+
+
+###### These are prior to changing the COPY entire repo above for the test stage for pytest integration. Note the path.
 ########### use for multi-processing forked version
 #CMD ["python", "master_script.py"]
 
 ############ use for multi-processing spawn version
-CMD ["python", "master_script_spawn.py"]
+#CMD ["python", "master_script_spawn.py"]
 
 
 
+####### USE THIS:
+####### These are for after changing teh COPY command to copy over the entire root repo directory for pytest test stage CI test integraion
+########### use for multi-processing forked version
+#CMD ["python", "aws_boto3_modular_multi_processing/master_script.py"]
+
+############ use for multi-processing spawn version
+CMD ["python", "aws_boto3_modular_multi_processing/master_script_spawn.py"]
 
