@@ -6257,7 +6257,41 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                     ##### installs, STDERR is very dirty and needs to be filtered through the whitelist.
 
 
-                    exit_status = stdout.channel.recv_exit_status()
+
+                    # (see comments below for why this was added)
+                    # --- EXIT STATUS TIMEOUT WRAPPER ---
+                    command_start = time.time()
+                    EXIT_STATUS_TIMEOUT = 120  # seconds, adjust if needed
+
+                    exit_status_timed_out = False
+
+                    while True:
+                        # If Paramiko says exit status is ready, read it and break
+                        if stdout.channel.exit_status_ready():
+                            exit_status = stdout.channel.recv_exit_status()
+                            break
+
+                        # Hard timeout waiting for exit status
+                        if time.time() - command_start > EXIT_STATUS_TIMEOUT:
+                            print(f"[{ip}] ⚠️ Exit status timeout — treating as failure")
+                            exit_status = 1
+                            exit_status_timed_out = True
+                            break
+
+                        time.sleep(1)
+                    # --- END EXIT STATUS TIMEOUT WRAPPER ---
+
+
+
+                    # Comment out the original and replace with the timeout wrapper for an AWS outage corner case. Very very 
+                    # rare but we did see it once. The outage was short lived and severed all the current SSH connections to the 
+                    # EC2 instances. IT occurred right when a cocmmand was executing on the node and was completely lost by the 
+                    # final third attempt.
+                    
+                    #exit_status = stdout.channel.recv_exit_status()
+                    
+
+
                     #log.info(f"[{ip}] Raw exit status from SSH channel: {exit_status}") # debug the negative test case issues
                     print(f"[{ip}] Raw exit status from SSH channel: {exit_status}")
 
@@ -6610,7 +6644,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for forensic trace
                                         *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
                                     ]
-                                }
+                        
                             else:
                                 registry_entry = {
                                     "status": "stub",
