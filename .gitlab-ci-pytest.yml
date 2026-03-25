@@ -1,0 +1,28 @@
+#### This is the child pipeline that is integrated in the main pipeline .gitlab-ci.yml. This will run as a separate pipeline and
+#### in its own separate container, separate from the deploy pipeline container. This runs a native pytest image and pytest is 
+#### added with pip install. 
+#### There is no nded to COPY or mount the repo as gitlab does that automatically for every job container
+#### by default. The deploy pipeline required a specific COPY of a subdirectory of the root repo directory and thus requires a 
+#### COPY command in the docker image that it uses (build push and deploy). This pytest pipeline will run the pytest test file in 
+#### the tests directory off the root of the repo by using the default mount that gitlab does for all containers. 
+#### pytest -v -s --capture=no tests/test_ai_hook_v7.py | tee pytest-report.log  <<< the logs will be piped to a log file and 
+#### these will be in the artifact logs for the child pipeline which can be downloaded in the Gitabl web console.
+
+stages:
+  - pytest
+
+pytest_job:
+  stage: pytest
+  image: python:3.12
+  before_script:
+    - pip install pytest
+  script:
+    - pytest -v -s --capture=no tests/test_ai_hook_v7.py | tee pytest-report.log
+  artifacts:
+    when: always
+    paths:
+      - pytest-report.log
+  only:
+    - main
+    - merge_requests
+#### This will run on both merge_requests and on push requests.
