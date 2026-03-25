@@ -6644,7 +6644,7 @@ def tomcat_worker(instance_info, security_group_ids, max_workers):
                                         *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for forensic trace
                                         *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
                                     ]
-                        
+                                } 
                             else:
                                 registry_entry = {
                                     "status": "stub",
