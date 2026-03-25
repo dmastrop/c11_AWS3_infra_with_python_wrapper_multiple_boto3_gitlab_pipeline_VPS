@@ -1,5 +1,6 @@
 stages:
   #  - lint
+  - test   #### run the pytest test suite test stage prior to the deploy build stage. This runs in a child pipeline not the deploy pipeline. The deploy pipeline will not run if the test stage fails (by design)
   - build
   - push
   - deploy
@@ -18,6 +19,20 @@ stages:
 #  paths:
 #    - logs/orchestration_sg_rules_module2.json
 
+
+
+#### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
+#### as shown below using the .gitlab-ci-pytest.yml child pipeline file 
+#### The pytest test suite will run for both pushes and merge_requests
+pytest_pipeline:
+  stage: test
+  trigger:
+    include: ".gitlab-ci-pytest.yml"
+    strategy: depend    #### do not run the deploy stage (or build or push stages) if the test stage fails. 
+  only:
+    - main
+    - merge_requests
+    
     
 build:
   stage: build
