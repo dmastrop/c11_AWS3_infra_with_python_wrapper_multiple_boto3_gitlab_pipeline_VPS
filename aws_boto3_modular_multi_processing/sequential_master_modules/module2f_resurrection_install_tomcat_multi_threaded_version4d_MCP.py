@@ -2127,11 +2127,36 @@ def resurrection_install_tomcat(
                     stdout_lines = stdout_output.strip().splitlines()
                     stdout_blacklisted_lines = [line for line in stdout_lines if not is_whitelisted_line(line)]
 
+
+
                     # Exit status, possibly overridden by strace parsing
-                    exit_status = stdout.channel.recv_exit_status()
+                    # Comment this out and use the wrapped timeout version for the AWS SSH outage issue 
+                    
+                    #exit_status = stdout.channel.recv_exit_status()
 
                     tags = []
                     
+                    # --- NEW EXIT STATUS TIMEOUT WRAPPER ---
+                    command_start = time.time()
+                    EXIT_STATUS_TIMEOUT = 120  # or 180, or whatever you want
+
+                    exit_status_timed_out = False
+
+                    while True:
+                        # If Paramiko says exit status is ready, read it and break
+                        if stdout.channel.exit_status_ready():
+                            exit_status = stdout.channel.recv_exit_status()
+                            break
+
+                        # Hard timeout waiting for exit status
+                        if time.time() - command_start > EXIT_STATUS_TIMEOUT:
+                            print(f"[{ip}] ⚠️ Exit status timeout — treating as failure")
+                            exit_status = 1
+                            exit_status_timed_out = True
+                            break
+
+                        time.sleep(1)
+                    # --- END EXIT STATUS TIMEOUT WRAPPER ---
 
 
                     ###### strace logic begins ######
