@@ -15,7 +15,7 @@ pytest_job:
   stage: pytest
   image: python:3.12
   tags:
-    - docker   #### added the tag docker in the /etc/gitlab-runner/config.toml file for the docker executor
+    - docker1   #### added the tag docker in the /etc/gitlab-runner/config.toml file for the docker executor. Make sure to use docker1 here. this is for the docker executor of instance type (not project or group type)
   before_script:
     - pip install pytest
   script:
