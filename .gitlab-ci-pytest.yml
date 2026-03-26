@@ -74,6 +74,8 @@ pytest_job:
     - merge_requests
 #### This will run on both merge_requests and on push requests.
 
-#### note that this uses the docker executor gitlab runner, so must enable access to this executor in the runner settings under
-#### CI/CD in the gitlab web console for this PROJECT.
-#### Make sure the docker executor is also allowed to run on this protected branch in the Admin settings.
+#### note that this uses the docker executor gitlab runner,  but it was found that project level executor had lots of issues.
+#### Thus a new docker executor of instance type was created for this and it is working fine. Since this executor is being used
+#### for a child pipeline make sure it it can run on protected branches. Since this is instance type gitlab docker executor 
+#### runner it is automatically available for this (and all other) project.
+
