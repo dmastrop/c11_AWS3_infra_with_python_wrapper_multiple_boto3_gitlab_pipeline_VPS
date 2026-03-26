@@ -16,10 +16,12 @@ pytest_job:
   image: python:3.12
   tags:
     - docker1   #### added the tag docker in the /etc/gitlab-runner/config.toml file for the docker executor. Make sure to use docker1 here. this is for the docker executor of instance type (not project or group type)
-  before_script:
-    - pip install pytest
+  
   script:
+    - pip install -r aws_boto3_modular_multi_processing/requirements.txt ## the pytest requires all python depenedencies that the actual deployment scripts rdquire. This docker container for the pytest suite is bare bones and we need to add them to it.
+    - pip install pytest
     - pytest -v -s --capture=no tests/test_ai_hook_v7.py | tee pytest-report.log
+  
   artifacts:
     when: always
     paths:
