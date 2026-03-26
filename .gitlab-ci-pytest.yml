@@ -28,3 +28,6 @@ pytest_job:
     - main
     - merge_requests
 #### This will run on both merge_requests and on push requests.
+
+#### note that this uses the docker executor gitlab runner, so must enable access to this executor in the runner settings under
+#### CI/CD in the gitlab web console for this PROJECT. 
