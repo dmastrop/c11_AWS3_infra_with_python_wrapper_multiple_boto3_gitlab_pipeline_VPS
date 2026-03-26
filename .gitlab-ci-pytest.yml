@@ -31,4 +31,4 @@ pytest_job:
 
 #### note that this uses the docker executor gitlab runner, so must enable access to this executor in the runner settings under
 #### CI/CD in the gitlab web console for this PROJECT.
-#### Make sure the docker executor is also allowed to run on this protected branch  
+#### Make sure the docker executor is also allowed to run on this protected branch in the Admin settings.
