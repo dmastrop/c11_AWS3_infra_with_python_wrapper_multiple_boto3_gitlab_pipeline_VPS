@@ -6069,7 +6069,7 @@ Two different containers appear during the full pipeline execution.
 
 Example:
 
-``
+```
 [root@vps ~]# docker ps
 CONTAINER ID   IMAGE                          COMMAND                  CREATED             STATUS                       PORTS                                                                                           NAMES
 0900a4ebc211   e9e99168705e                   "sh -c 'if [ -x /usr…"   4 minutes ago       Up 4 minutes                                                                                                                 runner-nqpoymzft-project-34-concurrent-0-8f6377e1138169e5-build
