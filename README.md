@@ -1507,6 +1507,13 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [Pytest test matrix and test results](#pytest-test-matrix-and-test-results)
 - [Pytest Test case registry_entrys](#pytest-test-case-registry_entrys)
 - [Pytest code review](#pytest-code-review)
+- [Porting the Pytest Test Suite to a GitLab CI Test Stage (Integration into the existing deploy pipeline)](#porting-the-pytest-test-suite-to-a-gitlab-ci-test-stage-integration-into-the-existing-deploy-pipeline)
+- [Transitioning to Real-life testing using the AI Gateway Service to interact with the LLM](#transitioning-to-real-life-testing-using-the-ai-gateway-service-to-interact-with-the-llm)
+
+
+
+
+
 
 ### Introduction: Pytest Overview and Testing Strategy
 
