@@ -5936,6 +5936,368 @@ def test_ai_hook_heuristic3_success(monkeypatch):
 
 
 
+
+
+
+
+
+
+
+
+
+### Porting the Pytest Test Suite to a GitLab CI Test Stage (Integration into the existing deploy pipeline)
+
+#### Overview
+
+This section documents the integration of the project’s full pytest suite into a dedicated **test stage** within the GitLab CI pipeline. The objective was to create a deterministic, isolated, and reproducible environment where all the  AI/MCP hook tests execute automatically before any deployment occurs.
+
+The final design uses:
+
+- A **shell executor** (instance‑level) for the build, push and deploy stage (main pipeline) 
+- A **Docker executor** (instance‑level) for the pytest stage  
+- A **child pipeline** to run tests inside a clean Python 3.12 container for the pytest test stage  
+- A **manual python dependency installation strategy** on the child pipeline container to avoid Python‑3.12 incompatibilities  
+
+This architecture ensures that testing and deployment remain fully isolated, reproducible, and safe.
+This will be particularly values for the regression testing during subsequent Phase4 AI/MCP code implemenations.
+
+---
+
+#### Rationale for using a dedicated Instance‑Level Docker Executor
+
+Several approaches were evaluated before arriving at the final configuration.
+
+
+
+**Project‑level Docker executor for the test stage (rejected)**
+
+A project‑level Docker executor was initially considered but proved unreliable:
+
+- GitLab failed to schedule jobs on it. The test stage would not run.  
+- Protected branch rules caused conflicts  
+- The executor was visible to the project and able to be added to the project but still did not run  
+- Child pipelines could not use it  
+- Jobs failed with “no runner found” errors  
+
+
+
+**Shell executor for pytest for the test stage (rejected)**
+
+Running pytest directly on the VPS using the shell executor (that is used for deployment stage) was also rejected:
+
+- The .gitlab-ci-pytest.yml file using image: and pip would not work because pip is not installed on the VPS and image: is not r
+recognized shell command. 
+- Would potentially pollute the VPS host environment with dependency requirements like pip, etc.   
+- Would not match the exact virtual environment that was used to develop the pytest test cases on the controller 
+- Would risk interfering with production processes  
+
+
+
+**Instance‑level Docker executor (final solution)**
+
+A new **instance‑level GitLab Runner** was created with the following attributes that resolved the issue:
+
+- Executor: `docker`  
+- Tag: `docker1`  This is so that we could invoke it directly and only for the test stage in the .gitlab-ci-pytest.yml file
+- Protected: enabled  
+- Run untagged jobs: disabled  
+
+This configuration solved all prior issues:
+
+- GitLab schedules the pytest job consistently as a child pipeline test stage  
+- The runner is visible to all projects  (in case docker containers are required for other projects)
+- Protected branches function correctly  
+- Child pipelines run without issue  
+- The environment is fully isolated and the python dependencies are decoupled from those used on the deployment stage shell 
+executor
+- No risk is introduced to the production VPS  
+
+This executor is used exclusively for the pytest stage.
+
+This is the correct and recommended Gitlab architeture for mixed shell/Docker executor pipelines
+This also offers extensibility to run docker in docker with this executory should the need arise later during development
+
+
+---
+
+#### Pipeline Architecture
+
+The CI/CD pipeline is structured as a two‑layer system:
+
+**1. Parent Pipeline (main pipeline)**  
+Runs on the **shell executor** and handles:
+
+- Launching/triggering the test stage as a child pipeline PRIOR to the deployment stage (so there is only 1 executor 
+container running on the VPS at a time; more on this below)
+
+And if and only if the test stage passes:
+- Building the deploy container (build stage, etc....) 
+- Running the master script during the deploy stage
+- Orchestrating AWS operations  
+
+
+**2. Child Pipeline (pytest pipeline)**  
+Runs on the **Docker executor** and handles:
+
+- Spinning up a clean `python:3.12` container. This version is compatible with all of the pytest testing that was performed 
+initially on teh AWS controllerin a python virtual environment during pytest development phase (3.12.5 python version)  
+- Installing all required dependencies manually as part of the .gitlab-ci-pytest.yml script 
+- Executing all pytest test cases  
+- Uploading `pytest-report.log` as an artifact for the child pipeline.  This artifact log file is separate from the deployment
+artifact log files genearated at the end of the deploy stage  
+
+GitLab renders this visually as:
+
+```
+Main Pipeline
+   └── Test Stage
+         └── Pytest Child Pipeline
+```
+
+Selecting the test stage in the GitLab UI reveals the nested pipeline as well as the real-time gitlab console log output (similar
+to the deply stage).
+
+---
+
+#### Two Distinct Containers in the Pipeline
+
+The pipeline uses two completely separate containers, each serving a different purpose.
+Two different containers appear during the full pipeline execution.
+
+
+**A. Pytest Container (Docker executor)**  
+
+Example:
+
+``
+[root@vps ~]# docker ps
+CONTAINER ID   IMAGE                          COMMAND                  CREATED             STATUS                       PORTS                                                                                           NAMES
+0900a4ebc211   e9e99168705e                   "sh -c 'if [ -x /usr…"   4 minutes ago       Up 4 minutes                                                                                                                 runner-nqpoymzft-project-34-concurrent-0-8f6377e1138169e5-build
+
+```
+
+Characteristics:
+
+- Created automatically by GitLab Runner using the .gitlab-ci-pytest.yml specifications. It does not require a Dockerfile, etc.
+- The runner is invoked through the .gitlab-ci-pytest.yml tags field with `docker1`, the tag associated with the docker executor  
+- Runs the image: `python:3.12` image via .gitlab-ci-pytest.yml file
+- Exists only during the test stage  
+- Destroyed automatically after the job completes  
+- Isolated from the host  
+- Executes the pytest suite only. It is not used during the deployment stage.  
+- Automatically mounts the project repo from root and this is ideal because the `tests` directory that has all the pytest source
+code, is in the root directory. Thus, no refactoring of the imports in the pytest code that are required to run all the nested 
+modules in the deployment code, is required.
+- The native original pytest source code runs fine on the container without any refactoring.
+
+
+
+**B. Deploy Container (Shell executor)**  
+
+This is an application container that is built using a customized Dockerfile, and pushed, and deployed as part of the parent 
+pipeline. The python modules are invoked from  inside this container via the master script. Since it is a shell executor, all
+the 100s of python processes run directly on the VPS and can be seen with a `top` on the VPS
+
+Example:
+
+```
+[root@vps ~]# docker ps
+CONTAINER ID   IMAGE                                                                                                                                      COMMAND                  CREATED             STATUS                       PORTS                                                                                           NAMES
+16d1f0153a95   gitlab-registry.linode.cloudnetworktesting.com/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3:latest   "python master_scrip…"   25 seconds ago      Up 24 seconds                                                                                                                optimistic_newton
+```
+
+Characteristics:
+
+- Since this is a shell executor the VPS has to have docker installed on it
+- Created by the deploy stage via `docker run` in the .gitlab-ci.yml parent pipeline config file. The deploy stage runs after
+the docker image has been built using a Dockerfile in the root of the repo, and then pushed to the container registry on the 
+gitlab.
+- Built from the project’s Dockerfile (`python:3.11.9`)  
+- Executes `master_script.py` (forked mode) or master_script_spawn.py (spawn mode; the current mode used) which runs all the 
+python deployment modules  
+- Represents the actual application environment  
+- Not created by GitLab Runner but through a customized Dockerfile and invoked thorugh the VPS shell using the shell executor
+- Lives as long as the deploy stage and the image in the gitlab container registry is cleaned up during the cleanup pipeline stage 
+using `docker rmi`
+- Runs independently of the test container 
+
+These two containers never interact and serve entirely different roles.
+
+---
+
+
+
+
+#### Dependency Strategy and Python Version Differences
+
+The deploy container uses (Dockerfile):
+
+```
+FROM python:3.11.9  <<<<<<<<<
+WORKDIR /aws_EC2
+ENV PYTHONUNBUFFERED=1
+
+# Confirm default shell
+RUN echo "Default shell: $(readlink /bin/sh)"
+
+# Install Bash to ensure proper stream redirection
+RUN apt-get update && apt-get install -y bash
+
+
+COPY ./aws_boto3_modular_multi_processing /aws_EC2
+
+```
+
+The pytest container uses (.gitlab-ci-pytest.yml specification)
+
+```
+stages:
+  - pytest
+
+pytest_job:
+  stage: pytest
+  image: python:3.12  <<<<<<<<<<
+```
+
+This difference introduced compatibility issues:
+
+- PyYAML 6.0 does not support Python 3.12  
+- The MariaDB Python driver does not support Python 3.12  
+- Several packages attempted to compile C extensions and failed  
+
+To avoid modifying the project’s `requirements.txt`, the pytest stage uses a **manual dependency installation block** in the
+.gitlab-ci-pytest.yml script that:
+
+- Installs all required packages individually  
+- Upgrades PyYAML to 6.0.1  
+- Excludes MariaDB entirely  
+- Ensures deterministic behavior in Python 3.12  
+
+This approach isolates test dependencies from deploy dependencies and avoids cross‑version conflicts.
+
+---
+
+#### Test Execution Performance
+
+The full pytest suite takes approximately:
+
+- ~2 minutes for dependency installation  
+- ~5 minutes to execute all 41 test cases  
+- Total: ~7 minutes  
+
+This is expected for a cold container environment and is acceptable for a CI test stage.
+
+---
+
+#### GitLab CI Configuration
+
+**Main Pipeline: Test Stage Trigger `.gitlab-ci.yml`**
+
+```yaml
+#### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. 
+#### This will run in a child pipeline using the .gitlab-ci-pytest.yml file.
+#### The pytest test suite will run for both pushes and merge_requests.
+
+pytest_pipeline:
+  stage: test
+  trigger:
+    include: ".gitlab-ci-pytest.yml"
+    strategy: depend    #### Prevent deploy/build/push stages from running if the test stage fails.
+  only:
+    - main
+    - merge_requests
+```
+
+---
+
+**Child Pipeline: `.gitlab-ci-pytest.yml`**
+
+```yaml
+#### This is the child pipeline integrated into the main pipeline. 
+#### It runs in its own container using the docker executor and executes the pytest suite.
+#### GitLab automatically mounts the repository into the job container, so no COPY is required.
+
+stages:
+  - pytest
+
+pytest_job:
+  stage: pytest
+  image: python:3.12
+  tags:
+    - docker1   #### Tag for the instance-level docker executor. The docker executor tag is added in /etc/gitlab-runner/config.toml
+
+  script:
+    - pip install pytest
+    - pip install \
+        ansible==10.3.0 \
+        ansible-core==2.17.9 \
+        apprise==1.1.0 \
+        bcrypt==4.3.0 \
+        boto3==1.37.7 \
+        botocore==1.37.7 \
+        certifi==2022.9.24 \
+        cffi==1.17.1 \
+        charset-normalizer==2.1.1 \
+        click==8.1.3 \
+        cryptography==44.0.2 \
+        idna==3.4 \
+        importlib-metadata==5.0.0 \
+        Jinja2==3.1.6 \
+        jmespath==1.0.1 \
+        Markdown==3.4.1 \
+        MarkupSafe==3.0.2 \
+        mysql-connector-python==8.0.31 \
+        oauthlib==3.2.1 \
+        packaging==24.2 \
+        paramiko==3.5.1 \
+        protobuf==3.20.1 \
+        psutil==5.9.8 \
+        pycparser==2.22 \
+        PyNaCl==1.5.0 \
+        python-dateutil==2.9.0.post0 \
+        python-dotenv==0.21.0 \
+        PyYAML==6.0.1 \
+        requests==2.28.1 \
+        requests-oauthlib==1.3.1 \
+        resolvelib==1.0.1 \
+        s3transfer==0.11.4 \
+        six==1.17.0 \
+        tabulate==0.9.0 \
+        urllib3==1.26.12 \
+        zipp==3.9.0
+    - pytest -v -s --capture=no tests/test_ai_hook_v7.py | tee pytest-report.log
+
+  artifacts:
+    when: always
+    paths:
+      - pytest-report.log
+
+  only:
+    - main
+    - merge_requests
+```
+
+---
+
+#### Artifact Handling
+
+The pytest child pipeline uploads `pytest-report.log` immediately upon completion.  
+This occurs **before** the deploy stage begins, which is expected behavior:
+
+- The parent pipeline immediately triggers the test stage using the child pipeline
+- The child pipeline completes  
+- Artifacts for the pytests are uploaded  
+- The parent pipeline resumes with the build, then push, then deploy stages  
+- The build stage begins only after successful test completion, so the deploy stage will never run if the test stage has failed  
+
+This ensures that test results are always available, even while deployment is still running.
+
+
+
+
+[Back to top](#top-update56)
+
+
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
