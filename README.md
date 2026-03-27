@@ -6018,11 +6018,102 @@ This is the correct and recommended Gitlab architeture for mixed shell/Docker ex
 This also offers extensibility to run docker in docker with this executory should the need arise later during development
 
 
+**Diagram 1 — Runner Configuration Overview**
+
+```
+                   RUNNER CONFIGURATION OVERVIEW
+
+┌──────────────────────────────────────────────────────────────┐
+│                Instance-Level GitLab Runner                   │
+│                                                              │
+│  Runner A: shell executor                                     │
+│    • Used for deploy stage                                    │
+│    • Runs directly on VPS                                     │
+│                                                              │
+│  Runner B: docker executor                                    │
+│    • Tag: docker1                                             │
+│    • Used for pytest child pipeline                           │
+│    • Runs python:3.12 containers                              │
+│    • Fully isolated                                            │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+
+
+
+
+
+**Diagram 1b — Executor Separation**
+
+
+```
+                   EXECUTOR ARCHITECTURE
+
+┌──────────────────────────────┐       ┌──────────────────────────────┐
+│      Shell Executor           │       │      Docker Executor         │
+│  (instance-level runner)      │       │  (instance-level runner)     │
+│                               │       │                              │
+│  • Used for deploy stage      │       │  • Used for pytest stage     │
+│  • Runs directly on VPS       │       │  • Runs inside container     │
+│  • Launches application       │       │  • Provides clean Python env │
+│    container via docker run   │       │  • Fully isolated            │
+└──────────────────────────────┘       └──────────────────────────────┘
+```
+
 ---
+
+
+
+
+
+
 
 #### Pipeline Architecture
 
 The CI/CD pipeline is structured as a two‑layer system:
+
+**Diagram 2 — High‑Level Pipeline Architecture**
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        MAIN PIPELINE                          │
+│                  (runs on shell executor)                     │
+│                                                              │
+│   ┌──────────────────────────────┐                           │
+│   │        test stage            │                           │
+│   │  (triggers child pipeline)   │                           │
+│   └──────────────┬───────────────┘                           │
+│                  │                                           │
+│                  ▼                                           │
+│   ┌──────────────────────────────┐                           │
+│   │        build stage           │                           │
+│   └──────────────────────────────┘                           │
+│                                                              │
+│   ┌──────────────────────────────┐                           │
+│   │        push stage            │                           │
+│   └──────────────────────────────┘                           │
+│                                                              │
+│   ┌──────────────────────────────┐                           │
+│   │        deploy stage          │                           │
+│   └──────────────────────────────┘                           │
+│                                                              │
+│   ┌──────────────────────────────┐                           │
+│   │        cleanup stage         │                           │
+│   └──────────────────────────────┘                           │
+└──────────────────────────────────────────────────────────────┘
+
+                    CHILD PIPELINE (pytest)
+                 ┌──────────────────────────────┐
+                 │   pytest_job (python:3.12)   │
+                 │   - installs dependencies    │
+                 │   - runs 41 tests            │
+                 │   - uploads artifact         │
+                 └──────────────────────────────┘
+```
+
+
+
+
 
 **1. Parent Pipeline (main pipeline)**  
 Runs on the **shell executor** and handles:
@@ -6056,6 +6147,26 @@ Main Pipeline
 
 Selecting the test stage in the GitLab UI reveals the nested pipeline as well as the real-time gitlab console log output (similar
 to the deply stage).
+
+
+**Diagram 2b — GitLab Pipeline Graph (Conceptual)**
+
+
+
+```
+GitLab UI Rendering (Conceptual)
+
+Main Pipeline
+┌──────────────────────────────────────────────────────────────────────────────┐
+│   test (child pipeline)   │   build   │   push   │   deploy   │   cleanup    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Child Pipeline (pytest)
+┌───────────────────────────────┐
+│  pytest_job (python:3.12)     │
+└───────────────────────────────┘
+```
+
 
 ---
 
@@ -6123,6 +6234,40 @@ using `docker rmi`
 
 These two containers never interact and serve entirely different roles.
 
+
+**Diagram 3 — Two Containers**
+```
+                   CONTAINERS USED IN THE PIPELINE
+
+┌──────────────────────────────────────────────────────────────┐
+│                     PYTEST CONTAINER                          │
+│                (created by GitLab Runner)                     │
+│                                                              │
+│  • Image: python:3.12                                         │
+│  • Name: runner-<id>-build                                    │
+│  • Purpose: run pytest suite                                  │
+│  • Lifecycle: created & destroyed per job                     │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                     DEPLOY CONTAINER                          │
+│                (created by deploy stage)                      │
+│                                                              │
+│  • Image: registry.gitlab...:latest                           │
+│  • Name: docker‑generated (e.g., optimistic_newton)           │
+│  • Purpose: run master_script.py                              │
+│  • Lifecycle: controlled by deploy logic                      │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+
+
+
+
+
+
 ---
 
 
@@ -6174,6 +6319,38 @@ To avoid modifying the project’s `requirements.txt`, the pytest stage uses a *
 - Ensures deterministic behavior in Python 3.12  
 
 This approach isolates test dependencies from deploy dependencies and avoids cross‑version conflicts.
+
+
+**Diagram 4 — Dependency Installation Flow**
+
+```
+                PYTEST DEPENDENCY INSTALLATION FLOW
+
+┌──────────────────────────────────────────────────────────────┐
+│                python:3.12 container starts                   │
+└──────────────────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────────────┐
+│  pip install pytest                                           │
+└──────────────────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────────────┐
+│  pip install <full dependency list>                           │
+│  • PyYAML==6.0.1 (override)                                   │
+│  • MariaDB removed (incompatible with 3.12)                   │
+│  • All other deps installed manually                          │
+└──────────────────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────────────┐
+│  pytest -v -s --capture=no tests/...                          │
+│  → produces pytest-report.log                                 │
+└──────────────────────────────────────────────────────────────┘
+```
+
+
 
 ---
 
