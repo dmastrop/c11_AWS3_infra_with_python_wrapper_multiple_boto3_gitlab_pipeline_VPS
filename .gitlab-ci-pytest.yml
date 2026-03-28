@@ -8,6 +8,15 @@
 #### pytest -v -s --capture=no tests/test_ai_hook_v7.py | tee pytest-report.log  <<< the logs will be piped to a log file and 
 #### these will be in the artifact logs for the child pipeline which can be downloaded in the Gitabl web console.
 
+#### The rule below uses the SKIP_PYTEST from the parent pipeline in the .gitlab-ci.yml file to indicate whether or not this child
+#### pytest pipeline will run. If it is set to true in .gitlab-ci.yml then this entire child pipeline below will be skipped.
+rules:
+  - if: '$SKIP_PYTEST == "true"'
+    when: never
+  - when: on_success
+    
+
+
 stages:
   - pytest
 
