@@ -13,6 +13,11 @@ RUN apt-get update && apt-get install -y bash
 # Copy project repo files
 COPY ./aws_boto3_modular_multi_processing /aws_EC2
 
+# Need to copy the .env from the root of the repo that is on gitlab-runner, to this container as teh above project repo does
+# not have the root. We need the .env file because the docker container itself needs access directly to the API_KEY for the OpenAI
+# AI Gateway Service connect to LLM. It won't have access through the copy on the gitlab-runner unless we copy it.
+COPY .env /aws_EC2/.env
+
 
 
 # Install project dependencies
@@ -52,6 +57,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN echo '#!/bin/bash\n\
 set -e\n\
+\n\
+# Export the API_KEY from the .env file that was copied into this container. See COPY above\n\
+export API_KEY=$(grep API_KEY /aws_EC2/.env | cut -d '=' -f2)\n\
 \n\
 # Install gateway dependencies\n\
 pip install fastapi uvicorn requests\n\
