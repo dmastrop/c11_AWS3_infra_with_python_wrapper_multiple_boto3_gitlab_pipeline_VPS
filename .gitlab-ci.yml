@@ -41,6 +41,20 @@ pytest_pipeline:
     
     
 
+pytest_pipeline:
+  stage: test
+  
+  trigger:
+    include: ".gitlab-ci-pytest.yml"
+    strategy: depend    #### IF the pytest test stage is Run, the parent(this) will require it to be successful in order to proceed to the build, push, and deploy
+
+  when: manual  #### This will give option of manual button the child pipeline so that it can optionally be skipped
+  
+  allow_failure: true   #### This is required with manual above: If the Run test stage button not pushed, the parent(this) will treat as success and proceed to build,push, deploy. IF the test stage is Cancelled, the parent (this) will tread as success and proceed to build,push, deploy.
+  
+  only:
+    - main
+    - merge_requests
 
 
 
