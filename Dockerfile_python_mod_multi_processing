@@ -19,8 +19,8 @@ COPY ./aws_boto3_modular_multi_processing /aws_EC2
 #COPY .env /aws_EC2/.env
 # The build context of the docker container is ./aws_boto3_modular_multi_processing. Copy the .env into the docker container root
 # directory so that it has access to the API_KEY inside of the .env file.
-COPY ./aws_boto3_modular_multi_processing/.env /aws_EC2/.env
-
+#COPY ./aws_boto3_modular_multi_processing/.env /aws_EC2/.env
+COPY ./aws_boto3_modular_multi_processing/env_runtime /aws_EC2/.env
 
 # Install project dependencies
 RUN pip install --no-cache-dir -r requirements.txt

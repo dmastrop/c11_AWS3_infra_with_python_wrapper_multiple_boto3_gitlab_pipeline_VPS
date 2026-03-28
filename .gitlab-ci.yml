@@ -325,8 +325,8 @@ deploy:
 
     # ⭐ Copy the completed .env into the build context. This is so that the docker container has access to the .env file, 
     # namely the API_KEY which it will not have unless we do this. 
-    - cp .env aws_boto3_modular_multi_processing/.env
-
+    #- cp .env aws_boto3_modular_multi_processing/.env
+    - cp .env aws_boto3_modular_multi_processing/env_runtime
 
 
 
