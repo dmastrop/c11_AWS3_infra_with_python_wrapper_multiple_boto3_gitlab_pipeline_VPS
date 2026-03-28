@@ -49,14 +49,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ------------------------------------------------------------
 # Embedded wrapper script for Step 6 (AI Gateway Service)
 # ------------------------------------------------------------
+
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 # Install gateway dependencies\n\
 pip install fastapi uvicorn requests\n\
 \n\
-# Start the AI Gateway Service in the background\n\
-nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &\n\
+# Start the AI Gateway Service in the background. Make sure sequential_master_modules referenced\n\
+nohup uvicorn sequential_master_modules.ai_gateway_service:app --host 0.0.0.0 --port 8000 &\n\
 \n\
 # Give it time to start\n\
 sleep 3\n\
@@ -67,6 +68,7 @@ sleep 3\n\
 # Use this for spawn mode:\n\
 python master_script_spawn.py\n' > /aws_EC2/start_with_gateway.sh && \
     chmod +x /aws_EC2/start_with_gateway.sh
+
 
 
 
