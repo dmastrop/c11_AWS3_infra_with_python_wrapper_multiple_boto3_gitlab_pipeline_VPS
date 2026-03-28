@@ -27,20 +27,23 @@ stages:
 
 
 
-#### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
-#### as shown below using the .gitlab-ci-pytest.yml child pipeline file 
-#### The pytest test suite will run for both pushes and merge_requests
-pytest_pipeline:
-  stage: test
-  trigger:
-    include: ".gitlab-ci-pytest.yml"
-    strategy: depend    #### do not run the deploy stage (or build or push stages) if the test stage fails. 
-  only:
-    - main
-    - merge_requests
+##### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
+##### as shown below using the .gitlab-ci-pytest.yml child pipeline file 
+##### The pytest test suite will run for both pushes and merge_requests
+#pytest_pipeline:
+#  stage: test
+#  trigger:
+#    include: ".gitlab-ci-pytest.yml"
+#    strategy: depend    #### do not run the deploy stage (or build or push stages) if the test stage fails. 
+#  only:
+#    - main
+#    - merge_requests
     
     
 
+#### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
+#### as shown below using the .gitlab-ci-pytest.yml child pipeline file via trigger.
+#### The pytest test suite will run for both pushes and merge_requests.
 pytest_pipeline:
   stage: test
   
