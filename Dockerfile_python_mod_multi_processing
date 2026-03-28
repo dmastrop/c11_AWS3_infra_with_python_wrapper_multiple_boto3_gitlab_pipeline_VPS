@@ -9,32 +9,14 @@ RUN echo "Default shell: $(readlink /bin/sh)"
 RUN apt-get update && apt-get install -y bash
 
 
+
+# Copy project repo files
 COPY ./aws_boto3_modular_multi_processing /aws_EC2
 
 
-#COPY . /aws_EC2
-# this is to accomodate the pytest test stage. The pytest test cases are in root and so if container runs them, the entire
-# root repo has to be copied over to the container.
 
-
-
-
-
+# Install project dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# fix the path to requirements.txt now that entire root directory of repo is copied over into container for test stage pytest 
-# CI integration
-#RUN pip install --no-cache-dir -r aws_boto3_modular_multi_processing/requirements.txt
-
-
-
-
-
-# Install pytest for the test stage that will run the pytest test cases
-#RUN pip install pytest
-
-
-
 
 
 # original for AWS2
@@ -50,20 +32,49 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 
+############## These are commented out now and invoked via the shell script below because we need to start both the 
+############## ai_gateway_service and then run the python master script. CMD can't do both.
 
 ########### use for multi-processing forked version
 #CMD ["python", "master_script.py"]
 
 ############ use for multi-processing spawn version
-CMD ["python", "master_script_spawn.py"]
+#CMD ["python", "master_script_spawn.py"]
 
 
 
-######## Does not work
-####### These are for after changing teh COPY command to copy over the entire root repo directory for pytest test stage CI test integraion
-########### use for multi-processing forked version
-#CMD ["python", "aws_boto3_modular_multi_processing/master_script.py"]
 
-############ use for multi-processing spawn version
-#CMD ["python", "aws_boto3_modular_multi_processing/master_script_spawn.py"]
+
+# ------------------------------------------------------------
+# Embedded wrapper script for Step 6 (AI Gateway Service)
+# ------------------------------------------------------------
+RUN echo '#!/bin/bash
+set -e
+
+# Install gateway dependencies
+pip install fastapi uvicorn requests
+
+# Start the AI Gateway Service in the background
+nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
+
+# Give it time to start
+sleep 3
+
+# Now run the master script
+# Use this for forked mode:
+# python master_script.py
+# Use this for spawn mode:
+python master_script_spawn.py
+' > /aws_EC2/start_with_gateway.sh && \
+    chmod +x /aws_EC2/start_with_gateway.sh
+
+# Use the wrapper script as the container entrypoint
+ENTRYPOINT ["/aws_EC2/start_with_gateway.sh"]
+```
+
+
+
+
+
+
 

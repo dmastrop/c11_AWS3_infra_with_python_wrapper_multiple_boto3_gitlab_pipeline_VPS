@@ -6,6 +6,8 @@ stages:
   - deploy
   - cleanup
 
+
+
 # add the lint stage to verify the code structure and syntax. This will abort the pipeline if there are problems
 
     
@@ -18,6 +20,10 @@ stages:
 #  key: sg_manifest
 #  paths:
 #    - logs/orchestration_sg_rules_module2.json
+
+
+
+
 
 
 
@@ -34,6 +40,15 @@ pytest_pipeline:
     - merge_requests
     
     
+
+
+
+
+
+
+
+
+
 build:
   stage: build
   script:
@@ -52,6 +67,14 @@ build:
     - docker build --file Dockerfile_python_mod_multi_processing -t $CI_REGISTRY_IMAGE:$CI_PIPELINE_IID-$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
 
 
+
+
+
+
+
+
+
+
 push:
   stage: push
   script:
@@ -62,6 +85,24 @@ push:
 
       # default instance_type is t2.micro. Test out a t3.small for performance installation issues.   
       # 30 processes(desired_count)  x chunk_size=2 → 60 EC2 instances total so set max and min count to 60 (example)   
+
+  
+
+
+
+
+
+
+#### This is the deploy stage that starts the docker container via gitlab runner shell executor and then runs the 
+#### python modules in that container/environment. Note that the python processes are externalized and will show up on the VPS
+#### host (the docker container is run from shell executor so it uses the VPS kernel space) in the top command on the VPS.
+#### Any sockets that are estabilshed inside the deploy container will not show up on the VPS netstat. The namespace is not
+#### shared so the socket will only be visible inside of the deploy docker container (docker exec into it and it will be there)
+#### This is for the AI Gateway Service that is used to interface with the LLM. module2 and module2f use the AI/MCP hook code
+#### via the my_mcp_client.py class and mcp.send method to reach the AI Gateway Service and contact the LLM for command 
+#### consultation and remediation of failed commands.   
+#### The AI Gateway Service will be started using an embedded script inside the Dockerfile_python_mod_multi_processing
+
 deploy:
   stage: deploy
   timeout: 4h
