@@ -70,7 +70,7 @@ python master_script_spawn.py
 
 # Use the wrapper script as the container entrypoint
 ENTRYPOINT ["/aws_EC2/start_with_gateway.sh"]
-```
+
 
 
 
