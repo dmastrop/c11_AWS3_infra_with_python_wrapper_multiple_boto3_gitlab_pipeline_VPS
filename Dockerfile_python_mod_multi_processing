@@ -16,8 +16,10 @@ COPY ./aws_boto3_modular_multi_processing /aws_EC2
 # Need to copy the .env from the root of the repo that is on gitlab-runner, to this container as teh above project repo does
 # not have the root. We need the .env file because the docker container itself needs access directly to the API_KEY for the OpenAI
 # AI Gateway Service connect to LLM. It won't have access through the copy on the gitlab-runner unless we copy it.
-COPY .env /aws_EC2/.env
-
+#COPY .env /aws_EC2/.env
+# The build context of the docker container is ./aws_boto3_modular_multi_processing. Copy the .env into the docker container root
+# directory so that it has access to the API_KEY inside of the .env file.
+COPY ./aws_boto3_modular_multi_processing/.env /aws_EC2/.env
 
 
 # Install project dependencies

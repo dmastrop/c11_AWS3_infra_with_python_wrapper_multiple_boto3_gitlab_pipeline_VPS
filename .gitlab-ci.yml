@@ -249,7 +249,8 @@ deploy:
       # This needs some work to get properly imported into the container. The other ENV vars are available in the gitlab runner only and that is ok for python modules to access, but the AI Gateway Service is running only in the deploy docker container so it cannot access that area of the file system. The API_KEY needs to be imported into the deploy docker container.
       # Need to add a COPY of the .env file from gitlab-runner into the docker container by adding COPY in Dockerfile and then 
       # export the API_KEY from there so that the AI Gateway Service can connect to LLM with the API key.
-
+      ##### NOTE at the bottom of this before script copy the complete contents to the project directory that the docker container
+      ##### uses.
 
     - echo 'SG_RULES_S3_BUCKET=c11-sg-rules-state' >> .env  # this is for the stateful SG implementation in module2 and 2e
 
@@ -321,6 +322,13 @@ deploy:
     - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E='${READY_FOR_AWS_SG_EDITS_MODULE2E} >> .env
     - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY='${READY_FOR_AWS_SG_EDITS_MODULE2E_DELAY} >> .env
     - echo 'READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS='${READY_FOR_AWS_SG_EDITS_MODULE2E_POSITIONS} >> .env
+
+    # ⭐ Copy the completed .env into the build context. This is so that the docker container has access to the .env file, 
+    # namely the API_KEY which it will not have unless we do this. 
+    - cp .env aws_boto3_modular_multi_processing/.env
+
+
+
 
 
       ## NOTE: To turn off dumps in specific pipelines or environments:Go to **Settings > CI/CD > Variables in the project
