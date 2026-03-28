@@ -53,7 +53,7 @@ pytest_pipeline:
 
   when: manual  #### This will give option of manual button the child pipeline so that it can optionally be skipped
   
-  allow_failure: true   #### This is required with manual above: If the Run test stage button not pushed, the parent(this) will treat as success and proceed to build,push, deploy. IF the test stage is Cancelled, the parent (this) will tread as success and proceed to build,push, deploy.
+  allow_failure: false   #### This is required with manual above: If the Run test stage button not pushed, the parent(this) will treat as success and proceed to build,push, deploy. IF the test stage is Cancelled, the parent (this) will tread as success and proceed to build,push, deploy.
   
   only:
     - main
