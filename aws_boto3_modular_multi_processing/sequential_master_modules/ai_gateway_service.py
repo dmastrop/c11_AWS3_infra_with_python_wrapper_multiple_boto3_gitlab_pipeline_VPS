@@ -23,21 +23,77 @@
 # - keeps it running during the job  
 # - ensures module2f can reach it  
 #
-#  For gitlab CI Use **uvicorn**, not:
+#  For gitlab CI OR Dockerfile Use **uvicorn**, not:
 #       python ai_gateway_service.py
 #  because FastAPI apps must be served by an ASGI server.
 
-# The proper CI command should be: nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
+# The proper CI command OR Dockefile shell script  should be: nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
 #
 
 # This AI Gateway Service listens on port 8000 and acts as a "router" to the LLM:
 #
 #   (Request path with the context) module2f → MCPClient → AI Gateway → LiLM
 #   (Response return path with the plan) LLM → AI Gateway → MCPClient → module2f
+# The port 8000 will not be visible on the VPS if the gateway is run on the deploy docker container, which is the approach that
+# is used for this implementation.
 #
 # module2f NEVER talks to the LLM directly.
 # The LLM NEVER sees module2f directly.
 # ------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# HOW THIS FILE IS LOADED BY UVICORN (AI Gateway Service Startup Mechanics)
+# ---------------------------------------------------------------------------
+# This file defines the FastAPI application used as the AI Gateway Service.
+# The key object is:
+#
+#       app = FastAPI()
+#
+# When uvicorn is started with:
+#
+#       uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000
+#
+# uvicorn performs the following steps automatically:
+#
+#   1. Imports the Python module named "ai_gateway_service"
+#      (i.e., this file: ai_gateway_service.py).
+#
+#   2. Searches the module for an attribute named "app".
+#      In this file, "app" is the FastAPI() instance defined below.
+#
+#   3. Loads the entire module into memory.
+#      This means ALL of the following are executed and available:
+#         • the LLM contract rules
+#         • the system prompt
+#         • the schema validation logic
+#         • the fallback logic
+#         • the RecoveryRequest Pydantic model
+#         • the /recover POST endpoint
+#
+#   4. Starts the ASGI server and exposes the FastAPI app on port 8000.
+#
+# The AI Gateway Service is started *inside the deploy container* via the
+# embedded wrapper script in the Dockerfile using:
+#
+#       nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
+#
+# This ensures:
+#   • The gateway runs inside the container (not on the VPS host)
+#   • Module2f and the MCPClient can reach it at http://localhost:8000
+#   • The LLM contract is fully loaded before any recovery requests occur
+#
+# The gateway acts as the router between module2f and the LLM:
+#
+#       module2f → MCPClient → AI Gateway → LLM
+#       LLM → AI Gateway → MCPClient → module2f
+#
+# The entire recovery contract is enforced here before any plan is returned.
+# ---------------------------------------------------------------------------
+
+
+
+
 
 from fastapi import FastAPI
 from pydantic import BaseModel
