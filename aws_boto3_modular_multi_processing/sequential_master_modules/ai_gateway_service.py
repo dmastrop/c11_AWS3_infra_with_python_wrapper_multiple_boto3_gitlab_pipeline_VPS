@@ -99,7 +99,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
 import os
-
+import json
 
 app = FastAPI()
 
@@ -301,10 +301,18 @@ def recover(request: RecoveryRequest):
 
                     # The context from module2f is embedded here.
                     # The LLM sees the entire failure context.
+                    #{
+                    #    "role": "user",
+                    #    "content": str(context)
+                    #}
+
+                    # The above context formatting with str(context) is python format and NOT JSON format
+                    # The LLM requires JSON format
                     {
                         "role": "user",
-                        "content": str(context)
+                        "content": json.dumps(context, indent=2)
                     }
+
                 ]
 
 
