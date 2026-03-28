@@ -1,5 +1,5 @@
-variables:
-  SKIP_PYTEST: "true" #### Use this to skip the pytest test stage below for non-python related tests/commits to the system. true will disable the test stage and false will enable the pytest test stage. The rules in .gitlab-ci-pytest.yml will dictate this behvavior for the child pytest pipeline.
+#variables:
+#  SKIP_PYTEST: "true" #### Use this to skip the pytest test stage below for non-python related tests/commits to the system. true will disable the test stage and false will enable the pytest test stage. The rules in .gitlab-ci-pytest.yml will dictate this behvavior for the child pytest pipeline.
 
 
 
