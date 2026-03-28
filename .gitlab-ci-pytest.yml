@@ -74,10 +74,12 @@ pytest_job:
     when: always
     paths:
       - pytest-report.log
-  only:
-    - main
-    - merge_requests
+    #only:
+    #  - main
+    #  - merge_requests
 #### This will run on both merge_requests and on push requests.
+#### This is taken care of with the .gitlab-ci.yml parent pipeline
+
 
 #### note that this uses the docker executor gitlab runner,  but it was found that project level executor had lots of issues.
 #### Thus a new docker executor of instance type was created for this and it is working fine. Since this executor is being used
