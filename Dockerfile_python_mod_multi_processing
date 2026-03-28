@@ -45,28 +45,30 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 
+
 # ------------------------------------------------------------
 # Embedded wrapper script for Step 6 (AI Gateway Service)
 # ------------------------------------------------------------
-RUN echo '#!/bin/bash
-set -e
-
-# Install gateway dependencies
-pip install fastapi uvicorn requests
-
-# Start the AI Gateway Service in the background
-nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &
-
-# Give it time to start
-sleep 3
-
-# Now run the master script
-# Use this for forked mode:
-# python master_script.py
-# Use this for spawn mode:
-python master_script_spawn.py
-' > /aws_EC2/start_with_gateway.sh && \
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Install gateway dependencies\n\
+pip install fastapi uvicorn requests\n\
+\n\
+# Start the AI Gateway Service in the background\n\
+nohup uvicorn ai_gateway_service:app --host 0.0.0.0 --port 8000 &\n\
+\n\
+# Give it time to start\n\
+sleep 3\n\
+\n\
+# Now run the master script\n\
+# Use this for forked mode:\n\
+# python master_script.py\n\
+# Use this for spawn mode:\n\
+python master_script_spawn.py\n' > /aws_EC2/start_with_gateway.sh && \
     chmod +x /aws_EC2/start_with_gateway.sh
+
+
 
 # Use the wrapper script as the container entrypoint
 ENTRYPOINT ["/aws_EC2/start_with_gateway.sh"]
