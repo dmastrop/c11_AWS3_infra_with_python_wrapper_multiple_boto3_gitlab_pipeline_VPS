@@ -2,13 +2,8 @@
 
 
 
-gvariables:
-#  SKIP_PYTEST: "true" #### Use this to skip the pytest test stage below for non-python related tests/commits to the system. true will disable the test stage and false will enable the pytest test stage. The rules in .gitlab-ci-pytest.yml will dictate this behvavior for the child pytest pipeline.
-
-
-
 stages:
-  #  - lint
+  #- lint
   #- test   #### run the pytest test suite test stage prior to the deploy build stage. This runs in a child pipeline not the deploy pipeline. The deploy pipeline will not run if the test stage fails (by design)
   - build
   - push
@@ -39,6 +34,7 @@ stages:
 #### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
 #### as shown below using the .gitlab-ci-pytest.yml child pipeline file 
 #### The pytest test suite will run for both pushes and merge_requests
+
 #pytest_pipeline:
 #  stage: test
 #  trigger:
@@ -49,30 +45,6 @@ stages:
 #    - merge_requests
     
     
-
-
-      ##### Deprecated:
-      ##### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
-      ##### as shown below using the .gitlab-ci-pytest.yml child pipeline file via trigger.
-      ##### The pytest test suite will run for both pushes and merge_requests.
-      #pytest_pipeline:
-      #  stage: test
-      #  
-      #  trigger:
-      #    include: ".gitlab-ci-pytest.yml"
-      #    strategy: depend    #### IF the pytest test stage is Run, the parent(this) will require it to be successful in order to proceed to the build, push, and deploy
-      #
-      #  when: manual  #### This will give option of manual button the child pipeline so that it can optionally be skipped
-      #  
-      #  allow_failure: false   #### This is required with manual above: If the Run test stage button not pushed, the parent(this) will treat as success and proceed to build,push, deploy. IF the test stage is Cancelled, the parent (this) will tread as success and proceed to build,push, deploy.
-      #  
-      #  only:
-      #    - main
-      #    - merge_requests
-
-
-
-
 
 
 
