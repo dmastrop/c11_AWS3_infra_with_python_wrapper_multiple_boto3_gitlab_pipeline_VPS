@@ -190,7 +190,7 @@ def recover(request: RecoveryRequest):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "gpt-4.1-mini",
+                "model": "gpt-4.1-pro",
                 "temperature": 0,
                 "response_format": {"type": "json_object"},
 
