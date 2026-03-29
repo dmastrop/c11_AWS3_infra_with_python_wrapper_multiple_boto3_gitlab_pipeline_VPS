@@ -104,7 +104,12 @@ import json
 app = FastAPI()
 
 # URL of the LLM API endpoint
-LLM_API = "https://api.openai.com/v1/chat/completions"
+#LLM_API = "https://api.openai.com/v1/chat/completions"
+# Must use this URL for LLM API endpoint for 4.1-pro model upgrade
+LLM_API = "https://api.openai.com/v1/responses"
+
+
+
 
 # The API key for the LLM
 #API_KEY = "api-key"   # <-- replace with real key or load from env
