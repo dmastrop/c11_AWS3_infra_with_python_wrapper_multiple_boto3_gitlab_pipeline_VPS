@@ -1,15 +1,11 @@
-###### This .gitlab-ci.yml EXCLUDES the child pipeline for pytest test stage ######
-
-
-
-gvariables:
+#variables:
 #  SKIP_PYTEST: "true" #### Use this to skip the pytest test stage below for non-python related tests/commits to the system. true will disable the test stage and false will enable the pytest test stage. The rules in .gitlab-ci-pytest.yml will dictate this behvavior for the child pytest pipeline.
 
 
 
 stages:
   #  - lint
-  #- test   #### run the pytest test suite test stage prior to the deploy build stage. This runs in a child pipeline not the deploy pipeline. The deploy pipeline will not run if the test stage fails (by design)
+  - test   #### run the pytest test suite test stage prior to the deploy build stage. This runs in a child pipeline not the deploy pipeline. The deploy pipeline will not run if the test stage fails (by design)
   - build
   - push
   - deploy
@@ -35,18 +31,18 @@ stages:
 
 
 
-    #### This .gitlab-ci.yml file EXCLUDES the child pipeline for pytest test stage ####
+
 #### This is the test stage for integration of the pytest test suite into the Gitlab CI pipeline. This will run in a child pipeline
 #### as shown below using the .gitlab-ci-pytest.yml child pipeline file 
 #### The pytest test suite will run for both pushes and merge_requests
-#pytest_pipeline:
-#  stage: test
-#  trigger:
-#    include: ".gitlab-ci-pytest.yml"
-#    strategy: depend    #### do not run the deploy stage (or build or push stages) if the test stage fails. 
-#  only:
-#    - main
-#    - merge_requests
+pytest_pipeline:
+  stage: test
+  trigger:
+    include: ".gitlab-ci-pytest.yml"
+    strategy: depend    #### do not run the deploy stage (or build or push stages) if the test stage fails. 
+  only:
+    - main
+    - merge_requests
     
     
 
