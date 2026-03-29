@@ -187,6 +187,283 @@ def recover(request: RecoveryRequest):
         #auditable, and easy to document.
         # If the fix involves more than one comamnd to resolve it it will use the action cleanup_and_retry.
 
+        
+        
+
+
+
+        ##### ORIGINAL BLOCK. This is deprecated. For NEW BLOCK see further below that has updated format required for gpt 4.1 ####
+        
+        # ---------------------------------------------------------------------------
+        # DEPRECATED BLOCK — OLD CHAT COMPLETIONS API (KEPT FOR HISTORICAL CONTEXT)
+        #
+        # This block originally used the legacy Chat Completions endpoint:
+        #
+        #     POST https://api.openai.com/v1/chat/completions
+        #
+        # with a payload containing a "messages" array:
+        #
+        #     "messages": [
+        #         {"role": "system", "content": <contract>},
+        #         {"role": "user",   "content": <failure context>}
+        #     ]
+        #
+        # WHY THIS BLOCK NO LONGER WORKS:
+        # -------------------------------
+        # The Chat Completions API is tied to older GPT‑3.5/4.0 model families.
+        # The recovery engine now uses GPT‑4.1‑pro, which is **not served** through
+        # the Chat Completions endpoint. Attempting to call GPT‑4.1‑pro here results in:
+        #
+        #     404 Not Found
+        #
+        # because the model literally does not exist at this URL.
+        #
+        # Additionally, the Chat Completions API requires the "messages" array format,
+        # which is no longer supported for GPT‑4.1 models. The new API uses:
+        #
+        #     • "system": <string>
+        #     • "input":  <string>
+        #
+        # instead of a list of role‑tagged messages.
+        #
+        # WHY WE KEEP THIS BLOCK COMMENTED OUT:
+        # -------------------------------------
+        # This block is preserved for reference so future maintainers can see:
+        #     • how the original implementation worked,
+        #     • why it failed when upgrading to GPT‑4.1‑pro,
+        #     • how the prompt structure evolved,
+        #     • and what API format is now deprecated.
+        #
+        # DO NOT RE‑ENABLE THIS BLOCK.
+        # It is incompatible with GPT‑4.1 and all future model families that use
+        # the unified /v1/responses API.
+        #
+        # If a future model upgrade is required, always verify:
+        #     1. The correct endpoint for that model family.
+        #     2. The required prompt structure ("system" + "input" vs. new formats).
+        #     3. That strict JSON output enforcement is still supported.
+        #
+        # ---------------------------------------------------------------------------
+
+
+
+        #response = requests.post(
+        #    LLM_API,
+        #    headers={
+        #        "Authorization": f"Bearer {API_KEY}",
+        #        "Content-Type": "application/json"
+        #    },
+        #    json={
+        #        "model": "gpt-4.1-pro",
+        #        "temperature": 0,
+        #        "response_format": {"type": "json_object"},
+
+
+        #        "messages": [
+        #            {
+        #                "role": "system",
+        #                "content": (
+        #                    "You are a recovery engine.\n\n"
+        #                    "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
+        #                    "{\n"
+        #                    "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+        #                    "  \"cleanup\": [string],   # optional\n"
+        #                    "  \"retry\": string        # optional\n"
+        #                    "}\n\n"
+        #                    "Rules:\n"
+        #                    "- ALWAYS choose one of the allowed actions.\n"
+        #                    "- NEVER return text outside the JSON.\n"
+        #                    "- NEVER explain your reasoning.\n"
+        #                    "- Use \"fallback\" if you cannot produce a valid plan.\n"
+        #                    "\n"
+        #                    
+
+        #                    "- Use \"abort\" when the command or system state is unsafe or non‑recoverable.\n"
+        #                    "  Abort conditions include (but are not limited to):\n"
+        #                    "    • destructive commands (e.g., deleting system files)\n"
+        #                    "    • non‑idempotent operations that cannot be safely retried\n"
+        #                    "    • dependency conflicts that cannot be resolved automatically\n"
+        #                    "    • corrupted or inconsistent system state\n"
+        #                    "    • security violations (credentials or secrets exposed)\n"
+        #                    "    • operations that risk data loss or node instability\n"
+        #                    "    • commands that cannot be undone or rolled back\n"
+        #                    "  When returning \"abort\", do NOT propose a retry command.\n"
+        #                    "\n"
+        #                    
+
+        #                    "- Use \"fallback\" when you cannot produce a valid or safe recovery plan.\n"
+        #                    "  Fallback conditions include:\n"
+        #                    "    • insufficient information in the failure context\n"
+        #                    "    • ambiguous or contradictory signals about system state\n"
+        #                    "    • inability to determine a safe retry command\n"
+        #                    "    • uncertainty about whether a retry would cause harm\n"
+        #                    "    • detection of malformed, incomplete, or unexpected context fields\n"
+        #                    "    • any situation where you cannot confidently choose another action\n"
+        #                    "  When returning \"fallback\", do NOT propose cleanup or retry commands.\n"
+        #                    "\n"
+        #                    
+
+        #                    "- Use \"cleanup_and_retry\" when the failure can be resolved by removing\n"
+        #                    "  temporary files, stale locks, partial installations, or other artifacts\n"
+        #                    "  that may be blocking successful execution.\n"
+        #                    "  Cleanup-and-retry conditions include:\n"
+        #                    "    • leftover PID files or lock files\n"
+        #                    "    • partially installed packages or corrupted temp directories\n"
+        #                    "    • stale processes that must be terminated before retrying\n"
+        #                    "    • insufficient disk space that can be reclaimed safely\n"
+        #                    "    • any reversible condition where cleanup restores a safe state\n"
+        #                    "\n"
+        #                    "  When returning \"cleanup_and_retry\", provide a list of cleanup commands\n"
+        #                    "  in the \"cleanup\" field, and one or more retry commands in the \"retry\"\n"
+        #                    "  field.\n"
+        #                    "\n"
+        #                    "  The \"retry\" field may be either a single string or a list of commands.\n"
+        #                    "  When multiple retry commands are provided, they are executed sequentially.\n"
+        #                    "  If any retry command fails (non-zero exit status or non-empty stderr),\n"
+        #                    "  the entire cleanup_and_retry action is considered failed immediately.\n"
+        #                    "  Only if all retry commands succeed is the action considered successful.\n"
+        #                    "\n"
+        #                    
+
+        #                    "- Idempotency‑related failures MUST use \"cleanup_and_retry\".\n"
+        #                    "  Idempotency conditions include (but are not limited to):\n"
+        #                    "    • \"already installed\"\n"
+        #                    "    • \"already exists\"\n"
+        #                    "    • \"nothing to do\"\n"
+        #                    "    • \"resource busy\"\n"
+        #                    "    • \"lock is held by PID ...\"\n"
+        #                    "    • \"directory not empty\"\n"
+        #                    "    • \"service already running\"\n"
+        #                    "    • \"package is in a half-installed state\"\n"
+        #                    "  These failures are caused by environmental residue, not incorrect commands.\n"
+        #                    "  When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup\n"
+        #                    "  commands that restore a safe state, followed by one or more retry commands.\n"
+        #                    "\n"
+
+
+        #                    "- The \"cleanup\" field may be an empty list when no cleanup steps are required.\n"
+        #                    "  In such cases, you may still use \"cleanup_and_retry\" to provide one or more\n"
+        #                    "  retry commands in the \"retry\" field. This is appropriate when the environment\n"
+        #                    "  is already in a safe state and only the retry commands are needed to repair\n"
+        #                    "  the failure.\n"
+        #                    "\n"
+
+
+        #                    "- Use \"retry_with_modified_command\" when the failure can be resolved by\n"
+        #                    "  adjusting the original command rather than performing cleanup.\n"
+        #                    "  Modified‑command conditions include:\n"
+        #                    "    • missing flags or arguments required for successful execution\n"
+        #                    "    • incorrect package names, service names, or paths\n"
+        #                    "    • commands that need elevated privileges (e.g., adding sudo)\n"
+        #                    "    • dependency installation commands that must be adjusted\n"
+        #                    "    • retrying with safer or more explicit parameters\n"
+        #                    "    • replacing a failing subcommand with a corrected version\n"
+        #                    "  When returning \"retry_with_modified_command\", provide exactly one\n"
+        #                    "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
+        #                )
+        #            },
+
+        #            # The context from module2f is embedded here.
+        #            # The LLM sees the entire failure context.
+        #            #{
+        #            #    "role": "user",
+        #            #    "content": str(context)
+        #            #}
+
+        #            # The above context formatting with str(context) is python format and NOT JSON format
+        #            # The LLM requires JSON format
+        #            {
+        #                "role": "user",
+        #                "content": json.dumps(context, indent=2)
+        #            }
+
+        #        ]
+
+
+        #    },    # end of json block construct. Lots of nesting here!!
+        #    timeout=15
+        #
+        #)  # end of request response post block
+
+
+
+
+
+
+
+
+        # ---------------------------------------------------------------------------
+        # NOTE: This block (BELOW) replaces the legacy Chat Completions API call (ABOVE).
+        #
+        # WHY THIS CHANGE WAS REQUIRED:
+        # -----------------------------
+        # The original implementation used:
+        #
+        #     POST https://api.openai.com/v1/chat/completions
+        #
+        # with a payload containing:
+        #
+        #     "messages": [
+        #         {"role": "system", "content": "..."},
+        #         {"role": "user", "content": "..."}
+        #     ]
+        #
+        # This endpoint and message format were part of the *old* Chat Completions API.
+        # However, the recovery engine now uses the GPT‑4.1 model family (specifically
+        # gpt‑4.1‑pro), and these models are **NOT** served through the Chat Completions
+        # endpoint. Attempting to call them there results in:
+        #
+        #     404 Not Found
+        #
+        # because the model literally does not exist at that path.
+        #
+        # NEW API REQUIREMENTS:
+        # ---------------------
+        # GPT‑4.1 models are only available through the new unified Responses API:
+        #
+        #     POST https://api.openai.com/v1/responses
+        #
+        # This API does **not** accept a "messages" array. Instead, it requires:
+        #
+        #     • "system": <string>   → the entire system prompt / contract
+        #     • "input":  <string>   → the user prompt (our failure context)
+        #     • "response_format": {"type": "json_object"} for strict JSON output
+        #
+        # The content of our prompts (the full recovery‑engine contract and the
+        # failure context) remains **100% identical**. Only the *shape* of the
+        # request changed.
+        #
+        # WHY THIS MATTERS FOR THE RECOVERY ENGINE:
+        # -----------------------------------------
+        # Our recovery engine depends on:
+        #     • strict JSON‑only output
+        #     • deterministic action selection
+        #     • a large, detailed system contract
+        #     • zero tolerance for hallucinated fields
+        #
+        # GPT‑4.1‑pro is capable of meeting these constraints, but only when called
+        # through the correct API with the correct payload structure.
+        #
+        # This rewrite preserves:
+        #     • the full system contract (every rule, every bullet, unchanged)
+        #     • the full failure context
+        #     • strict JSON enforcement
+        #     • deterministic behavior
+        #
+        # and updates only the transport format to match the new API.
+        #
+        # FUTURE MAINTAINERS:
+        # -------------------
+        # If the model is ever upgraded again (e.g., GPT‑5.x or later), verify:
+        #     1. The correct endpoint for that model family.
+        #     2. Whether the API still uses "system" + "input" or introduces a new format.
+        #     3. That "response_format": {"type": "json_object"} is still supported.
+        #
+        # DO NOT revert to the old Chat Completions format. It is deprecated and
+        # incompatible with GPT‑4.1 and later models.
+        #
+        # ---------------------------------------------------------------------------
+
 
         response = requests.post(
             LLM_API,
@@ -199,132 +476,103 @@ def recover(request: RecoveryRequest):
                 "temperature": 0,
                 "response_format": {"type": "json_object"},
 
+                # FULL SYSTEM PROMPT — unchanged, just moved into "system"
+                "system": (
+                    "You are a recovery engine.\n\n"
+                    "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
+                    "{\n"
+                    "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                    "  \"cleanup\": [string],   # optional\n"
+                    "  \"retry\": string        # optional\n"
+                    "}\n\n"
+                    "Rules:\n"
+                    "- ALWAYS choose one of the allowed actions.\n"
+                    "- NEVER return text outside the JSON.\n"
+                    "- NEVER explain your reasoning.\n"
+                    "- Use \"fallback\" if you cannot produce a valid plan.\n"
+                    "\n"
+                    "- Use \"abort\" when the command or system state is unsafe or non‑recoverable.\n"
+                    "  Abort conditions include (but are not limited to):\n"
+                    "    • destructive commands (e.g., deleting system files)\n"
+                    "    • non‑idempotent operations that cannot be safely retried\n"
+                    "    • dependency conflicts that cannot be resolved automatically\n"
+                    "    • corrupted or inconsistent system state\n"
+                    "    • security violations (credentials or secrets exposed)\n"
+                    "    • operations that risk data loss or node instability\n"
+                    "    • commands that cannot be undone or rolled back\n"
+                    "  When returning \"abort\", do NOT propose a retry command.\n"
+                    "\n"
+                    "- Use \"fallback\" when you cannot produce a valid or safe recovery plan.\n"
+                    "  Fallback conditions include:\n"
+                    "    • insufficient information in the failure context\n"
+                    "    • ambiguous or contradictory signals about system state\n"
+                    "    • inability to determine a safe retry command\n"
+                    "    • uncertainty about whether a retry would cause harm\n"
+                    "    • detection of malformed, incomplete, or unexpected context fields\n"
+                    "    • any situation where you cannot confidently choose another action\n"
+                    "  When returning \"fallback\", do NOT propose cleanup or retry commands.\n"
+                    "\n"
+                    "- Use \"cleanup_and_retry\" when the failure can be resolved by removing\n"
+                    "  temporary files, stale locks, partial installations, or other artifacts\n"
+                    "  that may be blocking successful execution.\n"
+                    "  Cleanup-and-retry conditions include:\n"
+                    "    • leftover PID files or lock files\n"
+                    "    • partially installed packages or corrupted temp directories\n"
+                    "    • stale processes that must be terminated before retrying\n"
+                    "    • insufficient disk space that can be reclaimed safely\n"
+                    "    • any reversible condition where cleanup restores a safe state\n"
+                    "\n"
+                    "  When returning \"cleanup_and_retry\", provide a list of cleanup commands\n"
+                    "  in the \"cleanup\" field, and one or more retry commands in the \"retry\"\n"
+                    "  field.\n"
+                    "\n"
+                    "  The \"retry\" field may be either a single string or a list of commands.\n"
+                    "  When multiple retry commands are provided, they are executed sequentially.\n"
+                    "  If any retry command fails (non-zero exit status or non-empty stderr),\n"
+                    "  the entire cleanup_and_retry action is considered failed immediately.\n"
+                    "  Only if all retry commands succeed is the action considered successful.\n"
+                    "\n"
+                    "- Idempotency‑related failures MUST use \"cleanup_and_retry\".\n"
+                    "  Idempotency conditions include (but are not limited to):\n"
+                    "    • \"already installed\"\n"
+                    "    • \"already exists\"\n"
+                    "    • \"nothing to do\"\n"
+                    "    • \"resource busy\"\n"
+                    "    • \"lock is held by PID ...\"\n"
+                    "    • \"directory not empty\"\n"
+                    "    • \"service already running\"\n"
+                    "    • \"package is in a half-installed state\"\n"
+                    "  These failures are caused by environmental residue, not incorrect commands.\n"
+                    "  When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup\n"
+                    "  commands that restore a safe state, followed by one or more retry commands.\n"
+                    "\n"
+                    "- The \"cleanup\" field may be an empty list when no cleanup steps are required.\n"
+                    "  In such cases, you may still use \"cleanup_and_retry\" to provide one or more\n"
+                    "  retry commands in the \"retry\" field. This is appropriate when the environment\n"
+                    "  is already in a safe state and only the retry commands are needed to repair\n"
+                    "  the failure.\n"
+                    "\n"
+                    "- Use \"retry_with_modified_command\" when the failure can be resolved by\n"
+                    "  adjusting the original command rather than performing cleanup.\n"
+                    "  Modified‑command conditions include:\n"
+                    "    • missing flags or arguments required for successful execution\n"
+                    "    • incorrect package names, service names, or paths\n"
+                    "    • commands that need elevated privileges (e.g., adding sudo)\n"
+                    "    • dependency installation commands that must be adjusted\n"
+                    "    • retrying with safer or more explicit parameters\n"
+                    "    • replacing a failing subcommand with a corrected version\n"
+                    "  When returning \"retry_with_modified_command\", provide exactly one\n"
+                    "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
+                ),
 
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a recovery engine.\n\n"
-                            "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
-                            "{\n"
-                            "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
-                            "  \"cleanup\": [string],   # optional\n"
-                            "  \"retry\": string        # optional\n"
-                            "}\n\n"
-                            "Rules:\n"
-                            "- ALWAYS choose one of the allowed actions.\n"
-                            "- NEVER return text outside the JSON.\n"
-                            "- NEVER explain your reasoning.\n"
-                            "- Use \"fallback\" if you cannot produce a valid plan.\n"
-                            "\n"
-                            
-
-                            "- Use \"abort\" when the command or system state is unsafe or non‑recoverable.\n"
-                            "  Abort conditions include (but are not limited to):\n"
-                            "    • destructive commands (e.g., deleting system files)\n"
-                            "    • non‑idempotent operations that cannot be safely retried\n"
-                            "    • dependency conflicts that cannot be resolved automatically\n"
-                            "    • corrupted or inconsistent system state\n"
-                            "    • security violations (credentials or secrets exposed)\n"
-                            "    • operations that risk data loss or node instability\n"
-                            "    • commands that cannot be undone or rolled back\n"
-                            "  When returning \"abort\", do NOT propose a retry command.\n"
-                            "\n"
-                            
-
-                            "- Use \"fallback\" when you cannot produce a valid or safe recovery plan.\n"
-                            "  Fallback conditions include:\n"
-                            "    • insufficient information in the failure context\n"
-                            "    • ambiguous or contradictory signals about system state\n"
-                            "    • inability to determine a safe retry command\n"
-                            "    • uncertainty about whether a retry would cause harm\n"
-                            "    • detection of malformed, incomplete, or unexpected context fields\n"
-                            "    • any situation where you cannot confidently choose another action\n"
-                            "  When returning \"fallback\", do NOT propose cleanup or retry commands.\n"
-                            "\n"
-                            
-
-                            "- Use \"cleanup_and_retry\" when the failure can be resolved by removing\n"
-                            "  temporary files, stale locks, partial installations, or other artifacts\n"
-                            "  that may be blocking successful execution.\n"
-                            "  Cleanup-and-retry conditions include:\n"
-                            "    • leftover PID files or lock files\n"
-                            "    • partially installed packages or corrupted temp directories\n"
-                            "    • stale processes that must be terminated before retrying\n"
-                            "    • insufficient disk space that can be reclaimed safely\n"
-                            "    • any reversible condition where cleanup restores a safe state\n"
-                            "\n"
-                            "  When returning \"cleanup_and_retry\", provide a list of cleanup commands\n"
-                            "  in the \"cleanup\" field, and one or more retry commands in the \"retry\"\n"
-                            "  field.\n"
-                            "\n"
-                            "  The \"retry\" field may be either a single string or a list of commands.\n"
-                            "  When multiple retry commands are provided, they are executed sequentially.\n"
-                            "  If any retry command fails (non-zero exit status or non-empty stderr),\n"
-                            "  the entire cleanup_and_retry action is considered failed immediately.\n"
-                            "  Only if all retry commands succeed is the action considered successful.\n"
-                            "\n"
-                            
-
-                            "- Idempotency‑related failures MUST use \"cleanup_and_retry\".\n"
-                            "  Idempotency conditions include (but are not limited to):\n"
-                            "    • \"already installed\"\n"
-                            "    • \"already exists\"\n"
-                            "    • \"nothing to do\"\n"
-                            "    • \"resource busy\"\n"
-                            "    • \"lock is held by PID ...\"\n"
-                            "    • \"directory not empty\"\n"
-                            "    • \"service already running\"\n"
-                            "    • \"package is in a half-installed state\"\n"
-                            "  These failures are caused by environmental residue, not incorrect commands.\n"
-                            "  When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup\n"
-                            "  commands that restore a safe state, followed by one or more retry commands.\n"
-                            "\n"
-
-
-                            "- The \"cleanup\" field may be an empty list when no cleanup steps are required.\n"
-                            "  In such cases, you may still use \"cleanup_and_retry\" to provide one or more\n"
-                            "  retry commands in the \"retry\" field. This is appropriate when the environment\n"
-                            "  is already in a safe state and only the retry commands are needed to repair\n"
-                            "  the failure.\n"
-                            "\n"
-
-
-                            "- Use \"retry_with_modified_command\" when the failure can be resolved by\n"
-                            "  adjusting the original command rather than performing cleanup.\n"
-                            "  Modified‑command conditions include:\n"
-                            "    • missing flags or arguments required for successful execution\n"
-                            "    • incorrect package names, service names, or paths\n"
-                            "    • commands that need elevated privileges (e.g., adding sudo)\n"
-                            "    • dependency installation commands that must be adjusted\n"
-                            "    • retrying with safer or more explicit parameters\n"
-                            "    • replacing a failing subcommand with a corrected version\n"
-                            "  When returning \"retry_with_modified_command\", provide exactly one\n"
-                            "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
-                        )
-                    },
-
-                    # The context from module2f is embedded here.
-                    # The LLM sees the entire failure context.
-                    #{
-                    #    "role": "user",
-                    #    "content": str(context)
-                    #}
-
-                    # The above context formatting with str(context) is python format and NOT JSON format
-                    # The LLM requires JSON format
-                    {
-                        "role": "user",
-                        "content": json.dumps(context, indent=2)
-                    }
-
-                ]
-
-
-            },    # end of json block construct. Lots of nesting here!!
+                # USER PROMPT — unchanged, just moved into "input"
+                "input": json.dumps(context, indent=2)
+            }, # end of json block construct. Lots of nesting here!!
             timeout=15
-        
         )  # end of request response post block
+
+
+
 
 
 
