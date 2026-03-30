@@ -489,8 +489,8 @@ def recover(request: RecoveryRequest):
                 "  When returning \"retry_with_modified_command\", provide exactly one\n"
                 "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
             ),
-            #"input": json.dumps(context, indent=2)
-            "input": context,
+            
+
             # NEW BLOCK STARTS HERE for input_schema
             "input_schema": {
                 "type": "json_schema",
@@ -521,6 +521,10 @@ def recover(request: RecoveryRequest):
                 }
             }
             # NEW BLOCK ENDS HERE
+
+
+            #"input": json.dumps(context, indent=2)
+            "input": context,
 
         }
 
@@ -730,10 +734,8 @@ def recover(request: RecoveryRequest):
                     "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
                 ),
 
-                # USER PROMPT — unchanged, just moved into "input"
-                #"input": json.dumps(context, indent=2)
-                "input": context,
-                
+
+
                 # Need to add an input_schema as well for the latest API
                 # IMPORTANT:
                 # When sending a structured JSON object in the "input" field, the /v1/responses
@@ -781,7 +783,12 @@ def recover(request: RecoveryRequest):
                                 "required": ["stderr", "command", "exit_status"]
                             }
                         }
-                    }
+                }, ## End of the input_schema
+
+                # USER PROMPT — unchanged, just moved into "input"
+                #"input": json.dumps(context, indent=2)
+                "input": context,
+                
 
             }, # end of json block construct. Lots of nesting here!!
             timeout=15
