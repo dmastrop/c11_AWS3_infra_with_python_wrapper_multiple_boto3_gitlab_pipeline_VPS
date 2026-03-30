@@ -196,7 +196,7 @@ def recover(request: RecoveryRequest):
         debug_payload = {
             "model": "gpt-4.1-pro",
             "temperature": 0,
-            #"response_format": {"type": "json_object"},
+            "response_format": {"type": "json_object"},
             
             #"system": (
             #    "You are a recovery engine.\n\n"
@@ -365,38 +365,38 @@ def recover(request: RecoveryRequest):
 
 
 
-            # NEW BLOCK STARTS HERE for input_schema
-            "input_schema": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "FailureContext",
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-07/schema#",
-                        "type": "object",
-                        "properties": {
-                            "stderr": {"type": "string"},
-                            "stdout": {"type": "string"},
-                            "command": {"type": "string"},
-                            "exit_status": {"type": "integer"},
-                            "attempt": {"type": "integer"},
-                            "instance_id": {"type": "string"},
-                            "ip": {"type": "string"},
-                            "tags": {
-                                "type": "array",
-                                "items": {"type": "string"}
-                            },
-                            "os_info": {"type": "string"},
-                            "history": {
-                                "type": "array",
-                                "items": {"type": "string"}
-                            }
-                        },
-                        "required": ["stderr", "command", "exit_status"],
-                        "additionalProperties": False
-                    }
-                }
-            },
-            # NEW BLOCK ENDS HERE
+            ## NEW BLOCK STARTS HERE for input_schema
+            #"input_schema": {
+            #    "type": "json_schema",
+            #    "json_schema": {
+            #        "name": "FailureContext",
+            #        "schema": {
+            #            "$schema": "http://json-schema.org/draft-07/schema#",
+            #            "type": "object",
+            #            "properties": {
+            #                "stderr": {"type": "string"},
+            #                "stdout": {"type": "string"},
+            #                "command": {"type": "string"},
+            #                "exit_status": {"type": "integer"},
+            #                "attempt": {"type": "integer"},
+            #                "instance_id": {"type": "string"},
+            #                "ip": {"type": "string"},
+            #                "tags": {
+            #                    "type": "array",
+            #                    "items": {"type": "string"}
+            #                },
+            #                "os_info": {"type": "string"},
+            #                "history": {
+            #                    "type": "array",
+            #                    "items": {"type": "string"}
+            #                }
+            #            },
+            #            "required": ["stderr", "command", "exit_status"],
+            #            "additionalProperties": False
+            #        }
+            #    }
+            #},
+            ## NEW BLOCK ENDS HERE
 
 
             #"input": json.dumps(context, indent=2),
@@ -730,7 +730,7 @@ def recover(request: RecoveryRequest):
             json={
                 "model": "gpt-4.1-pro",
                 "temperature": 0,
-                #"response_format": {"type": "json_object"},
+                "response_format": {"type": "json_object"},
 
 
                 ## FULL SYSTEM PROMPT — unchanged, just moved into "system"
@@ -925,36 +925,36 @@ def recover(request: RecoveryRequest):
                 # This allows the model to parse the failure context deterministically and
                 # apply the recovery-engine contract correctly.
 
-                "input_schema": {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "FailureContext",
-                            "schema": {
-                                "$schema": "http://json-schema.org/draft-07/schema#",
-                                "type": "object",
-                                "properties": {
-                                    "stderr": {"type": "string"},
-                                    "stdout": {"type": "string"},
-                                    "command": {"type": "string"},
-                                    "exit_status": {"type": "integer"},
-                                    "attempt": {"type": "integer"},
-                                    "instance_id": {"type": "string"},
-                                    "ip": {"type": "string"},
-                                    "tags": {
-                                        "type": "array",
-                                        "items": {"type": "string"}
-                                    },
-                                    "os_info": {"type": "string"},
-                                    "history": {
-                                        "type": "array",
-                                        "items": {"type": "string"}
-                                    }
-                                },
-                                "required": ["stderr", "command", "exit_status"],
-                                "additionalProperties": False
-                            }
-                        }
-                }, ## End of the input_schema
+                #"input_schema": {
+                #        "type": "json_schema",
+                #        "json_schema": {
+                #            "name": "FailureContext",
+                #            "schema": {
+                #                "$schema": "http://json-schema.org/draft-07/schema#",
+                #                "type": "object",
+                #                "properties": {
+                #                    "stderr": {"type": "string"},
+                #                    "stdout": {"type": "string"},
+                #                    "command": {"type": "string"},
+                #                    "exit_status": {"type": "integer"},
+                #                    "attempt": {"type": "integer"},
+                #                    "instance_id": {"type": "string"},
+                #                    "ip": {"type": "string"},
+                #                    "tags": {
+                #                        "type": "array",
+                #                        "items": {"type": "string"}
+                #                    },
+                #                    "os_info": {"type": "string"},
+                #                    "history": {
+                #                        "type": "array",
+                #                        "items": {"type": "string"}
+                #                    }
+                #                },
+                #                "required": ["stderr", "command", "exit_status"],
+                #                "additionalProperties": False
+                #            }
+                #        }
+                #}, ## End of the input_schema
 
                 # USER PROMPT — unchanged, just moved into "input"
                 #"input": json.dumps(context, indent=2),
