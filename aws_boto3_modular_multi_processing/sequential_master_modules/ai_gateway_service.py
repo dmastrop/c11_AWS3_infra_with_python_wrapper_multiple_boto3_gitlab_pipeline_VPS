@@ -519,7 +519,7 @@ def recover(request: RecoveryRequest):
                         "required": ["stderr", "command", "exit_status"]
                     }
                 }
-            }
+            },
             # NEW BLOCK ENDS HERE
 
 
