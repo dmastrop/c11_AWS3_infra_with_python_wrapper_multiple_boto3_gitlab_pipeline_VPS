@@ -196,7 +196,7 @@ def recover(request: RecoveryRequest):
         debug_payload = {
             "model": "gpt-4.1-pro",
             "temperature": 0,
-            "response_format": {"type": "json_object"},
+            #"response_format": {"type": "json_object"},
             
             #"system": (
             #    "You are a recovery engine.\n\n"
@@ -730,7 +730,7 @@ def recover(request: RecoveryRequest):
             json={
                 "model": "gpt-4.1-pro",
                 "temperature": 0,
-                "response_format": {"type": "json_object"},
+                #"response_format": {"type": "json_object"},
 
 
                 ## FULL SYSTEM PROMPT — unchanged, just moved into "system"
