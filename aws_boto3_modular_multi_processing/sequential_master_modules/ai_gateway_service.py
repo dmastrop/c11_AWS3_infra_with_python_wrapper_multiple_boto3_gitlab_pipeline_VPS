@@ -149,27 +149,8 @@ def recover(request: RecoveryRequest):
     # Forward the context to the LLM
     # --------------------------------------------------------
     try:
-        ##### TESTING
-        #response = requests.post(
-        #    LLM_API,
-        #    headers={
-        #        "Authorization": f"Bearer {API_KEY}",
-        #        "Content-Type": "application/json"
-        #    },
-        #    json={
-        #        "model": "gpt-5",   # or whatever model you use
-        #        "messages": [
-        #            {"role": "system", "content": "You are a recovery engine."},
 
-        #            # The context from module2f is embedded here.
-        #            # The LLM sees the entire failure context.
-        #            {"role": "user", "content": str(context)}
-        #        ]
-        #    },
-        #    timeout=15
-        #)
-
-        ###### The real deal setup is here ######
+        ##### ######
         # This is the plan schema for the action responses for the schema in accordance with the MCP Client (AI Request Sender)
         # in module2f. This has the acceptable action responses as I coded it in the AI/MCP HOOK function in module2f.
         
@@ -392,81 +373,31 @@ def recover(request: RecoveryRequest):
 
 
 
-        # ---------------------------------------------------------------------------
-        # NOTE: This block (BELOW) replaces the legacy Chat Completions API call (ABOVE).
-        #
-        # WHY THIS CHANGE WAS REQUIRED:
-        # -----------------------------
-        # The original implementation used:
-        #
-        #     POST https://api.openai.com/v1/chat/completions
-        #
-        # with a payload containing:
-        #
-        #     "messages": [
-        #         {"role": "system", "content": "..."},
-        #         {"role": "user", "content": "..."}
-        #     ]
-        #
-        # This endpoint and message format were part of the *old* Chat Completions API.
-        # However, the recovery engine now uses the GPT‑4.1 model family (specifically
-        # gpt‑4.1‑pro), and these models are **NOT** served through the Chat Completions
-        # endpoint. Attempting to call them there results in:
-        #
-        #     404 Not Found
-        #
-        # because the model literally does not exist at that path.
-        #
-        # NEW API REQUIREMENTS:
-        # ---------------------
-        # GPT‑4.1 models are only available through the new unified Responses API:
-        #
-        #     POST https://api.openai.com/v1/responses
-        #
-        # This API does **not** accept a "messages" array. Instead, it requires:
-        #
-        #     • "system": <string>   → the entire system prompt / contract
-        #     • "input":  <string>   → the user prompt (our failure context)
-        #     • "response_format": {"type": "json_object"} for strict JSON output
-        #
-        # The content of our prompts (the full recovery‑engine contract and the
-        # failure context) remains **100% identical**. Only the *shape* of the
-        # request changed.
-        #
-        # WHY THIS MATTERS FOR THE RECOVERY ENGINE:
-        # -----------------------------------------
-        # Our recovery engine depends on:
-        #     • strict JSON‑only output
-        #     • deterministic action selection
-        #     • a large, detailed system contract
-        #     • zero tolerance for hallucinated fields
-        #
-        # GPT‑4.1‑pro is capable of meeting these constraints, but only when called
-        # through the correct API with the correct payload structure.
-        #
-        # This rewrite preserves:
-        #     • the full system contract (every rule, every bullet, unchanged)
-        #     • the full failure context
-        #     • strict JSON enforcement
-        #     • deterministic behavior
-        #
-        # and updates only the transport format to match the new API.
-        #
-        # FUTURE MAINTAINERS:
-        # -------------------
-        # If the model is ever upgraded again (e.g., GPT‑5.x or later), verify:
-        #     1. The correct endpoint for that model family.
-        #     2. Whether the API still uses "system" + "input" or introduces a new format.
-        #     3. That "response_format": {"type": "json_object"} is still supported.
-        #
-        # DO NOT revert to the old Chat Completions format. It is deprecated and
-        # incompatible with GPT‑4.1 and later models.
-        #
-        # ---------------------------------------------------------------------------
 
 
+        # DEBUG: Print the exact payload being sent to OpenAI to troubleshoot the 400 issue. This is the print of the payload
+        # after the context is sent to the AI Gateway Service by the curl command inside the deploy container during testing.
+        # For example: 
+        # root@8e1145bca832:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
+        #  -H "Content-Type: application/json" \
+        #  -H "Authorization: Bearer $API_KEY" \
+        #  -d '{
+        #        "schema_version": "1.0",
+        #        "context": {
+        #            "stderr": "E: Could not get lock /var/lib/dpkg/lock-frontend",
+        #            "stdout": "",
+        #            "command": "apt-get install -y tomcat9",
+        #            "exit_status": 100,
+        #            "attempt": 1,
+        #            "instance_id": "i-123456",
+        #            "ip": "1.2.3.4",
+        #            "tags": [],
+        #            "os_info": "ubuntu",
+        #            "history": []
+        #        }
+        #      }'
+        
 
-        # DEBUG: Print the exact payload being sent to OpenAI to troubleshoot the 400 issue
         debug_payload = {
             "model": "gpt-4.1-pro",
             "temperature": 0,
@@ -558,7 +489,9 @@ def recover(request: RecoveryRequest):
                 "  When returning \"retry_with_modified_command\", provide exactly one\n"
                 "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
             ),
-            "input": json.dumps(context, indent=2)
+            #"input": json.dumps(context, indent=2)
+            "input": context
+
         }
 
         print("\n\n=== LLM REQUEST PAYLOAD ===")
@@ -568,6 +501,104 @@ def recover(request: RecoveryRequest):
 
 
 
+        # ---------------------------------------------------------------------------
+        # NOTE: This NEW BLOCK (BELOW) replaces the legacy Chat Completions API call (ORIGINAL BLOCK ABOVE).
+        #
+        # WHY THIS CHANGE WAS REQUIRED:
+        # -----------------------------
+        # The original implementation used:
+        #
+        #     POST https://api.openai.com/v1/chat/completions
+        #
+        # with a payload containing:
+        #
+        #     "messages": [
+        #         {"role": "system", "content": "..."},
+        #         {"role": "user", "content": "..."}
+        #     ]
+        #
+        # This endpoint and message format were part of the *old* Chat Completions API.
+        # However, the recovery engine now uses the GPT‑4.1 model family (specifically
+        # gpt‑4.1‑pro), and these models are **NOT** served through the Chat Completions
+        # endpoint. Attempting to call them there results in:
+        #
+        #     404 Not Found
+        #
+        # because the model literally does not exist at that path.
+        #
+        # NEW API REQUIREMENTS:
+        # ---------------------
+        # GPT‑4.1 models are only available through the new unified Responses API:
+        #
+        #     POST https://api.openai.com/v1/responses
+        #
+        # This API does **not** accept a "messages" array. Instead, it requires:
+        #
+        #     • "system": <string>   → the entire system prompt / contract
+        #     • "input":  <string>   → the user prompt (our failure context)
+        #     • "response_format": {"type": "json_object"} for strict JSON output
+        #
+        # The content of our prompts (the full recovery‑engine contract and the
+        # failure context) remains **100% identical**. Only the *shape* of the
+        # request changed.
+        #
+        # WHY THIS MATTERS FOR THE RECOVERY ENGINE:
+        # -----------------------------------------
+        # Our recovery engine depends on:
+        #     • strict JSON‑only output
+        #     • deterministic action selection
+        #     • a large, detailed system contract
+        #     • zero tolerance for hallucinated fields
+        #
+        # GPT‑4.1‑pro is capable of meeting these constraints, but only when called
+        # through the correct API with the correct payload structure.
+        #
+        # This rewrite preserves:
+        #     • the full system contract (every rule, every bullet, unchanged)
+        #     • the full failure context
+        #     • strict JSON enforcement
+        #     • deterministic behavior
+        #
+        # and updates only the transport format to match the new API.
+        #
+        # FUTURE MAINTAINERS:
+        # -------------------
+        # If the model is ever upgraded again (e.g., GPT‑5.x or later), verify:
+        #     1. The correct endpoint for that model family.
+        #     2. Whether the API still uses "system" + "input" or introduces a new format.
+        #     3. That "response_format": {"type": "json_object"} is still supported.
+        #
+        # DO NOT revert to the old Chat Completions format. It is deprecated and
+        # incompatible with GPT‑4.1 and later models.
+        #
+        # ---------------------------------------------------------------------------
+
+        # IMPORTANT:
+        # The /v1/responses API does NOT accept JSON-encoded strings as the "input" field.
+        # Previously we used:
+        #
+        #     "input": json.dumps(context, indent=2)
+        #
+        # which produces a STRING containing escaped JSON. Example:
+        #
+        #     "{ \"stderr\": \"E: Could not get lock ...\" }"
+        #
+        # This causes the OpenAI Responses API to return HTTP 400 because the model
+        # cannot interpret the failure context as structured data.
+        #
+        # FIX:
+        # Pass the context as a REAL JSON object:
+        #
+        #     "input": context
+        #
+        # This sends a proper JSON object to the model, allowing it to read fields like
+        # stderr, stdout, exit_status, command, attempt, etc. The model can then apply
+        # the recovery-engine contract and return a valid action plan.
+        #
+        # NOTE:
+        # FastAPI (the DEBUG print block ABOVE) will still return 200 OK for the /recover endpoint even when the
+        # OpenAI call fails. The 400 error appears INSIDE the JSON response because it
+        # comes from the second HTTP request (gateway → OpenAI), not from FastAPI itself.
 
         response = requests.post(
             LLM_API,
@@ -670,7 +701,9 @@ def recover(request: RecoveryRequest):
                 ),
 
                 # USER PROMPT — unchanged, just moved into "input"
-                "input": json.dumps(context, indent=2)
+                #"input": json.dumps(context, indent=2)
+                "input": context
+
             }, # end of json block construct. Lots of nesting here!!
             timeout=15
         )  # end of request response post block
