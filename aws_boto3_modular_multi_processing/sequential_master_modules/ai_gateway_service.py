@@ -490,7 +490,37 @@ def recover(request: RecoveryRequest):
                 "  corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
             ),
             #"input": json.dumps(context, indent=2)
-            "input": context
+            "input": context,
+            # NEW BLOCK STARTS HERE for input_schema
+            "input_schema": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "FailureContext",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "stderr": {"type": "string"},
+                            "stdout": {"type": "string"},
+                            "command": {"type": "string"},
+                            "exit_status": {"type": "integer"},
+                            "attempt": {"type": "integer"},
+                            "instance_id": {"type": "string"},
+                            "ip": {"type": "string"},
+                            "tags": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            },
+                            "os_info": {"type": "string"},
+                            "history": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            }
+                        },
+                        "required": ["stderr", "command", "exit_status"]
+                    }
+                }
+            }
+            # NEW BLOCK ENDS HERE
 
         }
 
@@ -702,7 +732,56 @@ def recover(request: RecoveryRequest):
 
                 # USER PROMPT — unchanged, just moved into "input"
                 #"input": json.dumps(context, indent=2)
-                "input": context
+                "input": context,
+                
+                # Need to add an input_schema as well for the latest API
+                # IMPORTANT:
+                # When sending a structured JSON object in the "input" field, the /v1/responses
+                # API requires an "input_schema" describing the exact shape of that object.
+                #
+                # Without this schema, the API returns HTTP 400 because it cannot validate or
+                # interpret the structured fields (stderr, stdout, command, exit_status, etc.).
+                #
+                # The nesting here is intentional:
+                #   input_schema
+                #       → type: "json_schema"
+                #       → json_schema
+                #             → name: "FailureContext"
+                #             → schema (actual JSON Schema definition)
+                #                   → properties (field definitions)
+                #                   → required (minimum fields needed)
+                #
+                # This allows the model to parse the failure context deterministically and
+                # apply the recovery-engine contract correctly.
+
+                "input_schema": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "FailureContext",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "stderr": {"type": "string"},
+                                    "stdout": {"type": "string"},
+                                    "command": {"type": "string"},
+                                    "exit_status": {"type": "integer"},
+                                    "attempt": {"type": "integer"},
+                                    "instance_id": {"type": "string"},
+                                    "ip": {"type": "string"},
+                                    "tags": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    },
+                                    "os_info": {"type": "string"},
+                                    "history": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    }
+                                },
+                                "required": ["stderr", "command", "exit_status"]
+                            }
+                        }
+                    }
 
             }, # end of json block construct. Lots of nesting here!!
             timeout=15
