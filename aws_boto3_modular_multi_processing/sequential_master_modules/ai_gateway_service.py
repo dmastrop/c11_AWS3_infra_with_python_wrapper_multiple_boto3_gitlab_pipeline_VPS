@@ -466,7 +466,7 @@ def recover(request: RecoveryRequest):
 
 
 
-        # DEBUG: Print the exact payload being sent to OpenAI
+        # DEBUG: Print the exact payload being sent to OpenAI to troubleshoot the 400 issue
         debug_payload = {
             "model": "gpt-4.1-pro",
             "temperature": 0,
