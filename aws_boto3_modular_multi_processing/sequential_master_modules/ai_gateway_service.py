@@ -196,7 +196,7 @@ def recover(request: RecoveryRequest):
         debug_payload = {
             "model": "gpt-4.1-pro",
             "temperature": 0,
-            "response_format": {"type": "json_object"},
+            #"response_format": {"type": "json_object"},
             
             #"system": (
             #    "You are a recovery engine.\n\n"
@@ -371,6 +371,7 @@ def recover(request: RecoveryRequest):
                 "json_schema": {
                     "name": "FailureContext",
                     "schema": {
+                        "$schema": "http://json-schema.org/draft-07/schema#",
                         "type": "object",
                         "properties": {
                             "stderr": {"type": "string"},
@@ -390,7 +391,8 @@ def recover(request: RecoveryRequest):
                                 "items": {"type": "string"}
                             }
                         },
-                        "required": ["stderr", "command", "exit_status"]
+                        "required": ["stderr", "command", "exit_status"],
+                        "additionalProperties": false
                     }
                 }
             },
@@ -722,7 +724,7 @@ def recover(request: RecoveryRequest):
             json={
                 "model": "gpt-4.1-pro",
                 "temperature": 0,
-                "response_format": {"type": "json_object"},
+                #"response_format": {"type": "json_object"},
 
 
                 ## FULL SYSTEM PROMPT — unchanged, just moved into "system"
@@ -922,6 +924,7 @@ def recover(request: RecoveryRequest):
                         "json_schema": {
                             "name": "FailureContext",
                             "schema": {
+                                "$schema": "http://json-schema.org/draft-07/schema#",
                                 "type": "object",
                                 "properties": {
                                     "stderr": {"type": "string"},
@@ -941,7 +944,8 @@ def recover(request: RecoveryRequest):
                                         "items": {"type": "string"}
                                     }
                                 },
-                                "required": ["stderr", "command", "exit_status"]
+                                "required": ["stderr", "command", "exit_status"],
+                                "additionalProperties": false
                             }
                         }
                 }, ## End of the input_schema
