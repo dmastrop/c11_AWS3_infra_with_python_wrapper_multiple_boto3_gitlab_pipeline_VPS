@@ -407,7 +407,8 @@ def recover(request: RecoveryRequest):
             #"input": json.dumps(context),
 
             #### UPDATED input block with both context and the contract (full system block)
-            "input": json.dumps({
+
+            "input": {
                 "contract": (
                     "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
                     "{\n"
@@ -482,7 +483,7 @@ def recover(request: RecoveryRequest):
                     "When returning \"retry_with_modified_command\", provide exactly one corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
                 ),
                 "context": context
-            }),
+            },
 
 
 
@@ -1047,7 +1048,8 @@ def recover(request: RecoveryRequest):
                 #"input": json.dumps(context),
 
                 #### UPDATED input block with contract (full system prompt) and the context
-                "input": json.dumps({
+
+                "input": {
                     "contract": (
                         "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
                         "{\n"
@@ -1122,9 +1124,7 @@ def recover(request: RecoveryRequest):
                         "When returning \"retry_with_modified_command\", provide exactly one corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
                     ),
                     "context": context
-                }),
-               
-
+                },
 
 
 
