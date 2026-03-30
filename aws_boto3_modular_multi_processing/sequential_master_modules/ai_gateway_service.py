@@ -392,7 +392,7 @@ def recover(request: RecoveryRequest):
                             }
                         },
                         "required": ["stderr", "command", "exit_status"],
-                        "additionalProperties": false
+                        "additionalProperties": False
                     }
                 }
             },
@@ -945,7 +945,7 @@ def recover(request: RecoveryRequest):
                                     }
                                 },
                                 "required": ["stderr", "command", "exit_status"],
-                                "additionalProperties": false
+                                "additionalProperties": False
                             }
                         }
                 }, ## End of the input_schema
