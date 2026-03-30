@@ -399,14 +399,20 @@ def recover(request: RecoveryRequest):
             # NEW BLOCK ENDS HERE
 
 
-            #"input": json.dumps(context, indent=2)
-            "input": context,
+            #"input": json.dumps(context, indent=2),
+            #"input": context,
+            "input": json.dumps(context),
 
         }
 
         print("\n\n=== LLM REQUEST PAYLOAD ===")
         print(json.dumps(debug_payload, indent=2))
         print("=== END PAYLOAD ===\n\n")
+
+
+
+
+
 
 
 
@@ -951,8 +957,10 @@ def recover(request: RecoveryRequest):
                 }, ## End of the input_schema
 
                 # USER PROMPT — unchanged, just moved into "input"
-                #"input": json.dumps(context, indent=2)
-                "input": context,
+                #"input": json.dumps(context, indent=2),
+                #"input": context,
+                "input": json.dumps(context),
+
                 
 
             }, # end of json block construct. Lots of nesting here!!
