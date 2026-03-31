@@ -842,25 +842,45 @@ def recover(request: RecoveryRequest):
         #)  # end of request response post block
 
 
-        # Build payload in a variable so we can inspect it
-        # Remove the frickin system field. That is causing the 400 issue. Use instruction field.
+        #Payload3
         payload = {
             "model": "gpt-4.1",
             "temperature": 0,
             "max_output_tokens": 256,
-            "input": {
-                "instruction": (
-                    "You are a recovery engine. "
-                    "Follow the contract and rules provided inside the input JSON. "
-                    "Return ONLY a JSON object."
-                ),
-                "contract": "test",
-                "context": context
-            }
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+                "CONTRACT:\n"
+                "test\n\n"
+                f"CONTEXT:\n{context}"
+            )
         }
 
 
 
+
+
+        ## Payload2
+        ## Build payload in a variable so we can inspect it
+        ## Remove the frickin system field. That is causing the 400 issue. Use instruction field.
+        #payload = {
+        #    "model": "gpt-4.1",
+        #    "temperature": 0,
+        #    "max_output_tokens": 256,
+        #    "input": {
+        #        "instruction": (
+        #            "You are a recovery engine. "
+        #            "Follow the contract and rules provided inside the input JSON. "
+        #            "Return ONLY a JSON object."
+        #        ),
+        #        "contract": "test",
+        #        "context": context
+        #    }
+        #}
+
+
+        # Payload1
         #payload = {
         #    "model": "gpt-4.1",
         #    "temperature": 0,
