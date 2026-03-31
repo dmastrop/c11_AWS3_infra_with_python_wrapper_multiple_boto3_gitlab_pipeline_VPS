@@ -195,7 +195,7 @@ def recover(request: RecoveryRequest):
 
         debug_payload = {
             #"model": "gpt-4.1-pro",
-            "model"="gpt-4.1",
+            "model":"gpt-4.1",
 
 
             "temperature": 0,
@@ -817,7 +817,7 @@ def recover(request: RecoveryRequest):
             },
             json={
                 #"model": "gpt-4.1-pro",
-                "model"="gpt-4.1",
+                "model":"gpt-4.1",
 
                 # ------------------------------------------------------------------------------
                 # IMPORTANT: Responses API model compatibility + request structure
