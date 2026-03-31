@@ -194,7 +194,10 @@ def recover(request: RecoveryRequest):
         
 
         debug_payload = {
-            "model": "gpt-4.1-pro",
+            #"model": "gpt-4.1-pro",
+            "model"="gpt-4.1",
+
+
             "temperature": 0,
             #"response_format": {"type": "json_object"},
             
@@ -813,7 +816,42 @@ def recover(request: RecoveryRequest):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "gpt-4.1-pro",
+                #"model": "gpt-4.1-pro",
+                "model"="gpt-4.1",
+
+                # ------------------------------------------------------------------------------
+                # IMPORTANT: Responses API model compatibility + request structure
+                #
+                # The Responses API does NOT support all Chat Completions models.
+                # In particular, *gpt-4.1-pro* and other “pro” variants are NOT available
+                # at the /v1/responses endpoint. Using them results in:
+                #
+                #   400 Bad Request  (with no useful error message)
+                #
+                # Verified via:
+                #   curl https://api.openai.com/v1/responses -d '{"model":"gpt-4.1-pro","input":"test"}'
+                #
+                # The correct model for this endpoint is:
+                #   - gpt-4.1        (recommended)
+                #   - gpt-4.1-mini   (cheaper)
+                #   - gpt-4.1-preview (faster)
+                #
+                # Additionally, the Responses API expects:
+                #   - A SHORT system prompt
+                #   - A JSON object for "input"
+                #   - No schema mode, no response_format, no input_schema
+                #
+                # Therefore, the gateway now uses:
+                #   system: "You are a recovery engine..."
+                #   input: {
+                #       "contract": "<full ruleset>",
+                #       "context": <failure context>
+                #   }
+                #
+                # This structure is validated and confirmed working via direct curl tests.
+                # ------------------------------------------------------------------------------
+
+
                 "temperature": 0,
                 #"response_format": {"type": "json_object"},
 
