@@ -808,39 +808,76 @@ def recover(request: RecoveryRequest):
         # FastAPI (the DEBUG print block ABOVE) will still return 200 OK for the /recover endpoint even when the
         # OpenAI call fails. The 400 error appears INSIDE the JSON response because it
         # comes from the second HTTP request (gateway → OpenAI), not from FastAPI itself.
+       
+        
+        #response = requests.post(
+        #    LLM_API,
+        #    headers={
+        #        "Authorization": f"Bearer {API_KEY}",
+        #        "Content-Type": "application/json"
+        #    },
+        #    json={
+        #        #"model": "gpt-4.1-pro",
+        #        "model":"gpt-4.1",
 
+        #        "temperature": 0,
+        #        
+        #        "max_output_tokens": 256,
+        #        
+        #        #### UPDATED2 System prompt
+        #        "system": "You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.",
+
+        #        "input": {
+        #            
+        #            "contract": "test",
+        #            "context": context
+        #        },
+
+
+
+
+
+        #    }, # end of json block construct. Lots of nesting here!!
+        #    timeout=15
+        #)  # end of request response post block
+
+
+        # Build payload in a variable so we can inspect it
+        payload = {
+            "model": "gpt-4.1",
+            "temperature": 0,
+            "max_output_tokens": 256,
+            "system": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object."
+            ),
+            "input": {
+                "contract": "test",
+                "context": context
+            }
+        }
+
+        # Print the exact payload before sending
+        print("\n==================== PAYLOAD SENT TO OPENAI ====================")
+        print(payload)
+        print("===============================================================\n")
+
+        # Make the request
         response = requests.post(
             LLM_API,
             headers={
                 "Authorization": f"Bearer {API_KEY}",
                 "Content-Type": "application/json"
             },
-            json={
-                #"model": "gpt-4.1-pro",
-                "model":"gpt-4.1",
-
-                "temperature": 0,
-                
-                "max_output_tokens": 256,
-                
-                #### UPDATED2 System prompt
-                "system": "You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.",
-
-                "input": {
-                    
-                    "contract": "test",
-                    "context": context
-                },
-
-
-
-
-
-            }, # end of json block construct. Lots of nesting here!!
+            json=payload,
             timeout=15
-        )  # end of request response post block
+        )
 
-
+        # Print raw response text
+        print("\n==================== RAW RESPONSE FROM OPENAI ==================")
+        print(response.text)
+        print("===============================================================\n")
 
 
 
