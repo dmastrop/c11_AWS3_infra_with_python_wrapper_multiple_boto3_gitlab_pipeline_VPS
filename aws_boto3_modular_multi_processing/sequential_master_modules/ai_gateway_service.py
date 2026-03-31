@@ -843,20 +843,38 @@ def recover(request: RecoveryRequest):
 
 
         # Build payload in a variable so we can inspect it
+        # Remove the frickin system field. That is causing the 400 issue. Use instruction field.
         payload = {
             "model": "gpt-4.1",
             "temperature": 0,
             "max_output_tokens": 256,
-            "system": (
-                "You are a recovery engine. "
-                "Follow the contract and rules provided inside the input JSON. "
-                "Return ONLY a JSON object."
-            ),
             "input": {
+                "instruction": (
+                    "You are a recovery engine. "
+                    "Follow the contract and rules provided inside the input JSON. "
+                    "Return ONLY a JSON object."
+                ),
                 "contract": "test",
                 "context": context
             }
         }
+
+
+
+        #payload = {
+        #    "model": "gpt-4.1",
+        #    "temperature": 0,
+        #    "max_output_tokens": 256,
+        #    "system": (
+        #        "You are a recovery engine. "
+        #        "Follow the contract and rules provided inside the input JSON. "
+        #        "Return ONLY a JSON object."
+        #    ),
+        #    "input": {
+        #        "contract": "test",
+        #        "context": context
+        #    }
+        #}
 
         # Print the exact payload before sending
         print("\n==================== PAYLOAD SENT TO OPENAI ====================")
