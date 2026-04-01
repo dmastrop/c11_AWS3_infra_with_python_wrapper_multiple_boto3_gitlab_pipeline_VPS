@@ -267,7 +267,8 @@ def recover(request: RecoveryRequest):
         #}
 
 
-        # Payload 5
+        # Payload 5. NOTE that the CONTEXT is {context} which is provided by the curl test command from within the container during 
+        # whitebox testing. So Payload5 can be used for tests5,6,7 etc until we need to edit the contract.
         payload = {
             "model": "gpt-4.1",
             "temperature": 0,
