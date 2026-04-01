@@ -909,8 +909,39 @@ def recover(request: RecoveryRequest):
 
 
 
-        # Payload 4
+        ## Payload 4
 
+        #payload = {
+        #    "model": "gpt-4.1",
+        #    "temperature": 0,
+        #    "max_output_tokens": 256,
+        #    "input": (
+        #        "You are a recovery engine. "
+        #        "Follow the contract and rules provided inside the input JSON. "
+        #        "Return ONLY a JSON object.\n\n"
+        #        "CONTRACT:\n"
+        #        "You must return ONLY a JSON object with this schema:\n\n"
+        #        "{\n"
+        #        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+        #        "  \"cleanup\": [string],\n"
+        #        "  \"retry\": string\n"
+        #        "}\n\n"
+        #        "Rules:\n"
+        #        "- ALWAYS choose one of the allowed actions.\n"
+        #        "- NEVER return text outside the JSON.\n"
+        #        "- NEVER explain your reasoning.\n"
+        #        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+        #        "Action meanings:\n"
+        #        "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+        #        "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+        #        "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+        #        "- fallback: Use when there is not enough information to choose another action.\n\n"
+        #        f"CONTEXT:\n{context}"
+        #    )
+        #}
+
+
+        # Payload 5
         payload = {
             "model": "gpt-4.1",
             "temperature": 0,
@@ -931,6 +962,11 @@ def recover(request: RecoveryRequest):
                 "- NEVER return text outside the JSON.\n"
                 "- NEVER explain your reasoning.\n"
                 "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+                "Fallback rules:\n"
+                "- When returning \"fallback\", return ONLY:\n"
+                "  { \"action\": \"fallback\" }\n"
+                "- Do NOT include \"cleanup\".\n"
+                "- Do NOT include \"retry\".\n\n"
                 "Action meanings:\n"
                 "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
                 "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
@@ -939,8 +975,6 @@ def recover(request: RecoveryRequest):
                 f"CONTEXT:\n{context}"
             )
         }
-
-
 
 
 
