@@ -1001,7 +1001,8 @@ def recover(request: RecoveryRequest):
 
 
 
-
+        ##### This is the plan validator. The AI Gateway Service has to validate the plan from the LLM before sending back to the 
+        ##### MCP Client (module2f)
         # If HTTP status is not 2xx, raise exception and print the error using except block below.
         response.raise_for_status()
         plan = response.json()
@@ -1037,6 +1038,9 @@ def recover(request: RecoveryRequest):
         return plan
         #return response.json()
 
+
+
+    #### This is the except block for the try block above. 
     except Exception as e:
         # If anything goes wrong, return fallback
         return {"error": str(e), "action": "fallback"}
