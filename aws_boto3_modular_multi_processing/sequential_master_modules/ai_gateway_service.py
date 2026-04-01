@@ -326,12 +326,71 @@ def recover(request: RecoveryRequest):
         print("===============================================================\n")
 
 
+        ####### ORIGINAL VALIDATOR CODE #######
+        ###### This is the plan validator. The AI Gateway Service has to validate the plan from the LLM before sending back to the 
+        ###### MCP Client (module2f)
+        ## If HTTP status is not 2xx, raise exception and print the error using except block below.
+        #response.raise_for_status()
+        #plan = response.json()
+        ## --------------------------------------------------------
+        ## Validate LLM plan schema
+        ## --------------------------------------------------------
+        #allowed_actions = {
+        #    "cleanup_and_retry",
+        #    "retry_with_modified_command",
+        #    "abort",
+        #    "fallback",
+        #    }
+
+        ## Must be a dict
+        #if not isinstance(plan, dict):
+        #    return {"error": "Invalid plan format", "action": "fallback"}
+
+        #action = plan.get("action")
+
+        ## Validate action
+        #if action not in allowed_actions:
+        #    return {"error": "Invalid or missing action", "action": "fallback"}
+
+        ## Validate cleanup
+        #if "cleanup" in plan and not isinstance(plan["cleanup"], list):
+        #    return {"error": "Invalid cleanup field", "action": "fallback"}
+
+        ## Validate retry
+        #if "retry" in plan and not isinstance(plan["retry"], str):
+        #    return {"error": "Invalid retry field", "action": "fallback"}
+
+        ## If we reach here, plan is valid and return to the LLM
+        #return plan
+        ##return response.json()
+
+
+
+
+
+
+
+        #### UPDATED plan validator. `response.json()` is the **entire Responses API envelope**, not the plan
+        #### The code below has been refactored so that the validator: 
+        #- extracts the inner JSON plan  
+        #- parses it  
+        #- validates it  
+        #- returns it cleanly  
+        # This will make the logic in the validator work properly relative to teh inner JSON plan
+
 
         ##### This is the plan validator. The AI Gateway Service has to validate the plan from the LLM before sending back to the 
         ##### MCP Client (module2f)
         # If HTTP status is not 2xx, raise exception and print the error using except block below.
         response.raise_for_status()
-        plan = response.json()
+        raw = response.json()
+
+        # --------------------------------------------------------
+        # Extract inner JSON plan from Responses API envelope
+        # --------------------------------------------------------
+        text = raw["output"][0]["content"][0]["text"]
+        plan = json.loads(text)
+
         # --------------------------------------------------------
         # Validate LLM plan schema
         # --------------------------------------------------------
@@ -340,7 +399,7 @@ def recover(request: RecoveryRequest):
             "retry_with_modified_command",
             "abort",
             "fallback",
-            }
+        }
 
         # Must be a dict
         if not isinstance(plan, dict):
@@ -360,26 +419,13 @@ def recover(request: RecoveryRequest):
         if "retry" in plan and not isinstance(plan["retry"], str):
             return {"error": "Invalid retry field", "action": "fallback"}
 
-        # If we reach here, plan is valid and return to the LLM
+        # If we reach here, plan is valid and returned to MCPClient/module2f
         return plan
-        #return response.json()
-
-#### UPDATED plan validator. `response.json()` is the **entire Responses API envelope**, not the plan
-#### The code below has been refactored so that the validator: 
-#- extracts the inner JSON plan  
-#- parses it  
-#- validates it  
-#- returns it cleanly  
-# This will make the logic in the validator work properly relative to teh inner JSON plan
 
 
 
-
-
-
-
-
-    #### This is the except block for the try block above. 
+    #### This is the except block for the entire try block above. This will protect module2f, the calling and receiving function 
+    #### from a crash anywhere inside the try block above.
     except Exception as e:
         # If anything goes wrong, return fallback
         return {"error": str(e), "action": "fallback"}
