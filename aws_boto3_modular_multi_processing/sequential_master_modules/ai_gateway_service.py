@@ -846,21 +846,27 @@ def recover(request: RecoveryRequest):
         #)  # end of request response post block
 
 
-        #Payload3
-        payload = {
-            "model": "gpt-4.1",
-            "temperature": 0,
-            "max_output_tokens": 256,
-            "input": (
-                "You are a recovery engine. "
-                "Follow the contract and rules provided inside the input JSON. "
-                "Return ONLY a JSON object.\n\n"
-                "CONTRACT:\n"
-                "test\n\n"
-                f"CONTEXT:\n{context}"
-            )
-        }
 
+
+
+
+
+
+        # Payload1
+        #payload = {
+        #    "model": "gpt-4.1",
+        #    "temperature": 0,
+        #    "max_output_tokens": 256,
+        #    "system": (
+        #        "You are a recovery engine. "
+        #        "Follow the contract and rules provided inside the input JSON. "
+        #        "Return ONLY a JSON object."
+        #    ),
+        #    "input": {
+        #        "contract": "test",
+        #        "context": context
+        #    }
+        #}
 
 
 
@@ -884,21 +890,59 @@ def recover(request: RecoveryRequest):
         #}
 
 
-        # Payload1
+
+
+        ##Payload3
         #payload = {
         #    "model": "gpt-4.1",
         #    "temperature": 0,
         #    "max_output_tokens": 256,
-        #    "system": (
+        #    "input": (
         #        "You are a recovery engine. "
         #        "Follow the contract and rules provided inside the input JSON. "
-        #        "Return ONLY a JSON object."
-        #    ),
-        #    "input": {
-        #        "contract": "test",
-        #        "context": context
-        #    }
+        #        "Return ONLY a JSON object.\n\n"
+        #        "CONTRACT:\n"
+        #        "test\n\n"
+        #        f"CONTEXT:\n{context}"
+        #    )
         #}
+
+
+
+        # Payload 4
+
+        payload = {
+            "model": "gpt-4.1",
+            "temperature": 0,
+            "max_output_tokens": 256,
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+                "CONTRACT:\n"
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "}\n\n"
+                "Rules:\n"
+                "- ALWAYS choose one of the allowed actions.\n"
+                "- NEVER return text outside the JSON.\n"
+                "- NEVER explain your reasoning.\n"
+                "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+                "Action meanings:\n"
+                "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+                "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+                "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+                "- fallback: Use when there is not enough information to choose another action.\n\n"
+                f"CONTEXT:\n{context}"
+            )
+        }
+
+
+
+
 
         # Print the exact payload before sending
         print("\n==================== PAYLOAD SENT TO OPENAI ====================")
