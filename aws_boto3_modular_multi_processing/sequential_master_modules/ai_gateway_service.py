@@ -402,6 +402,25 @@ def recover(request: RecoveryRequest):
                 "- abort: Use when the failure is unsafe or cannot be recovered.\n"
                 "- fallback: Use when there is not enough information to choose another action.\n\n"
 
+
+                # ============================================================
+                # ABORT RULES
+                # ============================================================
+                "Abort rules:\n"
+                "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
+                "- Abort when the plan would risk data loss, node instability, or security exposure.\n"
+                "- Abort when the failure suggests corrupted or inconsistent system state.\n"
+                "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
+                "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
+
+                # ============================================================
+                # SAFETY CONSTRAINTS
+                # ============================================================
+                "Safety constraints:\n"
+                "- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n"
+                "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
+                "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
+
                 # ============================================================
                 # CONTEXT — DYNAMIC INPUT FROM CURL
                 # ============================================================
