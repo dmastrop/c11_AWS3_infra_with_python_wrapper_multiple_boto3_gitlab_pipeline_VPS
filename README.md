@@ -6524,7 +6524,6 @@ what the architecture was designed to seamliessly deal with at massively scaled 
 - [Differences between the abort and fallback contract actions](#differences-between-the-abort-and-fallback-contract-actions)
 - [Advanced Architectural Note: AI Derived Fallback Conditions](#advanced-architectural-note-ai-derived-fallback-conditions)
 - [Development history: Steps 1–5b and Step 6 (formalized)](#development-history-steps15b-and-step6-formalized)
-
 - [Step 6: GitLab AI Gateway Service/Pipeline Integration](#step6-gitlab-ai-gateway-servicepipeline-integration--starting-the-ai-gateway-service-from-inside-the-deploy-container)
 - [Code Review](#code-review)
 
