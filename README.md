@@ -9603,6 +9603,9 @@ This UPDATE has all of the validation testing for the SG_STATE Security group ru
 
 For a complete detailed description of the Stateful design and code flow, as well as a complete code review, see the previous UPDATE. 
 
+- [Update part 53 Phase 3o: Part 7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)](#updates-part-53-phase-3o-part-7-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-using-s3-sg_state)
+
+
 This UPDATE has the validation testing only. 
 
 
