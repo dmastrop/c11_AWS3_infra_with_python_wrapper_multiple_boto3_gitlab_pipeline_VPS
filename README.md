@@ -6508,7 +6508,6 @@ what the architecture was designed to seamliessly deal with at massively scaled 
 
 ### **Table of Contents**
 <a name="top-update55"></a>
-
 - [AI/MCP Hook Introduction](#aimcp-hook-introduction)
 - [AI/MCP Recovery Engine Contract Overview](#aimcp-recovery-engine-contract-overview)
 - [AI/MCP Recovery Actions](#aimcp-recovery-actions)
@@ -9700,7 +9699,7 @@ This is exactly what is desired for the architecture. And testing has proven the
 
 ---
 
-#### 2. Why Container Processes Appear on the VPS (but Ports Do Not)**
+#### 2. Why Container Processes Appear on the VPS (but Ports Do Not)
 
 This is the subtle Docker behavior that confuses many engineers until they’ve lived through it.
 
@@ -9747,7 +9746,7 @@ This is precisely correct by design.
 
 ---
 
-#### 3. How the Deploy Container Is Built (Dockerfile)**
+#### 3. How the Deploy Container Is Built (Dockerfile)
 
 The Dockerfile builds the environment for:
 
@@ -9944,7 +9943,7 @@ mcp = MCPClient(
     base_url="http://localhost:8000",   # AI Gateway Service URL
     schema_version="1.0"                # Optional versioning for future compatibility
 )
-'''
+```
 
 
 
@@ -9973,7 +9972,7 @@ This is the exact moment the AI Gateway Service becomes a live component.
 
 ---
 
-#### 6. Why Step 6 is  Required for BOTH Curl Testing and Real‑Life Testing
+#### 6. Why Step 6 is Required for BOTH Curl Testing and Real‑Life Testing
 
 Curl testing from the docker container, during pipeline deploy stage runtime will be performed as part of the whitebox testing of
 the AI Service Gateway and the contract refinement in the ai_gateway_service.py relative to the LLM responses for a given context.
@@ -9993,7 +9992,7 @@ Step 6 is where the live interaction with the LLM becomes possible.
 
 ---
 
-#### 7. Summary of Step 6 Responsibilities**
+#### 7. Summary of Step 6 Responsibilities
 
 | Component | Responsibility |
 |----------|----------------|
