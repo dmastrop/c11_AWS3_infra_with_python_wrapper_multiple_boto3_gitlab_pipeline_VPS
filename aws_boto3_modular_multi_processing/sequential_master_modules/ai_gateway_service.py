@@ -267,16 +267,85 @@ def recover(request: RecoveryRequest):
         #}
 
 
-        # Payload 5. NOTE that the CONTEXT is {context} which is provided by the curl test command from within the container during 
-        # whitebox testing. So Payload5 can be used for tests5,6,7 etc until we need to edit the contract.
+        ## Payload 5. NOTE that the CONTEXT is {context} which is provided by the curl test command from within the container during 
+        ## whitebox testing. So Payload5 can be used for tests5,6,7 etc until we need to edit the contract.
+        #payload = {
+        #    "model": "gpt-4.1",
+        #    "temperature": 0,
+        #    "max_output_tokens": 256,
+        #    "input": (
+        #        "You are a recovery engine. "
+        #        "Follow the contract and rules provided inside the input JSON. "
+        #        "Return ONLY a JSON object.\n\n"
+        #        "CONTRACT:\n"
+        #        "You must return ONLY a JSON object with this schema:\n\n"
+        #        "{\n"
+        #        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+        #        "  \"cleanup\": [string],\n"
+        #        "  \"retry\": string\n"
+        #        "}\n\n"
+        #        "Rules:\n"
+        #        "- ALWAYS choose one of the allowed actions.\n"
+        #        "- NEVER return text outside the JSON.\n"
+        #        "- NEVER explain your reasoning.\n"
+        #        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+        #        "Fallback rules:\n"
+        #        "- When returning \"fallback\", return ONLY:\n"
+        #        "  { \"action\": \"fallback\" }\n"
+        #        "- Do NOT include \"cleanup\".\n"
+        #        "- Do NOT include \"retry\".\n\n"
+        #        "Action meanings:\n"
+        #        "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+        #        "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+        #        "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+        #        "- fallback: Use when there is not enough information to choose another action.\n\n"
+        #        f"CONTEXT:\n{context}"
+        #    )
+        #}
+
+
+
+
+
+
+        Payload6 enhancments
+        # ================================================================
+        # PAYLOAD BLOCK — AI GATEWAY SERVICE
+        #
+        # This payload defines the *contract* between the AI Gateway Service
+        # and the LLM. It is the single most important component of the
+        # recovery engine architecture.
+        #
+        # Key principles:
+        # - The contract is STATIC. It does not change between tests.
+        # - The context is DYNAMIC. It is injected from the curl request.
+        # - The LLM must ALWAYS return a JSON object that conforms to the schema.
+        # - The validator enforces the contract and rejects malformed plans.
+        #
+        # This block is the result of iterative white‑box testing using curl.
+        # Each iteration revealed ambiguities or weaknesses in the contract,
+        # which were then tightened to produce deterministic behavior.
+        #
+        # The comments in this block will be used directly in the README
+        # chapter: "Developing the AI Gateway Service through iterative
+        # white‑box LLM response testing with curl".
+        # ================================================================
+
         payload = {
             "model": "gpt-4.1",
             "temperature": 0,
             "max_output_tokens": 256,
+
+            # The "input" field contains the entire contract, rules, and context.
+            # The LLM receives this as a single string and MUST return a JSON object.
             "input": (
                 "You are a recovery engine. "
                 "Follow the contract and rules provided inside the input JSON. "
                 "Return ONLY a JSON object.\n\n"
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # ============================================================
                 "CONTRACT:\n"
                 "You must return ONLY a JSON object with this schema:\n\n"
                 "{\n"
@@ -284,25 +353,61 @@ def recover(request: RecoveryRequest):
                 "  \"cleanup\": [string],\n"
                 "  \"retry\": string\n"
                 "}\n\n"
+
+                # ============================================================
+                # CORE RULES
+                # ============================================================
                 "Rules:\n"
                 "- ALWAYS choose one of the allowed actions.\n"
                 "- NEVER return text outside the JSON.\n"
                 "- NEVER explain your reasoning.\n"
                 "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+
+                # ============================================================
+                # RETRY COMMAND RULES — NEWLY ADDED FOR ROBUSTNESS
+                # ============================================================
+                "Retry command rules:\n"
+                "- The \"retry\" field MUST be a literal shell command that can be executed directly.\n"
+                "- The retry command MUST NOT reference \"previous command\", \"original command\", or any vague instruction.\n"
+                "- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n"
+                "- The retry command MUST NOT contain placeholders like \"<command>\" or \"<package>\".\n"
+                "- The retry command MUST NOT contain commentary or explanation.\n"
+                "- The retry command MUST NOT contain multiple commands chained with \"&&\" unless necessary.\n"
+                "- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\n"
+
+                # ============================================================
+                # CLEANUP RULES
+                # ============================================================
+                "Cleanup rules:\n"
+                "- The \"cleanup\" field MUST be a list of literal shell commands.\n"
+                "- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n"
+                "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
+                "- Cleanup commands MUST NOT include dangerous operations.\n\n"
+
+                # ============================================================
+                # FALLBACK RULES
+                # ============================================================
                 "Fallback rules:\n"
                 "- When returning \"fallback\", return ONLY:\n"
                 "  { \"action\": \"fallback\" }\n"
                 "- Do NOT include \"cleanup\".\n"
                 "- Do NOT include \"retry\".\n\n"
+
+                # ============================================================
+                # ACTION MEANINGS
+                # ============================================================
                 "Action meanings:\n"
                 "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
                 "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
                 "- abort: Use when the failure is unsafe or cannot be recovered.\n"
                 "- fallback: Use when there is not enough information to choose another action.\n\n"
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
                 f"CONTEXT:\n{context}"
             )
         }
-
 
 
         # Print the exact payload before sending
