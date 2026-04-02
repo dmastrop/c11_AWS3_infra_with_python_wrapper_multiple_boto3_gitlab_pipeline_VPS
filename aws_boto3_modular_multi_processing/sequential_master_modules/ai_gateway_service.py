@@ -421,6 +421,29 @@ def recover(request: RecoveryRequest):
                 "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
                 "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
 
+
+
+                # ============================================================
+                # ADDITIONAL SAFETY CONSTRAINTS
+                # ============================================================
+                "Additional safety constraints:\n"
+                "- NEVER propose commands that pipe remote content into a shell (e.g., no \"curl ... | sh\").\n"
+                "- NEVER propose commands that disable or mask system services (e.g., no \"systemctl disable\", no \"systemctl mask\").\n"
+                "- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no \"update-grub\", no \"grub-install\", no kernel package installation).\n"
+                "- NEVER propose commands that modify package manager configuration files or sources lists.\n\n"
+
+                # ============================================================
+                # CLEANUP SEQUENCE RULES
+                # ============================================================
+                "Cleanup sequence rules:\n"
+                "- Cleanup steps MUST be ordered from least invasive to most invasive.\n"
+                "- Cleanup steps MUST be idempotent (safe to run multiple times).\n"
+                "- Cleanup steps MUST NOT exceed 3 commands.\n"
+                "- Cleanup steps MUST NOT include commentary or explanation.\n\n"
+
+
+
+
                 # ============================================================
                 # CONTEXT — DYNAMIC INPUT FROM CURL
                 # ============================================================
