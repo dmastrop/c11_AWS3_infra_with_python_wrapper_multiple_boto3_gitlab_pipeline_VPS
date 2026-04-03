@@ -11419,7 +11419,7 @@ This is the one that matters for:
 
 ---
 
-###### 4. The tag `ai_fallback_true` is NOT the control‑flow variable**
+###### 4. The tag `ai_fallback_true` is NOT the control‑flow variable
 
 
 The tag:
@@ -11449,7 +11449,7 @@ It is **not** the control‑flow variable.
 ---
 
 
-###### 5. Summary — the definitive truth table**
+###### 5. Summary — the definitive truth table
 
 | Concept | Control‑Flow? | Persistent State? | Stored in ai_metadata? | Stored in registry entry? | Tag created? |
 |--------|----------------|-------------------|-------------------------|----------------------------|--------------|
