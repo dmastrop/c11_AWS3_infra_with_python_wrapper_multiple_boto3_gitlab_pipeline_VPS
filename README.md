@@ -10937,6 +10937,338 @@ This ensured that whenever AI was invoked, the registry would reflect that fact,
 This generalization is required because the AI MCP HOOK code is refactored in Step5b to be invoked from anywhere within the 
 module2f code.
 
+This code lives in the module2f and inside the for attempt command retry loop (which is inside the for idx command loop).
+ 
+Note here, that the focus is on the persistent state variables. The control flow variables are set in the AI/MCP HOOK function 
+_invoke_ai_hook(), presented in the next section below as Step 5b.
+
+
+This code is right after the SSH connect code in module2f:
+```
+    #### END of the SSH for attempt in range(5) block #####
+
+
+
+    ##### initialize the following for the AI/MCP hook that has been inserted inside the for attempt loop (that is inside the for idx
+    ##### loop below). These will be used in the AI/MCP hook code, and will be used for tagging the install_success and
+    ##### install_failed cases when AI/MCP has or has not been invoked on a command to rescue the resurrection of  the node.
+    ##### There are referred to as persistent state variables. These will be integrated into the ai_metadata of the
+    ##### registry_entry by the _build_ai_metadata_and_tags function 
+
+    ai_invoked = False
+    ai_context = None
+    ai_plan = None
+    ai_fallback = False
+    ai_commands = []
+    ai_failed_command = None
+    # ai_failed_command needs to be initialized to None. It will be used to record the failed retry command. This is useful because the
+    # cleanup_and_retry contract action can support multiple retry commands.
+
+
+    # ------------------------------------------------------------
+    # AI/MCP tagging helper (no control-flow changes)
+    # This will be used in the registry_entrys that are towards the end of the for attempt in range loop, at the end of the 
+    # for idx loop and for the try block exception registry_entry outside of the for attempt and for idx loops
+    # This function runs POST AI/MCP HOOK, after AI has had a chance to work on the command for the thread. It will create the 
+    # ai_tags and ai_meta lists and variables so that they can easily be added to the tags field of the registry_entry and 
+    # added as an ai metadata field in the registry_entry.
+    # ------------------------------------------------------------
+    def _build_ai_metadata_and_tags():
+        """
+        Build a compact AI metadata dict and tag list for registry_entry.
+        - Does NOT change control flow.
+        - Safe to call from any registry_entry block.
+        """
+        ai_meta = {
+            "ai_invoked": ai_invoked,
+            "ai_fallback": ai_fallback,
+            "ai_plan_action": ai_plan.get("action") if isinstance(ai_plan, dict) else None,
+            "ai_commands": ai_commands[:] if isinstance(ai_commands, list) else [],
+            "ai_failed_command": ai_failed_command, # This is incorporating the failed retry command into the ai_metadata for the cleanup_and retry contract action. It is a persistent state variable like the other four.
+        }
+
+        ai_tags = []
+
+        # High-level flags
+        if ai_invoked:
+            ai_tags.append("ai_invoked_true")
+        else:
+            ai_tags.append("ai_invoked_false")
+
+        if ai_fallback:
+            ai_tags.append("ai_fallback_true")
+
+        if isinstance(ai_plan, dict) and ai_plan.get("action"):
+            ai_tags.append(f"ai_plan_action:{ai_plan.get('action')}")
+
+        # Per-command AI assistance markers
+        # Expectation: ai_commands is a list of dicts or strings.
+        # If dict: look for {"command": "...", "ai_assisted": bool}
+        # If string: assume AI-assisted command string.
+        for entry in ai_meta["ai_commands"]:
+            if isinstance(entry, dict):
+                cmd = entry.get("command")
+                assisted = entry.get("ai_assisted", False)
+                if cmd and assisted:
+                    ai_tags.append(f"ai_assisted:*{cmd}*")
+            elif isinstance(entry, str):
+                # Conservative: treat plain strings as AI-assisted commands
+                ai_tags.append(f"ai_assisted:*{entry}*")
+
+        return ai_meta, ai_tags
+    # ------------------------------------------------------------
+```
+
+
+Note that the function is invoked throughout the module2f code. If there is a heuristic failure, for example heuristic#4 as shown 
+below, the function is used after the AI/MCP HOOK has attempted to remedicate and fix the "broken" command. If the 
+AI/MCP HOOK succeeds, this _build_ai_metadata_and_tags() function is used to collect the persistent state variables and then 
+the code incorporates them into the install_success registry entry. 
+
+
+If on the other hand, the heuristic#4 invokes the AI/MCP HOOK and it is unsuccessful at remediating the "broken" command, this
+function _build_ai_metadata_and_tags is also used to incorporate the persistent state variables into the install_failed
+registry entry.
+
+
+Here is heuristic#4 in full, one of several heuristic blocks of code throughout module2f:
+
+Note that if the AI/MCP HOOK fails (CASE C below), the install_failed registry_entry that has been created within the heuristic block is 
+preserved with all of its tags, and then the _build_ai_metadata_and_tags is used to incorporate(add) the persistent state ai variables 
+into the install_failed registry_entry.  
+
+
+If there is a derived fallback (CASE B below), a similar use of _build_ai_metadata_and_tags is performed on the registry_entry.
+
+
+
+
+```
+                    ###### Heuristic Block #4 with AI/MCP integration: non-strace fatal_exit_nonzero ######
+                    # NOTE:
+                    #   This block mirrors Heuristic Block #2 (strace) and follows the same
+                    #   Step 5b pattern for invoking the AI/MCP hook on the final attempt.
+                    #   Keep the persistent variable `heuristic_registry_entry_for_ai_command_success`
+                    #   defined at the TOP of the function so it survives the break path.
+                    #
+                    # Non-zero exit => fail (final), else retry
+                    # 🔍 Case 1: Non-zero exit status — failure or stub
+                    if exit_status != 0:
+                        if attempt == RETRY_LIMIT - 1:
+                            # Capture process/thread/timestamp for forensic registry entry.
+                            # We assign to locals here for readability; the registry uses these values.
+                            pid = multiprocessing.current_process().pid
+                            thread_id = threading.get_ident()
+                            timestamp = str(datetime.utcnow())
+
+                            if stderr_output.strip():
+                                registry_entry = {
+                                    "status": "install_failed",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": thread_id,
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": timestamp,
+                                    "tags": base_tags + [
+                                        "fatal_exit_nonzero",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        f"exit_status_{exit_status}",
+                                        "stderr_present",
+                                        *[f"nonwhitelisted_material: {line}" for line in non_whitelisted_lines[:4]], # include first few lines for forensic trace
+                                        *stderr_output.strip().splitlines()[:25]  # snapshot for traceability
+                                    ]
+                                }
+                            else:
+                                registry_entry = {
+                                    "status": "stub",
+                                    "attempt": -1,
+                                    "pid": pid,
+                                    "thread_id": thread_id,
+                                    "thread_uuid": thread_uuid,
+                                    "public_ip": ip,
+                                    "private_ip": private_ip,
+                                    "timestamp": timestamp,
+                                    "tags": base_tags + [
+                                        "silent_failure",
+                                        command,
+                                        f"command_retry_{attempt + 1}",
+                                        f"exit_status_{exit_status}",
+                                        "exit_status_nonzero_stderr_blank"
+                                    ]
+                                }
+
+                            # ------------------------------------------------------------
+                            # Step 5b: Invoke AI/MCP HOOK for this heuristic failure (_invoke_ai_hook())
+                            # ------------------------------------------------------------
+                            # We call the AI hook here on the final attempt. If the AI repairs
+                            # the outputs we must NOT return immediately — instead we set the
+                            # persistent registry variable and break so install_success runs.
+                            extra_tags = registry_entry["tags"]
+                            result = _invoke_ai_hook(
+                                original_command=original_command,
+                                stdout_output=stdout_output,
+                                stderr_output=stderr_output,
+                                exit_status=exit_status,
+                                attempt=attempt,
+                                instance_id=instance_id,
+                                ip=ip,
+                                extra_tags=extra_tags,
+                                ssh=ssh,
+                            )
+
+                            # ------------------------------------------------------------
+                            # CASE A: AI FIXED THE HEURISTIC FAILURE
+                            # ------------------------------------------------------------
+                            if result["ai_fixed"]:
+                                # Update outputs with AI-repaired results
+                                stdout_output = result["new_stdout"]
+                                stderr_output = result["new_stderr"]
+                                exit_status = result["new_exit_status"]
+
+                                command_succeeded = True
+
+                                # Preserve the heuristic registry entry for install_success.
+                                # This variable is defined at the TOP of the function so it
+                                # survives the break and is visible to install_success.
+                                heuristic_registry_entry_for_ai_command_success = registry_entry
+
+                                # DO NOT RETURN — returning would exit the entire function.
+                                # We break so the idx loop continues and install_success runs.
+                                break
+
+
+                            # ------------------------------------------------------------
+                            # CASE B: AI FALLBACK CASE
+                            # ------------------------------------------------------------
+                            # Derived fallback (e.g., cleanup_and_retry with empty retry list, OR retry_with_modified_command with empty command
+                            # list).
+                            # The HOOK does NOT set persistent ai_fallback for derived conditions.(for native fallback, abort, or
+                            # unknown contract actions we DO set persistent ai_fallback in the AI/MCP HOOK).
+                            # We must set ai_fallback=True here so the metadata builder records fallback correctly.
+                            elif result.get("ai_fallback"):
+                                ai_fallback = True
+                                ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                                registry_entry["ai_metadata"] = ai_meta
+                                registry_entry["tags"].extend(ai_tags)
+                                registry_entry["tags"].append("ai_fallback")
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+
+                            # ------------------------------------------------------------
+                            # CASE C: AI FAILED TO FIX THE HEURISTIC FAILURE
+                            # ------------------------------------------------------------
+                            # Attach AI metadata and tags for forensic/telemetry purposes,
+                            # then close SSH and return the registry entry as a failure.
+
+                            else:
+                                # AI failed
+                                ai_meta, ai_tags = _build_ai_metadata_and_tags()
+                                registry_entry["ai_metadata"] = ai_meta
+                                registry_entry["tags"].extend(ai_tags)
+                                ssh.close()
+                                return ip, private_ip, registry_entry
+
+
+                        else:
+                            # Non-final attempt: log and retry after a short sleep.
+                            print(f"[{ip}] ⚠️ Non-zero exit — retrying attempt {attempt + 1}")
+                            time.sleep(SLEEP_BETWEEN_ATTEMPTS)
+                            continue
+```
+
+
+
+
+Note,however, that if the AI/MCP HOOK is successful (CASE A above), the code performs a break to completely exit out of the for attempt 
+retry command loop and proceed to the next command of the for idx outer loop, and proceed as normal.
+```
+
+        # If execution reaches this point, then:
+        #   - All commands in all idx iterations have succeeded, OR
+        #   - A heuristic failure occurred but AI successfully repaired it and the
+        #     retry-for-idx loop continued normally (meaning all commands in all
+        #     idx iterations ultimately succeeded).
+```
+
+This is the full install success block that uses the _build_ai_metadata_and_tags function to integrate the persistent state variables
+into the install_success registry_entry using a successive merging process:
+
+
+```
+
+        # -------------------------------------------------------------------------
+        # INSTALL SUCCESS BLOCK with AI/MCP refactoring for heuristic failures
+        # -------------------------------------------------------------------------
+        # If execution reaches this point, then:
+        #   - All commands in all idx iterations have succeeded, OR
+        #   - A heuristic failure occurred but AI successfully repaired it and the
+        #     retry-for-idx loop continued normally (meaning all commands in all
+        #     idx iterations ultimately succeeded).
+        # IMPORTANT:
+        #   - If AI repaired a heuristic failure, the variable
+        #       heuristic_registry_entry_for_ai_command_success
+        #     will contain the ORIGINAL heuristic registry entry (with its tags).
+        #   - We must merge those heuristic tags into the final install_success
+        #     registry entry to preserve full forensic lineage.
+        #   - The main objective is to preserve the forensic lineage of the original
+        #     heuristic failure after AI/MCP repair.
+        # -------------------------------------------------------------------------
+
+        transport = ssh.get_transport()
+        if transport:
+            transport.close()
+        ssh.close()
+
+        # Pull AI metadata and AI tags from persistent state
+        ai_meta, ai_tags = _build_ai_metadata_and_tags()
+
+        # Start building the merged tag list
+        merged_tags = base_tags + ["installation_completed"]
+
+        # Preserve non-shell failure tag if present
+        if non_shell_failure_tag:
+            merged_tags.append(non_shell_failure_tag)
+
+        # -------------------------------------------------------------------------
+        # Merge heuristic tags IF AND ONLY IF:
+        #   - A heuristic failure occurred, AND
+        #   - AI successfully repaired it (meaning we broke out of the retry loop),
+        #   - AND the heuristic registry entry was preserved earlier.
+        # -------------------------------------------------------------------------
+        if heuristic_registry_entry_for_ai_command_success:
+            merged_tags.extend(
+                heuristic_registry_entry_for_ai_command_success.get("tags", [])
+            )
+
+        # Always append AI tags last
+        merged_tags.extend(ai_tags)
+
+        registry_entry = {
+            "status": "install_success",
+            "attempt": 0,
+            "timestamp": str(datetime.utcnow()),
+            "pid": multiprocessing.current_process().pid,
+            "thread_id": threading.get_ident(),
+            "thread_uuid": thread_uuid,
+            "public_ip": ip,
+            "private_ip": private_ip,
+            "tags": merged_tags,
+            "ai_metadata": ai_meta,
+        }
+
+        return ip, private_ip, registry_entry
+
+```
+Thus, this _build_ai_metadata_and_tags is used extensively throughout module2f in all heuristic blocks and in the install_success block,
+etc. It is used in conjunction with the AI/MCP HOOK function _invoke_ai_hook() which is presented in the next section below, as 
+Step 5b.
+
+
+
+
 
 
 
@@ -10960,6 +11292,1055 @@ pytest became a critical part of validating this design, including the decision 
 The pytest UPDATE can be found at this link below: 
 
 - [Update part 56 Phase 4a.1: AI/MCP Hook Integration Pytest Validation Suite and Code](#updates-part-56-phase4a1-aimcp-hook-integration-pytest-validation-suite-and-code)
+
+The pytest test results have example pytest registry_entrys which will closely resemble the real-life registry_entrys that will be 
+published by the gitlab CI pipeline, once real life testing is performed.
+
+Jumping ahead, the pytest testing went very well and several whitebox related bugs and enhancements were done on the code once it was
+complete. As indicated in the link above there is an option to run the pytest test stage as part of the Gitlab CI pipeline. This stage
+runs prior to the build, push and deploy stages that are used on the production code.
+
+The full def _invoke_ai_hook() function is presented below. This is called in the same context that the _add_ai_metadata_and_tags()
+function is called, namely from the failure heuristic blocks throughout the module2f code. This makes sense. The general approach is
+that a failure heuristic is hit for commands that are unable to be executed, there are 3 attempts, and then the AI/MCP HOOK is invoked
+as a last resort.  See the heurstic#4 example code in the previous section above for this type of example. 
+
+
+##### Control‑Flow Variables vs. Persistent State Variables — What Goes Into the Registry Entry?
+
+Another important note about the _invoke_ai_hook() function below is the use of the control flow variables. The control flow variables
+are exclusively returned to the calling code (typically a heuristic code block) so that the caller can route the code flow as appropriate.
+The control flow variables let the caller know the complete results of the AI/MCP LLM attempt at remediating the command execution.
+The control flow varaibles are never incorporated into the registry_entry itself. The persistent state varaibles are incorporated into 
+the registry_entry using the _add_ai_metadata_and tags() function that was reviewed in Step 5 above. 
+
+
+-  1. Control‑flow variables are *never* written into the registry entry
+This is by design.
+
+Control‑flow variables exist **only to drive immediate execution logic** inside module2f.  
+They are *not* persisted, *not* stored in ai_metadata, and *not* turned into tags.
+
+Examples of control‑flow variables:
+
+- `ai_ran`
+- `ai_fixed`
+- `ai_failed`
+- `ai_fallback` *(control‑flow version)*
+- `new_stdout`
+- `new_stderr`
+- `new_exit_status`
+
+These variables:
+
+- determine what module2f does *right now*  
+- decide whether to retry, fallback, abort, or continue  
+- **do not** appear in the registry entry  
+- **do not** appear in ai_metadata  
+- **do not** appear in tags  
+
+This is intentional and correct.
+
+---
+
+- 2. Persistent state variables *are* written into the registry entry
+These are the variables that represent the **AI’s persistent telemetry**, not the control‑flow of the hook.
+
+Persistent state variables include:
+
+- `ai_invoked`
+- `ai_fallback` *(persistent state version)*
+- `ai_plan_action`
+- `ai_commands`
+- `ai_failed_command`
+
+These are the only variables that:
+
+- get stored in `ai_metadata`
+- get turned into persistent tags
+- get written into the registry entry via `_add_ai_metadata_and_tags()`
+
+This is the core rule:
+
+Control‑flow variables → drive logic only  
+Persistent state variables → stored in registry entry  
+
+---
+
+- 3. The ambiguous one: `ai_fallback` — two meanings, two layers
+
+This is the one that can be confusing when looking at fallback registry_entrys
+
+There are **two different `ai_fallback` variables**:
+
+---
+
+A. Control‑flow `ai_fallback` (from the HOOK return)**  
+This comes from the AI/MCP hook return payload:
+
+```python
+{"ai_fallback": True}
+```
+
+This is **not** persistent.  
+It is **not** stored.  
+It is **not** tagged.  
+It is used only to decide:
+
+- whether to enter derived fallback  
+- whether to skip retry logic  
+- whether to bypass plan execution  
+
+This version **never** appears in the registry entry.
+
+---
+
+B. Persistent state `ai_fallback` (stored in ai_metadata)**  
+This is the persistent state variable:
+
+```python
+ai_fallback = True
+```
+
+This one **is** stored in:
+
+- `ai_metadata["ai_fallback"] = True`
+- the persistent tag `"ai_fallback_true"`
+
+And it appears in the registry entry.
+
+This is the one that matters for:
+
+- telemetry  
+- debugging  
+- post‑mortem analysis  
+- registry queries  
+- historical tracking  
+
+---
+
+- 4. The tag `ai_fallback_true` is NOT the control‑flow variable**
+
+
+The tag:
+
+```
+"ai_fallback_true"
+```
+
+comes from the **persistent state variable**, not the control‑flow variable.
+
+It is generated by:
+
+```python
+if ai_fallback:
+    ai_tags.append("ai_fallback_true")
+```
+
+This tag is:
+
+- persistent  
+- stored in the registry entry  
+- part of the metadata  
+- part of the historical record  
+
+It is **not** the control‑flow variable.
+
+---
+
+
+5. Summary — the definitive truth table**
+
+| Concept | Control‑Flow? | Persistent State? | Stored in ai_metadata? | Stored in registry entry? | Tag created? |
+|--------|----------------|-------------------|-------------------------|----------------------------|--------------|
+| `ai_ran` | ✔ yes | ❌ no | ❌ no | ❌ no | ❌ no |
+| `ai_fixed` | ✔ yes | ❌ no | ❌ no | ❌ no | ❌ no |
+| `ai_failed` | ✔ yes | ❌ no | ❌ no | ❌ no | ❌ no |
+| `ai_fallback` (control‑flow) | ✔ yes | ❌ no | ❌ no | ❌ no | ❌ no |
+| `ai_fallback` (persistent) | ❌ no | ✔ yes | ✔ yes | ✔ yes | ✔ `"ai_fallback_true"` |
+| `ai_plan_action` | ❌ no | ✔ yes | ✔ yes | ✔ yes | ✔ (action tag) |
+| `ai_commands` | ❌ no | ✔ yes | ✔ yes | ✔ yes | ❌ no |
+| `ai_failed_command` | ❌ no | ✔ yes | ✔ yes | ✔ yes | ❌ no |
+| `ai_invoked` (persistent) | ❌ no | ✔ yes | ✔ yes | ✔ yes | ✔ `"ai_invoked_true"` 
+
+---
+
+
+- Control‑flow variables are never stored  
+- Only persistent state variables go into ai_metadata  
+- Only persistent state variables generate tags  
+- The ambiguous `ai_fallback` is persistent when stored, control‑flow when returned  
+- The registry entry uses the persistent version  
+- `ai_fallback_true` is a persistent tag, not a control‑flow signal  
+
+
+
+
+
+##### The complete AI/HOOK function _invoke_ai_hook()
+
+The code comments below have a few examaples of the persisent state variable vs. control flow variable usage as it pertains to this
+AI/MCP HOOK code.
+The basic purpose of this _invoke_ai_hook() function is to get a plan for the current context (problem command state) from the LLM by
+using the ask_for_ai_recovery function, and then based upon that plan, execute it and set the control flow variables (and sometimes the
+persistent state variables), so that the calling heuristic in module2f knows what to do and how to create the registry_entry for the
+thread/node having the problem with the command(s).
+
+
+```
+        plan = ask_ai_for_recovery(context)
+```
+
+
+
+```
+
+    # AI/MCP HOOK HELPER (FAITHFUL TO ORIGINAL HOOK)
+    # So the original AI/MCP HOOK has been made into a helper function because it needs to be called from 
+    # several different locations now. It has to be called from the original location towards the end of the for attemp
+    # loop (command), but it also needs to be called from all of the heuristic failure blocks inside of the same for attept
+    # command loop. In fact, thet most common scenario is that a difficult to execute command the will require AI assistance
+    # will fail in one of the heuristic blocks rather than the original generic location (fall through) towards the end of
+    # the for attempt command loop. The helper will make the integration much easier and compact.
+    # ------------------------------------------------------------
+    def _invoke_ai_hook(original_command, stdout_output, stderr_output,
+                        exit_status, attempt, instance_id, ip,
+                        extra_tags, ssh):
+        """
+        Unified AI/MCP hook for both heuristic failures and vanilla final-attempt failures.
+
+        Returns a dict describing the outcome:
+
+
+        (Below are control-flow variables in contrast to the nonlocal persistent state variables that are mutated directly
+        The control-flow variables are returned from this HOOK helper functon and help control the program flow given the status
+        of the ai helper application to the command. The persistent state variables on the other hand, help integrate the 
+        ai/mcp state into the registry_entry via tags and ai-metadata fields.
+        
+        The key difference between the two are that control-flow variables are required since the HOOK is now a helper function
+        and not inline in the def resurrection_install_tomcat function.  The control-flow variables must be returned by this
+        HOOK helper so that module2f can use this information to continue program flow correctly for the thread.
+        The persistent state variables are mutated directly since they are nonlocal in this HOOK helper. They do not need to 
+        be returned to the calling function like the control-flow variables.)
+
+        These are the control-flow variables
+
+            {
+                "ai_ran": True/False,
+                "ai_fixed": True/False,
+                "ai_failed": True/False,
+                "ai_fallback": True/False,
+                "new_stdout": "...",
+                "new_stderr": "...",
+                "new_exit_status": int,
+            }
+        
+            This  HOOK is no longer inline
+            So the caller needs a way to know:
+
+                Did AI fix the command?
+
+                Should I break the attempt loop?
+
+                Should I continue retrying?
+
+                Should I fall back to native logic?
+
+                What is the updated stdout/stderr/exit_status?
+
+                Persistent vars cannot answer these questions.
+
+            Why is stedout/stderr/exti_status required as a return control-flow variable??
+            Because the HOOK is no longer inline, the caller would otherwise lose:
+
+                the retry command’s stdout
+
+                the retry command’s stderr
+
+                the retry command’s exit status
+
+                These are needed for:
+                heuristics
+
+                classification
+
+                registry entries
+
+                exception handlers
+
+                post‑mortem debugging
+
+                So the helper must return them.
+
+            Example of how the control-flow variables will be used by the caller:
+                if result["ai_fixed"]:
+                    stdout_output = result["new_stdout"]
+                    stderr_output = result["new_stderr"]
+                    exit_status = result["new_exit_status"]
+                    command_succeeded = True
+                    break
+
+
+
+        These are the persistent state ai/mcp variables:
+
+            nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands    
+            
+            These will be used to mutate the registry_entry and update it to what ai/mcp has done in terms of command execution 
+            on the thread/registry_entry
+
+            _build_ai_metadata_and_tags() reads these persistent state variables later and incorprates them into the 
+            registry_entry using the ai_tags and ai_meta variables and lists.
+        
+            Example of how the persistent state variables are used to integrate into the registry_entry of a given thread:
+            
+                ai_meta, ai_tags = _build_ai_metadata_and_tags()
+
+                Inside that helper: 
+                    ai_meta = {
+                        "ai_invoked": ai_invoked,
+                        "ai_fallback": ai_fallback,
+                        "ai_plan_action": ai_plan.get("action"),
+                        "ai_commands": ai_commands[:],
+                        "ai_failed_command": ai_failed_command, 
+                    }
+            These live outside the HOOK helper and survive across:
+
+
+                attempts
+
+                commands
+
+                heuristic blocks
+
+                the entire resurrection run
+
+
+        Why persistent vars cannot replace control‑flow vars
+            Persistent vars indicate:
+
+            “AI was invoked at some point”
+
+            “Here is the plan AI chose”
+
+            “Here are the commands AI ran”
+
+            “AI fallback happened”
+
+            But they do not indicate:
+
+            “Did AI fix this command?”
+
+            “Should I break the loop?”
+
+            “Should I continue retrying?”
+
+            “What is the updated exit status?”
+
+            “What is the updated stderr?”
+
+            Those are control‑flow decisions, not metadata.
+
+
+        Why control‑flow vars cannot replace persistent vars
+            Control‑flow vars are ephemeral:
+
+            They only apply to the current HOOK invocation
+
+            They do not survive across commands
+
+            They do not survive across attempts
+
+            They do not survive across heuristic blocks
+
+            They are not used for tagging
+
+            Persistent vars are the opposite:
+
+            They survive across the entire resurrection run
+
+            They are used for tagging
+
+            They are used for metadata
+
+            They are used for forensic lineage
+
+
+        Complete code flow example:
+            
+            Step 1- HOOK helper (this function) runs:
+            
+            The HOOK helper mutates these persistent state variables directly as nonlocals:
+                ai_invoked = True
+                ai_plan = plan
+                ai_fallback = False
+                ai_commands.append(...)
+
+
+            The helper returns these control-flow variables:
+                {
+                    "ai_ran": True,
+                    "ai_fixed": True,
+                    "new_stdout": "...",
+                    "new_stderr": "",
+                    "new_exit_status": 0
+                }
+
+
+            Step 2-  The caller uses these conrol-flow variables like this: (the persistent variables cannot control code flow like this)
+            
+            if result["ai_fixed"]:
+                stdout_output = result["new_stdout"]
+                stderr_output = result["new_stderr"]
+                exit_status = result["new_exit_status"]
+                command_succeeded = True
+                break
+
+
+            Step 3- Later the install_success block is run assuming the rest of the commands succeed in the command list
+            
+            The following code is used to append ai/mcp tags to the registry_entry for the thread, as well as ai metadata to the 
+            registry_entry for the thread.
+
+            ai_meta, ai_tags = _build_ai_metadata_and_tags()
+            
+            The helper _build_ai_metadata_and_tags can now read the mutated persistent state vars (from Step1 above) and 
+            create the ai_meta list: 
+            
+            ai_meta = {
+                "ai_invoked": ai_invoked,
+                "ai_fallback": ai_fallback,
+                "ai_plan_action": ai_plan.get("action"),
+                "ai_commands": ai_commands[:],
+                "ai_failed_command": ai_failed_command, 
+            }
+
+
+            The merged_tags can then be incorporated into the install_success registry_entry with the following, noting that NO
+            historical forensic lineage/information has been lost from the original registry_entry tags:
+                
+                merged_tags = base_tags + [‘installation_completed’] + registry_entry[‘tags’] + ai_tags
+            
+            Likewise, the ai_meta can be added as a field to the install_success registry_entry    
+         
+
+
+        This helper:
+            - Builds context
+            - Calls ask_ai_for_recovery()
+            - Updates ai_invoked, ai_plan, ai_fallback, ai_commands (persistent state variables) directly
+            - Applies cleanup_and_retry or retry_with_modified_command
+            - Re-runs the command through the SAME SSH connection
+            - Returns updated outputs for classification and returns control-flow variables to the caller.
+        """
+
+
+        # ====================================================================================================
+        # IMPORTANT ARCHITECTURAL NOTE ABOUT FALLBACK HANDLING
+        # ----------------------------------------------------------------------------------------------------
+        # The AI/MCP HOOK returns *control‑flow* information to the caller. It does NOT directly mutate the
+        # persistent AI state variables (ai_fallback, ai_failed, ai_fixed, etc.) EXCEPT for explicit contract
+        # actions: "fallback", "unknown", and "abort".
+        #
+        # Why?
+        # ----
+        # Because the HOOK does not know the caller’s context. The HOOK is intentionally pure:
+        #   - It receives inputs.
+        #   - It executes the AI plan.
+        #   - It returns a control‑flow dict describing what happened.
+        #   - It does NOT decide how the caller should classify the result.
+        #
+        # The persistent state variables (ai_fallback, ai_failed, ai_fixed, ai_commands, ai_failed_command)
+        # belong to the CALLER (the heuristic block), not the HOOK. The caller uses these persistent variables
+        # to build ai_metadata and ai_tags for the registry entry.
+        #
+        # Native contract actions ("fallback", "unknown", "abort") *ARE* allowed to mutate persistent state,
+        # because they are explicit instructions from the AI plan. These are not derived conditions.
+        #
+        # HOWEVER:
+        # --------
+        # cleanup_and_retry fallback (retry list empty) and retry_with_modified_command fallback (retry missing)
+        # are *derived conditions*, not explicit contract actions. The HOOK cannot mutate persistent state for
+        # these cases, because:
+        #
+        #   1. The HOOK does not know which heuristic block invoked it.
+        #   2. The caller may choose to classify fallback differently depending on context.
+        #   3. Mutating persistent state inside the HOOK would cause cross‑heuristic contamination.
+        #   4. The HOOK must remain a pure function that returns control‑flow, not registry metadata.
+        #
+        # Therefore:
+        # ----------
+        # For derived fallback conditions, the HOOK returns:
+        #       {"ai_fallback": True, ...}
+        # but DOES NOT set the persistent ai_fallback variable.
+        #
+        # It is the responsibility of the CALLER (heuristic block) to:
+        #   - detect result["ai_fallback"] == True
+        #   - set the persistent ai_fallback = True
+        #   - build ai_metadata and ai_tags accordingly
+        #   - classify the registry entry as a native failure with fallback tagging
+        #
+        # This preserves the architecture:
+        #       HOOK → returns control‑flow
+        #       heuristic block → interprets control‑flow
+        #       persistent state → set by heuristic block
+        #       metadata builder → reads persistent state
+        #
+        # ====================================================================================================
+
+
+
+        nonlocal ai_invoked, ai_context, ai_plan, ai_fallback, ai_commands, ai_failed_command
+        # These are the persistent state variables that are incorporated into the ai_metadata in the registry_entry
+        # Make sure to  initialize these outside of the def _invoke_ai_hook function (this function)        
+
+
+        # --------------------------------------------------------
+        # 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
+        # --------------------------------------------------------
+        context = {
+            "command": original_command,
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "exit_status": exit_status,
+            "attempt": attempt + 1,
+            "instance_id": instance_id,
+            "ip": ip,
+            "tags": extra_tags,
+            "os_info": globals().get("os_info", None),
+            "history": globals().get("command_history", None),
+        }
+
+        print(f"AI_MCP_HOOK[{ip}] 🔍 Invoking AI/MCP recovery engine...")
+        plan = ask_ai_for_recovery(context)
+
+        # --------------------------------------------------------
+        # 2. Record AI invocation for tagging later
+        # --------------------------------------------------------
+        ai_invoked = True
+        ai_context = context
+        ai_plan = plan
+
+        # --------------------------------------------------------
+        # 3. Detect fallback conditions (IDENTICAL TO ORIGINAL)
+        # This is considered a native fallback and not a derived fallback.
+        # --------------------------------------------------------
+        if plan is None or plan.get("action") == "fallback" or "error" in plan:
+            print(f"AI_MCP_HOOK[{ip}] ⚠️ AI fallback triggered — continuing with native logic.")
+            ai_fallback = True
+            return {
+                "ai_ran": True,
+                "ai_fixed": False,
+                "ai_failed": True,
+                "ai_fallback": True,
+                "new_stdout": stdout_output,
+                "new_stderr": stderr_output,
+                "new_exit_status": exit_status,
+            }
+
+        # --------------------------------------------------------
+        # 4. AI returned a valid plan — apply it (IDENTICAL LOGIC)
+        # --------------------------------------------------------
+        action = plan.get("action")
+        print(f"AI_MCP_HOOK[{ip}] �� AI plan received: action={action}")
+
+
+
+
+
+
+        ## --------------------------------------------------------
+        ## ACTION: cleanup_and_retry VERSION1 single retry command support
+        ## --------------------------------------------------------
+        #if action == "cleanup_and_retry":
+        #    cleanup_cmds = plan.get("cleanup", [])
+        #    retry_cmd = plan.get("retry")
+
+        #    # Track commands for tagging. Always append to the existing ai_commands so that a complete history is in the tags
+        #    ai_commands.extend(cleanup_cmds)
+        #    if retry_cmd:
+        #        ai_commands.append(retry_cmd)
+
+        #    # ----------------------------------------------------
+        #    # 5A. Run cleanup commands (IDENTICAL)
+        #    # ----------------------------------------------------
+        #    for ccmd in cleanup_cmds:
+        #        print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
+        #        cin, cout, cerr = ssh.exec_command(ccmd, timeout=60)
+        #        cout.channel.settimeout(WATCHDOG_TIMEOUT)
+        #        cerr.channel.settimeout(WATCHDOG_TIMEOUT)
+        #        _co, _cs = read_output_with_watchdog(cout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+        #        _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+
+        #    # ----------------------------------------------------
+        #    # 5B. Run retry command (IDENTICAL)
+        #    # ----------------------------------------------------
+        #    if retry_cmd:
+        #        print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {retry_cmd}")
+        #        rin, rout, rerr = ssh.exec_command(retry_cmd, timeout=60)
+        #        rout.channel.settimeout(WATCHDOG_TIMEOUT)
+        #        rerr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+        #        r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+        #        r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+        #        r_exit = rout.channel.recv_exit_status()
+
+        #        print(f"AI_MCP_HOOK[{ip}] AI retry exit={r_exit}")
+
+        #        # ------------------------------------------------
+        #        # 5C. Re-evaluate success using SAME logic
+        #        # ------------------------------------------------
+        #        if r_exit == 0 and not r_stderr.strip():
+        #            print(f"AI_MCP_HOOK[{ip}] 🎉 AI successfully repaired the command!")
+        #            return {
+        #                "ai_ran": True,
+        #                "ai_fixed": True,
+        #                "ai_failed": False,
+        #                "ai_fallback": False,
+        #                "new_stdout": r_stdout,
+        #                "new_stderr": r_stderr,
+        #                "new_exit_status": r_exit,
+        #            }
+
+        #        print(f"AI_MCP_HOOK[{ip}] ❌ AI retry failed — falling back to native logic.")
+        #        return {
+        #            "ai_ran": True,
+        #            "ai_fixed": False,
+        #            "ai_failed": True,
+        #            "ai_fallback": False,
+        #            "new_stdout": r_stdout,
+        #            "new_stderr": r_stderr,
+        #            "new_exit_status": r_exit,
+        #        }
+
+
+
+
+        # --------------------------------------------------------
+        # ACTION: cleanup_and_retry  (VERSION2: UPDATED FOR MULTIPLE RETRIES)
+        # --------------------------------------------------------
+        if action == "cleanup_and_retry":
+
+
+        ##### General high level ordering #####
+        ##### This gives a lot of lattitude to what the LLM may send back for cleanup commands and retry commands and will prevent
+        ##### this HOOK code from crashing with commands that have not been properly normalized
+        #####
+        #1. Get cleanup_cmds and retry_cmds
+        #
+        #2. CLEANUP GUARD 1 — convert string → list
+        #3. CLEANUP GUARD 2 — convert invalid → []
+        #
+        #4. RETRY GUARD 1 — convert string → list
+        #5. RETRY GUARD 2 — convert invalid → []
+        #
+        #6. CLEANUP NORMALIZATION — remove None, "", whitespace
+        #7. Extend ai_commands FOR cleanup commands after cleanup normalization
+        #8. Run cleanup commands
+        #
+        #9. RETRY NORMALIZATION — remove None, "", whitespace
+        #9b. Extend ai_commands FOR retry commands (safe now because list is valid and also normalization converts whitespace,etc to [])
+        #
+        #10. DERIVED FALLBACK CHECK — if normalized list empty → fallback
+        #
+        #11. Run retry commands
+
+
+
+            cleanup_cmds = plan.get("cleanup", [])
+            retry_cmds = plan.get("retry", [])
+
+
+
+            # ----------------------------------------------------
+            # CLEANUP NORMALIZATION PHILOSOPHY
+            #
+            # The LLM contract *requires* cleanup to be a list, but
+            # in practice the LLM may occasionally return a single
+            # string or even an invalid type (None, int, dict).
+            #
+            # Cleanup is "best effort" and does NOT affect fallback
+            # or success/failure classification. Therefore, we take
+            # a forgiving approach:
+            #
+            #   - If cleanup is a single string → convert to [string]
+            #   - If cleanup is invalid (None, int, dict) → convert to []
+            #
+            # This prevents crashes and allows cleanup to run safely
+            # without impacting the retry logic.
+            # ----------------------------------------------------
+
+            # Cleanup GUARD #1 (see retry commands Guard1 for a full explanation on what this does)
+            # Cleanup GUARD #2 (see retry commands Guard2 for a full explanation on what this does)
+            # ----------------------------------------------------
+            # CLEANUP GUARD 1 — convert single string → list. The LLM SHOULD always return a list for cleanup commands but if it does
+            # not this will guard against that and convert a single string to a list of single string.
+            # ----------------------------------------------------
+            if isinstance(cleanup_cmds, str):
+                cleanup_cmds = [cleanup_cmds]
+
+            # ----------------------------------------------------
+            # CLEANUP GUARD 2 — convert invalid types → empty list
+            # ----------------------------------------------------
+            if not isinstance(cleanup_cmds, list):
+                cleanup_cmds = []
+
+
+
+
+            #### retry_cmds Guards 1 and 2 ####
+            # ----------------------------------------------------
+            # GUARD #1: Normalize retry_cmds to a list. The LLM can return either a list or a single string so this is important.
+            # We need to convert everything to a list prior to executing the commands.
+            # The contract allows retry to be a single string or a list.
+            # We convert a single string into a list of one element.
+            # ----------------------------------------------------
+            if isinstance(retry_cmds, str):
+                retry_cmds = [retry_cmds]
+
+            # GUARD #2: Convert None, numbers, dicts, etc. to empty list (NOTE: these are not single "string" that are addressed
+            # with GUARD1 above. single "string" will be converted to a list ["string"]). None (not "None") will pass thorugh Guard1
+            # and so None will fail here at Guard2 and be converted to an empty list [] so that it can be processed by the normalization
+            # code further down below.
+            if not isinstance(retry_cmds, list):
+                retry_cmds = []
+
+
+            # ----------------------------------------------------
+            # IMPORTANT: Retry guards (SEE ABOVE) MUST run before we extend
+            # ai_commands or attempt any normalization.(see blocks much further below)
+            #
+            # Reason:
+            #   - retry_cmds may be None, a string, a dict, or other
+            #     invalid types returned by the LLM.
+            #   - ai_commands.extend(retry_cmds) will CRASH if
+            #     retry_cmds is not a list.
+            #   - The normalization list comprehension will also
+            #     CRASH if retry_cmds is not iterable.
+            #
+            # Therefore:
+            #   1. Convert single string → [string]
+            #   2. Convert invalid types → []
+            #
+            # Only AFTER these guards is retry_cmds guaranteed to be
+            # a safe list for tagging, normalization, and execution.
+            # ----------------------------------------------------
+
+
+
+            #### normalize the cleanup commands ####
+
+            normalized_cleanup_cmds = [     ## for an explanation of what this does see the retry commands block further below(5B)
+                cmd for cmd in cleanup_cmds
+                if cmd is not None and str(cmd).strip()
+            ]
+
+
+
+            # ----------------------------------------------------
+            # Track commands for tagging and ai_metadata
+            # Cleanup commands are appended individually.
+            # Retry commands are also appended individually (NOT as a list). Retry commands have to be done after retry normalization
+            # Cleanup commands also have to be appended after cleanup normalization
+            # This ensures proper tagging and forensic traceability.
+            # ----------------------------------------------------
+
+            #ai_commands.extend(cleanup_cmds)
+            ai_commands.extend(normalized_cleanup_cmds)
+
+            # ----------------------------------------------------
+            # 5A. Run cleanup commands
+            #
+            # Cleanup is "best effort" and does NOT determine success/failure.
+            # Rationale:
+            #   - Cleanup commands often fail harmlessly (e.g., file already removed).
+            #   - Cleanup is not the repair; retry is the repair.
+            #   - Cleanup failures do not imply the system is unrecoverable.
+            #   - Therefore cleanup failures are ignored and retry proceeds.
+            #   - Even is None, or empty or whitespace, just normalize it, but it will not imply fallback contract action 
+            # ----------------------------------------------------
+
+
+            for ccmd in normalized_cleanup_cmds:
+            #for ccmd in cleanup_cmds:
+                print(f"AI_MCP_HOOK[{ip}] 🧹 AI cleanup: {ccmd}")
+                cin, cout, cerr = ssh.exec_command(ccmd, timeout=60)
+                cout.channel.settimeout(WATCHDOG_TIMEOUT)
+                cerr.channel.settimeout(WATCHDOG_TIMEOUT)
+                _co, _cs = read_output_with_watchdog(cout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                _eo, _es = read_output_with_watchdog(cerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+
+
+
+
+
+
+            # ------------------------------------------------
+            # If retry list is empty → fallback (make sure to handle whitespace as well)
+            # ------------------------------------------------
+            # This normalization below does the following:
+            # None → removed (empty) [] <<<< This is taken care of by Guard #2
+            # " " → removed (empty) []
+            # "" → removed (empty) []
+            # "echo hi" → kept   <<< This is taken care of by Guard #1
+            # It basically normalizes these edge cases to empty so that the if not normalized_retry_cmds can be evaluated properly, i.e.
+            # as failed and fallback and not simply failed.
+            # Treat whitespace-only commands as empty, etc....
+
+            # --------------------------------------------------------
+            # IMPORTANT NOTE ABOUT RETRY FALLBACK LOGIC
+            #
+            # Fallback for cleanup_and_retry is *derived* and occurs
+            # only when ALL retry commands are invalid.
+            #
+            # A retry command is considered invalid if it is:
+            #   - None
+            #   - an empty string ""
+            #   - whitespace-only "   "
+            #   - a string that becomes empty after .strip()
+            #
+            # After normalization, if the retry list becomes empty,
+            # the HOOK triggers fallback immediately and does NOT
+            # attempt to execute any retry commands.
+            #
+            # If ANY retry command is valid (non-empty after strip),
+            # the HOOK will execute the retry sequence normally.
+            # This means mixed cases behave as follows:
+            #
+            #   retry = ["echo OK", "   "]     → NOT fallback (if the command succeeds this will be install_success)
+            #   retry = ["echo FAIL", "   "]   → NOT fallback (ai_failed)
+            #   retry = ["   ", "echo OK"]     → NOT fallback (if the command succeeds this will be install_success)
+            #
+            # Only when ALL retry commands are invalid does the HOOK
+            # return ai_fallback=True.
+            # --------------------------------------------------------
+
+
+
+            normalized_retry_cmds = [
+                cmd for cmd in retry_cmds
+                if cmd is not None and str(cmd).strip()
+            ]
+
+
+
+
+            # ----------------------------------------------------
+            # Track commands for tagging and ai_metadata
+            # Retry commands are also appended individually (NOT as a list). Retry command have to be done after retry normalization
+            # This ensures proper tagging and forensic traceability.
+            # ----------------------------------------------------
+            #ai_commands.extend(retry_cmds) # must be done after retry normalization using the normalized_retry_cmds 
+            # Record only valid retry commands for ai_metadata
+
+            ai_commands.extend(normalized_retry_cmds)
+
+
+
+
+
+            #Initialize this stuff here for the derived fallback check below and also for the run retry_cmds exection block below that
+            last_stdout = ""
+            last_stderr = ""
+            last_exit = 1
+
+            ##### Derived fallback check:
+
+            if not normalized_retry_cmds:
+            # If the command is removed (empty) this will be true. If multiple commands, they all have to be removed(empty) for this to be true. 
+            # Otherwise the valid commands will be executed with the command execution block. See comments above for test cases.
+            #if not retry_cmds:
+                print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry commands provided — fallback.")
+                return {
+                    "ai_ran": True,
+                    "ai_fixed": False,
+                    "ai_failed": False,
+                    "ai_fallback": True,
+                    "new_stdout": last_stdout,
+                    "new_stderr": last_stderr,
+                    "new_exit_status": last_exit,
+                }
+
+
+
+
+
+            # ----------------------------------------------------
+            # 5B. Run retry commands (UPDATED FOR MULTIPLE COMMANDS)
+            #
+            # Retry commands are executed sequentially.
+            # If ANY retry command fails (non-zero exit OR stderr present),
+            # the entire cleanup_and_retry action fails immediately.
+            #
+            # Only if ALL retry commands succeed do we return ai_fixed=True.
+            # ----------------------------------------------------
+
+            for rcmd in normalized_retry_cmds:
+            #for rcmd in retry_cmds:
+                print(f"AI_MCP_HOOK[{ip}] 🔁 AI retry: {rcmd}")
+                rin, rout, rerr = ssh.exec_command(rcmd, timeout=60)
+                rout.channel.settimeout(WATCHDOG_TIMEOUT)
+                rerr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+                r_exit = rout.channel.recv_exit_status()
+
+                # Save last outputs for return payload
+                last_stdout = r_stdout
+                last_stderr = r_stderr
+                last_exit = r_exit
+
+                print(f"AI_MCP_HOOK[{ip}] AI retry exit={r_exit}")
+
+                # ------------------------------------------------
+                # Immediate failure on ANY retry command failure
+                # ------------------------------------------------
+                if r_exit != 0 or r_stderr.strip():
+                    print(f"AI_MCP_HOOK[{ip}] ❌ Retry command failed — aborting retry sequence.")
+                    ai_failed_command = rcmd  ## NEW. Record the failed retry command. This will be added to ai_metadata
+                    return {
+                        "ai_ran": True,
+                        "ai_fixed": False,
+                        "ai_failed": True,
+                        "ai_fallback": False,
+                        "new_stdout": last_stdout,
+                        "new_stderr": last_stderr,
+                        "new_exit_status": last_exit,
+                    }
+
+            # ----------------------------------------------------
+            # 5C. If we reach here, ALL retry commands succeeded
+            # ----------------------------------------------------
+            print(f"AI_MCP_HOOK[{ip}] 🎉 All retry commands succeeded — AI repaired the command!")
+            return {
+                "ai_ran": True,
+                "ai_fixed": True,
+                "ai_failed": False,
+                "ai_fallback": False,
+                "new_stdout": last_stdout,
+                "new_stderr": last_stderr,
+                "new_exit_status": last_exit,
+            }
+
+
+
+
+
+
+
+        # --------------------------------------------------------
+        # ACTION: retry_with_modified_command (IDENTICAL). Always append to the existing ai_comamands list.
+        # --------------------------------------------------------
+        if action == "retry_with_modified_command":
+            new_cmd = plan.get("retry")
+
+            # --------------------------------------------------------
+            # If retry command is missing → fallback (make sure to handle whitespace as well)
+            # --------------------------------------------------------
+
+            #new_cmd is missing → None → not new_cmd is True
+
+            #new_cmd is None explicitly → not new_cmd is True
+
+            #new_cmd is "" → not new_cmd is True
+
+            #new_cmd is " " → not new_cmd is False, but not str(new_cmd).strip() is True
+
+            #new_cmd is " \t\n " → strip → "" → True
+
+            #new_cmd is "echo hi" → strip → "echo hi" → False → valid command
+
+
+
+            #if not new_cmd:
+            if not new_cmd or not str(new_cmd).strip():    ## the not str(new_cmd) covers the whitespace " " case as well 
+                print(f"AI_MCP_HOOK[{ip}] ⚠️ No retry command provided — fallback.")
+                return {
+                    "ai_ran": True,
+                    "ai_fixed": False,
+                    "ai_failed": False,
+                    "ai_fallback": True,
+                    "new_stdout": "",
+                    "new_stderr": "",
+                    "new_exit_status": 1,
+                }
+
+
+            if new_cmd:
+                ai_commands.append(new_cmd)
+                print(f"AI_MCP_HOOK[{ip}] 🔁 AI modified retry: {new_cmd}")
+
+                rin, rout, rerr = ssh.exec_command(new_cmd, timeout=60)
+                rout.channel.settimeout(WATCHDOG_TIMEOUT)
+                rerr.channel.settimeout(WATCHDOG_TIMEOUT)
+
+                r_stdout, _ = read_output_with_watchdog(rout, "STDOUT", ip, WATCHDOG_TIMEOUT)
+                r_stderr, _ = read_output_with_watchdog(rerr, "STDERR", ip, WATCHDOG_TIMEOUT)
+                r_exit = rout.channel.recv_exit_status()
+
+                if r_exit == 0 and not r_stderr.strip():
+                    print(f"AI_MCP_HOOK[{ip}] 🎉 AI modified command succeeded!")
+                    return {
+                        "ai_ran": True,
+                        "ai_fixed": True,
+                        "ai_failed": False,
+                        "ai_fallback": False,
+                        "new_stdout": r_stdout,
+                        "new_stderr": r_stderr,
+                        "new_exit_status": r_exit,
+                    }
+
+                print(f"AI_MCP_HOOK[{ip}] ❌ AI modified retry failed — falling back to native logic.")
+
+                ai_failed_command = new_cmd # This retry_with_modified_command contract action can only have one command but
+                # since the ai_failed_command has been added to metadata add it for this contract as well (it is already added to
+                # the cleanup_and_retry_contract action). This will provide conistency. 
+
+                return {
+                    "ai_ran": True,
+                    "ai_fixed": False,
+                    "ai_failed": True,
+                    "ai_fallback": False,
+                    "new_stdout": r_stdout,
+                    "new_stderr": r_stderr,
+                    "new_exit_status": r_exit,
+                }
+
+        # --------------------------------------------------------
+        # ACTION: abort (IDENTICAL). Always append to the existing ai_commands list
+        # --------------------------------------------------------
+        if action == "abort":
+            print(f"AI_MCP_HOOK[{ip}] 🛑 AI instructed abort — tagging failure.")
+            ai_commands.append("abort")
+            return {
+                "ai_ran": True,
+                "ai_fixed": False,
+                "ai_failed": True,
+                "ai_fallback": False,
+                "new_stdout": stdout_output,
+                "new_stderr": stderr_output,
+                "new_exit_status": exit_status,
+            }
+            }
+
+        # --------------------------------------------------------
+        # Unknown action (IDENTICAL). Continue with native failure logic in calling function.
+        # This is considered a native fallback and not a derived fallback.
+        # --------------------------------------------------------
+        print(f"AI_MCP_HOOK[{ip}] ⚠️ Unknown AI action '{action}' — ignoring plan.")
+        ai_fallback = True
+        return {
+            "ai_ran": True,
+            "ai_fixed": False,
+            "ai_failed": True,
+            "ai_fallback": True,
+            "new_stdout": stdout_output,
+            "new_stderr": stderr_output,
+            "new_exit_status": exit_status,
+        }
+
+
 
 
 
