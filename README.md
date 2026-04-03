@@ -10108,7 +10108,7 @@ def ask_ai_for_recovery(context: dict):
 ## used to try to execute the command on the node. The AI/MCP HOOK is the last resort. It calls the 
 ## ask_ai_for_recovery function using the class defined above to send the context request to the AI Gateway Service
 ## which is in the python ai_gateway_service.py file in the repo.
-'''
+```
 
 
 
