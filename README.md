@@ -11315,7 +11315,7 @@ The control flow varaibles are never incorporated into the registry_entry itself
 the registry_entry using the _add_ai_metadata_and tags() function that was reviewed in Step 5 above. 
 
 
--  1. Control‑flow variables are *never* written into the registry entry
+###### 1. Control‑flow variables are *never* written into the registry entry
 This is by design.
 
 Control‑flow variables exist **only to drive immediate execution logic** inside module2f.  
@@ -11343,7 +11343,7 @@ This is intentional and correct.
 
 ---
 
-- 2. Persistent state variables *are* written into the registry entry
+###### 2. Persistent state variables *are* written into the registry entry
 These are the variables that represent the **AI’s persistent telemetry**, not the control‑flow of the hook.
 
 Persistent state variables include:
@@ -11367,7 +11367,7 @@ Persistent state variables → stored in registry entry
 
 ---
 
-- 3. The ambiguous one: `ai_fallback` — two meanings, two layers
+###### 3. The ambiguous one: `ai_fallback` — two meanings, two layers
 
 This is the one that can be confusing when looking at fallback registry_entrys
 
@@ -11419,7 +11419,7 @@ This is the one that matters for:
 
 ---
 
-- 4. The tag `ai_fallback_true` is NOT the control‑flow variable**
+###### 4. The tag `ai_fallback_true` is NOT the control‑flow variable**
 
 
 The tag:
@@ -11449,7 +11449,7 @@ It is **not** the control‑flow variable.
 ---
 
 
-5. Summary — the definitive truth table**
+###### 5. Summary — the definitive truth table**
 
 | Concept | Control‑Flow? | Persistent State? | Stored in ai_metadata? | Stored in registry entry? | Tag created? |
 |--------|----------------|-------------------|-------------------------|----------------------------|--------------|
