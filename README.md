@@ -10693,6 +10693,8 @@ def recover(request: RecoveryRequest):
         return {"error": str(e), "action": "fallback"}
 
 
+##### Additional notes about the contract actions and LLM interaction ######
+
 #### **1. Derived fallback is ALWAYS handled in module2f, not by the LLM**
 # Derived fallback is an ai_fallback that is not from the native contract fallback action above
 # Derived fallback occurs, for example, if cleanup_and_retry has all retry commands that are blank or missing or None
@@ -10741,7 +10743,7 @@ The LLM API key and related configuration were added to GitLab CI via environmen
 This prepares the system for automated AI Gateway startup (Step 6) and secure LLM access in the pipeline.
 
 
-#### How the OpenAI API key was obtained, configured, and injected into the GitLab pipeline
+##### How the OpenAI API key was obtained, configured, and injected into the GitLab pipeline
 
 The AI/MCP recovery engine requires authenticated access to the OpenAI Responses API. Step 4b formalizes how the API key was acquired, secured, and injected into the GitLab CI/CD pipeline so that the AI Gateway Service can communicate with the LLM during both curl‑based contract testing and real‑life module2f integration.
 
@@ -10756,7 +10758,7 @@ Below is the complete process.
 
 ---
 
-#### 1. Obtaining the OpenAI API Key
+##### 1. Obtaining the OpenAI API Key
 
 To obtain the API key, used the following steps:
 
@@ -10813,7 +10815,7 @@ Simply use the  **standard secret API key**, which is the correct choice for the
 
 ---
 
-#### 2. Storing the API Key in GitLab CI/CD
+##### 2. Storing the API Key in GitLab CI/CD
 
 Once the key was generated, stored it securely in this GitLab project:
 
@@ -10836,7 +10838,7 @@ This is the correct configuration for sensitive credentials.
 
 ---
 
-#### 3. Injecting the API Key into the Deploy Container
+##### 3. Injecting the API Key into the Deploy Container
 
 During the deploy stage, the `.gitlab-ci.yml` writes the API key into a `.env` file:
 
@@ -10868,7 +10870,7 @@ This confirmed that the environment variable was correctly injected.
 
 ---
 
-#### 4. Early Misdiagnosis: API Key vs. Contract Errors
+##### 4. Early Misdiagnosis: API Key vs. Contract Errors
 
 During early AI Gateway Service curl testing, initially suspected that the API key was not being passed into the container. However:
 
@@ -10879,9 +10881,9 @@ During early AI Gateway Service curl testing, initially suspected that the API k
 The real issue turned out to be: (and this will be discussed in a later UPDATE which describes how the contract of the AI Gateway Service
 was refined using curl)
 
--Incorrect payload format sent to the OpenAI API  
+- Incorrect payload format sent to the OpenAI API  
 - Use of the deprecated `/v1/chat/completions` endpoint  
--  Use of unsupported `system:` and `messages:` blocks  
+- Use of unsupported `system:` and `messages:` blocks  
 - Missing `input` block required by `/v1/responses`  
 
 Once the payload was corrected and the endpoint was switched to:
@@ -10896,7 +10898,7 @@ This is why Step 4b is important: it ensures the key is wired correctly so tha
 
 ---
 
-#### 5. Summary of Step 4b Responsibilities
+##### 5. Summary of Step 4b Responsibilities
 
 | Component | Responsibility |
 |----------|----------------|
