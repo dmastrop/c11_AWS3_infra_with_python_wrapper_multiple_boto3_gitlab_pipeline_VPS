@@ -5892,7 +5892,130 @@ def test_ai_hook_heuristic3_success(monkeypatch):
 
 ```
 
+A sample of the complete terminal output for pytest7 is shown below. The registry_entry is about 3/4ths of the way down.
+The monkeypatched SSH responses for the stdout, stderr and exit code can be seen throughout.
+There are 3 failed attempts with the original command followed by the invocation of the AI/MCP HOOK and the subsequent cleanup and
+retry commands from the synthetic plan from the LLM. In this particular case the retry command is monkeypatched to fail leading to
+exercise of the install_failed registry_entry code path which inserts the registry_entry with the appropriate ai_tags and 
+ai_metadata.
 
+
+```
+
+(latestenv) ubuntu@ip-172-31-81-160:~/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE$ pytest -v -s --capture=no tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
+============================================================== test session starts ===============================================================
+platform linux -- Python 3.12.5, pytest-9.0.2, pluggy-1.6.0 -- /home/ubuntu/course11_devops_startup/tmp_ansible_venv/latestenv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
+collected 1 item                                                                                                                                 
+
+tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure [1.2.3.4] [2026-03-17 21:44:54.741261] Replay 1/1: echo test (Attempt 1)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+[1.2.3.4] ⚠️ Non-zero exit — retrying attempt 1
+[1.2.3.4] [2026-03-17 21:44:59.747118] Replay 1/1: echo test (Attempt 2)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+[1.2.3.4] ⚠️ Non-zero exit — retrying attempt 2
+[1.2.3.4] [2026-03-17 21:45:04.747824] Replay 1/1: echo test (Attempt 3)
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 15 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 15 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+synthetic errorsynthetic error
+[1.2.3.4] STDOUT: ''
+[1.2.3.4] STDERR: 'synthetic errorsynthetic error'
+
+
+AI_MCP_HOOK[1.2.3.4] 🔍 Invoking AI/MCP recovery engine...
+AI_MCP_HOOK[1.2.3.4] �� AI plan received: action=cleanup_and_retry
+AI_MCP_HOOK[1.2.3.4] 🧹 AI cleanup: rm -f /var/lib/dpkg/lock
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🧹 AI cleanup: rm -f /var/lib/dpkg/lock-frontend
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] 🔁 AI retry: echo AI_RETRY_1
+[1.2.3.4] 📥 Watchdog read: 13 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 13 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+AI_RETRY_1 okAI_RETRY_1 ok
+[1.2.3.4] 📥 Watchdog read: 0 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 0 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 0 lines):
+
+AI_MCP_HOOK[1.2.3.4] AI retry exit=0
+AI_MCP_HOOK[1.2.3.4] 🔁 AI retry: echo AI_RETRY_2
+[1.2.3.4] 📥 Watchdog read: 24 bytes on STDOUT
+[1.2.3.4] 📥 Post-loop flush read: 24 bytes on STDOUT
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+AI_RETRY_2 still failingAI_RETRY_2 still failing
+[1.2.3.4] 📥 Watchdog read: 20 bytes on STDERR
+[1.2.3.4] 📥 Post-loop flush read: 20 bytes on STDERR
+[1.2.3.4] 🔍 Final output after flush (first 1 lines):
+cleanup retry failedcleanup retry failed
+AI_MCP_HOOK[1.2.3.4] AI retry exit=1
+AI_MCP_HOOK[1.2.3.4] ❌ Retry command failed — aborting retry sequence.
+
+===== REGISTRY ENTRY (pytest7) =====
+status: install_failed
+attempt: -1
+pid: 2860979
+thread_id: 136853691731008
+thread_uuid: c5911bcb
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-17 21:45:04.748336
+
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}
+================================
+
+DEBUG: registry (cleanup_and_retry failure) = {'status': 'install_failed', 'attempt': -1, 'pid': 2860979, 'thread_id': 136853691731008, 'thread_uuid': 'c5911bcb', 'public_ip': '1.2.3.4', 'private_ip': '10.0.0.1', 'timestamp': '2026-03-17 21:45:04.748336', 'tags': ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*'], 'ai_metadata': {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}}
+PASSED
+
+================================================================ warnings summary ================================================================
+tests/test_ai_hook_v7.py::test_ai_hook_cleanup_and_retry_failure
+  /home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/module2f_resurrection_install_tomcat_multi_threaded_version4d_MCP.py:2633: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = str(datetime.utcnow())
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================= 1 passed, 1 warning in 10.36s ==========================================================
+
+
+```
 
 [Back to top](#top-update56)
 
@@ -11452,8 +11575,34 @@ It is **not** the control‑flow variable.
 
 ---
 
+###### 5. A look ahead at a sample pytest registry_entry that incorporates the ai_metadata and ai_tags
 
-###### 5. Summary — the definitive truth table
+
+The pytest test suite test cases will be reviewed in the next UPDATE. This section just presents a snapshot of a sample registry_entry
+from one of these tests. 
+The test is a cleanup_and_retry ai_plan contract action with all of the persistent variables incorporated into the ai_metadata field of
+the registry_entry.
+
+```
+===== REGISTRY ENTRY (pytest7) =====
+status: install_failed
+attempt: -1
+pid: 2860979
+thread_id: 136853691731008
+thread_uuid: c5911bcb
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+timestamp: 2026-03-17 21:45:04.748336
+
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': 'echo AI_RETRY_2'}
+================================
+```
+
+---
+
+###### 6. Summary — the definitive truth table
 
 | Concept | Control‑Flow? | Persistent State? | Stored in ai_metadata? | Stored in registry entry? | Tag created? |
 |--------|----------------|-------------------|-------------------------|----------------------------|--------------|
