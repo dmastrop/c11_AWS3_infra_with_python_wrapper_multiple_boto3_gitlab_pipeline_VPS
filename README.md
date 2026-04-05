@@ -70,10 +70,11 @@ module2e processed registry and replays the commands on the threads to resurrect
 and never in module2e
 
 - An AI/MMCP HOOK has been integrated into module2f for the command set replay when the initial command set fails on the nodes. This is
-based upon and MCPClient/MCPServer architecture. An AI Gateway Service for the LLM integration (currently using OpenAI gpt-4.1) is used
-for bridging the module2f to the LLM.  The hook integration uses control and persistent state variables to desiginate and update
-the affected registry_entrys after the reattempt: ai_metadata and ai_tags are added to the affected registry_entrys.
- Iterative pytestcontext based testing is used to validate the AI/MCP HOOK integration into the module2f (control flow).  
+based upon an MCPClient/MCPServer based architecture. 
+An AI Gateway Service for the LLM integration (currently using OpenAI gpt-4.1) is used for bridging the module2f to the LLM.  
+The hook integration uses control and persistent state variables to desiginate and update the affected registry_entrys after the 
+reattempt: ai_metadata and ai_tags are added to the affected registry_entrys.
+Iterative pytest context-based testing is used to validate the AI/MCP HOOK integration into the module2f (heuristic control flow).  
 The AI Gateway Service start is integrated into the Gitlab pipeline deployment stage.   
 Iterative curl context testing with the LLM is used for AI Gateway Service contract development and refinement.
 
