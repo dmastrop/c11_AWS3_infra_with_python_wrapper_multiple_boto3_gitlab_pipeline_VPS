@@ -1830,7 +1830,7 @@ Curl is ideal here because:
 
 This suite proves that:
 
-> **the LLM and gateway behave correctly under the contract.**
+> **the LLM and gateway behave correctly under the contract for a given context (problem command set).**
 
 This is the **outer shell** of the architecture.
 
@@ -2005,7 +2005,570 @@ INFO:     127.0.0.1:57462 - "POST /recover HTTP/1.1" 200 OK
 ---
 
 
+### 3. The API Migration Story (Chat → Responses API)
 
+The migration from the legacy **Chat Completions API** (`/v1/chat/completions`) to the modern **Responses API** (`/v1/responses`) was not optional — it was forced by a series of failures, silent rejections, and validator errors that made it clear the old API could not support a deterministic recovery engine.
+
+This section summarizes the journey, the failures, and the breakthroughs that led to the final working payload.
+
+---
+
+#### 3.1 Why `/v1/chat/completions` Failed
+
+The Chat Completions API was fundamentally incompatible with the architecture:
+
+- It accepted **messages**, not a single contract string  
+- It allowed the model to return **arbitrary text**, not strict JSON  
+- It ignored or rewrote system prompts  
+- It produced **non‑deterministic formatting**  
+- It could not enforce a schema  
+- It frequently returned explanations, apologies, or reasoning text  
+- It provided no meaningful validator errors  
+
+For a recovery engine that must return **only JSON**, this API was impossible to control.
+
+The gateway needed:
+
+- strict schema enforcement  
+- deterministic formatting  
+- a single input string  
+- a single output JSON object  
+- no reasoning, no prose, no markdown  
+
+Chat Completions could not guarantee any of this.
+
+---
+
+#### 3.2 Why the Responses API Was Required
+
+The **Responses API** (`/v1/responses`) solved every problem the Chat API created:
+
+- It accepts a **single string** as the input  
+- It returns a **structured envelope** with a clean `output` block  
+- It does not rewrite or reinterpret system prompts  
+- It allows strict JSON‑only output  
+- It supports deterministic temperature‑0 behavior  
+- It rejects invalid fields with 400 errors (critical for debugging)  
+
+Most importantly:
+
+> The Responses API forces the developer to define the contract *explicitly* inside the `input` string.
+
+This is exactly what the recovery engine needed.
+
+---
+
+#### 3.3 Why `system:` and `messages:` Were Removed
+
+This was a very obvious issue looking back, but was not so obvious during troubleshooting due to the poor API documentation.
+
+The Responses API does **not** support:
+
+- `system:`  
+- `messages:`  
+- nested `input` objects  
+- instruction fields inside `input`  
+
+Every time these fields were included, the gateway received:
+
+```
+400 Bad Request
+```
+
+with no explanation. NOTE: no explanation at all for all testing iterations.
+
+The gateway debug logging eventually revealed the truth:
+
+> The Responses API only accepts:  
+> **model**, **temperature**, **max_output_tokens**, and **input** (string).
+
+Everything else is silently rejected.
+
+This forced the architecture to embed the entire contract into a **single string**.
+
+---
+
+#### 3.4 Why the Payload Had to Be a Single String
+
+The Responses API requires:
+
+```
+"input": "<entire contract + context>"
+```
+
+Not:
+
+```
+"input": { "contract": "...", "context": {...} }
+```
+
+Nested structures were rejected.
+
+Instruction fields were rejected.
+
+System fields were rejected.
+
+The gateway debug logging (which will be shown later below)  made this clear:  
+**the only valid shape is a single string.**
+
+This is why the final payload looks like:
+
+```
+"You are a recovery engine...
+ CONTRACT:
+ <contract text>
+
+ CONTEXT:
+ <context JSON>"
+```
+
+
+---
+
+#### 3.5 Why the Model Name Had to Change
+
+During the migration, the Chat API model names (`gpt-4.1`, `gpt-4.1-mini`, etc.) were accepted by the gateway but rejected by the Responses API.
+
+The Responses API required the **Responses‑compatible model variant**, which appears in the raw envelope as:
+
+```
+"model": "gpt-4.1-2025-04-14"
+```
+
+This is normal — the API internally resolves the model name to a dated variant.
+
+The important part is:
+
+> The model name must be valid for the Responses API, not the Chat API.
+
+---
+
+#### 3.6 Why the Endpoint Changed to `/v1/responses`
+
+The Chat API endpoint:
+
+```
+/v1/chat/completions
+```
+
+was designed for conversational agents.
+
+The Responses API endpoint:
+
+```
+/v1/responses
+```
+
+is designed for:
+
+- deterministic tasks  
+- structured output  
+- schema‑driven workflows  
+- contract enforcement  
+
+This endpoint is the only one that supports the recovery engine’s requirements.
+
+---
+
+#### 3.7 Why the 400 Errors Happened
+
+The 400 errors were caused by:
+
+- invalid fields (`system`, `messages`, `instruction`)  
+- nested `input` objects  
+- missing `input` string  
+- invalid model names  
+- invalid payload shapes  
+- contract not being a single string  
+
+The gateway debug logging  inside the ai_gateway_service.py  printed the payload before sending it, which allowed the debugging process to proceed systematically.
+
+The OpenAI response from the LLM was even more revealing. 
+
+The key insight:
+
+> The Responses API rejects the entire request if *any* field is invalid, resulting in the ambiguous 400 error code.
+
+This forced the payload to be stripped down to the minimal valid shape for ground up testing and validation.
+
+
+---
+
+#### 3.8 How Gatweay Debug Logging Revealed the Root Cause
+
+The breakthrough did **not** come from the gateway’s plan validator (covered later in Section 5).  
+The validator protects module2f from malformed LLM output (i.e. LLM plan)  — but it does **not** help diagnose API‑level 400 errors.
+
+The real breakthrough came from the **debug print block** inside the AI Gateway Service:
+
+```python
+# Print the exact payload before sending
+print("\n==================== PAYLOAD SENT TO OPENAI ====================")
+print(payload)
+print("===============================================================\n")
+
+# Make the request
+response = requests.post(
+    LLM_API,
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    },
+    json=payload,
+    timeout=15
+)
+
+# Print raw response text
+print("\n==================== RAW RESPONSE FROM OPENAI ==================")
+print(response.text)
+print("===============================================================\n")
+```
+
+This debug output was the **single most important tool** in the entire migration.
+
+It permits viewing:
+
+1. **The exact payload that is actually being sent by the AI Gateway Service to the LLM**  
+2. **The exact error message returned by the LLM Responses API**
+
+And the key insight came from this RAW response during Payload 2 testing:
+
+```
+"error": {
+  "message": "Invalid type for 'input': expected one of a string or array of input items, but got an object instead.",
+  "type": "invalid_request_error",
+  "param": "input",
+  "code": "invalid_type"
+}
+```
+
+This error revealed the final missing piece:
+
+> **`input` must be a single string.  
+> Nested objects are invalid.  
+> Instruction fields are invalid.**
+
+Once the nested `input` object was removed and replaced with a single string (Payload 3), the 400 errors disappeared instantly.
+
+This was the turning point.
+
+---
+
+#### 3.9 The Payload Evolution (Payloads 1–5) 
+
+
+
+Each payload is shown exactly as it existed during development.
+
+---
+
+##### Payload 1 — Invalid (system + nested input)
+
+```python
+payload = {
+    "model": "gpt-4.1",
+    "temperature": 0,
+    "max_output_tokens": 256,
+    "system": (
+        "You are a recovery engine. "
+        "Follow the contract and rules provided inside the input JSON. "
+        "Return ONLY a JSON object."
+    ),
+    "input": {
+        "contract": "test",
+        "context": context
+    }
+}
+```
+
+**Failure reason:**  
+`system` not allowed  
+`input` must be a string, not an object  
+
+---
+
+##### Payload 2 — Invalid (instruction + nested input using instruction which is not valid with this API)
+
+```python
+payload = {
+    "model": "gpt-4.1",
+    "temperature": 0,
+    "max_output_tokens": 256,
+    "input": {
+        "instruction": (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object."
+        ),
+        "contract": "test",
+        "context": context
+    }
+}
+```
+
+**Failure reason:**  
+`instruction` not allowed  
+ nested `input` still invalid  
+
+---
+
+##### Payload 3 — First Working Prototype
+
+```python
+payload = {
+    "model": "gpt-4.1",
+    "temperature": 0,
+    "max_output_tokens": 256,
+    "input": (
+        "You are a recovery engine. "
+        "Follow the contract and rules provided inside the input JSON. "
+        "Return ONLY a JSON object.\n\n"
+        "CONTRACT:\n"
+        "test\n\n"
+        f"CONTEXT:\n{context}"
+    )
+}
+```
+
+**Breakthrough:**  
+`input` is now a single string  
+contract embedded directly  
+context injected directly  
+Responses API accepts it  
+LLM returns valid JSON (full raw output will be presented further down below) 
+
+This was the first successful curl test.
+
+---
+
+##### Payload 4 — First Contract‑Driven Version
+
+```python
+payload = {
+    "model": "gpt-4.1",
+    "temperature": 0,
+    "max_output_tokens": 256,
+    "input": (
+        "You are a recovery engine. "
+        "Follow the contract and rules provided inside the input JSON. "
+        "Return ONLY a JSON object.\n\n"
+        "CONTRACT:\n"
+        "You must return ONLY a JSON object with this schema:\n\n"
+        "{\n"
+        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+        "  \"cleanup\": [string],\n"
+        "  \"retry\": string\n"
+        "}\n\n"
+        "Rules:\n"
+        "- ALWAYS choose one of the allowed actions.\n"
+        "- NEVER return text outside the JSON.\n"
+        "- NEVER explain your reasoning.\n"
+        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+        "Action meanings:\n"
+        "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+        "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+        "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+        "- fallback: Use when there is not enough information to choose another action.\n\n"
+        f"CONTEXT:\n{context}"
+    )
+}
+```
+
+**Breakthrough:**  
+The LLM now follows a real contract.
+
+---
+
+##### Payload 5 — First Fully Valid Contract (Used for Tests 5–7 of the test matrices which will be presented futher down below)
+
+```python
+payload = {
+    "model": "gpt-4.1",
+    "temperature": 0,
+    "max_output_tokens": 256,
+    "input": (
+        "You are a recovery engine. "
+        "Follow the contract and rules provided inside the input JSON. "
+        "Return ONLY a JSON object.\n\n"
+        "CONTRACT:\n"
+        "You must return ONLY a JSON object with this schema:\n\n"
+        "{\n"
+        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+        "  \"cleanup\": [string],\n"
+        "  \"retry\": string\n"
+        "}\n\n"
+        "Rules:\n"
+        "- ALWAYS choose one of the allowed actions.\n"
+        "- NEVER return text outside the JSON.\n"
+        "- NEVER explain your reasoning.\n"
+        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+        "Fallback rules:\n"
+        "- When returning \"fallback\", return ONLY:\n"
+        "  { \"action\": \"fallback\" }\n"
+        "- Do NOT include \"cleanup\".\n"
+        "- Do NOT include \"retry\".\n\n"
+        "Action meanings:\n"
+        "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+        "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+        "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+        "- fallback: Use when there is not enough information to choose another action.\n\n"
+        f"CONTEXT:\n{context}"
+    )
+}
+```
+
+**Breakthrough:**  
+This version supported all curl tests (5, 6, 7, etc.) until the contract was expanded further based upon the plan validator code
+development in the ai_gateway_service.py.
+
+
+---
+
+##### 3.9.1 Debug Output Comparison — Why Payload 2 Failed
+
+To make the evolution clear, here is the **actual failing debug output** from Payload 2:
+
+```
+==================== PAYLOAD SENT TO OPENAI ====================
+{'model': 'gpt-4.1', 'temperature': 0, 'max_output_tokens': 256, 'input': {'instruction': 'You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.', 'contract': 'test', 'context': {}}}
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "error": {
+    "message": "Invalid type for 'input': expected one of a string or array of input items, but got an object instead.",
+    "type": "invalid_request_error",
+    "param": "input",
+    "code": "invalid_type"
+  }
+}
+===============================================================
+```
+
+This error message is what finally made the problem obvious:
+
+- `input` was an **object**, not a string  
+- `instruction` was not allowed  
+- nested fields were not allowed  
+
+This is what directly led to Payload 3.
+
+---
+
+#### 3.10 The First Breakthrough (Payload 3 Raw Output)
+
+Payload 3 was the first time the Responses API accepted the request and returned a valid JSON object.
+The plan is invalid because at this time the contract rules were not fully developed (see payload evolution in the earlier section. The current payload6 is the full working prototype version which will be presented in a later section. The evolution presents payloads 2
+through 5. 5 is a fully functional contract based payload.
+
+This is the **full debug output** for Payload 3:
+
+The difference from debug Payload2 above and this debug Payload3 is readily apparent.
+Note the status success.
+
+```
+
+
+root@0bf493e0cc7b:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": {}
+      }'
+{"error":"Invalid or missing action","action":"fallback"}root@0bf493e0cc7b:/aws_EC2#
+
+
+==================== PAYLOAD SENT TO OPENAI ====================
+{'model': 'gpt-4.1', 'temperature': 0, 'max_output_tokens': 256, 'input': 'You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.\n\nCONTRACT:\ntest\n\nCONTEXT:\n{}'}
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_02033a71d20232d00069cb477dce8c81a2a8f19862bfb611c2",
+  "object": "response",
+  "created_at": 1774929789,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1774929790,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_02033a71d20232d00069cb477e7eec81a298faed258519e8c4",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"status\": \"success\",\n  \"message\": \"Contract 'test' acknowledged and processed according to provided context.\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 39,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 27,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 66
+  },
+  "user": null,
+  "metadata": {}
+}
+
+
+```
+
+This debug output shows:
+
+- the correct payload shape  
+- the contract embedded as a single string  
+- the context injected directly  
+- the Responses API envelope  
+- the inner JSON plan returned by the LLM  
+
+This is the moment the entire architecture began working end‑to‑end.
+
+---
+
+[Back to top](#top-update57)
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
