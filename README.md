@@ -1700,17 +1700,30 @@ This suite proves that:
 
 This is the **inner shell** of the architecture.
 
+For more information on pytest and the tests that were performed using it (including testing the derived fallback code paths
+described below) see this link:
+- [Update part 56 Phase 4a.1: AI/MCP Hook Integration Pytest Validation Suite and Code](#updates-part-56-phase4a1-aimcp-hook-integration-pytest-validation-suite-and-code)
+
 ---
 
-##### NOTE: Derived fallback lives inside the AI/MCP hook (_invoke_ai_hook) and not in the AI Service Gateway (ai_gateway_service.py)
+##### Derived fallback lives inside the AI/MCP hook (_invoke_ai_hook) and not in the AI Service Gateway (ai_gateway_service.py)
 
 `module2f` contains logic for **derived fallback**, and more precisely, this logic lives inside the AI/MCP hook function:
 
 ```
 _invoke_ai_hook()
 ```
+Derived fallback is explored in detail in the section below:
 
-This is where cleanup and retry commands are actually executed on the failed node(s).  
+
+The point here is that these types of logic code constructs are most effectively tested with pytest testing and not with curl based 
+testing.
+
+
+##### Derived fallback for cleanup_and_retry (inside the AI/MCP HOOK)
+
+The AI/MCP HOOK is where cleanup and retry commands are actually executed on the failed node(s).  
+
 Because of that, derived fallback must occur here — for example, when the normalized retry commands end up empty.
 
 Here is a real excerpt from the AI/MCP hook for the contract action **cleanup_and_retry**:
@@ -1740,6 +1753,7 @@ This is **purely deterministic module2f logic**.
 ---
 
 ##### Derived fallback for retry_with_modified_command (also inside the AI/MCP hook)
+
 To be complete, here is the corresponding derived‑fallback logic for the contract action **retry_with_modified_command**.  
 This block is structurally identical in purpose: if the LLM returns a missing, empty, or whitespace‑only retry command, module2f must fall back safely.
 
@@ -1780,6 +1794,13 @@ Again:
 - And therefore:
 
 > **Derived fallback is tested exclusively through pytest, not curl.**
+
+---
+
+For more information on the principles behind derived fallback see this link below:
+
+[Advanced Architectural Note: AI Derived Fallback Conditions](#advanced-architectural-note-ai-derived-fallback-conditions)
+
 
 ---
 
