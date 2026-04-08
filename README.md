@@ -2578,6 +2578,473 @@ This is the moment the entire architecture began working end‑to‑end.
 
 ---
 
+### 4. The Evolution of the Contract
+
+The recovery engine is governed by a strict, deterministic contract that defines how the LLM must respond to any failure context.  
+This contract evolved through multiple iterations:
+
+- a **long‑form academic specification**  
+- a **condensed operational contract** (Payload 6)  
+- iterative refinement through curl‑driven testing  
+- future refinement stages that will continue to strengthen the rules  
+
+This section documents that evolution.
+
+---
+
+#### 4.1 The Original Long‑Form Contract (Design Specification)
+
+The long‑form contract was the first complete articulation of the recovery engine’s behavioral rules.  
+It was intentionally verbose, academic, and exhaustive. Its purpose was to:
+
+- define every allowed action  
+- define every forbidden behavior  
+- describe the semantics of each action  
+- specify safety constraints  
+- encode idempotency logic  
+- define cleanup sequencing  
+- define modified‑command rules  
+- define abort and fallback conditions  
+- ensure the LLM could reason safely and deterministically  
+
+This version was never intended to be sent directly to the LLM.  
+Instead, it served as the **design specification** from which the operational contract would later be distilled.
+
+Below is the canonical long‑form contract exactly as it existed before the Responses API migration:
+(note that It semantically uses a nested input construct which will not work with the current API that is being used (see  the 
+Previous Section 3 for more information and background on this)
+
+```
+<<<BEGIN-CONTRACT>>>
+
+                "input": {
+                    "contract": (
+                        "Given the failure context, return ONLY a JSON object with the following schema:\n\n"
+                        "{\n"
+                        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                        "  \"cleanup\": [string],\n"
+                        "  \"retry\": string\n"
+                        "}\n\n"
+                        "Rules:\n"
+                        "- ALWAYS choose one of the allowed actions.\n"
+                        "- NEVER return text outside the JSON.\n"
+                        "- NEVER explain your reasoning.\n"
+                        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+                        "Abort rules:\n"
+                        "Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
+                        "Abort conditions include:\n"
+                        "  - destructive commands (e.g., deleting system files)\n"
+                        "  - non-idempotent operations that cannot be safely retried\n"
+                        "  - dependency conflicts that cannot be resolved automatically\n"
+                        "  - corrupted or inconsistent system state\n"
+                        "  - security violations (credentials or secrets exposed)\n"
+                        "  - operations that risk data loss or node instability\n"
+                        "  - commands that cannot be undone or rolled back\n"
+                        "When returning \"abort\", do NOT propose a retry command.\n\n"
+                        "Fallback rules:\n"
+                        "Use \"fallback\" when you cannot produce a valid or safe recovery plan.\n"
+                        "Fallback conditions include:\n"
+                        "  - insufficient information in the failure context\n"
+                        "  - ambiguous or contradictory signals about system state\n"
+                        "  - inability to determine a safe retry command\n"
+                        "  - uncertainty about whether a retry would cause harm\n"
+                        "  - detection of malformed, incomplete, or unexpected context fields\n"
+                        "  - any situation where you cannot confidently choose another action\n"
+                        "When returning \"fallback\", do NOT propose cleanup or retry commands.\n\n"
+                        "Cleanup-and-retry rules:\n"
+                        "Use \"cleanup_and_retry\" when the failure can be resolved by removing temporary files, stale locks, partial installations, or other artifacts that may be blocking successful execution.\n"
+                        "Cleanup-and-retry conditions include:\n"
+                        "  - leftover PID files or lock files\n"
+                        "  - partially installed packages or corrupted temp directories\n"
+                        "  - stale processes that must be terminated before retrying\n"
+                        "  - insufficient disk space that can be reclaimed safely\n"
+                        "  - any reversible condition where cleanup restores a safe state\n\n"
+                        "When returning \"cleanup_and_retry\", provide a list of cleanup commands in the \"cleanup\" field, and one or more retry commands in the \"retry\" field.\n\n"
+                        "The \"retry\" field may be either a single string or a list of commands.\n"
+                        "When multiple retry commands are provided, they are executed sequentially.\n"
+                        "If any retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
+                        "Only if all retry commands succeed is the action considered successful.\n\n"
+                        "Idempotency rules:\n"
+                        "Idempotency-related failures MUST use \"cleanup_and_retry\".\n"
+                        "Idempotency conditions include:\n"
+                        "  - \"already installed\"\n"
+                        "  - \"already exists\"\n"
+                        "  - \"nothing to do\"\n"
+                        "  - \"resource busy\"\n"
+                        "  - \"lock is held by PID ...\"\n"
+                        "  - \"directory not empty\"\n"
+                        "  - \"service already running\"\n"
+                        "  - \"package is in a half-installed state\"\n"
+                        "These failures are caused by environmental residue, not incorrect commands.\n"
+                        "When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
+                        "Cleanup field rules:\n"
+                        "The \"cleanup\" field may be an empty list when no cleanup steps are required.\n"
+                        "In such cases, you may still use \"cleanup_and_retry\" to provide one or more retry commands in the \"retry\" field.\n\n"
+                        "Modified-command rules:\n"
+                        "Use \"retry_with_modified_command\" when the failure can be resolved by adjusting the original command rather than performing cleanup.\n"
+                        "Modified-command conditions include:\n"
+                        "  - missing flags or arguments required for successful execution\n"
+                        "  - incorrect package names, service names, or paths\n"
+                        "  - commands that need elevated privileges (e.g., adding sudo)\n"
+                        "  - dependency installation commands that must be adjusted\n"
+                        "  - retrying with safer or more explicit parameters\n"
+                        "  - replacing a failing subcommand with a corrected version\n"
+                        "When returning \"retry_with_modified_command\", provide exactly one corrected command in the \"retry\" field. Do NOT include cleanup steps.\n"
+                    ),
+                    
+                    "context": context
+                },
+<<<END-CONTRACT>>>
+```
+
+This specification guided the architecture, the validator, and the curl test matrices that followed.
+
+---
+
+#### 4.2 The Final Condensed Contract (Operational Contract — Payload 6)
+
+Payload 6 is the **current working contract** used by the AI Gateway Service.  
+It is the distilled, production‑ready version of the long‑form specification.
+
+Where the long‑form contract was academic and exhaustive, Payload 6 is:
+
+- compact  
+- strict  
+- deterministic  
+- Responses‑API‑compatible  
+- validated through curl testing  
+- enforced by the gateway validator  
+
+### Why the contract had to be condensed
+
+The Responses API forced several architectural constraints:
+
+- **The contract must be a single string**  
+  (no nested objects, no system field, no instruction field)
+
+- **The contract must be static**  
+  (the LLM must always receive the same rules)
+
+- **The context must be dynamic**  
+  (injected per request)
+
+- **The LLM must return JSON only**  
+  (no prose, no reasoning, no markdown)
+
+- **Retry commands must be literal shell commands**  
+  (added after curl testing revealed ambiguity)
+
+- **Cleanup commands must be safe and minimal**  
+  (added after safety testing)
+
+Payload 6 is the result of this distillation.
+
+Below is the full operational contract block:
+Note the safety constraints blocks that were developed as a direct result of additional curl based testing
+(The curl tests will be presented in Section 6)
+
+```
+<<<BEGIN-PAYLOAD6>>>
+
+
+        #Payload6 enhancements
+        # ================================================================
+        # PAYLOAD BLOCK — AI GATEWAY SERVICE
+        #
+        # This payload defines the *contract* between the AI Gateway Service
+        # and the LLM. It is the single most important component of the
+        # recovery engine architecture.
+        #
+        # Key principles:
+        # - The contract is STATIC. It does not change between tests.
+        # - The context is DYNAMIC. It is injected from the curl request.
+        # - The LLM must ALWAYS return a JSON object that conforms to the schema.
+        # - The validator enforces the contract and rejects malformed plans.
+        #
+        # This block is the result of iterative white‑box testing using curl.
+        # Each iteration revealed ambiguities or weaknesses in the contract,
+        # which were then tightened to produce deterministic behavior.
+        #
+        # The comments in this block will be used directly in the README
+        # chapter: "Developing the AI Gateway Service through iterative
+        # white‑box LLM response testing with curl".
+        # ================================================================
+
+        payload = {
+            "model": "gpt-4.1",
+            "temperature": 0,
+            "max_output_tokens": 256,
+
+            # The "input" field contains the entire contract, rules, and context.
+            # The LLM receives this as a single string and MUST return a JSON object.
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # ============================================================
+                "CONTRACT:\n"
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "}\n\n"
+
+                # ============================================================
+                # CORE RULES
+                # ============================================================
+                "Rules:\n"
+                "- ALWAYS choose one of the allowed actions.\n"
+                "- NEVER return text outside the JSON.\n"
+                "- NEVER explain your reasoning.\n"
+                "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+
+                # ============================================================
+                # RETRY COMMAND RULES — NEWLY ADDED FOR ROBUSTNESS
+                # ============================================================
+                "Retry command rules:\n"
+                "- The \"retry\" field MUST be a literal shell command that can be executed directly.\n"
+                "- The retry command MUST NOT reference \"previous command\", \"original command\", or any vague instruction.\n"
+                "- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n"
+                "- The retry command MUST NOT contain placeholders like \"<command>\" or \"<package>\".\n"
+                "- The retry command MUST NOT contain commentary or explanation.\n"
+                "- The retry command MUST NOT contain multiple commands chained with \"&&\" unless necessary.\n"
+                "- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\n"
+
+                # ============================================================
+                # CLEANUP RULES
+                # ============================================================
+                "Cleanup rules:\n"
+                "- The \"cleanup\" field MUST be a list of literal shell commands.\n"
+                "- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n"
+                "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
+                "- Cleanup commands MUST NOT include dangerous operations.\n\n"
+
+                # ============================================================
+                # FALLBACK RULES
+                # ============================================================
+                "Fallback rules:\n"
+                "- When returning \"fallback\", return ONLY:\n"
+                "  { \"action\": \"fallback\" }\n"
+                "- Do NOT include \"cleanup\".\n"
+                "- Do NOT include \"retry\".\n\n"
+
+                # ============================================================
+                # ACTION MEANINGS
+                # ============================================================
+                "Action meanings:\n"
+                "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+                "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+                "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+                "- fallback: Use when there is not enough information to choose another action.\n\n"
+
+
+                # ============================================================
+                # ABORT RULES
+                # ============================================================
+                "Abort rules:\n"
+                "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
+                "- Abort when the plan would risk data loss, node instability, or security exposure.\n"
+                "- Abort when the failure suggests corrupted or inconsistent system state.\n"
+                "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
+                "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
+
+                # ============================================================
+                # SAFETY CONSTRAINTS
+                # ============================================================
+                "Safety constraints:\n"
+                "- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n"
+                "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
+                "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
+
+
+
+                # ============================================================
+                # ADDITIONAL SAFETY CONSTRAINTS
+                # ============================================================
+                "Additional safety constraints:\n"
+                "- NEVER propose commands that pipe remote content into a shell (e.g., no \"curl ... | sh\").\n"
+                "- NEVER propose commands that disable or mask system services (e.g., no \"systemctl disable\", no \"systemctl mask\").\n"
+                "- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no \"update-grub\", no \"grub-install\", no kernel package installation).\n"
+                "- NEVER propose commands that modify package manager configuration files or sources lists.\n\n"
+
+                # ============================================================
+                # CLEANUP SEQUENCE RULES
+                # ============================================================
+                "Cleanup sequence rules:\n"
+                "- Cleanup steps MUST be ordered from least invasive to most invasive.\n"
+                "- Cleanup steps MUST be idempotent (safe to run multiple times).\n"
+                "- Cleanup steps MUST NOT exceed 3 commands.\n"
+                "- Cleanup steps MUST NOT include commentary or explanation.\n\n"
+
+
+
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+            )
+        }
+<<<END-PAYLOAD6>>>
+```
+
+This is the version that successfully passed all curl tests in the two test matrices.
+
+---
+
+##### 4.2.1 Contract Rules Refinement — Stage 2 and Stage 3
+
+Payload 6 is **not the final contract**.  
+It is the first stable version produced through curl‑driven testing, but two additional refinement stages are planned.
+
+---
+
+**Contract Rules Refinement — Stage 2**
+  
+Automated Large‑Scale Context Testing**
+
+A custom Python script will:
+
+- iterate through a large set of problematic commands  
+- inject each command into the context  
+- send it to the AI Gateway Service  
+- capture the LLM’s plan  
+- evaluate whether the plan is:  
+  - a valid contract action  
+  - a valid JSON object  
+  - safe  
+  - executable on a real shell  
+  - semantically correct  
+  - compliant with retry/cleanup rules  
+
+Any unsatisfactory responses will trigger contract rule refinements.
+
+The test suite will be rerun until **all commands pass**.
+
+This stage ensures the contract is robust across a wide range of real‑world failure modes.
+
+---
+
+**Contract Rules Refinement — Stage 3**
+  
+Real‑World End‑to‑End Testing**
+
+This stage validates the entire recovery pipeline:
+
+1. Insert a known failing command into the module2 command set  
+2. module2 fails and escalates to module2f  
+3. module2f replays the entire command set  
+4. The failing command triggers a heuristic  
+5. After 3 failed retries, the AI/MCP HOOK is invoked  
+6. The LLM receives the context and contract  
+7. The LLM proposes a recovery plan  
+8. module2f executes the plan  
+9. The command set completes with `install_success`  
+
+Success criteria:
+
+- The LLM produces a valid plan  
+- The plan is safe  
+- The plan is executable  
+- The plan resolves the failure  
+- The system recovers cleanly  
+
+This stage ensures the contract works **in production**, not just in curl tests.
+
+---
+
+#### 4.3 Evolution Narrative (How 4.1 Contract Rules Became 4.2 Contract Rules)
+
+The evolution from the long‑form contract to Payload 6 followed a clear path:
+
+ **1. Long‑Form Contract → Conceptual Foundation**  
+The long‑form contract defined the full behavioral space:
+
+- all actions  
+- all rules  
+- all safety constraints  
+- all idempotency logic  
+- all cleanup sequencing  
+- all modified‑command rules  
+
+This version was too large and too structured to send directly to the LLM, but it served as the blueprint.
+
+---
+
+**2. Responses API Migration → Forced Simplification**  
+The Responses API rejected:
+
+- `system:`  
+- `messages:`  
+- nested `input` objects  
+- instruction fields  
+
+This forced the contract into a **single string**, which required:
+
+- removing structural nesting  
+- flattening the rules  
+- condensing the language  
+- embedding the contract directly into the payload  
+
+---
+
+**3. Curl‑Driven Testing → Rule Refinement**  
+Each curl test revealed:
+
+- ambiguities  
+- unsafe retry commands  
+- vague cleanup commands  
+- missing safety constraints  
+- missing retry literal‑command rules  
+- missing fallback field‑removal rules  
+
+Payload 6 emerged from this iterative refinement.
+
+---
+
+**4. Validator Enforcement → Deterministic Behavior**  
+The validator ensured:
+
+- only valid actions are accepted  
+- cleanup is a list  
+- retry is a string  
+- fallback has no fields  
+- abort has no fields  
+- malformed plans are rejected  
+
+This locked the contract into deterministic behavior and the Payload 6 Contract Rules passed the output validator enforcement by
+producing proper LLM plan responses that could be safely passed through the AI Gateway Service to the mcp client on module2f.
+
+The validator code of the AI Gateway Service will be reviewed in Section 5.
+
+---
+
+**5. Payload 6 → Current Operational Contract**  
+Payload 6 is the first version that:
+
+- passed all curl tests  (to be presented in Section 6)
+- satisfied the Responses API  
+- satisfied the validator  
+- produced deterministic LLM behavior  
+- enforced safety constraints  
+- supported all four actions  
+
+It is stable — but not final.
+
+
+
+
+---
+
+[Back to top](#top-update57)
+
+---
+
+
 
 ### 7. The Final Payload/Contract Rules Block (with comments)
 
