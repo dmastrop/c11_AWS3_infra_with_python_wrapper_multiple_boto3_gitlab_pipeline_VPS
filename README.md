@@ -154,7 +154,13 @@ artifact logs per pipeline)
 
 ## Latest milestone updates in this README:
 
-NOTE: A few of these Updates are hyperlinked to the content. All the updates are in this README and the hyperlinks to their content is a work in progress.
+NOTE: Many  of these Updates are hyperlinked to the content. All the updates are in this README and the hyperlinks to their content is a work in progress.
+
+NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
+UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
+
+The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
+
 
 
 - [Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level](#updates-part-21-phase-2g-write-to-disk-aggregator-in-main-working)
@@ -11499,6 +11505,12 @@ The embedded comments will be explained in detail in the later UPDATE, including
 well as how the contract was refined using curl.  The contract block forms the critical intelligent decision making for the context
 presented so the LLM can make the best plan for each given context.
 
+For readers that are interested in the later UPDATE that goes over the contract rule development process and the validator development
+process, and the curl related testing, please refer to this UPDATE link below:
+
+See: [Update part 57 Phase4a.1 — AI Gateway Service LLM Integration](#updates-part-57-phase4a1-developing-the-ai-gateway-service-llm-integration-contract-enforcement-validator-architecture-and-curl-driven-evolution)
+
+
 
 
 ```
@@ -11669,7 +11681,13 @@ def recover(request: RecoveryRequest):
         #MCP Client. This design keeps the recovery engine both powerful and safe, while making the entire AI layer testable, 
         #auditable, and easy to document.
         # If the fix involves more than one comamnd to resolve it it will use the action cleanup_and_retry.
-        #Payload6 enhancments
+        
+
+
+
+
+
+        #Payload6 enhancments (<<< this is the latest payload in development at the time of the writing of this section)
         # ================================================================
         # PAYLOAD BLOCK — AI GATEWAY SERVICE
         #
