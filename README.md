@@ -10702,7 +10702,7 @@ This preserves the architectural separation of responsibilities:
 This design ensures that the HOOK remains pure and context‑independent, while the calling code retains full control over how failures, fallbacks, and AI‑assisted outcomes are classified and recorded.
 
 
-#### **2,AI Fallback Tags: Why Both `ai_fallback_true` and `ai_fallback` Exist**
+#### **2.AI Fallback Tags: Why Both `ai_fallback_true` and `ai_fallback` Exist**
 
 
 This section explains the distinction between metadata‑level fallback state and registry‑level fallback classification, and why the system produces both ai_fallback_true and ai_fallback tags.
@@ -10733,7 +10733,7 @@ Note that there are 2 tags that resemble one another: ai_fallback_true and ai_fa
 
 The recovery engine produces **two different fallback indicators**, and both are intentional. They come from different layers of the system and serve different purposes. Understanding the distinction requires understanding the separation between **persistent state variables** and **control‑flow variables** inside the AI/MCP HOOK and the calling heuristics.
 
-**1. `ai_fallback_true` — Metadata‑Level Tag (Persistent State)**
+**(1) `ai_fallback_true` — Metadata‑Level Tag (Persistent State)**
 
 This tag is generated inside the AI metadata builder:
 
@@ -10758,7 +10758,7 @@ It is used for:
 
 This tag is part of the **AI metadata**, not the registry’s top‑level tag list.
 
-**2. `ai_fallback` — Registry‑Level Tag (Control‑Flow Classification)**
+**(2) `ai_fallback` — Registry‑Level Tag (Control‑Flow Classification)**
 
 This tag is added directly by the heuristic block:
 
@@ -10781,7 +10781,7 @@ It is used for:
 
 This tag is part of the **registry entry’s top‑level tags**, not the metadata.
 
-**3. Why Both Tags Are Needed**
+**(3) Why Both Tags Are Needed**
 
 Although they look similar, they represent **different layers of the architecture**:
 
@@ -10797,7 +10797,7 @@ These two tags answer **different questions**:
 
 They are not duplicates. They are complementary.
 
-**4. Relationship to Persistent State vs. Control‑Flow Variables**
+**(4) Relationship to Persistent State vs. Control‑Flow Variables**
 
 - The HOOK returns **control‑flow variables** such as `{"ai_fallback": True}`.  
 - The heuristic block interprets these control‑flow variables and sets the **persistent state variable** `ai_fallback = True`.  
@@ -10822,7 +10822,7 @@ This design ensures that fallback is represented consistently across:
 
 
 
-**5. The ai_metadata  'ai_fallback': True**
+**(5) The ai_metadata  'ai_fallback': True**
 
 This is the pytest registry sample for a derived fallback situation as noted above:
 
@@ -11114,7 +11114,7 @@ native fallback scenario from a derived fallback scenario.
 #### **6.Derived fallback vs. Native organic fallback contract action, and the LLM contract actions**
 
 
-**1. Derived fallback is ALWAYS handled in module2f (_invoke_ai_hook and the calling functino), not by the LLM**
+**(1) Derived fallback is ALWAYS handled in module2f (_invoke_ai_hook and the calling functino), not by the LLM**
 
 Derived fallback is an ai_fallback that is not from the native fallback contract action 
 
@@ -11154,7 +11154,7 @@ The LLM **never** needs to know:
 
 Those are **derived fallback conditions**, and they are **purely code‑driven**.
 
-**2. The LLM contract definition in the AI Gateway Service (ai_gateway_service.py)  does NOT include “whitespace handling”**
+**(2) The LLM contract definition in the AI Gateway Service (ai_gateway_service.py)  does NOT include “whitespace handling”**
 
 And it should not.
 
