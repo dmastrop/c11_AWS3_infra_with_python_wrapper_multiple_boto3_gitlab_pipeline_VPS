@@ -10645,7 +10645,7 @@ Abort = “COMPLETELY STOP — do not continue at all.”
 ### **Advanced Architectural Note: AI Derived Fallback Conditions**
 
 
-#### **Persistent State Variable Mutation and Derived Fallback Conditions: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions** 
+#### **1.Persistent State Variable Mutation and Derived Fallback Conditions: Why the AI/MCP HOOK Does Not Mutate Persistent State for Derived Fallback Conditions** 
 
 This section explains why the AI/MCP HOOK must remain a pure control‑flow component and why only the calling heuristics—not the HOOK—are allowed to mutate persistent AI state for derived fallback conditions such as cleanup‑only or missing‑retry scenarios.
 
@@ -10702,7 +10702,7 @@ This preserves the architectural separation of responsibilities:
 This design ensures that the HOOK remains pure and context‑independent, while the calling code retains full control over how failures, fallbacks, and AI‑assisted outcomes are classified and recorded.
 
 
-#### **AI Fallback Tags: Why Both `ai_fallback_true` and `ai_fallback` Exist**
+#### **2,AI Fallback Tags: Why Both `ai_fallback_true` and `ai_fallback` Exist**
 
 
 This section explains the distinction between metadata‑level fallback state and registry‑level fallback classification, and why the system produces both ai_fallback_true and ai_fallback tags.
@@ -10852,7 +10852,7 @@ all the raw persistent state variables.
 
 
 
-#### **The tagging and ai_metadata construction process from the Code point of view (fallback scenario)**
+#### **3.The tagging and ai_metadata construction process from the Code point of view (fallback scenario)**
 
 
 
@@ -10941,7 +10941,7 @@ These are all aligned and represent the same underlying state, just at different
 
 
 
-#### **Derived fallback conditions: A more in depth discussion**
+#### **4.Derived fallback conditions: A more in depth discussion**
 
 This section builds upon the previous sections. Derived fallback scnearios are inherently complex because derived fallback is designed
 to forensically track corner cases that can occur with the retry_with_modified_command and cleanup_and_retry contract actions, which are
@@ -11077,7 +11077,7 @@ ai_metadata: {'ai_invoked': True, 'ai_fallback': True, 'ai_plan_action': 'cleanu
 ```
 
 
-#### **A sample pytest registry_entry for an ai_plan_action of native fallback**
+#### **5.A sample pytest registry_entry for an ai_plan_action of native fallback**
 
 
 For completeness sake, this section presents a registry_entry for a native fallback contract action. 
@@ -11111,7 +11111,7 @@ native fallback scenario from a derived fallback scenario.
 
 
 
-#### **Derived fallback vs. Native organic fallback contract action, and the LLM contract actions**
+#### **6.Derived fallback vs. Native organic fallback contract action, and the LLM contract actions**
 
 
 **1. Derived fallback is ALWAYS handled in module2f (_invoke_ai_hook and the calling functino), not by the LLM**
@@ -11169,7 +11169,7 @@ Everything else (missing keys, None, whitespace, malformed lists) is **not part 
 
 
 
-#### Summary of Native fallback vs. Derived fallback
+#### **7.Summary of Native fallback vs. Derived fallback**
 
 
 **Native Fallback (LLM‑driven)**  
