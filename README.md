@@ -2893,6 +2893,7 @@ Note the safety constraints blocks that were developed as a direct result of add
 ```
 
 This is the version that successfully passed all curl tests in the two test matrices.
+(The curl tests will be presented in detail in Section 6).
 
 ---
 
@@ -2905,7 +2906,7 @@ It is the first stable version produced through curl‑driven testing, but two a
 
 **Contract Rules Refinement — Stage 2**
   
-Automated Large‑Scale Context Testing**
+Automated Large‑Scale Context Testing
 
 A custom Python script will:
 
@@ -2931,7 +2932,7 @@ This stage ensures the contract is robust across a wide range of real‑world fa
 
 **Contract Rules Refinement — Stage 3**
   
-Real‑World End‑to‑End Testing**
+Real‑World End‑to‑End Testing
 
 This stage validates the entire recovery pipeline:
 
@@ -2953,7 +2954,9 @@ Success criteria:
 - The plan resolves the failure  
 - The system recovers cleanly  
 
-This stage ensures the contract works **in production**, not just in curl tests.
+This stage ensures the contract works **in production**, not just in curl tests. 
+It validates the control flow of the module2f AI/MCP HOOK integration as well as the actual AI Gateway Service contract rules
+interaction with the LLM, both of which were respectively tested with pytest and curl based test suites.
 
 ---
 
