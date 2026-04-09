@@ -1520,7 +1520,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 <a name="top-update57"></a>
 
 
-### 1. Introduction — What the AI Gateway Service Is
+### **1. Introduction — What the AI Gateway Service Is**
 
 The AI Gateway Service is the **contract‑enforcement layer** that sits between `module2f` and the LLM.  
 It transforms a probabilistic model into a **deterministic recovery engine** by enforcing a strict, static contract and validating every plan the LLM returns.
@@ -1665,7 +1665,7 @@ These sections explain:
 
 
 
-### 2. Why Two Test Suites Exist (Pytest vs Curl)
+### **2. Why Two Test Suites Exist (Pytest vs Curl)**
 The recovery engine is not a single system — it is **two independent layers**, each with its own logic, responsibilities, and failure modes.  
 Because of this, a single test suite cannot validate the entire architecture.
 
@@ -2011,7 +2011,7 @@ INFO:     127.0.0.1:57462 - "POST /recover HTTP/1.1" 200 OK
 ---
 
 
-### 3. The API Migration Story (Chat → Responses API)
+### **3. The API Migration Story (Chat → Responses API)**
 
 The migration from the legacy **Chat Completions API** (`/v1/chat/completions`) to the modern **Responses API** (`/v1/responses`) was not optional — it was forced by a series of failures, silent rejections, and validator errors that made it clear the old API could not support a deterministic recovery engine.
 
@@ -2578,7 +2578,7 @@ This is the moment the entire architecture began working end‑to‑end.
 
 ---
 
-### 4. The Evolution of the Contract
+### **4. The Evolution of the Contract**
 
 The recovery engine is governed by a strict, deterministic contract that defines how the LLM must respond to any failure context.  
 This contract evolved through multiple iterations:
@@ -3047,7 +3047,7 @@ It is stable — but not final.
 
 ---
 
-### 5. The Validator Architecture
+### **5. The Validator Architecture**
 
 The AI Gateway Service contains two independent validators:
 
@@ -3400,7 +3400,7 @@ This validator layer is the backbone of the recovery engine.
 
 
 
-### 7. The Final Payload/Contract Rules Block (with comments)
+### **7. The Final Payload/Contract Rules Block (with comments)**
 
 This section 7 is not meant to present the entire code base for the AI Gatway Service (ai_gateway_service.py). 
 
