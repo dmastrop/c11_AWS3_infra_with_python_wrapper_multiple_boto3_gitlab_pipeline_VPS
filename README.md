@@ -3398,6 +3398,407 @@ This validator layer is the backbone of the recovery engine.
 
 
 
+### **6. The Iterative Curl‑Driven Development Process**
+
+The AI Gateway Service did not emerge fully formed.  
+It was shaped through a long sequence of **empirical curl tests**, each one revealing:
+
+- how the LLM interpreted the contract  
+- how the validator reacted to malformed or unsafe plans  
+- how the contract needed to evolve  
+- how cleanup sequencing, retry commands, and abort logic behaved in practice  
+
+This section documents that iterative process.
+
+The curl‑driven workflow became the **scientific method** of the gateway:
+
+1. Form a hypothesis (contract + validator rules)  
+2. Run a curl test  
+3. Observe the LLM’s behavior  
+4. Tighten the contract  
+5. Strengthen the validator  
+6. Repeat  
+
+By the end of this process, the gateway produced **deterministic**, **safe**, **contract‑compliant** recovery plans across all 10 test cases.
+
+Now that this prototype is running fine, this process above will be automated at some point with a python script to iterate through 
+a much larger data set (testing contexts that are presented to the LLM through the AI Service Gateway).
+
+
+---
+
+#### 6.1 Why curl Was Used
+
+Curl became the backbone of the development process because it provided:
+
+- **complete control** over the payload  
+- **repeatability** — the same input always produced the same validator behavior  
+- **isolation** — tests ran outside module2f, eliminating confounding variables  
+- **visibility** — every request and response was fully observable  
+- **speed** — no need to rebuild module2f or restart the entire system  
+
+Curl allows one to test the gateway as a **pure function**:
+
+```
+input JSON → gateway → LLM → validator → output JSON
+```
+
+This made it possible to iterate rapidly on:
+
+- contract wording  
+- safety constraints  
+- retry command rules  
+- cleanup sequencing  
+- fallback logic  
+- abort logic  
+
+A larger automated set of contexts will improve the contract refinement and accuracy. This is the next phase of the contract 
+refinement process.
+
+
+##### 6.1.1 Example (Test 5 — Empty Context)
+
+Test 5 is the simplest possible curl invocation. This is performed from the deployment docker container. The `docker ps' on the
+VPS reveals the deployment container and a docker exec -it is used to terminal into the container: 
+
+
+```
+[root@vps ~]# docker exec -it angry_banzai /bin/bash
+root@95a50449eba7:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": {}
+      }'
+{"action":"fallback"}     <<< This is the response to the curl command above
+
+```
+
+
+So once in the container this command presents the context to the AI Gateway Service on port 8000. This setup was reviewed in
+detail in a previous UPDATE here: 
+
+**Step 6: GitLab AI Gateway Service/Pipeline Integration** 
+- [Step 6: GitLab AI Gateway Service/Pipeline Integration](#step6-gitlab-ai-gateway-servicepipeline-integration--starting-the-ai-gateway-service-from-inside-the-deploy-container)
+
+
+The port socket 8000 is readily available from within the container.
+
+
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": {}
+      }'
+```
+
+This test was invaluable because:
+
+- it isolates the contract  
+- it isolates the validator  
+- it isolates the LLM  
+- it forces the system to handle the “no information” case  
+
+The correct response is: (as shown above)
+
+```json
+{ "action": "fallback" }
+```
+
+This test became the **baseline sanity check** for every contract revision.
+
+The full debugs will be presented in a later section below. As a single example, hese debugs logs print out the following for 
+this particular case:
+
+
+```
+==================== PAYLOAD SENT TO OPENAI ====================
+{'model': 'gpt-4.1', 'temperature': 0, 'max_output_tokens': 256, 'input': 'You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.\n\nCONTRACT:\nYou must return ONLY a JSON object with this schema:\n\n{\n  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",\n  "cleanup": [string],\n  "retry": string\n}\n\nRules:\n- ALWAYS choose one of the allowed actions.\n- NEVER return text outside the JSON.\n- NEVER explain your reasoning.\n- Use "fallback" if you cannot produce a valid plan.\n\nRetry command rules:\n- The "retry" field MUST be a literal shell command that can be executed directly.\n- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.\n- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n- The retry command MUST NOT contain placeholders like "<command>" or "<package>".\n- The retry command MUST NOT contain commentary or explanation.\n- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.\n- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\nCleanup rules:\n- The "cleanup" field MUST be a list of literal shell commands.\n- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n- Cleanup commands MUST NOT include vague instructions or commentary.\n- Cleanup commands MUST NOT include dangerous operations.\n\nFallback rules:\n- When returning "fallback", return ONLY:\n  { "action": "fallback" }\n- Do NOT include "cleanup".\n- Do NOT include "retry".\n\nAction meanings:\n- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n- abort: Use when the failure is unsafe or cannot be recovered.\n- fallback: Use when there is not enough information to choose another action.\n\nAbort rules:\n- Use "abort" when the command or system state is unsafe or non-recoverable.\n- Abort when the plan would risk data loss, node instability, or security exposure.\n- Abort when the failure suggests corrupted or inconsistent system state.\n- Abort when the only apparent fixes involve destructive or non-reversible operations.\n- When returning "abort", do NOT include "cleanup" or "retry".\n\nSafety constraints:\n- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).\n- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\nAdditional safety constraints:\n- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").\n- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").\n- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).\n- NEVER propose commands that modify package manager configuration files or sources lists.\n\nCleanup sequence rules:\n- Cleanup steps MUST be ordered from least invasive to most invasive.\n- Cleanup steps MUST be idempotent (safe to run multiple times).\n- Cleanup steps MUST NOT exceed 3 commands.\n- Cleanup steps MUST NOT include commentary or explanation.\n\nCONTEXT:\n{}'}
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_0855cc55f9cdc69d0069d441be5b3c81919ad298e5d2933509",
+  "object": "response",
+  "created_at": 1775518142,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518143,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_0855cc55f9cdc69d0069d441beff6081918b7b68810fa3b057",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{ \"action\": \"fallback\" }"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 729,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 9,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 738
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
+```
+The key part is here:
+
+
+```
+ "output": [
+    {
+      "id": "msg_0855cc55f9cdc69d0069d441beff6081918b7b68810fa3b057",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{ \"action\": \"fallback\" }"
+        }
+      ],
+```
+
+
+
+
+---
+
+#### 6.2 Why Testing Inside the Container Matters
+
+Running curl **inside the same Docker container** as the gateway was essential.
+
+It ensured:
+
+- the same Python environment  
+- the same uvicorn process  
+- the same validator code  
+- the same filesystem paths  
+- the same OS‑level behavior  
+- the same network namespace  
+
+This eliminated an entire class of “it works on my machine” discrepancies.
+
+##### 6.2.1 Example (Test 5 inside the container)
+
+
+As shown above: 
+
+
+```
+[root@vps ~]# docker exec -it angry_banzai /bin/bash
+root@95a50449eba7:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": {}
+      }'
+{"action":"fallback"}     <<< This is the response to the curl command above
+```
+
+
+
+Running curl from inside the container guaranteed:
+
+- no port mapping issues  
+- no host/container path mismatches  
+- no dependency drift  
+- no stale code  
+- no environment skew  
+
+This made the curl tests **authoritative**.
+
+---
+
+#### 6.3 Why Uvicorn Must Be Restarted
+
+During development, the gateway code changed constantly:
+
+- contract wording  
+- validator logic  
+- safety rules  
+- cleanup sequencing  
+- retry command rules  
+- fallback logic  
+- abort logic  
+
+Uvicorn does **not** automatically reload when running inside Docker unless explicitly configured.
+
+Therefore:
+
+- every contract change  
+- every validator change  
+- every safety rule change  
+
+required a **manual restart** of the uvicorn process.
+
+If uvicorn was not restarted:
+
+- curl tests would run against stale code  
+- validator behavior would appear inconsistent  
+- contract changes would seem ineffective  
+- debugging would become impossible  
+
+###### 6.3.1 Example
+
+This is often the last line in the print debug logs (full logs shown above)
+
+```
+INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
+```
+
+But if uvicorn is not restarted, the validator might still be using the *previous* contract.
+
+Restarting uvicorn ensures that:
+
+- the contract in memory matches the contract in the file  
+- the validator enforces the latest rules  
+- the LLM receives the correct payload  
+- curl tests are  meaningful  
+
+This step was critical to achieving deterministic behavior.
+
+---
+
+#### 6.4 How Context Is Injected Into the Contract
+
+The gateway constructs the LLM payload by:
+
+1. Taking the static contract  
+2. Embedding the dynamic `context` from module2f  
+3. Wrapping both in a strict instruction block  
+4. Sending the combined payload to the LLM  
+
+The structure looks like this:
+
+```json
+{
+  "schema_version": "1.0",
+  "context": { ... }
+}
+```
+
+The gateway then injects this into the contract template:
+
+```
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+<static contract text>
+
+CONTEXT:
+<the context from module2f>
+```
+
+This is the debug log prints from the Test 5: 
+(the CONTEXT block is at the very end)
+
+```
+==================== PAYLOAD SENT TO OPENAI ====================
+{'model': 'gpt-4.1', 'temperature': 0, 'max_output_tokens': 256, 'input': 'You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.\n\nCONTRACT:\nYou must return ONLY a JSON object with this schema:\n\n{\n  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",\n  "cleanup": [string],\n  "retry": string\n}\n\nRules:\n- ALWAYS choose one of the allowed actions.\n- NEVER return text outside the JSON.\n- NEVER explain your reasoning.\n- Use "fallback" if you cannot produce a valid plan.\n\nRetry command rules:\n- The "retry" field MUST be a literal shell command that can be executed directly.\n- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.\n- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n- The retry command MUST NOT contain placeholders like "<command>" or "<package>".\n- The retry command MUST NOT contain commentary or explanation.\n- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.\n- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\nCleanup rules:\n- The "cleanup" field MUST be a list of literal shell commands.\n- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n- Cleanup commands MUST NOT include vague instructions or commentary.\n- Cleanup commands MUST NOT include dangerous operations.\n\nFallback rules:\n- When returning "fallback", return ONLY:\n  { "action": "fallback" }\n- Do NOT include "cleanup".\n- Do NOT include "retry".\n\nAction meanings:\n- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n- abort: Use when the failure is unsafe or cannot be recovered.\n- fallback: Use when there is not enough information to choose another action.\n\nAbort rules:\n- Use "abort" when the command or system state is unsafe or non-recoverable.\n- Abort when the plan would risk data loss, node instability, or security exposure.\n- Abort when the failure suggests corrupted or inconsistent system state.\n- Abort when the only apparent fixes involve destructive or non-reversible operations.\n- When returning "abort", do NOT include "cleanup" or "retry".\n\nSafety constraints:\n- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).\n- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\nAdditional safety constraints:\n- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").\n- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").\n- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).\n- NEVER propose commands that modify package manager configuration files or sources lists.\n\nCleanup sequence rules:\n- Cleanup steps MUST be ordered from least invasive to most invasive.\n- Cleanup steps MUST be idempotent (safe to run multiple times).\n- Cleanup steps MUST NOT exceed 3 commands.\n- Cleanup steps MUST NOT include commentary or explanation.\n\nCONTEXT:\n{}'}
+'''
+
+##### 6.4.1 Example (Test 5)
+
+The context:
+
+```json
+{}
+```
+
+was injected into the payload exactly as:
+
+```
+CONTEXT:
+{}
+```
+as shown above.
+
+
+
+This allowed the LLM to reason:
+
+- “I have no information”
+- “I cannot choose cleanup”
+- “I cannot choose retry”
+- “I must choose fallback”
+
+This is why Test 5 is the perfect example for illustrating context injection. Even though the context is very very simple 
+(empty), the LLM has to do a lot of reasoning to figure out that this is a native fallback contract action case.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+[Back to top](#top-update57)
+
+---
+
+
 
 
 ### **7. The Final Payload/Contract Rules Block (with comments)**
