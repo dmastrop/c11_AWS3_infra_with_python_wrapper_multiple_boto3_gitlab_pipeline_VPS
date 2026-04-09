@@ -3203,7 +3203,7 @@ The entire gateway logic (payload construction, LLM call, plan extraction, plan 
 
 The entire ai_gateway_service.py file was presented in this section of an earlier UPDATE:
 
-[Step 4 — Create the AI Gateway Service (ai_gateway_service.py)](#step-4-create-the-ai-gateway-service-aigatewayservicepy)
+[Step 4 — Create the AI Gateway Service (ai_gateway_service.py)](#step-4-create-the-ai-gateway-service-ai_gateway_servicepy)
 
 
 If *anything* goes wrong:
@@ -3407,8 +3407,8 @@ This section 7 is not meant to present the entire code base for the AI Gatway Se
 For those interested in a complete presentation of the entire AI Gateway Service code (ai_gateway_service.py in its current form), 
 please see this link from a previous code review section of an earlier UPDATE (AI/MCP HOOK architecture and code): 
 
-
-See: [Step 4 — Create the AI Gateway Service (ai_gateway_service.py)](#step-4-create-the-ai-gateway-service-aigatewayservicepy)
+See:
+[Step 4 — Create the AI Gateway Service (ai_gateway_service.py)](#step-4-create-the-ai-gateway-service-ai_gateway_servicepy)
 
 
 ---
