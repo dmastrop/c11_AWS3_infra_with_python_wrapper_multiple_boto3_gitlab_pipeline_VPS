@@ -4717,12 +4717,19 @@ Paste your full debug logs into each collapsible block.
 <details>
 <summary><strong>Click to expand Test 5 debug logs</strong></summary>
 
-### **Curl Command**
+**Curl Command**
 ```bash
-# paste curl command here
+
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": {}
+      }'
+
 ```
 
-### **Payload Sent to OpenAI (cleaned)**
+**Payload Sent to OpenAI (cleaned)**
 
 ```text
 ==================== PAYLOAD SENT TO OPENAI ====================
