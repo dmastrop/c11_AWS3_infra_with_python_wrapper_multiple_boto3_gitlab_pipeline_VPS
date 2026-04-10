@@ -4723,7 +4723,7 @@ Paste your full debug logs into each collapsible block.
 ```
 
 ### **Payload Sent to OpenAI (cleaned)**
-```text
+
 ```text
 ==================== PAYLOAD SENT TO OPENAI ====================
 
