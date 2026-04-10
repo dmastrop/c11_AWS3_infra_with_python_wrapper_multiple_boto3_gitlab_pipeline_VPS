@@ -4912,7 +4912,7 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 {"action":"fallback"}
 ```
 
-
+</details>
 
 ---
 
