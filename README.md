@@ -4710,7 +4710,7 @@ Paste your full debug logs into each collapsible block.
 
 ---
 
-**Test 5 — Fallback (empty context)
+**Test 5 — Fallback (empty context)**
 
 
 
@@ -4724,25 +4724,188 @@ Paste your full debug logs into each collapsible block.
 
 ### **Payload Sent to OpenAI (cleaned)**
 ```text
-# paste cleaned payload here
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.  
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{}
+```
+
+
+
 ```
 
 ### **Raw Response from OpenAI**
 ```json
-# paste RAW RESPONSE FROM OPENAI here
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_0855cc55f9cdc69d0069d441be5b3c81919ad298e5d2933509",
+  "object": "response",
+  "created_at": 1775518142,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518143,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_0855cc55f9cdc69d0069d441beff6081918b7b68810fa3b057",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{ \"action\": \"fallback\" }"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 729,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 9,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 738
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
+
+
+
 ```
 
 ### **Extracted Plan**
 ```json
-# paste extracted plan here
+{
+  "action": "fallback"
+}
+
 ```
 
 ### **Validator Result**
-```text
-# paste validator output here
+
+
+```json
+{"action":"fallback"}
 ```
 
-</details>
 
 
 ---
