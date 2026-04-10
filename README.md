@@ -1533,7 +1533,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
   - [6.6 How the contract was refined](#66-how-the-contract-was-refined)
   - [6.7 Test Matrix 1 — fallback / retry_with_modified_command / abort](#67-test-matrix-1--fallback--retry_with_modified_command--abort)
   - [6.8 Test Matrix 2 — cleanup_and_retry](#68-test-matrix-2--cleanup_and_retry)
-  - [6.9 Summary of curl‑driven evolution](#69-summary-of-curl-driven-evolution)
+  - [6.9 Summary of Curl-Driven Evolution](#69-summary-of-curl-driven-evolution)
 - [7. The Final Payload/Contract Rules Block (with comments)](#7-the-final-payloadcontract-rules-block-with-comments)
 - [8. Lessons Learned](#8-lessons-learned)
 
@@ -3449,6 +3449,10 @@ a much larger data set (testing contexts that are presented to the LLM through t
 
 ---
 
+[Back to top](#top-update57)
+
+---
+
 #### 6.1 Why curl Was Used
 
 Curl became the backbone of the development process because it provided:
@@ -4062,8 +4066,8 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 
+#### 6.9 Summary of Curl-Driven Evolution
 
-#### 6.9 Summary of Curl‑Driven Evolution
 
 ---
 
