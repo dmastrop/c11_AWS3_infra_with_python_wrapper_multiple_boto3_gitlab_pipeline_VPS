@@ -1524,7 +1524,7 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 - [3. The API Migration Story (Chat → Responses API)](#3-the-api-migration-story-chat--responses-api)
 - [4. The Evolution of the Contract](#4-the-evolution-of-the-contract)
 - [5. The Validator Architecture](#5-the-validator-architecture)
-- [6. The Iterative Curl‑Driven Development Process](#6-the-iterative-curl-driven-development-process)
+- [6. The Iterative Curl‑Driven Development Process](#6-the-iterative-curldriven-development-process)
   - [6.1 Why curl was used](#61-why-curl-was-used)
   - [6.2 Why testing inside the container matters](#62-why-testing-inside-the-container-matters)
   - [6.3 Why uvicorn must be restarted after code changes](#63-why-uvicorn-must-be-restarted-after-code-changes)
@@ -3412,7 +3412,11 @@ The validator architecture ensures:
 
 This validator layer is the backbone of the recovery engine.
 
+---
 
+[Back to top](#top-update57)
+
+---
 
 
 
