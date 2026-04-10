@@ -237,7 +237,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Update part 57 Phase4a.1: Developing the AI Gateway Service LLM Integration: Contract Enforcement, Validator Architecture, and Curl‑Driven Evolution](#updates-part-57-phase4a1-developing-the-ai-gateway-service-llm-integration-contract-enforcement-validator-architecture-and-curl-driven-evolution)
 
-- [Update part 58 Phase4a.1: Real‑Life Context Testing & Emergence of a Universal Remediation Engine](#updates-part-58-phase4a1-real-life-context-testing-emergence-of-a-universal-remediation-engine)
+- [Update part 58 Phase4a.1: Real‑Life Context Testing & Emergence of a Universal Remediation Engine](#updates-part-58-phase4a1--reallife-context-testing--emergence-of-a-universal-remediation-engine)
 
 - [Preface Update1: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)](#preface-update1-extensibility--topological-mapping-architecture-and-resurrection-architecture-v45)
 
