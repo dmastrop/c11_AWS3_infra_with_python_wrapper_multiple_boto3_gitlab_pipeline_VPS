@@ -3732,10 +3732,13 @@ The key part of the debug logs above is here:
       ],
 ```
 
+---
 
-
+[Back to top](#top-update57)
 
 ---
+
+
 
 #### 6.2 Why Testing Inside the Container Matters
 
@@ -3782,6 +3785,13 @@ Running curl from inside the container guaranteed:
 This made the curl tests **authoritative**.
 
 ---
+
+[Back to top](#top-update57)
+
+---
+
+
+
 
 #### 6.3 Why Uvicorn Must Be Restarted
 
@@ -3847,6 +3857,12 @@ tail -n 200 nohup.out
 ```
 
 ---
+
+[Back to top](#top-update57)
+
+---
+
+
 
 #### 6.4 How Context Is Injected Into the Contract
 
