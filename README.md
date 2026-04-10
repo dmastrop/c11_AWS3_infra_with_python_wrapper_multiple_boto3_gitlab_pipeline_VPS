@@ -3509,13 +3509,92 @@ The correct response is: (as shown above)
 
 This test became the **baseline sanity check** for every contract revision.
 
-The full debugs will be presented in a later section below. As a single example, these debug logs print out the following for 
-this particular case:
+The full debugs for all the test cases will be presented in a later section below. 
+As a single example, these debug logs print out the following for this particular case:
 
 
-```
+```text
 ==================== PAYLOAD SENT TO OPENAI ====================
-{'model': 'gpt-4.1', 'temperature': 0, 'max_output_tokens': 256, 'input': 'You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.\n\nCONTRACT:\nYou must return ONLY a JSON object with this schema:\n\n{\n  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",\n  "cleanup": [string],\n  "retry": string\n}\n\nRules:\n- ALWAYS choose one of the allowed actions.\n- NEVER return text outside the JSON.\n- NEVER explain your reasoning.\n- Use "fallback" if you cannot produce a valid plan.\n\nRetry command rules:\n- The "retry" field MUST be a literal shell command that can be executed directly.\n- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.\n- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n- The retry command MUST NOT contain placeholders like "<command>" or "<package>".\n- The retry command MUST NOT contain commentary or explanation.\n- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.\n- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\nCleanup rules:\n- The "cleanup" field MUST be a list of literal shell commands.\n- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n- Cleanup commands MUST NOT include vague instructions or commentary.\n- Cleanup commands MUST NOT include dangerous operations.\n\nFallback rules:\n- When returning "fallback", return ONLY:\n  { "action": "fallback" }\n- Do NOT include "cleanup".\n- Do NOT include "retry".\n\nAction meanings:\n- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n- abort: Use when the failure is unsafe or cannot be recovered.\n- fallback: Use when there is not enough information to choose another action.\n\nAbort rules:\n- Use "abort" when the command or system state is unsafe or non-recoverable.\n- Abort when the plan would risk data loss, node instability, or security exposure.\n- Abort when the failure suggests corrupted or inconsistent system state.\n- Abort when the only apparent fixes involve destructive or non-reversible operations.\n- When returning "abort", do NOT include "cleanup" or "retry".\n\nSafety constraints:\n- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).\n- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\nAdditional safety constraints:\n- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").\n- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").\n- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).\n- NEVER propose commands that modify package manager configuration files or sources lists.\n\nCleanup sequence rules:\n- Cleanup steps MUST be ordered from least invasive to most invasive.\n- Cleanup steps MUST be idempotent (safe to run multiple times).\n- Cleanup steps MUST NOT exceed 3 commands.\n- Cleanup steps MUST NOT include commentary or explanation.\n\nCONTEXT:\n{}'}
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.  
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{}
+
+
+
 ===============================================================
 ==================== RAW RESPONSE FROM OPENAI ==================
 {
@@ -3592,10 +3671,28 @@ this particular case:
 ===============================================================
 INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 ```
-Note that the CONTRACT portion is massive, but it is rendered as a single line block, so it scrolls to the right for a very long
-string.(is is only shown in part without the scroll to the right)
 
-The key part is here:
+NOTE that the 200 OK is the message transfer itself and does not pertain to the payload (outgoing validation). In other words, 
+the 200 OK at the end of the debug log prints means:
+
+The gateway accepted the curl request made from the container
+
+The incoming validator did not reject the payload
+
+The LLM returned a valid JSON plan
+
+The gateway returned a valid response
+
+No exceptions were thrown
+
+Everything worked end‑to‑end
+
+It is a message from the FastAPI/Uvicorn’s HTTP access log
+
+
+
+
+The key part of the debug logs above is here:
 
 
 ```
