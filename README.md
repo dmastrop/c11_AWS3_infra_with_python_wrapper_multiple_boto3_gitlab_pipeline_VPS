@@ -4027,6 +4027,325 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 #### 6.5 How the LLM Responds
 
 
+### **6.5 How the LLM Responds**
+#### <a name="65-how-the-llm-responds"></a>
+
+This section shows, step‑by‑step, how the AI Gateway Service interacts with the LLM using the **Responses API**, how the LLM returns a structured recovery plan, and how the validator interprets that plan.
+
+To illustrate this, we use **Test 7 — dpkg lock file**, which triggers a `cleanup_and_retry` action.
+
+---
+
+#### 6.5.1 The Raw curl Request
+
+This is the exact request sent to the `/recover` endpoint inside the running container:
+
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "Temporary lock file detected: /var/lib/dpkg/lock" }
+      }'
+```
+
+
+---
+
+## **6.5.2 Payload Sent to OpenAI (Clean, Multi‑Line Format)**
+
+The gateway transforms the incoming request into a structured **Responses API** payload.  
+This includes:
+
+- the model  
+- temperature  
+- max tokens  
+- the full CONTRACT  
+- the injected CONTEXT  
+
+
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.  
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "Temporary lock file detected: /var/lib/dpkg/lock"
+}
+```
+
+
+
+---
+
+
+
+
+
+
+#### 6.5.3 Raw Responses API Envelope
+
+The Responses API returns a **full envelope**, not just the JSON plan.  
+This includes:
+
+- response ID  
+- timestamps  
+- token usage  
+- model version  
+- output array  
+- the inner JSON plan as a string  
+
+
+
+```json
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_026033b9bb8498ea0069d443c89aa081a2a6a0085f82da79ad",
+  "object": "response",
+  "created_at": 1775518664,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518665,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_026033b9bb8498ea0069d443c92c5081a28b852a77d5228877",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"rm -f /var/lib/dpkg/lock\"\n  ],\n  \"retry\": \"dpkg --configure -a\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 745,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 44,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 789
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:50196 - "POST /recover HTTP/1.1" 200 OK
+```
+
+The output block in the above is the key information as that has the contract action response from the LLM :
+
+```
+  "output": [
+    {
+      "id": "msg_026033b9bb8498ea0069d443c92c5081a28b852a77d5228877",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"rm -f /var/lib/dpkg/lock\"\n  ],\n  \"retry\": \"dpkg --configure -a\"\n}"
+        }
+      ],
+```
+
+
+
+---
+
+#### 6.5.4 Extracted Inner JSON Plan
+
+Inside the Responses API envelope, the actual recovery plan appears as a **string** inside the `output[0].content[0].text` field.
+
+For Test 7, the extracted JSON looks like:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rm -f /var/lib/dpkg/lock"
+  ],
+  "retry": "dpkg --configure -a"
+}
+```
+
+This is the exact structure required by the contract.
+
+---
+
+#### 6.5.5 Validator Interpretation
+
+After extracting the JSON, the gateway passes it to the validator.
+
+The validator checks:
+
+- the action is one of the allowed values  
+- cleanup commands are safe, literal, and ≤ 3  
+- retry command is a literal shell command  
+- no commentary or explanation is present  
+- no dangerous operations are included  
+- the plan matches the contract schema  
+
+For Test 7, the validator result is:
+
+```text
+VALIDATOR: plan accepted
+ACTION: cleanup_and_retry
+```
+
+This confirms that the LLM produced a fully valid recovery plan.
+
+
+In the container where the curl command was run, the action is the response line below: 
+
+```
+root@95a50449eba7:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "Temporary lock file detected: /var/lib/dpkg/lock" }
+      }'
+{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/dpkg/lock"],"retry":"dpkg --configure -a"}
+```
+---
+
+#### 6.5.6 Summary
+
+This example demonstrates the full lifecycle of an LLM‑driven recovery plan:
+
+1. **curl** sends a failure context to the gateway  
+2. The gateway constructs a **Responses API** payload  
+3. The LLM returns a **structured JSON plan** inside a full envelope  
+4. The gateway extracts the JSON  
+5. The validator verifies contract compliance  
+6. The gateway returns the validated plan to the caller  
+
+Test 7 shows the LLM correctly identifying a dpkg lock scenario and producing:
+
+- a safe, idempotent cleanup command  
+- a literal retry command  
+- a valid `cleanup_and_retry` action  
+
+This is exactly the behavior the contract is designed to enforce.
+
+
 ---
 
 [Back to top](#top-update57)
@@ -4035,7 +4354,7 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 
-#### 6.6 How the Contract Was Refined
+#### **6.6 How the Contract Was Refined**
 
 ---
 
@@ -4046,7 +4365,7 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 
-#### 6.7 Test Matrix 1 — Fallback / retry_with_modified_command / Abort
+#### 6.7 **Test Matrix 1 — Fallback / retry_with_modified_command / Abort**
 
 ---
 
@@ -4056,7 +4375,7 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 
-#### 6.8 Test Matrix 2 — cleanup_and_retry
+#### **6.8 Test Matrix 2 — cleanup_and_retry**
 
 ---
 
@@ -4066,7 +4385,7 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 
-#### 6.9 Summary of Curl-Driven Evolution
+#### **6.9 Summary of Curl-Driven Evolution**
 
 
 ---
