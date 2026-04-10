@@ -4026,17 +4026,13 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 #### 6.5 How the LLM Responds
 
-
-### **6.5 How the LLM Responds**
-#### <a name="65-how-the-llm-responds"></a>
-
 This section shows, step‑by‑step, how the AI Gateway Service interacts with the LLM using the **Responses API**, how the LLM returns a structured recovery plan, and how the validator interprets that plan.
 
 To illustrate this, we use **Test 7 — dpkg lock file**, which triggers a `cleanup_and_retry` action.
 
 ---
 
-#### 6.5.1 The Raw curl Request
+##### 6.5.1 The Raw curl Request
 
 This is the exact request sent to the `/recover` endpoint inside the running container:
 
@@ -4052,7 +4048,7 @@ curl -X POST "http://localhost:8000/recover" \
 
 ---
 
-## **6.5.2 Payload Sent to OpenAI (Clean, Multi‑Line Format)**
+##### 6.5.2 Payload Sent to OpenAI (Clean, Multi‑Line Format)
 
 The gateway transforms the incoming request into a structured **Responses API** payload.  
 This includes:
@@ -4156,7 +4152,7 @@ CONTEXT:
 
 
 
-#### 6.5.3 Raw Responses API Envelope
+##### 6.5.3 Raw Responses API Envelope
 
 The Responses API returns a **full envelope**, not just the JSON plan.  
 This includes:
@@ -4270,7 +4266,7 @@ The output block in the above is the key information as that has the contract ac
 
 ---
 
-#### 6.5.4 Extracted Inner JSON Plan
+##### 6.5.4 Extracted Inner JSON Plan
 
 Inside the Responses API envelope, the actual recovery plan appears as a **string** inside the `output[0].content[0].text` field.
 
@@ -4290,7 +4286,7 @@ This is the exact structure required by the contract.
 
 ---
 
-#### 6.5.5 Validator Interpretation
+##### 6.5.5 Validator Interpretation
 
 After extracting the JSON, the gateway passes it to the validator.
 
@@ -4326,7 +4322,7 @@ root@95a50449eba7:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
 ```
 ---
 
-#### 6.5.6 Summary
+##### 6.5.6 Summary
 
 This example demonstrates the full lifecycle of an LLM‑driven recovery plan:
 
