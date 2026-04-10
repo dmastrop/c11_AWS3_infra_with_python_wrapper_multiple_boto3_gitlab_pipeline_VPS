@@ -3999,15 +3999,12 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 ---
 
+[Back to top](#top-update57)
+
+---
 
 
-
-
-
-
-
-
-
+#### 6.5 How the LLM Responds
 
 
 ---
@@ -4018,8 +4015,56 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 
+#### 6.6 How the Contract Was Refined
 
-### **7. The Final Payload/Contract Rules Block (with comments)**
+---
+
+[Back to top](#top-update57)
+
+---
+
+
+
+
+#### 6.7 Test Matrix 1 — Fallback / retry_with_modified_command / Abort
+
+---
+
+[Back to top](#top-update57)
+
+---
+
+
+
+#### 6.8 Test Matrix 2 — cleanup_and_retry
+
+---
+
+[Back to top](#top-update57)
+
+---
+
+
+
+
+#### 6.9 Summary of Curl‑Driven Evolution
+
+---
+
+[Back to top](#top-update57)
+
+---
+
+
+
+
+
+
+
+
+### **7. The Final Payload/Contract Rules Block (with Comments)**
+
+
 
 This section 7 is not meant to present the entire code base for the AI Gatway Service (ai_gateway_service.py). 
 
@@ -4030,14 +4075,6 @@ See:
 [Step 4 — Create the AI Gateway Service (ai_gateway_service.py)](#step-4-create-the-ai-gateway-service-ai_gateway_servicepy)
 
 
----
-
-[Back to top](#top-update57)
-
----
-
-
-### **8. Lessons Learned (Optional but powerful)**
 
 ---
 
@@ -4046,8 +4083,13 @@ See:
 ---
 
 
+### **8. Lessons Learned**
 
+---
 
+[Back to top](#top-update57)
+
+---
 
 
 
