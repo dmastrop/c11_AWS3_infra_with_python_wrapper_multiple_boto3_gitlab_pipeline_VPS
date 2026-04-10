@@ -4808,7 +4808,7 @@ CONTEXT:
 
 
 
-### **Raw Response from OpenAI**
+**Raw Response from OpenAI**
 ```json
 ===============================================================
 ==================== RAW RESPONSE FROM OPENAI ==================
@@ -4890,7 +4890,7 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 
 ```
 
-### **Extracted Plan**
+**Extracted Plan**
 ```json
 {
   "action": "fallback"
@@ -4898,7 +4898,7 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 
 ```
 
-### **Validator Result**
+**Validator Result**
 
 
 ```json
@@ -4914,27 +4914,27 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 <details>
 <summary><strong>Click to expand Test 6 debug logs</strong></summary>
 
-### **Curl Command**
+**Curl Command**
 ```bash
 # paste curl command here
 ```
 
-### **Payload Sent to OpenAI (cleaned)**
+**Payload Sent to OpenAI (cleaned)**
 ```text
 # paste cleaned payload here
 ```
 
-### **Raw Response from OpenAI**
+**Raw Response from OpenAI**
 ```json
 # paste RAW RESPONSE FROM OPENAI here
 ```
 
-### **Extracted Plan**
+**Extracted Plan**
 ```json
 # paste extracted plan here
 ```
 
-### **Validator Result**
+**Validator Result**
 ```text
 # paste validator output here
 ```
@@ -4948,27 +4948,27 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 <details>
 <summary><strong>Click to expand Test A1 debug logs</strong></summary>
 
-### **Curl Command**
+**Curl Command**
 ```bash
 # paste curl command here
 ```
 
-### **Payload Sent to OpenAI (cleaned)**
+**Payload Sent to OpenAI (cleaned)**
 ```text
 # paste cleaned payload here
 ```
 
-### **Raw Response from OpenAI**
+**Raw Response from OpenAI**
 ```json
 # paste RAW RESPONSE FROM OPENAI here
 ```
 
-### **Extracted Plan**
+**Extracted Plan**
 ```json
 # paste extracted plan here
 ```
 
-### **Validator Result**
+**Validator Result**
 ```text
 # paste validator output here
 ```
@@ -4982,27 +4982,27 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 <details>
 <summary><strong>Click to expand Test A2 debug logs</strong></summary>
 
-### **Curl Command**
+**Curl Command**
 ```bash
 # paste curl command here
 ```
 
-### **Payload Sent to OpenAI (cleaned)**
+**Payload Sent to OpenAI (cleaned)**
 ```text
 # paste cleaned payload here
 ```
 
-### **Raw Response from OpenAI**
+**Raw Response from OpenAI**
 ```json
 # paste RAW RESPONSE FROM OPENAI here
 ```
 
-### **Extracted Plan**
+**Extracted Plan**
 ```json
 # paste extracted plan here
 ```
 
-### **Validator Result**
+**Validator Result**
 ```text
 # paste validator output here
 ```
@@ -5016,27 +5016,27 @@ INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
 <details>
 <summary><strong>Click to expand Test A3 debug logs</strong></summary>
 
-### **Curl Command**
+**Curl Command**
 ```bash
 # paste curl command here
 ```
 
-### **Payload Sent to OpenAI (cleaned)**
+**Payload Sent to OpenAI (cleaned)**
 ```text
 # paste cleaned payload here
 ```
 
-### **Raw Response from OpenAI**
+**Raw Response from OpenAI**
 ```json
 # paste RAW RESPONSE FROM OPENAI here
 ```
 
-### **Extracted Plan**
+**Extracted Plan**
 ```json
 # paste extracted plan here
 ```
 
-### **Validator Result**
+**Validator Result**
 ```text
 # paste validator output here
 ```
