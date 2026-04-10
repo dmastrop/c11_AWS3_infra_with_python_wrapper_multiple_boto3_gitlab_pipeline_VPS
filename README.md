@@ -1519,6 +1519,24 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 ### **Table of Contents - AI Gateway Service LLM Integration**
 <a name="top-update57"></a>
 
+- [1. Introduction — What the AI Gateway Service Is](#1-introduction--what-the-ai-gateway-service-is)
+- [2. Why Two Test Suites Exist (Pytest vs Curl)](#2-why-two-test-suites-exist-pytest-vs-curl)
+- [3. The API Migration Story (Chat → Responses API)](#3-the-api-migration-story-chat--responses-api)
+- [4. The Evolution of the Contract](#4-the-evolution-of-the-contract)
+- [5. The Validator Architecture](#5-the-validator-architecture)
+- [6. The Iterative Curl‑Driven Development Process](#6-the-iterative-curl-driven-development-process)
+  - [6.1 Why curl was used](#61-why-curl-was-used)
+  - [6.2 Why testing inside the container matters](#62-why-testing-inside-the-container-matters)
+  - [6.3 Why uvicorn must be restarted after code changes](#63-why-uvicorn-must-be-restarted-after-code-changes)
+  - [6.4 How context is injected](#64-how-context-is-injected)
+  - [6.5 How the LLM responds](#65-how-the-llm-responds)
+  - [6.6 How the contract was refined](#66-how-the-contract-was-refined)
+  - [6.7 Test Matrix 1 — fallback / retry_with_modified_command / abort](#67-test-matrix-1--fallback--retry_with_modified_command--abort)
+  - [6.8 Test Matrix 2 — cleanup_and_retry](#68-test-matrix-2--cleanup_and_retry)
+  - [6.9 Summary of curl‑driven evolution](#69-summary-of-curl-driven-evolution)
+- [7. The Final Payload/Contract Rules Block (with comments)](#7-the-final-payloadcontract-rules-block-with-comments)
+- [8. Lessons Learned](#8-lessons-learned)
+
 
 ### **1. Introduction — What the AI Gateway Service Is**
 
@@ -3478,7 +3496,6 @@ root@95a50449eba7:/aws_EC2# curl -X POST "http://localhost:8000/recover" \
 So once in the container this command presents the context to the AI Gateway Service on port 8000. This setup was reviewed in
 detail in a previous UPDATE here: 
 
-**Step 6: GitLab AI Gateway Service/Pipeline Integration** 
 - [Step 6: GitLab AI Gateway Service/Pipeline Integration](#step6-gitlab-ai-gateway-servicepipeline-integration--starting-the-ai-gateway-service-from-inside-the-deploy-container)
 
 
@@ -3861,9 +3878,91 @@ CONTEXT:
 This is the debug log prints from the Test 5: 
 (the CONTEXT block is at the very end; note as before teh CONTRACT is a very long single line block and scrolls to the right)
 
-```json
+```text
+
 ==================== PAYLOAD SENT TO OPENAI ====================
-{'model': 'gpt-4.1', 'temperature': 0, 'max_output_tokens': 256, 'input': 'You are a recovery engine. Follow the contract and rules provided inside the input JSON. Return ONLY a JSON object.\n\nCONTRACT:\nYou must return ONLY a JSON object with this schema:\n\n{\n  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",\n  "cleanup": [string],\n  "retry": string\n}\n\nRules:\n- ALWAYS choose one of the allowed actions.\n- NEVER return text outside the JSON.\n- NEVER explain your reasoning.\n- Use "fallback" if you cannot produce a valid plan.\n\nRetry command rules:\n- The "retry" field MUST be a literal shell command that can be executed directly.\n- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.\n- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n- The retry command MUST NOT contain placeholders like "<command>" or "<package>".\n- The retry command MUST NOT contain commentary or explanation.\n- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.\n- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\nCleanup rules:\n- The "cleanup" field MUST be a list of literal shell commands.\n- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n- Cleanup commands MUST NOT include vague instructions or commentary.\n- Cleanup commands MUST NOT include dangerous operations.\n\nFallback rules:\n- When returning "fallback", return ONLY:\n  { "action": "fallback" }\n- Do NOT include "cleanup".\n- Do NOT include "retry".\n\nAction meanings:\n- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n- abort: Use when the failure is unsafe or cannot be recovered.\n- fallback: Use when there is not enough information to choose another action.\n\nAbort rules:\n- Use "abort" when the command or system state is unsafe or non-recoverable.\n- Abort when the plan would risk data loss, node instability, or security exposure.\n- Abort when the failure suggests corrupted or inconsistent system state.\n- Abort when the only apparent fixes involve destructive or non-reversible operations.\n- When returning "abort", do NOT include "cleanup" or "retry".\n\nSafety constraints:\n- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).\n- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\nAdditional safety constraints:\n- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").\n- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").\n- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).\n- NEVER propose commands that modify package manager configuration files or sources lists.\n\nCleanup sequence rules:\n- Cleanup steps MUST be ordered from least invasive to most invasive.\n- Cleanup steps MUST be idempotent (safe to run multiple times).\n- Cleanup steps MUST NOT exceed 3 commands.\n- Cleanup steps MUST NOT include commentary or explanation.\n\nCONTEXT:\n{}'}
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.  
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{}
+```
+
+
+
+
 ```
 
 ##### 6.4.1 Example (Test 5)
@@ -3932,6 +4031,21 @@ See:
 [Back to top](#top-update57)
 
 ---
+
+
+### **8. Lessons Learned (Optional but powerful)**
+
+---
+
+[Back to top](#top-update57)
+
+---
+
+
+
+
+
+
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
