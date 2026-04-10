@@ -4025,6 +4025,8 @@ This is why Test 5 is the perfect example for illustrating context injection. 
 
 
 #### 6.5 How the LLM Responds
+<a name="65-how-the-llm-responds"></a>
+
 
 This section shows, step‑by‑step, how the AI Gateway Service interacts with the LLM using the **Responses API**, how the LLM returns a structured recovery plan, and how the validator interprets that plan.
 
@@ -4351,6 +4353,311 @@ This is exactly the behavior the contract is designed to enforce.
 
 
 #### **6.6 How the Contract Was Refined**
+<a name="66-how-the-contract-was-refined"></a>
+
+The contract did not emerge fully formed.  
+It was refined through dozens of curl‑driven iterations, each exposing a new edge case, ambiguity, or safety concern.  
+This section explains **how** the contract evolved and **why** each refinement was necessary.
+
+The refinement process centered around six major themes:
+
+- Retry literal‑command rule  
+- Cleanup sequencing  
+- Safety constraints  
+- Abort logic  
+- Fallback field rules  
+- Responses API shape corrections  
+
+Each refinement came directly from real failures observed during testing.
+
+---
+
+##### 6.6.1 The Retry Literal‑Command Rule
+
+Early in development, the LLM frequently returned retry commands like:
+
+- `"retry the previous command"`  
+- `"run the install again"`  
+- `"try apt update"`  
+- `"sudo apt update && apt upgrade"`  
+- `"dpkg --configure -a (if needed)"`  
+
+These were:
+
+- vague  
+- non‑literal  
+- multi‑step  
+- unsafe  
+- not executable  
+
+This forced the introduction of strict rules:
+
+- Retry **must** be a literal shell command  
+- No English sentences  
+- No references to “previous command”  
+- No placeholders (`<package>`, `<command>`)  
+- No commentary  
+- No chained commands unless absolutely required  
+
+This refinement made retry behavior **deterministic** and **machine‑executable**.
+
+---
+
+##### 6.6.2 Cleanup Sequencing
+
+Early cleanup plans were:
+
+- unordered  
+- non‑idempotent  
+- too invasive  
+- sometimes destructive  
+- sometimes included commentary  
+
+Examples from early tests:
+
+- `"rm -rf /var/lib/apt/lists"` (too destructive)  
+- `"apt-get clean && apt-get update"` (multi‑step)  
+- `"try removing the lock file"` (not literal)  
+
+This led to the cleanup rules:
+
+- Cleanup must be a **list** of literal shell commands  
+- Ordered from **least** to **most** invasive  
+- Maximum of **3** commands  
+- Must be **idempotent**  
+- No commentary  
+- No destructive operations  
+
+This refinement stabilized all cleanup‑and‑retry cases (Tests 7, 7b, 7c, 7d).
+
+---
+
+##### 6.6.3 Safety Constraints
+
+During early iterations, the LLM occasionally proposed:
+
+- modifying `/etc/passwd`  
+- removing system directories  
+- disabling system services  
+- piping remote scripts into a shell  
+- installing kernel packages  
+
+These were immediately blocked.
+
+This led to the **Safety Constraints** block:
+
+- Never modify `/etc/passwd`, `/etc/shadow`, or home directories  
+- Never delete system directories  
+- Never pipe remote content into a shell  
+- Never disable or mask system services  
+- Never modify kernel or bootloader  
+- Never modify package manager configuration  
+
+These constraints made the contract **safe by construction**.
+
+---
+
+##### 6.6.4 Abort Logic
+
+Abort logic originally triggered too rarely.  
+The LLM attempted to “fix” catastrophic situations such as:
+
+- `"rm -rf /"`  
+- `"edit /etc/passwd"`  
+- `"filesystem corruption"`  
+
+This was unacceptable.
+
+The abort rules were refined to:
+
+- Abort when the system state is unsafe  
+- Abort when recovery requires destructive operations  
+- Abort when the failure indicates corruption  
+- Abort when the only fixes involve irreversible changes  
+- Abort must return **only** `{ "action": "abort" }`  
+
+This refinement produced the correct behavior in Tests A1, A2, A3.
+
+---
+
+##### 6.6.5 Fallback Field Rules
+
+Fallback originally returned:
+
+- empty objects  
+- partial objects  
+- objects with commentary  
+- objects with retry fields  
+- objects with cleanup fields  
+
+This caused validator failures.
+
+The fallback rules were refined to:
+
+- Fallback must return **only**:  
+  ```
+  { "action": "fallback" }
+  ```
+- No cleanup  
+- No retry  
+- No commentary  
+- No additional fields  
+
+This refinement stabilized Test 5 and all “empty context” cases.
+
+---
+
+##### 6.6.6 Responses API Shape Corrections
+
+When migrating from the Chat API to the Responses API, the LLM output changed shape:
+
+- The JSON plan was now inside `output[0].content[0].text`  
+- The envelope included metadata, timestamps, token usage  
+- The validator needed to extract the inner JSON string  
+- The gateway needed to handle multi‑line JSON inside a string  
+
+This required:
+
+- updating the extraction logic  
+- updating the validator input  
+- updating the debug logging  
+- updating the contract to forbid commentary  
+
+This refinement made the gateway fully compatible with the Responses API.
+
+---
+
+##### 6.6.7 The Responses API Output Block Structure
+
+When the project migrated from the legacy **Chat Completions API** to the newer **Responses API**, the shape of the LLM output changed in a way that directly impacted the validator and the contract.
+
+Under the Chat API, the model returned text at the top level:
+
+```
+response["choices"][0]["message"]["content"]
+```
+
+But under the **Responses API**, the model’s output is wrapped in a **generalized envelope** designed to support:
+
+- multiple messages  
+- multiple content blocks  
+- multimodal output  
+- tool calls  
+- structured annotations  
+
+This meant the recovery plan was **no longer returned at the top level**.
+
+Instead, the actual JSON plan appears **inside a nested structure**:
+
+```
+response
+ └── output[0]
+       └── content[0]
+             └── text   ← JSON plan as a string
+```
+
+For example, from the previous section which used Test 7 as the example, this output block can be seen in the LLM response debug
+print logs as this:
+
+
+```
+"output": [
+    {
+      "id": "msg_026033b9bb8498ea0069d443c92c5081a28b852a77d5228877",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"rm -f /var/lib/dpkg/lock\"\n  ],\n  \"retry\": \"dpkg --configure -a\"\n}"
+        }
+      ],
+```
+
+
+Thus:
+
+> The LLM’s recovery plan is now a **string** located at  
+> `output[0].content[0].text`,  
+> not at the top level of the response.
+
+This required several contract and validator refinements:
+
+**1. Extraction Logic Had to Change**
+The gateway could no longer pass the entire response to the validator.  
+It had to:
+
+1. Locate `output[0].content[0].text`  
+2. Extract the string  
+3. Parse it as JSON  
+4. Validate the parsed object  
+
+**2. The Contract Had to Forbid Commentary**
+Because the JSON plan is embedded as a **string**, any extra text (explanations, apologies, reasoning) would break parsing.  
+This led to strict rules:
+
+- “Return ONLY a JSON object.”  
+- “NEVER explain your reasoning.”  
+- “NEVER return text outside the JSON.”  
+
+**3. Debug Logging Had to Be Updated**
+The debug logs now needed to show:
+
+- the full Responses API envelope  
+- the extracted inner JSON  
+- the validator result  
+
+This became part of the iterative refinement process in Section 6.
+
+**4. The Validator Had to Become Envelope‑Aware**
+The validator now expects:
+
+- a **string** containing JSON  
+- extracted from a nested structure  
+- not the entire response object  
+
+This change fixed multiple early failures (e.g., Test 5, Test 7) that were indiscriminately erroring out. Once the outgoing
+validator was extracting the nested output structure, the outging validator beghan to work.
+
+---
+
+**Summary**
+The migration to the Responses API forced the contract and validator to evolve.  
+The recovery plan is no longer returned at the top level — it is embedded inside `output[0].content[0].text`.  
+This required new extraction logic, stricter contract rules, and updated debug logging.
+
+
+
+
+---
+
+
+##### 6.6.8 Summary
+
+The contract evolved through **real failures**, not theoretical design.
+
+Each refinement:
+
+- removed ambiguity  
+- increased safety  
+- increased determinism  
+- reduced LLM freedom  
+- improved validator reliability  
+- improved reproducibility  
+
+By the end of the curl‑driven refinement cycle, the contract became:
+
+- strict  
+- deterministic  
+- safe  
+- machine‑executable  
+- fully compatible with the Responses API  
+
+This refinement process is what made the recovery engine **production‑ready**.
+
+---
 
 ---
 
