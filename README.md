@@ -7696,10 +7696,10 @@ So the /recover part of the URL is key to proper routing to the def recover func
 
 This separation is exactly how REST services are supposed to work:
 
-The server defines the route (/recover) (AI Gateway Service)
-The client constructs the full URL (http://localhost:8000/recover) (MCPClient)
-The HTTP framework (FastAPI) handles routing (AI Gateway Service)
-The client library (requests) handles the POST (MCPClient)
+- The server defines the route (/recover) (AI Gateway Service)
+- The client constructs the full URL (http://localhost:8000/recover) (MCPClient)
+- The HTTP framework (FastAPI) handles routing (AI Gateway Service)
+- The client library (requests) handles the POST (MCPClient)
 
 
 <details>
