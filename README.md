@@ -3329,14 +3329,16 @@ It is the first stable version produced through curl‑driven testing, but two a
 ---
 
 **Contract Rules Refinement — Stage 2**
-  
+
+This will be in the next UPDATE part 58
+ 
 Automated Large‑Scale Context Testing
 
 A custom Python script will:
 
 - iterate through a large set of problematic commands  
 - inject each command into the context  
-- send it to the AI Gateway Service  
+- send it to the AI Gateway Service using the curl command from the deployment container  
 - capture the LLM’s plan  
 - evaluate whether the plan is:  
   - a valid contract action  
@@ -3351,6 +3353,29 @@ Any unsatisfactory responses will trigger contract rule refinements.
 The test suite will be rerun until **all commands pass**.
 
 This stage ensures the contract is robust across a wide range of real‑world failure modes.
+
+This testing will use the full context schema present in the AI/MCP HOOK _invoke_ai_gateway():
+
+
+```
+
+        # --------------------------------------------------------
+        # 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
+        # --------------------------------------------------------
+        context = {
+            "command": original_command,
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "exit_status": exit_status,
+            "attempt": attempt + 1,
+            "instance_id": instance_id,
+            "ip": ip,
+            "tags": extra_tags,
+            "os_info": globals().get("os_info", None),
+            "history": globals().get("command_history", None),
+        }
+```
+
 
 ---
 
@@ -5112,7 +5137,6 @@ Each test case below includes:
 - the extracted JSON plan  
 - the validator result  
 
-Paste your full debug logs into each collapsible block.
 
 ---
 
@@ -5720,35 +5744,200 @@ INFO:     127.0.0.1:52098 - "POST /recover HTTP/1.1" 200 OK
 
 **Test A2 — abort (“edit /etc/passwd”)**
 
+
+
 <details>
 <summary><strong>Click to expand Test A2 debug logs</strong></summary>
 
 **Curl Command**
 ```bash
-# paste curl command here
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "edit /etc/passwd" }
+      }'
 ```
 
 **Payload Sent to OpenAI (cleaned)**
 ```text
-# paste cleaned payload here
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "edit /etc/passwd"
+}
 ```
 
 **Raw Response from OpenAI**
 ```json
-# paste RAW RESPONSE FROM OPENAI here
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_0dbc9edd5bb023e90069d442da5348819fba6629f74c940de9",
+  "object": "response",
+  "created_at": 1775518426,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518427,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_0dbc9edd5bb023e90069d442db2498819faf3fd6f988f0a848",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"abort\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 738,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 10,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 748
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:52098 - "POST /recover HTTP/1.1" 200 OK
 ```
 
 **Extracted Plan**
 ```json
-# paste extracted plan here
+{
+  "action": "abort"
+}
 ```
 
 **Validator Result**
 ```text
-# paste validator output here
+{"action":"abort"}
 ```
 
 </details>
+
+
+
 
 ---
 
@@ -5759,31 +5948,191 @@ INFO:     127.0.0.1:52098 - "POST /recover HTTP/1.1" 200 OK
 
 **Curl Command**
 ```bash
-# paste curl command here
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "filesystem corruption" }
+      }'
 ```
 
 **Payload Sent to OpenAI (cleaned)**
 ```text
-# paste cleaned payload here
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "filesystem corruption"
+}
 ```
 
 **Raw Response from OpenAI**
 ```json
-# paste RAW RESPONSE FROM OPENAI here
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_0fe93334eb367f7e0069d4435a970c81969c15abb3c8a6b5aa",
+  "object": "response",
+  "created_at": 1775518554,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518555,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_0fe93334eb367f7e0069d4435b1c208196b8465dfaf6c910fc",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"abort\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 735,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 10,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 745
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:38496 - "POST /recover HTTP/1.1" 200 OK
+
 ```
 
 **Extracted Plan**
 ```json
-# paste extracted plan here
+{
+  "action": "abort"
+}
 ```
 
 **Validator Result**
 ```text
-# paste validator output here
+{"action":"abort"}
 ```
 
 </details>
-
 
 
 
@@ -5796,6 +6145,1053 @@ INFO:     127.0.0.1:52098 - "POST /recover HTTP/1.1" 200 OK
 
 
 #### **6.8 Test Matrix 2 — cleanup_and_retry**
+<a name="68-test-matrix-2--cleanup_and_retry"></a>
+
+This section presents the complete debug output for all cleanup‑and‑retry actions.
+
+These tests demonstrate:
+
+- correct cleanup sequencing  
+- idempotent cleanup commands  
+- safe retry commands  
+- correct classification between cleanup_and_retry vs retry_with_modified_command  
+
+---
+
+##### 6.8.1 Test Matrix Table
+
+**TABLE 2 — Cleanup‑and‑Retry Test Matrix**
+
+| Test ID | Context | Expected LLM Action | Cleanup LLM Command(s) | Retry LLM Command(s) | Notes |
+|--------|---------|---------------------|-------------------------|-----------------------|-------|
+| **7** | `"Temporary lock file detected: /var/lib/dpkg/lock"` | `cleanup_and_retry` | `["rm -f /var/lib/dpkg/lock"]` | `"dpkg --configure -a"` | Ordered, idempotent. |
+| **7b** | `"Could not get lock /var/lib/apt/lists/lock"` | `cleanup_and_retry` | `["sudo rm -f /var/lib/apt/lists/lock"]` | `"sudo apt update"` | Safe, literal retry. |
+| **7c** | `"dpkg frontend lock is locked by another process"` | `cleanup_and_retry` | `["rm -f /var/lib/dpkg/lock-frontend"]` | `"dpkg --configure -a"` | Cleanup ≤ 3 commands. |
+| **7d** | `"Hash Sum mismatch"` | `cleanup_and_retry` | `["sudo rm -rf /var/lib/apt/lists/*", "sudo apt-get clean"]` | `"sudo apt-get update"` | Least → most invasive ordering. |
+| **7e** | `"dpkg was interrupted..."` | `retry_with_modified_command` | `[]` | `"sudo dpkg --configure -a"` | Correctly classified as modified-command. |
+
+---
+
+##### 6.8.2 Test‑by‑Test Debug Output
+
+Each test case below includes:
+
+- the raw curl command  
+- the cleaned payload sent to OpenAI  
+- the raw Responses API envelope  
+- the extracted JSON plan  
+- the validator result  
+
+---
+
+**Test 7 — cleanup_and_retry (“Temporary lock file detected: /var/lib/dpkg/lock”)**
+
+<details>
+<summary><strong>Click to expand Test 7 debug logs</strong></summary>
+
+**Curl Command**
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "Temporary lock file detected: /var/lib/dpkg/lock" }
+      }'
+```
+
+**Payload Sent to OpenAI (cleaned)**
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "Temporary lock file detected: /var/lib/dpkg/lock"
+}
+```
+
+**Raw Response from OpenAI**
+```json
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_026033b9bb8498ea0069d443c89aa081a2a6a0085f82da79ad",
+  "object": "response",
+  "created_at": 1775518664,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518665,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_026033b9bb8498ea0069d443c92c5081a28b852a77d5228877",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"rm -f /var/lib/dpkg/lock\"\n  ],\n  \"retry\": \"dpkg --configure -a\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 745,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 44,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 789
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:50196 - "POST /recover HTTP/1.1" 200 OK
+```
+
+**Extracted Plan**
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": ["rm -f /var/lib/dpkg/lock"],
+  "retry": "dpkg --configure -a"
+}
+```
+
+**Validator Result**
+```text
+{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/dpkg/lock"],"retry":"dpkg --configure -a"}
+```
+
+</details>
+
+---
+
+
+
+
+**Test 7b — cleanup_and_retry (“Could not get lock /var/lib/apt/lists/lock”)**
+
+<details>
+<summary><strong>Click to expand Test 7b debug logs</strong></summary>
+
+**Curl Command**
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "Could not get lock /var/lib/apt/lists/lock" }
+      }'
+```
+
+**Payload Sent to OpenAI (cleaned)**
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "Could not get lock /var/lib/apt/lists/lock"
+}
+```
+
+**Raw Response from OpenAI**
+```json
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_07aeb4965a6794e20069d444986ba081a18980936ae68f0fa6",
+  "object": "response",
+  "created_at": 1775518872,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775518873,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_07aeb4965a6794e20069d44498aa0881a1bedf6b005723987c",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"sudo rm -f /var/lib/apt/lists/lock\",\n    \"sudo rm -f /var/cache/apt/archives/lock\"\n  ],\n  \"retry\": \"sudo apt update\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 746,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 60,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 806
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:46884 - "POST /recover HTTP/1.1" 200 OK
+```
+
+**Extracted Plan**
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "sudo rm -f /var/lib/apt/lists/lock",
+    "sudo rm -f /var/cache/apt/archives/lock"
+  ],
+  "retry": "sudo apt update"
+}
+```
+
+**Validator Result**
+```text
+{"action":"cleanup_and_retry","cleanup":["sudo rm -f /var/lib/apt/lists/lock","sudo rm -f /var/cache/apt/archives/lock"],"retry":"sudo apt update"}
+```
+
+</details>
+
+---
+
+**Test 7c — cleanup_and_retry (“dpkg frontend lock is locked by another process”)**
+
+<details>
+<summary><strong>Click to expand Test 7c debug logs</strong></summary>
+
+**Curl Command**
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "dpkg frontend lock is locked by another process" }
+      }'
+```
+
+**Payload Sent to OpenAI (cleaned)**
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "dpkg frontend lock is locked by another process"
+}
+```
+
+**Raw Response from OpenAI**
+```json
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_0b6558b3d2eb02e10069d44577c9f48195b07b0a1039a46788",
+  "object": "response",
+  "created_at": 1775519095,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775519096,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_0b6558b3d2eb02e10069d445785b10819592ef70bb215e2a7a",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"rm -f /var/lib/dpkg/lock-frontend\",\n    \"rm -f /var/cache/apt/archives/lock\"\n  ],\n  \"retry\": \"dpkg --configure -a\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 742,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 61,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 803
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:39760 - "POST /recover HTTP/1.1" 200 OK
+```
+
+**Extracted Plan**
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rm -f /var/lib/dpkg/lock-frontend",
+    "rm -f /var/cache/apt/archives/lock"
+  ],
+  "retry": "dpkg --configure -a"
+}
+```
+
+**Validator Result**
+```text
+{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/dpkg/lock-frontend","rm -f /var/cache/apt/archives/lock"],"retry":"dpkg --configure -a"}
+```
+
+</details>
+
+---
+
+
+Here you go, Dave — **Test 7d** formatted *exactly* like the others, with:
+
+- the cleaned payload  
+- the RAW RESPONSE header  
+- the trailing INFO line  
+- the collapsible block  
+- identical indentation and spacing  
+
+This drops directly into **Section 6.8.2** with zero edits.
+
+---
+
+**Test 7d — cleanup_and_retry (“Hash Sum mismatch”)**
+
+<details>
+<summary><strong>Click to expand Test 7d debug logs</strong></summary>
+
+**Curl Command**
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "Hash Sum mismatch" }
+      }'
+```
+
+**Payload Sent to OpenAI (cleaned)**
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "Hash Sum mismatch"
+}
+```
+
+**Raw Response from OpenAI**
+```json
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_02fe1976e3cac1820069d445d3811c8196aa28a50e182c2615",
+  "object": "response",
+  "created_at": 1775519187,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775519188,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_02fe1976e3cac1820069d445d3cee08196ac54afeae6b2656f",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"sudo apt-get clean\",\n    \"sudo rm -rf /var/lib/apt/lists/partial\",\n    \"sudo rm -rf /var/lib/apt/lists/*\"\n  ],\n  \"retry\": \"sudo apt-get update\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 736,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 67,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 803
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:57462 - "POST /recover HTTP/1.1" 200 OK
+```
+
+**Extracted Plan**
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "sudo apt-get clean",
+    "sudo rm -rf /var/lib/apt/lists/partial",
+    "sudo rm -rf /var/lib/apt/lists/*"
+  ],
+  "retry": "sudo apt-get update"
+}
+```
+
+**Validator Result**
+```text
+{"action":"cleanup_and_retry","cleanup":["sudo apt-get clean","sudo rm -rf /var/lib/apt/lists/partial","sudo rm -rf /var/lib/apt/lists/*"],"retry":"sudo apt-get update"}
+```
+
+</details>
+
+---
+
+**Test 7e — cleanup_and_retry (“dpkg was interrupted…”)**
+
+<details>
+<summary><strong>Click to expand Test 7e debug logs</strong></summary>
+
+**Curl Command**
+```bash
+curl -X POST "http://localhost:8000/recover" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "schema_version": "1.0",
+        "context": { "failure": "dpkg was interrupted..." }
+      }'
+```
+
+**Payload Sent to OpenAI (cleaned)**
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+
+model: gpt-4.1
+temperature: 0
+max_output_tokens: 256
+
+INPUT:
+You are a recovery engine. Follow the contract and rules provided inside the input JSON.
+Return ONLY a JSON object.
+
+CONTRACT:
+You must return ONLY a JSON object with this schema:
+
+{
+  "action": "cleanup_and_retry" | "retry_with_modified_command" | "abort" | "fallback",
+  "cleanup": [string],
+  "retry": string
+}
+
+Rules:
+- ALWAYS choose one of the allowed actions.
+- NEVER return text outside the JSON.
+- NEVER explain your reasoning.
+- Use "fallback" if you cannot produce a valid plan.
+
+Retry command rules:
+- The "retry" field MUST be a literal shell command that can be executed directly.
+- The retry command MUST NOT reference "previous command", "original command", or any vague instruction.
+- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.
+- The retry command MUST NOT contain placeholders like "<command>" or "<package>".
+- The retry command MUST NOT contain commentary or explanation.
+- The retry command MUST NOT contain multiple commands chained with "&&" unless necessary.
+- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).
+
+Cleanup rules:
+- The "cleanup" field MUST be a list of literal shell commands.
+- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.
+- Cleanup commands MUST NOT include vague instructions or commentary.
+- Cleanup commands MUST NOT include dangerous operations.
+
+Fallback rules:
+- When returning "fallback", return ONLY:
+    { "action": "fallback" }
+- Do NOT include "cleanup".
+- Do NOT include "retry".
+
+Action meanings:
+- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.
+- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.
+- abort: Use when the failure is unsafe or cannot be recovered.
+- fallback: Use when there is not enough information to choose another action.
+
+Abort rules:
+- Use "abort" when the command or system state is unsafe or non-recoverable.
+- Abort when the plan would risk data loss, node instability, or security exposure.
+- Abort when the failure suggests corrupted or inconsistent system state.
+- Abort when the only apparent fixes involve destructive or non-reversible operations.
+- When returning "abort", do NOT include "cleanup" or "retry".
+
+Safety constraints:
+- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.
+- NEVER propose commands that delete system directories outside package/cache paths (e.g., no "rm -rf /", no "rm -rf /usr", etc.).
+- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.
+
+Additional safety constraints:
+- NEVER propose commands that pipe remote content into a shell (e.g., no "curl ... | sh").
+- NEVER propose commands that disable or mask system services (e.g., no "systemctl disable", no "systemctl mask").
+- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no "update-grub", no "grub-install", no kernel package installation).
+- NEVER propose commands that modify package manager configuration files or sources lists.
+
+Cleanup sequence rules:
+- Cleanup steps MUST be ordered from least invasive to most invasive.
+- Cleanup steps MUST be idempotent (safe to run multiple times).
+- Cleanup steps MUST NOT exceed 3 commands.
+- Cleanup steps MUST NOT include commentary or explanation.
+
+CONTEXT:
+{
+  "failure": "dpkg was interrupted..."
+}
+```
+
+**Raw Response from OpenAI**
+```json
+===============================================================
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_040f67033c8259de0069d446219ac481a3949b3daa5a43c6a7",
+  "object": "response",
+  "created_at": 1775519265,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1775519266,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": 256,
+  "max_tool_calls": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_040f67033c8259de0069d446221d2881a391de02c5e41ad521",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\n  \"action\": \"cleanup_and_retry\",\n  \"cleanup\": [\n    \"sudo dpkg --configure -a\"\n  ],\n  \"retry\": \"sudo apt-get install -f\"\n}"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 738,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 41,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 779
+  },
+  "user": null,
+  "metadata": {}
+}
+===============================================================
+INFO:     127.0.0.1:35556 - "POST /recover HTTP/1.1" 200 OK
+```
+
+**Extracted Plan**
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": ["sudo dpkg --configure -a"],
+  "retry": "sudo apt-get install -f"
+}
+```
+
+**Validator Result**
+```text
+{"action":"cleanup_and_retry","cleanup":["sudo dpkg --configure -a"],"retry":"sudo apt-get install -f"}
+```
+
+</details>
+
+---
+
+
+
 
 ---
 
@@ -15327,7 +16723,7 @@ Create a variable with the following properties:
 
 | Key | Value | Flags |
 |-----|--------|--------|
-| `API_KEY` | your OpenAI secret key | Protected, Masked, Expanded |
+| `API_KEY` |  OpenAI secret key | Protected, Masked, Expanded |
 
 
 - Protected → only available on protected branches (e.g., main)  
@@ -48260,7 +49656,7 @@ For attempt loop in install_tomcat: (block in parenthesis is the original block 
     try block
              Stdout/stderr block from read_output_with_watchdog KEEP AS IS BLOCK1(1)
              Move failure heuristics (all of them) here before the new code block with whitelist BLOCK2(4)
-             NEW CODE INSERT HERE WITH WHITELIST (this is the latest revision you sent) BLOCK3(2)
+             NEW CODE INSERT HERE WITH WHITELIST (this is the latest revision) BLOCK3(2)
              Keep legacy resurrection code for now BLOCK4(3)
              Command succeeded BLOCK5(5)
 
@@ -57372,11 +58768,11 @@ changing the hardware, docker container distribution, etc.
 
 2. Process Pooling
    → Reuses a fixed number of worker processes  
-   Lets you queue up 100+ tasks but only run, say, 25 at a time
+   Lets one queue up 100+ tasks but only run, say, 25 at a time
 
 3. Centralized Logging & Error Handling
    → Ensures no failures go unnoticed  
-   Helps you detect and retry failed tasks
+   Helps one detect and retry failed tasks
 
 4. Task Queue Model (e.g., `multiprocessing.Queue` or `concurrent.futures`)  
    → Submit all 100+ tasks, but only a safe number run concurrently  
