@@ -1945,7 +1945,7 @@ This is the foundation for a **universal, cross‑vendor remediation engine** ca
   - [6.6 How the contract was refined](#66-how-the-contract-was-refined)
   - [6.7 Test Matrix 1 — fallback / retry_with_modified_command / abort](#67-test-matrix-1--fallback--retry_with_modified_command--abort)
   - [6.8 Test Matrix 2 — cleanup_and_retry](#68-test-matrix-2--cleanup_and_retry)
-  - [6.9 Summary of Curl-Driven Evolution](#69-summary-of-curl-driven-evolution)
+  - [6.9 Summary of Curl‑Driven Evolution](#69-summary-of-curldriven-evolution)
 - [7. The Final Payload/Contract Rules Block (with comments)](#7-the-final-payloadcontract-rules-block-with-comments)
 - [8. Lessons Learned](#8-lessons-learned)
 
