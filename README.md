@@ -7466,6 +7466,8 @@ The MCPClient in module2f will forward the context to the http://localhost:8000/
 
 <details>
 <summary><strong>ask_for_ai_recovery invocation of the MCPClient using the mcp.send method</strong></summary>
+
+
 ```
 from my_mcp_client import MCPClient
 # ^ This is the Python file that implements the MCPClient class.
