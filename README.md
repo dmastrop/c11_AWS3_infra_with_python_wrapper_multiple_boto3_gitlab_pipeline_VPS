@@ -7418,7 +7418,10 @@ Below are the three core components of the AI/MCP recovery architecture:
 Each is presented in its own collapsible block for clarity.
 
 **The flow as described in Sections 7.5.1, 7.5.2, and 7.5.3 is:** 
+```
 module2f → ask_ai_for_recovery → MCPClient.send → POST /recover → FastAPI recover() → LLM → outgoing validator → return plan
+
+```
 
 ---
 
@@ -7427,8 +7430,11 @@ module2f → ask_ai_for_recovery → MCPClient.send → POST /recover → FastAP
 The AI/MCP HOOK _invoke_ai_hook() invokes the MCPClient through the ask_for_ai_recovery function 
 This point here in the AI/MCP HOOK starts the entire process.
 
+
 <details>
 <summary><strong>Click to expand module2f integration call from _invoke_ai_hook to ask_for_ai_recovery</strong></summary>
+
+
 ```
 # --------------------------------------------------------
 # 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
