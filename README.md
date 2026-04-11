@@ -7327,7 +7327,8 @@ This section presents:
 
 > **Note:**  
 > The payload input block and outgoing validator represent the *current* authoritative version of the AI Gateway Service contract.  
-> They will likely evolve further during Python‑intensive iterative contract testing (UPDATE 58) and during real‑pipeline testing (UPDATE 59).
+> They will likely evolve further during Python‑intensive iterative contract testing (UPDATE part 58) and during real‑pipeline testing (UPDATE part 59).
+---
 
 ---
 
