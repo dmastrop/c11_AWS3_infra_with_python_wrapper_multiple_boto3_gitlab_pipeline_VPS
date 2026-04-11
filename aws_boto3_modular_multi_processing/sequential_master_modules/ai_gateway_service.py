@@ -162,7 +162,7 @@ def recover(request: RecoveryRequest):
         #recovery actions: `cleanup_and_retry`, `retry_with_modified_command`, `abort`, or `fallback`. Each action has a 
         #well‑defined semantic meaning, strict validation rules, and a predictable execution path inside module2f. This contract 
         #ensures that AI‑assisted recovery behaves safely, consistently, and transparently, even in complex or ambiguous 
-        #failure scenarios. The system prompt embedded in the AI Gateway Service encodes the full behavioral contract, allowing 
+        #failure scenarios. The payload input block embedded in the AI Gateway Service encodes the full behavioral contract, allowing 
         #the LLM to reason about failures while remaining fully bounded by the schema and rules enforced by module2f and the 
         #MCP Client. This design keeps the recovery engine both powerful and safe, while making the entire AI layer testable, 
         #auditable, and easy to document.
@@ -525,6 +525,7 @@ def recover(request: RecoveryRequest):
 
         ##### This is the plan validator. The AI Gateway Service has to validate the plan from the LLM before sending back to the 
         ##### MCP Client (module2f)
+        ##### This is referred to as the outgoing validator
         # If HTTP status is not 2xx, raise exception and print the error using except block below.
         response.raise_for_status()
         raw = response.json()

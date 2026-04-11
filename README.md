@@ -7311,6 +7311,679 @@ please see this link from a previous code review section of an earlier UPDATE (A
 See:
 [Step 4 — Create the AI Gateway Service (ai_gateway_service.py)](#step-4-create-the-ai-gateway-service-ai_gateway_servicepy)
 
+---
+
+
+The AI Gateway Service’s payload input block is the single most important artifact produced during the curl‑driven evolution in Section 6. It encodes the entire behavioral contract for the LLM, defines the safety boundaries, and establishes the deterministic schema that module2f relies on when executing recovery actions.
+
+This section presents:
+
+- why the contract is embedded as a single string  
+- why the contract is static  
+- why the context is dynamic  
+- why the LLM must return JSON only  
+- why the validator enforces the schema  
+- and the complete, authoritative version of the payload input block, validator, and cross‑module integration along with a complete code-wise description of the context/contract processing flow.
+
+> **Note:**  
+> The payload input block and outgoing validator represent the *current* authoritative version of the AI Gateway Service contract.  
+> They will likely evolve further during Python‑intensive iterative contract testing (UPDATE 58) and during real‑pipeline testing (UPDATE 59).
+
+---
+
+#### 7.1 Why the contract is embedded as a single string
+
+The LLM must receive a **single, unified instruction block** that contains:
+
+- the contract  
+- the rules  
+- the safety constraints  
+- the cleanup sequence rules  
+- the action definitions  
+- the abort rules  
+- the fallback rules  
+- the dynamic context  
+
+Embedding everything into one string ensures:
+
+- deterministic behavior  
+- no ambiguity about which rules apply  
+- no reliance on multi‑message role semantics  
+- compatibility with the Responses API (which does not support `system:` roles)  
+- perfect reproducibility across tests  
+
+This design guarantees that the LLM always sees the same static contract, regardless of how or where it is invoked.
+
+---
+
+#### 7.2 Why the contract is static but context is dynamic
+
+The contract must be **static** because:
+
+- module2f depends on a fixed schema  
+- the validator enforces a fixed set of rules  
+- safety constraints cannot change between runs  
+- deterministic behavior requires a stable instruction set  
+
+The **context**, however, must be dynamic:
+
+- it contains the real failure information  
+- it is injected from module2f or curl  
+- it changes on every retry attempt  
+- it is the only variable input the LLM receives  
+
+This separation ensures that the LLM’s reasoning is bounded by a fixed contract while still being able to respond to real‑world failures.
+
+---
+
+#### 7.3 Why the LLM must return JSON only
+
+The LLM must return **only** a JSON object because:
+
+- module2f expects a machine‑readable plan  
+- the validator enforces strict schema compliance  
+- natural‑language output would break the retry loop  
+- JSON ensures deterministic parsing  
+- JSON prevents hallucinated explanations or commentary  
+
+This rule is the foundation of the entire recovery engine.
+
+---
+
+#### 7.4 Why the validator enforces the schema
+
+The validator is the **safety gate** between the LLM and module2f.
+
+It ensures:
+
+- only allowed actions are accepted  
+- cleanup is always a list  
+- retry is always a literal shell command  
+- no dangerous operations are returned  
+- malformed or ambiguous plans become fallback  
+- the system never executes unsafe or undefined behavior  
+
+The validator is what makes the AI layer safe, predictable, and production‑ready.
+
+---
+
+#### 7.5 Final Code Blocks and Code Flow (with Comments)
+
+Below are the three core components of the AI/MCP recovery architecture:
+
+- the AI Gateway Service (`ai_gateway_service.py`)  
+- the MCP Client (`my_mcp_client.py`)  
+- the module2f integration (`ask_ai_for_recovery()` and context builder)  
+
+Each is presented in its own collapsible block for clarity.
+
+**The flow as described in Sections 7.5.1, 7.5.2, and 7.5.3 is:** 
+module2f → ask_ai_for_recovery → MCPClient.send → POST /recover → FastAPI recover() → LLM → outgoing validator → return plan
+
+---
+
+##### 7.5.1 module2f — ask_ai_for_recovery() Integration + Context Builder
+
+The AI/MCP HOOK _invoke_ai_hook() invokes the MCPClient through the ask_for_ai_recovery function 
+This point here in the AI/MCP HOOK starts the entire process.
+
+<details>
+<summary><strong>Click to expand module2f integration call from _invoke_ai_hook to ask_for_ai_recovery</strong></summary>
+```
+# --------------------------------------------------------
+# 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
+# --------------------------------------------------------
+context = {
+    "command": original_command,
+    "stdout": stdout_output,
+    "stderr": stderr_output,
+    "exit_status": exit_status,
+    "attempt": attempt + 1,
+    "instance_id": instance_id,
+    "ip": ip,
+    "tags": extra_tags,
+    "os_info": globals().get("os_info", None),
+    "history": globals().get("command_history", None),
+}
+
+print(f"AI_MCP_HOOK[{ip}] 🔍 Invoking AI/MCP recovery engine...")
+plan = ask_ai_for_recovery(context)
+```
+</details>
+
+
+The ask_ai_for_recovery invokes the mcp.send method , and the MCPClient sends the context to the AI Gateway Service where it is forwarded to the LLM.  
+The MCPClient in module2f will forward the context to the http://localhost:8000/recover URL  that the AI Gateway Service is listening on (see next Section 7.5.2)
+
+
+<details>
+<summary><strong>ask_for_ai_recovery invocation of the MCPClient using the mcp.send method</strong></summary>
+```
+from my_mcp_client import MCPClient
+# ^ This is the Python file that implements the MCPClient class.
+#   This file is created in the repo (my_mcp_client.py).
+#   It will define and contain a simple class that wraps requests.post().
+#   The class has a method .send in it. The mcp.send() below is used to send/forward the context
+#   to the AI Gateway Service (ai_gateway_service.py file in the repo)
+
+# Create a global MCP client instance.
+# This object will be reused for every AI request.
+mcp = MCPClient(
+    base_url="http://localhost:8000",   # AI Gateway Service URL
+    schema_version="1.0"                # Optional versioning for future compatibility
+)
+
+def ask_ai_for_recovery(context: dict):
+    """
+    Send the failure context to the AI Gateway Service
+    and return the AI-generated recovery plan.
+
+    module2f calls THIS function inside the retry loop
+    ONLY on the final failed attempt.
+    """
+    # mcp.send() performs:
+    #   - JSON serialization
+    #   - POST to http://localhost:8000/recover
+    #   - returns parsed JSON from the AI Gateway
+    return mcp.send(context)
+
+```
+
+</details>
+
+---
+
+
+##### 7.5.2 my_mcp_client.py — MCPClient.send() & Native Fallback Logic
+
+The MCPClient sends the context to the AI Gateway Service.  The MCPClient has a lot of validator code for the AI Gateway Service to designate timeouts to the gateway or error responses from the gateway service as fallback (native fallback). Non-dict resposes are designated with fallback action as well.
+
+The MCPClient actually appends the /recover to the http://localhost:8000 URL for http://localhost:8000/recover so that the AI Gateway Service can consume it properly (see next Section 7.5.3).  This is done here in the code presented below
+
+
+```
+        try:
+            print("[AI_MCP] Sending context to AI Gateway Service...")
+            resp = requests.post(
+                f"{self.base_url}/recover",
+                json=payload,
+                timeout=30
+            )
+
+```
+
+The base_url is from the calling function ask_ai_for_recovery in module2f of the previous Section 7.5.1
+
+Full code block from my_mcp_client.py is below:
+
+<details>
+<summary><strong>Click to expand my_mcp_client.py</strong></summary>
+
+```python
+import requests
+
+class MCPClient:
+    def __init__(self, base_url: str, schema_version: str = "1.0"):
+        # Normalize base URL (avoid double slashes)
+        self.base_url = base_url.rstrip("/")
+        self.schema_version = schema_version
+
+    def send(self, context: dict) -> dict:
+        """
+        Send context to the AI Gateway Service and return the plan.
+
+        Returns a dict with either:
+            - a valid plan from the AI Gateway, OR
+            - {"action": "fallback", "error": "..."} on any failure.
+        """
+
+        payload = {
+            "schema_version": self.schema_version,
+            "context": context,
+        }
+        
+        # ------------------------------------------------------------------
+        # AI Gateway Request Behavior (Timeouts, HTTP Errors, and Fallback)
+        # ------------------------------------------------------------------
+        # This client enforces a strict timeout (currently 30 seconds) on the
+        # HTTP request to the AI Gateway Service. If the gateway is down,
+        # unreachable, slow, or hangs without responding, `requests.post()`
+        # will raise a Timeout or ConnectionError. Any such exception is
+        # caught below and converted into:
+        #
+        #     {"action": "fallback", "error": "..."}
+        #
+        # The same fallback behavior applies to ALL non‑2xx HTTP responses.
+        # The call to `resp.raise_for_status()` will raise an HTTPError for
+        # any 4xx or 5xx status code. This ensures that:
+        #
+        #   - 404 Not Found
+        #   - 500 Internal Server Error
+        #   - 503 Service Unavailable
+        #   - any other non‑200 response
+        #
+        # are treated as AI fallback conditions. Module2f will then continue
+        # with native failure classification (Heuristic 4) while tagging the
+        # registry with ai_fallback=True.
+        #
+        # Summary:
+        #   • Timeout  → fallback
+        #   • ConnectionError → fallback
+        #   • Non‑200 HTTP → fallback
+        #   • Invalid JSON → fallback
+        #
+        # This guarantees that the AI/MCP hook never blocks indefinitely and
+        # that module2f always receives a deterministic plan object.
+        # ------------------------------------------------------------------
+
+
+        try:
+            print("[AI_MCP] Sending context to AI Gateway Service...")
+            resp = requests.post(
+                f"{self.base_url}/recover",
+                json=payload,
+                timeout=30
+            )
+
+            # Raise for HTTP errors (non-2xx)
+            resp.raise_for_status()
+
+            data = resp.json()
+
+            # Validate that the response is a dict
+            if not isinstance(data, dict):
+                print("[AI_MCP] WARNING: Non-dict response from AI Gateway — using fallback")
+                return {"action": "fallback"}
+
+            print("[AI_MCP] Received valid response from AI Gateway")
+            return data
+
+
+        # ------------------------------------------------------------------
+        # Exception Handling and Fallback Behavior
+        # ------------------------------------------------------------------
+        # Any exception raised during the HTTP request or response parsing
+        # is treated as an AI fallback condition. This includes:
+        #
+        #   • Timeout (AI Gateway slow or non-responsive)
+        #   • ConnectionError (Gateway down, DNS failure, refused connection)
+        #   • HTTPError (non‑2xx status codes raised by raise_for_status())
+        #   • JSON decoding errors (invalid or empty response body)
+        #   • Any unexpected runtime exception
+        #
+        # All such failures are converted into a deterministic fallback plan:
+        #
+        #     {"action": "fallback", "error": "<exception message>"}
+        #
+        # Module2f interprets this as:
+        #   ai_invoked=True, ai_fallback=True, ai_fixed=False
+        #
+        # This guarantees:
+        #   • The AI/MCP hook never blocks indefinitely.
+        #   • Module2f always receives a valid plan object.
+        #   • The system degrades gracefully when the AI layer is unavailable.
+        # ------------------------------------------------------------------
+
+
+        except Exception as e:
+            # Any network error, timeout, HTTP error, or JSON error
+            print(f"[AI_MCP] ERROR: Exception talking to AI Gateway: {e}")
+            return {"action": "fallback", "error": str(e)}
+```
+
+</details>
+
+---
+
+
+
+
+##### 7.5.3 ai_gateway_service.py — Final Payload Input Block & Outgoing Validator
+
+The AI Gateway Service actually constructs the full payload and sends it to the LLM . The full payload has the CONTRACT rules and the CONTEXT embedded into it. 
+
+Important notes about the /recover in the POST URL: 
+
+The /recover will be appended to the URL by the MCPClient (see previous Section 7.5.2)
+The ai_gateway_service.py then has a listener established at this same URL by the FastAPI. FastAPI defines the route `/recover` in the  **ai_gateway_service.py**, using this line:
+
+```python
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+```
+
+So FastAPI defines the route to the proper function. The code above tells FastAPI to create an HTTP POST endpoint at http://<host>:<port>/recover  and route all POST requests to this function.
+
+Thus If the server is running at http://localhost:8000 (and it is), then the full endpoint becomes: http://localhost:8000/recover
+FastAPI creates and handles all of this automatically.
+
+The MCPClient explicitly POSTs to /recover as shown in the previous Section 7.5.2 with this code block:
+```
+resp = requests.post(
+    f"{self.base_url}/recover",
+    json=payload,
+    timeout=30
+)
+```
+That is in the my_mcp_client.py file.
+
+This is where the client constructs the full URL. Since self.base_url is: http://localhost:8000, the final URL becomes
+https:localhost:8000/recover. So the MCPClient of Section 7.5.2 is the one that appends the /recover to the base URL
+when making the POST request via the mcp.send method.
+
+And likewise,  FastAPI defines the endpoint POST /recover, and the MCPClient sends the POST request to http://localhost:8000/recover
+
+At this point the request is routed to the correct function: 
+
+def recover(request: RecoveryRequest): 
+
+…which forms the bulk of the AI Gateway Service code as shown in the code below. 
+
+This Is where the payload with the CONTRACT rules and the CONTEXT is constructed and finally sent off to the LLM. 
+So the /recover part of the URL is key to proper routing to the def recover function in the ai_gateway_service.py.
+
+This separation is exactly how REST services are supposed to work:
+
+The server defines the route (/recover) (AI Gateway Service)
+The client constructs the full URL (http://localhost:8000/recover) (MCPClient)
+The HTTP framework (FastAPI) handles routing (AI Gateway Service)
+The client library (requests) handles the POST (MCPClient)
+
+
+<details>
+<summary><strong>Click to expand ai_gateway_service.py</strong></summary>
+
+```python
+
+# ------------------------------------------------------------
+# Define the expected POST body using Pydantic
+# This ensures FastAPI parses JSON correctly.
+# ------------------------------------------------------------
+class RecoveryRequest(BaseModel):
+    schema_version: str
+    context: dict
+
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from AI Request Sender (MCP Client)
+# ------------------------------------------------------------
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient,
+    forward it to the LLM,
+    return the LLM's plan.
+    """
+
+    # Extract context from AI Request Sender POST to this AI Gateway Service
+    context = request.context
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+
+
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+
+        ##### ######
+        # This is the plan schema for the action responses for the schema in accordance with the MCP Client (AI Request Sender)
+        # in module2f. This has the acceptable action responses as I coded it in the AI/MCP HOOK function in module2f.
+
+
+        #### **AI/MCP Recovery Engine Contract Overview**
+        #
+        #The AI/MCP Recovery Engine introduces a deterministic, contract‑driven layer of intelligence into the module2f retry 
+        #loop. Instead of guessing how to fix a failure, the LLM is constrained to return one of four explicitly defined 
+        #recovery actions: `cleanup_and_retry`, `retry_with_modified_command`, `abort`, or `fallback`. Each action has a 
+        #well‑defined semantic meaning, strict validation rules, and a predictable execution path inside module2f. This contract 
+        #ensures that AI‑assisted recovery behaves safely, consistently, and transparently, even in complex or ambiguous 
+        #failure scenarios. The payload input block embedded in the AI Gateway Service encodes the full behavioral contract, allowing 
+        #the LLM to reason about failures while remaining fully bounded by the schema and rules enforced by module2f and the 
+        #MCP Client. This design keeps the recovery engine both powerful and safe, while making the entire AI layer testable, 
+        #auditable, and easy to document.
+        # If the fix involves more than one comamnd to resolve it it will use the action cleanup_and_retry.
+
+
+        #Payload6 enhancments
+        # ================================================================
+        # PAYLOAD BLOCK — AI GATEWAY SERVICE
+        #
+        # This payload defines the *contract* between the AI Gateway Service
+        # and the LLM. It is the single most important component of the
+        # recovery engine architecture.
+        #
+        # Key principles:
+        # - The contract is STATIC. It does not change between tests.
+        # - The context is DYNAMIC. It is injected from the curl request.
+        # - The LLM must ALWAYS return a JSON object that conforms to the schema.
+        # - The validator enforces the contract and rejects malformed plans.
+        #
+        # This block is the result of iterative white‑box testing using curl.
+        # Each iteration revealed ambiguities or weaknesses in the contract,
+        # which were then tightened to produce deterministic behavior.
+        #
+        # The comments in this block will be used directly in the README
+        # chapter: "Developing the AI Gateway Service through iterative
+        # white‑box LLM response testing with curl".
+        # ================================================================
+
+        payload = {
+            "model": "gpt-4.1",
+            "temperature": 0,
+            "max_output_tokens": 256,
+
+            # The "input" field contains the entire contract, rules, and context.
+            # The LLM receives this as a single string and MUST return a JSON object.
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # ============================================================
+                "CONTRACT:\n"
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "}\n\n"
+
+                # ============================================================
+                # CORE RULES
+                # ============================================================
+                "Rules:\n"
+                "- ALWAYS choose one of the allowed actions.\n"
+                "- NEVER return text outside the JSON.\n"
+                "- NEVER explain your reasoning.\n"
+                "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+
+                # ============================================================
+                # RETRY COMMAND RULES — NEWLY ADDED FOR ROBUSTNESS
+                # ============================================================
+                "Retry command rules:\n"
+                "- The \"retry\" field MUST be a literal shell command that can be executed directly.\n"
+                "- The retry command MUST NOT reference \"previous command\", \"original command\", or any vague instruction.\n"
+                "- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n"
+                "- The retry command MUST NOT contain placeholders like \"<command>\" or \"<package>\".\n"
+                "- The retry command MUST NOT contain commentary or explanation.\n"
+                "- The retry command MUST NOT contain multiple commands chained with \"&&\" unless necessary.\n"
+                "- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\n"
+                # ============================================================
+                # CLEANUP RULES
+                # ============================================================
+                "Cleanup rules:\n"
+                "- The \"cleanup\" field MUST be a list of literal shell commands.\n"
+                "- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n"
+                "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
+                "- Cleanup commands MUST NOT include dangerous operations.\n\n"
+
+                # ============================================================
+                # FALLBACK RULES
+                # ============================================================
+                "Fallback rules:\n"
+                "- When returning \"fallback\", return ONLY:\n"
+                "  { \"action\": \"fallback\" }\n"
+                "- Do NOT include \"cleanup\".\n"
+                "- Do NOT include \"retry\".\n\n"
+
+                # ============================================================
+                # ACTION MEANINGS
+                # ============================================================
+                "Action meanings:\n"
+                "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+                "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+                "- abort: Use when the failure is unsafe or cannot be recovered.\n"
+                "- fallback: Use when there is not enough information to choose another action.\n\n"
+
+
+
+                # ============================================================
+                # ABORT RULES
+                # ============================================================
+                "Abort rules:\n"
+                "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
+                "- Abort when the plan would risk data loss, node instability, or security exposure.\n"
+                "- Abort when the failure suggests corrupted or inconsistent system state.\n"
+                "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
+                "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
+
+                # ============================================================
+                # SAFETY CONSTRAINTS
+                # ============================================================
+                "Safety constraints:\n"
+                "- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n"
+                "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
+                "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
+
+
+
+                # ============================================================
+                # ADDITIONAL SAFETY CONSTRAINTS
+                # ============================================================
+                "Additional safety constraints:\n"
+                "- NEVER propose commands that pipe remote content into a shell (e.g., no \"curl ... | sh\").\n"
+                "- NEVER propose commands that disable or mask system services (e.g., no \"systemctl disable\", no \"systemctl mask\").\n"
+                "- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no \"update-grub\", no \"grub-install\", no kernel package installation).\n"
+                "- NEVER propose commands that modify package manager configuration files or sources lists.\n\n"
+
+                # ============================================================
+                # CLEANUP SEQUENCE RULES
+                # ============================================================
+                "Cleanup sequence rules:\n"
+                "- Cleanup steps MUST be ordered from least invasive to most invasive.\n"
+                "- Cleanup steps MUST be idempotent (safe to run multiple times).\n"
+                "- Cleanup steps MUST NOT exceed 3 commands.\n"
+                "- Cleanup steps MUST NOT include commentary or explanation.\n\n"
+
+
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+            )
+        }
+
+
+        #### UPDATED plan validator. `response.json()` is the **entire Responses API envelope**, not the plan
+        #### The code below has been refactored so that the validator: 
+        #- extracts the inner JSON plan  
+        #- parses it  
+        #- validates it  
+        #- returns it cleanly  
+        # This will make the logic in the validator work properly relative to teh inner JSON plan
+
+
+        ##### This is the plan validator. The AI Gateway Service has to validate the plan from the LLM before sending back to the 
+        ##### MCP Client (module2f)
+        ##### This is referred to as the outgoing validator
+        # If HTTP status is not 2xx, raise exception and print the error using except block below.
+        response.raise_for_status()
+        raw = response.json()
+
+        # --------------------------------------------------------
+        # Extract inner JSON plan from Responses API envelope
+        # --------------------------------------------------------
+        text = raw["output"][0]["content"][0]["text"]
+        plan = json.loads(text)
+
+        # --------------------------------------------------------
+        # Validate LLM plan schema
+        # --------------------------------------------------------
+        allowed_actions = {
+            "cleanup_and_retry",
+            "retry_with_modified_command",
+            "abort",
+            "fallback",
+        }
+
+        # Must be a dict
+        if not isinstance(plan, dict):
+            return {"error": "Invalid plan format", "action": "fallback"}
+
+        action = plan.get("action")
+
+        # Validate action
+        if action not in allowed_actions:
+            return {"error": "Invalid or missing action", "action": "fallback"}
+
+        # Validate cleanup
+        if "cleanup" in plan and not isinstance(plan["cleanup"], list):
+            return {"error": "Invalid cleanup field", "action": "fallback"}
+
+        # Validate retry
+        if "retry" in plan and not isinstance(plan["retry"], str):
+            return {"error": "Invalid retry field", "action": "fallback"}
+
+        # If we reach here, plan is valid and returned to MCPClient/module2f
+        return plan
+
+
+
+    #### This is the except block for the entire try block above. This will protect module2f, the calling and receiving function 
+    #### from a crash anywhere inside the try block above.
+    except Exception as e:
+        # If anything goes wrong, return fallback
+        return {"error": str(e), "action": "fallback"}
+
+##### Additional notes about the contract actions and LLM interaction ######
+
+
+#### **1. Derived fallback is ALWAYS handled in module2f, not by the LLM**
+# Derived fallback is an ai_fallback that is not from the native contract fallback action above
+# Derived fallback occurs, for example, if cleanup_and_retry has all retry commands that are blank or missing or None
+# This will result in install_failed and ai_fallback metadata, but the registry_entry will also have ai_plan_action of cleanup_and_retry
+# On the other hand, a native contract fallback will result in install_failed, have ai_fallback metadata, but will have ai_plan_action of
+# (native) fallback.
+
+#The LLM only emits:
+#
+#- `"action": "cleanup_and_retry"`
+#- `"action": "retry_with_modified_command"`
+#- `"action": "fallback"` (This is the native contract fallback action)
+#- `"action": "abort"`
+#- `"action": "some_unknown_action"`
+#
+#The LLM **never** needs to know:
+#
+#- what happens if retry is `None`
+#- what happens if retry is `"   "`
+#- what happens if retry is missing
+#- what happens if cleanup contains whitespace
+#- what happens if cleanup contains garbage
+#
+#Those are **derived fallback conditions**, and they are **purely code‑driven**.
+
+```
+
+</details>
+
+
+
 
 
 ---
