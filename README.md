@@ -7458,8 +7458,10 @@ plan = ask_ai_for_recovery(context)
 </details>
 
 
+
 The ask_ai_for_recovery invokes the mcp.send method , and the MCPClient sends the context to the AI Gateway Service where it is forwarded to the LLM.  
 The MCPClient in module2f will forward the context to the http://localhost:8000/recover URL  that the AI Gateway Service is listening on (see next Section 7.5.2)
+
 
 
 <details>
@@ -7521,6 +7523,8 @@ The MCPClient actually appends the /recover to the http://localhost:8000 URL for
 The base_url is from the calling function ask_ai_for_recovery in module2f of the previous Section 7.5.1
 
 Full code block from my_mcp_client.py is below:
+
+
 
 <details>
 <summary><strong>Click to expand my_mcp_client.py</strong></summary>
