@@ -6782,17 +6782,6 @@ INFO:     127.0.0.1:39760 - "POST /recover HTTP/1.1" 200 OK
 ---
 
 
-Here you go, Dave — **Test 7d** formatted *exactly* like the others, with:
-
-- the cleaned payload  
-- the RAW RESPONSE header  
-- the trailing INFO line  
-- the collapsible block  
-- identical indentation and spacing  
-
-This drops directly into **Section 6.8.2** with zero edits.
-
----
 
 **Test 7d — cleanup_and_retry (“Hash Sum mismatch”)**
 
