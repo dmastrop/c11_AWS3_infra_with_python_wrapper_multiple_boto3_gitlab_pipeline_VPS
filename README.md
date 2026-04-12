@@ -91,20 +91,28 @@ Thus this does not pose a security risk.
 
 ## High level project summary:
 
-
-System Resilience Engineering | High-Concurrency Diagnostic Design in Python:
-Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in Distributed Debugging Systems
-
+Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in High‑Concurrency Distributed Systems || 
+An AI/MCP‑LLM‑Driven Universal Remediation Engine with ML‑Enhanced Prediction
 
 
-Designed and executed a fault-tolerant parallel testing framework to diagnose silent SSH failures across 800 concurrent processes. Implemented watchdog-retry orchestration and swap profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi-processing and multi-threading support, enabling large-scale application deployment across thousands of AWS instances as part of a broader infrastructure automation suite.
-Testing is performed in a self-hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency. 
 
-•Phase 2 – Resurrection Logic : Integrated watchdog and retry-aware monitoring to detect silent thread stalls. Resurrection registry captures failure candidates for postmortem logging and sets the foundation for adaptive thread recovery.
+Designed and executed a fault‑tolerant, high‑concurrency testing framework to diagnose silent SSH failures across 800+ parallel processes. Implemented watchdog‑retry orchestration and swap‑aware profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi‑processing and multi‑threading support, enabling large‑scale application deployment across thousands of AWS instances as part of a broader infrastructure automation suite.
 
-•Phase 3 – Thread Healing & Adaptive Retry: Threads flagged in Phase 2 are dynamically respawned/rerouted during execution. This includes resurrection monitors, fallback pools, and potential thread override logic tuned to system state and swap conditions.
+Testing is performed in a self‑hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency.
 
-•Phase 4 – Machine Learning Integration: ML modules ingest historical resurrection logs and real-time telemetry to predict failure likelihood, tag anomalies, and adjust orchestration. Framework becomes self-tuning—modifying retry logic, watchdog thresholds, and workload routing based on learned failure patterns. AI/MCP integration for command set replay.
+**• Phase 2 – Resurrection Logic:**  
+Introduced watchdog‑aware monitoring to detect silent thread stalls. Resurrection registries capture failure candidates for postmortem analysis and establish the foundation for adaptive thread recovery.  
+*These components form the core of Plane‑2 orchestration‑level remediation, handling ghost detection, drift correction, futures crashes, and AWS‑related instability.*
+
+**• Phase 3 – Thread Healing & Adaptive Retry:**  
+Threads flagged in Phase 2 are dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and override logic tuned to system state, swap pressure, and orchestration conditions.  
+*Together, Phases 2 and 3 provide a mature, battle‑tested orchestration recovery layer that stabilizes large‑scale distributed execution.*
+
+**• Phase 4 – AI/MCP‑LLM Integration & ML Prediction:**  
+Phase4a introduces a contract‑driven AI/MCP HOOK for command‑level remediation (Plane 1), enabling structured cleanup, command rewriting, idempotency enforcement, and safe replay.  
+Phase4b introduces ML‑driven prediction and anomaly detection across both failure planes, ingesting registry_entry artifacts, ai_metadata, ai_tags, and full GitLab console logs to forecast failures, detect drift, and guide orchestration decisions.  
+*ML spans both the command plane and the orchestration plane, learning from AI‑assisted command recovery as well as large‑scale runtime behavior.*  
+Together, these components form a universal remediation engine across various platforms and operating systems, capable of real‑time reasoning, adaptive recovery, and predictive orchestration.
 
 
 Some features: 
