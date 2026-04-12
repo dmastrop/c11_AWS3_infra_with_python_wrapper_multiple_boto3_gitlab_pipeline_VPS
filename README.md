@@ -7,19 +7,18 @@
 
 ## NOTE: for full README contents
 
-The README on github is truncated in the browser to 500KB
-
-https://github.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/tree/main
-
-
 The README on gitlab is not truncated in the browser: see the following URL below
 
 https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README.md?expanded=true&ref_type=heads&viewer=rich
 
 
+The README on github is truncated in the browser to 500KB
+
+https://github.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/tree/main
+
+
 
 ## Current and latest development work
-
 
 The parent directory has the Docker files and the gitlab-ci.yml file
 Dockerfile_python_multi_processing is for the latest development gitlab pipeline.
