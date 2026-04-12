@@ -1,5 +1,5 @@
 # Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in High‑Concurrency Distributed Systems
-## An AI/MCP‑LLM‑Driven Universal Remediation Engine with ML‑Enhanced Prediction Across Command and Orchestration Failure Planes
+## An AI/MCP‑LLM‑Driven Universal Remediation Engine with ML‑Enhanced Prediction
 
 ```
 ```
