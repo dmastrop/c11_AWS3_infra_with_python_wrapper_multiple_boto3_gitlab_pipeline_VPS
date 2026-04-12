@@ -308,6 +308,7 @@ STATUS_TAGS = {
 ### **Table of Contents**
 <a name="top-preface2"></a>
 
+
 - [Introduction to Plane1 and Plane2 failures](#introduction-to-plane1-and-plane2-failures)
 - [Why Phase4 Now?](#why-phase4-now)
 - [High level code integration for Phase4a.1 and 4a.2 (AI/MCP client server architecture)](#high-level-code-integration-for-phase4a1-and-4a2-aimcp-client-server-architecture)
@@ -407,7 +408,7 @@ Phase4a.2 will integrate MCP/AI architecture into moddule2 where it really belon
 early as possible in the orchestration code flow as mentioned earlier to prevent install_failed and stubs from entering into the 
 module2 to 2f orchestration Plane2 healing and remediation. For example, a difficult command execution can fail all the nodes in 
 a fleet thereby pushing all the nodes to module2f (which is not multi-processed) to attempt to resurrect the thread in the 
-install_failed state. And module2f without MCP?AI integration  (assuming it has the same WHITELISTs as module2, and it does) will
+install_failed state. And module2f without MCP/AI integration  (assuming it has the same WHITELISTs as module2, and it does) will
 still fail in trying to execute those commands on the entire fleet of nodes.
 
 Phase4b will then add the ML analystics to the logs and data that are produced during module2 through 2f execution for prediction and
