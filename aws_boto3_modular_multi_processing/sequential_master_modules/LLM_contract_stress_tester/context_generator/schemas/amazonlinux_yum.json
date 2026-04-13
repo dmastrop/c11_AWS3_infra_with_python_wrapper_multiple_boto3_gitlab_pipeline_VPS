@@ -1,0 +1,145 @@
+{
+  "os_name": "Amazon Linux",
+  "os_version": "2",
+  "kernel": "4.14.0",
+  "package_managers": ["yum"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "No package nginx available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-301",
+      "ip": "10.0.3.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "yum update -y",
+          "stdout": "Loaded plugins: priorities, update-motd, security",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "bash: dnf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-302",
+      "ip": "10.0.3.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-303",
+      "ip": "10.0.3.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "yum update -y",
+          "stdout": "Loaded plugins: priorities, update-motd, security",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-304",
+      "ip": "10.0.3.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install",
+      "stdout": "",
+      "stderr": "Error: Need to pass a list of packages",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-305",
+      "ip": "10.0.3.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "Could not resolve host: repo.us-east-1.amazonaws.com",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-306",
+      "ip": "10.0.3.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-307",
+      "ip": "10.0.3.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-308",
+      "ip": "10.0.3.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-309",
+      "ip": "10.0.3.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y httpd",
+      "stdout": "",
+      "stderr": "No package httpd available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-310",
+      "ip": "10.0.3.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

@@ -1,0 +1,131 @@
+{
+  "os_name": "Cisco IOS",
+  "os_version": "15.2",
+  "kernel": "N/A",
+  "package_managers": [],
+  "shell": "ios-cli",
+  "contexts": [
+
+    {
+      "command": "show ip interface brief",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-701",
+      "ip": "10.0.7.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install nginx",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-702",
+      "ip": "10.0.7.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-703",
+      "ip": "10.0.7.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "configure terminal",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-704",
+      "ip": "10.0.7.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show running-config",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-705",
+      "ip": "10.0.7.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-706",
+      "ip": "10.0.7.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show version",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-707",
+      "ip": "10.0.7.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-708",
+      "ip": "10.0.7.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-709",
+      "ip": "10.0.7.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "% Invalid input detected at '^' marker.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-710",
+      "ip": "10.0.7.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

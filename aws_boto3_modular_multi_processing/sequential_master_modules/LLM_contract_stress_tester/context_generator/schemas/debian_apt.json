@@ -1,0 +1,145 @@
+{
+  "os_name": "Debian",
+  "os_version": "11",
+  "kernel": "5.10.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "E: Unable to locate package nginx",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-101",
+      "ip": "10.0.1.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "apt-get update -y",
+          "stdout": "Hit:1 http://deb.debian.org/debian bullseye InRelease",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apt install nginx",
+      "stdout": "",
+      "stderr": "E: Command 'apt' not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-102",
+      "ip": "10.0.1.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-103",
+      "ip": "10.0.1.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "apt-get update -y",
+          "stdout": "Hit:1 http://deb.debian.org/debian bullseye InRelease",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "bash: dnf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-104",
+      "ip": "10.0.1.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-105",
+      "ip": "10.0.1.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install",
+      "stdout": "",
+      "stderr": "E: Invalid operation install",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-106",
+      "ip": "10.0.1.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-107",
+      "ip": "10.0.1.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-108",
+      "ip": "10.0.1.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-109",
+      "ip": "10.0.1.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get update -y",
+      "stdout": "",
+      "stderr": "Temporary failure resolving 'deb.debian.org'",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-110",
+      "ip": "10.0.1.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

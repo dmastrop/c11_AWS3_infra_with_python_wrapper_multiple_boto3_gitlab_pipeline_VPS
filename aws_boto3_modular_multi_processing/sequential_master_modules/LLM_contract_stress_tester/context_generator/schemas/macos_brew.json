@@ -1,0 +1,145 @@
+{
+  "os_name": "macOS",
+  "os_version": "14.0",
+  "kernel": "23.0.0",
+  "package_managers": ["brew"],
+  "shell": "zsh",
+  "contexts": [
+
+    {
+      "command": "brew install nginx",
+      "stdout": "",
+      "stderr": "Error: nginx: no bottle available!",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-501",
+      "ip": "10.0.5.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "brew update",
+          "stdout": "Updated 1 tap (homebrew/core).",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "brew install",
+      "stdout": "",
+      "stderr": "Error: No formulae found in taps.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-502",
+      "ip": "10.0.5.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "zsh: command not found: apt-get",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-503",
+      "ip": "10.0.5.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "brew update",
+          "stdout": "Updated 1 tap (homebrew/core).",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "zsh: command not found: yum",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-504",
+      "ip": "10.0.5.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "zsh: command not found: dnf",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-505",
+      "ip": "10.0.5.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "zsh: command not found: apk",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-506",
+      "ip": "10.0.5.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew update",
+      "stdout": "",
+      "stderr": "Error: Could not resolve host: github.com",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-507",
+      "ip": "10.0.5.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "zsh: command not found: asdfasdfasdf",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-508",
+      "ip": "10.0.5.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "zsh: command not found: show",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-509",
+      "ip": "10.0.5.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install curl",
+      "stdout": "",
+      "stderr": "Error: curl: no bottle available!",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-510",
+      "ip": "10.0.5.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

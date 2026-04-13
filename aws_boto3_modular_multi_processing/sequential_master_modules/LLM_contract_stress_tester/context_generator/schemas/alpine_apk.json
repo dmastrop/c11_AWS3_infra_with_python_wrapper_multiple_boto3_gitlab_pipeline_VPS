@@ -1,0 +1,145 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "ERROR: unable to select packages:",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-401",
+      "ip": "10.0.4.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "apk update",
+          "stdout": "fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/main/x86_64/APKINDEX.tar.gz",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apk add",
+      "stdout": "",
+      "stderr": "apk: must specify at least one package name",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-402",
+      "ip": "10.0.4.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "sh: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-403",
+      "ip": "10.0.4.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "apk update",
+          "stdout": "fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/main/x86_64/APKINDEX.tar.gz",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-404",
+      "ip": "10.0.4.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "sh: dnf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-405",
+      "ip": "10.0.4.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk update",
+      "stdout": "",
+      "stderr": "ERROR: unable to resolve host dl-cdn.alpinelinux.org",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-406",
+      "ip": "10.0.4.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-407",
+      "ip": "10.0.4.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "sh: asdfasdfasdf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-408",
+      "ip": "10.0.4.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "sh: show: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-409",
+      "ip": "10.0.4.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "ERROR: unable to select packages:",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-410",
+      "ip": "10.0.4.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
