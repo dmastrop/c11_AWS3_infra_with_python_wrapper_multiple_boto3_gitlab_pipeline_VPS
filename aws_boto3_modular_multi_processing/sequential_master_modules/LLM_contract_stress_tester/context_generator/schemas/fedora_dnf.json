@@ -1,0 +1,145 @@
+{
+  "os_name": "Fedora",
+  "os_version": "39",
+  "kernel": "6.5.0",
+  "package_managers": ["dnf"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "No match for argument: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-1101",
+      "ip": "10.0.11.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "dnf update -y",
+          "stdout": "Fedora 39 - Updates",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1102",
+      "ip": "10.0.11.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1103",
+      "ip": "10.0.11.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "dnf update -y",
+          "stdout": "Fedora 39 - Updates",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1104",
+      "ip": "10.0.11.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install",
+      "stdout": "",
+      "stderr": "Error: Need to pass a list of packages",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-1105",
+      "ip": "10.0.11.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf update -y",
+      "stdout": "",
+      "stderr": "Could not resolve host: download.fedoraproject.org",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-1106",
+      "ip": "10.0.11.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1107",
+      "ip": "10.0.11.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1108",
+      "ip": "10.0.11.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1109",
+      "ip": "10.0.11.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y httpd",
+      "stdout": "",
+      "stderr": "No match for argument: httpd",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-1110",
+      "ip": "10.0.11.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

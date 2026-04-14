@@ -1,0 +1,131 @@
+{
+  "os_name": "Linux",
+  "os_version": "powershell-core",
+  "kernel": "5.15.0",
+  "package_managers": [],
+  "shell": "powershell",
+  "contexts": [
+
+    {
+      "command": "winget install nginx",
+      "stdout": "",
+      "stderr": "winget : The term 'winget' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1201",
+      "ip": "10.0.12.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "choco install nginx",
+      "stdout": "",
+      "stderr": "choco : The term 'choco' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1202",
+      "ip": "10.0.12.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1203",
+      "ip": "10.0.12.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1204",
+      "ip": "10.0.12.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1205",
+      "ip": "10.0.12.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1206",
+      "ip": "10.0.12.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1207",
+      "ip": "10.0.12.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "asdfasdfasdf : The term 'asdfasdfasdf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1208",
+      "ip": "10.0.12.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "show : The term 'show' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1209",
+      "ip": "10.0.12.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1210",
+      "ip": "10.0.12.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

@@ -1,0 +1,131 @@
+{
+  "os_name": "Linux",
+  "os_version": "busybox",
+  "kernel": "5.4.0",
+  "package_managers": [],
+  "shell": "sh",
+  "contexts": [
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1001",
+      "ip": "10.0.10.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "sh: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1002",
+      "ip": "10.0.10.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1003",
+      "ip": "10.0.10.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "sh: dnf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1004",
+      "ip": "10.0.10.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install nginx",
+      "stdout": "",
+      "stderr": "sh: brew: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1005",
+      "ip": "10.0.10.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1006",
+      "ip": "10.0.10.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "sh: asdfasdfasdf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1007",
+      "ip": "10.0.10.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "sh: show: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1008",
+      "ip": "10.0.10.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $SHELL",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1009",
+      "ip": "10.0.10.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk update",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-1010",
+      "ip": "10.0.10.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

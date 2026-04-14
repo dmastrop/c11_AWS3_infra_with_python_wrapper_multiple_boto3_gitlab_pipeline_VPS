@@ -1,0 +1,131 @@
+{
+  "os_name": "Linux",
+  "os_version": "generic",
+  "kernel": "5.10.0",
+  "package_managers": [],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-901",
+      "ip": "10.0.9.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-902",
+      "ip": "10.0.9.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "bash: dnf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-903",
+      "ip": "10.0.9.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-904",
+      "ip": "10.0.9.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install nginx",
+      "stdout": "",
+      "stderr": "bash: brew: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-905",
+      "ip": "10.0.9.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-906",
+      "ip": "10.0.9.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-907",
+      "ip": "10.0.9.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-908",
+      "ip": "10.0.9.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $SHELL",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-909",
+      "ip": "10.0.9.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-910",
+      "ip": "10.0.9.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
