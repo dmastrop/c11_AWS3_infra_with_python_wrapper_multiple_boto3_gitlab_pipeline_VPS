@@ -345,6 +345,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # CONTRACT — STATIC SPECIFICATION
+                # Revised: Added the messages requirement for abort and notes as well to the LLM
                 # ============================================================
                 "CONTRACT:\n"
                 "You must return ONLY a JSON object with this schema:\n\n"
@@ -352,7 +353,16 @@ def recover(request: RecoveryRequest):
                 "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
                 "  \"cleanup\": [string],\n"
                 "  \"retry\": string\n"
+                "  \"message\": string\n"
                 "}\n\n"
+                "Notes:\n"
+                "- \"message\" is REQUIRED when action = \"abort\".\n"
+                "- \"message\" is OPTIONAL for all other actions.\n"
+                "- \"cleanup\" MUST be an array of literal shell commands.\n"
+                "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
+
+
+
 
                 # ============================================================
                 # CORE RULES
@@ -405,6 +415,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # ABORT RULES
+                # Revised: added the messages requirement after doing LLM testing with various os and platforms
                 # ============================================================
                 "Abort rules:\n"
                 "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
@@ -412,6 +423,19 @@ def recover(request: RecoveryRequest):
                 "- Abort when the failure suggests corrupted or inconsistent system state.\n"
                 "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
                 "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
+                "- When returning \"abort\", you MUST include a \"message\" field explaining WHY the abort was chosen.\n"
+                "- The \"message\" must be a short, factual, non-emotional explanation.\n"
+                "- The \"message\" must NOT include reasoning steps, chain-of-thought, or internal deliberation.\n"
+                "- The \"message\" must NOT include instructions, commands, or suggestions.\n"
+                "- The \"message\" must NOT hallucinate OS capabilities or package managers.\n"
+                "- Examples of valid abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"Destructive command detected: rm -rf /\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support package installation.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Invalid or malformed command; no safe recovery available.\" }\n\n"
+
+
+
+
 
                 # ============================================================
                 # SAFETY CONSTRAINTS
