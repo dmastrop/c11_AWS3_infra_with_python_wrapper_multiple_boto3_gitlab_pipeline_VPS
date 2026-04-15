@@ -345,7 +345,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # CONTRACT — STATIC SPECIFICATION
-                # Revised: Added the messages requirement for abort and notes as well to the LLM
+                # Revision 1: Added the messages requirement for abort and notes as well to the LLM
                 # ============================================================
                 "CONTRACT:\n"
                 "You must return ONLY a JSON object with this schema:\n\n"
@@ -394,6 +394,20 @@ def recover(request: RecoveryRequest):
                 "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
                 "- Cleanup commands MUST NOT include dangerous operations.\n\n"
 
+
+                # ============================================================
+                # MALFORMED COMMAND RULES (LINUX)
+                # Revision 2: Added explicit handling for incomplete but fixable Linux commands. This ENTIRE block is newly added
+                # with revision 2. 
+                # ============================================================
+                "Malformed command rules (Linux):\n"
+                "- Treat commands like \"apt-get install\", \"yum install\", \"dnf install\", and \"apk add\" with no package as INCOMPLETE, not unsafe.\n"
+                "- If the command is incomplete but the missing argument CANNOT be safely inferred, prefer \"fallback\" over \"abort\".\n"
+                "- Do NOT guess a package name based solely on prior examples or patterns in the input.\n"
+                "- Only use \"retry_with_modified_command\" when you can safely construct a complete, realistic command.\n"
+                "- Incomplete commands MUST NOT trigger \"abort\" unless they are also unsafe or destructive.\n\n"
+
+
                 # ============================================================
                 # FALLBACK RULES
                 # ============================================================
@@ -402,6 +416,31 @@ def recover(request: RecoveryRequest):
                 "  { \"action\": \"fallback\" }\n"
                 "- Do NOT include \"cleanup\".\n"
                 "- Do NOT include \"retry\".\n\n"
+
+
+                # ============================================================
+                # FALLBACK RULES
+                # Revision 2: Clarified when to prefer fallback over abort or retry
+                # This revsion 2 is in reference to incomplete or ambigous commands (not necessarily malformed; see above)
+                # The reference to test-induced bias is important as much of the contract refinement is performed in an interative
+                # python schema based test environment where schemas for particular os or platform may focus on a specific package, for
+                # example nginx. We do NOT want the LLM to infer that the missing package in a given incomplete command based upon 
+                # the test design itself. This does not conform to real-world empirically desired results. It is better to fallback instead
+                # of retry_with_modified_command or cleanup_and_retry.
+                # ============================================================
+                "Fallback rules:\n"
+                "- When returning \"fallback\", return ONLY:\n"
+                "  { \"action\": \"fallback\" }\n"
+                "- Do NOT include \"cleanup\".\n"
+                "- Do NOT include \"retry\".\n"
+                "- Use \"fallback\" when the command is incomplete or ambiguous and no safe, concrete fix can be inferred.\n"
+                "- Use \"fallback\" instead of \"abort\" when the situation is non-destructive but under-specified (e.g., missing package name).\n"
+                "- Use \"fallback\" when OS, package manager, or shell context is unclear and any guess would be speculative.\n"
+                "- Use \"fallback\" when correcting the command would require unsafe inference or assumptions.\n\n"
+                "- NEVER infer missing arguments (such as package names) based solely on patterns in previous test cases or schema examples; avoid test-induced bias.\n\n"
+
+
+
 
                 # ============================================================
                 # ACTION MEANINGS
@@ -415,7 +454,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # ABORT RULES
-                # Revised: added the messages requirement after doing LLM testing with various os and platforms
+                # Revision 1:  added the messages requirement after doing LLM testing with various os and platforms
                 # ============================================================
                 "Abort rules:\n"
                 "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
