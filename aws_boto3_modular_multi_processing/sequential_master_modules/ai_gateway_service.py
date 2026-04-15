@@ -386,6 +386,26 @@ def recover(request: RecoveryRequest):
                 "- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\n"
 
                 # ============================================================
+                # RETRY FIELD SEMANTICS
+                # Revision 4: Clarified per-action retry shape (string vs list)
+                # This revision aligns the Contract with the module2f code itself, which can support multiple commands for the retry
+                # command but only with the cleanup_and_retry contract action and not the retry_with_modified_command contract action
+                # The cleanup_and_retry has specific use cases and those will be clarified as well in this CONTRACT with Revision 4
+                # See CLEANUP_AND_RETRY_SEMANTICS further below (also part of Revsion 4)
+                # Module2f already will mark the cleanup_and_retry action as failed if any one of the commands in a retry list fails.
+                # ============================================================
+                "Retry field semantics (Revision 4):\n"
+                "- For \"retry_with_modified_command\", the \"retry\" field MUST be exactly one corrected command (a single string).\n"
+                "- For \"cleanup_and_retry\", the \"retry\" field MAY be either:\n"
+                "    * a single command (string), OR\n"
+                "    * a list of commands for multi-step recovery.\n"
+                "- When \"retry\" is a list, commands are executed sequentially in the order provided.\n"
+                "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
+                "- Only if ALL retry commands succeed is the cleanup_and_retry action considered successful.\n\n"
+
+
+
+                # ============================================================
                 # CLEANUP RULES
                 # ============================================================
                 "Cleanup rules:\n"
@@ -393,6 +413,49 @@ def recover(request: RecoveryRequest):
                 "- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n"
                 "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
                 "- Cleanup commands MUST NOT include dangerous operations.\n\n"
+
+
+                # ============================================================
+                # CLEANUP_AND_RETRY SEMANTICS
+                # Revision 4: Restored original multi-step cleanup_and_retry behavior
+                # ============================================================
+                "Cleanup-and-retry rules (Revision 4):\n"
+                "- Use \"cleanup_and_retry\" when the failure can be resolved by removing temporary files, stale locks, partial installations, or other artifacts blocking success.\n"
+                "- Typical cleanup-and-retry conditions include:\n"
+                "  - leftover PID files or lock files\n"
+                "  - partially installed packages or corrupted temp directories\n"
+                "  - stale processes that must be terminated before retrying\n"
+                "  - insufficient disk space that can be reclaimed safely\n"
+                "  - any reversible condition where cleanup restores a safe state.\n"
+                "- When returning \"cleanup_and_retry\", provide:\n"
+                "  - a list of cleanup commands in the \"cleanup\" field (which MAY be empty), and\n"
+                "  - one or more retry commands in the \"retry\" field.\n"
+                "- For \"cleanup_and_retry\", the \"retry\" field MAY be a single string or a list of commands.\n"
+                "- When multiple retry commands are provided, they are executed sequentially.\n"
+                "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
+                "- Only if ALL retry commands succeed is the action considered successful.\n\n"
+
+
+
+                # ============================================================
+                # IDEMPOTENCY RULES
+                # Revision 4: Idempotency-related failures MUST use cleanup_and_retry
+                # ============================================================
+                "Idempotency rules (Revision 4):\n"
+                "- Idempotency-related failures MUST use \"cleanup_and_retry\".\n"
+                "- Idempotency conditions include messages such as:\n"
+                "  - \"already installed\"\n"
+                "  - \"already exists\"\n"
+                "  - \"nothing to do\"\n"
+                "  - \"resource busy\"\n"
+                "  - \"lock is held by PID ...\"\n"
+                "  - \"directory not empty\"\n"
+                "  - \"service already running\"\n"
+                "  - \"package is in a half-installed state\".\n"
+                "- These failures are caused by environmental residue, not incorrect commands.\n"
+                "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
+
+
 
 
                 # ============================================================
@@ -519,6 +582,9 @@ def recover(request: RecoveryRequest):
                 # ============================================================
                 # CISCO IOS RULES — REVISION 3.2 PATCH
                 # Revision 3.2: Clarified multi-step privilege escalation using cleanup_and_retry.
+                # NOTE: Revision 3.2 requires Revision 4 which is a refactoring of the CONTRACT to allign with the multiple
+                # Command support in module2f with the cleanup_and_retry contract action (NOT the retry_with_modified_command
+                # contract action).
                 # ============================================================
                 "Cisco IOS additional rules (Revision 3.2):\n"
                 "- For Cisco IOS, multi-step privilege escalation (e.g., \"enable\" followed by \"configure terminal\") MUST be expressed using \"cleanup_and_retry\" with a retry list.\n"
@@ -556,14 +622,31 @@ def recover(request: RecoveryRequest):
 
 
 
+                ## ============================================================
+                ## ACTION MEANINGS
+                ## ============================================================
+                #"Action meanings:\n"
+                #"- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+                #"- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+                #"- abort: Use when the failure is unsafe or cannot be recovered.\n"
+                #"- fallback: Use when there is not enough information to choose another action.\n\n"
+
+
+
+
                 # ============================================================
-                # ACTION MEANINGS
+                # ACTION MEANINGS Revision 4 addendum.This is a rewrite of the original ACTION MEANINGS to align to the 
+                # multiple command support for retry in the cleanup_and_retry command action
                 # ============================================================
                 "Action meanings:\n"
-                "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
-                "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
-                "- abort: Use when the failure is unsafe or cannot be recovered.\n"
-                "- fallback: Use when there is not enough information to choose another action.\n\n"
+                "- cleanup_and_retry: Use for environmental or state-related failures that can be fixed by cleanup and/or multi-step recovery before retrying.\n"
+                "  Examples: idempotency residue, lock files, half-installed packages, stale processes, privilege or mode setup sequences.\n"
+                "- retry_with_modified_command: Use for simple, single-command corrections where adjusting the original command is sufficient.\n"
+                "  Examples: fixing a package name, adding a missing flag, choosing the correct package manager, correcting a mistyped command.\n"
+                "- abort: Use when the failure is unsafe or cannot be recovered without risk of data loss, instability, or security exposure.\n"
+                "- fallback: Use when there is not enough safe, concrete information to choose another action without guessing.\n\n"
+
+
 
 
                 # ============================================================
