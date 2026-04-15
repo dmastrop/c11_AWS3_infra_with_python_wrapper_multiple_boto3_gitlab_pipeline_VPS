@@ -408,14 +408,115 @@ def recover(request: RecoveryRequest):
                 "- Incomplete commands MUST NOT trigger \"abort\" unless they are also unsafe or destructive.\n\n"
 
 
+
+
                 # ============================================================
-                # FALLBACK RULES
+                # CISCO IOS RULES
+                # Revision 3: Added full Cisco IOS command families, correction rules,
+                # malformed rules, safe/unsafe rules, fallback logic, retry logic,
+                # and abort logic. This ENTIRE block is newly added with Revision 3.
                 # ============================================================
-                "Fallback rules:\n"
-                "- When returning \"fallback\", return ONLY:\n"
-                "  { \"action\": \"fallback\" }\n"
-                "- Do NOT include \"cleanup\".\n"
-                "- Do NOT include \"retry\".\n\n"
+                "Cisco IOS rules:\n"
+                "- Cisco IOS is a network device operating system with its own CLI, not a Linux shell.\n"
+                "- Cisco IOS commands MUST NOT be treated as Linux commands.\n"
+                "- Cisco IOS does NOT support apt, apt-get, yum, dnf, apk, brew, or any Linux package manager.\n"
+                "- Cisco IOS does NOT support bash, zsh, sh, PowerShell, or macOS shells.\n"
+                "- Cisco IOS commands MUST be interpreted using IOS semantics only.\n\n"
+
+                # ------------------------------------------------------------
+                # VALID IOS COMMAND FAMILIES
+                # ------------------------------------------------------------
+                "Valid Cisco IOS command families:\n"
+                "- 'show' commands (safe):\n"
+                "    show ip interface brief\n"
+                "    show running-config\n"
+                "    show version\n"
+                "    show ip route\n"
+                "- 'configure terminal' (safe but privileged)\n"
+                "- 'interface' configuration commands (not used in tests but valid)\n"
+                "- 'enable' mode commands (not used in tests but valid)\n\n"
+
+                # ------------------------------------------------------------
+                # IOS MALFORMED COMMAND RULES. Preferred retry_with_modified_command or fallback contract actions
+                # ------------------------------------------------------------
+                "Malformed Cisco IOS command rules:\n"
+                "- The stderr pattern \"% Invalid input detected at '^' marker.\" indicates:\n"
+                "    * mistyped command, OR\n"
+                "    * incomplete command, OR\n"
+                "    * wrong mode (not in enable/config mode), OR\n"
+                "    * ambiguous command.\n"
+                "- This MUST NOT trigger 'abort' unless the command is destructive.\n"
+                "- For malformed IOS commands, prefer 'retry_with_modified_command' or 'fallback'.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS COMMAND CORRECTION RULES
+                # ------------------------------------------------------------
+                "Cisco IOS command correction rules:\n"
+                "- Correct 'show route everything' → 'show ip route'.\n"
+                "- Correct 'show route all' → 'show ip route'.\n"
+                "- Correct 'show ip int br' → 'show ip interface brief'.\n"
+                "- Correct 'show run' → 'show running-config'.\n"
+                "- Correct 'show ver' → 'show version'.\n"
+                "- If the command is a valid IOS command but failed due to mode, retry the SAME command.\n"
+                "- If the command is ambiguous or incomplete and cannot be safely corrected, use 'fallback'.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS SAFE COMMAND RULES
+                # ------------------------------------------------------------
+                "Cisco IOS safe commands:\n"
+                "- All 'show' commands are safe and MUST NOT trigger 'abort'.\n"
+                "- 'configure terminal' is safe (but privileged) and MUST NOT trigger 'abort'.\n"
+                "- Safe commands that fail should use 'retry_with_modified_command' or 'fallback'.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS UNSAFE COMMAND RULES
+                # ------------------------------------------------------------
+                "Cisco IOS unsafe commands:\n"
+                "- 'reload' (reboots the device)\n"
+                "- 'write erase' (erases configuration)\n"
+                "- 'erase startup-config'\n"
+                "- 'format flash:'\n"
+                "- Any command that modifies system storage or deletes configuration.\n"
+                "- Unsafe commands MUST trigger 'abort' with a clear message.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS FALLBACK LOGIC
+                # ------------------------------------------------------------
+                "Cisco IOS fallback rules:\n"
+                "- Use 'fallback' when the command is malformed AND no safe correction exists.\n"
+                "- Use 'fallback' when the command is ambiguous.\n"
+                "- Use 'fallback' when the command requires privileged mode and correction is unclear.\n"
+                "- Use 'fallback' when the command is incomplete and cannot be safely inferred.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS RETRY LOGIC
+                # ------------------------------------------------------------
+                "Cisco IOS retry rules:\n"
+                "- Use 'retry_with_modified_command' when a malformed IOS command can be safely corrected.\n"
+                "- Use 'retry_with_modified_command' when the command is valid but failed due to mode.\n"
+                "- The 'retry' field MUST contain a valid IOS command, not a Linux command.\n"
+                "- NEVER propose Linux commands (apt, yum, dnf, apk, bash, etc.).\n\n"
+
+                # ------------------------------------------------------------
+                # IOS ABORT LOGIC
+                # ------------------------------------------------------------
+                "Cisco IOS abort rules:\n"
+                "- Abort ONLY when the command is destructive or unsupported.\n"
+                "- Abort when the user attempts Linux package installation on IOS.\n"
+                "- Abort when the user attempts Linux shell commands on IOS.\n"
+                "- Abort when the command is unsafe (reload, write erase, erase startup-config, etc.).\n"
+                "- Abort MUST include a clear 'message' explaining the reason.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS ABORT MESSAGE EXAMPLES
+                # ------------------------------------------------------------
+                "Examples of valid Cisco IOS abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support Linux package managers.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support shell commands.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: write erase\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: reload\" }\n\n"
+
+
 
 
                 # ============================================================
