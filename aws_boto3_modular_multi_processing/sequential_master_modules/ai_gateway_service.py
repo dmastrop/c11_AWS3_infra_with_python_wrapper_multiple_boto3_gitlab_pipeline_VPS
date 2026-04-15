@@ -796,6 +796,45 @@ def recover(request: RecoveryRequest):
         text = raw["output"][0]["content"][0]["text"]
         plan = json.loads(text)
 
+
+        # ============================================================
+        # OUTGOING PLAN VALIDATOR — REVISION 3.2 + REVISION 4 ALIGNMENT (see below)
+        # The former code is deprectated.
+        #
+        # This validator enforces the CONTRACT rules before sending the
+        # LLM-generated plan to the MCP Client (module2f).
+        #
+        # These changes are REQUIRED to support:
+        #   - Revision 3.2 (Cisco IOS multi-step privilege escalation)
+        #   - Revision 4  (cleanup_and_retry multi-command semantics,
+        #                  idempotency rules, and action meaning updates)
+        #
+        # Module2f ALREADY supports:
+        #   - retry as a string OR list[str] for cleanup_and_retry
+        #   - retry as ONLY a string for retry_with_modified_command
+        #   - strict abort message requirements
+        #
+        # This validator now enforces:
+        #
+        #   1. retry_with_modified_command:
+        #        - retry MUST be a single string
+        #
+        #   2. cleanup_and_retry:
+        #        - retry MAY be a string OR list[str]
+        #        - cleanup MUST be a list
+        #
+        #   3. abort:
+        #        - message is REQUIRED
+        #
+        #   4. non-abort actions:
+        #        - message MUST NOT appear
+        #
+        # These changes ensure the gateway accepts the richer, more
+        # accurate plans produced after Revision 3.2 and Revision 4,
+        # enabling full end-to-end pipeline testing in Phase 4a.1.3.
+        # ============================================================
+
+        
         # --------------------------------------------------------
         # Validate LLM plan schema
         # --------------------------------------------------------
@@ -816,16 +855,91 @@ def recover(request: RecoveryRequest):
         if action not in allowed_actions:
             return {"error": "Invalid or missing action", "action": "fallback"}
 
-        # Validate cleanup
-        if "cleanup" in plan and not isinstance(plan["cleanup"], list):
+        # --------------------------------------------------------
+        # Validate cleanup (must always be a list when present)
+        # --------------------------------------------------------
+        cleanup = plan.get("cleanup")
+        if cleanup is not None and not isinstance(cleanup, list):
             return {"error": "Invalid cleanup field", "action": "fallback"}
 
-        # Validate retry
-        if "retry" in plan and not isinstance(plan["retry"], str):
-            return {"error": "Invalid retry field", "action": "fallback"}
+        # --------------------------------------------------------
+        # Validate retry (rules differ by action retry_with_modified_command vs. cleanup_and_retry
+        # This permits contract Revision 3.2 and Revision 4 changes to plan to be propagated through this outgoing validator 
+        # and to the MCPClient of module2f
+        # --------------------------------------------------------
+        retry = plan.get("retry")
 
-        # If we reach here, plan is valid and returned to MCPClient/module2f
+        if action == "retry_with_modified_command":
+            # MUST be a single string
+            if not isinstance(retry, str):
+                return {"error": "Invalid retry field for retry_with_modified_command", "action": "fallback"}
+
+        elif action == "cleanup_and_retry":
+            # MAY be string OR list[str]
+            if not (
+                isinstance(retry, str) or
+                (isinstance(retry, list) and all(isinstance(cmd, str) for cmd in retry))
+            ):
+                return {"error": "Invalid retry field for cleanup_and_retry", "action": "fallback"}
+
+        elif action in ("fallback", "abort"):
+            # retry MUST NOT appear
+            if retry not in (None, "", []):
+                return {"error": "Retry field not allowed for this action", "action": "fallback"}
+
+        # --------------------------------------------------------
+        # Validate message field
+        # --------------------------------------------------------
+        message = plan.get("message")
+
+        if action == "abort":
+            # message REQUIRED
+            if not isinstance(message, str) or not message.strip():
+                return {"error": "Abort requires message", "action": "fallback"}
+
+        else:
+            # message MUST NOT appear for non-abort actions
+            if message is not None:
+                return {"error": "Message not allowed for non-abort action", "action": "fallback"}
+
+        # --------------------------------------------------------
+        # If we reach here, plan is valid and returned to module2f
+        # --------------------------------------------------------
         return plan
+
+
+
+        ##### Deprecated code for the code above that aligns with contract Revision 3.2 and Revision 4
+        ## --------------------------------------------------------
+        ## Validate LLM plan schema
+        ## --------------------------------------------------------
+        #allowed_actions = {
+        #    "cleanup_and_retry",
+        #    "retry_with_modified_command",
+        #    "abort",
+        #    "fallback",
+        #}
+
+        ## Must be a dict
+        #if not isinstance(plan, dict):
+        #    return {"error": "Invalid plan format", "action": "fallback"}
+
+        #action = plan.get("action")
+
+        ## Validate action
+        #if action not in allowed_actions:
+        #    return {"error": "Invalid or missing action", "action": "fallback"}
+
+        ## Validate cleanup
+        #if "cleanup" in plan and not isinstance(plan["cleanup"], list):
+        #    return {"error": "Invalid cleanup field", "action": "fallback"}
+
+        ## Validate retry
+        #if "retry" in plan and not isinstance(plan["retry"], str):
+        #    return {"error": "Invalid retry field", "action": "fallback"}
+
+        ## If we reach here, plan is valid and returned to MCPClient/module2f
+        #return plan
 
 
 
