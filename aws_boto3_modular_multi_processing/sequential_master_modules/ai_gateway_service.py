@@ -516,6 +516,19 @@ def recover(request: RecoveryRequest):
                 "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: write erase\" }\n"
                 "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: reload\" }\n\n"
 
+                # ============================================================
+                # CISCO IOS RULES — REVISION 3.2 PATCH
+                # Revision 3.2: Clarified multi-step privilege escalation using cleanup_and_retry.
+                # ============================================================
+                "Cisco IOS additional rules (Revision 3.2):\n"
+                "- For Cisco IOS, multi-step privilege escalation (e.g., \"enable\" followed by \"configure terminal\") MUST be expressed using \"cleanup_and_retry\" with a retry list.\n"
+                "- Example:\n"
+                "    { \"action\": \"cleanup_and_retry\", \"cleanup\": [], \"retry\": [\"enable\", \"configure terminal\"] }.\n"
+                "- Do NOT attempt to express multi-step privilege escalation using \"retry_with_modified_command\"; that action is reserved for single-command corrections.\n\n"
+
+
+
+
 
 
 
