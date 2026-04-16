@@ -344,6 +344,17 @@ def recover(request: RecoveryRequest):
                 "Follow the contract and rules provided inside the input JSON. "
                 "Return ONLY a JSON object.\n\n"
 
+
+
+                ##### HIGH LEVEL ORGANIZATION ####
+                #Global rules
+                #CONTEXT
+                #Linux-generic malformed rules
+                #OS-specific domain blocks (domain primitives)
+
+
+
+
                 # ============================================================
                 # CONTRACT — STATIC SPECIFICATION
                 # Revision 1: Added the messages requirement for abort and notes as well to the LLM
