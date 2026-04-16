@@ -105,7 +105,7 @@ app = FastAPI()
 
 # URL of the LLM API endpoint
 #LLM_API = "https://api.openai.com/v1/chat/completions"
-# Must use this URL for LLM API endpoint for 4.1-pro model upgrade
+# Must use this URL for LLM API endpoint for 4.1. The 4.1-pro model is not supported with this API.
 LLM_API = "https://api.openai.com/v1/responses"
 
 
@@ -332,7 +332,8 @@ def recover(request: RecoveryRequest):
         # ================================================================
 
         payload = {
-            "model": "gpt-4.1",
+            #"model": "gpt-4.1",
+            "model": "gpt-4.3",
             "temperature": 0,
             "max_output_tokens": 256,
 
