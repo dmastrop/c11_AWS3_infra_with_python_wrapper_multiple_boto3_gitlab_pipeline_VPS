@@ -333,7 +333,7 @@ def recover(request: RecoveryRequest):
 
         payload = {
             #"model": "gpt-4.1",
-            "model": "gpt-4.3",
+            "model": "gpt-5.4",
             "temperature": 0,
             "max_output_tokens": 256,
 
