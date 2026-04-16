@@ -458,12 +458,131 @@ def recover(request: RecoveryRequest):
 
 
 
+                # ============================================================
+                # FALLBACK RULES
+                # Revision 2: Clarified when to prefer fallback over abort or retry
+                # This revsion 2 is in reference to incomplete or ambigous commands (not necessarily malformed; see above)
+                # The reference to test-induced bias is important as much of the contract refinement is performed in an interative
+                # python schema based test environment where schemas for particular os or platform may focus on a specific package, for
+                # example nginx. We do NOT want the LLM to infer that the missing package in a given incomplete command based upon 
+                # the test design itself. This does not conform to real-world empirically desired results. It is better to fallback instead
+                # of retry_with_modified_command or cleanup_and_retry.
+                # ============================================================
+                "Fallback rules:\n"
+                "- When returning \"fallback\", return ONLY:\n"
+                "  { \"action\": \"fallback\" }\n"
+                "- Do NOT include \"cleanup\".\n"
+                "- Do NOT include \"retry\".\n"
+                "- Use \"fallback\" when the command is incomplete or ambiguous and no safe, concrete fix can be inferred.\n"
+                "- Use \"fallback\" instead of \"abort\" when the situation is non-destructive but under-specified (e.g., missing package name).\n"
+                "- Use \"fallback\" when OS, package manager, or shell context is unclear and any guess would be speculative.\n"
+                "- Use \"fallback\" when correcting the command would require unsafe inference or assumptions.\n\n"
+                "- NEVER infer missing arguments (such as package names) based solely on patterns in previous test cases or schema examples; avoid test-induced bias.\n\n"
+
+
+
+
+                ## ============================================================
+                ## ACTION MEANINGS
+                ## ============================================================
+                #"Action meanings:\n"
+                #"- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+                #"- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+                #"- abort: Use when the failure is unsafe or cannot be recovered.\n"
+                #"- fallback: Use when there is not enough information to choose another action.\n\n"
+
+
+
+
+                # ============================================================
+                # ACTION MEANINGS Revision 4 addendum.This is a rewrite of the original ACTION MEANINGS to align to the 
+                # multiple command support for retry in the cleanup_and_retry command action
+                # ============================================================
+                "Action meanings:\n"
+                "- cleanup_and_retry: Use for environmental or state-related failures that can be fixed by cleanup and/or multi-step recovery before retrying.\n"
+                "  Examples: idempotency residue, lock files, half-installed packages, stale processes, privilege or mode setup sequences.\n"
+                "- retry_with_modified_command: Use for simple, single-command corrections where adjusting the original command is sufficient.\n"
+                "  Examples: fixing a package name, adding a missing flag, choosing the correct package manager, correcting a mistyped command.\n"
+                "- abort: Use when the failure is unsafe or cannot be recovered without risk of data loss, instability, or security exposure.\n"
+                "- fallback: Use when there is not enough safe, concrete information to choose another action without guessing.\n\n"
+
+
+
+
+                # ============================================================
+                # ABORT RULES
+                # Revision 1:  added the messages requirement after doing LLM testing with various os and platforms
+                # ============================================================
+                "Abort rules:\n"
+                "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
+                "- Abort when the plan would risk data loss, node instability, or security exposure.\n"
+                "- Abort when the failure suggests corrupted or inconsistent system state.\n"
+                "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
+                "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
+                "- When returning \"abort\", you MUST include a \"message\" field explaining WHY the abort was chosen.\n"
+                "- The \"message\" must be a short, factual, non-emotional explanation.\n"
+                "- The \"message\" must NOT include reasoning steps, chain-of-thought, or internal deliberation.\n"
+                "- The \"message\" must NOT include instructions, commands, or suggestions.\n"
+                "- The \"message\" must NOT hallucinate OS capabilities or package managers.\n"
+                "- Examples of valid abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"Destructive command detected: rm -rf /\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support package installation.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Invalid or malformed command; no safe recovery available.\" }\n\n"
+
+
+
+
+
+                # ============================================================
+                # SAFETY CONSTRAINTS
+                # ============================================================
+                "Safety constraints:\n"
+                "- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n"
+                "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
+                "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
+
+
+
+                # ============================================================
+                # ADDITIONAL SAFETY CONSTRAINTS
+                # ============================================================
+                "Additional safety constraints:\n"
+                "- NEVER propose commands that pipe remote content into a shell (e.g., no \"curl ... | sh\").\n"
+                "- NEVER propose commands that disable or mask system services (e.g., no \"systemctl disable\", no \"systemctl mask\").\n"
+                "- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no \"update-grub\", no \"grub-install\", no kernel package installation).\n"
+                "- NEVER propose commands that modify package manager configuration files or sources lists.\n\n"
+
+                # ============================================================
+                # CLEANUP SEQUENCE RULES
+                # ============================================================
+                "Cleanup sequence rules:\n"
+                "- Cleanup steps MUST be ordered from least invasive to most invasive.\n"
+                "- Cleanup steps MUST be idempotent (safe to run multiple times).\n"
+                "- Cleanup steps MUST NOT exceed 3 commands.\n"
+                "- Cleanup steps MUST NOT include commentary or explanation.\n\n"
+
+
+
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+
+
+
+
+                ##### DOMAIN SPECIFIC PRIMITIVES ######
+
 
                 # ============================================================
                 # MALFORMED COMMAND RULES (LINUX)
                 # Revision 2: Added explicit handling for incomplete but fixable Linux commands. This ENTIRE block is newly added
                 # with revision 2. 
                 # ============================================================
+                # NOTE these primitives apply to all Linux OSes: Ubuntu Debian CentOS RHEL Fedora Alpine BusyBox
+                # There are domain primitives for each one of these OSes further below
+
                 "Malformed command rules (Linux):\n"
                 "- Treat commands like \"apt-get install\", \"yum install\", \"dnf install\", and \"apk add\" with no package as INCOMPLETE, not unsafe.\n"
                 "- If the command is incomplete but the missing argument CANNOT be safely inferred, prefer \"fallback\" over \"abort\".\n"
@@ -473,6 +592,35 @@ def recover(request: RecoveryRequest):
 
 
 
+
+                # ------------------------------------------------------------
+                # Ubuntu (APT) Domain Primitives (Minimal Required Knowledge)  This is Revision 5 a new block.
+                # ------------------------------------------------------------
+                "Ubuntu APT domain primitives:\n"
+                "- Ubuntu uses 'apt' and 'apt-get' as its package managers.\n"
+                "- The command 'apt-get update' refreshes package indexes.\n"
+                "- The command 'apt-get install <pkg>' installs packages.\n"
+                "- The flag '-y' auto-confirms installation.\n"
+                "- If a package cannot be located (E: Unable to locate package),\n"
+                "  the LLM MUST retry with:\n"
+                "    * apt-get update\n"
+                "    * apt-get install -y <pkg>\n"
+                "- If the command is missing arguments (e.g., 'apt-get install'),\n"
+                "  treat it as malformed and use retry_with_modified_command.\n"
+                "- If the command uses a non-Ubuntu package manager (yum, dnf, apk),\n"
+                "  the LLM MUST abort with an unsupported-OS message.\n"
+                "- If the command is destructive (rm -rf /), the LLM MUST abort.\n"
+                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                "- Network failures during 'apt-get update' (e.g., DNS errors)\n"
+                "  MUST be handled with fallback.\n\n"
+
+
+                ###### INSERT NEW PRIMITIVES HERE #########
+
+
+
+
+                ###########################################
 
                 # ============================================================
                 # CISCO IOS RULES
@@ -650,116 +798,6 @@ def recover(request: RecoveryRequest):
 
 
 
-                # ============================================================
-                # FALLBACK RULES
-                # Revision 2: Clarified when to prefer fallback over abort or retry
-                # This revsion 2 is in reference to incomplete or ambigous commands (not necessarily malformed; see above)
-                # The reference to test-induced bias is important as much of the contract refinement is performed in an interative
-                # python schema based test environment where schemas for particular os or platform may focus on a specific package, for
-                # example nginx. We do NOT want the LLM to infer that the missing package in a given incomplete command based upon 
-                # the test design itself. This does not conform to real-world empirically desired results. It is better to fallback instead
-                # of retry_with_modified_command or cleanup_and_retry.
-                # ============================================================
-                "Fallback rules:\n"
-                "- When returning \"fallback\", return ONLY:\n"
-                "  { \"action\": \"fallback\" }\n"
-                "- Do NOT include \"cleanup\".\n"
-                "- Do NOT include \"retry\".\n"
-                "- Use \"fallback\" when the command is incomplete or ambiguous and no safe, concrete fix can be inferred.\n"
-                "- Use \"fallback\" instead of \"abort\" when the situation is non-destructive but under-specified (e.g., missing package name).\n"
-                "- Use \"fallback\" when OS, package manager, or shell context is unclear and any guess would be speculative.\n"
-                "- Use \"fallback\" when correcting the command would require unsafe inference or assumptions.\n\n"
-                "- NEVER infer missing arguments (such as package names) based solely on patterns in previous test cases or schema examples; avoid test-induced bias.\n\n"
-
-
-
-
-                ## ============================================================
-                ## ACTION MEANINGS
-                ## ============================================================
-                #"Action meanings:\n"
-                #"- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
-                #"- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
-                #"- abort: Use when the failure is unsafe or cannot be recovered.\n"
-                #"- fallback: Use when there is not enough information to choose another action.\n\n"
-
-
-
-
-                # ============================================================
-                # ACTION MEANINGS Revision 4 addendum.This is a rewrite of the original ACTION MEANINGS to align to the 
-                # multiple command support for retry in the cleanup_and_retry command action
-                # ============================================================
-                "Action meanings:\n"
-                "- cleanup_and_retry: Use for environmental or state-related failures that can be fixed by cleanup and/or multi-step recovery before retrying.\n"
-                "  Examples: idempotency residue, lock files, half-installed packages, stale processes, privilege or mode setup sequences.\n"
-                "- retry_with_modified_command: Use for simple, single-command corrections where adjusting the original command is sufficient.\n"
-                "  Examples: fixing a package name, adding a missing flag, choosing the correct package manager, correcting a mistyped command.\n"
-                "- abort: Use when the failure is unsafe or cannot be recovered without risk of data loss, instability, or security exposure.\n"
-                "- fallback: Use when there is not enough safe, concrete information to choose another action without guessing.\n\n"
-
-
-
-
-                # ============================================================
-                # ABORT RULES
-                # Revision 1:  added the messages requirement after doing LLM testing with various os and platforms
-                # ============================================================
-                "Abort rules:\n"
-                "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
-                "- Abort when the plan would risk data loss, node instability, or security exposure.\n"
-                "- Abort when the failure suggests corrupted or inconsistent system state.\n"
-                "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
-                "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
-                "- When returning \"abort\", you MUST include a \"message\" field explaining WHY the abort was chosen.\n"
-                "- The \"message\" must be a short, factual, non-emotional explanation.\n"
-                "- The \"message\" must NOT include reasoning steps, chain-of-thought, or internal deliberation.\n"
-                "- The \"message\" must NOT include instructions, commands, or suggestions.\n"
-                "- The \"message\" must NOT hallucinate OS capabilities or package managers.\n"
-                "- Examples of valid abort messages:\n"
-                "    { \"action\": \"abort\", \"message\": \"Destructive command detected: rm -rf /\" }\n"
-                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support package installation.\" }\n"
-                "    { \"action\": \"abort\", \"message\": \"Invalid or malformed command; no safe recovery available.\" }\n\n"
-
-
-
-
-
-                # ============================================================
-                # SAFETY CONSTRAINTS
-                # ============================================================
-                "Safety constraints:\n"
-                "- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n"
-                "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
-                "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
-
-
-
-                # ============================================================
-                # ADDITIONAL SAFETY CONSTRAINTS
-                # ============================================================
-                "Additional safety constraints:\n"
-                "- NEVER propose commands that pipe remote content into a shell (e.g., no \"curl ... | sh\").\n"
-                "- NEVER propose commands that disable or mask system services (e.g., no \"systemctl disable\", no \"systemctl mask\").\n"
-                "- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no \"update-grub\", no \"grub-install\", no kernel package installation).\n"
-                "- NEVER propose commands that modify package manager configuration files or sources lists.\n\n"
-
-                # ============================================================
-                # CLEANUP SEQUENCE RULES
-                # ============================================================
-                "Cleanup sequence rules:\n"
-                "- Cleanup steps MUST be ordered from least invasive to most invasive.\n"
-                "- Cleanup steps MUST be idempotent (safe to run multiple times).\n"
-                "- Cleanup steps MUST NOT exceed 3 commands.\n"
-                "- Cleanup steps MUST NOT include commentary or explanation.\n\n"
-
-
-
-
-                # ============================================================
-                # CONTEXT — DYNAMIC INPUT FROM CURL
-                # ============================================================
-                f"CONTEXT:\n{context}"
             )
         }
 
