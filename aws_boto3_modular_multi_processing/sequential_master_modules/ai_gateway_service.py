@@ -584,6 +584,9 @@ def recover(request: RecoveryRequest):
 
 
                 ##### DOMAIN SPECIFIC PRIMITIVES ######
+                ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
+                ##### rule leakage between different OSes and platforms, etc.
+
 
 
                 # ============================================================
