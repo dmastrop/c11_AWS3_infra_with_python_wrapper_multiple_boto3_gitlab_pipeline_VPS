@@ -595,6 +595,7 @@ def recover(request: RecoveryRequest):
 
                 # ------------------------------------------------------------
                 # IOS PRIVILEGE MODE KNOWLEDGE (Required for accurate reasoning)
+                # With Revision 3.3 (see below)
                 # ------------------------------------------------------------
                 "Cisco IOS privilege mode semantics:\n"
                 "- Cisco IOS has two primary command modes relevant to this contract:\n"
@@ -618,6 +619,30 @@ def recover(request: RecoveryRequest):
                 "    2. the original intended command (e.g., \"configure terminal\").\n"
                 "- This rule OVERRIDES malformed-command rules.\n"
                 "- This rule OVERRIDES retry_with_modified_command rules.\n"
+                "- NEVER use retry_with_modified_command for privilege-mode escalation.\n\n"
+
+
+                # ------------------------------------------------------------
+                # Cisco IOS Privileged-Only Commands (Domain Knowledge Block)
+                # Revision 3.4
+                # ------------------------------------------------------------
+                "Cisco IOS privileged-only commands:\n"
+                "- The following commands ALWAYS require Privileged EXEC mode (Router#):\n"
+                "    * configure terminal\n"
+                "    * show running-config\n"
+                "    * show startup-config\n"
+                "    * write memory\n"
+                "    * copy running-config startup-config\n"
+                "    * copy startup-config running-config\n"
+                "    * erase startup-config\n"
+                "    * reload\n"
+                "- If any of these commands fail with '% Invalid input detected at '^' marker.',\n"
+                "  the LLM MUST treat the failure as a privilege-mode failure.\n"
+                "- For privilege-mode failures, the LLM MUST use 'cleanup_and_retry' with the retry list:\n"
+                "    1. enable\n"
+                "    2. the original intended command\n"
+                "- These rules OVERRIDE malformed-command rules.\n"
+                "- These rules OVERRIDE retry_with_modified_command rules.\n"
                 "- NEVER use retry_with_modified_command for privilege-mode escalation.\n\n"
 
 
