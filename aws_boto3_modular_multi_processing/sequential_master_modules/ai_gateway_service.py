@@ -594,6 +594,8 @@ def recover(request: RecoveryRequest):
                 # NOTE these primitives apply to all Linux OSes: Ubuntu Debian CentOS RHEL Fedora Alpine BusyBox
                 # There are domain primitives for each one of these OSes further below
 
+                "These rules apply ONLY to Linux-family OSes: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine, BusyBox.\n"
+
                 "Malformed command rules (Linux):\n"
                 "- Treat commands like \"apt-get install\", \"yum install\", \"dnf install\", and \"apk add\" with no package as INCOMPLETE, not unsafe.\n"
                 "- If the command is incomplete but the missing argument CANNOT be safely inferred, prefer \"fallback\" over \"abort\".\n"
@@ -603,6 +605,15 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
+
+
+
+                # ============================================================
+                # UBUNTU (APT) DOMAIN RULES — Applies ONLY when os_name = "Ubuntu"
+                # ============================================================
+                "These rules apply ONLY when os_name = \"Ubuntu\".\n"
 
                 # ------------------------------------------------------------
                 # Ubuntu (APT) Domain Primitives (Minimal Required Knowledge)  This is Revision 5 a new block.
@@ -626,12 +637,17 @@ def recover(request: RecoveryRequest):
                 "  MUST be handled with fallback.\n\n"
 
 
-                ###### INSERT NEW PRIMITIVES HERE #########
+                ###### INSERT NEW DOMAIN PRIMITIVES HERE #########
 
 
 
 
-                ###########################################
+                ###################################################
+
+                # ============================================================
+                # CISCO IOS DOMAIN RULES — Applies ONLY when os_name = "Cisco IOS"
+                # ============================================================
+                "These rules apply ONLY when os_name = \"Cisco IOS\".\n"
 
                 # ============================================================
                 # CISCO IOS RULES
