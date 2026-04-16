@@ -138,7 +138,72 @@
       "ip": "10.0.0.19",
       "tags": [],
       "history": []
+    },
+
+    {
+        "command": "apt-get install -y nginx",
+        "stdout": "",
+        "stderr": "dpkg was interrupted, you must manually run 'sudo dpkg --configure -a' to correct the problem.",
+        "exit_status": 1,
+        "attempt": 1,
+        "instance_id": "i-test-011",
+        "ip": "10.0.0.20",
+        "tags": [],
+        "history": []
+    },
+
+
+    {
+        "command": "apt-get update -y",
+        "stdout": "",
+        "stderr": "E: Failed to fetch ... Hash Sum mismatch",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-012",
+        "ip": "10.0.0.21",
+        "tags": [],
+        "history": []
+    },
+
+    {
+        "command": "apt-get install -y nginx",
+        "stdout": "",
+        "stderr": "E: Unable to correct problems, you have held broken packages.",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-013",
+        "ip": "10.0.0.22",
+        "tags": [],
+        "history": []
+    },
+
+    {
+        "command": "apt-get install -y nginx",
+        "stdout": "",
+        "stderr": "E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-014",
+        "ip": "10.0.0.23",
+        "tags": [],
+        "history": []
+    },
+
+    {
+        "command": "apt-get install -y nginx",
+        "stdout": "",
+        "stderr": "E: You might want to run 'apt --fix-broken install' to correct these.",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-015",
+        "ip": "10.0.0.24",
+        "tags": [],
+        "history": []
     }
+
+
+
+
 
   ]
 }
