@@ -592,6 +592,32 @@ def recover(request: RecoveryRequest):
                 "    { \"action\": \"cleanup_and_retry\", \"cleanup\": [], \"retry\": [\"enable\", \"configure terminal\"] }.\n"
                 "- Do NOT attempt to express multi-step privilege escalation using \"retry_with_modified_command\"; that action is reserved for single-command corrections.\n\n"
 
+                # ------------------------------------------------------------
+                # IOS PRIVILEGE MODE KNOWLEDGE (Required for accurate reasoning)
+                # ------------------------------------------------------------
+                "Cisco IOS privilege mode semantics:\n"
+                "- Cisco IOS has two primary command modes relevant to this contract:\n"
+                "    * User EXEC mode (prompt ends with '>') — limited read-only access.\n"
+                "    * Privileged EXEC mode (prompt ends with '#') — full administrative access.\n"
+                "- The command 'enable' transitions from User EXEC mode to Privileged EXEC mode.\n"
+                "- The command 'configure terminal' ALWAYS requires Privileged EXEC mode.\n"
+                "- If 'configure terminal' is executed while NOT in Privileged EXEC mode, IOS returns:\n"
+                "    '% Invalid input detected at '^' marker.'\n"
+                "- Therefore, any failure of 'configure terminal' MUST be treated as a privilege-mode failure.\n\n"
+
+
+                # ============================================================
+                # CISCO IOS RULES — REVISION 3.3
+                # Privilege-mode failures MUST use cleanup_and_retry
+                # ============================================================
+                "Cisco IOS privilege-mode rules (Revision 3.3):\n"
+                "- If a command fails because the device is NOT in privileged mode (e.g., '% Invalid input' for 'configure terminal'),\n"
+                "  the LLM MUST use \"cleanup_and_retry\" and MUST provide a retry list that includes:\n"
+                "    1. \"enable\"\n"
+                "    2. the original intended command (e.g., \"configure terminal\").\n"
+                "- This rule OVERRIDES malformed-command rules.\n"
+                "- This rule OVERRIDES retry_with_modified_command rules.\n"
+                "- NEVER use retry_with_modified_command for privilege-mode escalation.\n\n"
 
 
 
