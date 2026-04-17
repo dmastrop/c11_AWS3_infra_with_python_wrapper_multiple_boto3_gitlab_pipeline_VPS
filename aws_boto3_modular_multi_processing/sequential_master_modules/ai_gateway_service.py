@@ -644,20 +644,23 @@ def recover(request: RecoveryRequest):
                 "  a cleanup_and_retry action with the following retry sequence:\n"
                 "    * dpkg --configure -a\n"
                 "    * apt-get install -y <pkg>\n"
+               
+                ##### Revision 6.2
+                "- If stderr CONTAINS the EXACT phrase 'held broken packages', the LLM MUST NOT run 'apt --fix-broken install'.\n"
+                "  This condition is non-deterministic and MUST use fallback.\n"
 
                 "- If stderr suggests running 'apt --fix-broken install', the LLM MUST return\n"
                 "  a cleanup_and_retry action with the following retry sequence:\n"
                 "    * apt --fix-broken install -y\n"
                 "    * apt-get install -y <pkg>\n"
 
-                "- If stderr indicates a 'Hash Sum mismatch' during 'apt-get update', the LLM MUST return\n"
-                "  a cleanup_and_retry action with the following retry sequence:\n"
+                ##### Revision 6.2
+                "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
+                "  It MUST return a cleanup_and_retry action with the following retry sequence:\n"
                 "    * rm -rf /var/lib/apt/lists/partial/*\n"
                 "    * rm -rf /var/cache/apt/archives/partial/*\n"
                 "    * apt-get update -y\n"
                 "    * apt-get install -y <pkg>\n"
-
-
 
 
                 ###### INSERT NEW DOMAIN PRIMITIVES HERE #########
