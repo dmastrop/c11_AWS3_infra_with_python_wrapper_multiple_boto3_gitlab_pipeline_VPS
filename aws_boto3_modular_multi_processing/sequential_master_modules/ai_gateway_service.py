@@ -639,6 +639,26 @@ def recover(request: RecoveryRequest):
                 "- Network failures during 'apt-get update' (e.g., DNS errors)\n"
                 "  MUST be handled with fallback.\n\n"
 
+                ##### Revision 6 addtions to the ubuntu domain primitives  #####
+                "- If stderr suggests running 'dpkg --configure -a', the LLM MUST return\n"
+                "  a cleanup_and_retry action with the following retry sequence:\n"
+                "    * dpkg --configure -a\n"
+                "    * apt-get install -y <pkg>\n"
+
+                "- If stderr suggests running 'apt --fix-broken install', the LLM MUST return\n"
+                "  a cleanup_and_retry action with the following retry sequence:\n"
+                "    * apt --fix-broken install -y\n"
+                "    * apt-get install -y <pkg>\n"
+
+                "- If stderr indicates a 'Hash Sum mismatch' during 'apt-get update', the LLM MUST return\n"
+                "  a cleanup_and_retry action with the following retry sequence:\n"
+                "    * rm -rf /var/lib/apt/lists/partial/*\n"
+                "    * rm -rf /var/cache/apt/archives/partial/*\n"
+                "    * apt-get update -y\n"
+                "    * apt-get install -y <pkg>\n"
+
+
+
 
                 ###### INSERT NEW DOMAIN PRIMITIVES HERE #########
 
