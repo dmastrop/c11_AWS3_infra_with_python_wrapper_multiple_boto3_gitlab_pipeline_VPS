@@ -469,6 +469,18 @@ def recover(request: RecoveryRequest):
 
 
 
+
+                # ------------------------------------------------------------
+                # Literal precedence meta-rule (Revision 6.3). This must be before Linux Malformed block  and global fallback
+                # ruels for precedence
+                # ------------------------------------------------------------
+                "- Literal‑match rules take precedence over semantic or general rules.\n"
+                "  If stderr contains an EXACT phrase referenced by any rule, the LLM MUST apply that rule\n"
+                "  even if earlier rules appear semantically similar.\n"
+                "  Only when no literal phrase matches may the LLM fall back to general or earlier rules.\n\n"
+
+
+
                 # ============================================================
                 # FALLBACK RULES
                 # Revision 2: Clarified when to prefer fallback over abort or retry
@@ -588,15 +600,6 @@ def recover(request: RecoveryRequest):
                 ##### rule leakage between different OSes and platforms, etc.
 
 
-
-
-                # ------------------------------------------------------------
-                # Literal precedence meta-rule (Revision 6.3). This must be before Linux Malformed block for precedence
-                # ------------------------------------------------------------
-                "- Literal‑match rules take precedence over semantic or general rules.\n"
-                "  If stderr contains an EXACT phrase referenced by any rule, the LLM MUST apply that rule\n"
-                "  even if earlier rules appear semantically similar.\n"
-                "  Only when no literal phrase matches may the LLM fall back to general or earlier rules.\n\n"
 
                 # ============================================================
                 # MALFORMED COMMAND RULES (LINUX)
