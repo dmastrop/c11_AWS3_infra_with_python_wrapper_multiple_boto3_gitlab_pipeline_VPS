@@ -589,6 +589,15 @@ def recover(request: RecoveryRequest):
 
 
 
+
+                # ------------------------------------------------------------
+                # Literal precedence meta-rule (Revision 6.3). This must be before Linux Malformed block for precedence
+                # ------------------------------------------------------------
+                "- Literal‑match rules take precedence over semantic or general rules.\n"
+                "  If stderr contains an EXACT phrase referenced by any rule, the LLM MUST apply that rule\n"
+                "  even if earlier rules appear semantically similar.\n"
+                "  Only when no literal phrase matches may the LLM fall back to general or earlier rules.\n\n"
+
                 # ============================================================
                 # MALFORMED COMMAND RULES (LINUX)
                 # Revision 2: Added explicit handling for incomplete but fixable Linux commands. This ENTIRE block is newly added
@@ -609,22 +618,11 @@ def recover(request: RecoveryRequest):
 
 
 
-
-
-
-
                 # ============================================================
                 # UBUNTU (APT) DOMAIN RULES — Applies ONLY when os_name = "Ubuntu"
                 # ============================================================
                 "These rules apply ONLY when os_name = \"Ubuntu\".\n"
 
-                # ------------------------------------------------------------
-                # Literal precedence meta-rule (Revision 6.3)
-                # ------------------------------------------------------------
-                "- Literal‑match rules take precedence over semantic or general rules.\n"
-                "  If stderr contains an EXACT phrase referenced by any rule, the LLM MUST apply that rule\n"
-                "  even if earlier rules appear semantically similar.\n"
-                "  Only when no literal phrase matches may the LLM fall back to general or earlier rules.\n\n"
 
                 # ------------------------------------------------------------
                 # Ubuntu (APT) Domain Primitives (Minimal Required Knowledge)  This is Revision 5 a new block.
