@@ -645,6 +645,11 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST rewrite the command using the correct Ubuntu package manager ('apt-get') and retry.\n"
                 "- If the command is destructive (rm -rf /), the LLM MUST abort.\n"
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                #### Revision 6.4
+                "- The error 'Hash Sum mismatch' is NOT a network failure.\n"
+                "  It indicates corrupted or inconsistent package index files.\n"
+                "  The LLM MUST NOT classify this as a DNS or connectivity issue.\n"
+                "  The Hash Sum mismatch cleanup_and_retry rule MUST take precedence.\n"
                 "- Network failures during 'apt-get update' (e.g., DNS errors)\n"
                 "  MUST be handled with fallback.\n\n"
 
