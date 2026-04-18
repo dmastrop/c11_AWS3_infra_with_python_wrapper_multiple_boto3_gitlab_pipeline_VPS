@@ -8650,8 +8650,8 @@ def main():
 
 
     ### Configurable parameters
-    chunk_size = 2 # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
-    max_workers = 2 # Threads per process
+    chunk_size = 1 # Number of IPs per process; chunk_size should be less than or equal to max_workers, otherwise inefficiency results.
+    max_workers = 1 # Threads per process
     desired_count = 2  ## Max concurrent processes (NOT threads) for iniital batch.
     #### For the 16 node test chunk_size of 2, max_workers of 2, and desired_count of 6 so that 2 processes are pooled for the
     #### last 4 of 16 nodes
