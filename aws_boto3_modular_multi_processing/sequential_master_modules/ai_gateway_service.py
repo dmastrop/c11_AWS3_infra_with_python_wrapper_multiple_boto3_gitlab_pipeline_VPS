@@ -385,6 +385,8 @@ def recover(request: RecoveryRequest):
                 "- NEVER explain your reasoning.\n"
                 "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
 
+
+
                 # ============================================================
                 # RETRY COMMAND RULES — NEWLY ADDED FOR ROBUSTNESS
                 # ============================================================
@@ -397,6 +399,8 @@ def recover(request: RecoveryRequest):
                 "- The retry command MUST NOT contain multiple commands chained with \"&&\" unless necessary.\n"
                 "- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\n"
 
+
+
                 # ============================================================
                 # RETRY FIELD SEMANTICS
                 # Revision 4: Clarified per-action retry shape (string vs list)
@@ -405,6 +409,8 @@ def recover(request: RecoveryRequest):
                 # The cleanup_and_retry has specific use cases and those will be clarified as well in this CONTRACT with Revision 4
                 # See CLEANUP_AND_RETRY_SEMANTICS further below (also part of Revsion 4)
                 # Module2f already will mark the cleanup_and_retry action as failed if any one of the commands in a retry list fails.
+                # Revision 6.5: "- For \"cleanup_and_retry\", the \"retry\" commands SHOULD include all commands that actively attempt to re-run the failing operation and/or reattempt the original high-level goal.\n\n"
+
                 # ============================================================
                 "Retry field semantics (Revision 4):\n"
                 "- For \"retry_with_modified_command\", the \"retry\" field MUST be exactly one corrected command (a single string).\n"
@@ -415,23 +421,31 @@ def recover(request: RecoveryRequest):
                 "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
                 "- Only if ALL retry commands succeed is the cleanup_and_retry action considered successful.\n\n"
 
+                "- For \"cleanup_and_retry\", the \"retry\" commands SHOULD include all commands that actively attempt to re-run the failing operation and/or reattempt the original high-level goal.\n\n"
+
+
 
 
                 # ============================================================
-                # CLEANUP RULES
+                # CLEANUP RULES  
+                # Revision 6.5 "- Cleanup commands MUST NOT attempt to perform the original high-level goal (such as installing a package or starting a service).\n"
                 # ============================================================
                 "Cleanup rules:\n"
                 "- The \"cleanup\" field MUST be a list of literal shell commands.\n"
                 "- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n"
                 "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
                 "- Cleanup commands MUST NOT include dangerous operations.\n\n"
+                "- Cleanup commands MUST NOT attempt to perform the original high-level goal (such as installing a package or starting a service).\n"
 
 
                 # ============================================================
                 # CLEANUP_AND_RETRY SEMANTICS
                 # Revision 4: Restored original multi-step cleanup_and_retry behavior
+                # Revision 6.5: "- A \"cleanup_and_retry\" plan MUST include at least one retry command. A cleanup-only plan is allowed syntactically, but it accomplishes nothing and SHOULD be avoided.\n"
+                # Revision 6.5: "- For multi-step recovery, a typical pattern is:\n"
+                #
                 # ============================================================
-                "Cleanup-and-retry rules (Revision 4):\n"
+                "Cleanup-and-retry rules (Revision 4, Revision 6.5 addendum):\n"
                 "- Use \"cleanup_and_retry\" when the failure can be resolved by removing temporary files, stale locks, partial installations, or other artifacts blocking success.\n"
                 "- Typical cleanup-and-retry conditions include:\n"
                 "  - leftover PID files or lock files\n"
@@ -439,14 +453,21 @@ def recover(request: RecoveryRequest):
                 "  - stale processes that must be terminated before retrying\n"
                 "  - insufficient disk space that can be reclaimed safely\n"
                 "  - any reversible condition where cleanup restores a safe state.\n"
+                
                 "- When returning \"cleanup_and_retry\", provide:\n"
                 "  - a list of cleanup commands in the \"cleanup\" field (which MAY be empty), and\n"
                 "  - one or more retry commands in the \"retry\" field.\n"
+                
+                "- A \"cleanup_and_retry\" plan MUST include at least one retry command. A cleanup-only plan is allowed syntactically, but it accomplishes nothing and SHOULD be avoided.\n"
+                
                 "- For \"cleanup_and_retry\", the \"retry\" field MAY be a single string or a list of commands.\n"
                 "- When multiple retry commands are provided, they are executed sequentially.\n"
                 "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
                 "- Only if ALL retry commands succeed is the action considered successful.\n\n"
 
+                "- For multi-step recovery, a typical pattern is:\n"
+                "  - cleanup: commands that remove corrupted or partial state (for example, deleting partial apt lists or caches).\n"
+                "  - retry: commands that re-run the failing operation and, if needed, reattempt the original goal (for example, 'apt-get update -y' followed by 'apt-get install -y <pkg>').\n\n"
 
 
                 # ============================================================
@@ -520,9 +541,11 @@ def recover(request: RecoveryRequest):
                 # ============================================================
                 # ACTION MEANINGS Revision 4 addendum.This is a rewrite of the original ACTION MEANINGS to align to the 
                 # multiple command support for retry in the cleanup_and_retry command action
+                # Revision 6.5: "  A cleanup_and_retry plan that contains cleanup commands but no retry commands does not meaningfully remediate the original failure and SHOULD be avoided.\n"
                 # ============================================================
                 "Action meanings:\n"
                 "- cleanup_and_retry: Use for environmental or state-related failures that can be fixed by cleanup and/or multi-step recovery before retrying.\n"
+                "  A cleanup_and_retry plan that contains cleanup commands but no retry commands does not meaningfully remediate the original failure and SHOULD be avoided.\n"
                 "  Examples: idempotency residue, lock files, half-installed packages, stale processes, privilege or mode setup sequences.\n"
                 "- retry_with_modified_command: Use for simple, single-command corrections where adjusting the original command is sufficient.\n"
                 "  Examples: fixing a package name, adding a missing flag, choosing the correct package manager, correcting a mistyped command.\n"
@@ -553,6 +576,37 @@ def recover(request: RecoveryRequest):
                 "    { \"action\": \"abort\", \"message\": \"Invalid or malformed command; no safe recovery available.\" }\n\n"
 
 
+                # ============================================================
+                # NETWORK FAILURE SEMANTICS — Revision 6.5 (GLOBAL)
+                # ============================================================
+                "Network failure semantics (Revision 6.5):\n"
+                "- A network failure is defined as a condition where the system cannot reach remote package sources or remote hosts due to connectivity issues.\n"
+                "- Network failures MUST be handled with \"fallback\".\n"
+                "- Network failures include (but are not limited to):\n"
+                "    * DNS resolution errors (e.g., 'Temporary failure resolving ...')\n"
+                "    * connection refused\n"
+                "    * connection timed out\n"
+                "    * no route to host\n"
+                "    * host unreachable\n"
+                "    * network unreachable\n"
+                "    * TLS/SSL handshake failures\n"
+                "    * proxy connection failures\n"
+                "    * interface down or missing network device\n"
+                "- These conditions indicate connectivity problems, NOT package corruption.\n\n"
+
+                "- The following ARE NOT network failures:\n"
+                "    * 'Hash Sum mismatch'\n"
+                "    * integrity check mismatch\n"
+                "    * cryptographic signature mismatch\n"
+                "    * corrupted package index files\n"
+                "    * partial or inconsistent package downloads\n"
+                "    * cache corruption under /var/lib/apt or /var/cache/apt\n"
+                "- These conditions MUST NOT be treated as DNS or connectivity issues.\n"
+                "- These conditions SHOULD be handled using cleanup_and_retry when safe.\n\n"
+
+                "- The error 'Hash Sum mismatch' is NOT a network failure.\n"
+                "  It indicates corrupted or inconsistent package index files.\n"
+                "  The LLM MUST NOT classify this as a DNS or connectivity issue.\n\n"
 
 
 
@@ -645,13 +699,8 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST rewrite the command using the correct Ubuntu package manager ('apt-get') and retry.\n"
                 "- If the command is destructive (rm -rf /), the LLM MUST abort.\n"
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
-                #### Revision 6.4
-                "- The error 'Hash Sum mismatch' is NOT a network failure.\n"
-                "  It indicates corrupted or inconsistent package index files.\n"
-                "  The LLM MUST NOT classify this as a DNS or connectivity issue.\n"
-                "  The Hash Sum mismatch cleanup_and_retry rule MUST take precedence.\n"
-                "- Network failures during 'apt-get update' (e.g., DNS errors)\n"
-                "  MUST be handled with fallback.\n\n"
+                
+                #### Revision 6.4 (Hash Sum mismatch)  (replaced with Revision 6.5)
 
                 ##### Revision 6 addtions to the ubuntu domain primitives  #####
                 "- If stderr suggests running 'dpkg --configure -a', the LLM MUST return\n"
@@ -668,9 +717,13 @@ def recover(request: RecoveryRequest):
                 "    * apt --fix-broken install -y\n"
                 "    * apt-get install -y <pkg>\n"
 
-                ##### Revision 6.2
+                ##### Revision 6.2 (Hash Sum mismatch) (replaced with Revision 6.5)
+
+
+                ##### Revision 6.5 (Hash Sum mismatch)
+                ##### Revision 6.5 (replaces Revision 6.2 Hash Sum mismatch behavior)
                 "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
-                "  It MUST return a cleanup_and_retry action with the following retry sequence:\n"
+                "  It MUST return a cleanup_and_retry action using the following recovery sequence:\n"
                 "    * rm -rf /var/lib/apt/lists/partial/*\n"
                 "    * rm -rf /var/cache/apt/archives/partial/*\n"
                 "    * apt-get update -y\n"
