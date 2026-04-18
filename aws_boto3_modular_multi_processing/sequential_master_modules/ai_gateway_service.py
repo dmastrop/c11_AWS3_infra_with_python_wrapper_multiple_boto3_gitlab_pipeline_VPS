@@ -726,11 +726,13 @@ def recover(request: RecoveryRequest):
                 ##### Revision 6.5 (Hash Sum mismatch)
                 ##### Revision 6.5 (replaces Revision 6.2 Hash Sum mismatch behavior)
                 "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
-                "  It MUST return a cleanup_and_retry action using the following recovery sequence:\n"
-                "    * rm -rf /var/lib/apt/lists/partial/*\n"
-                "    * rm -rf /var/cache/apt/archives/partial/*\n"
-                "    * apt-get update -y\n"
-                "    * apt-get install -y <pkg>\n"
+                "  It MUST return a cleanup_and_retry action with:\n"
+                "    * \"cleanup\" containing EXACTLY these commands:\n"
+                "        - rm -rf /var/lib/apt/lists/partial/*\n"
+                "        - rm -rf /var/cache/apt/archives/partial/*\n"
+                "    * \"retry\" containing a list of commands that MUST include, in this order:\n"
+                "        - apt-get update -y\n"
+                "        - apt-get install -y <pkg>\n"
 
 
                 ###### INSERT NEW DOMAIN PRIMITIVES HERE #########
