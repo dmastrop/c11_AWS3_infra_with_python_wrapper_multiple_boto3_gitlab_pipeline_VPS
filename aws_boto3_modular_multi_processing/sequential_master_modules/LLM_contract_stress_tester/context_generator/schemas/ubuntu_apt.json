@@ -199,10 +199,70 @@
         "ip": "10.0.0.24",
         "tags": [],
         "history": []
+    },
+
+
+    {
+        "command": "apt-get install -y mysql-server",
+        "stdout": "",
+        "stderr": "E: Failed to fetch ... Hash Sum mismatch",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-016",
+        "ip": "10.0.0.25",
+        "tags": [],
+        "history": []
+    },
+
+
+
+    {
+        "command": "apt-get upgrade -y",
+        "stdout": "",
+        "stderr": "E: Failed to fetch ... Hash Sum mismatch",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-017",
+        "ip": "10.0.0.26",
+        "tags": [],
+        "history": []
+    },
+
+    {
+        "command": "apt-get dist-upgrade -y",
+        "stdout": "",
+        "stderr": "E: Failed to fetch ... Hash Sum mismatch",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-018",
+        "ip": "10.0.0.27",
+        "tags": [],
+        "history": []
+    },
+
+    {
+        "command": "apt-get install -y python3-pip",
+        "stdout": "",
+        "stderr": "E: Failed to fetch ... Hash Sum mismatch",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-019",
+        "ip": "10.0.0.28",
+        "tags": [],
+        "history": []
+    },
+
+    {
+        "command": "apt-get install -y curl",
+        "stdout": "",
+        "stderr": "E: Failed to fetch ... Hash Sum mismatch",
+        "exit_status": 100,
+        "attempt": 1,
+        "instance_id": "i-test-020",
+        "ip": "10.0.0.29",
+        "tags": [],
+        "history": []
     }
-
-
-
 
 
   ]
