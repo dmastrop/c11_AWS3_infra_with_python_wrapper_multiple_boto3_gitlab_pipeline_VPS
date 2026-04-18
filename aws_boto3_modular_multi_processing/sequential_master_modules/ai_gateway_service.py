@@ -725,14 +725,27 @@ def recover(request: RecoveryRequest):
 
                 ##### Revision 6.5 (Hash Sum mismatch)
                 ##### Revision 6.5 (replaces Revision 6.2 Hash Sum mismatch behavior)
+
+                ##### Revision 6.6 (Hash Sum mismatch — corrected package binding) (replaces Revision 6.5)
                 "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
                 "  It MUST return a cleanup_and_retry action with:\n"
                 "    * \"cleanup\" containing EXACTLY these commands:\n"
                 "        - rm -rf /var/lib/apt/lists/partial/*\n"
                 "        - rm -rf /var/cache/apt/archives/partial/*\n"
+                "\n"
                 "    * \"retry\" containing a list of commands that MUST include, in this order:\n"
                 "        - apt-get update -y\n"
+                "\n"
+                "- For any rule that references \"<pkg>\", the LLM MUST replace \"<pkg>\" with the\n"
+                "  package name used in the failing command (for example, nginx, mysql-server, etc.).\n"
+                "\n"
+                "- If the failing command does NOT include a package name (for example, 'apt-get update'),\n"
+                "  the LLM MUST NOT invent or guess a package name, and MUST omit the install step.\n"
+                "\n"
+                "- If the failing command DOES include a package name (for example, 'apt-get install -y mysql-server'),\n"
+                "  then the \"retry\" list MUST include, after 'apt-get update -y', the command:\n"
                 "        - apt-get install -y <pkg>\n"
+
 
 
                 ###### INSERT NEW DOMAIN PRIMITIVES HERE #########
@@ -754,11 +767,21 @@ def recover(request: RecoveryRequest):
                 # and abort logic. This ENTIRE block is newly added with Revision 3.
                 # ============================================================
                 "Cisco IOS rules:\n"
+                # Revision 6.6
+                "- If stderr contains \"% Invalid input detected at '^' marker.\" AND the command\n"
+                "  belongs to a known IOS command family (show, configure, interface, enable),\n"
+                "  the LLM MUST use \"retry_with_modified_command\" and MUST return the same command.\n"
+
                 "- Cisco IOS is a network device operating system with its own CLI, not a Linux shell.\n"
                 "- Cisco IOS commands MUST NOT be treated as Linux commands.\n"
                 "- Cisco IOS does NOT support apt, apt-get, yum, dnf, apk, brew, or any Linux package manager.\n"
                 "- Cisco IOS does NOT support bash, zsh, sh, PowerShell, or macOS shells.\n"
                 "- Cisco IOS commands MUST be interpreted using IOS semantics only.\n\n"
+
+
+
+
+
 
                 # ------------------------------------------------------------
                 # VALID IOS COMMAND FAMILIES
