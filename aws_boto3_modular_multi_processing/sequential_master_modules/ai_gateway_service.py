@@ -608,6 +608,9 @@ def recover(request: RecoveryRequest):
                 "  It indicates corrupted or inconsistent package index files.\n"
                 "  The LLM MUST NOT classify this as a DNS or connectivity issue.\n\n"
 
+                "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use \"fallback\".\n"
+                "- It MUST treat this as a corruption/integrity failure and apply a \"cleanup_and_retry\" plan using the OS-specific rules (for Ubuntu, the Hash Sum mismatch recovery sequence).\n\n"
+
 
 
                 # ============================================================
