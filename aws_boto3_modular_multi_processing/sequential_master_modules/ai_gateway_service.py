@@ -767,7 +767,8 @@ def recover(request: RecoveryRequest):
                 # and abort logic. This ENTIRE block is newly added with Revision 3.
                 # ============================================================
                 "Cisco IOS rules:\n"
-                # Revision 6.6
+                
+                # Revision 6.6. This will make these types of scenarios fully deterministic.
                 "- If stderr contains \"% Invalid input detected at '^' marker.\" AND the command\n"
                 "  belongs to a known IOS command family (show, configure, interface, enable),\n"
                 "  the LLM MUST use \"retry_with_modified_command\" and MUST return the same command.\n"
