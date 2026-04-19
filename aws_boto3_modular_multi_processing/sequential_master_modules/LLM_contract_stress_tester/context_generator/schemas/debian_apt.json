@@ -9,10 +9,10 @@
     {
       "command": "apt-get install -y nginx",
       "stdout": "",
-      "stderr": "E: Unable to locate package nginx",
+      "stderr": "E: Unable to locate package 'nginx'",
       "exit_status": 100,
       "attempt": 1,
-      "instance_id": "i-test-101",
+      "instance_id": "i-test-001",
       "ip": "10.0.1.10",
       "tags": [],
       "history": [
@@ -31,7 +31,7 @@
       "stderr": "E: Command 'apt' not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-102",
+      "instance_id": "i-test-002",
       "ip": "10.0.1.11",
       "tags": [],
       "history": []
@@ -43,7 +43,7 @@
       "stderr": "bash: yum: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-103",
+      "instance_id": "i-test-003",
       "ip": "10.0.1.12",
       "tags": [],
       "history": [
@@ -62,7 +62,7 @@
       "stderr": "bash: dnf: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-104",
+      "instance_id": "i-test-004",
       "ip": "10.0.1.13",
       "tags": [],
       "history": []
@@ -74,7 +74,7 @@
       "stderr": "bash: apk: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-105",
+      "instance_id": "i-test-005",
       "ip": "10.0.1.14",
       "tags": [],
       "history": []
@@ -86,7 +86,7 @@
       "stderr": "E: Invalid operation install",
       "exit_status": 100,
       "attempt": 1,
-      "instance_id": "i-test-106",
+      "instance_id": "i-test-006",
       "ip": "10.0.1.15",
       "tags": [],
       "history": []
@@ -98,7 +98,7 @@
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-107",
+      "instance_id": "i-test-007",
       "ip": "10.0.1.16",
       "tags": [],
       "history": []
@@ -110,7 +110,7 @@
       "stderr": "bash: asdfasdfasdf: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-108",
+      "instance_id": "i-test-008",
       "ip": "10.0.1.17",
       "tags": [],
       "history": []
@@ -122,7 +122,7 @@
       "stderr": "bash: show: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-109",
+      "instance_id": "i-test-009",
       "ip": "10.0.1.18",
       "tags": [],
       "history": []
@@ -134,8 +134,128 @@
       "stderr": "Temporary failure resolving 'deb.debian.org'",
       "exit_status": 100,
       "attempt": 1,
-      "instance_id": "i-test-110",
+      "instance_id": "i-test-010",
       "ip": "10.0.1.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-011",
+      "ip": "10.0.1.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get update -y",
+      "stdout": "",
+      "stderr": "E: Failed to fetch http://deb.debian.org/debian/... Hash Sum mismatch",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-012",
+      "ip": "10.0.1.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "E: Unable to correct problems, you have held broken packages.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-013",
+      "ip": "10.0.1.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "E: Could not open lock file /var/lib/apt/lists/lock - open (13: Permission denied)",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-014",
+      "ip": "10.0.1.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "E: You might want to run 'apt-get -f install' to correct these.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-015",
+      "ip": "10.0.1.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y mysql-server",
+      "stdout": "",
+      "stderr": "E: Failed to fetch http://deb.debian.org/debian/... Hash Sum mismatch",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-016",
+      "ip": "10.0.1.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get upgrade -y",
+      "stdout": "",
+      "stderr": "E: Failed to fetch http://deb.debian.org/debian/... Hash Sum mismatch",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-017",
+      "ip": "10.0.1.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get dist-upgrade -y",
+      "stdout": "",
+      "stderr": "E: Failed to fetch http://deb.debian.org/debian/... Hash Sum mismatch",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-018",
+      "ip": "10.0.1.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y python3-pip",
+      "stdout": "",
+      "stderr": "E: Failed to fetch http://deb.debian.org/debian/... Hash Sum mismatch",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-019",
+      "ip": "10.0.1.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y curl",
+      "stdout": "",
+      "stderr": "E: Failed to fetch http://deb.debian.org/debian/... Hash Sum mismatch",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-020",
+      "ip": "10.0.1.29",
       "tags": [],
       "history": []
     }

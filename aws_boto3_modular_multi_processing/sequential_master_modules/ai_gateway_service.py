@@ -751,6 +751,131 @@ def recover(request: RecoveryRequest):
 
                 ###### INSERT NEW DOMAIN PRIMITIVES HERE #########
 
+                ##### Debian APT domain primitives #####
+                # ============================================================
+                # DEBIAN (APT) DOMAIN RULES — Applies ONLY when os_name = "Debian" (Revision 7)
+                # ============================================================
+                #
+                # Debian APT vs Ubuntu APT — subtle but important differences:
+                #
+                # 1. Package manager usage:
+                #    - Ubuntu commonly uses both "apt" and "apt-get" in user-facing docs.
+                #    - Debian historically prefers "apt-get" for scripting and automation.
+                #    - In this contract, Debian SHOULD normalize to "apt-get" for all recovery
+                #      and retry commands (e.g., "apt-get install -y <pkg>").
+                #
+                # 2. Error message wording:
+                #    - Ubuntu often uses:   E: Unable to locate package nginx
+                #    - Debian may use:      E: Unable to locate package 'nginx'
+                #    - The contract MUST treat both forms as equivalent and MUST NOT depend
+                #      on the presence or absence of quotes around the package name.
+                #
+                # 3. Repository URLs:
+                #    - Ubuntu:  http://archive.ubuntu.com/ubuntu
+                #    - Debian:  http://deb.debian.org/debian
+                #    - Error messages (including Hash Sum mismatch and Failed to fetch) may
+                #      reference different base URLs, but the recovery logic is identical.
+                #
+                # 4. Lock file behavior:
+                #    - Ubuntu commonly surfaces:
+                #        /var/lib/dpkg/lock-frontend
+                #        /var/lib/dpkg/lock
+                #    - Debian may also surface:
+                #        /var/lib/apt/lists/lock
+                #    - The contract MUST treat these lock files as equivalent symptoms of
+                #      package manager contention and handle them via cleanup_and_retry
+                #      when safe, or fallback when non-deterministic.
+                #
+                # 5. Fix-broken suggestions:
+                #    - Ubuntu often suggests:  apt --fix-broken install
+                #    - Debian often suggests:  apt-get -f install
+                #    - Both are valid on Debian, but this contract chooses a canonical,
+                #      deterministic recovery path:
+                #          apt-get -f install -y
+                #      followed by:
+                #          apt-get install -y <pkg>
+                #
+                # 6. Hash Sum mismatch:
+                #    - Behavior and remediation are effectively identical between Ubuntu and
+                #      Debian:
+                #        * clean partial lists and archives
+                #        * rerun "apt-get update -y"
+                #        * optionally rerun the original install/upgrade command
+                #      The Ubuntu Revision 6.6 Hash Sum mismatch logic is reused here
+                #      verbatim, with the same <pkg> binding semantics.
+                #
+                # 7. Malformed commands:
+                #    - Global Linux malformed rules still apply (e.g., "apt-get install"
+                #      with no package is incomplete and SHOULD prefer fallback over
+                #      guessing).
+                #    - Debian-specific rules MUST NOT introduce any behavior that guesses
+                #      package names or infers intent from test bias.
+                #
+                # In summary:
+                #    - Debian APT domain primitives are structurally identical to Ubuntu APT,
+                #      but normalized to "apt-get", aware of Debian-specific error wording,
+                #      and canonicalized around "apt-get -f install -y" for fix-broken flows.
+                # ============================================================
+
+                "These rules apply ONLY when os_name = \"Debian\".\n"
+
+                "Debian APT domain primitives:\n"
+                "- Debian uses 'apt-get' as the canonical package manager for scripted operations.\n"
+                "- The command 'apt-get update' refreshes package indexes.\n"
+                "- The command 'apt-get install <pkg>' installs packages.\n"
+                "- The flag '-y' auto-confirms installation.\n"
+                "- If a package cannot be located (e.g., 'E: Unable to locate package <pkg>' or\n"
+                "  'E: Unable to locate package '<pkg>''), the LLM MUST retry with:\n"
+                "    * apt-get update -y\n"
+                "    * apt-get install -y <pkg>\n"
+                "- If the command is missing arguments (e.g., 'apt-get install'),\n"
+                "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
+                "  can be constructed WITHOUT guessing a package name.\n"
+                "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew),\n"
+                "  the LLM MUST rewrite the command using the correct Debian package manager ('apt-get')\n"
+                "  and retry when a safe, concrete package name is present.\n"
+                "- If the command is destructive (rm -rf /), the LLM MUST abort.\n"
+                "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
+                "  primitive, 'fallback' is allowed.\n"
+
+                # dpkg interrupted
+                "- If stderr suggests running 'dpkg --configure -a', the LLM MUST return\n"
+                "  a cleanup_and_retry action with the following retry sequence:\n"
+                "    * dpkg --configure -a\n"
+                "    * apt-get install -y <pkg>\n"
+
+                # held broken packages
+                "- If stderr CONTAINS the EXACT phrase 'held broken packages', the LLM MUST NOT run\n"
+                "  'apt --fix-broken install' or 'apt-get -f install'.\n"
+                "  This condition is non-deterministic and MUST use 'fallback'.\n"
+
+                # fix-broken suggestions (Debian canonical form)
+                "- If stderr suggests running 'apt --fix-broken install' OR 'apt-get -f install',\n"
+                "  the LLM MUST return a cleanup_and_retry action with the following retry sequence:\n"
+                "    * apt-get -f install -y\n"
+                "    * apt-get install -y <pkg>\n"
+
+                # Hash Sum mismatch — reuse Revision 6.6 semantics
+                "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
+                "  It MUST return a cleanup_and_retry action with:\n"
+                "    * \"cleanup\" containing EXACTLY these commands:\n"
+                "        - rm -rf /var/lib/apt/lists/partial/*\n"
+                "        - rm -rf /var/cache/apt/archives/partial/*\n"
+                "\n"
+                "    * \"retry\" containing a list of commands that MUST include, in this order:\n"
+                "        - apt-get update -y\n"
+                "\n"
+                "- For any rule that references \"<pkg>\", the LLM MUST replace \"<pkg>\" with the\n"
+                "  package name used in the failing command (for example, nginx, mysql-server, etc.).\n"
+                "\n"
+                "- If the failing command does NOT include a package name (for example, 'apt-get update',\n"
+                "  'apt-get upgrade -y', or 'apt-get dist-upgrade -y'), the LLM MUST NOT invent or guess\n"
+                "  a package name, and MUST omit any install step.\n"
+                "\n"
+                "- If the failing command DOES include a package name (for example,\n"
+                "  'apt-get install -y mysql-server' or 'apt-get install -y curl'), then the \"retry\" list\n"
+                "  MUST include, after 'apt-get update -y', the command:\n"
+                "        - apt-get install -y <pkg>\n"
 
 
 
