@@ -727,6 +727,7 @@ def recover(request: RecoveryRequest):
                 ##### Revision 6.5 (replaces Revision 6.2 Hash Sum mismatch behavior)
 
                 ##### Revision 6.6 (Hash Sum mismatch — corrected package binding) (replaces Revision 6.5)
+                ##### The Hash Sum mismatch is a very common error in ubuntu for command errors
                 "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
                 "  It MUST return a cleanup_and_retry action with:\n"
                 "    * \"cleanup\" containing EXACTLY these commands:\n"
