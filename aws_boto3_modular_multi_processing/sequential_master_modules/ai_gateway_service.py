@@ -1295,10 +1295,12 @@ def recover(request: RecoveryRequest):
             )
         }
 
-
+        ##### DEBUG code printing payload and OpenAI response to the gitlab pipeline console #####
         # Print the exact payload before sending
         print("\n==================== PAYLOAD SENT TO OPENAI ====================")
-        print(payload)
+        #print(payload)
+        print(json.dumps(payload, indent=2)) ##### Need to dump in json formatting because the os_info that is injected by the whitebox stress testing is lost in the middle of the massive payload without a newline.
+
         print("===============================================================\n")
 
         # Make the request
