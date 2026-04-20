@@ -879,6 +879,8 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
                 ##### RHEL/CentOS YUM domain primitives #####
                 # ============================================================
                 # RHEL/CentOS (YUM) DOMAIN RULES — Applies ONLY when os_name is a
@@ -966,6 +968,8 @@ def recover(request: RecoveryRequest):
                 "  failing command (e.g., nginx, mysql-server, etc.).\n"
                 "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM MUST NOT invent\n"
                 "  or guess a package name, and MUST omit any install step.\n"
+
+
 
 
 
