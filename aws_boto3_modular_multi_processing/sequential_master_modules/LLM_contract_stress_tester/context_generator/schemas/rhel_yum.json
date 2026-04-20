@@ -12,13 +12,13 @@
       "stderr": "No match for argument: nginx",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-201",
+      "instance_id": "i-test-001",
       "ip": "10.0.2.10",
       "tags": [],
       "history": [
         {
           "command": "yum update -y",
-          "stdout": "Loaded plugins: fastestmirror",
+          "stdout": "Loaded plugins: fastestmirror\nDetermining fastest mirrors\n * base: mirror.centos.org",
           "stderr": "",
           "exit_status": 0
         }
@@ -26,12 +26,12 @@
     },
 
     {
-      "command": "dnf install nginx",
+      "command": "dnf install -y nginx",
       "stdout": "",
       "stderr": "No match for argument: nginx",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-202",
+      "instance_id": "i-test-002",
       "ip": "10.0.2.11",
       "tags": [],
       "history": []
@@ -43,13 +43,13 @@
       "stderr": "bash: apt-get: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-203",
+      "instance_id": "i-test-003",
       "ip": "10.0.2.12",
       "tags": [],
       "history": [
         {
           "command": "yum update -y",
-          "stdout": "Loaded plugins: fastestmirror",
+          "stdout": "Loaded plugins: fastestmirror\nDetermining fastest mirrors\n * base: mirror.centos.org",
           "stderr": "",
           "exit_status": 0
         }
@@ -62,7 +62,7 @@
       "stderr": "bash: apk: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-204",
+      "instance_id": "i-test-004",
       "ip": "10.0.2.13",
       "tags": [],
       "history": []
@@ -74,7 +74,7 @@
       "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-205",
+      "instance_id": "i-test-005",
       "ip": "10.0.2.14",
       "tags": [],
       "history": []
@@ -86,7 +86,7 @@
       "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-206",
+      "instance_id": "i-test-006",
       "ip": "10.0.2.15",
       "tags": [],
       "history": []
@@ -98,7 +98,7 @@
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-207",
+      "instance_id": "i-test-007",
       "ip": "10.0.2.16",
       "tags": [],
       "history": []
@@ -110,7 +110,7 @@
       "stderr": "bash: asdfasdfasdf: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-208",
+      "instance_id": "i-test-008",
       "ip": "10.0.2.17",
       "tags": [],
       "history": []
@@ -122,7 +122,7 @@
       "stderr": "bash: show: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-209",
+      "instance_id": "i-test-009",
       "ip": "10.0.2.18",
       "tags": [],
       "history": []
@@ -134,8 +134,128 @@
       "stderr": "Could not resolve host: mirrorlist.centos.org",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-210",
+      "instance_id": "i-test-010",
       "ip": "10.0.2.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Metadata file does not match checksum for repomd.xml from baseos",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-011",
+      "ip": "10.0.2.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "repomd.xml signature could not be verified for repo 'baseos'",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-012",
+      "ip": "10.0.2.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'baseos': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-013",
+      "ip": "10.0.2.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.20.1-1.el9.x86_64 is already installed. Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-014",
+      "ip": "10.0.2.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-015",
+      "ip": "10.0.2.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum upgrade -y",
+      "stdout": "",
+      "stderr": "No packages marked for update.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-016",
+      "ip": "10.0.2.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt install nginx",
+      "stdout": "",
+      "stderr": "bash: apt: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-017",
+      "ip": "10.0.2.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y mysql-server",
+      "stdout": "",
+      "stderr": "No match for argument: mysql-server",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-018",
+      "ip": "10.0.2.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y httpd",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-019",
+      "ip": "10.0.2.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y curl",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'extras': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-020",
+      "ip": "10.0.2.29",
       "tags": [],
       "history": []
     }
