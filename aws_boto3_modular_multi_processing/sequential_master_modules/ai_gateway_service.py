@@ -879,6 +879,97 @@ def recover(request: RecoveryRequest):
 
 
 
+                ##### RHEL/CentOS YUM domain primitives #####
+                # ============================================================
+                # RHEL/CentOS (YUM) DOMAIN RULES — Applies ONLY when os_name is a
+                # RHEL-family YUM-based distribution (Revision 8)
+                # ============================================================
+                #
+                # IMPORTANT: Amazon Linux will have its own YUM block. Do NOT merge
+                # Amazon Linux behavior into this block. RHEL/CentOS and Amazon Linux
+                # share YUM syntax but differ in repo layout, metadata behavior, and
+                # error wording.
+                #
+                # Key differences vs APT (Ubuntu/Debian):
+                #   - YUM uses metadata repositories instead of APT index lists.
+                #   - Integrity failures appear as repo/metadata corruption, NOT
+                #     "Hash Sum mismatch".
+                #   - Cleanup is performed using:
+                #         yum clean all
+                #         yum makecache
+                #   - YUM does NOT have dpkg-like half-installed states.
+                #   - YUM idempotency messages differ ("Nothing to do", "Already installed").
+                #
+                # Key differences vs DNF (Fedora):
+                #   - DNF has different metadata wording and different lock behavior.
+                #   - DNF will have its own domain primitive block.
+                #
+                # Network failures:
+                #   - Governed by global Network Failure Semantics (Revision 6.5).
+                #   - DNS / connectivity errors MUST use "fallback".
+                #
+                # In summary:
+                #   - YUM domain primitives focus on:
+                #       * wrong package manager → rewrite to yum
+                #       * malformed install commands
+                #       * repo/metadata corruption → yum clean all + yum makecache + retry
+                #       * idempotency ("Nothing to do", "Already installed")
+                #       * destructive commands → abort
+                #       * unknown commands → fallback
+                # ============================================================
+
+                "These rules apply ONLY when os_name is a RHEL-family YUM-based system (e.g., 'RHEL', 'CentOS').\n"
+
+                "RHEL/CentOS YUM domain primitives:\n"
+                "- RHEL/CentOS use 'yum' as the primary package manager.\n"
+                "- The command 'yum update -y' refreshes package metadata.\n"
+                "- The command 'yum install -y <pkg>' installs packages.\n"
+                "- The flag '-y' auto-confirms installation.\n"
+
+                # Wrong package manager → rewrite
+                "- If the command uses a package manager that does NOT match RHEL/CentOS (apt, apt-get, dnf, apk, brew),\n"
+                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name is present.\n"
+
+                # Malformed install
+                "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
+                "  unless a safe, concrete correction can be constructed WITHOUT guessing a package name.\n"
+
+                # Destructive commands
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST abort.\n"
+
+                # Unknown commands
+                "- If the command is unrecognized (exit_status 127) and not obviously a shell primitive, 'fallback' is allowed.\n"
+
+                # YUM metadata / repo corruption
+                "- If stderr indicates YUM metadata or repo corruption (e.g., 'Metadata file does not match checksum',\n"
+                "  'repomd.xml signature could not be verified', 'failed to retrieve repodata', 'Error: failed to download metadata'),\n"
+                "  the LLM MUST use 'cleanup_and_retry' with the following retry sequence:\n"
+                "    * yum clean all\n"
+                "    * yum makecache\n"
+                "    * yum install -y <pkg>   (only when a package name is present)\n"
+
+                # Repo errors without deterministic fix
+                "- If stderr indicates repository errors that are NOT corruption and NOT network failures (e.g., disabled repo,\n"
+                "  missing repo configuration), and no deterministic fix exists, the LLM MUST use 'fallback'.\n"
+
+                # Network failures (global)
+                "- If stderr indicates DNS or connectivity failures (e.g., 'Could not resolve host', 'Connection timed out',\n"
+                "  'No route to host'), the LLM MUST treat this as a network failure and use 'fallback'.\n"
+
+                # Idempotency
+                "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
+                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' ONLY when there is evidence of\n"
+                "  partial or inconsistent state. Otherwise, 'fallback' is acceptable.\n"
+
+                # <pkg> binding semantics
+                "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the\n"
+                "  failing command (e.g., nginx, mysql-server, etc.).\n"
+                "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM MUST NOT invent\n"
+                "  or guess a package name, and MUST omit any install step.\n"
+
+
+
+
                 ###################################################
 
                 # ============================================================
