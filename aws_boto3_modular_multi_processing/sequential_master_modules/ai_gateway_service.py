@@ -981,6 +981,110 @@ def recover(request: RecoveryRequest):
 
 
 
+                # ============================================================
+                # AMAZON LINUX (YUM) DOMAIN RULES — Applies ONLY when os_name = "Amazon Linux"
+                # Revision 9
+                # ============================================================
+                #
+                # IMPORTANT:
+                # Amazon Linux uses YUM syntax, but its repo layout, metadata behavior,
+                # error wording, and package availability differ from RHEL/CentOS.
+                #
+                # DO NOT merge Amazon Linux behavior with RHEL/CentOS YUM (Revision 8).
+                # DO NOT assume repo names, mirrorlist behavior, or metadata wording
+                # are identical across these OS families.
+                #
+                # Key differences vs RHEL/CentOS:
+                #   - Amazon Linux uses amazon-linux-extras and amzn2-core repos.
+                #   - Metadata corruption wording differs ("Error: failed to download metadata"
+                #     vs "Metadata file does not match checksum").
+                #   - Some packages exist only in amazon-linux-extras (e.g., nginx, php7.x).
+                #   - YUM cleanup behavior is similar but not identical.
+                #
+                # Key differences vs Amazon Linux 2023 (DNF-based):
+                #   - This block applies ONLY to Amazon Linux 1 and Amazon Linux 2.
+                #   - Amazon Linux 2023 will have its own DNF domain primitive block.
+                #
+                # Network failures:
+                #   - Governed by global Network Failure Semantics (Revision 6.5).
+                #   - DNS / connectivity errors MUST use "fallback".
+                #
+                # In summary:
+                #   - Amazon Linux YUM domain primitives focus on:
+                #       * wrong package manager → rewrite to yum
+                #       * malformed install commands
+                #       * repo/metadata corruption → yum clean all + yum makecache + retry
+                #       * amazon-linux-extras handling
+                #       * idempotency ("Nothing to do", "Already installed")
+                #       * destructive commands → abort
+                #       * unknown commands → fallback
+                # ============================================================
+
+                "These rules apply ONLY when os_name = \"Amazon Linux\".\n"
+
+                "Amazon Linux YUM domain primitives (Revision 9):\n"
+                "- Amazon Linux uses 'yum' as the primary package manager.\n"
+                "- The command 'yum update -y' refreshes package metadata.\n"
+                "- The command 'yum install -y <pkg>' installs packages.\n"
+                "- The flag '-y' auto-confirms installation.\n"
+
+                # Wrong package manager → rewrite
+                "- If the command uses a package manager that does NOT match Amazon Linux (apt, apt-get, apt-cache, dnf, apk, brew),\n"
+                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name is present. This includes commands\n"
+                "  such as 'apt install <pkg>' and 'apt-get install <pkg>', which MUST be rewritten to:\n"
+                "      yum install -y <pkg>\n"
+
+                # Malformed install
+                "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
+                "  unless a safe, concrete correction can be constructed WITHOUT guessing a package name.\n"
+
+                # Destructive commands
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST abort.\n"
+
+                # Unknown commands
+                "- If the command is unrecognized (exit_status 127) and not obviously a shell primitive, 'fallback' is allowed.\n"
+
+                # Amazon Linux Extras (unique to Amazon Linux)
+                "- If stderr indicates that a package is available ONLY through amazon-linux-extras (e.g., 'nginx is available in amazon-linux-extras'),\n"
+                "  the LLM MUST use 'cleanup_and_retry' with the retry sequence:\n"
+                "      * amazon-linux-extras install <pkg> -y\n"
+                "      * yum install -y <pkg>\n"
+
+                # YUM metadata / repo corruption (Amazon Linux wording)
+                "- If stderr indicates YUM metadata or repo corruption (e.g., 'Error: failed to download metadata',\n"
+                "  'repomd.xml is damaged', 'cannot prepare internal mirrorlist', 'no URLs in mirrorlist'),\n"
+                "  the LLM MUST use 'cleanup_and_retry' with the following retry sequence:\n"
+                "      * yum clean all\n"
+                "      * yum makecache\n"
+                "      * yum install -y <pkg>   (only when a package name is present)\n"
+
+                # rpmdb corruption (Amazon Linux wording)
+                "- If stderr contains 'rpmdb open failed' or indicates rpm database corruption (e.g., Berkeley DB errors such as\n"
+                "  'BDB0113 Thread/process died', 'db5 error(-30973)', or 'BDB1507 Thread died'), the LLM MUST use 'cleanup_and_retry'\n"
+                "  with rpmdb recovery steps such as:\n"
+                "      rm -f /var/lib/rpm/.rpm.lock\n"
+                "      rpm --rebuilddb\n"
+                "      yum install -y <pkg>\n"
+
+                # Repo errors without deterministic fix
+                "- If stderr indicates repository errors that are NOT corruption and NOT network failures (e.g., disabled repo,\n"
+                "  missing repo configuration, missing amazon-linux-extras metadata), and no deterministic fix exists,\n"
+                "  the LLM MUST use 'fallback'.\n"
+
+                # Network failures (global)
+                "- If stderr indicates DNS or connectivity failures (e.g., 'Could not resolve host', 'Connection timed out',\n"
+                "  'No route to host'), the LLM MUST treat this as a network failure and use 'fallback'.\n"
+
+                # Idempotency
+                "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
+                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' ONLY when there is evidence of\n"
+                "  partial or inconsistent state. Otherwise, 'fallback' is acceptable.\n"
+
+                # <pkg> binding semantics
+                "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the\n"
+                "  failing command (e.g., nginx, mysql-server, etc.).\n"
+                "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM MUST NOT invent\n"
+                "  or guess a package name, and MUST omit any install step.\n"
 
 
 
