@@ -929,8 +929,10 @@ def recover(request: RecoveryRequest):
                 "- The flag '-y' auto-confirms installation.\n"
 
                 # Wrong package manager → rewrite
-                "- If the command uses a package manager that does NOT match RHEL/CentOS (apt, apt-get, dnf, apk, brew),\n"
-                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name is present.\n"
+                "- If the command uses a package manager that does NOT match RHEL/CentOS (apt, apt-get, apt-cache, dnf, apk, brew),\n"
+                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name is present. This includes commands\n"
+                "  such as 'apt install <pkg>' and 'apt-get install <pkg>', which MUST be rewritten to:\n"
+                "      yum install -y <pkg>\n"
 
                 # Malformed install
                 "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
@@ -949,6 +951,14 @@ def recover(request: RecoveryRequest):
                 "    * yum clean all\n"
                 "    * yum makecache\n"
                 "    * yum install -y <pkg>   (only when a package name is present)\n"
+
+                "- If stderr contains 'rpmdb open failed' or indicates rpm database corruption (e.g., Berkeley DB errors such as\n"
+                "  'BDB0113 Thread/process died', 'db5 error(-30973)', or 'BDB1507 Thread died'), the LLM MUST use 'cleanup_and_retry'\n"
+                "  with rpmdb recovery steps such as:\n"
+                "      rm -f /var/lib/rpm/.rpm.lock\n"
+                "      rpm --rebuilddb\n"
+                "      yum install -y <pkg>\n"
+
 
                 # Repo errors without deterministic fix
                 "- If stderr indicates repository errors that are NOT corruption and NOT network failures (e.g., disabled repo,\n"
