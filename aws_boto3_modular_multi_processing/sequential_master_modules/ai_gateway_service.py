@@ -1088,6 +1088,16 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
+                #### macos domain primitives notes. Make sure to add this to the contract rules to differentiate these two different
+                #### domain primitives
+
+                #“These rules apply ONLY when os_name = "macOS" AND os_version ends with "-brew".”
+                #“These rules apply ONLY when os_name = "macOS" AND os_version ends with "-zsh".”
+
+
+
                 ###################################################
 
                 # ============================================================

@@ -1,6 +1,6 @@
 {
   "os_name": "macOS",
-  "os_version": "14.0",
+  "os_version": "14.0-zsh",
   "kernel": "23.0.0",
   "package_managers": [],
   "shell": "zsh",
