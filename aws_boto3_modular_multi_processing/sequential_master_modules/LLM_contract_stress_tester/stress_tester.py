@@ -156,10 +156,13 @@ def build_payload(schema: dict, context: dict) -> dict:
     """
 
     # Extract OS info from schema metadata
+    # REMOVE the kernel from os_info. The module2f code for the AI/MCP hook _invoke_ai_hook does not use kernel in the context
+    # block that is sent to the LLM . So the stress tester has to mirror that for whitebox testing. Regresssion test all 
+    # schemas that were done with kernel for LLM re-training to the contract rules that we have now. 
     os_info = {
         "name": schema.get("os_name"),
         "version": schema.get("os_version"),
-        "kernel": schema.get("kernel"),
+        #"kernel": schema.get("kernel"),
     }
 
     # Build the final payload dict
