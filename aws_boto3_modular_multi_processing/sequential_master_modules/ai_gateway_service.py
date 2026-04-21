@@ -924,9 +924,10 @@ def recover(request: RecoveryRequest):
                 #       * unknown commands → fallback
                 # ============================================================
 
-                "These rules apply ONLY when os_name is a RHEL-family YUM-based system (e.g., 'RHEL', 'CentOS').\n"
+                "These rules apply ONLY when os_name == 'RHEL' AND os_version starts with '9'. They MUST NOT apply to CentOS 7, CentOS 8, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
 
                 "RHEL/CentOS YUM domain primitives:\n"
+                
                 "- RHEL/CentOS use 'yum' as the primary package manager.\n"
                 "- The command 'yum update -y' refreshes package metadata.\n"
                 "- The command 'yum install -y <pkg>' installs packages.\n"
@@ -1089,6 +1090,177 @@ def recover(request: RecoveryRequest):
                 "  failing command (e.g., nginx, mysql-server, etc.).\n"
                 "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM MUST NOT invent\n"
                 "  or guess a package name, and MUST omit any install step.\n"
+
+
+
+
+
+
+
+
+
+                ##### Revision 10 — CentOS 7 YUM domain primitives and error handling rules #####
+                
+                "These rules apply ONLY when os_name == 'CentOS' AND os_version starts with '7'. They MUST NOT apply to RHEL, CentOS 8, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+                
+                "CentOS 7 YUM domain primitives (Revision 10):\n"
+
+                "- CentOS 7 uses 'yum' as its primary package manager.\n"
+                "- The command 'yum install -y <pkg>' installs packages.\n"
+                "- The command 'yum update -y' refreshes package metadata and updates packages.\n"
+                "- The command 'yum clean all' clears cached metadata and packages.\n"
+                "- The command 'yum makecache' rebuilds the YUM metadata cache.\n"
+                "\n"
+
+                "- If 'yum install -y <pkg>' fails with:\n"
+                "    * 'No package <pkg> available.'\n"
+                "    * 'No package <pkg> available. Error: Nothing to do.'\n"
+                "  the LLM MAY use 'fallback' if a prior successful 'yum update -y' exists in history.\n"
+                "  Otherwise, 'fallback' is allowed.\n"
+                "\n"
+
+                "- If 'yum install -y <pkg>' fails with wording similar to:\n"
+                "    * 'No package <pkg> available.'\n"
+                "  and there is NO prior 'yum update -y' in history,\n"
+                "  the LLM MAY retry with:\n"
+                "      yum update -y\n"
+                "      yum install -y <pkg>\n"
+                "\n"
+
+                "- If the command uses a package manager that does NOT match CentOS 7 (apt, apt-get, dnf, apk),\n"
+                "  the LLM MUST rewrite the command using 'yum' and retry:\n"
+                "      yum install -y <pkg>   (for install commands)\n"
+                "      yum update -y          (for update/upgrade commands)\n"
+                "\n"
+
+                "- If 'yum install' or 'dnf install' is called without a package name and stderr contains\n"
+                "  'Need to pass a list of packages', the command is malformed and the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If stderr contains DNS resolution failures such as:\n"
+                "    * 'Could not resolve host:'\n"
+                "    * 'Could not resolve host: mirrorlist.centos.org'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If stderr contains YUM metadata or repo corruption errors such as:\n"
+                "    * 'Metadata file does not match checksum for repomd.xml'\n"
+                "    * 'YumRepo Error: All mirror URLs are not using ftp, http[s] or file.'\n"
+                "    * 'Cannot find a valid baseurl for repo'\n"
+                "    * 'Error: failed to download metadata for repo'\n"
+                "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                "    cleanup:\n"
+                "      - yum clean all\n"
+                "    retry:\n"
+                "      - yum makecache\n"
+                "      - yum install -y <pkg>\n"
+                "\n"
+
+                "- If stderr contains 'Error: rpmdb open failed', the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                "    cleanup:\n"
+                "      - rm -f /var/lib/rpm/.rpm.lock\n"
+                "    retry:\n"
+                "      - rpm --rebuilddb\n"
+                "      - yum install -y <pkg>\n"
+                "\n"
+
+                "- If stderr indicates the package is already installed, such as:\n"
+                "    * 'Package <pkg> is already installed. Nothing to do.'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If 'yum update -y' or 'yum upgrade -y' completes successfully with stderr:\n"
+                "    * 'Nothing to do.'\n"
+                "    * 'No packages marked for update.'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'\n"
+                "  with a clear message indicating a destructive command was detected.\n"
+                "\n"
+
+                "- If the command is unrecognized (exit_status 127) and does not match any safe correction rule,\n"
+                "  the LLM MUST use 'fallback'.\n"
+
+
+
+
+
+                ##### Revision 11 — CentOS 8 DNF/YUM domain primitives and error handling rules #####
+
+                "These rules apply ONLY when os_name == 'CentOS' AND os_version starts with '8'. They MUST NOT apply to RHEL, CentOS 7, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+
+                "CentOS 8 DNF domain primitives (Revision 11):\n"
+
+                "- CentOS 8 uses 'dnf' as its primary package manager. 'yum' is a compatibility wrapper.\n"
+                "- The command 'dnf install -y <pkg>' installs packages.\n"
+                "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
+                "- The command 'dnf clean all' clears cached metadata and packages.\n"
+                "- The command 'dnf makecache' rebuilds the DNF metadata cache.\n"
+                "\n"
+
+                "- If 'dnf install -y <pkg>' fails with:\n"
+                "    * 'No match for argument: <pkg>'\n"
+                "    * 'Unable to find a match: <pkg>'\n"
+                "  the LLM MAY use 'fallback' if a prior successful 'dnf update -y' exists in history.\n"
+                "  Otherwise, 'fallback' is allowed.\n"
+                "\n"
+
+                "- If 'yum install -y <pkg>' is used on CentOS 8, the LLLM MAY normalize it to:\n"
+                "      dnf install -y <pkg>\n"
+                "  and retry.\n"
+                "\n"
+
+                "- If the command uses a package manager that does NOT match CentOS 8 (apt, apt-get, apk),\n"
+                "  the LLM MUST rewrite the command using 'dnf' and retry:\n"
+                "      dnf install -y <pkg>   (for install commands)\n"
+                "      dnf upgrade -y         (for upgrade commands)\n"
+                "      dnf update -y          (for update commands)\n"
+                "\n"
+
+                "- If 'dnf install' or 'yum install' is called without a package name and stderr contains\n"
+                "  'Error: Need to pass a list of packages', the command is malformed and the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If stderr contains metadata or mirrorlist failures such as:\n"
+                "    * 'Failed to download metadata for repo'\n"
+                "    * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+                "    * 'Error: failed to download metadata for repo'\n"
+                "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                "    cleanup:\n"
+                "      - dnf clean all\n"
+                "    retry:\n"
+                "      - dnf makecache\n"
+                "      - dnf install -y <pkg>\n"
+                "\n"
+
+                "- If stderr contains 'Error: rpmdb open failed', the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                "    cleanup:\n"
+                "      - rm -f /var/lib/rpm/.rpm.lock\n"
+                "    retry:\n"
+                "      - rpm --rebuilddb\n"
+                "      - dnf install -y <pkg>\n"
+                "\n"
+
+                "- If stderr indicates the package is already installed, such as:\n"
+                "    * 'Package <pkg> is already installed.'\n"
+                "    * 'Nothing to do.'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with stderr:\n"
+                "    * 'Nothing to do.'\n"
+                "    * 'No packages marked for upgrade.'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'\n"
+                "  with a clear message indicating a destructive command was detected.\n"
+                "\n"
+
+                "- If the command is unrecognized (exit_status 127) and does not match any safe correction rule,\n"
+                "  the LLM MUST use 'fallback'.\n"
+
 
 
 
