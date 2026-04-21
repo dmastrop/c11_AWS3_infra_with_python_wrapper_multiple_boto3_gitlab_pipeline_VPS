@@ -674,7 +674,11 @@ def recover(request: RecoveryRequest):
                 "- Do NOT guess a package name based solely on prior examples or patterns in the input.\n"
                 "- Only use \"retry_with_modified_command\" when you can safely construct a complete, realistic command.\n"
                 "- Incomplete commands MUST NOT trigger \"abort\" unless they are also unsafe or destructive.\n\n"
-
+                
+                # Revision 6.7 All show style commands performed in any linux variant os should return fallback. There are no 
+                # show commands in any linux variant.
+                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                "- Linux-family OSes (Ubuntu, Debian, RHEL, CentOS, Amazon Linux) do NOT use Cisco-style 'show' commands. If a command begins with 'show ' and is not a valid Linux command, the LLM MUST NOT attempt to correct it using Cisco IOS rules. It MUST return a 'fallback' action.\n"
 
 
 
