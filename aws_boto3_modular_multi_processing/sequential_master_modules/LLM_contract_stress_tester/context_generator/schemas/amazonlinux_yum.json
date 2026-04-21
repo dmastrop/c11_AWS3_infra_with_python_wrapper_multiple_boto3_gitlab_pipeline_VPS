@@ -9,16 +9,16 @@
     {
       "command": "yum install -y nginx",
       "stdout": "",
-      "stderr": "No package nginx available.",
+      "stderr": "No match for argument: nginx",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-301",
+      "instance_id": "i-test-001",
       "ip": "10.0.3.10",
       "tags": [],
       "history": [
         {
           "command": "yum update -y",
-          "stdout": "Loaded plugins: priorities, update-motd, security",
+          "stdout": "Loaded plugins: priorities, update-motd, search-disabled-repos\nResolving Dependencies",
           "stderr": "",
           "exit_status": 0
         }
@@ -26,12 +26,12 @@
     },
 
     {
-      "command": "dnf install nginx",
+      "command": "yum install -y nginx",
       "stdout": "",
-      "stderr": "bash: dnf: command not found",
-      "exit_status": 127,
+      "stderr": "Error: Unable to find a match: nginx",
+      "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-302",
+      "instance_id": "i-test-002",
       "ip": "10.0.3.11",
       "tags": [],
       "history": []
@@ -43,13 +43,13 @@
       "stderr": "bash: apt-get: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-303",
+      "instance_id": "i-test-003",
       "ip": "10.0.3.12",
       "tags": [],
       "history": [
         {
           "command": "yum update -y",
-          "stdout": "Loaded plugins: priorities, update-motd, security",
+          "stdout": "Loaded plugins: priorities, update-motd, search-disabled-repos\nResolving Dependencies",
           "stderr": "",
           "exit_status": 0
         }
@@ -62,7 +62,7 @@
       "stderr": "bash: apk: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-304",
+      "instance_id": "i-test-004",
       "ip": "10.0.3.13",
       "tags": [],
       "history": []
@@ -74,19 +74,19 @@
       "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-305",
+      "instance_id": "i-test-005",
       "ip": "10.0.3.14",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "yum update -y",
+      "command": "dnf install",
       "stdout": "",
-      "stderr": "Could not resolve host: repo.us-east-1.amazonaws.com",
+      "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-306",
+      "instance_id": "i-test-006",
       "ip": "10.0.3.15",
       "tags": [],
       "history": []
@@ -98,7 +98,7 @@
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-307",
+      "instance_id": "i-test-007",
       "ip": "10.0.3.16",
       "tags": [],
       "history": []
@@ -110,7 +110,7 @@
       "stderr": "bash: asdfasdfasdf: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-308",
+      "instance_id": "i-test-008",
       "ip": "10.0.3.17",
       "tags": [],
       "history": []
@@ -122,8 +122,116 @@
       "stderr": "bash: show: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-309",
+      "instance_id": "i-test-009",
       "ip": "10.0.3.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "Could not resolve host: amazonlinux.default.amazonaws.com",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-010",
+      "ip": "10.0.3.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Metadata file does not match checksum for repomd.xml from amzn2-core",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-011",
+      "ip": "10.0.3.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "repomd.xml signature could not be verified for repo 'amzn2-core'",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-012",
+      "ip": "10.0.3.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-013",
+      "ip": "10.0.3.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.22.1-1.amzn2.x86_64 is already installed. Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-014",
+      "ip": "10.0.3.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-015",
+      "ip": "10.0.3.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum upgrade -y",
+      "stdout": "",
+      "stderr": "No packages marked for update.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-016",
+      "ip": "10.0.3.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt install nginx",
+      "stdout": "",
+      "stderr": "bash: apt: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-017",
+      "ip": "10.0.3.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y mysql-server",
+      "stdout": "",
+      "stderr": "No match for argument: mysql-server",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-018",
+      "ip": "10.0.3.27",
       "tags": [],
       "history": []
     },
@@ -131,15 +239,219 @@
     {
       "command": "yum install -y httpd",
       "stdout": "",
-      "stderr": "No package httpd available.",
+      "stderr": "Error: rpmdb open failed",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-310",
-      "ip": "10.0.3.19",
+      "instance_id": "i-test-019",
+      "ip": "10.0.3.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y curl",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2extra-docker': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-020",
+      "ip": "10.0.3.29",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y git",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: git",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-021",
+      "ip": "10.0.3.30",
+      "tags": [],
+      "history": []
+    },
+
+
+    {
+      "command": "yum reinstall -y bash",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-022",
+      "ip": "10.0.3.31",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y python3",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-023",
+      "ip": "10.0.3.32",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y docker",
+      "stdout": "",
+      "stderr": "No match for argument: docker",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-024",
+      "ip": "10.0.3.33",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y vim",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: vim",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-025",
+      "ip": "10.0.3.34",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y tree",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-026",
+      "ip": "10.0.3.35",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y java-17-amazon-corretto",
+      "stdout": "",
+      "stderr": "No match for argument: java-17-amazon-corretto",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-027",
+      "ip": "10.0.3.36",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y perl",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: perl",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-028",
+      "ip": "10.0.3.37",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y wget",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2extra-epel': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-029",
+      "ip": "10.0.3.38",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nodejs",
+      "stdout": "",
+      "stderr": "No match for argument: nodejs",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-030",
+      "ip": "10.0.3.39",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y unzip",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: unzip",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-031",
+      "ip": "10.0.3.40",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y jq",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2extra-epel': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-032",
+      "ip": "10.0.3.41",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y redis",
+      "stdout": "",
+      "stderr": "No match for argument: redis",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-033",
+      "ip": "10.0.3.42",
+      "tags": [],
+      "history": []
+    },
+
+        {
+      "command": "yum install -y php",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: php",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-034",
+      "ip": "10.0.3.43",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y gcc",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-035",
+      "ip": "10.0.3.44",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y ruby",
+      "stdout": "",
+      "stderr": "No match for argument: ruby",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-036",
+      "ip": "10.0.3.45",
       "tags": [],
       "history": []
     }
 
-  ]
-}
 
+}
