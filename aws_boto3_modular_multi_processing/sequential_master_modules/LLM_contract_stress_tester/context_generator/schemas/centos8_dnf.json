@@ -1,0 +1,258 @@
+{
+  "os_name": "CentOS",
+  "os_version": "8",
+  "kernel": "4.18.0",
+  "package_managers": ["dnf", "yum"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "No match for argument: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-801",
+      "ip": "10.0.8.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "dnf update -y",
+          "stdout": "CentOS Linux 8 - BaseOS\nDependencies resolved.",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Unable to find a match: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-802",
+      "ip": "10.0.8.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "No match for argument: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-803",
+      "ip": "10.0.8.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-804",
+      "ip": "10.0.8.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-805",
+      "ip": "10.0.8.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install",
+      "stdout": "",
+      "stderr": "Error: Need to pass a list of packages",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-806",
+      "ip": "10.0.8.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-807",
+      "ip": "10.0.8.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-808",
+      "ip": "10.0.8.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-809",
+      "ip": "10.0.8.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf update -y",
+      "stdout": "",
+      "stderr": "Failed to download metadata for repo 'baseos': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-810",
+      "ip": "10.0.8.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'baseos': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-811",
+      "ip": "10.0.8.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Failed to download metadata for repo 'appstream': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-812",
+      "ip": "10.0.8.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.20.1-10.module_el8.x86_64 is already installed.\nDependencies resolved.\nNothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-813",
+      "ip": "10.0.8.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf update -y",
+      "stdout": "",
+      "stderr": "Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-814",
+      "ip": "10.0.8.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf upgrade -y",
+      "stdout": "",
+      "stderr": "No packages marked for upgrade.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-815",
+      "ip": "10.0.8.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt install nginx",
+      "stdout": "",
+      "stderr": "bash: apt: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-816",
+      "ip": "10.0.8.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y mysql-server",
+      "stdout": "",
+      "stderr": "No match for argument: mysql-server",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-817",
+      "ip": "10.0.8.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y httpd",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-818",
+      "ip": "10.0.8.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y curl",
+      "stdout": "",
+      "stderr": "Failed to download metadata for repo 'extras': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-819",
+      "ip": "10.0.8.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y git",
+      "stdout": "",
+      "stderr": "Unable to find a match: git",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-820",
+      "ip": "10.0.8.29",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

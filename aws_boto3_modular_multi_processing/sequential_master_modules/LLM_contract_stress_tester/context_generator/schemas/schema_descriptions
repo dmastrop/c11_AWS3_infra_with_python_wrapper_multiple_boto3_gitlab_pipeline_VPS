@@ -185,3 +185,51 @@ Palo Alto PAN‑OS firewall CLI.
 - Confirms correct OS inference under extreme mismatch
 
 ---
+
+
+## **15. centos7_yum.json**  
+CentOS 7 with `yum` and bash.
+
+**Why this schema is important:**  
+- CentOS 7 is a downstream rebuild of RHEL 7 and uses the legacy YUM stack  
+- Validates correct handling of YUM‑specific error patterns distinct from RHEL 8/9  
+- Ensures the LLM rewrites wrong package managers (apt, apt‑get, dnf, apk → yum)  
+- Tests CentOS‑specific repo failures:  
+  - “Cannot find a valid baseurl for repo”  
+  - “YumRepo Error: All mirror URLs are not using ftp, http[s] or file.”  
+- Validates correct metadata‑corruption recovery:  
+  - `yum clean all`  
+  - `yum makecache`  
+  - retry install  
+- Ensures correct rpmdb corruption handling (`rpm --rebuilddb`)  
+- Confirms correct fallback behavior for missing packages  
+- Ensures destructive commands (`rm -rf /`) trigger abort  
+- Validates correct OS boundary behavior now that CentOS 7 has its own primitive block
+
+
+---
+
+## **16. centos8_dnf.json**  
+CentOS 8 with `dnf` (primary) and `yum` (compatibility wrapper).
+
+**Why this schema is important:**  
+- CentOS 8 is a downstream rebuild of RHEL 8 and uses DNF, not YUM  
+- Ensures the LLM normalizes `yum install` → `dnf install`  
+- Validates DNF‑specific error patterns distinct from YUM:  
+  - “Failed to download metadata for repo”  
+  - “Cannot prepare internal mirrorlist: No URLs in mirrorlist”  
+- Tests correct DNF metadata‑corruption recovery:  
+  - `dnf clean all`  
+  - `dnf makecache`  
+  - retry install  
+- Ensures correct rpmdb corruption handling (`rpm --rebuilddb`)  
+- Confirms correct fallback behavior for missing packages  
+- Ensures destructive commands (`rm -rf /`) trigger abort  
+- Validates strict OS boundary behavior so DNF rules do not leak into:  
+  - RHEL 9  
+  - CentOS 7  
+  - Amazon Linux  
+  - Fedora  
+- Ensures correct handling of CentOS‑specific mirrorlist failures
+
+

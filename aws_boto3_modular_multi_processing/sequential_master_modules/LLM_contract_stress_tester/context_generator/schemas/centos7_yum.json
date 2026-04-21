@@ -1,0 +1,265 @@
+{
+  "os_name": "CentOS",
+  "os_version": "7",
+  "kernel": "3.10.0",
+  "package_managers": ["yum"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "No package nginx available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-701",
+      "ip": "10.0.7.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "yum update -y",
+          "stdout": "Loaded plugins: fastestmirror\nDetermining fastest mirrors\n * base: mirror.centos.org",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "No package nginx available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-702",
+      "ip": "10.0.7.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-703",
+      "ip": "10.0.7.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "yum update -y",
+          "stdout": "Loaded plugins: fastestmirror\nDetermining fastest mirrors\n * base: mirror.centos.org",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-704",
+      "ip": "10.0.7.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install",
+      "stdout": "",
+      "stderr": "Error: Need to pass a list of packages",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-705",
+      "ip": "10.0.7.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install",
+      "stdout": "",
+      "stderr": "Error: Need to pass a list of packages",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-706",
+      "ip": "10.0.7.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-707",
+      "ip": "10.0.7.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-708",
+      "ip": "10.0.7.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-709",
+      "ip": "10.0.7.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "Could not resolve host: mirrorlist.centos.org",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-710",
+      "ip": "10.0.7.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Metadata file does not match checksum for repomd.xml from base",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-711",
+      "ip": "10.0.7.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "YumRepo Error: All mirror URLs are not using ftp, http[s] or file.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-712",
+      "ip": "10.0.7.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Cannot find a valid baseurl for repo: base/7/x86_64",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-713",
+      "ip": "10.0.7.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.16.1-1.el7.x86_64 already installed and latest version\nNothing to do",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-714",
+      "ip": "10.0.7.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "No packages marked for update",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-715",
+      "ip": "10.0.7.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum upgrade -y",
+      "stdout": "",
+      "stderr": "No packages marked for update",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-716",
+      "ip": "10.0.7.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt install nginx",
+      "stdout": "",
+      "stderr": "bash: apt: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-717",
+      "ip": "10.0.7.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y mysql-server",
+      "stdout": "",
+      "stderr": "No package mysql-server available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-718",
+      "ip": "10.0.7.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y httpd",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-719",
+      "ip": "10.0.7.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y curl",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'extras': Cannot find a valid baseurl for repo",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-720",
+      "ip": "10.0.7.29",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
