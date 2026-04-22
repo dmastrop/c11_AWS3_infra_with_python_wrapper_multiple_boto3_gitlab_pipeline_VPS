@@ -1266,6 +1266,117 @@ def recover(request: RecoveryRequest):
 
 
 
+                # ============================================================
+                # FEDORA (DNF) DOMAIN RULES — Applies ONLY when os_name = "Fedora"
+                # Revision 12
+                # ============================================================
+                #
+                # IMPORTANT:
+                # Fedora is a DNF-based distribution. YUM is either absent or a thin
+                # compatibility shim, but DNF is the canonical package manager.
+                #
+                # DO NOT merge Fedora behavior with:
+                #   - RHEL 9 YUM/DNF (Revision 8)
+                #   - CentOS 7 YUM (Revision 10)
+                #   - CentOS 8 DNF/YUM (Revision 11)
+                #   - Amazon Linux YUM (Revision 9)
+                #
+                # Key points:
+                #   - Primary package manager: dnf
+                #   - Typical repos: fedora, updates, fedora-modular, updates-modular
+                #   - Error wording differs slightly from RHEL/CentOS (but is similar).
+                #
+                # Network failures:
+                #   - Governed by global Network Failure Semantics (Revision 6.5).
+                #   - DNS / connectivity errors MUST use "fallback".
+                #
+                # In summary:
+                #   - Fedora DNF domain primitives focus on:
+                #       * wrong package manager → rewrite to dnf
+                #       * malformed install commands
+                #       * repo/metadata corruption → dnf clean all + dnf makecache + retry
+                #       * idempotency ("Nothing to do", "Already installed")
+                #       * rpmdb corruption → rebuilddb + retry
+                #       * destructive commands → abort
+                #       * unknown commands → fallback
+                # ============================================================
+
+                "These rules apply ONLY when os_name == 'Fedora'. They MUST NOT apply to RHEL, CentOS, Amazon Linux, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+
+                "Fedora DNF domain primitives (Revision 12):\n"
+
+                "- Fedora uses 'dnf' as its primary package manager.\n"
+                "- The command 'dnf install -y <pkg>' installs packages.\n"
+                "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
+                "- The command 'dnf clean all' clears cached metadata and packages.\n"
+                "- The command 'dnf makecache' rebuilds the DNF metadata cache.\n"
+                "\n"
+
+                "- If 'dnf install -y <pkg>' fails with:\n"
+                "    * 'No match for argument: <pkg>'\n"
+                "    * 'Unable to find a match: <pkg>'\n"
+                "  the LLM MAY use 'fallback' if a prior successful 'dnf update -y' exists in history.\n"
+                "  Otherwise, 'fallback' is allowed.\n"
+                "\n"
+
+                "- If 'yum install -y <pkg>' is used on Fedora, the LLM MAY normalize it to:\n"
+                "      dnf install -y <pkg>\n"
+                "  and retry.\n"
+                "\n"
+
+                "- If the command uses a package manager that does NOT match Fedora (apt, apt-get, apk),\n"
+                "  the LLM MUST rewrite the command using 'dnf' and retry:\n"
+                "      dnf install -y <pkg>   (for install commands)\n"
+                "      dnf upgrade -y         (for upgrade commands)\n"
+                "      dnf update -y          (for update commands)\n"
+                "\n"
+
+                "- If 'dnf install' or 'yum install' is called without a package name and stderr contains\n"
+                "  'Error: Need to pass a list of packages', the command is malformed and the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If stderr contains metadata or mirrorlist failures such as:\n"
+                "    * 'Failed to download metadata for repo'\n"
+                "    * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+                "    * 'Error: failed to download metadata for repo'\n"
+                "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                "    cleanup:\n"
+                "      - dnf clean all\n"
+                "    retry:\n"
+                "      - dnf makecache\n"
+                "      - dnf install -y <pkg>\n"
+                "\n"
+
+                "- If stderr contains 'Error: rpmdb open failed', the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                "    cleanup:\n"
+                "      - rm -f /var/lib/rpm/.rpm.lock\n"
+                "    retry:\n"
+                "      - rpm --rebuilddb\n"
+                "      - dnf install -y <pkg>\n"
+                "\n"
+
+                "- If stderr indicates the package is already installed, such as:\n"
+                "    * 'Package <pkg> is already installed.'\n"
+                "    * 'Nothing to do.'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with stderr:\n"
+                "    * 'Nothing to do.'\n"
+                "    * 'No packages marked for upgrade.'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'\n"
+                "  with a clear message indicating a destructive command was detected.\n"
+                "\n"
+
+                "- If the command is unrecognized (exit_status 127) and does not match any safe correction rule,\n"
+                "  the LLM MUST use 'fallback'.\n"
+
+
+
+
                 #### macos domain primitives notes. Make sure to add this to the contract rules to differentiate these two different
                 #### domain primitives
 
