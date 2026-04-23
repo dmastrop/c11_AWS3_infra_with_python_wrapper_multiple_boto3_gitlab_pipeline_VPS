@@ -1,3 +1,50 @@
+For the bash_linux.json this has to be tested in a specfic manner.
+The os_name in the schema needs to be edited for each linux distro below and then the bash_linux.json schema needs to be regressed
+with that linux distro. The os_name Linux and os_version generic in the original bash_linux.json schema is just a placeholder.
+The active contract rules are in the malformed linux block in ai_gateway_service.py and this rule noted below that governs package
+manager behavior, for example, will offload the final rule behavior to the domain specific primitive linux distro rule block.
+
+                ##### Revision 6.8 — Linux malformed-command hardening (applies to bash and BusyBox shells) #####
+                "- These rules extend and harden the existing malformed Linux rules and apply to ALL Linux-family\n"
+                "  OSes covered by this contract (os_name): Ubuntu, Debian, CentOS, RHEL, Fedora, Amazon Linux,\n"
+                "  Alpine, and BusyBox.\n"
+                "\n"
+                "- The malformed Linux block MUST remain deterministic and MUST NOT guess user intent. When a\n"
+                "  malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+                "  inventing or hallucinating a corrected command.\n"
+                "\n"
+                "- If a command is syntactically malformed (for example, missing arguments, truncated flags,\n"
+                "  partial pipelines, or incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
+                "  unless a safe, deterministic correction is directly implied by the original command.\n"
+                "\n"
+                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command,\n"
+                "  and ONLY within OS-specific domain primitive blocks (Ubuntu, Debian, RHEL/CentOS, Fedora,\n"
+                "  Amazon Linux, Alpine, BusyBox). The malformed Linux block MUST NOT introduce or guess any\n"
+                "  package-manager behavior.\n"
+                "\n"
+>>>>>>>                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk, brew),\n"
+                "  and the OS-specific domain block does not define a deterministic rewrite for that manager,\n"
+                "  the LLM MUST use 'fallback'. The malformed Linux block MUST NOT guess which package manager\n"
+                "  is correct.\n"
+                "\n"
+                "- Linux-family OSes in this contract MUST NOT introduce 'sudo' as part of malformed-command\n"
+                "  correction. If a command fails due to permission issues and no OS-specific deterministic\n"
+                "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
+                "\n"
+                "- The synthetic 'Linux/generic' schema used in testing exists ONLY to harden these malformed\n"
+                "  Linux rules. Real OS discovery MUST NOT return 'Linux/generic'. All real Linux-family OSes\n"
+                "  (Ubuntu, Debian, CentOS, RHEL, Fedora, Amazon Linux, Alpine, BusyBox) inherit this behavior.\n"
+                "\n"
+ 
+
+
+
+
+
+
 These schemas will test the LLM inference for a variety of package managers and some different platforms, with the goal of refining the contract rules to handle a wide variety of package manager command sets or platform command sets, making the sofware a universal 
 remediator
 
