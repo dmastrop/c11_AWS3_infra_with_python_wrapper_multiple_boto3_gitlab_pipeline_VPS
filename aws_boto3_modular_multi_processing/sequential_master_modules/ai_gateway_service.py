@@ -1377,6 +1377,95 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
+                ###### Alpine APK domain primitives #####
+                # ============================================================
+                # ALPINE (APK) DOMAIN RULES — Applies ONLY when os_name = "Alpine" (Revision 13)
+                # ============================================================
+                #
+                # Alpine APK vs Ubuntu/Debian APT — key similarities and differences:
+                #
+                # 1. Package manager:
+                #    - Alpine uses 'apk' as its package manager.
+                #    - Common commands:
+                #        apk update
+                #        apk add <pkg>
+                #        apk del <pkg>
+                #
+                # 2. Cache and index layout:
+                #    - Alpine stores APK cache under:
+                #        /var/cache/apk
+                #    - Corruption or partial state is typically resolved by:
+                #        * removing cached APKs
+                #        * rerunning 'apk update'
+                #        * rerunning 'apk add <pkg>' when a package is present
+                #
+                # 3. Error message wording (examples, not exhaustive):
+                #    - 'ERROR: unable to select packages:'
+                #    - 'ERROR: unsatisfiable constraints:'
+                #    - 'ERROR: failed to update apk cache'
+                #    - 'ERROR: repository ... not found'
+                #    - 'fetch http://...: temporary error (try again later)'
+                #
+                # 4. Network failures:
+                #    - Governed by global Network Failure Semantics (Revision 6.5).
+                #    - DNS / connectivity errors MUST use "fallback".
+                #
+                # 5. Malformed commands:
+                #    - Global Linux malformed rules apply (Revision 2, 6.7).
+                #    - 'apk add' with no package is INCOMPLETE and MUST prefer 'fallback'
+                #      unless a safe, concrete correction exists WITHOUT guessing a package.
+                #
+                # In summary:
+                #    - Alpine APK domain primitives are structurally aligned with Ubuntu APT,
+                #      but normalized to 'apk', use APT-style corruption cleanup semantics
+                #      for /var/cache/apk, and respect global malformed and safety rules.
+                # ============================================================
+
+                "These rules apply ONLY when os_name = \"Alpine\".\n"
+
+                "Alpine APK domain primitives (Revision 13):\n"
+                "- Alpine uses 'apk' as its package manager.\n"
+                "- The command 'apk update' refreshes package indexes.\n"
+                "- The command 'apk add <pkg>' installs packages.\n"
+                "- The flag '--no-cache' may be used in some environments, but this contract\n"
+                "  assumes standard 'apk update' + 'apk add <pkg>' flows for recovery.\n"
+                "- If a package cannot be selected or resolved (e.g., 'ERROR: unable to select packages:'\n"
+                "  or 'ERROR: unsatisfiable constraints:' for <pkg>), and there is no deterministic fix\n"
+                "  (such as enabling a specific repository), the LLM MUST use 'fallback'.\n"
+                "- If the command is missing arguments (e.g., 'apk add'), treat it as malformed and\n"
+                "  use 'fallback' unless a safe, concrete correction can be constructed WITHOUT\n"
+                "  guessing a package name.\n"
+                "- If the command uses a package manager that does not match Alpine (apt, apt-get,\n"
+                "  yum, dnf, brew), the LLM MUST rewrite the command using 'apk add <pkg>' when a\n"
+                "  safe, concrete package name is present.\n"
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST abort.\n"
+                "- If the command is unrecognized (exit_status 127), 'fallback' is allowed.\n"
+                "\n"
+                "- If stderr indicates APK cache or index corruption (for example, messages such as\n"
+                "  'ERROR: failed to update apk cache' or other corruption-like wording that does NOT\n"
+                "  indicate a network failure), the LLM MUST use 'cleanup_and_retry' with APT-style\n"
+                "  cleanup semantics adapted to Alpine:\n"
+                "    * 'cleanup' containing commands that remove cached APK state, such as:\n"
+                "        - rm -rf /var/cache/apk/*\n"
+                "\n"
+                "    * 'retry' containing a list of commands that MUST include, in this order:\n"
+                "        - apk update\n"
+                "\n"
+                "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the\n"
+                "  package name used in the failing command (for example, curl, nginx, etc.).\n"
+                "\n"
+                "- If the failing command does NOT include a package name (for example, 'apk update'),\n"
+                "  the LLM MUST NOT invent or guess a package name, and MUST omit any 'apk add' step.\n"
+                "\n"
+                "- If the failing command DOES include a package name (for example, 'apk add curl'),\n"
+                "  then the 'retry' list for corruption recovery MUST include, after 'apk update',\n"
+                "  the command:\n"
+                "        - apk add <pkg>\n"
+
+
+
                 #### macos domain primitives notes. Make sure to add this to the contract rules to differentiate these two different
                 #### domain primitives
 
