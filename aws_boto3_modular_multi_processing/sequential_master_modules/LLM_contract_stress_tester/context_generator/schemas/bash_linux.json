@@ -104,7 +104,7 @@
 
     {
       "command": "echo $SHELL",
-      "stdout": "",
+      "stdout": "/bin/bash",
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
@@ -122,6 +122,126 @@
       "attempt": 1,
       "instance_id": "i-test-910",
       "ip": "10.0.9.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf update -y",
+      "stdout": "",
+      "stderr": "bash: dnf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-911",
+      "ip": "10.0.9.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum update -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-912",
+      "ip": "10.0.9.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk update",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-913",
+      "ip": "10.0.9.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "sudo ls -l",
+      "stdout": "",
+      "stderr": "bash: sudo: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-914",
+      "ip": "10.0.9.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "cat /etc/passwd",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-915",
+      "ip": "10.0.9.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep h",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-916",
+      "ip": "10.0.9.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "ls -l /nonexistent",
+      "stdout": "",
+      "stderr": "ls: cannot access '/nonexistent': No such file or directory",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-917",
+      "ip": "10.0.9.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(unknowncmd)",
+      "stdout": "",
+      "stderr": "bash: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-918",
+      "ip": "10.0.9.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "grep",
+      "stdout": "",
+      "stderr": "grep: missing pattern",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-919",
+      "ip": "10.0.9.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo \"unterminated string",
+      "stdout": "",
+      "stderr": "bash: unexpected EOF while looking for matching '\"'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-920",
+      "ip": "10.0.9.29",
       "tags": [],
       "history": []
     }
