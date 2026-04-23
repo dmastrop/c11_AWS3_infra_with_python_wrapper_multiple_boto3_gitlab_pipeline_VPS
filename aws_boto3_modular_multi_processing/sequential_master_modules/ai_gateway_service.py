@@ -944,10 +944,10 @@ def recover(request: RecoveryRequest):
 
 
 
-                ##### RHEL/CentOS YUM domain primitives #####
+                ##### RHEL YUM domain primitives #####
                 # ============================================================
-                # RHEL/CentOS (YUM) DOMAIN RULES — Applies ONLY when os_name is a
-                # RHEL-family YUM-based distribution (Revision 8)
+                # RHEL (YUM) DOMAIN RULES — Applies ONLY when os_name is a
+                # RHEL-family YUM-based distribution (This entire block is Revision 8)
                 # ============================================================
                 #
                 # IMPORTANT: Amazon Linux will have its own YUM block. Do NOT merge
@@ -1074,7 +1074,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # AMAZON LINUX (YUM) DOMAIN RULES — Applies ONLY when os_name = "Amazon Linux"
-                # Revision 9
+                # This entire block is Revision 9
                 # ============================================================
                 #
                 # IMPORTANT:
@@ -1435,7 +1435,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # FEDORA (DNF) DOMAIN RULES — Applies ONLY when os_name = "Fedora"
-                # Revision 12
+                # This entire block is Revision 12
                 # ============================================================
                 #
                 # IMPORTANT:
@@ -1575,7 +1575,7 @@ def recover(request: RecoveryRequest):
 
                 ###### Alpine APK domain primitives #####
                 # ============================================================
-                # ALPINE (APK) DOMAIN RULES — Applies ONLY when os_name = "Alpine" (Revision 13)
+                # ALPINE (APK) DOMAIN RULES — Applies ONLY when os_name = "Alpine" (This entire block is Revision 13)
                 # ============================================================
                 #
                 # Alpine APK vs Ubuntu/Debian APT — key similarities and differences:
@@ -1715,7 +1715,7 @@ def recover(request: RecoveryRequest):
                 ###################################################
 
                 # ============================================================
-                # CISCO IOS DOMAIN RULES — Applies ONLY when os_name = "Cisco IOS"
+                # CISCO IOS DOMAIN RULES — Applies ONLY when os_name = "Cisco IOS" (This entire block is Revsion 3)
                 # ============================================================
                 "These rules apply ONLY when os_name = \"Cisco IOS\".\n"
 
