@@ -7,66 +7,6 @@
   "contexts": [
 
     {
-      "command": "apt-get install -y nginx",
-      "stdout": "",
-      "stderr": "bash: apt-get: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-901",
-      "ip": "10.0.9.10",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "yum install nginx",
-      "stdout": "",
-      "stderr": "bash: yum: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-902",
-      "ip": "10.0.9.11",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf install nginx",
-      "stdout": "",
-      "stderr": "bash: dnf: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-903",
-      "ip": "10.0.9.12",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "apk add nginx",
-      "stdout": "",
-      "stderr": "bash: apk: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-904",
-      "ip": "10.0.9.13",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "brew install nginx",
-      "stdout": "",
-      "stderr": "bash: brew: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-905",
-      "ip": "10.0.9.14",
-      "tags": [],
-      "history": []
-    },
-
-    {
       "command": "rm -rf /",
       "stdout": "",
       "stderr": "",
@@ -110,54 +50,6 @@
       "attempt": 1,
       "instance_id": "i-test-909",
       "ip": "10.0.9.18",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "apt-get update -y",
-      "stdout": "",
-      "stderr": "bash: apt-get: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-910",
-      "ip": "10.0.9.19",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf update -y",
-      "stdout": "",
-      "stderr": "bash: dnf: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-911",
-      "ip": "10.0.9.20",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "yum update -y",
-      "stdout": "",
-      "stderr": "bash: yum: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-912",
-      "ip": "10.0.9.21",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "apk update",
-      "stdout": "",
-      "stderr": "bash: apk: command not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-913",
-      "ip": "10.0.9.22",
       "tags": [],
       "history": []
     },
@@ -242,6 +134,114 @@
       "attempt": 1,
       "instance_id": "i-test-920",
       "ip": "10.0.9.29",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo $(unknowncmd)))",
+      "stdout": "",
+      "stderr": "bash: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-921",
+      "ip": "10.0.9.30",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | | grep h",
+      "stdout": "",
+      "stderr": "bash: syntax error near unexpected token '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-922",
+      "ip": "10.0.9.31",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo",
+      "stdout": "",
+      "stderr": "bash: unexpected EOF while looking for matching ')'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-923",
+      "ip": "10.0.9.32",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep",
+      "stdout": "",
+      "stderr": "grep: missing pattern",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-924",
+      "ip": "10.0.9.33",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(ls -l /nonexistent)",
+      "stdout": "",
+      "stderr": "ls: cannot access '/nonexistent': No such file or directory",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-925",
+      "ip": "10.0.9.34",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo $(echo $(echo",
+      "stdout": "",
+      "stderr": "bash: unexpected EOF while looking for matching ')'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-926",
+      "ip": "10.0.9.35",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(unknowncmd | grep h)",
+      "stdout": "",
+      "stderr": "bash: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-927",
+      "ip": "10.0.9.36",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep h | | wc -l",
+      "stdout": "",
+      "stderr": "bash: syntax error near unexpected token '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-928",
+      "ip": "10.0.9.37",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(unknowncmd))",
+      "stdout": "",
+      "stderr": "bash: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-929",
+      "ip": "10.0.9.38",
       "tags": [],
       "history": []
     }
