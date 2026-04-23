@@ -151,7 +151,7 @@ artifact logs per pipeline)
 - AI Gateway Service start integration during Gitlab pipeline deployment stage
 - Iterative curl context testing with LLM for AI Gateway Service payload contract action rule development and refinement 
 (whitebox testing)
-- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) LLM contract rule formation
+- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) LLM contract rule formation (whitebox testing)
 
 ## Latest milestone updates in this README:
 
