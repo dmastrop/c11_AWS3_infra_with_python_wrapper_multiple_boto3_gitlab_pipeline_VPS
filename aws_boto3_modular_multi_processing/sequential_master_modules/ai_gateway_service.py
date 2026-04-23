@@ -681,45 +681,9 @@ def recover(request: RecoveryRequest):
                 "- Linux-family OSes (Ubuntu, Debian, RHEL, CentOS, Amazon Linux) do NOT use Cisco-style 'show' commands. If a command begins with 'show ' and is not a valid Linux command, the LLM MUST NOT attempt to correct it using Cisco IOS rules. It MUST return a 'fallback' action.\n"
 
                 ##### Revision 6.8 — Linux malformed-command hardening (applies to bash and BusyBox shells) #####
-                "- These rules extend and harden the existing malformed Linux rules and apply to ALL Linux-family\n"
-                "  OSes covered by this contract (os_name): Ubuntu, Debian, CentOS, RHEL, Fedora, Amazon Linux,\n"
-                "  Alpine, and BusyBox.\n"
-                "\n"
-                "- The malformed Linux block MUST remain deterministic and MUST NOT guess user intent. When a\n"
-                "  malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
-                "  inventing or hallucinating a corrected command.\n"
-                "\n"
-                "- If a command is syntactically malformed (for example, missing arguments, truncated flags,\n"
-                "  partial pipelines, or incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
-                "  unless a safe, deterministic correction is directly implied by the original command.\n"
-                "\n"
-                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
-                "    * syntactically valid,\n"
-                "    * semantically safe,\n"
-                "    * and directly implied by the original command,\n"
-                "  and ONLY within OS-specific domain primitive blocks (Ubuntu, Debian, RHEL/CentOS, Fedora,\n"
-                "  Amazon Linux, Alpine, BusyBox). The malformed Linux block MUST NOT introduce or guess any\n"
-                "  package-manager behavior.\n"
-                "\n"
-                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk, brew),\n"
-                "  and the OS-specific domain block does not define a deterministic rewrite for that manager,\n"
-                "  the LLM MUST use 'fallback'. The malformed Linux block MUST NOT guess which package manager\n"
-                "  is correct.\n"
-                "\n"
-                "- Linux-family OSes in this contract MUST NOT introduce 'sudo' as part of malformed-command\n"
-                "  correction. If a command fails due to permission issues and no OS-specific deterministic\n"
-                "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
-                "\n"
-                "- The synthetic 'Linux/generic' schema used in testing exists ONLY to harden these malformed\n"
-                "  Linux rules. Real OS discovery MUST NOT return 'Linux/generic'. All real Linux-family OSes\n"
-                "  (Ubuntu, Debian, CentOS, RHEL, Fedora, Amazon Linux, Alpine, BusyBox) inherit this behavior.\n"
-                "\n"
-
-
-
-
-
-
+                ##### THIS needs to be added to each linux distro domain primitives block below. That is the cleanest
+                ##### way to apply bash contract rule semantics to the various linux os's. The LLM will be less likely
+                ##### to get confused and plan actions from the LLM for bash like issues will be much more deterministic.
 
 
 
