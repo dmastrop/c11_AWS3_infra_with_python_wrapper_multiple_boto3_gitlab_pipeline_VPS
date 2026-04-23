@@ -1464,6 +1464,23 @@ def recover(request: RecoveryRequest):
                 "  the command:\n"
                 "        - apk add <pkg>\n"
 
+                # Revision 13.1
+                "- If stderr contains 'unable to select packages:' AND the history contains a prior 'apk update',\n"
+                "  the LLM MUST use 'cleanup_and_retry' instead of 'fallback'.\n"
+                "  The cleanup list MUST contain:\n"
+                "      - rm -rf /var/cache/apk/*\n"
+                "  The retry list MUST contain, in this order:\n"
+                "      - apk update\n"
+                "      - apk add <pkg>\n"
+
+                "- Alpine environments in this contract do NOT use 'sudo'. The LLM MUST NOT generate 'sudo'\n"
+                "  under any circumstances, including permission errors.\n"
+
+
+
+
+
+
 
 
                 #### macos domain primitives notes. Make sure to add this to the contract rules to differentiate these two different
