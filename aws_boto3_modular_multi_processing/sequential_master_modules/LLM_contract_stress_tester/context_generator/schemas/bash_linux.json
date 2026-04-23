@@ -1,6 +1,6 @@
 {
-  "os_name": "Linux",
-  "os_version": "generic",
+  "os_name": "Ubuntu",
+  "os_version": "9",
   "kernel": "5.10.0",
   "package_managers": [],
   "shell": "bash",
