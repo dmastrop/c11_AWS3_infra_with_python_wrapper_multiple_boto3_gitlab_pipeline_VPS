@@ -26,9 +26,9 @@
     },
 
     {
-      "command": "apk add",
+      "command": "apk add curl",
       "stdout": "",
-      "stderr": "apk: must specify at least one package name",
+      "stderr": "ERROR: unsatisfiable constraints:",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "i-test-402",
@@ -38,10 +38,10 @@
     },
 
     {
-      "command": "apt-get install -y nginx",
+      "command": "apk add htop",
       "stdout": "",
-      "stderr": "sh: apt-get: not found",
-      "exit_status": 127,
+      "stderr": "ERROR: unable to select packages:",
+      "exit_status": 1,
       "attempt": 1,
       "instance_id": "i-test-403",
       "ip": "10.0.4.12",
@@ -49,11 +49,23 @@
       "history": [
         {
           "command": "apk update",
-          "stdout": "fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/main/x86_64/APKINDEX.tar.gz",
+          "stdout": "fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/community/x86_64/APKINDEX.tar.gz",
           "stderr": "",
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "apt-get install nginx",
+      "stdout": "",
+      "stderr": "sh: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-404",
+      "ip": "10.0.4.13",
+      "tags": [],
+      "history": []
     },
 
     {
@@ -62,8 +74,8 @@
       "stderr": "sh: yum: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-404",
-      "ip": "10.0.4.13",
+      "instance_id": "i-test-405",
+      "ip": "10.0.4.14",
       "tags": [],
       "history": []
     },
@@ -74,20 +86,32 @@
       "stderr": "sh: dnf: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-405",
-      "ip": "10.0.4.14",
+      "instance_id": "i-test-406",
+      "ip": "10.0.4.15",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "apk update",
+      "command": "brew install nginx",
       "stdout": "",
-      "stderr": "ERROR: unable to resolve host dl-cdn.alpinelinux.org",
+      "stderr": "sh: brew: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-407",
+      "ip": "10.0.4.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add",
+      "stdout": "",
+      "stderr": "apk add: missing operand",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-406",
-      "ip": "10.0.4.15",
+      "instance_id": "i-test-408",
+      "ip": "10.0.4.17",
       "tags": [],
       "history": []
     },
@@ -98,8 +122,8 @@
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-407",
-      "ip": "10.0.4.16",
+      "instance_id": "i-test-409",
+      "ip": "10.0.4.18",
       "tags": [],
       "history": []
     },
@@ -110,8 +134,8 @@
       "stderr": "sh: asdfasdfasdf: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-408",
-      "ip": "10.0.4.17",
+      "instance_id": "i-test-410",
+      "ip": "10.0.4.19",
       "tags": [],
       "history": []
     },
@@ -122,8 +146,20 @@
       "stderr": "sh: show: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-409",
-      "ip": "10.0.4.18",
+      "instance_id": "i-test-411",
+      "ip": "10.0.4.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk update",
+      "stdout": "",
+      "stderr": "fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/main: temporary error (try again later)",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-412",
+      "ip": "10.0.4.21",
       "tags": [],
       "history": []
     },
@@ -131,11 +167,95 @@
     {
       "command": "apk add curl",
       "stdout": "",
+      "stderr": "fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/main: no route to host",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-413",
+      "ip": "10.0.4.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk update",
+      "stdout": "",
+      "stderr": "ERROR: failed to update apk cache",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-414",
+      "ip": "10.0.4.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "ERROR: repository 'community' not found",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-415",
+      "ip": "10.0.4.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "ERROR: database is corrupt",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-416",
+      "ip": "10.0.4.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add htop",
+      "stdout": "",
+      "stderr": "ERROR: unable to open database: Permission denied",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-417",
+      "ip": "10.0.4.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk update",
+      "stdout": "",
+      "stderr": "ERROR: index is too old",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-418",
+      "ip": "10.0.4.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "OK: 123 packages, 0 upgraded, 0 newly installed",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-419",
+      "ip": "10.0.4.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
       "stderr": "ERROR: unable to select packages:",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-410",
-      "ip": "10.0.4.19",
+      "instance_id": "i-test-420",
+      "ip": "10.0.4.29",
       "tags": [],
       "history": []
     }
