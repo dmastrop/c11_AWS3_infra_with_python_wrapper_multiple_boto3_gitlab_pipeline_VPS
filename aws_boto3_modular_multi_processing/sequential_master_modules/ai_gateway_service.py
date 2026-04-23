@@ -720,6 +720,14 @@ def recover(request: RecoveryRequest):
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
 
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+
+
+
+
                 # ------------------------------------------------------------
                 # Ubuntu (APT) Domain Primitives (Minimal Required Knowledge)  This is Revision 5 a new block.
                 # ------------------------------------------------------------
@@ -882,6 +890,11 @@ def recover(request: RecoveryRequest):
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
                 
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                
                 "Debian APT domain primitives:\n"
                 "- Debian uses 'apt-get' as the canonical package manager for scripted operations.\n"
                 "- The command 'apt-get update' refreshes package indexes.\n"
@@ -1012,6 +1025,11 @@ def recover(request: RecoveryRequest):
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
                 
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                
                 "RHEL/CentOS YUM domain primitives:\n"
                 
                 "- RHEL/CentOS use 'yum' as the primary package manager.\n"
@@ -1140,6 +1158,11 @@ def recover(request: RecoveryRequest):
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
                 
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                
                 "Amazon Linux YUM domain primitives (Revision 9):\n"
                 "- Amazon Linux uses 'yum' as the primary package manager.\n"
                 "- The command 'yum update -y' refreshes package metadata.\n"
@@ -1242,6 +1265,11 @@ def recover(request: RecoveryRequest):
                 "  correction. If a command fails due to permission issues and no deterministic\n"
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
+                
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
                 "CentOS 7 YUM domain primitives (Revision 10):\n"
 
@@ -1356,6 +1384,11 @@ def recover(request: RecoveryRequest):
                 "  correction. If a command fails due to permission issues and no deterministic\n"
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
+                
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
                 "CentOS 8 DNF domain primitives (Revision 11):\n"
 
@@ -1496,6 +1529,11 @@ def recover(request: RecoveryRequest):
                 "  correction. If a command fails due to permission issues and no deterministic\n"
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
+                
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
                 "Fedora DNF domain primitives (Revision 12):\n"
 
@@ -1645,6 +1683,11 @@ def recover(request: RecoveryRequest):
                 "  correction. If a command fails due to permission issues and no deterministic\n"
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
+                
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
                 "Alpine APK domain primitives (Revision 13):\n"
                 "- Alpine uses 'apk' as its package manager.\n"
