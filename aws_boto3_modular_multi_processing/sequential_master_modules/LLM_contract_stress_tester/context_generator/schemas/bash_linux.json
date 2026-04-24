@@ -1,5 +1,5 @@
 {
-  "os_name": "Ubuntu",
+  "os_name": "RHEL",
   "os_version": "9",
   "kernel": "5.10.0",
   "package_managers": [],
