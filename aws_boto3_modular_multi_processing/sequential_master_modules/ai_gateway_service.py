@@ -724,14 +724,14 @@ def recover(request: RecoveryRequest):
                 "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
-                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"                
+                "\n"
+                
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
 
 
-
-
-                # ------------------------------------------------------------
                 # Ubuntu (APT) Domain Primitives (Minimal Required Knowledge)  This is Revision 5 a new block.
-                # ------------------------------------------------------------
                 "Ubuntu APT domain primitives:\n"
                 "- Ubuntu uses 'apt' and 'apt-get' as its package managers.\n"
                 "- The command 'apt-get update' refreshes package indexes.\n"
@@ -896,6 +896,9 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+                
                 "Debian APT domain primitives:\n"
                 "- Debian uses 'apt-get' as the canonical package manager for scripted operations.\n"
                 "- The command 'apt-get update' refreshes package indexes.\n"
@@ -1031,8 +1034,10 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
-                "RHEL/CentOS YUM domain primitives:\n"
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
                 
+                "RHEL YUM domain primitives:\n" 
                 "- RHEL/CentOS use 'yum' as the primary package manager.\n"
                 "- The command 'yum update -y' refreshes package metadata.\n"
                 "- The command 'yum install -y <pkg>' installs packages.\n"
@@ -1164,6 +1169,9 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+                
                 "Amazon Linux YUM domain primitives (Revision 9):\n"
                 "- Amazon Linux uses 'yum' as the primary package manager.\n"
                 "- The command 'yum update -y' refreshes package metadata.\n"
@@ -1272,8 +1280,10 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+                
                 "CentOS 7 YUM domain primitives (Revision 10):\n"
-
                 "- CentOS 7 uses 'yum' as its primary package manager.\n"
                 "- The command 'yum install -y <pkg>' installs packages.\n"
                 "- The command 'yum update -y' refreshes package metadata and updates packages.\n"
@@ -1391,8 +1401,10 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+                
                 "CentOS 8 DNF domain primitives (Revision 11):\n"
-
                 "- CentOS 8 uses 'dnf' as its primary package manager. 'yum' is a compatibility wrapper.\n"
                 "- The command 'dnf install -y <pkg>' installs packages.\n"
                 "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
@@ -1536,8 +1548,10 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
                 
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+                
                 "Fedora DNF domain primitives (Revision 12):\n"
-
                 "- Fedora uses 'dnf' as its primary package manager.\n"
                 "- The command 'dnf install -y <pkg>' installs packages.\n"
                 "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
@@ -1689,6 +1703,9 @@ def recover(request: RecoveryRequest):
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
                 
                 "Alpine APK domain primitives (Revision 13):\n"
                 "- Alpine uses 'apk' as its package manager.\n"
