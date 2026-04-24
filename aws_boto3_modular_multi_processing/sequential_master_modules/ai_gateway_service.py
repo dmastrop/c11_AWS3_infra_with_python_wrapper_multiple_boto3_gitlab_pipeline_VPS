@@ -680,6 +680,7 @@ def recover(request: RecoveryRequest):
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
                 "- Linux-family OSes (Ubuntu, Debian, RHEL, CentOS, Amazon Linux) do NOT use Cisco-style 'show' commands. If a command begins with 'show ' and is not a valid Linux command, the LLM MUST NOT attempt to correct it using Cisco IOS rules. It MUST return a 'fallback' action.\n"
 
+
                 ##### Revision 6.8 — Linux malformed-command hardening (applies to bash and BusyBox shells) #####
                 ##### THIS needs to be added to each linux distro domain primitives block below. That is the cleanest
                 ##### way to apply bash contract rule semantics to the various linux os's. The LLM will be less likely
