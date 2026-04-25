@@ -1404,15 +1404,39 @@ def resurrection_install_tomcat(
         # 3. Detect fallback conditions (IDENTICAL TO ORIGINAL)
         # This is considered a native fallback and not a derived fallback.
         # --------------------------------------------------------
+        # --------------------------------------------------------
+        # 3. Detect fallback conditions (NATIVE FALLBACK)
+        # --------------------------------------------------------
+        # Native fallback occurs when the LLM explicitly returns:
+        #   { "action": "fallback" }
+        # or returns no plan, or returns an error field.
+        #
+        # IMPORTANT SEMANTICS:
+        # - Native fallback means the AI *declines to modify the command*.
+        # - It does NOT mean the AI "failed" to fix anything.
+        # - The original command's success/failure is preserved exactly as-is.
+        #
+        # ALIGNMENT WITH DERIVED FALLBACK:
+        # - Derived fallback (e.g., cleanup_and_retry with empty retry list)
+        #   already sets ai_failed = False and ai_fallback = True.
+        # - Native fallback must match that semantic: AI did not fail; it simply
+        #   did nothing. Therefore ai_failed must be False.
+        #
+        # This ensures:
+        # - CASE B in the heuristic handles both native + derived fallback.
+        # - CASE C ("AI FAILED") is reserved ONLY for failed plan execution.
+        # - No historical behavior is broken.
+        # --------------------------------------------------------
+
         if plan is None or plan.get("action") == "fallback" or "error" in plan:
             print(f"AI_MCP_HOOK[{ip}] ⚠️ AI fallback triggered — continuing with native logic.")
-            ai_fallback = True
+            ai_fallback = True  # persistent state variable (native fallback)
             return {
                 "ai_ran": True,
                 "ai_fixed": False,
-                "ai_failed": True,
-                "ai_fallback": True,
-                "new_stdout": stdout_output,
+                "ai_failed": False,   # <-- FIXED: native fallback is NOT an AI failure. See comments above. Set this to False
+                "ai_fallback": True,  # control-flow signal for calling heuristic CASE B
+                "new_stdout": stdout_output,  # original command results for stdout, stderr and exit_status. LLM has not done anything
                 "new_stderr": stderr_output,
                 "new_exit_status": exit_status,
             }
