@@ -1761,6 +1761,87 @@ def recover(request: RecoveryRequest):
 
 
 
+                ##### BUSYBOX (ash) DOMAIN RULES (Revision 14)— Applies ONLY when os_name == "Linux" AND os_version == "busybox" #####
+                "These rules apply ONLY when os_name == 'Linux' AND os_version == 'busybox'.\n"
+                "These BusyBox domain primitives apply ONLY when BusyBox is the primary OS environment. They MUST NOT override Linux-family domain primitives when BusyBox is installed as a package or command suite on Ubuntu, Debian, RHEL, CentOS, Fedora, Amazon Linux, or Alpine.\n"
+
+                ##### Revision 6.9 — ash malformed-command hardening (BusyBox-only) #####
+                ##### This block is analagous to the bash malformed command harndening that is included in the linux os 
+                ##### domain primitives blocks above, but this is soley for Busybox ash
+                "- BusyBox uses the 'ash' shell, which is more limited than bash and does NOT support advanced bash constructs.\n"
+                "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed ash command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
+                "- BusyBox ash does NOT support:\n"
+                "    * bash-style arrays\n"
+                "    * bash-style [[ ]] conditionals\n"
+                "    * process substitution (<( ) or >( ))\n"
+                "    * advanced pipeline constructs\n"
+                "    * command substitution beyond basic $( )\n"
+                "- If a command uses bash-only syntax (for example, [[ ]], { }, <( ), >(), or arrays), the LLM MUST return 'fallback'.\n"
+                "- If a command is syntactically malformed (missing arguments, truncated flags, incomplete constructs), the LLM MUST use 'fallback' unless a safe, deterministic correction is directly implied.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error', 'unexpected token'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT attempt to repair malformed pipelines, MUST NOT insert missing commands, and MUST NOT infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                "- BusyBox ash MUST NOT introduce 'sudo' under any circumstances.\n"
+
+                ##### BusyBox Domain Primitives (Revision 14) #####
+                "BusyBox domain primitives:\n"
+                "- BusyBox uses 'ash' as its shell and provides a suite of applets (ls, cp, mv, rm, wget, etc.).\n"
+                "- BusyBox does NOT include a package manager. There is NO 'apt', 'yum', 'dnf', 'apk', or 'brew'.\n"
+                "- BusyBox does NOT support Linux package installation. Any attempt to install packages MUST trigger 'abort'.\n"
+                "- BusyBox supports only minimal POSIX utilities and BusyBox applets.\n"
+                "- BusyBox filesystem layout is minimal and may lack /usr/bin, /usr/sbin, or /var/lib paths.\n"
+                "- BusyBox error messages differ from bash-based Linux distributions and MUST be interpreted using BusyBox semantics only.\n"
+
+                ##### Wrong package manager → abort #####
+                "- If the command references ANY package manager (apt, apt-get, yum, dnf, apk, brew), the LLM MUST return 'abort'.\n"
+                "- Example abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"BusyBox does not support Linux package managers.\" }\n"
+
+                ##### Malformed BusyBox commands #####
+                "- If a BusyBox applet is invoked with missing arguments (e.g., 'cp', 'mv', 'rm' with no target), the LLM MUST use 'fallback'.\n"
+                "- If the command is incomplete and no deterministic correction exists, the LLM MUST use 'fallback'.\n"
+                "- If the command is syntactically valid but fails due to missing files, the LLM MAY use 'retry_with_modified_command' ONLY when the corrected command is directly implied.\n"
+
+                ##### BusyBox corruption / partial-state rules #####
+                "- BusyBox does NOT maintain package caches or metadata. Therefore, cleanup_and_retry MUST NOT attempt to remove package lists, apt caches, yum metadata, or apk caches.\n"
+                "- If stderr indicates missing files, missing directories, or non-existent paths, the LLM MUST use 'fallback'.\n"
+                "- BusyBox does NOT support dpkg, rpm, apk, or any package database. Any reference to these MUST trigger 'abort'.\n"
+
+                ##### BusyBox idempotency rules #####
+                "- BusyBox idempotency failures include messages such as:\n"
+                "    * 'file exists'\n"
+                "    * 'directory exists'\n"
+                "    * 'not removed'\n"
+                "- These MUST use 'fallback' unless a safe cleanup is explicitly implied (for example, removing a temporary file).\n"
+
+                ##### BusyBox destructive command rules #####
+                "- BusyBox supports 'rm', including recursive deletion. Destructive commands MUST trigger 'abort'.\n"
+                "- Examples:\n"
+                "    * rm -rf /\n"
+                "    * rm -rf /bin\n"
+                "    * rm -rf /etc\n"
+                "- Abort MUST include a clear message.\n"
+
+                ##### BusyBox rewrite rules #####
+                "- If the command uses a Linux-specific path that does not exist in BusyBox (for example, /usr/bin/apt), the LLM MUST use 'fallback'.\n"
+                "- If the command uses a BusyBox applet incorrectly (for example, 'busybox install'), the LLM MUST use 'fallback'.\n"
+
+                ##### BusyBox fallback rules #####
+                "- Use 'fallback' when the command is incomplete, ambiguous, malformed, or references unsupported features.\n"
+                "- Use 'fallback' when the command uses bash-only syntax.\n"
+                "- Use 'fallback' when the command references non-existent BusyBox applets.\n"
+
+                ##### BusyBox retry rules #####
+                "- Use 'retry_with_modified_command' ONLY when the corrected BusyBox command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command.\n"
+                "- The 'retry' field MUST contain a valid BusyBox command.\n"
+                "- NEVER propose Linux package manager commands.\n"
+
+                ##### BusyBox abort rules #####
+                "- Abort MUST be used when the command is destructive, unsupported, or references Linux package managers.\n"
+                "- Abort MUST include a clear message.\n"
 
 
 
