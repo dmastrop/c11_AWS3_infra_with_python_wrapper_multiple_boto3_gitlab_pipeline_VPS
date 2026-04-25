@@ -1,70 +1,10 @@
 {
   "os_name": "Linux",
   "os_version": "busybox",
-  "kernel": "5.4.0",
+  "kernel": "5.10.0",
   "package_managers": [],
-  "shell": "sh",
+  "shell": "ash",
   "contexts": [
-
-    {
-      "command": "apk add nginx",
-      "stdout": "",
-      "stderr": "sh: apk: not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1001",
-      "ip": "10.0.10.10",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "apt-get install -y nginx",
-      "stdout": "",
-      "stderr": "sh: apt-get: not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1002",
-      "ip": "10.0.10.11",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "yum install nginx",
-      "stdout": "",
-      "stderr": "sh: yum: not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1003",
-      "ip": "10.0.10.12",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf install nginx",
-      "stdout": "",
-      "stderr": "sh: dnf: not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1004",
-      "ip": "10.0.10.13",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "brew install nginx",
-      "stdout": "",
-      "stderr": "sh: brew: not found",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1005",
-      "ip": "10.0.10.14",
-      "tags": [],
-      "history": []
-    },
 
     {
       "command": "rm -rf /",
@@ -72,8 +12,8 @@
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-1006",
-      "ip": "10.0.10.15",
+      "instance_id": "i-test-001",
+      "ip": "10.0.9.1",
       "tags": [],
       "history": []
     },
@@ -81,11 +21,11 @@
     {
       "command": "asdfasdfasdf",
       "stdout": "",
-      "stderr": "sh: asdfasdfasdf: not found",
+      "stderr": "ash: asdfasdfasdf: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-1007",
-      "ip": "10.0.10.16",
+      "instance_id": "i-test-002",
+      "ip": "10.0.9.2",
       "tags": [],
       "history": []
     },
@@ -93,35 +33,215 @@
     {
       "command": "show route everything",
       "stdout": "",
-      "stderr": "sh: show: not found",
+      "stderr": "ash: show: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-1008",
-      "ip": "10.0.10.17",
+      "instance_id": "i-test-003",
+      "ip": "10.0.9.3",
       "tags": [],
       "history": []
     },
 
     {
       "command": "echo $SHELL",
-      "stdout": "",
+      "stdout": "/bin/ash",
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-1009",
-      "ip": "10.0.10.18",
+      "instance_id": "i-test-004",
+      "ip": "10.0.9.4",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "apk update",
+      "command": "sudo ls -l",
       "stdout": "",
-      "stderr": "sh: apk: not found",
+      "stderr": "ash: sudo: not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-1010",
-      "ip": "10.0.10.19",
+      "instance_id": "i-test-005",
+      "ip": "10.0.9.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "cat /etc/passwd",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-006",
+      "ip": "10.0.9.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep h",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-007",
+      "ip": "10.0.9.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "ls -l /nonexistent",
+      "stdout": "",
+      "stderr": "ls: /nonexistent: No such file or directory",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-008",
+      "ip": "10.0.9.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(unknowncmd)",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-009",
+      "ip": "10.0.9.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "grep",
+      "stdout": "",
+      "stderr": "grep: unrecognized option: ",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-010",
+      "ip": "10.0.9.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo \"unterminated string",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-011",
+      "ip": "10.0.9.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo $(unknowncmd)))",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-012",
+      "ip": "10.0.9.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | | grep h",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-013",
+      "ip": "10.0.9.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-014",
+      "ip": "10.0.9.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep",
+      "stdout": "",
+      "stderr": "grep: unrecognized option: ",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-015",
+      "ip": "10.0.9.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(ls -l /nonexistent)",
+      "stdout": "",
+      "stderr": "ls: /nonexistent: No such file or directory",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-016",
+      "ip": "10.0.9.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo $(echo $(echo",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-017",
+      "ip": "10.0.9.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(unknowncmd | grep h)",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-018",
+      "ip": "10.0.9.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep h | | wc -l",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-test-019",
+      "ip": "10.0.9.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(unknowncmd))",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-020",
+      "ip": "10.0.9.20",
       "tags": [],
       "history": []
     }
