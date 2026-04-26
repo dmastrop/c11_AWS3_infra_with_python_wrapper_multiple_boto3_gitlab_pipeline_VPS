@@ -1,0 +1,42 @@
+conftest is for pytest testing
+pytest testing is used for the AI/MCP HOOK integration testing. The HOOK has been integrated into module2f as part of Phase 4a of this
+project.
+The following are used for pytest testing.
+
+The commands must be run from this directory: 
+/home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE
+
+This is the root directory of the repo. If the commands are not run from this directory there are all sorts of problems with 
+imports in the pytest code. 
+
+A command list is in the file: pytest_commands_to_run_from_HERE
+
+
+The pytest code is located in this directory:
+/home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/tests
+
+The latest (current) version is: test_ai_hook_v7.py
+
+
+conftest.py establishes the directory above as the root so that there are no import issues when running the pytest tests:
+module2f is nested and has nested functions that will be problematic otherwise.
+The monkeypatching is done to the SSH connection part of the code in module2f, as well as the AI/MCP hook returning the LLM
+plan code in module2f.   The fakeSSH and fakeSSHv2 and the fake plan monkeypatching worked extremely well and many code 
+permuations have been verifed. A key part of the testing was to validate the registry_entrys with pseudo pytest 
+registry_entrys. The ai_metatdata fields and the ai_tags fields were all verifed as part of this whitebox testing to facilitate
+the transition from whitebox testing to real-world testing in Phase4a.1.3.
+
+==================
+
+Phase 4a.1.2 is being performed with an orthogonal type of testing (curl testing in the deploy docker container that is part
+of the gitlab deploy stage pipeline). The curl testing has been used to refine and tune the contract payload that is in the
+ai_gateway_service.py relative to desired responses. This can only be done through an interative process.  These tests are 
+located in the following directory below and are completely separate from the pytest testing in both purpose and objective.
+
+/home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/LLM_contract_stress_tester 
+
+The schemas located in the directory below have the os/platform specific tests that are performed using the LLM to refine the 
+contract rules for each domain primitives os/platform block:
+
+/home/ubuntu/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/LLM_contract_stress_tester/context_generator/schemas
+
