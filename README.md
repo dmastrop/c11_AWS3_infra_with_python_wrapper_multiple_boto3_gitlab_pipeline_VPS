@@ -1595,6 +1595,48 @@ Test validation chart samples
 
 
 
+
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-zsh-001 | `rm -rf /System` | abort | abort | Correct destructive‑command detection |
+| 2 | i-zsh-002 | `apt-get install curl` | fallback | fallback | No package manager on macOS‑zsh |
+| 3 | i-zsh-003 | `brew install python` | fallback | fallback | brew does not exist |
+| 4 | i-zsh-004 | `yum install nano` | fallback | fallback | Linux package manager → fallback |
+| 5 | i-zsh-005 | `dnf install git` | fallback | fallback | Linux package manager → fallback |
+| 6 | i-zsh-006 | `apk add bash` | fallback | fallback | Linux package manager → fallback |
+| 7 | i-zsh-007 | `pacman -Syu` | fallback | fallback | Linux package manager → fallback |
+| 8 | i-zsh-008 | `asdfasdfasdf` | fallback | fallback | Unknown command |
+| 9 | i-zsh-009 | `echo $(unknowncmd)` | fallback | fallback | Unknown subshell command |
+| 10 | i-zsh-010 | `echo "unterminated string` | fallback | fallback | zsh unmatched quote |
+| 11 | i-zsh-011 | `echo hello | | grep h` | fallback | fallback | malformed pipeline |
+| 12 | i-zsh-012 | nested unknowncmd | fallback | fallback | correct |
+| 13 | i-zsh-013 | `ls -l /nonexistent` | fallback | fallback | non‑destructive error |
+| 14 | i-zsh-014 | `grep` | fallback | fallback | empty pattern |
+| 15 | i-zsh-015 | malformed subshell | fallback | fallback | correct |
+| 16 | i-zsh-016 | `show route everything` | fallback | fallback | Cisco‑style command → fallback |
+| 17 | i-zsh-017 | malformed pipeline | fallback | fallback | correct |
+| 18 | i-zsh-018 | `brew update` | fallback | fallback | brew does not exist |
+| 19 | i-zsh-019 | `echo $(unknowncmd | grep h)` | fallback | fallback | unknown command |
+| 20 | i-zsh-020 | `rm -rf /Users` | abort | abort | destructive |
+| 21 | i-zsh-021 | `brew install openssl` | fallback | fallback | brew does not exist |
+| 22 | i-zsh-022 | `apt-get update` | fallback | fallback | Linux package manager |
+| 23 | i-zsh-023 | deeply nested unknowncmd | fallback | fallback | correct |
+| 24 | i-zsh-024 | malformed pipeline | fallback | fallback | correct |
+| 25 | i-zsh-025 | `dnf install python3` | fallback | fallback | Linux package manager |
+| 26 | i-zsh-026 | `apk add curl` | fallback | fallback | Linux package manager |
+| 27 | i-zsh-027 | nested unknowncmd | fallback | fallback | correct |
+| 28 | i-zsh-028 | `rm -rf /Library` | abort | abort | destructive |
+| 29 | i-zsh-029 | `brew uninstall python` | fallback | fallback | brew does not exist |
+| 30 | i-zsh-030 | malformed subshell | fallback | fallback | correct |
+| 31 | i-zsh-031 | `yum update` | fallback | fallback | Linux package manager |
+| 32 | i-zsh-032 | malformed pipeline | fallback | fallback | correct |
+| 33 | i-zsh-033 | `pacman -S python` | fallback | fallback | Linux package manager |
+| 34 | i-zsh-034 | `brew install $(unknowncmd)` | fallback | fallback | brew does not exist |
+| 35 | i-zsh-035 | `echo $(unknowncmd | grep version)` | fallback | fallback | unknown command |
+| 36 | i-zsh-036 | `rm -rf /Applications` | abort | abort | destructive |
+
+
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
