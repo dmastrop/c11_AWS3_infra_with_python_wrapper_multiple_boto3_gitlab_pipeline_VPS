@@ -1,145 +1,434 @@
 {
   "os_name": "macOS",
   "os_version": "14.0-brew",
-  "kernel": "23.0.0",
+  "kernel": "Darwin",
   "package_managers": ["brew"],
   "shell": "zsh",
   "contexts": [
 
     {
-      "command": "brew install nginx",
+      "command": "rm -rf /usr/local/Homebrew",
       "stdout": "",
-      "stderr": "Error: nginx: no bottle available!",
-      "exit_status": 1,
+      "stderr": "",
+      "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-501",
-      "ip": "10.0.5.10",
+      "instance_id": "i-brew-001",
+      "ip": "10.0.20.1",
       "tags": [],
-      "history": [
-        {
-          "command": "brew update",
-          "stdout": "Updated 1 tap (homebrew/core).",
-          "stderr": "",
-          "exit_status": 0
-        }
-      ]
+      "history": []
+    },
+
+    {
+      "command": "apt-get install curl",
+      "stdout": "",
+      "stderr": "zsh: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-002",
+      "ip": "10.0.20.2",
+      "tags": [],
+      "history": []
     },
 
     {
       "command": "brew install",
       "stdout": "",
-      "stderr": "Error: No formulae found in taps.",
+      "stderr": "Error: No formula specified",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-502",
-      "ip": "10.0.5.11",
+      "instance_id": "i-brew-003",
+      "ip": "10.0.20.3",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "apt-get install -y nginx",
+      "command": "brew install nonexistentpkg123",
       "stdout": "",
-      "stderr": "zsh: command not found: apt-get",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-503",
-      "ip": "10.0.5.12",
-      "tags": [],
-      "history": [
-        {
-          "command": "brew update",
-          "stdout": "Updated 1 tap (homebrew/core).",
-          "stderr": "",
-          "exit_status": 0
-        }
-      ]
-    },
-
-    {
-      "command": "yum install nginx",
-      "stdout": "",
-      "stderr": "zsh: command not found: yum",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-504",
-      "ip": "10.0.5.13",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf install nginx",
-      "stdout": "",
-      "stderr": "zsh: command not found: dnf",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-505",
-      "ip": "10.0.5.14",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "apk add curl",
-      "stdout": "",
-      "stderr": "zsh: command not found: apk",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-506",
-      "ip": "10.0.5.15",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "brew update",
-      "stdout": "",
-      "stderr": "Error: Could not resolve host: github.com",
+      "stderr": "Error: No available formula with the name \"nonexistentpkg123\"",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-507",
-      "ip": "10.0.5.16",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "asdfasdfasdf",
-      "stdout": "",
-      "stderr": "zsh: command not found: asdfasdfasdf",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-508",
-      "ip": "10.0.5.17",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "show route everything",
-      "stdout": "",
-      "stderr": "zsh: command not found: show",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-509",
-      "ip": "10.0.5.18",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "brew install curl",
-      "stdout": "",
-      "stderr": "Error: curl: no bottle available!",
-      "exit_status": 1,
-      "attempt": 1,
-      "instance_id": "i-test-510",
-      "ip": "10.0.5.19",
+      "instance_id": "i-brew-004",
+      "ip": "10.0.20.4",
       "tags": [],
       "history": []
     }
+    {
+      "command": "brew update",
+      "stdout": "",
+      "stderr": "Already up-to-date.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-brew-005",
+      "ip": "10.0.20.5",
+      "tags": [],
+      "history": []
+    },
 
+    {
+      "command": "brew install openssl",
+      "stdout": "",
+      "stderr": "Error: SHA256 mismatch",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-006",
+      "ip": "10.0.20.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew doctor",
+      "stdout": "",
+      "stderr": "Warning: Unbrewed header files were found in /usr/local/include.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-007",
+      "ip": "10.0.20.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python | | grep version",
+      "stdout": "",
+      "stderr": "zsh: syntax error near unexpected token '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-008",
+      "ip": "10.0.20.8",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install openssl | grep version | | wc -l",
+      "stdout": "",
+      "stderr": "zsh: parse error near '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-009",
+      "ip": "10.0.20.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(unknowncmd)",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-010",
+      "ip": "10.0.20.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python --force",
+      "stdout": "",
+      "stderr": "Error: invalid option: --force",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-011",
+      "ip": "10.0.20.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew uninstall",
+      "stdout": "",
+      "stderr": "Error: This command requires a formula argument",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-012",
+      "ip": "10.0.20.12",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install nodejs | grep version",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-brew-013",
+      "ip": "10.0.20.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(echo $(unknowncmd))",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-014",
+      "ip": "10.0.20.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python | | | grep x",
+      "stdout": "",
+      "stderr": "zsh: parse error near '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-015",
+      "ip": "10.0.20.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install openssl --with-random-flag",
+      "stdout": "",
+      "stderr": "Error: invalid option: --with-random-flag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-016",
+      "ip": "10.0.20.16",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install wget && apt-get update",
+      "stdout": "",
+      "stderr": "zsh: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-017",
+      "ip": "10.0.20.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install openssl | grep",
+      "stdout": "",
+      "stderr": "grep: empty pattern",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-018",
+      "ip": "10.0.20.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(echo $(echo $(unknowncmd)))",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-019",
+      "ip": "10.0.20.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python --with-nonexistent-flag",
+      "stdout": "",
+      "stderr": "Error: invalid option: --with-nonexistent-flag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-020",
+      "ip": "10.0.20.20",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install curl && yum install nano",
+      "stdout": "",
+      "stderr": "zsh: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-021",
+      "ip": "10.0.20.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install",
+      "stdout": "",
+      "stderr": "Error: No formula specified",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-022",
+      "ip": "10.0.20.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install openssl | | grep version",
+      "stdout": "",
+      "stderr": "zsh: parse error near '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-023",
+      "ip": "10.0.20.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(echo $(echo $(echo $(unknowncmd))))",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-024",
+      "ip": "10.0.20.24",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install openssl && dnf install git",
+      "stdout": "",
+      "stderr": "zsh: dnf: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-025",
+      "ip": "10.0.20.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(echo $(echo $(echo $(echo $(unknowncmd)))))",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-026",
+      "ip": "10.0.20.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python | grep version | | grep python",
+      "stdout": "",
+      "stderr": "zsh: parse error near '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-027",
+      "ip": "10.0.20.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install openssl --with-invalid-feature",
+      "stdout": "",
+      "stderr": "Error: invalid option: --with-invalid-feature",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-028",
+      "ip": "10.0.20.28",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install curl && apk add bash",
+      "stdout": "",
+      "stderr": "zsh: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-029",
+      "ip": "10.0.20.29",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(echo $(echo $(echo $(echo $(echo $(unknowncmd))))))",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-030",
+      "ip": "10.0.20.30",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python | grep version | grep python | | wc -l",
+      "stdout": "",
+      "stderr": "zsh: parse error near '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-031",
+      "ip": "10.0.20.31",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install openssl --with-unsupported-feature",
+      "stdout": "",
+      "stderr": "Error: invalid option: --with-unsupported-feature",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-032",
+      "ip": "10.0.20.32",
+      "tags": [],
+      "history": []
+    }
+    {
+      "command": "brew install curl && pacman -Syu",
+      "stdout": "",
+      "stderr": "zsh: pacman: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-033",
+      "ip": "10.0.20.33",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install $(echo $(echo $(echo $(echo $(echo $(echo $(unknowncmd)))))))",
+      "stdout": "",
+      "stderr": "zsh: unknowncmd: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-brew-034",
+      "ip": "10.0.20.34",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python | grep version | grep python | grep brew | | wc -l",
+      "stdout": "",
+      "stderr": "zsh: parse error near '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-brew-035",
+      "ip": "10.0.20.35",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install openssl --with-imaginary-flag",
+      "stdout": "",
+      "stderr": "Error: invalid option: --with-imaginary-flag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-brew-036",
+      "ip": "10.0.20.36",
+      "tags": [],
+      "history": []
+    }
   ]
 }
 

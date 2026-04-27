@@ -1761,6 +1761,12 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
+
+
+
+
                 ##### BUSYBOX (ash) DOMAIN RULES (Revision 14)— Applies ONLY when os_name == "Linux" AND os_version == "busybox" #####
                 "These rules apply ONLY when os_name == 'Linux' AND os_version == 'busybox'.\n"
                 "These BusyBox domain primitives apply ONLY when BusyBox is the primary OS environment. They MUST NOT override Linux-family domain primitives when BusyBox is installed as a package or command suite on Ubuntu, Debian, RHEL, CentOS, Fedora, Amazon Linux, or Alpine.\n"
@@ -1851,6 +1857,141 @@ def recover(request: RecoveryRequest):
 
                 #“These rules apply ONLY when os_name = "macOS" AND os_version ends with "-brew".”
                 #“These rules apply ONLY when os_name = "macOS" AND os_version ends with "-zsh".”
+
+
+
+
+
+
+                ##### macOS Homebrew domain primitives (Revision 15) #####
+                "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-brew\".\n"
+                "They MUST NOT apply to macOS-zsh, Linux-family OSes, BusyBox, Windows, PAN-OS, or Cisco IOS.\n"
+                "\n"
+                ##### Revision 6.10 — Bash/zsh malformed-command hardening (macOS-brew) #####
+                "- These rules harden malformed-command handling for macOS-brew.\n"
+                "- The LLM MUST remain deterministic and MUST NOT guess user intent.\n"
+                "- When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
+                "\n"
+                "- If a command is syntactically malformed (missing arguments, truncated flags, partial pipelines, incomplete constructs)\n"
+                "  but NOT destructive, the LLM SHOULD use 'fallback' unless a safe, deterministic correction is directly implied.\n"
+                "\n"
+                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command.\n"
+                "  The LLM MUST NOT guess or invent corrected commands.\n"
+                "\n"
+                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk, brew)\n"
+                "  and this OS block does NOT define a deterministic rewrite for that manager,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- macOS-brew MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
+                "- If a command fails due to permission issues and no deterministic recovery rule applies,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- For malformed commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to repair them.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token'),\n"
+                "  the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT infer user intent.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless destructive, in which case 'abort' applies.\n"
+                "\n"
+                ##### BusyBox addendum to Revision 6.10 #####
+                "These rules also apply when BusyBox applets are invoked on macOS.\n"
+                "BusyBox installed on macOS does NOT activate the BusyBox domain primitives block.\n"
+                "\n"
+                ##### macOS Homebrew domain primitives #####
+                "- macOS-brew uses 'brew' as its primary package manager.\n"
+                "- Canonical commands include:\n"
+                "    brew update\n"
+                "    brew install <pkg>\n"
+                "    brew upgrade <pkg>\n"
+                "    brew uninstall <pkg>\n"
+                "    brew doctor\n"
+                "    brew cleanup\n"
+                "\n"
+                "- The LLM MUST NOT invent flags such as '--force' or '--fix'.\n"
+                "- The LLM MUST NOT guess package names.\n"
+                "\n"
+                ##### Wrong package manager → rewrite #####
+                "- If the command uses a non-macOS package manager (apt, apt-get, yum, dnf, apk),\n"
+                "  the LLM MUST rewrite the command using:\n"
+                "      brew install <pkg>\n"
+                "  ONLY when a safe, concrete package name is present.\n"
+                "- If no package name is present, the LLM MUST use 'fallback'.\n"
+                "\n"
+                ##### Malformed brew install commands #####
+                "- Examples of malformed commands:\n"
+                "    brew install\n"
+                "    brew install -y\n"
+                "    brew install --force\n"
+                "- These MUST be treated as malformed.\n"
+                "- The LLM MUST use 'fallback' unless a safe correction is directly implied.\n"
+                "- The LLM MUST NOT guess a package name.\n"
+                "\n"
+                ##### Destructive commands #####
+                "- If the command is destructive (e.g., 'rm -rf /', 'rm -rf /System', 'rm -rf /usr/local/Homebrew'),\n"
+                "  the LLM MUST return 'abort' with a clear message.\n"
+                "\n"
+                ##### Unknown commands #####
+                "- If exit_status = 127 and the command is not obviously a brew primitive,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+                ##### Brew metadata / cache corruption #####
+                "- If stderr indicates brew metadata corruption, such as:\n"
+                "    'Error: failed to download'\n"
+                "    'Error: Fetching /usr/local/Homebrew/...'\n"
+                "    'Error: SHA256 mismatch'\n"
+                "    'Error: No available formula'\n"
+                "    'Error: Corrupt cache'\n"
+                "  the LLM MUST return a 'cleanup_and_retry' action.\n"
+                "\n"
+                "  cleanup:\n"
+                "      - brew cleanup\n"
+                "      - rm -rf ~/Library/Caches/Homebrew/*\n"
+                "\n"
+                "  retry:\n"
+                "      - brew update\n"
+                "      - brew install <pkg>   (ONLY if a package name is present)\n"
+                "\n"
+                ##### Formula not found #####
+                "- If stderr contains:\n"
+                "    'Error: No available formula with the name \"<pkg>\"'\n"
+                "    'Error: No formulae found in taps'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT guess alternative package names.\n"
+                "\n"
+                ##### Brew doctor warnings #####
+                "- If stderr contains brew doctor warnings or environment warnings,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to fix environment issues.\n"
+                "\n"
+                ##### Network failures #####
+                "- If stderr contains network failures such as:\n"
+                "    'Could not resolve host'\n"
+                "    'Connection timed out'\n"
+                "    'No route to host'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+                ##### Idempotency rules #####
+                "- If stderr indicates:\n"
+                "    'Warning: <pkg> is already installed'\n"
+                "    'Nothing to do'\n"
+                "    'Already up-to-date'\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+                ##### <pkg> binding semantics #####
+                "- The LLM MUST replace '<pkg>' with the actual package name used in the failing command.\n"
+                "- The LLM MUST NOT invent or guess a package name.\n"
+                "- If the failing command does NOT include a package name (e.g., 'brew update'),\n"
+                "  the LLM MUST omit any install step.\n"
+                "\n"
+
+
+
+
+
+
+
 
 
 
