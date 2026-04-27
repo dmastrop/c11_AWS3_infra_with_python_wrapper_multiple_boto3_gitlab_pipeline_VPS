@@ -1523,6 +1523,51 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 ## UPDATES part 59 — Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation
 
 
+Test validation chart
+
+
+### *LLM Contract Stress Tester — macOS (brew) Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-brew-001 | `rm -rf /usr/local/Homebrew` | abort | abort | Correct destructive‑command detection |
+| 2 | i-brew-002 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command | Correct package‑manager substitution |
+| 3 | i-brew-003 | `brew install` | fallback | fallback | Missing formula → fallback |
+| 4 | i-brew-004 | `brew install nonexistentpkg123` | fallback | fallback | Formula not found |
+| 5 | i-brew-005 | `brew update` | fallback | fallback | Already up‑to‑date → fallback |
+| 6 | i-brew-006 | `brew install openssl` (SHA mismatch) | cleanup_and_retry | cleanup_and_retry | Correct brew corruption handling |
+| 7 | i-brew-007 | `brew doctor` | fallback | fallback | Warning → fallback |
+| 8 | i-brew-008 | malformed pipeline | fallback | fallback | Syntax error |
+| 9 | i-brew-009 | malformed pipeline | fallback | fallback | Syntax error |
+| 10 | i-brew-010 | subshell unknowncmd | fallback | fallback | Correct; validator stripped message |
+| 11 | i-brew-011 | invalid flag | fallback | fallback | Correct |
+| 12 | i-brew-012 | uninstall missing formula | fallback | fallback | Correct |
+| 13 | i-brew-013 | valid pipeline | fallback | fallback | Correct (LLM declines to run commands) |
+| 14 | i-brew-014 | nested unknowncmd | fallback | fallback | Correct |
+| 15 | i-brew-015 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
+| 16 | i-brew-016 | invalid flag | fallback | fallback | Correct |
+| 17 | i-brew-017 | apt-get in pipeline | fallback | fallback | Correct |
+| 18 | i-brew-018 | `grep` empty pattern | fallback | fallback | Correct |
+| 19 | i-brew-019 | nested unknowncmd | fallback | fallback | Correct |
+| 20 | i-brew-020 | invalid flag | fallback | fallback | Correct |
+| 21 | i-brew-021 | yum on macOS | retry_with_modified_command | retry_with_modified_command | Correct substitution to brew |
+| 22 | i-brew-022 | brew install (no formula) | fallback | fallback | Correct |
+| 23 | i-brew-023 | malformed pipeline | fallback | fallback | Correct |
+| 24 | i-brew-024 | nested unknowncmd | fallback | fallback | Correct |
+| 25 | i-brew-025 | dnf on macOS | retry_with_modified_command | retry_with_modified_command | Correct multi‑command rewrite |
+| 26 | i-brew-026 | nested unknowncmd | fallback | fallback | Correct |
+| 27 | i-brew-027 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
+| 28 | i-brew-028 | invalid flag | fallback | fallback | Correct; validator stripped message |
+| 29 | i-brew-029 | apk on macOS | fallback | fallback | Correct |
+| 30 | i-brew-030 | deeply nested unknowncmd | fallback | fallback | Correct |
+| 31 | i-brew-031 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
+| 32 | i-brew-032 | invalid flag | fallback | fallback | Correct |
+| 33 | i-brew-033 | pacman on macOS | fallback | fallback | Correct |
+| 34 | i-brew-034 | deeply nested unknowncmd | fallback | fallback | Correct |
+| 35 | i-brew-035 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
+| 36 | i-brew-036 | invalid flag | fallback | fallback | Correct |
+
+
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
