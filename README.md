@@ -1523,7 +1523,33 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 ## UPDATES part 59 — Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation
 
 
-Test validation chart
+
+OS matrix sample
+
+
+| OS / Platform | Package Manager | Revision | Status |
+|---------------|-----------------|----------|--------|
+| Alpine | apk | 13 | **DONE** |
+| Amazon Linux 2 | yum | 9 | **DONE** |
+| Linux generic | bash (Rev 6.8) | 6.8 | **DONE** |
+| BusyBox | ash | 14 (with 6.9) | **DONE** |
+| Cisco IOS | — | 3 | **DONE** |
+| Debian | apt | 7 | **DONE** |
+| Fedora | dnf | 12 | **DONE** |
+| macOS brew | brew | 15 (with 6.10) | **DONE** |
+| RHEL | yum | 8 | **DONE** |
+| Ubuntu | apt | 5 | **DONE** |
+| CentOS 7 | yum | 10 | **DONE** |
+| CentOS 8 | dnf | 11 | **DONE** |
+| PAN‑OS | — | 19 | pending |
+| Windows Server | PowerShell | 17 | pending |
+| Linux (PowerShell Core) | pwsh | 18 | pending |
+| **macOS zsh** | none | **16 (with 6.11)** | **READY TO TEST** |
+
+
+
+
+Test validation chart samples
 
 
 ### *LLM Contract Stress Tester — macOS (brew) Environment*
