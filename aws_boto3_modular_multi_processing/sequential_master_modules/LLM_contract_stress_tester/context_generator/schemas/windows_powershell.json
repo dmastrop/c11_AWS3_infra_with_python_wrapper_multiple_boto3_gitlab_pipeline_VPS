@@ -6,139 +6,405 @@
   "shell": "powershell",
   "contexts": [
 
-    {
-      "command": "winget install nginx",
-      "stdout": "",
-      "stderr": "No package found matching input criteria.",
-      "exit_status": 1,
-      "attempt": 1,
-      "instance_id": "i-test-601",
-      "ip": "10.0.6.10",
-      "tags": [],
-      "history": [
-        {
-          "command": "winget update",
-          "stdout": "No applicable updates found.",
-          "stderr": "",
-          "exit_status": 0
-        }
-      ]
-    },
 
     {
-      "command": "winget install",
+      "command": "Remove-Item -Recurse -Force C:\\Windows",
       "stdout": "",
-      "stderr": "The following command requires at least one argument: install",
+      "stderr": "Remove-Item : Access to the path 'C:\\Windows' is denied.",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-602",
-      "ip": "10.0.6.11",
+      "instance_id": "i-win-001",
+      "ip": "10.0.50.1",
       "tags": [],
       "history": []
     },
-
+    
+    {
+      "command": "Remove-Item -Recurse -Force C:\\Windows\\System32",
+      "stdout": "",
+      "stderr": "Remove-Item : Access to the path 'C:\\Windows\\System32' is denied.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-win-002",
+      "ip": "10.0.50.2",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "Remove-Item -Recurse -Force C:\\Program Files",
+      "stdout": "",
+      "stderr": "Remove-Item : Access to the path 'C:\\Program Files' is denied.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-win-003",
+      "ip": "10.0.50.3",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "Remove-Item -Recurse -Force C:\\Users",
+      "stdout": "",
+      "stderr": "Remove-Item : Access to the path 'C:\\Users' is denied.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-win-004",
+      "ip": "10.0.50.4",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "Stop-Process -Force -Name lsass",
+      "stdout": "",
+      "stderr": "Stop-Process : Cannot stop process 'lsass' because it is a critical system process.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-win-005",
+      "ip": "10.0.50.5",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "Stop-Process -Force -Name wininit",
+      "stdout": "",
+      "stderr": "Stop-Process : Cannot stop process 'wininit' because it is a critical system process.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-win-006",
+      "ip": "10.0.50.6",
+      "tags": [],
+      "history": []
+    },
     {
       "command": "apt-get install -y nginx",
       "stdout": "",
       "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-603",
-      "ip": "10.0.6.12",
+      "instance_id": "i-win-007",
+      "ip": "10.0.50.7",
       "tags": [],
-      "history": [
-        {
-          "command": "winget update",
-          "stdout": "No applicable updates found.",
-          "stderr": "",
-          "exit_status": 0
-        }
-      ]
+      "history": []
     },
-
     {
       "command": "yum install nginx",
       "stdout": "",
       "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-604",
-      "ip": "10.0.6.13",
+      "instance_id": "i-win-008",
+      "ip": "10.0.50.8",
       "tags": [],
       "history": []
     },
-
     {
       "command": "dnf install nginx",
       "stdout": "",
       "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-605",
-      "ip": "10.0.6.14",
+      "instance_id": "i-win-009",
+      "ip": "10.0.50.9",
       "tags": [],
       "history": []
     },
-
     {
       "command": "apk add curl",
       "stdout": "",
       "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-606",
-      "ip": "10.0.6.15",
+      "instance_id": "i-win-010",
+      "ip": "10.0.50.10",
       "tags": [],
       "history": []
     },
-
     {
       "command": "winget update",
       "stdout": "",
       "stderr": "Failed to update source: winget",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-607",
-      "ip": "10.0.6.16",
+      "instance_id": "i-win-011",
+      "ip": "10.0.50.11",
       "tags": [],
       "history": []
     },
-
     {
-      "command": "asdfasdfasdf",
+      "command": "brew install node",
       "stdout": "",
-      "stderr": "asdfasdfasdf : The term 'asdfasdfasdf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "stderr": "brew : The term 'brew' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-608",
-      "ip": "10.0.6.17",
+      "instance_id": "i-win-012",
+      "ip": "10.0.50.12",
       "tags": [],
       "history": []
     },
-
     {
-      "command": "show route everything",
+      "command": "pacman -Syu",
       "stdout": "",
-      "stderr": "show : The term 'show' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "stderr": "pacman : The term 'pacman' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-609",
-      "ip": "10.0.6.18",
+      "instance_id": "i-win-013",
+      "ip": "10.0.50.13",
       "tags": [],
       "history": []
     },
-
     {
-      "command": "winget install curl",
+      "command": "zypper install vim",
       "stdout": "",
-      "stderr": "No package found matching input criteria.",
-      "exit_status": 1,
+      "stderr": "zypper : The term 'zypper' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-610",
-      "ip": "10.0.6.19",
+      "instance_id": "i-win-014",
+      "ip": "10.0.50.14",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "emerge --sync",
+      "stdout": "",
+      "stderr": "emerge : The term 'emerge' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-015",
+      "ip": "10.0.50.15",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "port install wget",
+      "stdout": "",
+      "stderr": "port : The term 'port' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-016",
+      "ip": "10.0.50.16",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "rpm -i package.rpm",
+      "stdout": "",
+      "stderr": "rpm : The term 'rpm' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-017",
+      "ip": "10.0.50.17",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "pkg install python",
+      "stdout": "",
+      "stderr": "pkg : The term 'pkg' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-018",
+      "ip": "10.0.50.18",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "snap install go",
+      "stdout": "",
+      "stderr": "snap : The term 'snap' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-019",
+      "ip": "10.0.50.19",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "xbps-install -Syu",
+      "stdout": "",
+      "stderr": "xbps-install : The term 'xbps-install' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-020",
+      "ip": "10.0.50.20",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "guix install git",
+      "stdout": "",
+      "stderr": "guix : The term 'guix' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-021",
+      "ip": "10.0.50.21",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "nix-env -iA nixpkgs.htop",
+      "stdout": "",
+      "stderr": "nix-env : The term 'nix-env' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-022",
+      "ip": "10.0.50.22",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "slapt-get --install wget",
+      "stdout": "",
+      "stderr": "slapt-get : The term 'slapt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-023",
+      "ip": "10.0.50.23",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "urpmi htop",
+      "stdout": "",
+      "stderr": "urpmi : The term 'urpmi' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-024",
+      "ip": "10.0.50.24",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "pkg_add nano",
+      "stdout": "",
+      "stderr": "pkg_add : The term 'pkg_add' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-025",
+      "ip": "10.0.50.25",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "aptitude install curl",
+      "stdout": "",
+      "stderr": "aptitude : The term 'aptitude' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-026",
+      "ip": "10.0.50.26",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "rpm-ostree install vim",
+      "stdout": "",
+      "stderr": "rpm-ostree : The term 'rpm-ostree' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-027",
+      "ip": "10.0.50.27",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "apk add bash",
+      "stdout": "",
+      "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-028",
+      "ip": "10.0.50.28",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "pacman -Syu",
+      "stdout": "",
+      "stderr": "pacman : The term 'pacman' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-029",
+      "ip": "10.0.50.29",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "dnf install tree",
+      "stdout": "",
+      "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-030",
+      "ip": "10.0.50.30",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "yum install git",
+      "stdout": "",
+      "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-031",
+      "ip": "10.0.50.31",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "emerge --sync",
+      "stdout": "",
+      "stderr": "emerge : The term 'emerge' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-032",
+      "ip": "10.0.50.32",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "zypper install gcc",
+      "stdout": "",
+      "stderr": "zypper : The term 'zypper' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-033",
+      "ip": "10.0.50.33",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "port install wget",
+      "stdout": "",
+      "stderr": "port : The term 'port' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-034",
+      "ip": "10.0.50.34",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "brew install node",
+      "stdout": "",
+      "stderr": "brew : The term 'brew' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-035",
+      "ip": "10.0.50.35",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "pkg install python",
+      "stdout": "",
+      "stderr": "pkg : The term 'pkg' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-win-036",
+      "ip": "10.0.50.36",
       "tags": [],
       "history": []
     }
+
 
   ]
 }

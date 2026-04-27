@@ -1,0 +1,145 @@
+{
+  "os_name": "Windows",
+  "os_version": "2022",
+  "kernel": "10.0.20348",
+  "package_managers": ["winget"],
+  "shell": "powershell",
+  "contexts": [
+
+    {
+      "command": "winget install nginx",
+      "stdout": "",
+      "stderr": "No package found matching input criteria.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-601",
+      "ip": "10.0.6.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "winget update",
+          "stdout": "No applicable updates found.",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "winget install",
+      "stdout": "",
+      "stderr": "The following command requires at least one argument: install",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-602",
+      "ip": "10.0.6.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-603",
+      "ip": "10.0.6.12",
+      "tags": [],
+      "history": [
+        {
+          "command": "winget update",
+          "stdout": "No applicable updates found.",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "yum install nginx",
+      "stdout": "",
+      "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-604",
+      "ip": "10.0.6.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install nginx",
+      "stdout": "",
+      "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-605",
+      "ip": "10.0.6.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-606",
+      "ip": "10.0.6.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "winget update",
+      "stdout": "",
+      "stderr": "Failed to update source: winget",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-607",
+      "ip": "10.0.6.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "asdfasdfasdf : The term 'asdfasdfasdf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-608",
+      "ip": "10.0.6.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "show : The term 'show' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-609",
+      "ip": "10.0.6.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "winget install curl",
+      "stdout": "",
+      "stderr": "No package found matching input criteria.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-610",
+      "ip": "10.0.6.19",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
