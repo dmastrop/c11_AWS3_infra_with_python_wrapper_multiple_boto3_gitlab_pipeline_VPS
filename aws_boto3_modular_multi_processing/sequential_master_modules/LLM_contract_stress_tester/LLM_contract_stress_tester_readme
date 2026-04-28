@@ -42,8 +42,10 @@ stress_tester/
 │       ├── bash_linux.json
 │       ├── busybox_sh.json
 │       ├── zsh_macos.json
-│       └── powershell_windows.json
-│
+│       └── powershell_linux.json
+│           centos7_yum.json
+|           centos8_dnf.json
+|
 ├── os_matrix/
 │   ├── __init__.py
 │   └── matrix.py                   # OS + PM compatibility rules

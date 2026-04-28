@@ -193,7 +193,7 @@ Windows Server/Desktop with PowerShell and winget.
 
 ---
 
-## **12. powershell_windows.json**  
+## **12. powershell_linux.json**  
 PowerShell Core running on Linux.
 
 **Why this schema is important:**  
