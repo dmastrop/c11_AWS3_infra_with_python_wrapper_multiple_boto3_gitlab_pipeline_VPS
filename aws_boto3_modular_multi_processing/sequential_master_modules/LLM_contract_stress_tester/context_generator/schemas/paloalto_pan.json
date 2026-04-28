@@ -124,6 +124,126 @@
       "ip": "10.0.8.19",
       "tags": [],
       "history": []
+    },
+
+    {
+      "command": "set network interface ethernet1/1 comment \"test\"",
+      "stdout": "",
+      "stderr": "Invalid syntax: not in configuration mode",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-811",
+      "ip": "10.0.8.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "delete network interface ethernet1/2",
+      "stdout": "",
+      "stderr": "Invalid syntax: not in configuration mode",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-812",
+      "ip": "10.0.8.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "commit",
+      "stdout": "",
+      "stderr": "Invalid syntax: not in configuration mode",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-813",
+      "ip": "10.0.8.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show system software stats",
+      "stdout": "",
+      "stderr": "Unknown command: show system software stats",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-814",
+      "ip": "10.0.8.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "request system reboot",
+      "stdout": "",
+      "stderr": "Unknown command: request system reboot",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-815",
+      "ip": "10.0.8.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "request system shutdown",
+      "stdout": "",
+      "stderr": "Unknown command: request system shutdown",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-816",
+      "ip": "10.0.8.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "delete config saved",
+      "stdout": "",
+      "stderr": "Unknown command: delete config saved",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-817",
+      "ip": "10.0.8.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "bash -c 'echo test'",
+      "stdout": "",
+      "stderr": "Unknown command: bash",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-818",
+      "ip": "10.0.8.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python",
+      "stdout": "",
+      "stderr": "Unknown command: brew",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-819",
+      "ip": "10.0.8.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "snap install go",
+      "stdout": "",
+      "stderr": "Unknown command: snap",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-820",
+      "ip": "10.0.8.29",
+      "tags": [],
+      "history": []
     }
 
   ]
