@@ -2293,6 +2293,177 @@ def recover(request: RecoveryRequest):
 
 
 
+                # ============================================================
+                # LINUX POWERSHELL CORE DOMAIN RULES — Applies ONLY when
+                # os_name = "Linux" AND os_version = "powershell-core".
+                # This entire block is Revision 18.
+                # ============================================================
+
+                "These rules apply ONLY when os_name = \"Linux\" AND os_version = \"powershell-core\".\n"
+                "They MUST NOT apply to Windows, macOS, BusyBox, PAN-OS, or Cisco IOS.\n"
+                "They MUST NOT apply when os_version == \"busybox\" even if PowerShell is installed as a package.\n"
+
+                # ============================================================
+                # Revision 6.13 — PowerShell Core on Linux malformed-command hardening
+                # ============================================================
+
+                "- These rules harden malformed-command handling for PowerShell Core running on Linux.\n"
+                "- The LLM MUST remain deterministic and MUST NOT guess user intent.\n"
+                "- When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
+                "\n"
+                "- PowerShell Core uses cmdlets (Verb-Noun), pipelines ('|'), script blocks ('{ }'),\n"
+                "  subexpressions ('$()'), and parameter binding rules.\n"
+                "- The LLM MUST NOT invent cmdlets, MUST NOT invent modules, and MUST NOT invent parameters.\n"
+                "- The LLM MUST NOT assume the presence of optional modules unless explicitly referenced.\n"
+                "\n"
+                "- If a command is syntactically malformed (missing parameters, truncated flags, malformed pipelines,\n"
+                "  malformed script blocks, unmatched quotes, or incomplete constructs) but NOT destructive,\n"
+                "  the LLM MUST use 'fallback' unless a safe, deterministic correction is directly implied.\n"
+                "\n"
+                "- 'retry_with_modified_command' MUST be used ONLY when the corrected PowerShell command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command.\n"
+                "  The LLM MUST NOT guess or invent corrected commands.\n"
+                "\n"
+                "- If stderr indicates a pipeline or parsing error (e.g., 'Unexpected token',\n"
+                "  'The string is missing the terminator', 'Missing argument', 'Unexpected end of input'),\n"
+                "  the LLM MUST return 'fallback' unless the command is destructive.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands,\n"
+                "  and MUST NOT infer user intent for pipeline stages.\n"
+                "\n"
+                "- For malformed commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM\n"
+                "  MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is\n"
+                "  destructive, in which case 'abort' applies.\n"
+                "\n"
+                "- PowerShell Core on Linux MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
+                "  If a command fails due to permission issues and no deterministic recovery rule applies,\n"
+                "  the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
+                "\n"
+
+                # ============================================================
+                # PowerShell Core on Linux domain primitives (Revision 18)
+                # ============================================================
+
+                "- This OS block represents PowerShell Core running on a generic Linux system.\n"
+                "- Canonical PowerShell concepts include:\n"
+                "    * cmdlets (Get-Process, Get-Service, Get-Item, Remove-Item, etc.)\n"
+                "    * pipelines using '|'\n"
+                "    * parameters prefixed with '-'\n"
+                "    * error records with categories and messages.\n"
+                "\n"
+                "- This block does NOT define any Linux package manager semantics.\n"
+                "- The LLM MUST NOT assume the presence of 'apt', 'apt-get', 'yum', 'dnf', 'apk', 'pacman', or 'zypper'\n"
+                "  for this OS block, and MUST NOT rewrite between package managers.\n"
+                "- If a PowerShell Core command invokes a Linux package manager (apt, apt-get, yum, dnf, apk, pacman, zypper,\n"
+                "  brew, snap, etc.), and no explicit deterministic rule is defined for that manager in this block,\n"
+                "  the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT invent package manager commands, MUST NOT guess package names, and MUST NOT introduce\n"
+                "  package managers as remediation.\n"
+                "\n"
+                "- If stderr contains the EXACT PowerShell message:\n"
+                "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
+                "  the LLM MUST return 'fallback'.\n"
+                "\n"
+                "- If the command references BusyBox-specific semantics (for example, BusyBox applets or BusyBox-only paths)\n"
+                "  while os_version != 'busybox', the LLM MUST use 'fallback'. This block MUST NOT activate BusyBox domain\n"
+                "  primitives.\n"
+                "\n"
+
+                # ============================================================
+                # Destructive commands (PowerShell Core on Linux)
+                # ============================================================
+
+                "- If the command is destructive to core Linux system paths, the LLM MUST return 'abort' with a clear message.\n"
+                "- Examples include (but are not limited to):\n"
+                "    * Remove-Item -Recurse -Force /\n"
+                "    * Remove-Item -Recurse -Force /bin\n"
+                "    * Remove-Item -Recurse -Force /sbin\n"
+                "    * Remove-Item -Recurse -Force /usr\n"
+                "    * Remove-Item -Recurse -Force /etc\n"
+                "    * Remove-Item -Recurse -Force /var\n"
+                "    * Remove-Item -Recurse -Force /home\n"
+                "    * rm -rf /\n"
+                "    * rm -rf /bin\n"
+                "    * rm -rf /etc\n"
+                "- ANY attempt to recursively delete or irreversibly modify these locations MUST trigger 'abort'.\n"
+                "\n"
+                "- If the command attempts to stop or kill critical Linux processes (for example, PID 1 or init/systemd\n"
+                "  equivalents) via PowerShell Core wrappers or direct shell invocation, the LLM MUST return 'abort'.\n"
+                "\n"
+
+                # ============================================================
+                # Wrong OS / wrong tool usage (PowerShell Core on Linux)
+                # ============================================================
+
+                "- If the command references Windows-only paths (e.g., 'C:\\Windows', 'C:\\Program Files', 'HKLM:\\'),\n"
+                "  the LLM MUST return 'fallback'. This OS block MUST NOT rewrite Windows paths into Linux paths.\n"
+                "- If the command references Windows-only tools or cmdlets that are not available in PowerShell Core on Linux,\n"
+                "  and no deterministic mapping is defined, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If the command references macOS-specific paths (/System, /Applications, /Library) or macOS-only tools,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                # ============================================================
+                # Network failures (PowerShell Core on Linux)
+                # ============================================================
+
+                "- Network failures follow global Network Failure Semantics (Revision 6.5).\n"
+                "- If stderr contains:\n"
+                "    * 'The remote name could not be resolved'\n"
+                "    * 'Unable to connect to the remote server'\n"
+                "    * 'No such host is known'\n"
+                "    * or equivalent Linux/PowerShell Core network resolution errors,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                # ============================================================
+                # cleanup_and_retry usage (PowerShell Core on Linux)
+                # ============================================================
+
+                "- cleanup_and_retry MUST be used sparingly and ONLY when stderr contains a literal,\n"
+                "  deterministic remediation suggestion that is safe on Linux.\n"
+                "- If stderr explicitly suggests a safe, single-step remediation (for example, rerunning a non-destructive\n"
+                "  PowerShell Core command), the LLM MAY use cleanup_and_retry with:\n"
+                "    * 'cleanup' as an empty list or minimal safe commands, and\n"
+                "    * 'retry' containing the suggested command.\n"
+                "- The LLM MUST NOT invent multi-step cleanup sequences.\n"
+                "- The LLM MUST NOT introduce Linux package manager cleanup (apt caches, yum metadata, apk caches, etc.)\n"
+                "  from this OS block.\n"
+                "- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
+                "\n"
+
+                # ============================================================
+                # retry_with_modified_command usage (PowerShell Core on Linux)
+                # ============================================================
+
+                "- retry_with_modified_command MAY be used when the original command is a clear near-miss\n"
+                "  of a valid PowerShell Core cmdlet or parameter usage.\n"
+                "- Examples include:\n"
+                "    * 'Get-Servce' → 'Get-Service'\n"
+                "    * missing mandatory parameter names when intent is unambiguous and non-destructive.\n"
+                "- The LLM MUST NOT use retry_with_modified_command to:\n"
+                "    * guess module names,\n"
+                "    * guess package IDs,\n"
+                "    * introduce new tools or package managers,\n"
+                "    * or change the high-level intent of the command.\n"
+                "\n"
+
+                # ============================================================
+                # Fallback rules (PowerShell Core on Linux)
+                # ============================================================
+
+                "- Use 'fallback' when the command is incomplete, ambiguous, malformed, or references\n"
+                "  unsupported features, cmdlets, modules, or paths.\n"
+                "- Use 'fallback' when correcting the command would require guessing user intent,\n"
+                "  inventing capabilities, or inferring cross-OS behavior.\n"
+                "- Use 'fallback' when the OS, shell, or package manager context is unclear.\n"
+                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                "- If the command uses ANY package manager (apt, apt-get, yum, dnf, apk, pacman, brew, snap, etc.),\n"
+                "  and this OS block does NOT define a deterministic rewrite, the LLM MUST return 'fallback'.\n"
+                "\n"
 
 
 
