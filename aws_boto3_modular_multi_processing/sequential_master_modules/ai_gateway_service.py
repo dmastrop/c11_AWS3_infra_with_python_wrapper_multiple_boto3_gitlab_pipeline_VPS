@@ -2263,32 +2263,6 @@ def recover(request: RecoveryRequest):
 
 
 
-                ###################################################
-
-                # ============================================================
-                # CISCO IOS DOMAIN RULES — Applies ONLY when os_name = "Cisco IOS" (This entire block is Revsion 3)
-                # ============================================================
-                "These rules apply ONLY when os_name = \"Cisco IOS\".\n"
-
-                # ============================================================
-                # CISCO IOS RULES
-                # Revision 3: Added full Cisco IOS command families, correction rules,
-                # malformed rules, safe/unsafe rules, fallback logic, retry logic,
-                # and abort logic. This ENTIRE block is newly added with Revision 3.
-                # ============================================================
-                "Cisco IOS rules:\n"
-                
-                # Revision 6.6. This will make these types of scenarios fully deterministic.
-                "- If stderr contains \"% Invalid input detected at '^' marker.\" AND the command\n"
-                "  belongs to a known IOS command family (show, configure, interface, enable),\n"
-                "  the LLM MUST use \"retry_with_modified_command\" and MUST return the same command.\n"
-
-                "- Cisco IOS is a network device operating system with its own CLI, not a Linux shell.\n"
-                "- Cisco IOS commands MUST NOT be treated as Linux commands.\n"
-                "- Cisco IOS does NOT support apt, apt-get, yum, dnf, apk, brew, or any Linux package manager.\n"
-                "- Cisco IOS does NOT support bash, zsh, sh, PowerShell, or macOS shells.\n"
-                "- Cisco IOS commands MUST be interpreted using IOS semantics only.\n\n"
-
 
 
 
@@ -2468,6 +2442,37 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
+
+
+                ###################################################
+
+                # ============================================================
+                # CISCO IOS DOMAIN RULES — Applies ONLY when os_name = "Cisco IOS" (This entire block is Revsion 3)
+                # ============================================================
+                "These rules apply ONLY when os_name = \"Cisco IOS\".\n"
+
+                # ============================================================
+                # CISCO IOS RULES
+                # Revision 3: Added full Cisco IOS command families, correction rules,
+                # malformed rules, safe/unsafe rules, fallback logic, retry logic,
+                # and abort logic. This ENTIRE block is newly added with Revision 3.
+                # ============================================================
+                "Cisco IOS rules:\n"
+                
+                # Revision 6.6. This will make these types of scenarios fully deterministic.
+                "- If stderr contains \"% Invalid input detected at '^' marker.\" AND the command\n"
+                "  belongs to a known IOS command family (show, configure, interface, enable),\n"
+                "  the LLM MUST use \"retry_with_modified_command\" and MUST return the same command.\n"
+
+                "- Cisco IOS is a network device operating system with its own CLI, not a Linux shell.\n"
+                "- Cisco IOS commands MUST NOT be treated as Linux commands.\n"
+                "- Cisco IOS does NOT support apt, apt-get, yum, dnf, apk, brew, or any Linux package manager.\n"
+                "- Cisco IOS does NOT support bash, zsh, sh, PowerShell, or macOS shells.\n"
+                "- Cisco IOS commands MUST be interpreted using IOS semantics only.\n\n"
+
+
                 # ------------------------------------------------------------
                 # VALID IOS COMMAND FAMILIES
                 # ------------------------------------------------------------
@@ -2629,6 +2634,171 @@ def recover(request: RecoveryRequest):
 
 
 
+                # ============================================================
+                # PAN-OS DOMAIN RULES — Applies ONLY when os_name = "PAN-OS" (Revision 19)
+                # ============================================================
+                "These rules apply ONLY when os_name = \"PAN-OS\".\n"
+
+                # ============================================================
+                # PAN-OS RULES
+                # Revision 19: Added full PAN-OS command families, malformed rules,
+                # safe/unsafe rules, fallback logic, retry logic, cleanup_and_retry logic,
+                # and abort logic. This ENTIRE block is newly added with Revision 19.
+                # ============================================================
+                "PAN-OS rules:\n"
+                "- PAN-OS is a firewall/network security operating system with its own CLI.\n"
+                "- PAN-OS commands MUST NOT be treated as Linux, macOS, Windows, or Cisco IOS commands.\n"
+                "- PAN-OS does NOT support apt, apt-get, yum, dnf, apk, brew, snap, or any Linux package manager.\n"
+                "- PAN-OS does NOT support bash, zsh, sh, PowerShell, or IOS shells.\n"
+                "- PAN-OS commands MUST be interpreted using PAN-OS CLI semantics only.\n\n"
+
+
+                # ------------------------------------------------------------
+                # VALID PAN-OS COMMAND FAMILIES
+                # ------------------------------------------------------------
+                "Valid PAN-OS command families:\n"
+                "- Operational mode (prompt ends with '>'):\n"
+                "    show system info\n"
+                "    show system software status\n"
+                "    show routing route\n"
+                "    show routing summary\n"
+                "    show session all\n"
+                "- Configuration mode (prompt ends with '#'):\n"
+                "    configure\n"
+                "    set ...\n"
+                "    delete ...\n"
+                "    rename ...\n"
+                "    commit\n"
+                "- The 'configure' command transitions from operational mode to configuration mode.\n"
+                "- Configuration-mode commands MUST NOT be treated as valid in operational mode.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS MALFORMED COMMAND RULES
+                # ------------------------------------------------------------
+                "Malformed PAN-OS command rules:\n"
+                "- PAN-OS may return errors such as:\n"
+                "    'Unknown command: <command>'\n"
+                "    'Invalid syntax.'\n"
+                "    'Invalid command.'\n"
+                "- These indicate:\n"
+                "    * mistyped command, OR\n"
+                "    * unsupported command, OR\n"
+                "    * wrong mode (operational vs configuration), OR\n"
+                "    * ambiguous or incomplete command.\n"
+                "- Malformed PAN-OS commands MUST NOT trigger 'abort' unless the command is destructive.\n"
+                "- For malformed PAN-OS commands, prefer 'retry_with_modified_command' (if a safe correction exists)\n"
+                "  or 'fallback' (if no safe correction exists).\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS COMMAND CORRECTION RULES
+                # ------------------------------------------------------------
+                "PAN-OS command correction rules:\n"
+                "- If a command clearly belongs to a known PAN-OS family and can be safely corrected, use 'retry_with_modified_command'.\n"
+                "- Examples of safe corrections (illustrative, not exhaustive):\n"
+                "    * Correct 'show system software stats' → 'show system software status'.\n"
+                "    * Correct 'show route summary' → 'show routing summary'.\n"
+                "- If the command is ambiguous, incomplete, or cannot be safely corrected, use 'fallback'.\n"
+                "- NEVER correct a PAN-OS command into a Linux, macOS, Windows, or IOS command.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS SAFE COMMAND RULES
+                # ------------------------------------------------------------
+                "PAN-OS safe commands:\n"
+                "- All 'show' commands are read-only and MUST NOT trigger 'abort'.\n"
+                "- 'configure' is safe (mode transition) and MUST NOT trigger 'abort'.\n"
+                "- 'commit' is configuration-application but not inherently destructive; it MUST NOT trigger 'abort' by itself.\n"
+                "- Safe commands that fail should use 'retry_with_modified_command' (if a safe correction exists)\n"
+                "  or 'fallback' (if no safe correction exists).\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS UNSAFE / DESTRUCTIVE COMMAND RULES
+                # ------------------------------------------------------------
+                "PAN-OS unsafe commands:\n"
+                "- Commands that reboot or power off the device, for example:\n"
+                "    * request system reboot\n"
+                "    * request system shutdown\n"
+                "- Commands that erase or reset configuration, for example:\n"
+                "    * delete config saved\n"
+                "    * delete config version <id>\n"
+                "    * load config default (if it resets to factory defaults)\n"
+                "- Any command that clearly deletes or wipes system configuration or storage.\n"
+                "- Unsafe commands MUST trigger 'abort' with a clear message.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS MODE / PRIVILEGE SEMANTICS
+                # ------------------------------------------------------------
+                "PAN-OS mode semantics:\n"
+                "- PAN-OS has two primary CLI modes relevant to this contract:\n"
+                "    * Operational mode (prompt ends with '>') — used for 'show' and operational commands.\n"
+                "    * Configuration mode (prompt ends with '#') — used for 'set', 'delete', 'rename', 'commit', etc.\n"
+                "- The command 'configure' transitions from operational mode to configuration mode.\n"
+                "- Configuration-mode commands (set/delete/rename/commit) are invalid in operational mode.\n"
+                "- If a configuration-mode command fails due to being in the wrong mode, the LLM MUST treat this\n"
+                "  as a mode failure, not as a generic malformed command.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS FALLBACK LOGIC
+                # ------------------------------------------------------------
+                "PAN-OS fallback rules:\n"
+                "- Use 'fallback' when the command is malformed AND no safe correction exists.\n"
+                "- Use 'fallback' when the command is ambiguous or incomplete.\n"
+                "- Use 'fallback' when the command is clearly not a PAN-OS command but is not destructive\n"
+                "  (for example, random strings or unknown non-destructive commands).\n"
+                "- Use 'fallback' when the error indicates a generic syntax issue and no deterministic\n"
+                "  correction or mode transition can be inferred.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS RETRY LOGIC (SINGLE-COMMAND CORRECTIONS)
+                # ------------------------------------------------------------
+                "PAN-OS retry rules (retry_with_modified_command):\n"
+                "- Use 'retry_with_modified_command' when a malformed PAN-OS command can be safely corrected\n"
+                "  into a valid PAN-OS command.\n"
+                "- The 'retry' field MUST contain a single valid PAN-OS command.\n"
+                "- NEVER propose Linux, macOS, Windows, or IOS commands in 'retry'.\n"
+                "- Do NOT use 'retry_with_modified_command' for multi-step mode transitions; those MUST use 'cleanup_and_retry'.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS CLEANUP_AND_RETRY LOGIC (MODE TRANSITIONS)
+                # ------------------------------------------------------------
+                "PAN-OS cleanup_and_retry rules (mode transitions):\n"
+                "- Use 'cleanup_and_retry' when a configuration-mode command fails because the device is\n"
+                "  not in configuration mode.\n"
+                "- In such cases, the LLM MUST provide a 'retry' list that includes:\n"
+                "    1. 'configure'\n"
+                "    2. the original intended configuration command (e.g., 'set ...', 'delete ...', 'commit').\n"
+                "- Example:\n"
+                "    { \"action\": \"cleanup_and_retry\", \"cleanup\": [], \"retry\": [\"configure\", \"set rulebase security rules ...\"] }.\n"
+                "- NEVER use 'retry_with_modified_command' for mode transitions; 'cleanup_and_retry' is required.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS ABORT LOGIC
+                # ------------------------------------------------------------
+                "PAN-OS abort rules:\n"
+                "- Abort when the command is clearly destructive (reboot, shutdown, erase/reset configuration).\n"
+                "- Abort when the user attempts Linux package installation or Linux shell commands on PAN-OS\n"
+                "  (apt, apt-get, yum, dnf, apk, brew, snap, bash, sh, zsh, etc.).\n"
+                "- Abort when the user attempts Windows or macOS shell commands on PAN-OS.\n"
+                "- Abort MUST include a clear 'message' explaining the reason.\n\n"
+
+
+                # ------------------------------------------------------------
+                # PAN-OS ABORT MESSAGE EXAMPLES
+                # ------------------------------------------------------------
+                "Examples of valid PAN-OS abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: PAN-OS does not support Linux package managers.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: PAN-OS does not support shell commands.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: request system reboot\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: request system shutdown\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: delete config saved\" }\n\n"
 
 
             )
