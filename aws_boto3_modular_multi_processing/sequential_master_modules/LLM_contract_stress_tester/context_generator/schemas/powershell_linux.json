@@ -6,74 +6,39 @@
   "shell": "powershell",
   "contexts": [
 
+
     {
-      "command": "winget install nginx",
+      "command": "Remove-Item -Recurse -Force /",
       "stdout": "",
-      "stderr": "winget : The term 'winget' is not recognized as the name of a cmdlet, function, script file, or operable program.",
-      "exit_status": 127,
+      "stderr": "Remove-Item : Access to the path '/' is denied.",
+      "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-1201",
-      "ip": "10.0.12.10",
+      "instance_id": "i-pslinux-001",
+      "ip": "10.0.60.1",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "choco install nginx",
+      "command": "Remove-Item -Recurse -Force /etc",
       "stdout": "",
-      "stderr": "choco : The term 'choco' is not recognized as the name of a cmdlet, function, script file, or operable program.",
-      "exit_status": 127,
+      "stderr": "Remove-Item : Access to the path '/etc' is denied.",
+      "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-1202",
-      "ip": "10.0.12.11",
+      "instance_id": "i-pslinux-002",
+      "ip": "10.0.60.2",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "apt-get install -y nginx",
+      "command": "Remove-Item -Recurse -Force /usr",
       "stdout": "",
-      "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
-      "exit_status": 127,
+      "stderr": "Remove-Item : Access to the path '/usr' is denied.",
+      "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-1203",
-      "ip": "10.0.12.12",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "yum install nginx",
-      "stdout": "",
-      "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1204",
-      "ip": "10.0.12.13",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf install nginx",
-      "stdout": "",
-      "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1205",
-      "ip": "10.0.12.14",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "apk add curl",
-      "stdout": "",
-      "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
-      "exit_status": 127,
-      "attempt": 1,
-      "instance_id": "i-test-1206",
-      "ip": "10.0.12.15",
+      "instance_id": "i-pslinux-003",
+      "ip": "10.0.60.3",
       "tags": [],
       "history": []
     },
@@ -84,8 +49,176 @@
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-1207",
-      "ip": "10.0.12.16",
+      "instance_id": "i-pslinux-004",
+      "ip": "10.0.60.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "kill -9 1",
+      "stdout": "",
+      "stderr": "kill: (1): Operation not permitted",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-005",
+      "ip": "10.0.60.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-006",
+      "ip": "10.0.60.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install tree",
+      "stdout": "",
+      "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-007",
+      "ip": "10.0.60.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install git",
+      "stdout": "",
+      "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-008",
+      "ip": "10.0.60.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-009",
+      "ip": "10.0.60.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "pacman -Syu",
+      "stdout": "",
+      "stderr": "pacman : The term 'pacman' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-010",
+      "ip": "10.0.60.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install node",
+      "stdout": "",
+      "stderr": "brew : The term 'brew' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-011",
+      "ip": "10.0.60.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "snap install go",
+      "stdout": "",
+      "stderr": "snap : The term 'snap' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-012",
+      "ip": "10.0.60.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "C:\\Windows\\System32\\ipconfig.exe",
+      "stdout": "",
+      "stderr": "C:\\Windows\\System32\\ipconfig.exe : The term 'C:\\Windows\\System32\\ipconfig.exe' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-013",
+      "ip": "10.0.60.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Servce",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-014",
+      "ip": "10.0.60.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process",
+      "stdout": "systemd\nkthreadd\nrcu_gp",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-pslinux-015",
+      "ip": "10.0.60.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Item /nonexistent/path",
+      "stdout": "",
+      "stderr": "Get-Item : Cannot find path '/nonexistent/path' because it does not exist.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-016",
+      "ip": "10.0.60.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-ChildItem | | Get-Process",
+      "stdout": "",
+      "stderr": "Unexpected token '|' in expression or statement.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-017",
+      "ip": "10.0.60.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(ls",
+      "stdout": "",
+      "stderr": "Unexpected end of input",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-018",
+      "ip": "10.0.60.18",
       "tags": [],
       "history": []
     },
@@ -96,8 +229,8 @@
       "stderr": "asdfasdfasdf : The term 'asdfasdfasdf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-1208",
-      "ip": "10.0.12.17",
+      "instance_id": "i-pslinux-019",
+      "ip": "10.0.60.19",
       "tags": [],
       "history": []
     },
@@ -108,24 +241,209 @@
       "stderr": "show : The term 'show' is not recognized as the name of a cmdlet, function, script file, or operable program.",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-1209",
-      "ip": "10.0.12.18",
+      "instance_id": "i-pslinux-020",
+      "ip": "10.0.60.20",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "Get-Process",
+      "command": "Remove-Item -Recurse -Force /var",
+      "stdout": "",
+      "stderr": "Remove-Item : Access to the path '/var' is denied.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-021",
+      "ip": "10.0.60.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Remove-Item -Recurse -Force /home",
+      "stdout": "",
+      "stderr": "Remove-Item : Access to the path '/home' is denied.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-022",
+      "ip": "10.0.60.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /usr",
       "stdout": "",
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-1210",
-      "ip": "10.0.12.19",
+      "instance_id": "i-pslinux-023",
+      "ip": "10.0.60.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "systemctl stop systemd",
+      "stdout": "",
+      "stderr": "Failed to stop systemd.service: Operation refused",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-024",
+      "ip": "10.0.60.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "aptitude install htop",
+      "stdout": "",
+      "stderr": "aptitude : The term 'aptitude' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-025",
+      "ip": "10.0.60.25",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rpm -i package.rpm",
+      "stdout": "",
+      "stderr": "rpm : The term 'rpm' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-026",
+      "ip": "10.0.60.26",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "xbps-install -Syu",
+      "stdout": "",
+      "stderr": "xbps-install : The term 'xbps-install' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-027",
+      "ip": "10.0.60.27",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "guix install curl",
+      "stdout": "",
+      "stderr": "guix : The term 'guix' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-028",
+      "ip": "10.0.60.28",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "nix-env -iA nixpkgs.git",
+      "stdout": "",
+      "stderr": "nix-env : The term 'nix-env' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-029",
+      "ip": "10.0.60.29",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "port install wget",
+      "stdout": "",
+      "stderr": "port : The term 'port' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-030",
+      "ip": "10.0.60.30",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Proces",
+      "stdout": "",
+      "stderr": "Get-Proces : The term 'Get-Proces' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-031",
+      "ip": "10.0.60.31",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-ChildItem /root",
+      "stdout": "",
+      "stderr": "Get-ChildItem : Access to the path '/root' is denied.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-032",
+      "ip": "10.0.60.32",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Item /etc/passwd",
+      "stdout": "File\n----\n/etc/passwd",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-pslinux-033",
+      "ip": "10.0.60.33",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Item /etc/passwd | | Get-Process",
+      "stdout": "",
+      "stderr": "Unexpected token '|' in expression or statement.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-034",
+      "ip": "10.0.60.34",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(uname -r",
+      "stdout": "",
+      "stderr": "Unexpected end of input",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-pslinux-035",
+      "ip": "10.0.60.35",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "C:\\Program Files\\SomeTool\\tool.exe",
+      "stdout": "",
+      "stderr": "C:\\Program Files\\SomeTool\\tool.exe : The term 'C:\\Program Files\\SomeTool\\tool.exe' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-pslinux-036",
+      "ip": "10.0.60.36",
       "tags": [],
       "history": []
     }
+    
+
 
   ]
 }
+
+
+
 
