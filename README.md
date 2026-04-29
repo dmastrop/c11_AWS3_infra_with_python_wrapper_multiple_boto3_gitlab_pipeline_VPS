@@ -2033,7 +2033,7 @@ The corpus feeds the mutators and generator to produce large‑scale test suites
 
 ---
 
-#### OS Matrix (Phase 4a.1.3 Preview: SEE EARLIER SECTION ABOVE FOR THE CURRENT REV 1 MATRIX)
+#### OS Matrix (Phase 4a.1.3 Preview: See the earlier section above for the current REV 1 OS matrix)
 
 The OS matrix will be used in Phase 4a.1.3 for real‑node OS discovery.
 
