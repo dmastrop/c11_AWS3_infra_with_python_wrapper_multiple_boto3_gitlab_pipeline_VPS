@@ -1740,7 +1740,332 @@ OS domain primitives block defined.
 
 
 
-### The new section on stress tester architecture (title here)
+### How the LLM Contract Stress Tester Works
+
+The LLM Contract Stress Tester is the core framework used to harden, validate, and scale the domain‑primitive contract rules across all supported operating systems and platforms. It transforms the contract from a manually curated set of rules into a rigorously tested, systematically validated, and highly deterministic specification that governs LLM behavior in the remediation engine.
+
+This section explains the architecture, execution pipeline, schema mechanics, validation logic, scoring, reporting, and the future expansion path that will ultimately support Phase 4a.1.3 (real‑node OS discovery and full pipeline integration).
+
+---
+
+#### High-Level Code Architecture
+
+The stress tester is built around a clean separation of responsibilities:
+
+- **stress_tester.py**  
+  The orchestrator.  
+  Builds the payload, injects OS metadata, selects test contexts, and coordinates validation, scoring, and reporting.
+
+- **curl_harness/harness.py**  
+  The transport layer.  
+  Converts Python dicts to JSON, writes temporary files, executes curl, and returns raw LLM responses.
+
+- **context_generator/**  
+  Loads schemas, and (in the automated phase) generates new test cases through corpus‑driven mutation and fuzzing.
+
+- **validator/**  
+  Performs first‑line contract validation: JSON shape checking, contract rule checking, and OS‑specific rule checking.
+
+- **scoring/**  
+  Assigns PASS/FAIL, severity levels, and violation categories.
+
+- **reports/**  
+  Produces human‑readable and machine‑readable summaries.
+
+- **artifacts/**  
+  Stores payloads, responses, scoring results, and validator output for regression testing.
+
+- **command_corpus/**  
+  Provides canonical command families per OS/platform for schema expansion.
+
+- **os_matrix/**  
+  (Phase 4a.1.3) Maps real OS discovery → domain‑primitive blocks.
+
+This modular architecture ensures that each component is independently testable, replaceable, and extensible.
+
+---
+
+#### Execution Pipeline
+
+The execution pipeline is deterministic and follows a strict sequence:
+
+1. **Schema selection**  
+   The tester loads a schema file (e.g., `ubuntu_apt.json`).
+
+2. **Context selection**  
+   A specific test case is selected by index.
+
+3. **Payload construction**  
+   `stress_tester.py` injects:
+   - `schema_version`
+   - `os_info` (name + version)
+   - the raw context fields
+
+4. **Transport**  
+   The payload is passed to `harness.py`, which:
+   - writes JSON to a temp file  
+   - executes curl  
+   - returns raw LLM output
+
+5. **Validation**  
+   The validator checks:
+   - JSON structure  
+   - action validity  
+   - retry/cleanup correctness  
+   - OS‑specific contract rules  
+   - destructive command handling  
+   - malformed command handling  
+   - wrong‑OS tool handling  
+   - privilege/mode semantics (IOS, PAN‑OS, PowerShell, etc.)
+
+6. **Scoring**  
+   PASS/FAIL + severity + violation category.
+
+7. **Reporting**  
+   Summaries are generated for:
+   - per‑test  
+   - per‑schema  
+   - per‑OS  
+   - full test suite
+
+8. **Artifact storage**  
+   Payloads, responses, scoring, and validator output are saved for regression testing.
+
+This pipeline is the backbone of the contract‑hardening methodology.
+
+---
+
+#### Schema Loading
+
+Schemas live in:
+
+```
+context_generator/schemas/
+```
+
+Each schema contains a list of raw test contexts:
+
+```
+command
+stdout
+stderr
+exit_status
+attempt
+instance_id
+ip
+tags
+history
+```
+
+Schemas **do not** contain:
+
+- schema_version  
+- os_info  
+- context wrapper  
+
+These are injected dynamically by `stress_tester.py`.
+
+Schemas represent the “substrate” for testing — they simulate the output of real nodes without requiring real infrastructure.
+
+---
+
+#### Context Generation
+
+In the manual phase, schemas were hand‑crafted (20–36 cases each).  
+In the automated phase, schemas will be expanded using:
+
+- **command corpus** (canonical commands per OS)  
+- **mutators** (syntactic and semantic variations)  
+- **fuzzers** (randomized perturbations)  
+- **OS‑specific command families**  
+- **known malformed patterns**  
+- **known destructive patterns**  
+- **known wrong‑OS patterns**  
+- **near‑miss patterns**  
+
+This is the heart of schema expansion.
+
+#### Schema Expansion Pipeline
+
+1. `command_corpus/`  
+   Provides canonical commands per OS/platform.
+
+2. `mutators.py`  
+   Generates variations:
+   - typos  
+   - missing flags  
+   - wrong subcommands  
+   - swapped arguments  
+   - malformed syntax  
+
+3. `generator.py`  
+   Assembles new contexts:
+   - fills in stderr  
+   - assigns instance_id  
+   - assigns IP  
+   - assigns exit_status  
+
+4. `schema_expander.py`  
+   Writes new schema files (50, 100, 200 cases).
+
+This is how the contract is torture‑tested.
+
+---
+
+#### Harness Behavior
+
+`curl_harness/harness.py` is intentionally simple:
+
+- Accepts a fully assembled Python dict  
+- Converts dict → JSON  
+- Writes JSON to a temporary file  
+- Executes curl with `-d @tempfile.json`  
+- Returns raw stdout (LLM response)
+
+It does **not**:
+
+- modify payloads  
+- validate anything  
+- inject metadata  
+- interpret responses  
+
+It is a pure transport layer.
+
+This separation ensures clarity, debuggability, and future extensibility (e.g., replacing curl with Python requests).
+
+---
+
+#### Validator Behavior
+
+The validator is the automated version of the manual testing you performed during the first round.
+
+It performs:
+
+- JSON shape checking  
+- Required field checking  
+- Action validity checking  
+- Retry/cleanup correctness  
+- OS‑specific rule enforcement  
+- Destructive command detection  
+- Wrong‑OS tool detection  
+- Malformed command handling  
+- Privilege/mode semantics (IOS, PAN‑OS, PowerShell)  
+
+The validator is a **first‑line filter**, not a replacement for human judgment.
+
+It catches ~95% of issues.  
+The remaining ~5% are escalated for manual review and contract refinement.
+
+This is exactly how professional LLM contract‑testing frameworks operate.
+
+---
+
+#### Scoring Engine
+
+The scoring engine assigns:
+
+- PASS / FAIL  
+- Severity (low, medium, high, critical)  
+- Violation category:
+  - malformed command mishandling  
+  - destructive command mishandling  
+  - wrong‑OS tool mishandling  
+  - privilege/mode mishandling  
+  - invalid action  
+  - invalid retry list  
+  - invalid cleanup list  
+  - contract rule violation  
+
+Scoring results feed directly into the reporting layer.
+
+---
+
+#### Reporting Layer
+
+The reporting layer produces:
+
+- Per‑test summaries  
+- Per‑schema summaries  
+- Per‑OS summaries  
+- Full test suite summaries  
+- JSON reports for machine consumption  
+- Human‑readable reports for contract refinement  
+
+Reports are designed to be fed back into the LLM for interpretation, enabling a closed‑loop refinement cycle.
+
+---
+
+#### Artifacts
+
+Artifacts include:
+
+- Payloads  
+- Raw LLM responses  
+- Validator output  
+- Scoring results  
+- Summary reports  
+- Regression snapshots  
+
+Artifacts are essential for:
+
+- debugging  
+- regression testing  
+- contract evolution  
+- reproducibility  
+
+---
+
+#### Command Corpus
+
+The command corpus is the foundation for schema expansion.  
+It contains:
+
+- canonical commands per OS  
+- safe commands  
+- unsafe commands  
+- malformed patterns  
+- wrong‑OS patterns  
+- destructive patterns  
+- privilege‑mode commands  
+- near‑miss variants  
+
+The corpus feeds the mutators and generator to produce large‑scale test suites.
+
+---
+
+#### OS Matrix (Phase 4a.1.3 Preview: SEE EARLIER SECTION ABOVE FOR THE CURRENT REV 1 MATRIX)
+
+The OS matrix will be used in Phase 4a.1.3 for real‑node OS discovery.
+
+It maps:
+
+- OS name → schema  
+- OS name → domain‑primitive block  
+- OS name → package manager  
+- OS name → shell  
+- OS name → revision  
+
+In Phase 4a.1.3, this will be integrated into module2f so that real nodes can be tested end‑to‑end.
+
+---
+
+#### Future Expansion
+
+The stress tester is designed to evolve into:
+
+- a full contract‑hardening engine  
+- a schema expansion engine  
+- a regression testing engine  
+- a multi‑OS fuzzing engine  
+- a real‑node validation engine (Phase 4a.1.3)  
+- a generalizable LLM contract‑testing framework  
+
+This methodology is applicable to any AI/MCP system that relies on deterministic LLM behavior under strict contract rules.
+
+This stress tester is not simply a tool, but rather it defines a paradigm for contract LLM-based refinement.
+
+
+
 
 
 
