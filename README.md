@@ -1937,7 +1937,7 @@ This separation ensures clarity, debuggability, and future extensibility (e.g., 
 
 #### Validator Behavior
 
-The validator is the automated version of the manual testing you performed during the first round.
+The validator is the automated version of the manual testing that was performed during the first round.(see Introduction, above)
 
 It performs:
 
