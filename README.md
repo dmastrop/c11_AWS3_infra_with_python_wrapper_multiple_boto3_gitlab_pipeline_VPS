@@ -1630,9 +1630,9 @@ UPDATE; each domain primitives block has a filter).
 | CentOS 7 | yum | 10 | **DONE** |
 | CentOS 8 | dnf | 11 | **DONE** |
 | PAN‑OS | — | 19 | **DONE** |
-| Windows Server | PowerShell | 17 | **DONE** |
-| Linux (PowerShell Core) | pwsh | 18 | **DONE** |
-| **macOS zsh** | none | **16 (with 6.11)** | **DONE** |
+| Windows Server | PowerShell | 17 (with 6.12) | **DONE** |
+| Linux (PowerShell Core) | pwsh | 18 (with 6.13) | **DONE** |
+| macOS zsh | none | 16 (with 6.11) | **DONE** |
 
 
 
