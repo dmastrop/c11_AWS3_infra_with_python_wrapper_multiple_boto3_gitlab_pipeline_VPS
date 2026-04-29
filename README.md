@@ -1571,8 +1571,12 @@ of the responses from the LLM
 of this testing
 - Operating system matrix for the currently tested supported operating systems and platforms
 - Test matrices for each operating system and platform
+- The rollout of the full version of the stress tester where all of the above is automated, primarly the validation phase of each
+test result.
 
-The iterative process was done manually using a partially developed stress tester that packaged the schemas into a payload and 
+#### Manual phase: 
+
+The iterative process was first done manually using a partially developed stress tester that packaged the schemas into a payload and 
 sent them to the LLM. This was the initial manual testing.
 
 Later on, once the stress tester framework was fully developed and automated, the schema test cases could be ramped up significantly
@@ -1582,29 +1586,121 @@ contract rules in each domain primitives block.
 
 The paradigm above was highly successful (see ai_gateway_service.py payload6 block)
 
-Another important note: All of the manual testing above with curl, iterating through each test case in the schema, was done by
-docker exec -it into the running deploy container, since all of that development has been completed and thorougly tested (see
-previous UPDATES). In a similar manner the stress tester (stress_tester.py) complete code is available as part of the repo and thus
-it is pushed into the container, so the stress tester is run in a similar manner directly from the deploy container. As an added
-benefit there are printf debugs that are in the ai_gateway_service.py code that send the payload and the LLM response directly to
-the gitlab console logs for inspection when and if there are deep level issues with the LLM resolution (very rare).
+An important note: All of the manual testing above with curl, iterating through each test case in the schema, was done by
+docker exec -it into the running deploy container. All of the AI Gateway Code has been stable for quite some time (see
+previous UPDATES). 
 
-The stress tester facilitates very large number of tests in the schema to be funneled through to the LLM, records the response
-(test result) and then provides reports for interpretation. The interpretation itself is done by consulting with an LLM for
-feedback on what the proper responses should be.  Any incorrect test results are then remediated by modifying the contract rules
-for that domain primitives block accordingly. The test is then run again until clean. The stress tester can easily run through 
-100 test cases per OS/platform (there are 16 as of this writing) and collate the information into reports that can be fed back
-into the LLM for interpretation. This leads to an extremely robust set of domain primitives in the contract rules block. The 
-objective is always to make a non-deterministic LLM extremely deterministic for the use cases that this software supports.
+The stress tester is invoked per test (manually), for example, in the following manner:
+
+```
+python3 stress_tester.py --os ubuntu_apt --index 0
+```
+
+This command invokes the stress_tester.py code and packages the ubuntu_apt.json first context test case (index 0), sends it 
+to the AI Gateway Service, gets the plan action response from the LLM and prints it out to the terminal.
+This can be done because the stress tester code is committed to the project's repo and all of it is pushed to the container
+running in the deploy stage of the pipeline.
+
+ As an added benefit there are printf debugs that are in the ai_gateway_service.py code that send the payload and the LLM response 
+directly to the gitlab console logs for inspection when and if there are deep level issues with the LLM resolution (very rare).
+
+#### Fully automated phase:
+
+The main objective of the stress tester code is to automate all of this manual invocation.
+
+The stress tester facilitates iterating through a very large number of tests in the schema, such that they are efficiently funneled 
+through to the LLM. It records the response (test result) for each test, does a pre-emptive validation check (a JSON shape checker, a
+contract rule checker, and an OS-specific rule checker that pertains to the contract domain primitives block for the OS), and then 
+provides a report (PASS/FAIL) for interpretation.
+
+Prior to the fully automated phase, each result was validated by manually consulting with an LLM to make sure that the plan action
+response from the LLM was appropriate given the context that it was presented with, for the domain primitives block of contract
+rules.
+
+With the fully automated phase the first pass validator will catch about 95% of the problems with the plan action response (if 
+present), and only about 5% of the FAILed test cases will need manual consultation with the LLM.
+This is exactly how professional LLM contract‑testing frameworks work.
+
+Any incorrect test results are then remediated by modifying the contract rules for that domain primitives block accordingly. 
+The test is then run again until all test cases are PASSed. 
+Given this, the stress tester can easily run through 100s test cases per OS/platform (there are 16 OS as of this writing) 
+and collate the information into reports that can be fed back into the LLM for interpretation. 
+This leads to an extremely robust set of domain primitives in the contract rules block. 
+ 
+Once the stress tester code is presented below it will be clear that: 
+
+The validator’s job is to:
+- Catch clear failures
+- Catch clear successes
+- Flag ambiguous cases
+- Produce structured output
+- Feed the scoring engine
+- Feed the reporting layer
+
+Manual LLM consultation on the 5% of problematic test cases is to: 
+- Interpret ambiguous cases
+- Refine the contract
+- Update domain‑primitive blocks
+- Improve schemas
+- Improve the validator of the stress tester itself
+- Retest until all test cases are PASSed.
+
+The objective is always to make a non-deterministic LLM extremely deterministic for the use cases that this software supports.
 This form of whitebox testing hardens the contract rules in each domain primitives block so that the rollout to Phase 4a.1.3 (see next
 paragraph below) goes smoothly.
 
+
+#### Schema expanders used in the fully automated phase
+ 
+Once the code is explained in a later section one will see how this scaled automated phase is possible. It is mainly done through 
+a process of schema expansion.
+
+Schema expansion = Automatically generating new test cases using:
+
+- command corpus
+- mutators
+- fuzzers
+- OS‑specific command families
+- known malformed patterns
+- known destructive patterns
+- known wrong‑OS patterns
+- known near‑miss patterns
+
+The goal: Turn the current 20 to 36 case schemas into:
+
+- 50‑case schemas
+- 100‑case schemas
+- 200‑case schemas
+
+This is how the contract is torture‑tested
+
+The general formation steps are:
+
+- command_corpus/ → provides canonical commands substrate per OS/platform
+- mutators.py → generates variations
+- generator.py → assembles new contexts for that OS/platform
+- schema_expander.py → writes new schema files
+
+
+Probabilistically, the  contract needs 100+ cases to be hardened
+
+The mutators + corpus + generator will automate this
+
+
+
+#### A brief look ahead to Phase 4a.1.3
+
 Another facet of this development will be to develop os-discovery code and integrate it into module2f so that Phase 4a.1.3 real-life
-testing with commands through the full gitlab pipeline can be tested. The os-discovery code will be a directly mapping from the 
-os matrix below with os_info consisting of the os_name and os_version. These will be added as tags to the per thread 
+testing with commands through the full gitlab pipeline can be tested. The os-discovery code will be a direct mapping from the 
+os matrix below with os_info consisting of the os_name and os_version. (For the stress tester this os info in incorporated into
+the schema json file as metadata to simulate different OS/platforms under test). 
+
+This os_name and os_version (as well as command_history)  will be added as tags to the per thread 
 registry_entry and then extracted in the AI/MCP HOOK so that it can be sent to the LLM as part of the payload. The LLM then can
 execute the proper domain primitives contract rules block after receiving the very large contract block. This is the most
-critical aspect of the architecture.  The testing with the stress_tester.py framework is the whitebox testing component of this, 
+critical aspect of the architecture.  
+
+The testing with the stress_tester.py framework is the whitebox testing component of this, 
 ensuring the the contract domain primitives for each OS are resilient and mature enough to withstand the real-life testing envrionment
 via the gitlab pipeline. The os-discovery code will detect the os_info from the live node in AWS, and then normalize it so that
 it aligns with the filters in the contract rules block of the payload sent to the LLM  (These filters will be presented in this
@@ -1612,7 +1708,12 @@ UPDATE; each domain primitives block has a filter).
 
 
 
-### OS matrix sample
+#### OS matrix Revision 1 (after first round of manual testing)
+
+The revsions noted below are a direct result of the first round of manual testing using the stress tester framework with 
+schema context sizes that ranged from 20-36 test cases each (low/moderate size; not scalled yet). As one can see, there
+were many revisions during the process to the ai_gateway_service.py which has the contract payload list of rules for each 
+OS domain primitives block defined. 
 
 
 | OS / Platform | Package Manager | Revision | Status |
@@ -1637,7 +1738,83 @@ UPDATE; each domain primitives block has a filter).
 
 
 
-### Test validation chart samples
+
+
+### The new section on stress tester architecture (title here)
+
+
+
+### Stress tester code review (major blocks)
+ 
+A high level of the file structure in the repo is show below.  The code in the major blocks (like harness.py, loaders.py, 
+stress_tester.py, etc) will be presented and reviewed in this section. This code was instrumental in contract refinement via the 
+LLM plan action responses. 
+
+```
+
+├── LLM_contract_stress_tester_readme
+├── NOTE_these_tests_are_run_on_deploy_container
+├── artifacts
+│   ├── __init__.py
+│   └── collector.py
+├── command_corpus
+│   ├── __init__.py
+│   └── corpus.py
+├── context_generator
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-310.pyc
+│   │   └── loaders.cpython-310.pyc
+│   ├── generator.py
+│   ├── loaders.py
+│   ├── loaders_examples
+│   ├── mutators.py
+│   └── schemas
+│       ├── alpine_apk.json
+│       ├── amazonlinux_yum.json
+│       ├── bash_linux.json
+│       ├── busybox_sh.json
+│       ├── centos7_yum.json
+│       ├── centos8_dnf.json
+│       ├── cisco_ios.json
+│       ├── debian_apt.json
+│       ├── fedora_dnf.json
+│       ├── macos_brew.json
+│       ├── old_windows_powershell.json
+│       ├── paloalto_pan.json
+│       ├── powershell_linux.json
+│       ├── rhel_yum.json
+│       ├── ubuntu_apt.json
+│       ├── windows_powershell.json
+│       └── zsh_macos.json
+├── curl_harness
+│   ├── 1
+│   ├── __init__.py
+│   └── harness.py
+├── os_matrix
+│   ├── __init__.py
+│   └── matrix.py
+├── reports
+│   ├── __init__.py
+│   └── summary.py
+├── schema_descriptions_readme
+├── scoring
+│   ├── __init__.py
+│   └── scoring.py
+├── stress_tester.py   <<< this is the main module
+└── validator
+    ├── __init__.py
+    └── validator.py
+
+```
+
+
+
+
+
+### Test validation chart samples (Manual testing phase with the stress tester) 
+
+WORK IN PROGRESS
 
 
 #### *LLM Contract Stress Tester — macOS (brew) Environment*
