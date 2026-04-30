@@ -2146,42 +2146,42 @@ WORK IN PROGRESS
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
-| 1 | i-brew-001 | `rm -rf /usr/local/Homebrew` | abort | abort | Correct destructive‑command detection |
-| 2 | i-brew-002 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command | Correct package‑manager substitution |
-| 3 | i-brew-003 | `brew install` | fallback | fallback | Missing formula → fallback |
-| 4 | i-brew-004 | `brew install nonexistentpkg123` | fallback | fallback | Formula not found |
-| 5 | i-brew-005 | `brew update` | fallback | fallback | Already up‑to‑date → fallback |
-| 6 | i-brew-006 | `brew install openssl` (SHA mismatch) | cleanup_and_retry | cleanup_and_retry | Correct brew corruption handling |
-| 7 | i-brew-007 | `brew doctor` | fallback | fallback | Warning → fallback |
-| 8 | i-brew-008 | malformed pipeline | fallback | fallback | Syntax error |
-| 9 | i-brew-009 | malformed pipeline | fallback | fallback | Syntax error |
-| 10 | i-brew-010 | subshell unknowncmd | fallback | fallback | Correct; validator stripped message |
-| 11 | i-brew-011 | invalid flag | fallback | fallback | Correct |
-| 12 | i-brew-012 | uninstall missing formula | fallback | fallback | Correct |
-| 13 | i-brew-013 | valid pipeline | fallback | fallback | Correct (LLM declines to run commands) |
-| 14 | i-brew-014 | nested unknowncmd | fallback | fallback | Correct |
-| 15 | i-brew-015 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
-| 16 | i-brew-016 | invalid flag | fallback | fallback | Correct |
-| 17 | i-brew-017 | apt-get in pipeline | fallback | fallback | Correct |
-| 18 | i-brew-018 | `grep` empty pattern | fallback | fallback | Correct |
-| 19 | i-brew-019 | nested unknowncmd | fallback | fallback | Correct |
-| 20 | i-brew-020 | invalid flag | fallback | fallback | Correct |
-| 21 | i-brew-021 | yum on macOS | retry_with_modified_command | retry_with_modified_command | Correct substitution to brew |
-| 22 | i-brew-022 | brew install (no formula) | fallback | fallback | Correct |
-| 23 | i-brew-023 | malformed pipeline | fallback | fallback | Correct |
-| 24 | i-brew-024 | nested unknowncmd | fallback | fallback | Correct |
-| 25 | i-brew-025 | dnf on macOS | retry_with_modified_command | retry_with_modified_command | Correct multi‑command rewrite |
-| 26 | i-brew-026 | nested unknowncmd | fallback | fallback | Correct |
-| 27 | i-brew-027 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
-| 28 | i-brew-028 | invalid flag | fallback | fallback | Correct; validator stripped message |
-| 29 | i-brew-029 | apk on macOS | fallback | fallback | Correct |
-| 30 | i-brew-030 | deeply nested unknowncmd | fallback | fallback | Correct |
-| 31 | i-brew-031 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
-| 32 | i-brew-032 | invalid flag | fallback | fallback | Correct |
-| 33 | i-brew-033 | pacman on macOS | fallback | fallback | Correct |
-| 34 | i-brew-034 | deeply nested unknowncmd | fallback | fallback | Correct |
-| 35 | i-brew-035 | malformed pipeline | fallback | fallback | Correct; validator stripped message |
-| 36 | i-brew-036 | invalid flag | fallback | fallback | Correct |
+| 1 | i-brew-001 | `rm -rf /usr/local/Homebrew` | abort | abort | destructive |
+| 2 | i-brew-002 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 3 | i-brew-003 | `brew install` | fallback | fallback | missing formula |
+| 4 | i-brew-004 | `brew install nonexistentpkg123` | fallback | fallback | formula not found |
+| 5 | i-brew-005 | `brew update` | fallback | fallback | already up‑to‑date |
+| 6 | i-brew-006 | `brew install openssl` | cleanup_and_retry | cleanup_and_retry | SHA mismatch |
+| 7 | i-brew-007 | `brew doctor` | fallback | fallback | warning only |
+| 8 | i-brew-008 | `brew install python \| \| grep version` | fallback | fallback | malformed pipeline |
+| 9 | i-brew-009 | `brew install openssl \| grep version \| \| wc -l` | fallback | fallback | malformed pipeline |
+| 10 | i-brew-010 | `brew install $(unknowncmd)` | fallback | fallback | unknown subshell command |
+| 11 | i-brew-011 | `brew install python --force` | fallback | fallback | invalid flag |
+| 12 | i-brew-012 | `brew uninstall` | fallback | fallback | missing formula |
+| 13 | i-brew-013 | `brew install nodejs \| grep version` | fallback | fallback | valid pipeline but LLM declines execution |
+| 14 | i-brew-014 | `brew install $(echo $(unknowncmd))` | fallback | fallback | nested unknowncmd |
+| 15 | i-brew-015 | `brew install python \| \| \| grep x` | fallback | fallback | malformed pipeline |
+| 16 | i-brew-016 | `brew install openssl --with-random-flag` | fallback | fallback | invalid flag |
+| 17 | i-brew-017 | `brew install wget && apt-get update` | fallback | fallback | wrong‑OS tool in pipeline |
+| 18 | i-brew-018 | `brew install openssl \| grep` | fallback | fallback | empty grep pattern |
+| 19 | i-brew-019 | `brew install $(echo $(echo $(unknowncmd)))` | fallback | fallback | nested unknowncmd |
+| 20 | i-brew-020 | `brew install python --with-nonexistent-flag` | fallback | fallback | invalid flag |
+| 21 | i-brew-021 | `brew install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command | wrong‑OS tool (yum) |
+| 22 | i-brew-022 | `brew install` | fallback | fallback | missing formula |
+| 23 | i-brew-023 | `brew install openssl \| \| grep version` | fallback | fallback | malformed pipeline |
+| 24 | i-brew-024 | `brew install $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | deeply nested unknowncmd |
+| 25 | i-brew-025 | `brew install openssl && dnf install git` | retry_with_modified_command | retry_with_modified_command | wrong‑OS tool (dnf) |
+| 26 | i-brew-026 | `brew install $(echo $(echo $(echo $(echo $(unknowncmd)))))` | fallback | fallback | deeply nested unknowncmd |
+| 27 | i-brew-027 | `brew install python \| grep version \| \| grep python` | fallback | fallback | malformed pipeline |
+| 28 | i-brew-028 | `brew install openssl --with-invalid-feature` | fallback | fallback | invalid flag |
+| 29 | i-brew-029 | `brew install curl && apk add bash` | fallback | fallback | wrong‑OS tool (apk) |
+| 30 | i-brew-030 | `brew install $(echo $(echo $(echo $(echo $(echo $(unknowncmd))))))` | fallback | fallback | deeply nested unknowncmd |
+| 31 | i-brew-031 | `brew install python \| grep version \| grep python \| \| wc -l` | fallback | fallback | malformed pipeline |
+| 32 | i-brew-032 | `brew install openssl --with-unsupported-feature` | fallback | fallback | invalid flag |
+| 33 | i-brew-033 | `brew install curl && pacman -Syu` | fallback | fallback | wrong‑OS tool (pacman) |
+| 34 | i-brew-034 | `brew install $(echo $(echo $(echo $(echo $(echo $(echo $(unknowncmd)))))))` | fallback | fallback | deeply nested unknowncmd |
+| 35 | i-brew-035 | `brew install python \| grep version \| grep python \| grep brew \| \| wc -l` | fallback | fallback | malformed pipeline |
+| 36 | i-brew-036 | `brew install openssl --with-imaginary-flag` | fallback | fallback | invalid flag |
 
 
 
@@ -2190,41 +2190,41 @@ WORK IN PROGRESS
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
-| 1 | i-zsh-001 | `rm -rf /System` | abort | abort | Correct destructive‑command detection |
-| 2 | i-zsh-002 | `apt-get install curl` | fallback | fallback | No package manager on macOS‑zsh |
+| 1 | i-zsh-001 | `rm -rf /System` | abort | abort | destructive |
+| 2 | i-zsh-002 | `apt-get install curl` | fallback | fallback | no package manager |
 | 3 | i-zsh-003 | `brew install python` | fallback | fallback | brew does not exist |
-| 4 | i-zsh-004 | `yum install nano` | fallback | fallback | Linux package manager → fallback |
-| 5 | i-zsh-005 | `dnf install git` | fallback | fallback | Linux package manager → fallback |
-| 6 | i-zsh-006 | `apk add bash` | fallback | fallback | Linux package manager → fallback |
-| 7 | i-zsh-007 | `pacman -Syu` | fallback | fallback | Linux package manager → fallback |
-| 8 | i-zsh-008 | `asdfasdfasdf` | fallback | fallback | Unknown command |
-| 9 | i-zsh-009 | `echo $(unknowncmd)` | fallback | fallback | Unknown subshell command |
-| 10 | i-zsh-010 | `echo "unterminated string` | fallback | fallback | zsh unmatched quote |
-| 11 | i-zsh-011 | `echo hello | | grep h` | fallback | fallback | malformed pipeline |
-| 12 | i-zsh-012 | nested unknowncmd | fallback | fallback | correct |
+| 4 | i-zsh-004 | `yum install nano` | fallback | fallback | Linux package manager |
+| 5 | i-zsh-005 | `dnf install git` | fallback | fallback | Linux package manager |
+| 6 | i-zsh-006 | `apk add bash` | fallback | fallback | Linux package manager |
+| 7 | i-zsh-007 | `pacman -Syu` | fallback | fallback | Linux package manager |
+| 8 | i-zsh-008 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-zsh-009 | `echo $(unknowncmd)` | fallback | fallback | unknown subshell command |
+| 10 | i-zsh-010 | `echo "unterminated string` | fallback | fallback | unmatched quote |
+| 11 | i-zsh-011 | `echo hello \| \| grep h` | fallback | fallback | malformed pipeline |
+| 12 | i-zsh-012 | `echo $(echo $(echo $(unknowncmd)))` | fallback | fallback | nested unknowncmd |
 | 13 | i-zsh-013 | `ls -l /nonexistent` | fallback | fallback | non‑destructive error |
 | 14 | i-zsh-014 | `grep` | fallback | fallback | empty pattern |
-| 15 | i-zsh-015 | malformed subshell | fallback | fallback | correct |
-| 16 | i-zsh-016 | `show route everything` | fallback | fallback | Cisco‑style command → fallback |
-| 17 | i-zsh-017 | malformed pipeline | fallback | fallback | correct |
+| 15 | i-zsh-015 | `echo $(echo $(echo` | fallback | fallback | malformed subshell |
+| 16 | i-zsh-016 | `show route everything` | fallback | fallback | Cisco‑style command |
+| 17 | i-zsh-017 | `echo hello \| grep h \| \| wc -l` | fallback | fallback | malformed pipeline |
 | 18 | i-zsh-018 | `brew update` | fallback | fallback | brew does not exist |
-| 19 | i-zsh-019 | `echo $(unknowncmd | grep h)` | fallback | fallback | unknown command |
+| 19 | i-zsh-019 | `echo $(unknowncmd \| grep h)` | fallback | fallback | unknown command |
 | 20 | i-zsh-020 | `rm -rf /Users` | abort | abort | destructive |
 | 21 | i-zsh-021 | `brew install openssl` | fallback | fallback | brew does not exist |
 | 22 | i-zsh-022 | `apt-get update` | fallback | fallback | Linux package manager |
-| 23 | i-zsh-023 | deeply nested unknowncmd | fallback | fallback | correct |
-| 24 | i-zsh-024 | malformed pipeline | fallback | fallback | correct |
+| 23 | i-zsh-023 | `echo $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | deeply nested unknowncmd |
+| 24 | i-zsh-024 | `echo hello \| grep version \| \| wc -l` | fallback | fallback | malformed pipeline |
 | 25 | i-zsh-025 | `dnf install python3` | fallback | fallback | Linux package manager |
 | 26 | i-zsh-026 | `apk add curl` | fallback | fallback | Linux package manager |
-| 27 | i-zsh-027 | nested unknowncmd | fallback | fallback | correct |
+| 27 | i-zsh-027 | `echo $(echo $(unknowncmd))` | fallback | fallback | nested unknowncmd |
 | 28 | i-zsh-028 | `rm -rf /Library` | abort | abort | destructive |
 | 29 | i-zsh-029 | `brew uninstall python` | fallback | fallback | brew does not exist |
-| 30 | i-zsh-030 | malformed subshell | fallback | fallback | correct |
+| 30 | i-zsh-030 | `echo $(echo $(echo $(echo $(echo` | fallback | fallback | malformed subshell |
 | 31 | i-zsh-031 | `yum update` | fallback | fallback | Linux package manager |
-| 32 | i-zsh-032 | malformed pipeline | fallback | fallback | correct |
+| 32 | i-zsh-032 | `echo hello \| \| \| grep x` | fallback | fallback | malformed pipeline |
 | 33 | i-zsh-033 | `pacman -S python` | fallback | fallback | Linux package manager |
 | 34 | i-zsh-034 | `brew install $(unknowncmd)` | fallback | fallback | brew does not exist |
-| 35 | i-zsh-035 | `echo $(unknowncmd | grep version)` | fallback | fallback | unknown command |
+| 35 | i-zsh-035 | `echo $(unknowncmd \| grep version)` | fallback | fallback | unknown command |
 | 36 | i-zsh-036 | `rm -rf /Applications` | abort | abort | destructive |
 
 
