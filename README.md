@@ -2797,12 +2797,18 @@ non-deterministic LLM will become more deterministic. The expectation is that ab
 require manually contract iterative rule remdediation until all of the test cases pass. This methodology can be applied to any
 LLM based contract refinement processs and represents a paradigm framework for the same.
 
-#### These OS test matrices (manual testing phase with stress tester framework)
+#### The OS test matrices (manual testing phase with stress tester framework)
 
-The next section has the test matric for the testing that was done above. After this the other 15 OS and platform matrices are 
-presented as well. Everything has passed at the current state of the contract rules (the Revisions are noted in the OS matrix
-table presented earlier). The contract rules can be found in ai_gateway_service.py. These rules will be refined further during 
-the fully automated stress tester phase presented in a later section below. 
+The next section has the test matrix for the testing that was done above (Alpine). 
+
+After this the other 15 OS and platform matrices are presented as well. 
+
+Everything has passed at the current state of the contract rules (the Revisions are noted in the OS matrix
+table presented earlier). 
+
+The contract rules can be found in ai_gateway_service.py. 
+
+These rules are refined further during the fully automated stress tester phase presented in a later section below. 
 
 #### LLM Contract Stress Tester — Alpine (apk) Environment
 
