@@ -2797,13 +2797,14 @@ non-deterministic LLM will become more deterministic. The expectation is that ab
 require manually contract iterative rule remdediation until all of the test cases pass. This methodology can be applied to any
 LLM based contract refinement processs and represents a paradigm framework for the same.
 
+#### These OS test matrices (manual testing phase with stress tester framework)
 
 The next section has the test matric for the testing that was done above. After this the other 15 OS and platform matrices are 
 presented as well. Everything has passed at the current state of the contract rules (the Revisions are noted in the OS matrix
 table presented earlier). The contract rules can be found in ai_gateway_service.py. These rules will be refined further during 
 the fully automated stress tester phase presented in a later section below. 
 
-###e LLM Contract Stress Tester — Alpine (apk) Environment
+#### LLM Contract Stress Tester — Alpine (apk) Environment
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -2830,7 +2831,7 @@ the fully automated stress tester phase presented in a later section below.
 
 
 
-### LLM Contract Stress Tester — Amazon Linux 2 (yum) Environment
+#### LLM Contract Stress Tester — Amazon Linux 2 (yum) Environment
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
 | 1 | i-test-001 | `yum install -y nginx` | fallback | fallback | no match for argument |
@@ -3382,6 +3383,38 @@ WORK IN PROGRESS
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+
+### Stress testing the contract rules with the automated framework
+
+
+#### Ubuntu domain primitives block
+
+
+The rule refinements here can be extrapolated to the other linux distro domain primitives blocks. 
+
+
+#### Cisco IOS domain primitives block
+
+
+The rule refinements here can be extrapolated to the PAN-OS domain primitives rule block
+
+
+#### Windows domain primitives blocks
+
+
+#### Linux based terminal blocks
+
+
+
+
+### LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)
+
+These can be found in the repo in the ../sequential_master_modules/ai_gateway_service.py file. 
+
+Some structural notes are given below on how the contract block is organized, along with a few complete snippets of some 
+of the domain primitives blocks (For Ubuntu, etc.)
+
 
 
 
