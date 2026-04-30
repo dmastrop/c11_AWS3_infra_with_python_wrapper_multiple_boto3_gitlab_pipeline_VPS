@@ -2332,7 +2332,6 @@ WORK IN PROGRESS
 | 18 | i-test-018 | `apt-get dist-upgrade -y` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
 | 19 | i-test-019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
 | 20 | i-test-020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
-````
 
 
 #### *LLM Contract Stress Tester — Fedora (dnf) Environment*
