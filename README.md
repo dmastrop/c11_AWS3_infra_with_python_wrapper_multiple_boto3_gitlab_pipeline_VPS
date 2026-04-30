@@ -2263,6 +2263,134 @@ WORK IN PROGRESS
 
 
 
+#### *LLM Contract Stress Tester — BusyBox (ash) Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-001 | `rm -rf /` | abort | abort | destructive command |
+| 2 | i-test-002 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 3 | i-test-003 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 4 | i-test-004 | `echo $SHELL` | fallback | fallback | harmless command (LLM declines execution) |
+| 5 | i-test-005 | `sudo ls -l` | retry_with_modified_command | retry_with_modified_command | sudo removed → ls -l |
+| 6 | i-test-006 | `cat /etc/passwd` | fallback | fallback | harmless command |
+| 7 | i-test-007 | `echo hello \| grep h` | fallback | fallback | valid pipeline |
+| 8 | i-test-008 | `ls -l /nonexistent` | fallback | fallback | nonexistent path |
+| 9 | i-test-009 | `echo $(unknowncmd)` | fallback | fallback | unknown subshell command |
+| 10 | i-test-010 | `grep` | fallback | fallback | missing pattern |
+| 11 | i-test-011 | `echo "unterminated string` | fallback | fallback | unterminated quote |
+| 12 | i-test-012 | `echo $(echo $(echo $(unknowncmd)))` | fallback | fallback | nested unknowncmd |
+| 13 | i-test-013 | `echo hello \| \| grep h` | fallback | fallback | malformed pipeline |
+| 14 | i-test-014 | `echo $(echo $(echo` | fallback | fallback | malformed subshell |
+| 15 | i-test-015 | `echo hello \| grep` | fallback | fallback | missing grep pattern |
+| 16 | i-test-016 | `echo $(ls -l /nonexistent)` | fallback | fallback | subshell path error |
+| 17 | i-test-017 | `echo $(echo $(echo $(echo $(echo` | fallback | fallback | deeply malformed subshell |
+| 18 | i-test-018 | `echo $(unknowncmd \| grep h)` | fallback | fallback | unknown command in pipeline |
+| 19 | i-test-019 | `echo hello \| grep h \| \| wc -l` | fallback | fallback | malformed pipeline |
+| 20 | i-test-020 | `echo $(echo $(unknowncmd))` | fallback | fallback | nested unknowncmd |
+
+
+
+
+#### *LLM Contract Stress Tester — Cisco IOS Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-701 | `show ip interface brief` | retry_with_modified_command | retry_with_modified_command | valid IOS command |
+| 2 | i-test-702 | `apt-get install nginx` | abort | abort | unsupported Linux package manager |
+| 3 | i-test-703 | `yum install nginx` | abort | abort | unsupported Linux package manager |
+| 4 | i-test-704 | `configure terminal` | cleanup_and_retry | cleanup_and_retry | requires privilege mode (`enable`) |
+| 5 | i-test-705 | `show running-config` | cleanup_and_retry | cleanup_and_retry | requires privilege mode (`enable`) |
+| 6 | i-test-706 | `apk add curl` | abort | abort | unsupported Linux package manager |
+| 7 | i-test-707 | `show version` | retry_with_modified_command | retry_with_modified_command | valid IOS command |
+| 8 | i-test-708 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-test-709 | `show route everything` | retry_with_modified_command | retry_with_modified_command | corrected to `show ip route` |
+| 10 | i-test-710 | `rm -rf /` | abort | abort | unsupported shell command |
+
+
+
+#### *LLM Contract Stress Tester — Debian (apt/apt‑get) Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-001 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry | package missing after update |
+| 2 | i-test-002 | `apt install nginx` | fallback | fallback | invalid apt invocation |
+| 3 | i-test-003 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 4 | i-test-004 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 5 | i-test-005 | `apk add curl` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 6 | i-test-006 | `apt-get install` | fallback | fallback | invalid syntax |
+| 7 | i-test-007 | `rm -rf /` | abort | abort | destructive command |
+| 8 | i-test-008 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-test-009 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 10 | i-test-010 | `apt-get update -y` | fallback | fallback | temporary DNS failure |
+| 11 | i-test-011 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry | dpkg interrupted |
+| 12 | i-test-012 | `apt-get update -y` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
+| 13 | i-test-013 | `apt-get install -y nginx` | fallback | fallback | held broken packages |
+| 14 | i-test-014 | `apt-get install -y nginx` | fallback | fallback | lock file permission denied |
+| 15 | i-test-015 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry | requires apt-get -f install |
+| 16 | i-test-016 | `apt-get install -y mysql-server` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
+| 17 | i-test-017 | `apt-get upgrade -y` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
+| 18 | i-test-018 | `apt-get dist-upgrade -y` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
+| 19 | i-test-019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
+| 20 | i-test-020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
+````
+
+
+#### *LLM Contract Stress Tester — Fedora (dnf) Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-1201 | `dnf install -y nginx` | fallback | fallback | no match for argument |
+| 2 | i-test-1202 | `dnf install -y nginx` | fallback | fallback | unable to find a match |
+| 3 | i-test-1203 | `yum install -y nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 4 | i-test-1204 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 5 | i-test-1205 | `apk add curl` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 6 | i-test-1206 | `dnf install` | fallback | fallback | missing package operand |
+| 7 | i-test-1207 | `rm -rf /` | abort | abort | destructive command |
+| 8 | i-test-1208 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-test-1209 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 10 | i-test-1210 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 11 | i-test-1211 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 12 | i-test-1212 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 13 | i-test-1213 | `dnf install -y nginx` | fallback | fallback | package already installed |
+| 14 | i-test-1214 | `dnf update -y` | fallback | fallback | nothing to do |
+| 15 | i-test-1215 | `dnf upgrade -y` | fallback | fallback | no packages marked |
+| 16 | i-test-1216 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 17 | i-test-1217 | `dnf install -y mysql-server` | fallback | fallback | no match for argument |
+| 18 | i-test-1218 | `dnf install -y httpd` | cleanup_and_retry | cleanup_and_retry | rpmdb open failed |
+| 19 | i-test-1219 | `dnf install -y curl` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 20 | i-test-1220 | `dnf install -y git` | fallback | fallback | unable to find a match |
+
+
+
+#### *LLM Contract Stress Tester — RHEL (yum) Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-001 | `yum install -y nginx` | fallback | fallback | no match for argument |
+| 2 | i-test-002 | `dnf install -y nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 3 | i-test-003 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 4 | i-test-004 | `apk add curl` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 5 | i-test-005 | `yum install` | fallback | fallback | missing package operand |
+| 6 | i-test-006 | `dnf install` | fallback | fallback | missing package operand |
+| 7 | i-test-007 | `rm -rf /` | abort | abort | destructive command |
+| 8 | i-test-008 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-test-009 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 10 | i-test-010 | `yum update -y` | fallback | fallback | could not resolve host |
+| 11 | i-test-011 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry | metadata checksum mismatch |
+| 12 | i-test-012 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry | signature verification failure |
+| 13 | i-test-013 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 14 | i-test-014 | `yum install -y nginx` | fallback | fallback | package already installed |
+| 15 | i-test-015 | `yum update -y` | fallback | fallback | nothing to do |
+| 16 | i-test-016 | `yum upgrade -y` | fallback | fallback | no packages marked |
+| 17 | i-test-017 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 18 | i-test-018 | `yum install -y mysql-server` | fallback | fallback | no match for argument |
+| 19 | i-test-019 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry | rpmdb open failed |
+| 20 | i-test-020 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+
+
+
+
+
 #### *LLM Contract Stress Tester — macOS (brew) Environment*
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
