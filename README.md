@@ -3382,7 +3382,6 @@ The following sections reivew the code that forms the stress tester framework
 WORK IN PROGRESS
 
 
-**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ### Stress testing the contract rules with the automated framework
@@ -3419,6 +3418,7 @@ of the domain primitives blocks (For Ubuntu, etc.)
 
 
 
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
 ## UPDATES part 58: Phase4a.1 — Real‑Life Context Testing & Emergence of a Universal Remediation Engine
