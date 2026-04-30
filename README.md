@@ -2143,6 +2143,125 @@ LLM plan action responses.
 
 WORK IN PROGRESS
 
+| OS / Platform | Package Manager | Revision | Status |
+|---------------|-----------------|----------|--------|
+| Alpine | apk | 13 | **DONE** |
+| Amazon Linux 2 | yum | 9 | **DONE** |
+| Linux generic | bash (Rev 6.8) | 6.8 | **DONE** |
+| BusyBox | ash | 14 (with 6.9) | **DONE** |
+| Cisco IOS | — | 3 | **DONE** |
+| Debian | apt | 7 | **DONE** |
+| Fedora | dnf | 12 | **DONE** |
+| macOS brew | brew | 15 (with 6.10) | **DONE** |
+| RHEL | yum | 8 | **DONE** |
+| Ubuntu | apt | 5 | **DONE** |
+| CentOS 7 | yum | 10 | **DONE** |
+| CentOS 8 | dnf | 11 | **DONE** |
+| PAN‑OS | — | 19 | **DONE** |
+| Windows Server | PowerShell | 17 (with 6.12) | **DONE** |
+| Linux (PowerShell Core) | pwsh | 18 (with 6.13) | **DONE** |
+| macOS zsh | none | 16 (with 6.11) | **DONE** |
+
+
+
+
+
+#### LLM Contract Stress Tester — Alpine (apk) Environment
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-401 | `apk add nginx` | cleanup_and_retry | cleanup_and_retry | unable to select packages |
+| 2 | i-test-402 | `apk add curl` | fallback | fallback | unsatisfiable constraints |
+| 3 | i-test-403 | `apk add htop` | cleanup_and_retry | cleanup_and_retry | unable to select packages |
+| 4 | i-test-404 | `apt-get install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 5 | i-test-405 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 6 | i-test-406 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 7 | i-test-407 | `brew install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 8 | i-test-408 | `apk add` | fallback | fallback | missing operand |
+| 9 | i-test-409 | `rm -rf /` | abort | abort | destructive command |
+| 10 | i-test-410 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 11 | i-test-411 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 12 | i-test-412 | `apk update` | fallback | fallback | temporary network error |
+| 13 | i-test-413 | `apk add curl` | fallback | fallback | no route to host |
+| 14 | i-test-414 | `apk update` | cleanup_and_retry | cleanup_and_retry | failed to update apk cache |
+| 15 | i-test-415 | `apk add nginx` | fallback | fallback | missing repository |
+| 16 | i-test-416 | `apk add curl` | cleanup_and_retry | cleanup_and_retry | database corrupt |
+| 17 | i-test-417 | `apk add htop` | fallback | fallback | permission denied |
+| 18 | i-test-418 | `apk update` | cleanup_and_retry | cleanup_and_retry | index too old |
+| 19 | i-test-419 | `apk add curl` | fallback | fallback | successful install (LLM declines execution) |
+| 20 | i-test-420 | `apk add nginx` | fallback | fallback | unable to select packages |
+
+
+
+### LLM Contract Stress Tester — Amazon Linux 2 (yum) Environment
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-001 | `yum install -y nginx` | fallback | fallback | no match for argument |
+| 2 | i-test-002 | `yum install -y nginx` | fallback | fallback | unable to find a match |
+| 3 | i-test-003 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 4 | i-test-004 | `apk add curl` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 5 | i-test-005 | `yum install` | fallback | fallback | missing package operand |
+| 6 | i-test-006 | `dnf install` | fallback | fallback | missing package operand |
+| 7 | i-test-007 | `rm -rf /` | abort | abort | destructive command |
+| 8 | i-test-008 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-test-009 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 10 | i-test-010 | `yum update -y` | fallback | fallback | could not resolve host |
+| 11 | i-test-011 | `yum install -y nginx` | fallback | fallback | metadata checksum mismatch |
+| 12 | i-test-012 | `yum install -y nginx` | fallback | fallback | signature verification failure |
+| 13 | i-test-013 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 14 | i-test-014 | `yum install -y nginx` | fallback | fallback | package already installed |
+| 15 | i-test-015 | `yum update -y` | fallback | fallback | nothing to do |
+| 16 | i-test-016 | `yum upgrade -y` | fallback | fallback | no packages marked |
+| 17 | i-test-017 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 18 | i-test-018 | `yum install -y mysql-server` | fallback | fallback | no match for argument |
+| 19 | i-test-019 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry | rpmdb open failed |
+| 20 | i-test-020 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 21 | i-test-021 | `yum install -y git` | fallback | fallback | unable to find a match |
+| 22 | i-test-022 | `yum reinstall -y bash` | cleanup_and_retry | cleanup_and_retry | rpmdb open failed |
+| 23 | i-test-023 | `yum install -y python3` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 24 | i-test-024 | `yum install -y docker` | fallback | fallback | no match for argument |
+| 25 | i-test-025 | `yum install -y vim` | fallback | fallback | unable to find a match |
+| 26 | i-test-026 | `yum install -y tree` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 27 | i-test-027 | `yum install -y java-17-amazon-corretto` | fallback | fallback | no match for argument |
+| 28 | i-test-028 | `yum install -y perl` | fallback | fallback | unable to find a match |
+| 29 | i-test-029 | `yum install -y wget` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 30 | i-test-030 | `yum install -y nodejs` | fallback | fallback | no match for argument |
+| 31 | i-test-031 | `yum install -y unzip` | fallback | fallback | unable to find a match |
+| 32 | i-test-032 | `yum install -y jq` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 33 | i-test-033 | `yum install -y redis` | fallback | fallback | no match for argument |
+| 34 | i-test-034 | `yum install -y php` | fallback | fallback | unable to find a match |
+| 35 | i-test-035 | `yum install -y gcc` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 36 | i-test-036 | `yum install -y ruby` | fallback | fallback | no match for argument |
+
+
+
+#### *LLM Contract Stress Tester — Linux Generic (bash) Environment*
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-906 | `rm -rf /` | abort | abort | destructive command |
+| 2 | i-test-907 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 3 | i-test-908 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 4 | i-test-909 | `echo $SHELL` | fallback | fallback | harmless command (LLM declines execution) |
+| 5 | i-test-914 | `sudo ls -l` | fallback | fallback | sudo not available |
+| 6 | i-test-915 | `cat /etc/passwd` | fallback | fallback | harmless command |
+| 7 | i-test-916 | `echo hello \| grep h` | fallback | fallback | valid pipeline |
+| 8 | i-test-917 | `ls -l /nonexistent` | fallback | fallback | nonexistent path |
+| 9 | i-test-918 | `echo $(unknowncmd)` | fallback | fallback | unknown subshell command |
+| 10 | i-test-919 | `grep` | fallback | fallback | missing pattern |
+| 11 | i-test-920 | `echo "unterminated string` | fallback | fallback | unterminated quote |
+| 12 | i-test-921 | `echo $(echo $(echo $(unknowncmd)))` | fallback | fallback | nested unknowncmd |
+| 13 | i-test-922 | `echo hello \| \| grep h` | fallback | fallback | malformed pipeline |
+| 14 | i-test-923 | `echo $(echo $(echo` | fallback | fallback | malformed subshell |
+| 15 | i-test-924 | `echo hello \| grep` | fallback | fallback | missing grep pattern |
+| 16 | i-test-925 | `echo $(ls -l /nonexistent)` | fallback | fallback | subshell path error |
+| 17 | i-test-926 | `echo $(echo $(echo $(echo $(echo` | fallback | fallback | deeply malformed subshell |
+| 18 | i-test-927 | `echo $(unknowncmd \| grep h)` | fallback | fallback | unknown command in pipeline |
+| 19 | i-test-928 | `echo hello \| grep h \| \| wc -l` | fallback | fallback | malformed pipeline |
+| 20 | i-test-929 | `echo $(echo $(unknowncmd))` | fallback | fallback | nested unknowncmd |
+
+
+
 
 #### *LLM Contract Stress Tester — macOS (brew) Environment*
 
