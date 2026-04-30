@@ -1715,6 +1715,8 @@ schema context sizes that ranged from 20-36 test cases each (low/moderate size; 
 were many revisions during the process to the ai_gateway_service.py which has the contract payload list of rules for each 
 OS domain primitives block defined. 
 
+The Revision column pertains to the contract revision in the payload block of the ai_gateway_servivce.py code.
+These revisions are also clearly marked in the code comments and can be clearly seen in the Code Revivew section of this UPDATE.
 
 | OS / Platform | Package Manager | Revision | Status |
 |---------------|-----------------|----------|--------|
