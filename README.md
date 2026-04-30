@@ -2227,7 +2227,7 @@ accordance and compliance to the contract rules for that operating system (domai
 of the payload). So the stress_tester.py tests everything with real_life flow, exccpt for the module2f invocation of the 
 AI/MCP HOOK and the call to the AI Gateway Service via the MCPClient. 
 
-The stress_tester basically hijacks the flow and sends the context directory to the AI Gateway Service. This is how to effectively
+The stress_tester basically hijacks the flow and sends the context directly to the AI Gateway Service. This is how to effectively
 optimize contract stress testing with the LLM prior to real-life deployment.
 
 So effectively, the stress_tester.py and the framework that it is built on replaces module2f, to simulate contract rule interaction
@@ -2252,10 +2252,10 @@ MCPClient returns the action plan to the AI/MCP HOOK in module2f (return of plan
 
 AI/MCP HOOK can then execute the LLM action plan  (new commands, or abort or native fallback or derived fallback) ---->
 
-AI/MCP HOOK sets the local  control flow variables ---> 
+AI/MCP HOOK sets the local control flow variables in accordance to EXECUTION of the LLM's action plan (failed, sucessful, fallback, etc---> 
 
-Module2f heuristic then acts based upon the result that is encodedin the control flow variables (iterate to next command, or 
-install_success) or install_failed if the LLM attempt failed).
+Module2f heuristic then acts based upon the result that is encoded in the control flow variables (iterate to next command, or 
+install_success, or install_failed if the LLM attempt failed).
 
 
 #### One full example for the Apline (apk) environment
