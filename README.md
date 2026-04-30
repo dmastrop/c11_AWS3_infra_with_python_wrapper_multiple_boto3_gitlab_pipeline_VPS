@@ -143,7 +143,7 @@ artifact logs per pipeline)
 - Adaptive orchestration logic with ML/LLM feedback hooks 
 - AI/MCP integration for command set replay
 - MCPClient/MCPService based architecture
-- AI Gateway Service for LLM integration (OpenAI gpt-4.1 for now)
+- AI Gateway Service for LLM integration (OpenAI gpt-5.x for now)
 - AI/MCP HOOK integration into python modules (using control flow and persistent state variables architecture)
 - Pytest test stage integration into Gitlab pipeline (whitebox testing)
 - Iterative pytest context testing for AI/MCP HOOK integration testing (control flow)
