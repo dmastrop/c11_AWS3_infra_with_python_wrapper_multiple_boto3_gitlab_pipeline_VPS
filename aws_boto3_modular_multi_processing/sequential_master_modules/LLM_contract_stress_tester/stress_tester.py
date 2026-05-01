@@ -139,7 +139,7 @@ It NEVER sends JSON directly — that is harness.py's job.
 #### where stress_tester.py can create artifacts, reporting, and scoring for the test based upon the plan result that was returned
 #### from the LLM.
 
-
+from validator.validator import validate_response   # This is importing the validatory.py function validate_response
 import argparse
 from context_generator.loaders import load_schema
 from curl_harness.harness import send_payload
