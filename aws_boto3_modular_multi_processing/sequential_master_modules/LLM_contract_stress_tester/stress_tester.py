@@ -209,6 +209,18 @@ def main():
     print(response)
     print("========================\n")
 
+    # Run validator v1 (see ../validator/validator.py code)
+    validation = validate_response(schema, context, response)
+
+    print("\n=== VALIDATION RESULT ===")
+    print(f"OS: {validation['os_name']} {validation['os_version']}")
+    print(f"Command: {validation['command']}")
+    print(f"Status: {validation['status']}")
+    if validation["errors"]:
+        print("Errors:")
+        for err in validation["errors"]:
+            print(f"  - {err}")
+    print("========================\n")
 
 if __name__ == "__main__":
     main()
