@@ -209,8 +209,9 @@ def main():
     print(response)
     print("========================\n")
 
-    # Run validator v1 (see ../validator/validator.py code)
-    validation = validate_response(schema, context, response)
+    # Run validator v1, v2, etc....  (see ../validator/validator.py code)
+    validation = validate_response(schema, context, response) ## MUST pass full schema. This has os_name and os_version
+    #### os_name and os_version are absolutely critical so that the os specific function in validator.py validate_response is hit.
 
     print("\n=== VALIDATION RESULT ===")
     print(f"OS: {validation['os_name']} {validation['os_version']}")

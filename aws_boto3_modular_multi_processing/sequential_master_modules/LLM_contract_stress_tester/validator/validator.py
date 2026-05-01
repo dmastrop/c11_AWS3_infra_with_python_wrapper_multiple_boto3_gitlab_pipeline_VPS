@@ -435,7 +435,8 @@ def validate_response(
         "command": <original command string>,
       }
     """
-    os_name = schema.get("os_name")
+    os_name = schema.get("os_name")  # The schema is passed into validator.py from stress_tester.py (loaders.py gets schema).
+    #### The schema has the full schema including the os metadata at the top which has os_name and os_version.
     os_version = schema.get("os_version")
     command = context.get("command")
 
