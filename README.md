@@ -3534,6 +3534,11 @@ The execution of the schema test cases when manually done, with the validator ho
 
 
 
+
+
+A subset of the domain primitives blocks was run through the full stress tester: 
+
+
 #### Ubuntu domain primitives block
 
 
@@ -3561,6 +3566,80 @@ These can be found in the repo in the ../sequential_master_modules/ai_gateway_se
 Some structural notes are given below on how the contract block is organized, along with a few complete snippets of some 
 of the domain primitives blocks (For Ubuntu, etc.)
 
+The contract rules domain primitives blocks are found here in the ai_gateway_service.py: 
+
+
+```
+
+        #Payload6 enhancments
+        # ================================================================
+        # PAYLOAD BLOCK — AI GATEWAY SERVICE
+        #
+        # This payload defines the *contract* between the AI Gateway Service
+        # and the LLM. It is the single most important component of the
+        # recovery engine architecture.
+        #
+        # Key principles:
+        # - The contract is STATIC. It does not change between tests.
+        # - The context is DYNAMIC. It is injected from the curl request.
+        # - The LLM must ALWAYS return a JSON object that conforms to the schema.
+        # - The validator enforces the contract and rejects malformed plans.
+        #
+        # This block is the result of iterative white‑box testing using curl.
+        # Each iteration revealed ambiguities or weaknesses in the contract,
+        # which were then tightened to produce deterministic behavior.
+        #
+        # The comments in this block will be used directly in the README
+        # chapter: "Developing the AI Gateway Service through iterative
+        # white‑box LLM response testing with curl".
+        # ================================================================
+
+        payload = {
+            #"model": "gpt-4.1",
+            "model": "gpt-5.4",
+            "temperature": 0,
+            "max_output_tokens": 256,
+
+            # The "input" field contains the entire contract, rules, and context.
+            # The LLM receives this as a single string and MUST return a JSON object.
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+
+
+
+
+                ##### HIGH LEVEL ORGANIZATION ####
+                #Global rules
+                #CONTEXT
+                #Linux-generic malformed rules
+                #OS-specific domain blocks (domain primitives)
+
+
+
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # Revision 1: Added the messages requirement for abort and notes as well to the LLM
+                # ============================================================
+                "CONTRACT:\n"
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "  \"message\": string\n"
+                "}\n\n"
+                "Notes:\n"
+                "- \"message\" is REQUIRED when action = \"abort\".\n"
+                "- \"message\" is OPTIONAL for all other actions.\n"
+                "- \"cleanup\" MUST be an array of literal shell commands.\n"
+                "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
+
+                <<<< with the rest of the blocks omitted from brevity>>>>
+
+```
 
 
 

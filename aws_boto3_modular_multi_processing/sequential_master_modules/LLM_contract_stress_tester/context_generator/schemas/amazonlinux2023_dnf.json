@@ -1,135 +1,203 @@
 {
   "os_name": "Amazon Linux 2023",
   "os_version": "2023",
-  "tests": [
+  "kernel": "6.x",
+  "package_managers": ["dnf"],
+  "shell": "bash",
+  "contexts": [
 
     {
-      "index": 0,
       "command": "apt-get install nginx",
-      "exit_status": 1,
       "stdout": "",
-      "stderr": "apt-get: command not found"
-    },
-
-    {
-      "index": 1,
-      "command": "dnf install",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Error: Need to pass a list of packages"
-    },
-
-    {
-      "index": 2,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Failed to download metadata for repo 'amzn2023-core'"
-    },
-
-    {
-      "index": 3,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Cannot prepare internal mirrorlist: No URLs in mirrorlist"
-    },
-
-    {
-      "index": 4,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Error: failed to download metadata for repo 'amzn2023-extras'"
-    },
-
-    {
-      "index": 5,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Error: No matching repo: amzn2023-php"
-    },
-
-    {
-      "index": 6,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "rpmdb open failed"
-    },
-
-    {
-      "index": 7,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "BDB0113 Thread/process died"
-    },
-
-    {
-      "index": 8,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Could not resolve host: mirror.amazonlinux.com"
-    },
-
-    {
-      "index": 9,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Connection timed out"
-    },
-
-    {
-      "index": 10,
-      "command": "dnf install -y nginx",
-      "exit_status": 1,
-      "stdout": "",
-      "stderr": "Package nginx is already installed.\nNothing to do."
-    },
-
-    {
-      "index": 11,
-      "command": "dnf update -y",
-      "exit_status": 0,
-      "stdout": "",
-      "stderr": "Nothing to do."
-    },
-
-    {
-      "index": 12,
-      "command": "dnf upgrade -y",
-      "exit_status": 0,
-      "stdout": "",
-      "stderr": "No packages marked for update."
-    },
-
-    {
-      "index": 13,
-      "command": "show ip interface brief",
+      "stderr": "apt-get: command not found",
       "exit_status": 127,
-      "stdout": "",
-      "stderr": "show: command not found"
+      "attempt": 1,
+      "instance_id": "i-test-001",
+      "ip": "10.0.4.10",
+      "tags": [],
+      "history": []
     },
 
     {
-      "index": 14,
-      "command": "rm -rf /",
+      "command": "dnf install",
+      "stdout": "",
+      "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
-      "stdout": "",
-      "stderr": "rm: cannot remove '/': Permission denied"
+      "attempt": 1,
+      "instance_id": "i-test-002",
+      "ip": "10.0.4.11",
+      "tags": [],
+      "history": []
     },
 
     {
-      "index": 15,
-      "command": "dnf install -y htop",
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Failed to download metadata for repo 'amzn2023-core'",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-003",
+      "ip": "10.0.4.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-004",
+      "ip": "10.0.4.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-extras'",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-005",
+      "ip": "10.0.4.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Error: No matching repo: amzn2023-php",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-006",
+      "ip": "10.0.4.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "rpmdb open failed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-007",
+      "ip": "10.0.4.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "BDB0113 Thread/process died",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-008",
+      "ip": "10.0.4.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Could not resolve host: mirror.amazonlinux.com",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-009",
+      "ip": "10.0.4.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Connection timed out",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-010",
+      "ip": "10.0.4.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx is already installed.\nNothing to do.",
       "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-011",
+      "ip": "10.0.4.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf update -y",
+      "stdout": "",
+      "stderr": "Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-012",
+      "ip": "10.0.4.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf upgrade -y",
+      "stdout": "",
+      "stderr": "No packages marked for update.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-013",
+      "ip": "10.0.4.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show ip interface brief",
+      "stdout": "",
+      "stderr": "show: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-test-014",
+      "ip": "10.0.4.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "rm: cannot remove '/': Permission denied",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-015",
+      "ip": "10.0.4.24",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y htop",
       "stdout": "Installed: htop",
-      "stderr": ""
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-016",
+      "ip": "10.0.4.25",
+      "tags": [],
+      "history": []
     }
+
   ]
 }
 
