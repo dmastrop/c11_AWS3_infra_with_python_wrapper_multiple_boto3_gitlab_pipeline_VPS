@@ -85,9 +85,9 @@ def validate_response(
          from .amazonlinux2_semantics import validate_amazonlinux2_semantics
          errors.extend(validate_amazonlinux2_semantics(context, parsed))
     
-    elif os_name == "Amazon Linux 2023":
-        from .amazonlinux2023_semantics import validate_amazonlinux2023_semantics
-        errors.extend(validate_amazonlinux2023_semantics(context, parsed))
+     elif os_name == "Amazon Linux 2023":
+         from .amazonlinux2023_semantics import validate_amazonlinux2023_semantics
+         errors.extend(validate_amazonlinux2023_semantics(context, parsed))
 
 
 
