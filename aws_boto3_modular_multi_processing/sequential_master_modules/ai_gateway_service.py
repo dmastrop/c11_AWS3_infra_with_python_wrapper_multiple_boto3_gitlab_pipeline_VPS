@@ -1244,7 +1244,7 @@ def recover(request: RecoveryRequest):
                 # AMAZON LINUX 2023 (DNF) DOMAIN RULES — Applies ONLY when
                 # os_name = "Amazon Linux 2023"
                 #
-                # This entire block is Revision 1.
+                # This entire block is Revision 20
                 # ============================================================
 
                 "These rules apply ONLY when os_name == 'Amazon Linux 2023'. They MUST NOT apply to Amazon Linux 1/2, RHEL, CentOS, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"

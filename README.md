@@ -1576,7 +1576,8 @@ of this testing
 schema expansion (of the test cases, to 100s of test cases) and automatic first pass validation of each test result. The first
 pass validation will cover about 95% of the test cases, and the last 5% of ambiguous test results will continue to be manually 
 reviewed in consultation with the LLM. Iterative contract rule remediation will continue to harden the contract rules for each
-domain pimritives block.
+domain pimritives block. A mutator will also be implemented as part of the stress tester to create schema context test cases that
+are more creative.
 
 
 #### Manual phase: 
@@ -2799,20 +2800,29 @@ non-deterministic LLM will become more deterministic. The expectation is that ab
 require manually contract iterative rule remdediation until all of the test cases pass. This methodology can be applied to any
 LLM based contract refinement processs and represents a paradigm framework for the same.
 
+
+
+
 #### The OS test matrices (manual testing phase with stress tester framework)
 
 The next section has the test matrix for the testing that was done above (Alpine). 
 
-After this the other 15 OS and platform matrices are presented as well. 
+After this the other 16 OS and platform matrices are presented as well. 
 
 Everything has passed at the current state of the contract rules (the Revisions are noted in the OS matrix
 table presented earlier). 
 
 The contract rules can be found in ai_gateway_service.py. 
 
+
 These rules are refined further during the fully automated stress tester phase presented in a later section below. 
 
 #### LLM Contract Stress Tester — Alpine (apk) Environment
+
+<details>
+<summary><b>Click to expand Apline test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -2837,9 +2847,16 @@ These rules are refined further during the fully automated stress tester phase p
 | 19 | i-test-419 | `apk add curl` | fallback | fallback | successful install (LLM declines execution) |
 | 20 | i-test-420 | `apk add nginx` | fallback | fallback | unable to select packages |
 
-
+</details>
 
 #### LLM Contract Stress Tester — Amazon Linux 2 (yum) Environment
+
+<details>
+<summary><b>Click to expand Amazon Linux 2 test matrix</b></summary>
+
+<br>
+
+
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
 | 1 | i-test-001 | `yum install -y nginx` | fallback | fallback | no match for argument |
@@ -2879,7 +2896,7 @@ These rules are refined further during the fully automated stress tester phase p
 | 35 | i-test-035 | `yum install -y gcc` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
 | 36 | i-test-036 | `yum install -y ruby` | fallback | fallback | no match for argument |
 
-
+</details>
 
 
 #### LLM Contract Stress Tester — Amazon Linux 2023 (dnf) Environment
@@ -2888,6 +2905,16 @@ WIP
 
 
 #### *LLM Contract Stress Tester — Linux Generic (bash) Environment*
+
+NOTE: Testing was done on Ubuntu Debian RHEL 9 and Alpine with the dual schema testing methodology, running the scheam for 
+the linux distro and also the schema for the Linux bash (bash_linux.json)
+A perfect result is all fallback for the contract action, except for the first test case which is an abort.
+
+
+<details>
+<summary><b>Click to expand Linux Generic (bash) test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -2912,10 +2939,15 @@ WIP
 | 19 | i-test-928 | `echo hello \| grep h \| \| wc -l` | fallback | fallback | malformed pipeline |
 | 20 | i-test-929 | `echo $(echo $(unknowncmd))` | fallback | fallback | nested unknowncmd |
 
-
+</details>
 
 
 #### *LLM Contract Stress Tester — BusyBox (ash) Environment*
+
+<details>
+<summary><b>Click to expand BusyBox test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -2940,10 +2972,16 @@ WIP
 | 19 | i-test-019 | `echo hello \| grep h \| \| wc -l` | fallback | fallback | malformed pipeline |
 | 20 | i-test-020 | `echo $(echo $(unknowncmd))` | fallback | fallback | nested unknowncmd |
 
-
+</details>
 
 
 #### *LLM Contract Stress Tester — Cisco IOS Environment*
+
+<details>
+<summary><b>Click to expand Cisco IOS test matrix</b></summary>
+
+<br>
+
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -2958,9 +2996,18 @@ WIP
 | 9 | i-test-709 | `show route everything` | retry_with_modified_command | retry_with_modified_command | corrected to `show ip route` |
 | 10 | i-test-710 | `rm -rf /` | abort | abort | unsupported shell command |
 
+</details>
+
+
 
 
 #### *LLM Contract Stress Tester — Debian (apt/apt‑get) Environment*
+
+<details>
+<summary><b>Click to expand Debian test matrix</b></summary>
+
+<br>
+
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -2985,8 +3032,17 @@ WIP
 | 19 | i-test-019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
 | 20 | i-test-020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
 
+</details>
+
+
+
 
 #### *LLM Contract Stress Tester — Fedora (dnf) Environment*
+
+<details>
+<summary><b>Click to expand Fedora test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3011,9 +3067,18 @@ WIP
 | 19 | i-test-1219 | `dnf install -y curl` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
 | 20 | i-test-1220 | `dnf install -y git` | fallback | fallback | unable to find a match |
 
+</details>
+
+
+
 
 
 #### *LLM Contract Stress Tester — RHEL (yum) Environment*
+
+<details>
+<summary><b>Click to expand RHEL test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3038,10 +3103,15 @@ WIP
 | 19 | i-test-019 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry | rpmdb open failed |
 | 20 | i-test-020 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
 
-
+</details>
 
 
 #### *LLM Contract Stress Tester — Ubuntu (apt/apt‑get) Environment*
+
+<details>
+<summary><b>Click to expand Ubuntu test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3066,8 +3136,17 @@ WIP
 | 19 | i-test-019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
 | 20 | i-test-020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry | hash sum mismatch |
 
+</details>
+
+
+
 
 #### *LLM Contract Stress Tester — CentOS 7 (yum) Environment*
+
+<details>
+<summary><b>Click to expand CentOS 7 test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3092,10 +3171,15 @@ WIP
 | 19 | i-test-719 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry | rpmdb open failed |
 | 20 | i-test-720 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry | metadata download failure |
 
-
+</details>
 
 
 #### *LLM Contract Stress Tester — CentOS 8 (dnf) Environment*
+
+<details>
+<summary><b>Click to expand CentOS 8 test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3120,11 +3204,16 @@ WIP
 | 19 | i-test-819 | `dnf install -y curl` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
 | 20 | i-test-820 | `dnf install -y git` | fallback | fallback | unable to find a match |
 
-
+</details>
 
 
 
 #### *LLM Contract Stress Tester — PAN‑OS Environment*
+
+<details>
+<summary><b>Click to expand PAN-OS test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3149,10 +3238,15 @@ WIP
 | 19 | i-test-819 | `brew install python` | abort | abort | unsupported Linux package manager |
 | 20 | i-test-820 | `snap install go` | abort | abort | unsupported Linux package manager |
 
-
+</details>
 
 
 #### *LLM Contract Stress Tester — Windows PowerShell Environment*
+
+<details>
+<summary><b>Click to expand Windows PowerShell test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3193,9 +3287,16 @@ WIP
 | 35 | i-win-035 | `brew install node` | fallback | fallback | unsupported macOS package manager |
 | 36 | i-win-036 | `pkg install python` | fallback | fallback | unsupported BSD package manager |
 
+</details>
+
 
 
 #### *LLM Contract Stress Tester — Linux PowerShell (pwsh‑on‑Linux) Environment*
+
+<details>
+<summary><b>Click to expand Linux PowerShell test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3236,10 +3337,15 @@ WIP
 | 35 | i-pslinux-035 | `echo $(uname -r` | fallback | fallback | unterminated expression |
 | 36 | i-pslinux-036 | `C:\Program Files\SomeTool\tool.exe` | fallback | fallback | Windows path on Linux |
 
-
+</details>
 
 
 #### *LLM Contract Stress Tester — macOS (brew) Environment*
+
+<details>
+<summary><b>Click to expand macOS (brew) test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3280,10 +3386,19 @@ WIP
 | 35 | i-brew-035 | `brew install python \| grep version \| grep python \| grep brew \| \| wc -l` | fallback | fallback | malformed pipeline |
 | 36 | i-brew-036 | `brew install openssl --with-imaginary-flag` | fallback | fallback | invalid flag |
 
+</details>
+
+
+
 
 
 
 #### *LLM Contract Stress Tester — macOS (zsh) Environment*
+
+<details>
+<summary><b>Click to expand macOS (zsh) test matrix</b></summary>
+
+<br>
 
 | Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |-------|--------------|---------|------------------|----------------|--------|
@@ -3323,6 +3438,12 @@ WIP
 | 34 | i-zsh-034 | `brew install $(unknowncmd)` | fallback | fallback | brew does not exist |
 | 35 | i-zsh-035 | `echo $(unknowncmd \| grep version)` | fallback | fallback | unknown command |
 | 36 | i-zsh-036 | `rm -rf /Applications` | abort | abort | destructive |
+
+</details>
+
+
+
+
 
 
 ### Stress tester code review
