@@ -54,7 +54,6 @@ def validate_response(
     errors.extend(check_optional_error_field(parsed))
 
 
-
     # ------------------------------------------------------------
     # OS-specific semantic checks
     # ------------------------------------------------------------
@@ -69,65 +68,61 @@ def validate_response(
         from .rhel_semantics import validate_rhel_semantics
         errors.extend(validate_rhel_semantics(context, parsed))
 
-
     elif os_name == "CentOS" and os_version.startswith("7"):
-         from .centos7_semantics import validate_centos7_semantics
-         errors.extend(validate_centos7_semantics(context, parsed))
+        from .centos7_semantics import validate_centos7_semantics
+        errors.extend(validate_centos7_semantics(context, parsed))
 
     elif os_name == "CentOS" and os_version.startswith("8"):
-         from .centos8_semantics import validate_centos8_semantics
-         errors.extend(validate_centos8_semantics(context, parsed))
+        from .centos8_semantics import validate_centos8_semantics
+        errors.extend(validate_centos8_semantics(context, parsed))
 
-    elif os_name == "Amazon Linux": 
-         from .amazonlinux2_semantics import validate_amazonlinux2_semantics
-         errors.extend(validate_amazonlinux2_semantics(context, parsed))
-    
+    elif os_name == "Amazon Linux":
+        from .amazonlinux2_semantics import validate_amazonlinux2_semantics
+        errors.extend(validate_amazonlinux2_semantics(context, parsed))
+
     elif os_name == "Amazon Linux 2023":
-         from .amazonlinux2023_semantics import validate_amazonlinux2023_semantics
-         errors.extend(validate_amazonlinux2023_semantics(context, parsed))
-
-
+        from .amazonlinux2023_semantics import validate_amazonlinux2023_semantics
+        errors.extend(validate_amazonlinux2023_semantics(context, parsed))
 
     elif os_name == "Fedora":
-         from .fedora_semantics import validate_fedora_semantics
-         errors.extend(validate_fedora_semantics(context, parsed))
+        from .fedora_semantics import validate_fedora_semantics
+        errors.extend(validate_fedora_semantics(context, parsed))
 
     elif os_name == "Alpine":
-         from .alpine_semantics import validate_alpine_semantics
-         errors.extend(validate_alpine_semantics(context, parsed))
+        from .alpine_semantics import validate_alpine_semantics
+        errors.extend(validate_alpine_semantics(context, parsed))
 
     elif os_name == "Linux" and os_version == "generic":
-         from .linux_generic_semantics import validate_linux_generic_semantics
-         errors.extend(validate_linux_generic_semantics(context, parsed))
+        from .linux_generic_semantics import validate_linux_generic_semantics
+        errors.extend(validate_linux_generic_semantics(context, parsed))
 
     elif os_name == "Linux" and os_version == "busybox":
-         from .busybox_semantics import validate_busybox_semantics
-         errors.extend(validate_busybox_semantics(context, parsed))
+        from .busybox_semantics import validate_busybox_semantics
+        errors.extend(validate_busybox_semantics(context, parsed))
 
     elif os_name == "macOS" and os_version.endswith("-brew"):
-         from .macos_brew_semantics import validate_macos_brew_semantics
-         errors.extend(validate_macos_brew_semantics(context, parsed))
+        from .macos_brew_semantics import validate_macos_brew_semantics
+        errors.extend(validate_macos_brew_semantics(context, parsed))
 
     elif os_name == "macOS" and os_version.endswith("-zsh"):
-         from .macos_zsh_semantics import validate_macos_zsh_semantics
-         errors.extend(validate_macos_zsh_semantics(context, parsed))
+        from .macos_zsh_semantics import validate_macos_zsh_semantics
+        errors.extend(validate_macos_zsh_semantics(context, parsed))
 
     elif os_name == "Windows":
-         from .windows_semantics import validate_windows_semantics
-         errors.extend(validate_windows_semantics(context, parsed))
+        from .windows_semantics import validate_windows_semantics
+        errors.extend(validate_windows_semantics(context, parsed))
 
     elif os_name == "Linux" and os_version == "powershell-core":
-         from .pwsh_linux_semantics import validate_pwsh_linux_semantics
-         errors.extend(validate_pwsh_linux_semantics(context, parsed))
+        from .pwsh_linux_semantics import validate_pwsh_linux_semantics
+        errors.extend(validate_pwsh_linux_semantics(context, parsed))
 
     elif os_name == "Cisco IOS":
-         from .cisco_ios_semantics import validate_cisco_ios_semantics
-         errors.extend(validate_cisco_ios_semantics(context, parsed))
+        from .cisco_ios_semantics import validate_cisco_ios_semantics
+        errors.extend(validate_cisco_ios_semantics(context, parsed))
 
     elif os_name == "PAN-OS":
-         from .panos_semantics import validate_panos_semantics
-         errors.extend(validate_panos_semantics(context, parsed))
-
+        from .panos_semantics import validate_panos_semantics
+        errors.extend(validate_panos_semantics(context, parsed))
 
 
 
