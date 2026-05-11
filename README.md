@@ -1728,6 +1728,7 @@ These revisions are also clearly marked in the code comments and can be clearly 
 |---------------|-----------------|----------|--------|
 | Alpine | apk | 13 | **DONE** |
 | Amazon Linux 2 | yum | 9 | **DONE** |
+| Amazon Linux 2023 | dnf | 20 | **DONE** |
 | Linux generic | bash (Rev 6.8) | 6.8 | **DONE** |
 | BusyBox | ash | 14 (with 6.9) | **DONE** |
 | Cisco IOS | — | 3 | **DONE** |
@@ -2162,6 +2163,7 @@ the context and the full contract rules set for all of the domain primitives bel
 |---------------|-----------------|----------|--------|
 | Alpine | apk | 13 | **DONE** |
 | Amazon Linux 2 | yum | 9 | **DONE** |
+| Amazon Linux 2023 | dnf | 20 | **DONE** |
 | Linux generic | bash (Rev 6.8) | 6.8 | **DONE** |
 | BusyBox | ash | 14 (with 6.9) | **DONE** |
 | Cisco IOS | — | 3 | **DONE** |
@@ -2876,6 +2878,12 @@ These rules are refined further during the fully automated stress tester phase p
 | 34 | i-test-034 | `yum install -y php` | fallback | fallback | unable to find a match |
 | 35 | i-test-035 | `yum install -y gcc` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
 | 36 | i-test-036 | `yum install -y ruby` | fallback | fallback | no match for argument |
+
+
+
+
+#### LLM Contract Stress Tester — Amazon Linux 2023 (dnf) Environment
+WIP
 
 
 

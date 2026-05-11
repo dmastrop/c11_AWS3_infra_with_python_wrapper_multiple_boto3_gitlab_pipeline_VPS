@@ -1,0 +1,212 @@
+from typing import Any, Dict, List
+
+from .helpers_linux import (
+    cmd_uses_wrong_package_manager,
+    extract_pkg_from_command,
+    stderr_contains,
+    looks_like_network_failure,
+)
+
+
+def validate_centos7_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> List[str]:
+    """
+    CentOS 7–specific semantic checks derived from the CentOS 7 YUM domain primitives
+    (Revision 10) and global Linux malformed-command rules (Revision 6.8).
+
+    Applies ONLY when os_name == "CentOS" AND os_version starts with "7".
+    """
+
+    errors: List[str] = []
+
+    command = (context.get("command") or "").strip()
+    stderr = context.get("stderr") or ""
+    exit_status = context.get("exit_status")
+
+    action = resp.get("action")
+    cleanup = resp.get("cleanup", [])
+    retry = resp.get("retry")
+
+    # ------------------------------------------------------------
+    # Helper: normalize retry into a list of strings
+    # ------------------------------------------------------------
+    def _retry_as_list(r: Any) -> List[str]:
+        if isinstance(r, str):
+            return [r]
+        if isinstance(r, list):
+            return [c for c in r if isinstance(c, str)]
+        return []
+
+    retry_list = _retry_as_list(retry)
+
+    # ------------------------------------------------------------
+    # 1) Wrong package manager in RETRY on CentOS 7
+    # ------------------------------------------------------------
+    def _check_retry_wrong_pm(r: Any) -> None:
+        if isinstance(r, str):
+            if cmd_uses_wrong_package_manager(r):
+                errors.append(
+                    "On CentOS 7, retry must not use non-YUM package managers (apt/dnf/apk/brew/etc.)."
+                )
+        elif isinstance(r, list):
+            for cmd in r:
+                if isinstance(cmd, str) and cmd_uses_wrong_package_manager(cmd):
+                    errors.append(
+                        "On CentOS 7, retry must not use non-YUM package managers (apt/dnf/apk/brew/etc.)."
+                    )
+
+    _check_retry_wrong_pm(retry)
+
+    # ------------------------------------------------------------
+    # 2) Wrong package manager in ORIGINAL command → deterministic rewrite
+    # ------------------------------------------------------------
+    pkg_from_cmd = extract_pkg_from_command(command)
+
+    if cmd_uses_wrong_package_manager(command) and pkg_from_cmd:
+        if action != "retry_with_modified_command":
+            errors.append(
+                "On CentOS 7, when the original command uses a non-YUM package manager "
+                "with a clear package name, the LLM must use 'retry_with_modified_command'."
+            )
+        else:
+            if not isinstance(retry, str):
+                errors.append(
+                    "CentOS 7 wrong-package-manager rewrites must use a single string retry command."
+                )
+            else:
+                expected_sub = f"yum install -y {pkg_from_cmd}"
+                if expected_sub not in retry:
+                    errors.append(
+                        f"CentOS 7 wrong-package-manager rewrite must include '{expected_sub}' "
+                        "in the retry command."
+                    )
+
+    # ------------------------------------------------------------
+    # 3) Malformed pipelines/subshells → fallback
+    # ------------------------------------------------------------
+    if "|" in command or "$(" in command or ")" in command:
+        if (
+            "syntax error" in stderr
+            or "unexpected token" in stderr
+            or "unexpected EOF" in stderr
+        ):
+            if action != "fallback":
+                errors.append("Malformed pipeline/subshell on CentOS 7 must result in 'fallback'.")
+
+    # ------------------------------------------------------------
+    # 4) Network failures MUST use fallback
+    # ------------------------------------------------------------
+    if looks_like_network_failure(stderr):
+        if action != "fallback":
+            errors.append("Network failures on CentOS 7 must use 'fallback' action.")
+
+    # ------------------------------------------------------------
+    # 5) Missing package name → malformed
+    # ------------------------------------------------------------
+    if ("yum install" in command or "dnf install" in command) and "Need to pass a list of packages" in stderr:
+        if action != "fallback":
+            errors.append(
+                "CentOS 7 malformed install (missing package name) must use 'fallback'."
+            )
+
+    # ------------------------------------------------------------
+    # 6) DNS resolution failures → fallback
+    # ------------------------------------------------------------
+    dns_indicators = [
+        "Could not resolve host:",
+        "Could not resolve host: mirrorlist.centos.org",
+    ]
+
+    if any(ind in stderr for ind in dns_indicators):
+        if action != "fallback":
+            errors.append("DNS resolution failures on CentOS 7 must use 'fallback'.")
+
+    # ------------------------------------------------------------
+    # 7) YUM metadata / repo corruption → cleanup_and_retry
+    # ------------------------------------------------------------
+    yum_metadata_indicators = [
+        "Metadata file does not match checksum for repomd.xml",
+        "YumRepo Error: All mirror URLs are not using ftp, http[s] or file.",
+        "Cannot find a valid baseurl for repo",
+        "Error: failed to download metadata for repo",
+    ]
+
+    if any(ind in stderr for ind in yum_metadata_indicators):
+        if action != "cleanup_and_retry":
+            errors.append("YUM metadata corruption on CentOS 7 must use 'cleanup_and_retry'.")
+
+        # cleanup must include yum clean all
+        if isinstance(cleanup, list):
+            cleanup_set = set(c.strip() for c in cleanup if isinstance(c, str))
+            if "yum clean all" not in cleanup_set:
+                errors.append(
+                    "CentOS 7 metadata corruption cleanup must include 'yum clean all'."
+                )
+        else:
+            errors.append("CentOS 7 metadata corruption requires 'cleanup' to be a list.")
+
+        # retry must include yum makecache
+        if not any("yum makecache" in c for c in retry_list):
+            errors.append("CentOS 7 metadata corruption retry must include 'yum makecache'.")
+
+        # If a package exists, retry must include yum install -y <pkg>
+        if pkg_from_cmd:
+            expected_install = f"yum install -y {pkg_from_cmd}"
+            if not any(expected_install in c for c in retry_list):
+                errors.append(
+                    f"CentOS 7 metadata corruption retry must include '{expected_install}' "
+                    "when a package is present."
+                )
+
+    # ------------------------------------------------------------
+    # 8) rpmdb corruption → cleanup_and_retry
+    # ------------------------------------------------------------
+    if "rpmdb open failed" in stderr:
+        if action != "cleanup_and_retry":
+            errors.append("rpmdb corruption on CentOS 7 must use 'cleanup_and_retry'.")
+
+        # cleanup must include rm -f /var/lib/rpm/.rpm.lock
+        if isinstance(cleanup, list):
+            cleanup_set = set(c.strip() for c in cleanup if isinstance(c, str))
+            if "rm -f /var/lib/rpm/.rpm.lock" not in cleanup_set:
+                errors.append(
+                    "CentOS 7 rpmdb corruption cleanup must include 'rm -f /var/lib/rpm/.rpm.lock'."
+                )
+        else:
+            errors.append("CentOS 7 rpmdb corruption requires 'cleanup' to be a list.")
+
+        # retry must include rpm --rebuilddb
+        if not any("rpm --rebuilddb" in c for c in retry_list):
+            errors.append("CentOS 7 rpmdb corruption retry must include 'rpm --rebuilddb'.")
+
+        # If a package exists, retry must include yum install -y <pkg>
+        if pkg_from_cmd:
+            expected_install = f"yum install -y {pkg_from_cmd}"
+            if not any(expected_install in c for c in retry_list):
+                errors.append(
+                    f"CentOS 7 rpmdb corruption retry must include '{expected_install}' "
+                    "when a package is present."
+                )
+
+    # ------------------------------------------------------------
+    # 9) Package already installed → fallback
+    # ------------------------------------------------------------
+    if "already installed" in stderr and "Nothing to do" in stderr:
+        if action != "fallback":
+            errors.append("CentOS 7 idempotent install must use 'fallback'.")
+
+    # ------------------------------------------------------------
+    # 10) yum update/upgrade idempotency → fallback
+    # ------------------------------------------------------------
+    if "Nothing to do" in stderr or "No packages marked for update" in stderr:
+        if action != "fallback":
+            errors.append("CentOS 7 idempotent update/upgrade must use 'fallback'.")
+
+    # ------------------------------------------------------------
+    # 11) Cisco-style 'show' commands → fallback
+    # ------------------------------------------------------------
+    if exit_status == 127 and command.startswith("show "):
+        if action != "fallback":
+            errors.append("CentOS 7 must use 'fallback' for Cisco-style 'show' commands.")
+
+    return errors
+

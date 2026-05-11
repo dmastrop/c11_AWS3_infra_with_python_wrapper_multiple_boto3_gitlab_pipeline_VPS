@@ -81,9 +81,15 @@ def validate_response(
          from .centos8_semantics import validate_centos8_semantics
          errors.extend(validate_centos8_semantics(context, parsed))
 
-     elif os_name == "Amazon Linux" and os_version.startswith("2"):
+     elif os_name == "Amazon Linux": 
          from .amazonlinux2_semantics import validate_amazonlinux2_semantics
          errors.extend(validate_amazonlinux2_semantics(context, parsed))
+    
+    elif os_name == "Amazon Linux 2023":
+        from .amazonlinux2023_semantics import validate_amazonlinux2023_semantics
+        errors.extend(validate_amazonlinux2023_semantics(context, parsed))
+
+
 
      elif os_name == "Fedora":
          from .fedora_semantics import validate_fedora_semantics
