@@ -2906,7 +2906,7 @@ WIP
 
 #### *LLM Contract Stress Tester — Linux Generic (bash) Environment*
 
-NOTE: Testing was done on Ubuntu Debian RHEL 9 and Alpine with the dual schema testing methodology, running the scheam for 
+NOTE: Testing was done on Ubuntu Debian RHEL 9 and Alpine with the dual schema testing methodology, running the schema for 
 the linux distro and also the schema for the Linux bash (bash_linux.json)
 A perfect result is all fallback for the contract action, except for the first test case which is an abort.
 
@@ -3520,6 +3520,18 @@ WORK IN PROGRESS
 
 
 ### Stress testing the contract rules with the automated framework
+
+The automated framework, as noted earlier, provides for a validator and schema expander so that 100s of schema context based
+test cases can be run against the domain primitives block for a given OS/platform.   This further hardens the rules in accordance
+with the LLM feedback loop described earlier. 
+
+The validator for example will validate each test case so that it no longer has to be manually reviewed (also with the help of
+the LLM) saving up to 95% of the review cycle. It is expected that about 5% of the test cases will have wrong or ambigoius 
+LLM action plan responses from the LLM that will need manual inspection and perhaps contract revision and refinement. 
+
+The execution of the schema test cases when manually done, with the validator hooked in look like this, for example:
+
+
 
 
 #### Ubuntu domain primitives block
