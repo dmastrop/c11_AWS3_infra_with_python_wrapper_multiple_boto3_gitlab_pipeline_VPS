@@ -2079,7 +2079,7 @@ This stress tester is not simply a tool, but rather it defines a paradigm for co
 
 
 
-### Stress tester high level file sructure
+### Stress tester high level file structure
  
 A high level of the file structure in the repo is show below.  
 
