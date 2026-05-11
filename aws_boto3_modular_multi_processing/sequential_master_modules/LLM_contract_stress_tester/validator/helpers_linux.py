@@ -1,13 +1,37 @@
 from typing import Any, Dict, List, Optional
 
-_UBUNTU_WRONG_PM = ("yum", "dnf", "apk", "zypper", "pacman", "brew")
+# ------------------------------------------------------------
+# OS-specific wrong package manager sets. NOTE these are WRONG. For right PM the semantics file will handle that. 
+# ------------------------------------------------------------
+WRONG_PM_BY_OS = {
+    "Ubuntu": {"yum", "dnf", "apk", "zypper", "pacman", "brew"},
+    "Debian": {"yum", "dnf", "apk", "zypper", "pacman", "brew"},
+
+    "RHEL": {"apt", "apt-get", "apk", "zypper", "pacman", "brew"},
+    "CentOS": {"apt", "apt-get", "apk", "zypper", "pacman", "brew"},
+    "Fedora": {"apt", "apt-get", "apk", "zypper", "pacman", "brew"},
+
+    "Amazon Linux": {"apt", "apt-get", "apk", "zypper", "pacman", "brew"},
+    "Amazon Linux 2023": {"apt", "apt-get", "apk", "zypper", "pacman", "brew"},
+
+    "Alpine": {"apt", "apt-get", "yum", "dnf", "zypper", "pacman", "brew"},
+
+    "macOS": {"apt", "apt-get", "yum", "dnf", "apk", "zypper", "pacman"},
+    "Windows": {"apt", "apt-get", "yum", "dnf", "apk", "zypper", "pacman", "brew"},
+}
+
+# ------------------------------------------------------------
+# Corrected wrong-PM detector (tokenized, OS-specific)
+# ------------------------------------------------------------
+def cmd_uses_wrong_package_manager(cmd: str, os_name: str) -> bool:
+    tokens = cmd.strip().split()
+    wrong = WRONG_PM_BY_OS.get(os_name, set())
+    return any(tok in wrong for tok in tokens)
 
 
-def cmd_uses_wrong_package_manager(cmd: str) -> bool:
-    s = cmd.strip()
-    return any(pm in s.split() for pm in _UBUNTU_WRONG_PM)
-
-
+# ------------------------------------------------------------
+# Existing helpers (unchanged)
+# ------------------------------------------------------------
 def cmd_uses_apt_family(cmd: str) -> bool:
     s = cmd.strip()
     return s.startswith("apt ") or s.startswith("apt-get ")

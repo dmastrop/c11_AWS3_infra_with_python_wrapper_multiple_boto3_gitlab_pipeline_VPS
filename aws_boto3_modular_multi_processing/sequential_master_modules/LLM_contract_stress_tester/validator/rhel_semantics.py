@@ -44,13 +44,13 @@ def validate_rhel_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> Li
     # ------------------------------------------------------------
     def _check_retry_wrong_pm(r: Any) -> None:
         if isinstance(r, str):
-            if cmd_uses_wrong_package_manager(r):
+            if cmd_uses_wrong_package_manager(r, os_name):
                 errors.append(
                     "On RHEL, retry must not use non-YUM package managers (apt/dnf/apk/brew/etc.)."
                 )
         elif isinstance(r, list):
             for cmd in r:
-                if isinstance(cmd, str) and cmd_uses_wrong_package_manager(cmd):
+                if isinstance(cmd, str) and cmd_uses_wrong_package_manager(cmd, os_name):
                     errors.append(
                         "On RHEL, retry must not use non-YUM package managers (apt/dnf/apk/brew/etc.)."
                     )
@@ -66,7 +66,7 @@ def validate_rhel_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> Li
     # ------------------------------------------------------------
     pkg_from_cmd = extract_pkg_from_command(command)
 
-    if cmd_uses_wrong_package_manager(command) and pkg_from_cmd:
+    if cmd_uses_wrong_package_manager(command, os_name) and pkg_from_cmd:
         if action != "retry_with_modified_command":
             errors.append(
                 "On RHEL, when the original command uses a non-YUM package manager "
