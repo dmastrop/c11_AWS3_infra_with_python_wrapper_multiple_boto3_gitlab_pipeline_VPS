@@ -2075,6 +2075,278 @@ This methodology is applicable to any AI/MCP system that relies on deterministic
 This stress tester is not simply a tool, but rather it defines a paradigm for contract LLM-based refinement.
 
 
+### Schema context-based test case design methodology
+
+The test design is always based upon the underlying OS/platform domain primitves contract rules block and how to exploit
+it from the perspective of a non-deterministic LLM action plan response. The ultimate goal is to make the LLM responses
+increasingly deterministic by tuning the contract rules in response to the contract-based test cases below. 
+
+
+
+
+
+**1. ubuntu_apt.json**  
+Ubuntu with `apt`/`apt-get` and bash.
+
+**Why this schema is important:**  
+- Tests correct inference of Debian‑based package managers  
+- Ensures LLM prefers `apt-get install -y`  
+- Ensures LLM ignores yum/dnf/apk commands in history  
+- Tests handling of common Ubuntu errors:  
+  - “Unable to locate package”  
+  - “Temporary failure resolving”  
+- Validates correct OS boundary behavior
+
+---
+
+**2. debian_apt.json**  
+Debian with `apt-get` and bash.
+
+**Why this schema is important:**  
+- Similar to Ubuntu but with different stderr patterns  
+- Ensures LLM does not hallucinate `apt` on Debian when only `apt-get` exists  
+- Validates correct fallback behavior for missing packages  
+- Ensures LLM respects Debian‑specific error codes
+
+---
+
+**3. rhel_yum.json**  
+RHEL with `yum`/`dnf` and bash.
+
+**Why this schema is important:**  
+- Tests RPM‑based package manager inference  
+- Ensures LLM uses `yum` or `dnf` appropriately  
+- Validates recognition of RHEL‑style errors:  
+  - “No match for argument”  
+  - “Need to pass a list of packages”  
+- Ensures LLM does not hallucinate apt/apk/brew
+
+---
+
+**4. fedora_dnf.json**  
+Fedora with `dnf` and bash.
+
+**Why this schema is important:**  
+- Tests modern RPM‑based package manager behavior  
+- Ensures LLM prefers `dnf` over `yum`  
+- Validates Fedora‑specific errors:  
+  - “No match for argument”  
+  - “Could not resolve host”  
+- Ensures correct OS inference even when history contains Ubuntu commands
+
+---
+
+**5. amazonlinux_yum.json**  
+Amazon Linux 2 with `yum`.
+
+**Why this schema is important:**  
+- Tests Amazon Linux’s hybrid RHEL‑like behavior  
+- Ensures LLM uses `yum` (not dnf)  
+- Validates Amazon Linux‑specific stderr:  
+  - “Loaded plugins: priorities, update-motd, security”  
+- Ensures correct remediation when packages are missing from repos
+
+---
+
+**6. alpine_apk.json**  
+Alpine Linux with `apk` and BusyBox.
+
+**Why this schema is important:**  
+- Tests musl‑based, BusyBox‑based environment  
+- Ensures LLM uses `apk add`  
+- Validates Alpine‑specific errors:  
+  - “unable to select packages”  
+  - “apk: not found”  
+- Tests repo‑enablement logic (community repo)  
+- Ensures LLM does not hallucinate apt/yum/dnf/brew
+
+---
+
+**7. bash_linux.json**  
+Generic Linux with bash and **no package manager**.
+
+**Why this schema is important:**  
+- Tests LLM’s ability to detect “no PM available”  
+- Ensures LLM does NOT hallucinate apt/yum/dnf/apk  
+- Expected output is usually empty retry or no‑op  
+- Validates OS boundary detection
+
+---
+
+**8. busybox_sh.json**  
+BusyBox `/bin/sh` minimal environment.
+
+**Why this schema is important:**  
+- Tests extremely minimal shell  
+- Ensures LLM does not hallucinate package managers  
+- Validates BusyBox‑style stderr:  
+  - “sh: <cmd>: not found”  
+- Ensures correct fallback behavior (usually no retry)
+
+---
+
+**9. macos_brew.json**  
+macOS with zsh and Homebrew installed.
+
+**Why this schema is important:**  
+- Tests macOS‑specific package manager inference  
+- Ensures LLM uses `brew install`  
+- Validates macOS stderr:  
+  - “Error: no bottle available!”  
+- Ensures LLM does not hallucinate apt/yum/dnf/apk
+
+---
+
+**10. zsh_macos.json**  
+macOS with zsh and **NO Homebrew installed**.
+
+**Why this schema is important:**  
+- Pure macOS environment  
+- No package manager  
+- Linux commands fail  
+- brew fails  
+- Only built‑in macOS commands work  
+- Forces LLM to:  
+  - rely on `os_info`  
+  - NOT hallucinate apt/yum/dnf/apk  
+  - NOT hallucinate brew  
+  - NOT hallucinate package installation  
+  - return empty retry or harmless no‑op  
+- Excellent OS boundary test
+
+---
+
+**11. windows_powershell.json**  
+Windows Server/Desktop with PowerShell and winget.
+
+**Why this schema is important:**  
+- Tests Windows‑specific package manager inference  
+- Ensures LLM uses `winget install`  
+- Validates PowerShell stderr:  
+  - “The term ‘apt-get’ is not recognized…”  
+- Ensures correct fallback behavior when winget cannot find a package
+
+---
+
+**12. powershell_windows.json**  
+PowerShell Core running on Linux.
+
+**Why this schema is important:**  
+- PowerShell syntax + Linux environment  
+- No winget  
+- No choco  
+- No MSI installers  
+- Ensures LLM does NOT hallucinate Windows tools  
+- Expected retry is usually empty or no‑op  
+- Tests cross‑environment shell inference
+
+---
+
+**13. cisco_ios.json**  
+Cisco IOS network appliance CLI.
+
+**Why this schema is important:**  
+- Tests non‑POSIX, non‑Linux environment  
+- Ensures LLM does NOT attempt package installation  
+- Validates Cisco stderr:  
+  - “% Invalid input detected at '^' marker.”  
+- Expected retry is empty or no‑op  
+- Critical OS boundary test
+
+---
+
+**14. paloalto_pan.json**  
+Palo Alto PAN‑OS firewall CLI.
+
+**Why this schema is important:**  
+- Tests another non‑Linux network appliance  
+- Ensures LLM does NOT hallucinate package managers  
+- Validates PAN‑OS stderr:  
+  - “Unknown command: <cmd>”  
+- Expected retry is empty or no‑op  
+- Confirms correct OS inference under extreme mismatch
+
+---
+
+
+**15. centos7_yum.json**  
+CentOS 7 with `yum` and bash.
+
+**Why this schema is important:**  
+- CentOS 7 is a downstream rebuild of RHEL 7 and uses the legacy YUM stack  
+- Validates correct handling of YUM‑specific error patterns distinct from RHEL 8/9  
+- Ensures the LLM rewrites wrong package managers (apt, apt‑get, dnf, apk → yum)  
+- Tests CentOS‑specific repo failures:  
+  - “Cannot find a valid baseurl for repo”  
+  - “YumRepo Error: All mirror URLs are not using ftp, http[s] or file.”  
+- Validates correct metadata‑corruption recovery:  
+  - `yum clean all`  
+  - `yum makecache`  
+  - retry install  
+- Ensures correct rpmdb corruption handling (`rpm --rebuilddb`)  
+- Confirms correct fallback behavior for missing packages  
+- Ensures destructive commands (`rm -rf /`) trigger abort  
+- Validates correct OS boundary behavior now that CentOS 7 has its own primitive block
+
+
+---
+
+**16. centos8_dnf.json**  
+CentOS 8 with `dnf` (primary) and `yum` (compatibility wrapper).
+
+**Why this schema is important:**  
+- CentOS 8 is a downstream rebuild of RHEL 8 and uses DNF, not YUM  
+- Ensures the LLM normalizes `yum install` → `dnf install`  
+- Validates DNF‑specific error patterns distinct from YUM:  
+  - “Failed to download metadata for repo”  
+  - “Cannot prepare internal mirrorlist: No URLs in mirrorlist”  
+- Tests correct DNF metadata‑corruption recovery:  
+  - `dnf clean all`  
+  - `dnf makecache`  
+  - retry install  
+- Ensures correct rpmdb corruption handling (`rpm --rebuilddb`)  
+- Confirms correct fallback behavior for missing packages  
+- Ensures destructive commands (`rm -rf /`) trigger abort  
+- Validates strict OS boundary behavior so DNF rules do not leak into:  
+  - RHEL 9  
+  - CentOS 7  
+  - Amazon Linux  
+  - Fedora  
+- Ensures correct handling of CentOS‑specific mirrorlist failures
+
+---
+
+**17. amazonlinux2023_dnf.json**  
+Amazon Linux 2023 with `dnf` and bash.
+
+**Why this schema is important:**  
+- Amazon Linux 2023 is a **new, DNF‑only**, Fedora‑aligned distribution — very different from Amazon Linux 2  
+- Ensures the LLM **does NOT fall back to yum**, which no longer exists on AL2023  
+- Validates AL2023‑specific error patterns:  
+  - “Failed to download metadata for repo 'amzn2023-core'”  
+  - “Cannot prepare internal mirrorlist: No URLs in mirrorlist”  
+  - “Error: No matching repo: amzn2023‑php”  
+  - “BDB0113 Thread/process died” (rpmdb corruption)  
+- Tests correct handling of AL2023 network failures:  
+  - “Could not resolve host: mirror.amazonlinux.com”  
+  - “Connection timed out”  
+- Ensures correct remediation behavior for metadata corruption:  
+  - `dnf clean all`  
+  - `dnf makecache`  
+  - retry install  
+- Validates correct rpmdb corruption handling (`rpm --rebuilddb`)  
+- Ensures destructive commands (`rm -rf /`) trigger abort  
+- Confirms strict OS boundary behavior so AL2023 rules do not leak into:  
+  - Amazon Linux 2  
+  - Fedora  
+  - CentOS 8  
+  - RHEL 8/9  
+- Critical for verifying that the LLM correctly distinguishes between:  
+  - **Amazon Linux 2 (yum)**  
+  - **Amazon Linux 2023 (dnf)**  
+  - despite both being “Amazon Linux”  
+
+---
 
 
 
@@ -3536,7 +3808,7 @@ The execution of the schema test cases when manually done, with the validator ho
 
 
 
-A subset of the domain primitives blocks was run through the full stress tester: 
+A subset of the domain primitives blocks was run through the full stress tester (4 of them below):
 
 
 #### Ubuntu domain primitives block
@@ -3551,10 +3823,10 @@ The rule refinements here can be extrapolated to the other linux distro domain p
 The rule refinements here can be extrapolated to the PAN-OS domain primitives rule block
 
 
-#### Windows domain primitives blocks
+#### Windows domain primitives block
 
 
-#### Linux based terminal blocks
+#### Linux based terminal domain primitives block
 
 
 
