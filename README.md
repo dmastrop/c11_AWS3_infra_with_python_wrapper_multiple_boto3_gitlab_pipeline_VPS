@@ -3943,6 +3943,9 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ### LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)
 
 
+
+#### Location in the repo
+
 These can be found in the repo in the ../sequential_master_modules/ai_gateway_service.py file. 
 
 Some structural notes are given below on how the contract block is organized, along with a few complete snippets of some 
@@ -4022,6 +4025,159 @@ The contract rules domain primitives blocks are found here in the ai_gateway_ser
                 <<<< with the rest of the blocks omitted from brevity>>>>
 
 ```
+
+
+#### Contract Structure (High‑Level & All 17 OS/Platforms)
+
+The contract is organized into **five major layers**, each forming a strict semantic boundary that prevents rule leakage across OS families.
+
+The rules are explicitly stated as a part of the contract sent to the LLM to ensure no leakage between the domain primitives.
+
+---
+
+**1. Global Contract Rules**  
+These rules apply to *every* OS/platform and define the universal behavior of the LLM contract.
+
+- JSON schema  
+- action semantics  
+- cleanup rules  
+- retry rules  
+- fallback rules  
+- abort rules  
+- safety constraints  
+- literal‑precedence meta‑rule  
+- network‑failure semantics  
+
+These rules form the **root of the contract** and are evaluated before any OS‑specific logic.
+
+---
+
+**2. Malformed‑Linux Rules**  
+Applies to all Linux‑family OSes before OS‑specific domain primitives.
+
+- incomplete commands  
+- unrecognized commands  
+- show‑command fallback  
+- Revision 6.7 (core malformed‑Linux logic)  
+- Revision 6.8 (bash malformed‑command hardening, included in all Linux OS blocks)  
+
+This layer ensures malformed or ambiguous Linux commands are handled deterministically.
+
+---
+
+**3. Linux OS‑Specific Domain Primitives (11 of 17)**  
+Each Linux OS/platform has its own domain‑primitive block, including Revision 6.8.
+
+- Ubuntu (Rev 5, 6.6)  
+- Debian (Rev 7)  
+- RHEL (Rev 8)  
+- Amazon Linux 2 (Rev 9)  
+- **Amazon Linux 2023 (Rev 20)**  
+- CentOS 7 (Rev 10)  
+- CentOS 8 (Rev 11)  
+- Fedora (Rev 12)  
+- Alpine (Rev 13, 13.1)  
+- BusyBox (Rev 14 with 6.9)  
+- Linux generic (bash, Rev 6.8)  
+
+These blocks define OS‑specific package‑manager semantics, corruption indicators, idempotency rules, and recovery flows.
+
+---
+
+**4. Non‑Linux Domain Primitives (6 of 17)**  
+These platforms have **fully isolated** domain‑primitive blocks with no Linux inheritance.
+
+- Cisco IOS (Rev 3, 3.2, 3.3, 3.4)  
+- PAN‑OS (Rev 19)  
+- macOS brew (Rev 15 with 6.10)  
+- macOS zsh (Rev 16 with 6.11)  
+- Windows Server PowerShell (Rev 17 with 6.12)  
+- Linux PowerShell Core (pwsh, Rev 18 with 6.13)  
+
+These blocks define command‑mode semantics, privilege‑mode logic, PowerShell/pwsh behavior, and macOS‑specific command handling.
+
+---
+
+**5. Context Injection**  
+This is the final layer and applies to *all* OS/platforms.
+
+- dynamic stderr  
+- dynamic stdout  
+- dynamic exit_status  
+- dynamic command  
+- dynamic OS identity  
+
+This layer ensures the LLM receives the **exact execution context** for each test case, enabling deterministic rule selection.
+
+
+
+
+
+#### Contract Structural Map (All 17 Domain‑Primitives Blocks)**
+
+| **Section** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------|------------------|-------------|------------------|-----------|
+| **Global JSON Schema** | 1 | Defines allowed actions and fields | None | Hard boundary for validator |
+| **Core Rules** | 1–4 | Action semantics, retry rules | Low | Precedes OS logic |
+| **Cleanup Rules** | 6.5 | Safe cleanup semantics | Low | Applies to all OSes |
+| **cleanup_and_retry Semantics** | 4, 6.5 | Multi‑step retry logic | Low | Critical for dpkg/rpmdb flows |
+| **Idempotency Rules** | 4 | Handle “already installed” cases | Low | Applies to all OSes |
+| **Literal‑Precedence Meta‑Rule** | 6.3 | Exact‑match overrides | Medium | Ensures deterministic rule selection |
+| **Fallback Rules** | 2 | Avoid guessing | Medium | Prevents test‑induced bias |
+| **Network Failure Semantics** | 6.5 | DNS/connectivity → fallback | Low | Global override |
+| **Malformed‑Linux Rules** | 2, 6.7 | Incomplete commands | Medium | Precedes OS‑specific blocks |
+| **Revision 6.8 (per‑OS)** | 6.8 | Bash malformed‑command hardening | **High** | Included in all Linux‑family OS blocks |
+
+---
+
+**Linux OS‑Specific Domain Primitives (All 17 Blocks)**
+
+| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
+| **Ubuntu** | apt | 5, 6.6 | Hash Sum mismatch, dpkg repair | Medium | APT‑specific |
+| **Debian** | apt | 7 | fix‑broken, quote variants | Medium | APT variant |
+| **RHEL** | yum | 8 | metadata corruption, rpmdb | Medium | YUM‑specific |
+| **Amazon Linux 2** | yum | 9 | amazon‑linux‑extras | Medium | AL2‑specific |
+| **Amazon Linux 2023** | dnf | **20** | DNF metadata/mirrorlist logic, missing‑repo fallback | Medium | AL2023‑specific |
+| **CentOS 7** | yum | 10 | legacy YUM | Medium | C7‑specific |
+| **CentOS 8** | dnf | 11 | DNF + yum wrapper | Medium | C8‑specific |
+| **Fedora** | dnf | 12 | DNF semantics | Medium | Fedora‑specific |
+| **Alpine** | apk | 13, 13.1 | APK cache corruption | Medium | APK‑specific |
+| **Linux generic** | bash | 6.8 | malformed‑command hardening | High | Global Linux fallback |
+| **BusyBox** | ash | 14 (with 6.9) | ash‑specific malformed‑command logic | Medium | BusyBox‑specific |
+| **PAN‑OS** | — | 19 | operational‑mode vs config‑mode | Low | Fully isolated |
+| **Cisco IOS** | — | 3–3.4 | privilege‑mode logic | Low | Fully isolated |
+
+---
+ 
+**macOS Domain Primitives**
+
+| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
+| **macOS brew** | brew | 15 (with 6.10) | Homebrew semantics | Low | macOS‑specific |
+| **macOS zsh** | none | 16 (with 6.11) | zsh‑specific malformed‑command logic | Low | macOS‑specific |
+
+---
+
+**Windows Domain Primitives**
+
+| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
+| **Windows Server** | PowerShell | 17 (with 6.12) | PowerShell semantics | Low | Windows‑specific |
+| **Linux (PowerShell Core)** | pwsh | 18 (with 6.13) | pwsh‑specific semantics | Low | Cross‑platform pwsh |
+
+---
+
+**Context Injection Layer**
+
+| Section | Revision(s) | Purpose | Leakage Risk | Notes |
+|--------|-------------|---------|--------------|-------|
+| **Context Injection** | — | dynamic stderr/stdout/exit_status, dynamic command, dynamic OS identity | None | End of contract |
+
+---
+
+
+
 
 ---
 
