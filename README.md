@@ -3126,7 +3126,7 @@ The contract rules can be found in ai_gateway_service.py.
 
 These rules are refined further during the fully automated stress tester phase presented in a later section below. 
 
-#### LLM Contract Stress Tester — Alpine (apk) Environment
+#### *LLM Contract Stress Tester — Alpine (apk) Environment*
 
 <details>
 <summary><b>Click to expand Apline test matrix</b></summary>
@@ -3158,7 +3158,7 @@ These rules are refined further during the fully automated stress tester phase p
 
 </details>
 
-#### LLM Contract Stress Tester — Amazon Linux 2 (yum) Environment
+#### *LLM Contract Stress Tester — Amazon Linux 2 (yum) Environment*
 
 <details>
 <summary><b>Click to expand Amazon Linux 2 test matrix</b></summary>
@@ -3211,7 +3211,7 @@ These rules are refined further during the fully automated stress tester phase p
 
 
 
-#### LLM Contract Stress Tester — Amazon Linux 2023 (DNF) Environment**
+#### *LLM Contract Stress Tester — Amazon Linux 2023 (DNF) Environment*
 
 <details>
 <summary><b>Click to expand Amazon Linux 2023 test matrix</b></summary>
@@ -3239,12 +3239,6 @@ These rules are refined further during the fully automated stress tester phase p
 
 </details>
 
-
-
-
-
-### LLM Contract Stress Tester — Amazon Linux 2023 (dnf) Environment
-IP
 
 
 
