@@ -1538,11 +1538,10 @@ WORK IN PROGRESS
 - [How the LLM Contract Stress Tester Works](#how-the-llm-contract-stress-tester-works)
 - [Schema context‑based test case design methodology](#schema-context-based-test-case-design-methodology)
 - [Stress tester high‑level file structure](#stress-tester-high-level-file-structure)
-- [Test validation matrices per domain primitives block](#test-validation-matrices-per-domain-primitives-block)
+- [Test validation matrices per domain primitives block (Manual testing phase with the stress tester)](#test-validation-matrices-per-domain-primitives-block-manual-testing-phase-with-the-stress-tester)
 - [Stress tester code review](#stress-tester-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
-- [LLM stress‑tested Contract rules (all domain primitives blocks)](#llm-stresstested-contract-rules-all-domain-primitives-blocks)
-
+- [LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks-for-all-the-current-osplatforms)
 
 
 ### Introduction
@@ -3946,7 +3945,9 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 
 ---
 
+
 ### LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)
+
 
 These can be found in the repo in the ../sequential_master_modules/ai_gateway_service.py file. 
 
