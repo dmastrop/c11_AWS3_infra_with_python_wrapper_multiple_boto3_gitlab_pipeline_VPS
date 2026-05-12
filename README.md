@@ -3797,6 +3797,9 @@ The automated framework, as noted earlier, provides for a validator and schema e
 test cases can be run against the domain primitives block for a given OS/platform.   This further hardens the rules in accordance
 with the LLM feedback loop described earlier. 
 
+
+#### The validator
+
 The validator for example will validate each test case so that it no longer has to be manually reviewed (also with the help of
 the LLM) saving up to 95% of the review cycle. It is expected that about 5% of the test cases will have wrong or ambigoius 
 LLM action plan responses from the LLM that will need manual inspection and perhaps contract revision and refinement. 
@@ -3823,29 +3826,37 @@ Note that the VALIDATION RESULT is now displayed.
 With the validator in place around 95% of the test cases can be auto-validated permitting a scaling of test cases and test case
 iteration to harden the contract domain primitives rules block for each OS/platform. 
 
+#### semantics files
 
 
+Each OS/platform has a dedicated semantics file that has the hardcoded python logic that would have been required had the LLM
+AI logic/hook not been avaiable. The validator semantics file are a crude replacement for the LLM, the LLM being far more 
+adept at handling this. But the validator semantics logic will cover about 95 % of the test cases with an accurate validation 
+assessment which will enable the test cases to be efficiently scaled. Otherwise it would be very difficult to scale the context
+based test cases in the schema to adequately stress test the contract rules domain primtives blocks. 
 
+
+#### running some basic tests
 
 A subset of the domain primitives blocks was run through the full stress tester (4 of them below):
 
 
-#### Ubuntu domain primitives block
+##### Ubuntu domain primitives block
 
 
 The rule refinements here can be extrapolated to the other linux distro domain primitives blocks. 
 
 
-#### Cisco IOS domain primitives block
+##### Cisco IOS domain primitives block
 
 
 The rule refinements here can be extrapolated to the PAN-OS domain primitives rule block
 
 
-#### Windows domain primitives block
+##### Windows domain primitives block
 
 
-#### Linux based terminal domain primitives block
+##### Linux based terminal domain primitives block
 
 
 
