@@ -1524,7 +1524,19 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 WORK IN PROGRESS
 
-### Table of Contents
+### **Table of Contents — UPDATES part 59 (Phase 4a.1.2)**  
+<a name="top-update59"></a>
+
+### Table of Contents — LLM Contract Stress‑Testing Framework (Phase 4a.1.2)
+
+- [Introduction](#introduction)
+- [How the LLM Contract Stress Tester Works](#how-the-llm-contract-stress-tester-works)
+- [Schema context‑based test case design methodology](#schema-context-based-test-case-design-methodology)
+- [Stress tester high‑level file structure](#stress-tester-high-level-file-structure)
+- [Test validation matrices per domain primitives block](#test-validation-matrices-per-domain-primitives-block)
+- [Stress tester code review](#stress-tester-code-review)
+- [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
+- [LLM stress‑tested Contract rules (all domain primitives blocks)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks)
 
 
 
@@ -1745,7 +1757,11 @@ These revisions are also clearly marked in the code comments and can be clearly 
 | Linux (PowerShell Core) | pwsh | 18 (with 6.13) | **DONE** |
 | macOS zsh | none | 16 (with 6.11) | **DONE** |
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 
 
@@ -2075,6 +2091,15 @@ This methodology is applicable to any AI/MCP system that relies on deterministic
 This stress tester is not simply a tool, but rather it defines a paradigm for contract LLM-based refinement.
 
 
+---
+
+[Back to top](#top-update59)
+
+---
+
+
+
+
 ### Schema context-based test case design methodology
 
 The test design is always based upon the underlying OS/platform domain primitves contract rules block and how to exploit
@@ -2348,7 +2373,11 @@ Amazon Linux 2023 with `dnf` and bash.
 
 ---
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 
 ### Stress tester high level file structure
@@ -2417,7 +2446,11 @@ A complete code review of the framework will follow the manual testing section a
 
 ```
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 
 
@@ -3174,7 +3207,7 @@ These rules are refined further during the fully automated stress tester phase p
 
 
 
-### LLM Contract Stress Tester — Amazon Linux 2023 (DNF) Environment**
+#### LLM Contract Stress Tester — Amazon Linux 2023 (DNF) Environment**
 
 <details>
 <summary><b>Click to expand Amazon Linux 2023 test matrix</b></summary>
@@ -3749,7 +3782,11 @@ A perfect result is all fallback for the contract action, except for the first t
 </details>
 
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 
 
@@ -3824,7 +3861,11 @@ The following sections reivew the code that forms the stress tester framework
 WORK IN PROGRESS
 
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 ### Stress testing the contract rules with the automated framework
 
@@ -3894,7 +3935,11 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ##### Linux based terminal domain primitives block
 
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 ### LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)
 
@@ -3978,7 +4023,11 @@ The contract rules domain primitives blocks are found here in the ai_gateway_ser
 
 ```
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
