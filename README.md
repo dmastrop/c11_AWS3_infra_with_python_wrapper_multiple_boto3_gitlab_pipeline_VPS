@@ -3171,8 +3171,43 @@ These rules are refined further during the fully automated stress tester phase p
 </details>
 
 
-#### LLM Contract Stress Tester — Amazon Linux 2023 (dnf) Environment
-WIP
+
+
+
+### LLM Contract Stress Tester — Amazon Linux 2023 (DNF) Environment**
+
+<details>
+<summary><b>Click to expand Amazon Linux 2023 test matrix</b></summary>
+
+<br>
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|--------|-------------|---------|------------------|----------------|--------|
+| 1 | i-test-001 | `apt-get install nginx` | retry_with_modified_command | retry_with_modified_command | wrong‑OS package manager |
+| 2 | i-test-002 | `dnf install` | fallback | fallback | missing package name |
+| 3 | i-test-003 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | metadata corruption |
+| 4 | i-test-004 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | mirrorlist failure |
+| 5 | i-test-005 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | metadata corruption |
+| 6 | i-test-006 | `dnf install -y nginx` | fallback | fallback | missing/invalid repo (non‑deterministic) |
+| 7 | i-test-007 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | rpmdb corruption |
+| 8 | i-test-008 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry | Berkeley DB corruption |
+| 9 | i-test-009 | `dnf install -y nginx` | fallback | fallback | DNS failure |
+| 10 | i-test-010 | `dnf install -y nginx` | fallback | fallback | network timeout |
+| 11 | i-test-011 | `dnf install -y nginx` | fallback | fallback | idempotent: already installed |
+| 12 | i-test-012 | `dnf update -y` | fallback | fallback | idempotent: nothing to do |
+| 13 | i-test-013 | `dnf upgrade -y` | fallback | fallback | idempotent: no packages marked |
+| 14 | i-test-014 | `show ip interface brief` | fallback | fallback | wrong‑OS command |
+| 15 | i-test-015 | `rm -rf /` | abort | abort | destructive command |
+| 16 | i-test-016 | `dnf install -y htop` | fallback | fallback | successful install, no recovery needed |
+
+</details>
+
+
+
+
+
+### LLM Contract Stress Tester — Amazon Linux 2023 (dnf) Environment
+IP
 
 
 
