@@ -2458,7 +2458,7 @@ A complete code review of the framework will follow the manual testing section a
 
 
 
-### Test validation matrices per domain primitives block  (Manual testing phase with the stress tester) 
+### Test validation matrices per domain primitives block (Manual testing phase with the stress tester) 
 
 
 #### Introduction
