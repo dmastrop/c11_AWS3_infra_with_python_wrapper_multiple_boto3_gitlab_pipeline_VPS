@@ -11,7 +11,12 @@ The README on gitlab is not truncated in the browser with the following URL belo
 
 https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README.md?expanded=true&ref_type=heads&viewer=rich
 
-The README on github is truncated.
+The README on github is truncated and the hyperlinks have not been extensively tested. 
+
+The preferred source should be to use the gitlab link above.
+
+
+
 
 ## Current and latest development work
 
