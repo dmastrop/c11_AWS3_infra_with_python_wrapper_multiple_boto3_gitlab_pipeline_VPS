@@ -110,6 +110,45 @@ def validate_amazonlinux2023_semantics(context: Dict[str, Any], resp: Dict[str, 
                 "Amazon Linux 2023 malformed install (missing package name) must use 'fallback'."
             )
 
+    ## ------------------------------------------------------------
+    ## 6) DNF metadata / mirrorlist failures → cleanup_and_retry
+    ## ------------------------------------------------------------
+    #metadata_indicators = [
+    #    "Failed to download metadata for repo",
+    #    "Cannot prepare internal mirrorlist",
+    #    "No URLs in mirrorlist",
+    #    "Error: failed to download metadata for repo",
+    #    "Error: No matching repo",
+    #]
+
+    #if any(ind in stderr for ind in metadata_indicators):
+    #    if action != "cleanup_and_retry":
+    #        errors.append("DNF metadata corruption on Amazon Linux 2023 must use 'cleanup_and_retry'.")
+
+    #    # cleanup must include dnf clean all
+    #    if isinstance(cleanup, list):
+    #        cleanup_set = set(c.strip() for c in cleanup if isinstance(c, str))
+    #        if "dnf clean all" not in cleanup_set:
+    #            errors.append(
+    #                "Amazon Linux 2023 metadata corruption cleanup must include 'dnf clean all'."
+    #            )
+    #    else:
+    #        errors.append("Amazon Linux 2023 metadata corruption requires 'cleanup' to be a list.")
+
+    #    # retry must include dnf makecache
+    #    if not any("dnf makecache" in c for c in retry_list):
+    #        errors.append("Amazon Linux 2023 metadata corruption retry must include 'dnf makecache'.")
+
+    #    # If a package exists, retry must include dnf install -y <pkg>
+    #    if pkg_from_cmd:
+    #        expected_install = f"dnf install -y {pkg_from_cmd}"
+    #        if not any(expected_install in c for c in retry_list):
+    #            errors.append(
+    #                f"Amazon Linux 2023 metadata corruption retry must include '{expected_install}' "
+    #                "when a package is present."
+    #            )
+
+
     # ------------------------------------------------------------
     # 6) DNF metadata / mirrorlist failures → cleanup_and_retry
     # ------------------------------------------------------------
@@ -118,10 +157,19 @@ def validate_amazonlinux2023_semantics(context: Dict[str, Any], resp: Dict[str, 
         "Cannot prepare internal mirrorlist",
         "No URLs in mirrorlist",
         "Error: failed to download metadata for repo",
-        "Error: No matching repo",
     ]
 
-    if any(ind in stderr for ind in metadata_indicators):
+    # "Error: No matching repo" is metadata corruption ONLY when accompanied
+    # by one of the above indicators.
+    is_metadata_corruption = (
+        any(ind in stderr for ind in metadata_indicators)
+        or (
+            "Error: No matching repo" in stderr
+            and any(ind in stderr for ind in metadata_indicators)
+        )
+    )
+
+    if is_metadata_corruption:
         if action != "cleanup_and_retry":
             errors.append("DNF metadata corruption on Amazon Linux 2023 must use 'cleanup_and_retry'.")
 
@@ -147,6 +195,23 @@ def validate_amazonlinux2023_semantics(context: Dict[str, Any], resp: Dict[str, 
                     f"Amazon Linux 2023 metadata corruption retry must include '{expected_install}' "
                     "when a package is present."
                 )
+
+
+    # ------------------------------------------------------------
+    # 6b) Missing or invalid repo → fallback
+    # ------------------------------------------------------------
+    if (
+        "Error: No matching repo" in stderr
+        and not is_metadata_corruption
+    ):
+        if action != "fallback":
+            errors.append(
+                "Non-deterministic repo errors on Amazon Linux 2023 must use 'fallback'."
+            )
+
+
+
+
 
     # ------------------------------------------------------------
     # 7) rpmdb corruption → cleanup_and_retry
