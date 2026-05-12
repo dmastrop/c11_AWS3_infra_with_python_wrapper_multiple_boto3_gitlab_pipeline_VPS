@@ -3803,6 +3803,25 @@ LLM action plan responses from the LLM that will need manual inspection and perh
 
 The execution of the schema test cases when manually done, with the validator hooked in look like this, for example:
 
+```
+root@1a2c8608e0db:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os amazonlinux2023_dnf --index 7
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/rpm/.rpm.lock"],"retry":["rpm --rebuilddb","dnf install -y nginx"]}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Amazon Linux 2023 2023
+Command: dnf install -y nginx
+Status: PASS
+========================
+
+```
+
+Note that the VALIDATION RESULT is now displayed. 
+With the validator in place around 95% of the test cases can be auto-validated permitting a scaling of test cases and test case
+iteration to harden the contract domain primitives rules block for each OS/platform. 
 
 
 

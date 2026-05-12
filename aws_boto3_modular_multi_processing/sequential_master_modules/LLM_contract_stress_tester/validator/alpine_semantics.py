@@ -1,4 +1,3 @@
-```python
 from typing import Any, Dict, List
 
 from .helpers_linux import (
@@ -225,4 +224,4 @@ def validate_alpine_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> 
         errors.append("Alpine environments in this contract must not use 'sudo' in cleanup or retry.")
 
     return errors
-```
+

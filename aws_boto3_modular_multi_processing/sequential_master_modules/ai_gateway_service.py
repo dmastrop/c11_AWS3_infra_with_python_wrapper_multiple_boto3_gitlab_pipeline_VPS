@@ -1317,7 +1317,8 @@ def recover(request: RecoveryRequest):
                 "    * 'Failed to download metadata for repo'\n"
                 "    * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
                 "    * 'Error: failed to download metadata for repo'\n"
-                "    * 'Error: No matching repo'\n"
+                "    * 'Error: No matching repo' (ONLY when accompanied by metadata/mirrorlist failures)\n"
+                
                 "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
                 "    cleanup:\n"
                 "      - dnf clean all\n"
@@ -1325,6 +1326,12 @@ def recover(request: RecoveryRequest):
                 "      - dnf makecache\n"
                 "      - dnf install -y <pkg>   (only when a package name is present)\n"
                 "\n"
+
+                # Missing or invalid repo (non-deterministic repo errors)
+                "- If stderr contains 'Error: No matching repo' AND the repo does not exist,\n"
+                "  is disabled, or is not part of Amazon Linux 2023 (e.g., 'amzn2023-php'),\n"
+                "  the LLM MUST use 'fallback'.\n"
+
 
                 # rpmdb corruption
                 "- If stderr contains 'rpmdb open failed' or Berkeley DB errors (BDB0113, BDB1507,\n"
