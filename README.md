@@ -1541,7 +1541,7 @@ WORK IN PROGRESS
 - [Test validation matrices per domain primitives block](#test-validation-matrices-per-domain-primitives-block)
 - [Stress tester code review](#stress-tester-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
-- [LLM stress‑tested Contract rules (all domain primitives blocks)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks)
+- [LLM stress‑tested Contract rules (all domain primitives blocks)](#llm-stresstested-contract-rules-all-domain-primitives-blocks)
 
 
 
