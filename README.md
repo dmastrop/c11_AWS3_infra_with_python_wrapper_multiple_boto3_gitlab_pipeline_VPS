@@ -1539,7 +1539,7 @@ WORK IN PROGRESS
 - [Schema context‑based test case design methodology](#schema-context-based-test-case-design-methodology)
 - [Stress tester high‑level file structure](#stress-tester-high-level-file-structure)
 - [Test validation matrices per domain primitives block (Manual testing phase with the stress tester)](#test-validation-matrices-per-domain-primitives-block-manual-testing-phase-with-the-stress-tester)
-- [Dual‑Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
+- [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
 - [Stress tester code review](#stress-tester-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks-for-all-the-current-osplatforms)
@@ -3802,7 +3802,10 @@ For more information on why dual-schema testing is required see this section tha
 ---
 
 
-### Dual‑Schema Testing for Linux (Why It Exists and How It Works)
+
+
+### Dual-Schema Testing for Linux (Why It Exists and How It Works)
+
 
 #### Why Dual‑Schema Testing Is Required
 
