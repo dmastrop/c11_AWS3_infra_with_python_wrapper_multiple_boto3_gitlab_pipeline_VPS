@@ -1,0 +1,50 @@
+For bash_linux.json must change the metadata to the relevant linux distro under test.
+
+This is dual schema testing for all linux distros: the primary linux distro domain primitives block is tested and the
+Revision 6.8 linux bash sub-block is also tested with the bash_linux.json context test cases. Most of the test cases should
+go to LLM action plan fallback.
+
+
+Example for Debian linux testing, the bash_linux.json change the metadata to the following: 
+
+ubuntu@ip-172-31-81-160:~/course11_devops_startup_gitlab_repo/python_testing/AWS_infra_git_repo_env_MULTIPLE_USE/aws_boto3_modular_multi_processing/sequential_master_modules/LLM_contract_stress_tester/context_generator/schemas$ cat bash_linux.json 
+{
+  "os_name": "Debian",    <<<<<
+  "os_version": "11",   <<<<
+  "kernel": "5.10.0",
+  "package_managers": [],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-906",
+      "ip": "10.0.9.15",
+      "tags": [],
+      "history": []
+    },
+
+=========
+
+Likewise in validator.py change the Linux generic to the following
+
+
+
+
+
+
+    #elif os_name == "Linux" and os_version == "generic":
+    #    from .linux_generic_semantics import validate_linux_generic_semantics
+    #    errors.extend(validate_linux_generic_semantics(context, parsed))
+
+    #### For linux bash testing must change the Linux generic above to the specific linix distro under test: 
+    elif os_name == "Debian" and os_version == "11":
+        from .linux_generic_semantics import validate_linux_generic_semantics
+        errors.extend(validate_linux_generic_semantics(context, parsed))
+    
+
+

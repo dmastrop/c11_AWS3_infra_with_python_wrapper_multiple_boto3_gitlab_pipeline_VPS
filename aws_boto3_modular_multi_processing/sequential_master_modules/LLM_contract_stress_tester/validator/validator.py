@@ -92,9 +92,22 @@ def validate_response(
         from .alpine_semantics import validate_alpine_semantics
         errors.extend(validate_alpine_semantics(context, parsed))
 
-    elif os_name == "Linux" and os_version == "generic":
+
+
+
+
+    #elif os_name == "Linux" and os_version == "generic":
+    #    from .linux_generic_semantics import validate_linux_generic_semantics
+    #    errors.extend(validate_linux_generic_semantics(context, parsed))
+
+    #### For linux bash testing must change the Linux generic above to the specific linix distro under test: 
+    elif os_name == "Debian" and os_version == "11":
         from .linux_generic_semantics import validate_linux_generic_semantics
         errors.extend(validate_linux_generic_semantics(context, parsed))
+    
+
+
+
 
     elif os_name == "Linux" and os_version == "busybox":
         from .busybox_semantics import validate_busybox_semantics
@@ -115,6 +128,7 @@ def validate_response(
     elif os_name == "Linux" and os_version == "powershell-core":
         from .pwsh_linux_semantics import validate_pwsh_linux_semantics
         errors.extend(validate_pwsh_linux_semantics(context, parsed))
+
 
     elif os_name == "Cisco IOS":
         from .cisco_ios_semantics import validate_cisco_ios_semantics
