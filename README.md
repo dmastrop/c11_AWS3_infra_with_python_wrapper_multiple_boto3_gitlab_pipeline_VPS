@@ -3804,7 +3804,7 @@ For more information on why dual-schema testing is required see this section tha
 
 
 
-### Dual-Schema Testing for Linux (Why It Exists and How It Works)
+### Dual Schema Testing for Linux (Why It Exists and How It Works)
 
 
 #### Why Dual‑Schema Testing Is Required
