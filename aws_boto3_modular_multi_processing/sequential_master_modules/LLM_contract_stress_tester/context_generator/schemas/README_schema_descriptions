@@ -4,6 +4,21 @@ with that linux distro. The os_name Linux and os_version generic in the original
 The active contract rules are in the malformed linux block in ai_gateway_service.py and this rule noted below that governs package
 manager behavior, for example, will offload the final rule behavior to the domain specific primitive linux distro rule block.
 
+
+See the following notes here: 
+
+sequential_master_modules/LLM_contract_stress_tester/validator$
+
+
+README_schema_validator_notes
+
+
+
+
+
+
+======
+
                 ##### Revision 6.8 — Linux malformed-command hardening (applies to bash and BusyBox shells) #####
                 "- These rules extend and harden the existing malformed Linux rules and apply to ALL Linux-family\n"
                 "  OSes covered by this contract (os_name): Ubuntu, Debian, CentOS, RHEL, Fedora, Amazon Linux,\n"
@@ -279,4 +294,32 @@ CentOS 8 with `dnf` (primary) and `yum` (compatibility wrapper).
   - Fedora  
 - Ensures correct handling of CentOS‑specific mirrorlist failures
 
+**17. amazonlinux2023_dnf.json**
+Amazon Linux 2023 with `dnf` and bash.
 
+**Why this schema is important:**
+- Amazon Linux 2023 is a **new, DNF‑only**, Fedora‑aligned distribution — very different from Amazon Linux 2
+- Ensures the LLM **does NOT fall back to yum**, which no longer exists on AL2023
+- Validates AL2023‑specific error patterns:
+  - “Failed to download metadata for repo 'amzn2023-core'”
+  - “Cannot prepare internal mirrorlist: No URLs in mirrorlist”
+  - “Error: No matching repo: amzn2023‑php”
+  - “BDB0113 Thread/process died” (rpmdb corruption)
+- Tests correct handling of AL2023 network failures:
+  - “Could not resolve host: mirror.amazonlinux.com”
+  - “Connection timed out”
+- Ensures correct remediation behavior for metadata corruption:
+  - `dnf clean all`
+  - `dnf makecache`
+  - retry install
+- Validates correct rpmdb corruption handling (`rpm --rebuilddb`)
+- Ensures destructive commands (`rm -rf /`) trigger abort
+- Confirms strict OS boundary behavior so AL2023 rules do not leak into:
+  - Amazon Linux 2
+  - Fedora
+  - CentOS 8
+  - RHEL 8/9
+- Critical for verifying that the LLM correctly distinguishes between:
+  - **Amazon Linux 2 (yum)**
+  - **Amazon Linux 2023 (dnf)**
+  - despite both being “Amazon Linux”
