@@ -4113,7 +4113,7 @@ This layer ensures the LLM receives the **exact execution context** for each tes
 
 
 
-#### Contract Structural Map (All 17 Domain‑Primitives Blocks)**
+#### Contract Structural Map (All 17 Domain‑Primitives Blocks)
 
 | **Section** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
 |-------------|------------------|-------------|------------------|-----------|
