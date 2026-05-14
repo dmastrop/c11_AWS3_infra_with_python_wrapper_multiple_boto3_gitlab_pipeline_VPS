@@ -3256,12 +3256,18 @@ These rules are refined further during the fully automated stress tester phase p
 
 #### *LLM Contract Stress Tester — Linux Generic (bash) Environment*
 
-NOTE: Testing was done on Ubuntu Debian RHEL 9 and Alpine with the dual-schema testing methodology, running the schema for 
+NOTE: Testing was done on Ubuntu, Debian, RHEL, Alpine with the dual-schema testing methodology, running the schema for 
 the linux distro and also the schema for the Linux bash (bash_linux.json)
+Other OS that require dual-schema testing are Amazon Linux 2, Amazon Linux 2023, Fedora, CentOS 7, and CentOS 8
+
 A perfect result is all fallback for the contract action, except for the first test case which is an abort.
 
-For more information on why dual-schema testing is required see this section that was presented earlier:
+For more information on why dual-schema testing is required see this section:
 **Dual‑Schema Testing for Linux (Why It Exists and How It Works)**
+
+For more information on why fallback is the expected result for most of the test cases see this section:
+##Why the LLM Must Never Autocorrect Bash Commands**
+
 
 
 <details>
@@ -4046,6 +4052,350 @@ This is the only reliable way to validate:
 [Back to top](#top-update59)
 
 ---
+
+
+
+
+### Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS mutation policy
+
+#### Overview
+
+The AI Gateway Service contract enforces strict determinism.  
+Every LLM action must be:
+
+- predictable  
+- reproducible  
+- safe  
+- rule‑bound  
+- non‑creative  
+
+This is why the contract explicitly forbids the LLM from “fixing” or “guessing” corrections for malformed bash commands.  
+Even when a human can easily infer the intended command, the LLM is not allowed to.
+
+This rule is just as important as the rule that forbids the LLM from mutating the OS (e.g., installing packages on Amazon Linux 2).  
+Both rules exist for the same reason:
+
+> **Guessing user intent breaks determinism and introduces unacceptable risk.**
+
+---
+
+#### Why Bash Autocorrection Is Forbidden
+
+**1. Bash typos are ambiguous**
+
+A human might type:
+
+```
+lh -la
+```
+
+and *probably* mean:
+
+```
+ls -la
+```
+
+But from a deterministic system perspective, `lh` could also be:
+
+- `ln`  
+- `ld`  
+- `lsof`  
+- `lshw`  
+- `lua`  
+- `login`  
+- or any other command beginning with `l`
+
+There is no rule‑based way to know what the user intended.
+
+Allowing the LLM to “fix” this would require guessing — and guessing is explicitly forbidden.
+
+---
+
+**2. Even if the command is close, the flags are ambiguous**
+
+Example:
+
+```
+ls -lp
+```
+
+This is a valid command.  
+So is:
+
+- `ls -la`  
+- `ls -lh`  
+- `ls -lR`  
+- `ls -lpa`  
+- `ls -l --color=auto`  
+
+There is no deterministic rule that says:
+
+```
+-lp → -la
+```
+
+Any correction here is a hallucination.
+And hallucinations must be minimized. This can be done through proper and appropriate LLM action plan responses (namely using
+a native fallback action plan response), by tuning the contract rules accordingly.
+
+
+---
+
+**3. Bash corrections lead to nondeterministic behavior**
+
+If the LLM were allowed to “fix” bash commands, it would begin:
+
+- inserting missing flags  
+- removing flags  
+- rewriting pipelines  
+- repairing subshells  
+- adding missing arguments  
+- inferring user intent  
+- inventing commands  
+
+This destroys:
+
+- reproducibility  
+- safety  
+- OS isolation  
+- contract determinism  
+- auditability  
+
+The system becomes unpredictable.
+
+---
+
+**4. Bash autocorrection is fundamentally different from package‑manager rewrites**
+
+Package‑manager rewrites are deterministic:
+
+- Ubuntu → apt‑get  
+- Debian → apt‑get  
+- RHEL → yum  
+- CentOS 8 → dnf  
+- Alpine → apk  
+
+These are rule‑based, OS‑specific, and unambiguous.
+
+Bash corrections are not.
+
+This is why the contract allows package‑manager rewrites but forbids bash rewrites.
+
+---
+
+#### Fallback Is the Only Safe Action Plan response
+
+When the LLM encounters:
+
+- unrecognized commands  
+- malformed pipelines  
+- malformed subshells  
+- quoting errors  
+- missing arguments  
+- syntactic errors  
+- typos  
+- unknown commands  
+
+…the correct action is:
+
+```
+{"action": "fallback"}
+```
+
+This is not a failure — it is the **correct deterministic behavior**.
+
+The engine returns the error to the user, and the user fixes their own bash typo.
+In the pipeline the node would be native fallback (not derived fallback). And the node would be install_failed registry_entry status. There is no way to resurrect the node as install_success (meaning all commands successfully executed on the node).
+
+Malformed bash commands are ambiguous and cannot be deterministically corrected.
+Allowing the LLM to “fix” them would violate the contract’s safety and determinism guarantees.
+
+
+In the stress tester, malformed bash commands must always produce `fallback`, ensuring the node enters `install_failed` state. This prevents the LLM from attempting any corrective action that could mutate the OS or violate determinism.
+
+This is why most of the tests in the earlier section during manual testing for the bash_linux.json schema returned fallback. This
+is the correct and desired response and indicates that the contract rules are properly constructed and "guarding" the 
+node from execution of an improperly re-written command. (either with retry_with_modifed_command or cleanup_and_retry action plan)
+
+---
+
+#### Parallel to the “Never Mutate the OS” Rule
+
+
+
+The same reasoning applies to OS mutation:
+
+- The LLM must never install packages  
+- The LLM must never enable repos  
+- The LLM must never modify system configuration  
+- The LLM must never “fix” missing dependencies by altering the OS  
+
+Why?
+
+Because these actions are:
+
+- nondeterministic  
+- irreversible  
+- OS‑specific  
+- potentially destructive  
+- outside the LLM’s authority  
+
+Just like bash autocorrection, OS mutation requires guessing user intent — and guessing is forbidden.
+
+
+##### OS Mutation Policy (Never Modify the Operating System)
+
+The OS mutation policy ensures that the LLM never alters the underlying system state, preserving determinism across all Linux distributions.
+ 
+The LLM must never:
+
+- install packages  
+- remove packages  
+- enable repositories  
+- modify system configuration  
+- repair dpkg/rpm  
+- fix missing dependencies  
+- update the OS  
+- alter kernel or bootloader state  
+
+This policy applies to all Linux distributions in the contract, including Ubuntu, Debian, RHEL, CentOS, Fedora, Amazon Linux 2, and Amazon Linux 2023.
+While the OS‑mutation policy applies uniformly across all Linux distributions, it becomes especially critical on Amazon Linux 2 and Amazon Linux 2023 due to their repo‑gated, extras‑driven, and module‑driven design. These OSes expose far more opportunities for accidental OS mutation, which is why the next section provides a dedicated Amazon Linux case study.
+
+---
+
+#### Revision 6.8: Hardening Against Bash Hallucinations
+
+Revision 6.8 in the contract palyload, formalizes the following rule constructs:
+
+- malformed pipelines → fallback  
+- malformed subshells → fallback  
+- unmatched quotes → fallback  
+- missing commands → fallback  
+- unknown commands → fallback  
+- sudo injection → fallback  
+- destructive commands → abort  
+- **no pipeline repair**  
+- **no subshell repair**  
+- **no flag guessing**  
+- **no command guessing**  
+
+This ensures the LLM behaves as a deterministic subsystem, not a creative assistant.
+
+---
+
+#### Conclusion on bash autocorrection
+
+Bash autocorrection is forbidden because:
+
+- it is nondeterministic  
+- it requires guessing  
+- it breaks reproducibility  
+- it introduces safety risks  
+- it violates the contract’s core principles  
+
+The LLM must never infer:
+
+```
+lh -la → ls -la
+```
+
+for the same reason it must never:
+
+- install missing packages  
+- enable Amazon Linux Extras  
+- modify system configuration  
+- repair the OS  
+- guess package names  
+
+The contract’s job is to enforce **deterministic, safe, rule‑bound behavior** — not to interpret user intent.
+
+Revision 6.8 and the OS mutation policy are parallel safeguards in that both prevent the LLM from taking nondeterministic actions based on guessed user intent.
+
+More will be said on the OS mutation on the next major section that follows this.
+
+
+
+#### Revision 6.8: Prohibition on Pipeline and Subshell Corrections
+
+Revision 6.8 introduces another critical hardening rule:  
+the LLM must **never** attempt to “repair,” “fix,” or “correct” malformed pipelines or subshells.
+
+This set of contract rules exists because malformed pipelines are inherently ambiguous.  
+A human might guess the intended structure, but the LLM is not allowed to.
+
+##### Why Pipeline Correction Is Forbidden
+
+Malformed pipelines such as:
+
+```
+echo hello | | grep h
+echo hello | grep h | | wc -l
+echo $(unknowncmd | grep h)
+```
+
+are ambiguous.  
+
+There is no deterministic rule that says:
+
+- remove the extra `|`
+- insert a missing command
+- reorder pipeline stages
+- infer the intended structure
+
+Any such correction would require guessing user intent, which violates the contract’s determinism guarantees.
+
+
+
+##### Revision 6.8 Requirements
+
+Revision 6.8 explicitly states:
+
+- If a command contains malformed pipelines (`|`) or malformed subshells (`$(...)`),  
+  **the LLM MUST return `fallback`.**
+- The LLM MUST NOT:
+  - remove extra `|`
+  - insert missing commands
+  - infer missing pipeline stages
+  - rewrite or reorder pipeline components
+  - attempt to “repair” unmatched parentheses
+  - attempt to “repair” incomplete subshells
+- The only exception is destructive commands, which still trigger `abort`.
+
+
+
+Allowing pipeline correction would cause:
+
+- nondeterministic behavior  
+- hallucinated rewrites  
+- unsafe command execution  
+- cross‑OS leakage  
+- unpredictable retries  
+- broken reproducibility  
+
+By enforcing strict fallback, the system remains:
+
+- deterministic  
+- auditable  
+- safe  
+- predictable  
+- rule‑bound  
+
+##### Pipeline Failures and Node State
+
+When a malformed pipeline triggers fallback:
+
+- the engine treats it as a **native fallback** (not derived)  
+- the node is marked **install_failed** in the registry  
+- the node **cannot** be resurrected to install_success  
+- Phase 4a.1.6 (LLM retry) does **not** apply here and cannot remmediate such a problem 
+- the user must correct the command manually  
+
+This is the correct and safe behavior.
+
+
+
+
+
 
 
 
