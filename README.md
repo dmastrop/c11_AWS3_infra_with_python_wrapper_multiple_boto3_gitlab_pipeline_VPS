@@ -1540,6 +1540,7 @@ WORK IN PROGRESS
 - [Stress tester high‑level file structure](#stress-tester-high-level-file-structure)
 - [Test validation matrices per domain primitives block (Manual testing phase with the stress tester)](#test-validation-matrices-per-domain-primitives-block-manual-testing-phase-with-the-stress-tester)
 - [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
+- [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [Stress tester code review](#stress-tester-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks-for-all-the-current-osplatforms)
@@ -4056,7 +4057,7 @@ This is the only reliable way to validate:
 
 
 
-### Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS mutation policy
+### Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy
 
 #### Overview
 
@@ -4393,7 +4394,11 @@ When a malformed pipeline triggers fallback:
 This is the correct and safe behavior.
 
 
+---
 
+[Back to top](#top-update59)
+
+---
 
 
 
