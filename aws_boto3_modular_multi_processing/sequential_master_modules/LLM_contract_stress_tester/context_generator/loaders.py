@@ -40,6 +40,7 @@ def load_schema(schema_name):
     See the extensive documenatation on this design in the README. 
     See the comments in the generator.py for more detail on this as well.
 
+    The original code is below and the new code line to call the generate_context of generator.py is below.
     """
 
     filename = f"{schema_name}.json"
