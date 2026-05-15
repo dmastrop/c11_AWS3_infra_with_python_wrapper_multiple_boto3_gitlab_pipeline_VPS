@@ -82,6 +82,9 @@ def validate_amazonlinux2023_semantics(context: Dict[str, Any], resp: Dict[str, 
                         "in the retry command."
                     )
 
+        return errors
+
+
     # ------------------------------------------------------------
     # 3) Malformed pipelines/subshells → fallback
     # ------------------------------------------------------------

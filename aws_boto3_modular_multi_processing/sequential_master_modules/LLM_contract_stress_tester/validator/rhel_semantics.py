@@ -87,6 +87,9 @@ def validate_rhel_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> Li
                         "in the retry command."
                     )
 
+        return errors
+
+
     # ------------------------------------------------------------
     # 3) Malformed pipelines/subshells → fallback
     # ------------------------------------------------------------

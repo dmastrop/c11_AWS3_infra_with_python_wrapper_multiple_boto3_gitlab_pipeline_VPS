@@ -87,6 +87,9 @@ def validate_debian_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> 
                         "in the retry command."
                     )
 
+        return errors
+
+
     # ------------------------------------------------------------------
     # 3) Malformed pipelines/subshells → fallback
     #

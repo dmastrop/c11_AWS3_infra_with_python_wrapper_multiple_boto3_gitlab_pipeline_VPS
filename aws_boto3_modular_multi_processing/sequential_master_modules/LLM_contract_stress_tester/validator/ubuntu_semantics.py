@@ -94,6 +94,10 @@ def validate_ubuntu_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> 
                         "in the retry command."
                     )
 
+        # 🔥 REQUIRED SHORT‑CIRCUIT
+        return errors
+
+
     # ------------------------------------------------------------------
     # 3) Malformed pipelines/subshells → fallback
     #

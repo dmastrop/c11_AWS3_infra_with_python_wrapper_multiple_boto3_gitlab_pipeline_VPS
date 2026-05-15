@@ -81,6 +81,9 @@ def validate_centos7_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
                         f"CentOS 7 wrong-package-manager rewrite must include '{expected_sub}' "
                         "in the retry command."
                     )
+        return errors
+
+
 
     # ------------------------------------------------------------
     # 3) Malformed pipelines/subshells → fallback

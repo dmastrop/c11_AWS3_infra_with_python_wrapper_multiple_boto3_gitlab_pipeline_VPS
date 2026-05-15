@@ -92,6 +92,9 @@ def validate_macos_brew_semantics(context: Dict[str, Any], resp: Dict[str, Any])
                     "macOS-brew: wrong package manager with NO package name must use 'fallback'."
                 )
 
+        return errors
+
+
     # ------------------------------------------------------------
     # 3) Malformed pipelines/subshells → fallback
     # ------------------------------------------------------------
