@@ -66,7 +66,7 @@ def validate_macos_brew_semantics(context: Dict[str, Any], resp: Dict[str, Any])
     # ------------------------------------------------------------
     pkg_from_cmd = extract_pkg_from_command(command)
 
-    if cmd_uses_wrong_package_manager(command):
+    if cmd_uses_wrong_package_manager(command, os_name):
         if pkg_from_cmd:
             if action != "retry_with_modified_command":
                 errors.append(

@@ -61,7 +61,7 @@ def validate_cisco_ios_semantics(context: Dict[str, Any], resp: Dict[str, Any]) 
     # ------------------------------------------------------------
     # 2) Linux/macOS/Windows commands → abort
     # ------------------------------------------------------------
-    if cmd_uses_wrong_package_manager(command):
+    if cmd_uses_wrong_package_manager(command, os_name):
         if action != "abort":
             errors.append(
                 "Cisco IOS does not support Linux/macOS package managers. MUST use 'abort'."

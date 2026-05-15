@@ -63,7 +63,7 @@ def validate_windows_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
     # ------------------------------------------------------------
     # 2) Linux/macOS package managers or POSIX tools → fallback
     # ------------------------------------------------------------
-    if cmd_uses_wrong_package_manager(command):
+    if cmd_uses_wrong_package_manager(command, os_name):
         if action != "fallback":
             errors.append(
                 "Windows PowerShell MUST use 'fallback' for Linux/macOS package managers."
@@ -143,7 +143,7 @@ def validate_windows_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
 
         # No invented package managers or modules
         for r in retry_list:
-            if cmd_uses_wrong_package_manager(r):
+            if cmd_uses_wrong_package_manager(r, os_name):
                 errors.append("Windows cleanup_and_retry MUST NOT introduce package managers.")
 
     # ------------------------------------------------------------
@@ -156,7 +156,7 @@ def validate_windows_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
             )
         else:
             # MUST NOT introduce new tools or package managers
-            if cmd_uses_wrong_package_manager(retry):
+            if cmd_uses_wrong_package_manager(retry, os_name):
                 errors.append(
                     "Windows retry_with_modified_command MUST NOT introduce Linux/macOS package managers."
                 )

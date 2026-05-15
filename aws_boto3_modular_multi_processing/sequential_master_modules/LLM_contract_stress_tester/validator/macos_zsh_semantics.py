@@ -64,14 +64,14 @@ def validate_macos_zsh_semantics(context: Dict[str, Any], resp: Dict[str, Any]) 
     # macOS-zsh has NO package manager.
     # ALL package-manager commands MUST result in fallback.
     # ------------------------------------------------------------
-    if cmd_uses_wrong_package_manager(command) or command.startswith("brew"):
+    if cmd_uses_wrong_package_manager(command, os_name) or command.startswith("brew"):
         if action != "fallback":
             errors.append(
                 "macOS-zsh: ALL package-manager commands (apt/yum/dnf/apk/pacman/brew) MUST use 'fallback'."
             )
 
     for r in retry_list:
-        if cmd_uses_wrong_package_manager(r) or (isinstance(r, str) and r.startswith("brew")):
+        if cmd_uses_wrong_package_manager(r, os_name) or (isinstance(r, str) and r.startswith("brew")):
             errors.append(
                 "macOS-zsh retry MUST NOT reference any package manager (apt/yum/dnf/apk/pacman/brew)."
             )
@@ -164,7 +164,7 @@ def validate_macos_zsh_semantics(context: Dict[str, Any], resp: Dict[str, Any]) 
             )
         else:
             # MUST NOT introduce package managers
-            if cmd_uses_wrong_package_manager(retry) or retry.startswith("brew"):
+            if cmd_uses_wrong_package_manager(retry, os_name) or retry.startswith("brew"):
                 errors.append(
                     "macOS-zsh retry_with_modified_command MUST NOT introduce package managers."
                 )

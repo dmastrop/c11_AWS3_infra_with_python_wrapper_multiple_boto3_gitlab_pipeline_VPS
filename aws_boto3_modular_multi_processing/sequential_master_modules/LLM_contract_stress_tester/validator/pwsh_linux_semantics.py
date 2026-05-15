@@ -79,7 +79,7 @@ def validate_pwsh_linux_semantics(context: Dict[str, Any], resp: Dict[str, Any])
     # ------------------------------------------------------------
     # 3) Package managers are NOT allowed → fallback
     # ------------------------------------------------------------
-    if cmd_uses_wrong_package_manager(command):
+    if cmd_uses_wrong_package_manager(command, os_name):
         if action != "fallback":
             errors.append(
                 "PowerShell Core on Linux has NO package manager semantics. "
@@ -87,7 +87,7 @@ def validate_pwsh_linux_semantics(context: Dict[str, Any], resp: Dict[str, Any])
             )
 
     for r in retry_list:
-        if cmd_uses_wrong_package_manager(r):
+        if cmd_uses_wrong_package_manager(r, os_name):
             errors.append(
                 "PowerShell Core on Linux retry MUST NOT reference any package manager."
             )
@@ -177,7 +177,7 @@ def validate_pwsh_linux_semantics(context: Dict[str, Any], resp: Dict[str, Any])
             )
 
         for r in retry_list:
-            if cmd_uses_wrong_package_manager(r):
+            if cmd_uses_wrong_package_manager(r, os_name):
                 errors.append(
                     "PowerShell Core on Linux cleanup_and_retry MUST NOT introduce package managers."
                 )
@@ -191,7 +191,7 @@ def validate_pwsh_linux_semantics(context: Dict[str, Any], resp: Dict[str, Any])
                 "PowerShell Core on Linux retry_with_modified_command MUST use a single string retry command."
             )
         else:
-            if cmd_uses_wrong_package_manager(retry):
+            if cmd_uses_wrong_package_manager(retry, os_name):
                 errors.append(
                     "PowerShell Core on Linux retry_with_modified_command MUST NOT introduce package managers."
                 )

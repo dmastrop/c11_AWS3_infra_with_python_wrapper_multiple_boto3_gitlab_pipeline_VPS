@@ -67,7 +67,7 @@ def validate_panos_semantics(context: Dict[str, Any], resp: Dict[str, Any]) -> L
         "/usr", "/bin", "/etc", "C:\\", "HKLM:\\", "apt ", "apt-get ",
         "yum ", "dnf ", "apk ", "brew ", "snap "
     ]
-    if any(tok in command for tok in forbidden_shell_tokens) or cmd_uses_wrong_package_manager(command):
+    if any(tok in command for tok in forbidden_shell_tokens) or cmd_uses_wrong_package_manager(command, os_name):
         if action != "abort":
             errors.append(
                 "PAN-OS does not support Linux/macOS/Windows/IOS commands. MUST use 'abort'."
