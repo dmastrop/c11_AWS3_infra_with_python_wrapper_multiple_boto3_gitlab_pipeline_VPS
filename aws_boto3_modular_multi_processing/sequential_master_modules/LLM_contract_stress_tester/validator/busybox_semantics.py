@@ -25,7 +25,7 @@ def validate_busybox_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
 
     os_name = context.get("os_name", "")
     os_version = context.get("os_version", "")
-    print("DEBUG:", repr(os_name))
+    #print("DEBUG:", repr(os_name))
 
     command = (context.get("command") or "").strip()
     stderr = context.get("stderr") or ""
