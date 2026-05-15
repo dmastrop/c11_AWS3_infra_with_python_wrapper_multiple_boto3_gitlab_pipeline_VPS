@@ -19,7 +19,8 @@ def validate_centos7_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
     errors: List[str] = []
 
     os_name = context.get("os_name", "")   
-    
+    print("DEBUG:", repr(os_name))
+
     command = (context.get("command") or "").strip()
     stderr = context.get("stderr") or ""
     exit_status = context.get("exit_status")
@@ -81,7 +82,7 @@ def validate_centos7_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
                         f"CentOS 7 wrong-package-manager rewrite must include '{expected_sub}' "
                         "in the retry command."
                     )
-        return errors
+        return errorg
 
 
 

@@ -19,6 +19,7 @@ def validate_centos8_semantics(context: Dict[str, Any], resp: Dict[str, Any]) ->
     errors: List[str] = []
 
     os_name = context.get("os_name", "")   
+    print("DEBUG:", repr(os_name))
 
     command = (context.get("command") or "").strip()
     stderr = context.get("stderr") or ""
