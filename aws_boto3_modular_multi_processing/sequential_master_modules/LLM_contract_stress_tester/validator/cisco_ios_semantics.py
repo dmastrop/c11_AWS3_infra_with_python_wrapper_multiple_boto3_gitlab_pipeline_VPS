@@ -24,6 +24,8 @@ def validate_cisco_ios_semantics(context: Dict[str, Any], resp: Dict[str, Any]) 
 
     errors: List[str] = []
 
+    os_name = context.get("os_name", "")
+
     command = (context.get("command") or "").strip()
     stderr = context.get("stderr") or ""
     exit_status = context.get("exit_status")
