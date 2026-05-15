@@ -1377,6 +1377,14 @@ def resurrection_install_tomcat(
         # --------------------------------------------------------
         # 1. Build the AI context payload (IDENTICAL TO ORIGINAL)
         # --------------------------------------------------------
+        
+        #### NOTE: os_info will be generated from an os-discovery module that will be implemented in this module2f. 
+        #### The registry_entry tags field will be used to store the os_name and os_version from the discovery logic/code
+        #### If the thread (node) fails and is sent to the AI/MCP HOOK, the os_name and os_version can be used to create
+        #### the os_info which must be incorporated into the context as shown below.
+        #### The os_name and os_version will be incorporated into the context as os_info and the LLM will parse out the 
+        #### os_name and os_version so that the contract decision logic can be applied appropriately.
+
         context = {
             "command": original_command,
             "stdout": stdout_output,
