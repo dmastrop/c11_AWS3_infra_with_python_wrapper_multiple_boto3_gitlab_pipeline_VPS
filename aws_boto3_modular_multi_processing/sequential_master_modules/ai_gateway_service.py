@@ -2186,6 +2186,17 @@ def recover(request: RecoveryRequest):
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error', 'unexpected token'), the LLM MUST return 'fallback'.\n"
                 "- The LLM MUST NOT attempt to repair malformed pipelines, MUST NOT insert missing commands, and MUST NOT infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+
+
+                 ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                "- If a command contains flags that are invalid for BusyBox ash or any BusyBox applet\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not supported by the BusyBox applet),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+
                 "- BusyBox ash MUST NOT introduce 'sudo' under any circumstances.\n"
 
                 ##### BusyBox Domain Primitives (Revision 14) #####
@@ -2201,6 +2212,17 @@ def recover(request: RecoveryRequest):
                 "- If the command references ANY package manager (apt, apt-get, yum, dnf, apk, brew), the LLM MUST return 'abort'.\n"
                 "- Example abort messages:\n"
                 "    { \"action\": \"abort\", \"message\": \"BusyBox does not support Linux package managers.\" }\n"
+
+
+                ##### Wrong package manager in pipelines (&&) — BusyBox semantics #####   #### PATCH stress_tester1 ####
+                "- If the command is a pipeline using '&&' and ANY segment references a Linux package manager\n"
+                "  (apt, apt-get, yum, dnf, apk, brew, pacman), the LLM MUST return 'abort'.\n"
+                "- BusyBox does NOT support Linux package managers under ANY circumstances.\n"
+                "- The LLM MUST NOT attempt to rewrite, correct, or translate ANY package‑manager segment.\n"
+                "- The LLM MUST NOT attempt to preserve or execute the non‑PM segments of the pipeline.\n"
+                "- The entire command MUST be treated as unsupported and MUST trigger 'abort'.\n"
+                "\n"
+
 
                 ##### Malformed BusyBox commands #####
                 "- If a BusyBox applet is invoked with missing arguments (e.g., 'cp', 'mv', 'rm' with no target), the LLM MUST use 'fallback'.\n"
