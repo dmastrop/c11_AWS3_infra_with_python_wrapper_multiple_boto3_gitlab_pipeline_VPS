@@ -221,6 +221,7 @@ def main():
         print("Errors:")
         for err in validation["errors"]:
             print(f"  - {err}")
+    print(f"[DEBUG] schema os_name={schema.get('os_name')}, schema os_version={schema.get('os_version')}")
     print("========================\n")
 
 if __name__ == "__main__":

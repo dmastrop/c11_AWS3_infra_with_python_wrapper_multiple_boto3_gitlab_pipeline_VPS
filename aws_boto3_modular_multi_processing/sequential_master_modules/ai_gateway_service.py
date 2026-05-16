@@ -726,7 +726,15 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"                
                 "\n"
-                
+
+                ##### Invalid package‑manager flags (Linux-family OSes) PATCH stress_tester1  #####
+                "- If an 'apt', 'apt-get', 'yum', 'dnf', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
                 # Busybox addendum to Revision 6.8:
                 "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
 
@@ -747,7 +755,33 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST rewrite the command using the correct Ubuntu package manager ('apt-get') and retry.\n"
                 "- If the command is destructive (rm -rf /), the LLM MUST abort.\n"
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
-                
+               
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 ####
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If the wrong‑OS package‑manager segment performs a simple package install, such as:\n"
+                "      yum install <pkg>\n"
+                "      dnf install <pkg>\n"
+                "      apk add <pkg>\n"
+                "      pacman -S <pkg>\n"
+                "  the LLM MUST use 'retry_with_modified_command' and rewrite ONLY that segment using the correct package manager\n"
+                "  for this OS.\n"
+                "- The LLM MUST NOT rewrite or duplicate the original correct segment.\n"
+                "\n"
+                "- If the wrong‑OS package‑manager segment performs a system‑wide operation, such as:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system‑wide operations into equivalents for this OS.\n"
+                "\n"
+
+               
                 #### Revision 6.4 (Hash Sum mismatch)  (replaced with Revision 6.5)
 
                 ##### Revision 6 addtions to the ubuntu domain primitives  #####
@@ -791,6 +825,10 @@ def recover(request: RecoveryRequest):
                 "- If the failing command DOES include a package name (for example, 'apt-get install -y mysql-server'),\n"
                 "  then the \"retry\" list MUST include, after 'apt-get update -y', the command:\n"
                 "        - apt-get install -y <pkg>\n"
+
+
+
+
 
 
 
@@ -2048,7 +2086,7 @@ def recover(request: RecoveryRequest):
                 "  ONLY when a safe, concrete package name is present.\n"
                 "- If no package name is present, the LLM MUST use 'fallback'.\n"
                 "\n"
-                ##### Wrong package manager in pipelines (&&) #####   #### PATCH ####
+                ##### Wrong package manager in pipelines (&&) #####   #### PATCH stress_tester1  ####
                 "- If the command is a pipeline using '&&' and includes a non-macOS package manager (apt, apt-get, yum, dnf, apk, pacman),\n"
                 "  the LLM MUST treat each segment independently.\n"
                 "\n"
@@ -2078,7 +2116,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST use 'fallback' unless a safe correction is directly implied.\n"
                 "- The LLM MUST NOT guess a package name.\n"
                 "\n"
-                ##### Invalid brew install flags #####   #### PATCH #####
+                ##### Invalid brew install flags #####   #### PATCH stress_tester1 #####
                 "- If a 'brew install' command contains any unknown or unsupported flags (e.g., 'invalid option:' in stderr),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to correct, remove, or rewrite unknown flags.\n"
