@@ -1430,6 +1430,17 @@ def recover(request: RecoveryRequest):
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless destructive.\n"
                 "\n"
 
+
+                ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                "- If a 'dnf', 'yum', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+
+
                 # BusyBox addendum
                 "These rules also apply when BusyBox applets are invoked on Linux-family OSes.\n"
 
@@ -1448,6 +1459,33 @@ def recover(request: RecoveryRequest):
                 "  when a safe, concrete package name is present:\n"
                 "      dnf install -y <pkg>\n"
                 "\n"
+
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 ####
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: apt/apt-get on Amazon Linux 2023; yum/dnf on Ubuntu/Debian; apk/pacman on non-Alpine/Arch systems),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If the wrong‑OS package‑manager segment performs a simple package install, such as:\n"
+                "      apt-get install <pkg>\n"
+                "      apt install <pkg>\n"
+                "      yum install -y <pkg>\n"
+                "      apk add <pkg>\n"
+                "      pacman -S <pkg>\n"
+                "  the LLM MUST use 'retry_with_modified_command' and rewrite ONLY that segment using the correct package manager\n"
+                "  for this OS (i.e., 'dnf install -y <pkg>').\n"
+                "- The LLM MUST NOT rewrite or duplicate the original correct segment.\n"
+                "\n"
+                "- If the wrong‑OS package‑manager segment performs a system‑wide operation, such as:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update (when wrong OS)\n"
+                "      dnf upgrade (when wrong OS)\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system‑wide operations into equivalents for this OS.\n"
+                "\n"
+
 
                 # Malformed install
                 "- If 'dnf install' or 'yum install' is called without a package name and stderr\n"
