@@ -147,7 +147,7 @@ def validate_macos_brew_semantics(context: Dict[str, Any], resp: Dict[str, Any])
         "Error: failed to download",
         "Error: Fetching /usr/local/Homebrew",
         "Error: SHA256 mismatch",
-        "Error: No available formula",
+        #"Error: No available formula",
         "Error: Corrupt cache",
     ]
     if any(sig in stderr for sig in brew_corruption_signatures):

@@ -1990,8 +1990,9 @@ def recover(request: RecoveryRequest):
 
 
 
-
+                ##########################################################
                 ##### macOS Homebrew domain primitives (Revision 15) #####
+                ##########################################################
                 "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-brew\".\n"
                 "They MUST NOT apply to macOS-zsh, Linux-family OSes, BusyBox, Windows, PAN-OS, or Cisco IOS.\n"
                 "\n"
@@ -2047,6 +2048,27 @@ def recover(request: RecoveryRequest):
                 "  ONLY when a safe, concrete package name is present.\n"
                 "- If no package name is present, the LLM MUST use 'fallback'.\n"
                 "\n"
+                ##### Wrong package manager in pipelines (&&) #####   #### PATCH ####
+                "- If the command is a pipeline using '&&' and includes a non-macOS package manager (apt, apt-get, yum, dnf, apk, pacman),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If a non-macOS package manager segment performs a simple package install, such as:\n"
+                "      yum install <pkg>\n"
+                "      dnf install <pkg>\n"
+                "      apk add <pkg>\n"
+                "  the LLM MUST use 'retry_with_modified_command' and rewrite ONLY that segment as:\n"
+                "      brew install <pkg>\n"
+                "- The LLM MUST NOT rewrite or duplicate the original brew segment.\n"
+                "\n"
+                "- If a non-macOS package manager segment performs a system-wide operation, such as:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system-wide operations into brew equivalents.\n"
+                "\n"
+                
+
                 ##### Malformed brew install commands #####
                 "- Examples of malformed commands:\n"
                 "    brew install\n"
@@ -2056,6 +2078,13 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST use 'fallback' unless a safe correction is directly implied.\n"
                 "- The LLM MUST NOT guess a package name.\n"
                 "\n"
+                ##### Invalid brew install flags #####   #### PATCH #####
+                "- If a 'brew install' command contains any unknown or unsupported flags (e.g., 'invalid option:' in stderr),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, or rewrite unknown flags.\n"
+                "- The LLM MUST NOT guess what the intended flag might have been.\n"
+                "\n"
+
                 ##### Destructive commands #####
                 "- If the command is destructive (e.g., 'rm -rf /', 'rm -rf /System', 'rm -rf /usr/local/Homebrew'),\n"
                 "  the LLM MUST return 'abort' with a clear message.\n"
