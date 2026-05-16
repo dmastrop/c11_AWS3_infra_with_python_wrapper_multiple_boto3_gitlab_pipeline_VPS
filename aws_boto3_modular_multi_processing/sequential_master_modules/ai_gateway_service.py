@@ -2557,6 +2557,15 @@ def recover(request: RecoveryRequest):
                 "  destructive, in which case 'abort' applies.\n"
                 "\n"
 
+                ##### Invalid flags (macOS‑zsh) #####   #### PATCH stress_tester1 ####
+                "- If a command contains flags that are invalid for macOS‑zsh or any standard macOS POSIX utility\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not supported by the invoked command),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+
                 # BusyBox addendum (adapted for macOS-zsh) Revision 6.11
                 "These rules also apply when BusyBox-style applets or Linux-only commands are invoked.\n"
                 "macOS-zsh does NOT activate Linux or BusyBox domain primitives. Any Linux-specific\n"
@@ -2571,6 +2580,16 @@ def recover(request: RecoveryRequest):
                 "- macOS-zsh systems DO NOT include a package manager by default.\n"
                 "- The commands 'apt', 'apt-get', 'yum', 'dnf', 'apk', 'pacman', and 'brew' MUST all\n"
                 "  return 'fallback'. macOS-zsh MUST NOT rewrite these commands.\n"
+
+                ##### Wrong package manager in pipelines (&&) — macOS‑zsh semantics #####   #### PATCH stress_tester1 ####
+                "- If the command is a pipeline using '&&' and ANY segment references a package manager\n"
+                "  (apt, apt-get, yum, dnf, apk, pacman, brew), the LLM MUST return 'fallback'.\n"
+                "- macOS‑zsh MUST NOT rewrite, correct, or translate ANY package‑manager segment.\n"
+                "- macOS‑zsh MUST NOT attempt to preserve or execute the non‑PM segments of the pipeline.\n"
+                "- The entire command MUST be treated as unsupported and MUST result in 'fallback'.\n"
+                "\n"
+
+                #### continued after patch insertion.....
                 "- The command 'brew' MUST NOT be introduced by the LLM. If the user invokes 'brew',\n"
                 "  the LLM MUST return 'fallback' with no correction.\n"
                 "\n"
