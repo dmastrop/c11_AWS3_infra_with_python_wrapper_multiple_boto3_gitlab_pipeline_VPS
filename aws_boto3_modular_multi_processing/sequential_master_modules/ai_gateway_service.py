@@ -2865,6 +2865,16 @@ def recover(request: RecoveryRequest):
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is\n"
                 "  destructive, in which case 'abort' applies.\n"
                 "\n"
+                
+                ##### Invalid flags (PowerShell Core on Linux) #####   #### PATCH stress_tester1 ####
+                "- If a PowerShell cmdlet, parameter, or flag is invalid or unrecognized\n"
+                "  (for example: 'A parameter cannot be found that matches', 'Unexpected parameter',\n"
+                "  or any error indicating an unsupported flag), the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown parameters.\n"
+                "\n"
+
+                #### continued after patch insertion.... 
                 "- PowerShell Core on Linux MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
                 "  If a command fails due to permission issues and no deterministic recovery rule applies,\n"
                 "  the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
