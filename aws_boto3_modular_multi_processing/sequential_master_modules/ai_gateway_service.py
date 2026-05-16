@@ -933,7 +933,17 @@ def recover(request: RecoveryRequest):
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
                 "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
-                
+               
+                ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                "- If an 'apt', 'apt-get', 'yum', 'dnf', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+
+
                 # Busybox addendum to Revision 6.8:
                 "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
                 
@@ -955,6 +965,33 @@ def recover(request: RecoveryRequest):
                 "- If the command is destructive (rm -rf /), the LLM MUST abort.\n"
                 "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
                 "  primitive, 'fallback' is allowed.\n"
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 ####
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Debian/Ubuntu; apt/apt-get on RHEL/CentOS/Fedora/Alpine),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If the wrong‑OS package‑manager segment performs a simple package install, such as:\n"
+                "      yum install <pkg>\n"
+                "      dnf install <pkg>\n"
+                "      apk add <pkg>\n"
+                "      pacman -S <pkg>\n"
+                "  the LLM MUST use 'retry_with_modified_command' and rewrite ONLY that segment using the correct package manager\n"
+                "  for this OS.\n"
+                "- The LLM MUST NOT rewrite or duplicate the original correct segment.\n"
+                "\n"
+                "- If the wrong‑OS package‑manager segment performs a system‑wide operation, such as:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system‑wide operations into equivalents for this OS.\n"
+                "\n"
+
+
+
 
                 # dpkg interrupted
                 "- If stderr suggests running 'dpkg --configure -a', the LLM MUST return\n"
