@@ -2691,6 +2691,16 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands,\n"
                 "  and MUST NOT infer user intent for pipeline stages.\n"
                 "\n"
+                
+                ##### Invalid flags (Windows PowerShell) #####   #### PATCH stress_tester1 ####
+                "- If a PowerShell cmdlet, parameter, or flag is invalid or unrecognized\n"
+                "  (for example: 'A parameter cannot be found that matches', 'Unexpected parameter',\n"
+                "  or any error indicating an unsupported flag), the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown parameters.\n"
+                "\n"
+
+                #### continued after patch insertion....
                 "- If stderr contains the EXACT PowerShell message:\n"
                 "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
                 "  the LLM MUST return 'fallback'.\n"
