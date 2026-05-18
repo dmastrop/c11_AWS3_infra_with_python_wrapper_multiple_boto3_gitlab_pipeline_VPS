@@ -5260,6 +5260,10 @@ WORK IN PROGRESS
 
 ---
 
+
+
+
+
 ### Stress testing the contract rules with the automated framework
 
 The automated framework, as noted earlier, provides for a validator and schema expander so that 100s of schema context based
@@ -5295,7 +5299,7 @@ Note that the VALIDATION RESULT is now displayed.
 With the validator in place around 95% of the test cases can be auto-validated permitting a scaling of test cases and test case
 iteration to harden the contract domain primitives rules block for each OS/platform. 
 
-#### semantics files
+#### Semantics files
 
 
 Each OS/platform has a dedicated semantics file that has the hardcoded python logic that would have been required had the LLM
@@ -5305,7 +5309,15 @@ assessment which will enable the test cases to be efficiently scaled. Otherwise 
 based test cases in the schema to adequately stress test the contract rules domain primtives blocks. 
 
 
-#### running some basic tests
+#### Schema expansion and the mutators.py
+
+To expand the schema context based tests to higher number of test cases, a schema expander and mutator will be used. We can 
+get 100s of context based tests with variants of each test, to purposefully try to exploit holes and deficiencies in the 
+contract rules for a given domain primitives block (OS/platform). This will help harden the contract rules set for each 
+domain primitives block.
+
+
+#### Running some basic tests with the schema expansion and mutators.py
 
 A subset of the domain primitives blocks was run through the full stress tester (4 of them below):
 
@@ -5333,6 +5345,10 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 [Back to top](#top-update59)
 
 ---
+
+
+
+
 
 
 ### LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)
@@ -5417,7 +5433,7 @@ The contract rules domain primitives blocks are found here in the ai_gateway_ser
                 "- \"cleanup\" MUST be an array of literal shell commands.\n"
                 "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
 
-                <<<< with the rest of the blocks omitted from brevity>>>>
+                <<<< TRUNCATED FOR BREVITY>>>>
 
 ```
 
@@ -5527,6 +5543,9 @@ This layer ensures the LLM receives the **exact execution context** for each tes
 
 **Linux OS‑Specific Domain Primitives (All 17 Blocks)**
 
+NOTE: The Linux generic is integrated into each linux distro domain primitives block below (Ubuntu, Debian, etc....) as a
+sub-block noted in the code comments (Revision 6.8)
+
 | **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
 |-------------------|-----------------------------|------------------|-------------|------------------|-----------|
 | **Ubuntu** | apt | 5, 6.6 | Hash Sum mismatch, dpkg repair | Medium | APT‑specific |
@@ -5569,8 +5588,55 @@ This layer ensures the LLM receives the **exact execution context** for each tes
 |--------|-------------|---------|--------------|-------|
 | **Context Injection** | — | dynamic stderr/stdout/exit_status, dynamic command, dynamic OS identity | None | End of contract |
 
+
+
+In the payload the Context Injection Layer is this part right here:
+
+```
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+
+
+
+
+                ##### DOMAIN SPECIFIC PRIMITIVES ######
+                ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
+                ##### rule leakage between different OSes and platforms, etc.
+```
+This is the context block that is injected into the payload to the LLM by the AI/MCP HOOK in module2f:
+
+```
+
+        context = {
+            "command": original_command,
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "exit_status": exit_status,
+            "attempt": attempt + 1,
+            "instance_id": instance_id,
+            "ip": ip,
+            "tags": extra_tags,
+            "os_info": globals().get("os_info", None),
+            "history": globals().get("command_history", None),
+        }
+```
 ---
 
+
+
+### About the Contract Rules in the payload section of the `ai_gateway_service.py`
+
+
+The full LLM contract is defined inside `ai_gateway_service.py` and includes detailed domain‑primitive blocks for every supported OS and platform. These blocks describe the exact semantics, safety rules, and recovery behaviors the LLM must follow when interpreting shell commands, handling package‑manager failures, or performing remediation. The file also contains extensive commentary explaining the differences between operating systems (e.g., Debian vs. Ubuntu APT behavior, Fedora vs. RHEL DNF semantics, Alpine APK quirks, BusyBox limitations). These comments are intended for developers maintaining the contract and are not part of the runtime logic. 
+
+This README section provides a high‑level overview, but the authoritative source of truth for all specific contract rules is the 
+domain‑primitive section inside the payload block of the `ai_gateway_service.py`.
+
+The notes and comments are placed at the bottom of the `ai_gateway_service.py'.  These notes were generated during the formative
+stages of contract rule development and testing.
 
 
 
