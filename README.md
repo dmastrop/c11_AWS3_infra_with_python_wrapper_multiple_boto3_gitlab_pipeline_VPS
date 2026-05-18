@@ -5012,7 +5012,173 @@ The result is increasingly robust and increasingly deterministic LLM contract-ba
 ---
 
 
-### Stress tester code review
+
+### Continued testing with the semantics files (validator logic) hooked into the stress tester
+
+#### Introduction
+
+To test the 17 semantics files some quick schema based testing was performed with several of the operating systems.
+
+The validator.py calls the OS specific validator logic file (referred to as semantic files), to execute the validator against
+a give schema context based test on a given OS. To do this properly the generator.py code, which was discussed earlier, had to
+be implemented. 
+
+The generator.py code discussed in an earlier section above was used to inject the os_name and os_version into each context test that
+makes up each schema json file. This is required, as discussed earlier, so that the validator semantics logic (in the 
+validator directory) can be executed using the proper os_name/os_version. Without this information, things like PM (package manager)
+rewrite will not be validated properly for a given os_name. For example for ubuntu testing, the validator must have the os_name
+of Ubuntu to know that the apt is the correct PM, and that all other PMs need to be re-written to apt.  This is just one 
+example of many. The os_name/os_version, as discussed earlier, are critical in this entire architecture for proper 
+LLM contract decision domain primitives making, for proper validator code selection (semantic files are unique per OS), and for
+proper validation logic given the test results (semantic logic execution).
+
+
+
+
+#### Two patches
+
+During the testing of some of the OSes with semantic result validation, some contract based issues were found. 
+The validator was fairly good at detecting problems, but was not nearly as logically consistent as the LLM. This was 
+expected. The validator is only a rough approximator of the test results (the LLM logic decision making). The validator
+is just used as a first pass validator. Sometimes it will give a false negative (test case failed when it is actually fine), 
+and sometimes it will give a false positive (test case passed when it actually did not pass). The objective here is to find
+contract rule inconsistencies that need to be tuned to make the LLM as deterministic as possible.
+
+The contract issues that were discovered necessitated 2 patches to most of the domain primitives contract rules blocks in
+the ai_gateway_service.py
+
+The two patches for Ubuntu are below (they are very similar across all linux os domain primitives blocks and there are slight
+variations in them for the macos brew and zsh and the windows and linux powershell; bboth patches are not always required for
+these).
+
+Patch1:
+
+```
+
+                ##### Invalid package‑manager flags (Linux-family OSes) PATCH stress_tester1  #####
+                "- If an 'apt', 'apt-get', 'yum', 'dnf', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+```
+
+Patch2:
+
+
+```
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 ####
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, or\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
+                "\n"
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+```
+
+The patches are self-explanatory.  The patches ensure fallback is always used with any ambigious flags used with a package
+manager command, multiple segmented package install commands with && are rewritten at the segment level by the LLM, and
+if any package installer command attempts OS mutation/system-wide operations (in any segment), fallback will be used.
+The retry_with_modified_command will replay the entire command string once the problematic segment(s) is (are) corrected.
+
+The logic is:
+
+If ALL segments are safe (simple installs or non‑mutating commands):
+→ retry_with_modified_command  
+→ emit a full pipeline  
+→ rewrite only wrong‑PM install segments  
+→ copy all other segments verbatim
+
+If ANY segment is unsafe (system‑wide op, mutation, invalid flag):
+→ fallback
+
+This handles:
+
+Wrong && Right && Wrong
+
+Right && Wrong && Wrong
+
+Wrong && Wrong && Right
+
+Right && Right && Wrong
+
+Wrong && Right
+
+Right && Wrong
+
+Single wrong
+
+Single right
+
+Mixed PMs
+
+Mixed flags
+
+Mixed system‑ops
+
+
+
+
+
+#### macos Brew schema based test with test matrix
+
+
+#### Schema based tests for alpine, fedora and ubuntu (with test matrices)
+
+Some new schema based tests were written to test the patches above and these were run against Alpine, Fedora and Ubuntu. 
+
+
+Here is a sample output from the Alpine schema based test on the patches. Note that the validator FAILED is a false
+negative. The logic in the validator is not refined enough to catch such a subtle test case nuance and that is fine. We 
+are not attepting to fix every validator bug, just the contract based issues. 
+
+```
+
+
+```
+
+
+
+#### Schema based tests for macos zsh, windows powershell, and linux powershell (with test matrices)
+
+
+
+
+#### Test case matrices for selected patch testing on Alpine, Fedora and Ubuntu
+
+
+
+
+
+
+
+
+
+
+### Stress tester complete code review
 
 The code is in the following directory on the repo: 
 
