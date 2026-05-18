@@ -1,0 +1,25 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+    { "command": "apk add curl --badflag", "stdout": "", "stderr": "apk: unrecognized option '--badflag'", "exit_status": 1, "attempt": 1, "instance_id": "a-patch-001", "ip": "10.0.52.1", "tags": [], "history": [] },
+
+    { "command": "apk add curl && apt-get install nano", "stdout": "", "stderr": "sh: apt-get: not found", "exit_status": 127, "attempt": 1, "instance_id": "a-patch-002", "ip": "10.0.52.2", "tags": [], "history": [] },
+
+    { "command": "apk add curl && yum install nano", "stdout": "", "stderr": "sh: yum: not found", "exit_status": 127, "attempt": 1, "instance_id": "a-patch-003", "ip": "10.0.52.3", "tags": [], "history": [] },
+
+    { "command": "apk add curl && pacman -Syu", "stdout": "", "stderr": "sh: pacman: not found", "exit_status": 127, "attempt": 1, "instance_id": "a-patch-004", "ip": "10.0.52.4", "tags": [], "history": [] },
+
+    { "command": "apk add curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "a-patch-005", "ip": "10.0.52.5", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apk add nano", "stdout": "", "stderr": "sh: apt-get: not found", "exit_status": 127, "attempt": 1, "instance_id": "a-patch-006", "ip": "10.0.52.6", "tags": [], "history": [] },
+
+    { "command": "apk add curl && apk add python3 --badflag", "stdout": "", "stderr": "apk: unrecognized option '--badflag'", "exit_status": 1, "attempt": 1, "instance_id": "a-patch-007", "ip": "10.0.52.7", "tags": [], "history": [] }
+
+  ]
+}
+

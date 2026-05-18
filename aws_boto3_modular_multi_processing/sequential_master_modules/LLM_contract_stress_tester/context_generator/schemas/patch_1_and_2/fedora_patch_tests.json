@@ -1,0 +1,25 @@
+{
+  "os_name": "Fedora",
+  "os_version": "39",
+  "kernel": "6.7.0",
+  "package_managers": ["dnf"],
+  "shell": "bash",
+  "contexts": [
+
+    { "command": "dnf install nginx --badflag", "stdout": "", "stderr": "Error: unknown option --badflag", "exit_status": 1, "attempt": 1, "instance_id": "f-patch-001", "ip": "10.0.51.1", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && apt-get install nano", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "f-patch-002", "ip": "10.0.51.2", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && yum install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "f-patch-003", "ip": "10.0.51.3", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && pacman -Syu", "stdout": "", "stderr": "bash: pacman: command not found", "exit_status": 127, "attempt": 1, "instance_id": "f-patch-004", "ip": "10.0.51.4", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "f-patch-005", "ip": "10.0.51.5", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && dnf install nano", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "f-patch-006", "ip": "10.0.51.6", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf install python3 --badflag", "stdout": "", "stderr": "Error: unknown option --badflag", "exit_status": 1, "attempt": 1, "instance_id": "f-patch-007", "ip": "10.0.51.7", "tags": [], "history": [] }
+
+  ]
+}
+

@@ -1,0 +1,35 @@
+{
+  "os_name": "Ubuntu",
+  "os_version": "22.04",
+  "kernel": "5.15.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+    { "command": "apt-get install nginx --badflag", "stdout": "", "stderr": "E: Command line option --badflag is not understood", "exit_status": 100, "attempt": 1, "instance_id": "u-patch-001", "ip": "10.0.50.1", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && yum install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-002", "ip": "10.0.50.2", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apt-get update", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-003", "ip": "10.0.50.3", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apt-get update --badflag", "stdout": "", "stderr": "E: Command line option --badflag is not understood", "exit_status": 100, "attempt": 1, "instance_id": "u-patch-004", "ip": "10.0.50.4", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && pacman -Syu", "stdout": "", "stderr": "bash: pacman: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-005", "ip": "10.0.50.5", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apk add bash", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-006", "ip": "10.0.50.6", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-007", "ip": "10.0.50.7", "tags": [], "history": [] },
+
+    { "command": "yum install nano && apt-get install curl", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-008", "ip": "10.0.50.8", "tags": [], "history": [] },
+
+    { "command": "dnf install git && yum install nano", "stdout": "", "stderr": "bash: dnf: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-009", "ip": "10.0.50.9", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apt-get install python3 --badflag", "stdout": "", "stderr": "E: Command line option --badflag is not understood", "exit_status": 100, "attempt": 1, "instance_id": "u-patch-010", "ip": "10.0.50.10", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apt-get install python3", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-011", "ip": "10.0.50.11", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apt-get install python3 && yum install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-012", "ip": "10.0.50.12", "tags": [], "history": [] }
+
+  ]
+}
+
