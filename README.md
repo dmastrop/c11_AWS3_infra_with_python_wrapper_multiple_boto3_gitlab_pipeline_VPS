@@ -1541,7 +1541,7 @@ WORK IN PROGRESS
 - [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
-- [Stress tester code review](#stress-tester-code-review)
+- [Stress tester complete code review](#stress-tester-complete-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks-for-all-the-current-osplatforms)
 
@@ -5065,11 +5065,11 @@ Patch1:
 
 ```
 
-Patch2:
+Patch2 rev2:
 
 
 ```
-                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 ####
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
@@ -5141,12 +5141,12 @@ Mixed system‑ops
 
 
 
-
+#### Schema-based tests for Ubuntu (with test matrix)
 
 #### Schema based tests for macos Brew (with test matrix)
 
 
-#### Schema based tests for alpine, fedora and ubuntu (with test matrices)
+#### Schema-based tests for Alpine (with test matrix)
 
 Some new schema based tests were written to test the patches above and these were run against Alpine, Fedora and Ubuntu. 
 
@@ -5160,9 +5160,21 @@ are not attepting to fix every validator bug, just the contract based issues.
 
 ```
 
+#### Schema-based tests for Fedora (with test matrix)
 
 
-#### Schema based tests for macos zsh, windows powershell, and linux powershell (with test matrices)
+#### Schema-based tests for macos zh
+
+
+
+#### Schema-based tests for windows powershell
+
+
+#### Schema-based tests for linux powershell
+
+
+
+
 
 
 
@@ -5631,7 +5643,7 @@ This is the context block that is injected into the payload to the LLM by the AI
 ---
 
 
-### About the Contract Rules in the payload section of the `ai_gateway_service.py`
+### Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost 
 
 
 The full LLM contract is defined inside `ai_gateway_service.py` and includes detailed domain‑primitive blocks for every supported OS and platform. These blocks describe the exact semantics, safety rules, and recovery behaviors the LLM must follow when interpreting shell commands, handling package‑manager failures, or performing remediation. The file also contains extensive commentary explaining the differences between operating systems (e.g., Debian vs. Ubuntu APT behavior, Fedora vs. RHEL DNF semantics, Alpine APK quirks, BusyBox limitations). These comments are intended for developers maintaining the contract and are not part of the runtime logic. 
@@ -5642,8 +5654,6 @@ domain‑primitive section inside the payload block of the `ai_gateway_service.p
 The notes and comments are placed at the bottom of the `ai_gateway_service.py'.  These notes were generated during the formative
 stages of contract rule development and testing.
 
-
-#### Comments in the payload contract block and the LLM efficiency: reasoning, determinism, and cost
 
 It is important that the commentary be moved out of the payload in the `ai_gateway_service.py`
 
