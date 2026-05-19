@@ -5192,12 +5192,23 @@ They conntinued to pass as shown in the table below:
 Now the more intensive level of testing invovled running the 24 addtional tests designed to exploit the patches. All 24 of these
 test cases passed as shown in the test matrix below. This was a milestone. The complexity of these test cases even caused some
 false negatives with the stress tester validator code (semantics file) (Validator marked the result as failed even though the test
-results from the LLM was correct). This goes back to the original intent of the stress tester validator: it is just a rough first
+results from the LLM was correct). 
+
+This goes back to the original intent of the stress tester validator: it is just a rough first
 pass to make going through test cases easier. It is not nearly as adept as the LLM and in fact, to continue to develop the semantics
 code for the validator to make it 100% as correct as the LLM would require a massive amount of the python code (the semantics file
 is already quite large even at this level). This is proof of how powerful the AI/MCP HOOK to the LLM is for the purposes that are 
 being applied here (very complex command semanatics).   The test cases below did not "fool" the LLM given that the patch2 rev 2
 contract rules are very resilient and solid.
+
+To further this discussion, the semantics validator code only validates the context based test result that the LLM has proposed.
+It does not actually rewrite or "think" up the retry command syntax to resolve the given context command issue. The semantics
+based validator code is merely a complex python based rules engine that deterministically evaluates a given result in relation
+to the action plan that the LLM has proposed relative to a crude approximation the contract rule semantics. The semantics validation
+code was written to try to approximate the contract rules. And even with this it is still far from perfect. The semantics code 
+cannot actual "understand" the contract rules like the LLM reasoning and inference does. Thus the semantics based validator is 
+prone to eventually fail in some cases.
+
 
 
 **LLM Contract Stress Tester — Ubuntu Patch2‑Rev2 Pipeline Rewrite Tests (24 Cases)**  
