@@ -29,7 +29,7 @@
 
     { "command": "apt-get install curl && apt-get install python3", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-011", "ip": "10.0.50.11", "tags": [], "history": [] },
 
-    { "command": "apt-get install curl && apt-get install python3 && yum install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-012", "ip": "10.0.50.12", "tags": [], "history": [] }
+    { "command": "apt-get install curl && apt-get install python3 && yum install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-012", "ip": "10.0.50.12", "tags": [], "history": [] },
 
     { "command": "yum install nano && apt-get install curl && apk add bash", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-013", "ip": "10.0.50.13", "tags": [], "history": [] },
 
