@@ -20,6 +20,7 @@
 
     { "command": "apt-get install curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-007", "ip": "10.0.50.7", "tags": [], "history": [] },
 
+
     { "command": "yum install nano && apt-get install curl", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-008", "ip": "10.0.50.8", "tags": [], "history": [] },
 
     { "command": "dnf install git && yum install nano", "stdout": "", "stderr": "bash: dnf: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-009", "ip": "10.0.50.9", "tags": [], "history": [] },
@@ -29,6 +30,36 @@
     { "command": "apt-get install curl && apt-get install python3", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-011", "ip": "10.0.50.11", "tags": [], "history": [] },
 
     { "command": "apt-get install curl && apt-get install python3 && yum install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-012", "ip": "10.0.50.12", "tags": [], "history": [] }
+
+    { "command": "yum install nano && apt-get install curl && apk add bash", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-013", "ip": "10.0.50.13", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && dnf install git && apt-get install nano", "stdout": "", "stderr": "bash: dnf: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-014", "ip": "10.0.50.14", "tags": [], "history": [] },
+
+    { "command": "yum install nano && apk add bash && pacman -S htop", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-015", "ip": "10.0.50.15", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apt-get install nano && apk add bash", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-016", "ip": "10.0.50.16", "tags": [], "history": [] },
+
+    { "command": "yum install nano && apt-get install curl && apt-get update", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-017", "ip": "10.0.50.17", "tags": [], "history": [] },
+
+    { "command": "apk add bash && echo 'hello' && yum install nano", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-018", "ip": "10.0.50.18", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && echo 'test' && pacman -S htop", "stdout": "", "stderr": "bash: pacman: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-019", "ip": "10.0.50.19", "tags": [], "history": [] },
+
+    { "command": "yum install nano --badflag && apt-get install curl", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-020", "ip": "10.0.50.20", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && apk add bash --badflag && apt-get install nano", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-021", "ip": "10.0.50.21", "tags": [], "history": [] },
+
+    { "command": "yum install nano && apk add bash && apt-get update", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-022", "ip": "10.0.50.22", "tags": [], "history": [] },
+
+    { "command": "apk add bash && apt-get install curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-023", "ip": "10.0.50.23", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl && yum install nano && echo hi && apk add bash", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-024", "ip": "10.0.50.24", "tags": [], "history": [] }
+
+
+
+
+
+
 
   ]
 }
