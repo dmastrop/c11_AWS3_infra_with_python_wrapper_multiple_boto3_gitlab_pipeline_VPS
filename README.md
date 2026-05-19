@@ -5148,6 +5148,101 @@ Mixed system‑ops
 
 #### Schema-based tests for Ubuntu (with test matrix)
 
+To ensure that the patches did not disrupt the legacy testing of the domain primitives block for Ubuntu, the original 20 
+test cases using the original schema context based tests was performed again after the patches were applied. 
+
+They conntinued to pass as shown in the table below:
+
+
+**LLM Contract Stress Tester — Ubuntu (apt/apt‑get) Environment (Original 20 Tests)**
+*With corrected rewritten commands shown in parentheses*
+
+<details>
+<summary><b>Click to expand Ubuntu test matrix</b></summary>
+
+<br>
+
+| Test # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|-------|--------------|---------|------------------|----------------|--------|
+| 1 | i-test-001 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get update -y && apt-get install -y nginx`) | package missing after update |
+| 2 | i-test-002 | `apt install nginx` | fallback | fallback | invalid apt invocation |
+| 3 | i-test-003 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | wrong‑OS package manager |
+| 4 | i-test-004 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | wrong‑OS package manager |
+| 5 | i-test-005 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl`) | wrong‑OS package manager |
+| 6 | i-test-006 | `apt-get install` | fallback | fallback | invalid syntax |
+| 7 | i-test-007 | `rm -rf /` | abort | abort | destructive command |
+| 8 | i-test-008 | `asdfasdfasdf` | fallback | fallback | unknown command |
+| 9 | i-test-009 | `show route everything` | fallback | fallback | wrong‑OS command |
+| 10 | i-test-010 | `apt-get update -y` | fallback | fallback | temporary DNS failure |
+| 11 | i-test-011 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a && apt-get install -y nginx`) | dpkg interrupted |
+| 12 | i-test-012 | `apt-get update -y` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/* && rm -rf /var/cache/apt/archives/partial/* && apt-get update -y`) | hash sum mismatch |
+| 13 | i-test-013 | `apt-get install -y nginx` | fallback | fallback | held broken packages |
+| 14 | i-test-014 | `apt-get install -y nginx` | fallback | fallback | lock file permission denied |
+| 15 | i-test-015 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt --fix-broken install -y && apt-get install -y nginx`) | requires apt --fix-broken install |
+| 16 | i-test-016 | `apt-get install -y mysql-server` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/* && rm -rf /var/cache/apt/archives/partial/* && apt-get update -y && apt-get install -y mysql-server`) | hash sum mismatch |
+| 17 | i-test-017 | `apt-get upgrade -y` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/* && rm -rf /var/cache/apt/archives/partial/* && apt-get update -y && apt-get upgrade -y`) | hash sum mismatch |
+| 18 | i-test-018 | `apt-get dist-upgrade -y` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/* && rm -rf /var/cache/apt/archives/partial/* && apt-get update -y`) | hash sum mismatch |
+| 19 | i-test-019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/* && rm -rf /var/cache/apt/archives/partial/* && apt-get update -y && apt-get install -y python3-pip`) | hash sum mismatch |
+| 20 | i-test-020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/* && rm -rf /var/cache/apt/archives/partial/* && apt-get update -y && apt-get install -y curl`) | hash sum mismatch |
+
+</details>
+
+
+
+Now the more intensive level of testing invovled running the 24 addtional tests designed to exploit the patches. All 24 of these
+test cases passed as shown in the test matrix below. This was a milestone. The complexity of these test cases even caused some
+false negatives with the stress tester validator code (semantics file) (Validator marked the result as failed even though the test
+results from the LLM was correct). This goes back to the original intent of the stress tester validator: it is just a rough first
+pass to make going through test cases easier. It is not nearly as adept as the LLM and in fact, to continue to develop the semantics
+code for the validator to make it 100% as correct as the LLM would require a massive amount of the python code (the semantics file
+is already quite large even at this level). This is proof of how powerful the AI/MCP HOOK to the LLM is for the purposes that are 
+being applied here (very complex command semanatics).   The test cases below did not "fool" the LLM given that the patch2 rev 2
+contract rules are very resilient and solid.
+
+
+**LLM Contract Stress Tester — Ubuntu Patch2‑Rev2 Pipeline Rewrite Tests (24 Cases)**  
+*With corrected rewritten commands shown in parentheses*
+
+<details>
+<summary><b>Click to expand Ubuntu Patch2‑Rev2 test matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | u-patch-001 | `apt-get install nginx --badflag` | fallback | fallback | invalid flag → correct fallback |
+| 2 | u-patch-002 | `apt-get install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install -y nano`) | wrong‑PM segment rewritten |
+| 3 | u-patch-003 | `apt-get install curl && apt-get update` | fallback | fallback | system‑wide op → fallback |
+| 4 | u-patch-004 | `apt-get install curl && apt-get update --badflag` | fallback | fallback | invalid flag → fallback |
+| 5 | u-patch-005 | `apt-get install curl && pacman -Syu` | fallback | fallback | pacman‑Syu = system‑wide |
+| 6 | u-patch-006 | `apt-get install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install -y bash`) | wrong‑PM rewritten |
+| 7 | u-patch-007 | `apt-get install curl && rm -rf /` | abort | abort | destructive command |
+| 8 | u-patch-008 | `yum install nano && apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y curl`) | wrong‑PM rewritten |
+| 9 | u-patch-009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y git && apt-get install -y nano`) | both wrong‑PM segments rewritten |
+| 10 | u-patch-010 | `apt-get install curl && apt-get install python3` | fallback | fallback | **LLM correct — validator false‑positive** (successful command entering hook; Phase 4a.1.4 fix) |
+| 11 | u-patch-011 | `apt-get install curl && apt-get install python3 && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install python3 && apt-get install -y nano`) | wrong‑PM rewritten |
+| 12 | u-patch-012 | `yum install nano && apt-get install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install curl && apt-get install -y bash`) | two wrong‑PM segments rewritten |
+| 13 | u-patch-013 | `apt-get install curl && dnf install git && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y git && apt-get install -y nano`) | wrong‑PM rewritten |
+| 14 | u-patch-014 | `yum install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y bash && apt-get install -y htop`) | all wrong‑PM segments rewritten |
+| 15 | u-patch-015 | `apt-get install curl && apt-get install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install nano && apt-get install -y bash`) | wrong‑PM rewritten |
+| 16 | u-patch-016 | `yum install nano && apt-get install curl && apt-get update` | fallback | fallback | **LLM correct — validator false‑negative** (system‑wide op → fallback) |
+| 17 | u-patch-017 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y bash && echo 'hello' && apt-get install -y nano`) | wrong‑PM rewritten |
+| 18 | u-patch-018 | `apt-get install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && echo 'test' && apt-get install -y htop`) | wrong‑PM rewritten |
+| 19 | u-patch-019 | `yum install nano --badflag && apt-get install curl` | fallback | fallback | **LLM correct — validator false‑negative** (invalid flag → fallback) |
+| 20 | u-patch-020 | `apt-get install curl && apk add bash --badflag && apt-get install nano` | fallback | fallback | **LLM correct — validator false‑negative** (invalid flag → fallback) |
+| 21 | u-patch-021 | `yum install nano && apk add bash && apt-get update` | fallback | fallback | **LLM correct — validator false‑negative** (system‑wide op → fallback) |
+| 22 | u-patch-022 | `apk add bash && apt-get install curl && rm -rf /` | abort | abort | **LLM correct — validator false‑negative** (destructive command → abort) |
+| 23 | u-patch-023 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`) | wrong‑PM rewritten |
+| 24 | u-patch-024 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`) | identical to #23 |
+
+</details>
+
+
+
+
+
+
+
 #### Schema based tests for macos Brew (with test matrix)
 
 
