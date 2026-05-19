@@ -5623,8 +5623,12 @@ This is the context block that is injected into the payload to the LLM by the AI
             "history": globals().get("command_history", None),
         }
 ```
+
 ---
 
+[Back to top](#top-update59)
+
+---
 
 
 ### About the Contract Rules in the payload section of the `ai_gateway_service.py`
@@ -5639,6 +5643,53 @@ The notes and comments are placed at the bottom of the `ai_gateway_service.py'. 
 stages of contract rule development and testing.
 
 
+#### Comments in the payload contract block and the LLM
+
+It is important that the commentary be moved out of the payload in the `ai_gateway_service.py`
+
+
+(1) Comments do NOT improve model reasoning, and
+(2) Comments DO reduce determinism.
+(3) Long comments will increase the prefill tokenization cost for each transaction with the LLM.
+
+The last thing we want to do is reduce determinism in this complex system.
+
+Regarding the reduction in determinism, it is counter-intuiitve at first thought, but very true:
+
+Determinism in LLMs comes from:
+
+- a clean instruction signal  
+- low entropy  
+- minimal ambiguity  
+- minimal competing patterns  
+- minimal irrelevant text  
+
+Long comments introduce the following issues with the contract payload processing by the LLM:
+
+- Increase in the token count  
+More tokens → more branching → more variance.
+
+- Ingroduce alternative phrasings  
+The language model may latch onto a comment instead of a rule.
+
+- Introduce narrative text  
+Narrative text is high‑entropy and encourages creative continuation.
+
+- Increases the chance of the model “hallucinating” patterns  
+Because it sees more examples, more words, more structures.
+
+- Weakens the ratio of “rules” to “noise”  
+LLMs follow the **dominant pattern** in the prompt.  
+Comments dilute the dominance of the rules.
+
+- Increases the chance of drift  
+Especially in long-running systems like this AI gateway.
+
+
+
+
+
+
 
 ---
 
@@ -5648,6 +5699,13 @@ stages of contract rule development and testing.
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+
+
+
+
+
+
 
 
 ## UPDATES part 58: Phase4a.1 — Real‑Life Context Testing & Emergence of a Universal Remediation Engine
