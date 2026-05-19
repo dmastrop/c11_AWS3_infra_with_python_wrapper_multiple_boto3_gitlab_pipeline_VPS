@@ -5155,6 +5155,7 @@ They conntinued to pass as shown in the table below:
 
 
 **LLM Contract Stress Tester — Ubuntu (apt/apt‑get) Environment (Original 20 Tests)**
+
 *With corrected rewritten commands shown in parentheses*
 
 <details>
@@ -5204,14 +5205,20 @@ contract rules are very resilient and solid.
 To further this discussion, the semantics validator code only validates the context based test result that the LLM has proposed.
 It does not actually rewrite or "think" up the retry command syntax to resolve the given context command issue. The semantics
 based validator code is merely a complex python based rules engine that deterministically evaluates a given result in relation
-to the action plan that the LLM has proposed relative to a crude approximation the contract rule semantics. The semantics validation
-code was written to try to approximate the contract rules. And even with this it is still far from perfect. The semantics code 
-cannot actual "understand" the contract rules like the LLM reasoning and inference does. Thus the semantics based validator is 
-prone to eventually fail in some cases.
+to the action plan that the LLM has proposed. THis is done using this crude rules-based approximation the contract rule semantics. 
+
+The semantics validation code was written to try to approximate the contract rules. And even with all of this code, 
+ it is still far from perfect. 
+
+The semantics code cannot actually "understand" the contract rules like the LLM reasoning can as the prefill is tokenized from the 
+original context and then the action plan is sent as the LLM inference decode response with a "solution" to the problem at hand.
+
+Thus the semantics based validator is prone to eventually fail in some cases, and indeed it does.
 
 
 
 **LLM Contract Stress Tester — Ubuntu Patch2‑Rev2 Pipeline Rewrite Tests (24 Cases)**  
+
 *With corrected rewritten commands shown in parentheses*
 
 <details>
