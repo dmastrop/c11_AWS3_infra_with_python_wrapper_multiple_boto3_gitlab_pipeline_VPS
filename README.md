@@ -1540,10 +1540,15 @@ WORK IN PROGRESS
 - [Test validation matrices per domain primitives block (Manual testing phase with the stress tester)](#test-validation-matrices-per-domain-primitives-block-manual-testing-phase-with-the-stress-tester)
 - [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
+- [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
+- [Continued testing with the semantics files (validator logic) hooked into the stress tester](#continued-testing-with-the-semantics-files-validator-logic-hooked-into-the-stress-tester)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
-- [LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)](#llm-stress-tested-contract-rules-all-domain-primitives-blocks-for-all-the-current-osplatforms)
+- [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
+- [Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost](#comments-in-the-payload-contract-block-of-ai_gateway_servicepy-and-llm-efficiency-reasoning-determinism-and-cost)
+
+
 
 
 ### Introduction
@@ -5363,11 +5368,11 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 
 
 
-### LLM stress tested Contract rules (all domain primitives blocks for all the current OS/platforms)
+### LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map
 
+The following sections pertain to all domain prikmitives blocks for all the current OSes/plaforms
 
-
-#### Location in the repo
+#### Code Location in the repo
 
 These can be found in the repo in the ../sequential_master_modules/ai_gateway_service.py file. 
 
