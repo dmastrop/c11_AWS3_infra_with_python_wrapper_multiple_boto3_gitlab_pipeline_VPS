@@ -843,67 +843,6 @@ def recover(request: RecoveryRequest):
                 # ============================================================
                 # DEBIAN (APT) DOMAIN RULES — Applies ONLY when os_name = "Debian" (Revision 7)
                 # ============================================================
-                #
-                # Debian APT vs Ubuntu APT — subtle but important differences:
-                #
-                # 1. Package manager usage:
-                #    - Ubuntu commonly uses both "apt" and "apt-get" in user-facing docs.
-                #    - Debian historically prefers "apt-get" for scripting and automation.
-                #    - In this contract, Debian SHOULD normalize to "apt-get" for all recovery
-                #      and retry commands (e.g., "apt-get install -y <pkg>").
-                #
-                # 2. Error message wording:
-                #    - Ubuntu often uses:   E: Unable to locate package nginx
-                #    - Debian may use:      E: Unable to locate package 'nginx'
-                #    - The contract MUST treat both forms as equivalent and MUST NOT depend
-                #      on the presence or absence of quotes around the package name.
-                #
-                # 3. Repository URLs:
-                #    - Ubuntu:  http://archive.ubuntu.com/ubuntu
-                #    - Debian:  http://deb.debian.org/debian
-                #    - Error messages (including Hash Sum mismatch and Failed to fetch) may
-                #      reference different base URLs, but the recovery logic is identical.
-                #
-                # 4. Lock file behavior:
-                #    - Ubuntu commonly surfaces:
-                #        /var/lib/dpkg/lock-frontend
-                #        /var/lib/dpkg/lock
-                #    - Debian may also surface:
-                #        /var/lib/apt/lists/lock
-                #    - The contract MUST treat these lock files as equivalent symptoms of
-                #      package manager contention and handle them via cleanup_and_retry
-                #      when safe, or fallback when non-deterministic.
-                #
-                # 5. Fix-broken suggestions:
-                #    - Ubuntu often suggests:  apt --fix-broken install
-                #    - Debian often suggests:  apt-get -f install
-                #    - Both are valid on Debian, but this contract chooses a canonical,
-                #      deterministic recovery path:
-                #          apt-get -f install -y
-                #      followed by:
-                #          apt-get install -y <pkg>
-                #
-                # 6. Hash Sum mismatch:
-                #    - Behavior and remediation are effectively identical between Ubuntu and
-                #      Debian:
-                #        * clean partial lists and archives
-                #        * rerun "apt-get update -y"
-                #        * optionally rerun the original install/upgrade command
-                #      The Ubuntu Revision 6.6 Hash Sum mismatch logic is reused here
-                #      verbatim, with the same <pkg> binding semantics.
-                #
-                # 7. Malformed commands:
-                #    - Global Linux malformed rules still apply (e.g., "apt-get install"
-                #      with no package is incomplete and SHOULD prefer fallback over
-                #      guessing).
-                #    - Debian-specific rules MUST NOT introduce any behavior that guesses
-                #      package names or infers intent from test bias.
-                #
-                # In summary:
-                #    - Debian APT domain primitives are structurally identical to Ubuntu APT,
-                #      but normalized to "apt-get", aware of Debian-specific error wording,
-                #      and canonicalized around "apt-get -f install -y" for fix-broken flows.
-                # ============================================================
 
                 "These rules apply ONLY when os_name = \"Debian\".\n"
 
@@ -1048,39 +987,6 @@ def recover(request: RecoveryRequest):
                 # ============================================================
                 # RHEL (YUM) DOMAIN RULES — Applies ONLY when os_name is a
                 # RHEL-family YUM-based distribution (This entire block is Revision 8)
-                # ============================================================
-                #
-                # IMPORTANT: Amazon Linux will have its own YUM block. Do NOT merge
-                # Amazon Linux behavior into this block. RHEL/CentOS and Amazon Linux
-                # share YUM syntax but differ in repo layout, metadata behavior, and
-                # error wording.
-                #
-                # Key differences vs APT (Ubuntu/Debian):
-                #   - YUM uses metadata repositories instead of APT index lists.
-                #   - Integrity failures appear as repo/metadata corruption, NOT
-                #     "Hash Sum mismatch".
-                #   - Cleanup is performed using:
-                #         yum clean all
-                #         yum makecache
-                #   - YUM does NOT have dpkg-like half-installed states.
-                #   - YUM idempotency messages differ ("Nothing to do", "Already installed").
-                #
-                # Key differences vs DNF (Fedora):
-                #   - DNF has different metadata wording and different lock behavior.
-                #   - DNF will have its own domain primitive block.
-                #
-                # Network failures:
-                #   - Governed by global Network Failure Semantics (Revision 6.5).
-                #   - DNS / connectivity errors MUST use "fallback".
-                #
-                # In summary:
-                #   - YUM domain primitives focus on:
-                #       * wrong package manager → rewrite to yum
-                #       * malformed install commands
-                #       * repo/metadata corruption → yum clean all + yum makecache + retry
-                #       * idempotency ("Nothing to do", "Already installed")
-                #       * destructive commands → abort
-                #       * unknown commands → fallback
                 # ============================================================
 
                 "These rules apply ONLY when os_name == 'RHEL' AND os_version starts with '9'. They MUST NOT apply to CentOS 7, CentOS 8, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
@@ -1229,32 +1135,6 @@ def recover(request: RecoveryRequest):
                 # DO NOT merge Amazon Linux behavior with RHEL/CentOS YUM (Revision 8).
                 # DO NOT assume repo names, mirrorlist behavior, or metadata wording
                 # are identical across these OS families.
-                #
-                # Key differences vs RHEL/CentOS:
-                #   - Amazon Linux uses amazon-linux-extras and amzn2-core repos.
-                #   - Metadata corruption wording differs ("Error: failed to download metadata"
-                #     vs "Metadata file does not match checksum").
-                #   - Some packages exist only in amazon-linux-extras (e.g., nginx, php7.x).
-                #   - YUM cleanup behavior is similar but not identical.
-                #
-                # Key differences vs Amazon Linux 2023 (DNF-based):
-                #   - This block applies ONLY to Amazon Linux 1 and Amazon Linux 2.
-                #   - Amazon Linux 2023 will have its own DNF domain primitive block.
-                #
-                # Network failures:
-                #   - Governed by global Network Failure Semantics (Revision 6.5).
-                #   - DNS / connectivity errors MUST use "fallback".
-                #
-                # In summary:
-                #   - Amazon Linux YUM domain primitives focus on:
-                #       * wrong package manager → rewrite to yum
-                #       * malformed install commands
-                #       * repo/metadata corruption → yum clean all + yum makecache + retry
-                #       * amazon-linux-extras handling
-                #       * idempotency ("Nothing to do", "Already installed")
-                #       * destructive commands → abort
-                #       * unknown commands → fallback
-                # ============================================================
 
                 "These rules apply ONLY when os_name = \"Amazon Linux\".\n"
 
@@ -1890,32 +1770,6 @@ def recover(request: RecoveryRequest):
                 # IMPORTANT:
                 # Fedora is a DNF-based distribution. YUM is either absent or a thin
                 # compatibility shim, but DNF is the canonical package manager.
-                #
-                # DO NOT merge Fedora behavior with:
-                #   - RHEL 9 YUM/DNF (Revision 8)
-                #   - CentOS 7 YUM (Revision 10)
-                #   - CentOS 8 DNF/YUM (Revision 11)
-                #   - Amazon Linux YUM (Revision 9)
-                #
-                # Key points:
-                #   - Primary package manager: dnf
-                #   - Typical repos: fedora, updates, fedora-modular, updates-modular
-                #   - Error wording differs slightly from RHEL/CentOS (but is similar).
-                #
-                # Network failures:
-                #   - Governed by global Network Failure Semantics (Revision 6.5).
-                #   - DNS / connectivity errors MUST use "fallback".
-                #
-                # In summary:
-                #   - Fedora DNF domain primitives focus on:
-                #       * wrong package manager → rewrite to dnf
-                #       * malformed install commands
-                #       * repo/metadata corruption → dnf clean all + dnf makecache + retry
-                #       * idempotency ("Nothing to do", "Already installed")
-                #       * rpmdb corruption → rebuilddb + retry
-                #       * destructive commands → abort
-                #       * unknown commands → fallback
-                # ============================================================
 
                 "These rules apply ONLY when os_name == 'Fedora'. They MUST NOT apply to RHEL, CentOS, Amazon Linux, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
 
@@ -2073,45 +1927,6 @@ def recover(request: RecoveryRequest):
                 ###### Alpine APK domain primitives #####
                 # ============================================================
                 # ALPINE (APK) DOMAIN RULES — Applies ONLY when os_name = "Alpine" (This entire block is Revision 13)
-                # ============================================================
-                #
-                # Alpine APK vs Ubuntu/Debian APT — key similarities and differences:
-                #
-                # 1. Package manager:
-                #    - Alpine uses 'apk' as its package manager.
-                #    - Common commands:
-                #        apk update
-                #        apk add <pkg>
-                #        apk del <pkg>
-                #
-                # 2. Cache and index layout:
-                #    - Alpine stores APK cache under:
-                #        /var/cache/apk
-                #    - Corruption or partial state is typically resolved by:
-                #        * removing cached APKs
-                #        * rerunning 'apk update'
-                #        * rerunning 'apk add <pkg>' when a package is present
-                #
-                # 3. Error message wording (examples, not exhaustive):
-                #    - 'ERROR: unable to select packages:'
-                #    - 'ERROR: unsatisfiable constraints:'
-                #    - 'ERROR: failed to update apk cache'
-                #    - 'ERROR: repository ... not found'
-                #    - 'fetch http://...: temporary error (try again later)'
-                #
-                # 4. Network failures:
-                #    - Governed by global Network Failure Semantics (Revision 6.5).
-                #    - DNS / connectivity errors MUST use "fallback".
-                #
-                # 5. Malformed commands:
-                #    - Global Linux malformed rules apply (Revision 2, 6.7).
-                #    - 'apk add' with no package is INCOMPLETE and MUST prefer 'fallback'
-                #      unless a safe, concrete correction exists WITHOUT guessing a package.
-                #
-                # In summary:
-                #    - Alpine APK domain primitives are structurally aligned with Ubuntu APT,
-                #      but normalized to 'apk', use APT-style corruption cleanup semantics
-                #      for /var/cache/apk, and respect global malformed and safety rules.
                 # ============================================================
 
                 "These rules apply ONLY when os_name = \"Alpine\".\n"
@@ -3721,7 +3536,19 @@ def recover(request: RecoveryRequest):
 #- Increases the chance of drift
 #Especially in long-running systems like this AI gateway.
 
-
+#By removing heavy comments:
+#
+#- the instruction signal becomes cleaner
+#
+#- the model has fewer competing patterns
+#
+#- the rules dominate the prompt
+#
+#- the model becomes more consistent
+#
+#- the model becomes more predictable
+#
+#- the model becomes more stable across runs
 
 
 

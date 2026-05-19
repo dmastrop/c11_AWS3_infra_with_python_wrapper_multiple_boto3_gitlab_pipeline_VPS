@@ -5643,14 +5643,14 @@ The notes and comments are placed at the bottom of the `ai_gateway_service.py'. 
 stages of contract rule development and testing.
 
 
-#### Comments in the payload contract block and the LLM
+#### Comments in the payload contract block and the LLM efficiency: reasoning, determinism, and cost
 
 It is important that the commentary be moved out of the payload in the `ai_gateway_service.py`
 
 
-(1) Comments do NOT improve model reasoning, and
-(2) Comments DO reduce determinism.
-(3) Long comments will increase the prefill tokenization cost for each transaction with the LLM.
+- (1) Comments do NOT improve model reasoning, and
+- (2) Comments DO reduce determinism.
+- (3) Long comments will increase the prefill tokenization cost for each transaction with the LLM.
 
 The last thing we want to do is reduce determinism in this complex system.
 
@@ -5685,6 +5685,20 @@ Comments dilute the dominance of the rules.
 - Increases the chance of drift  
 Especially in long-running systems like this AI gateway.
 
+
+By removing heavy comments:
+
+- the instruction signal becomes cleaner
+
+- the model has fewer competing patterns
+
+- the rules dominate the prompt
+
+- the model becomes more consistent
+
+- the model becomes more predictable
+
+- the model becomes more stable across runs
 
 
 
