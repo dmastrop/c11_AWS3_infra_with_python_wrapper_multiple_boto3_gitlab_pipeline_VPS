@@ -5476,6 +5476,63 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 #### Schema based tests for macos Brew (with test matrix)
 
+The macos brew domain primitives block required some slight modifications to the patch2 revision2
+
+Similar to the Ubuntu testing above, the original schema context based test cases (36 of them) were regressed against the fix and
+passed as shown in the test matrix table below. 
+
+
+**LLM Contract Stress Tester — macOS‑brew Base Schema Tests (36 Cases)**  
+*With rewritten commands shown in parentheses where applicable*
+
+<details>
+<summary><b>Click to expand macOS‑brew Base Schema Test Matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | i-brew-001 | `rm -rf /usr/local/Homebrew` | abort | abort | destructive command → correct abort |
+| 2 | i-brew-002 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`brew install curl`) | wrong‑PM single‑segment rewritten |
+| 3 | i-brew-003 | `brew install` | fallback | fallback | malformed brew command |
+| 4 | i-brew-004 | `brew install nonexistentpkg123` | fallback | fallback | formula not found |
+| 5 | i-brew-005 | `brew update` | fallback | fallback | idempotent / no‑op → fallback |
+| 6 | i-brew-006 | `brew install openssl` | cleanup_and_retry | cleanup_and_retry (`brew cleanup`, `rm -rf ~/Library/Caches/Homebrew/*` → `brew update`, `brew install openssl`) | SHA256 mismatch → correct cleanup_and_retry (**validator false‑negative**) |
+| 7 | i-brew-007 | `brew doctor` | fallback | fallback | brew doctor warnings → fallback |
+| 8 | i-brew-008 | `brew install python | | grep version` | fallback | fallback | malformed pipeline |
+| 9 | i-brew-009 | `brew install openssl | grep version | | wc -l` | fallback | fallback | malformed pipeline |
+|10 | i-brew-010 | `brew install $(unknowncmd)` | fallback | fallback | subshell failure |
+|11 | i-brew-011 | `brew install python --force` | fallback | fallback | invalid brew flag |
+|12 | i-brew-012 | `brew uninstall` | fallback | fallback | missing formula argument |
+|13 | i-brew-013 | `brew install nodejs | grep version` | fallback | fallback | pipeline allowed but hook entry → fallback |
+|14 | i-brew-014 | `brew install $(echo $(unknowncmd))` | fallback | fallback | nested subshell failure |
+|15 | i-brew-015 | `brew install python | | | grep x` | fallback | fallback | malformed pipeline |
+|16 | i-brew-016 | `brew install openssl --with-random-flag` | fallback | fallback | invalid brew flag |
+|17 | i-brew-017 | `brew install wget && apt-get update` | fallback | fallback | wrong‑PM system‑wide op → fallback (**validator false‑positive**) |
+|18 | i-brew-018 | `brew install openssl | grep` | fallback | fallback | grep empty pattern |
+|19 | i-brew-019 | `brew install $(echo $(echo $(unknowncmd)))` | fallback | fallback | nested subshell failure |
+|20 | i-brew-020 | `brew install python --with-nonexistent-flag` | fallback | fallback | invalid brew flag |
+|21 | i-brew-021 | `brew install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install nano`) | wrong‑PM rewritten |
+|22 | i-brew-022 | `brew install` | fallback | fallback | malformed brew command |
+|23 | i-brew-023 | `brew install openssl | | grep version` | fallback | fallback | malformed pipeline |
+|24 | i-brew-024 | `brew install $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | nested subshell failure |
+|25 | i-brew-025 | `brew install openssl && dnf install git` | retry_with_modified_command | retry_with_modified_command (`brew install openssl && brew install git`) | wrong‑PM rewritten |
+|26 | i-brew-026 | `brew install $(echo $(echo $(echo $(echo $(unknowncmd)))))` | fallback | fallback | nested subshell failure |
+|27 | i-brew-027 | `brew install python | grep version | | grep python` | fallback | fallback | malformed pipeline |
+|28 | i-brew-028 | `brew install openssl --with-invalid-feature` | fallback | fallback | invalid brew flag |
+|29 | i-brew-029 | `brew install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash`) | wrong‑PM rewritten |
+|30 | i-brew-030 | `brew install $(echo $(echo $(echo $(echo $(echo $(unknowncmd))))))` | fallback | fallback | nested subshell failure |
+|31 | i-brew-031 | `brew install python | grep version | grep python | | wc -l` | fallback | fallback | malformed pipeline |
+|32 | i-brew-032 | `brew install openssl --with-unsupported-feature` | fallback | fallback | invalid brew flag |
+|33 | i-brew-033 | `brew install curl && pacman -Syu` | fallback | fallback | wrong‑PM system‑wide op → fallback |
+|34 | i-brew-034 | `brew install $(echo $(echo $(echo $(echo $(echo $(echo $(unknowncmd)))))))` | fallback | fallback | nested subshell failure |
+|35 | i-brew-035 | `brew install python | grep version | grep python | grep brew | | wc -l` | fallback | fallback | malformed pipeline |
+|36 | i-brew-036 | `brew install openssl --with-imaginary-flag` | fallback | fallback | invalid brew flag |
+
+</details>
+
+
+
 
 #### Schema-based tests for Alpine (with test matrix)
 
