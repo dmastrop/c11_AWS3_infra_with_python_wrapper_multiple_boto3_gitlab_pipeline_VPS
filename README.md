@@ -1541,7 +1541,7 @@ WORK IN PROGRESS
 - [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
-
+- [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
 - [Continued testing with the semantics files (validator logic) hooked into the stress tester](#continued-testing-with-the-semantics-files-validator-logic-hooked-into-the-stress-tester)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
@@ -4758,8 +4758,8 @@ And it ensures AL2023 behaves consistently with all other Linux distributions in
 ---
 
 
-
 ### Fallback vs. Abort in the Contract Architecture Relative to OS
+
 *(Native fallback, OS‑mutation, BusyBox, brew, and destructive commands)*
 
 The contract defines two fundamentally different failure actions: **fallback** and **abort**.  
@@ -4958,7 +4958,7 @@ This section deals only with native fallback, not derived fallback.
 - BusyBox is the only OS where wrong‑PM = abort becasuse it has no package manager
 - Destructive commands = abort everywhere in all OSes
 - This section discussion concerns native fallback, not derived fallback. (For a much more detailed code-centric explanation of 
-all the differences between native and derived fallback see the earlier UPDATE chapters in this README). 
+all the differences between native and derived fallback see the earlier UPDATE chapters in this READMEg. 
 
 
 
