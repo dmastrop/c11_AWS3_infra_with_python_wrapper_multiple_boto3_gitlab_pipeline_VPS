@@ -5482,55 +5482,59 @@ Similar to the Ubuntu testing above, the original schema context based test case
 passed as shown in the test matrix table below. 
 
 
-**LLM Contract Stress Tester — macOS‑brew Base Schema Tests (36 Cases)**  
-*With rewritten commands shown in parentheses where applicable*
+<h3>LLM Contract Stress Tester — macOS Homebrew Base Schema Tests (36 Cases)</h3>
+<p><em>With rewritten commands shown in parentheses where applicable</em></p>
 
-<details>
-<summary><b>Click to expand macOS‑brew Base Schema Test Matrix</b></summary>
-
-<br>
-
-| # | Instance ID | Command | Expected Action | Actual Action | Notes |
-|---|-------------|---------|------------------|----------------|--------|
-| 1 | i-brew-001 | `rm -rf /usr/local/Homebrew` | abort | abort | destructive command → correct abort |
-| 2 | i-brew-002 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`brew install curl`) | wrong‑PM single‑segment rewritten |
-| 3 | i-brew-003 | `brew install` | fallback | fallback | malformed brew command |
-| 4 | i-brew-004 | `brew install nonexistentpkg123` | fallback | fallback | formula not found |
-| 5 | i-brew-005 | `brew update` | fallback | fallback | idempotent / no‑op → fallback |
-| 6 | i-brew-006 | `brew install openssl` | cleanup_and_retry | cleanup_and_retry (`brew cleanup`, `rm -rf ~/Library/Caches/Homebrew/*` → `brew update`, `brew install openssl`) | SHA256 mismatch → correct cleanup_and_retry (**validator false‑negative**) |
-| 7 | i-brew-007 | `brew doctor` | fallback | fallback | brew doctor warnings → fallback |
-| 8 | i-brew-008 | `brew install python | | grep version` | fallback | fallback | malformed pipeline |
-| 9 | i-brew-009 | `brew install openssl | grep version | | wc -l` | fallback | fallback | malformed pipeline |
-|10 | i-brew-010 | `brew install $(unknowncmd)` | fallback | fallback | subshell failure |
-|11 | i-brew-011 | `brew install python --force` | fallback | fallback | invalid brew flag |
-|12 | i-brew-012 | `brew uninstall` | fallback | fallback | missing formula argument |
-|13 | i-brew-013 | `brew install nodejs | grep version` | fallback | fallback | pipeline allowed but hook entry → fallback |
-|14 | i-brew-014 | `brew install $(echo $(unknowncmd))` | fallback | fallback | nested subshell failure |
-|15 | i-brew-015 | `brew install python | | | grep x` | fallback | fallback | malformed pipeline |
-|16 | i-brew-016 | `brew install openssl --with-random-flag` | fallback | fallback | invalid brew flag |
-|17 | i-brew-017 | `brew install wget && apt-get update` | fallback | fallback | wrong‑PM system‑wide op → fallback (**validator false‑positive**) |
-|18 | i-brew-018 | `brew install openssl | grep` | fallback | fallback | grep empty pattern |
-|19 | i-brew-019 | `brew install $(echo $(echo $(unknowncmd)))` | fallback | fallback | nested subshell failure |
-|20 | i-brew-020 | `brew install python --with-nonexistent-flag` | fallback | fallback | invalid brew flag |
-|21 | i-brew-021 | `brew install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install nano`) | wrong‑PM rewritten |
-|22 | i-brew-022 | `brew install` | fallback | fallback | malformed brew command |
-|23 | i-brew-023 | `brew install openssl | | grep version` | fallback | fallback | malformed pipeline |
-|24 | i-brew-024 | `brew install $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | nested subshell failure |
-|25 | i-brew-025 | `brew install openssl && dnf install git` | retry_with_modified_command | retry_with_modified_command (`brew install openssl && brew install git`) | wrong‑PM rewritten |
-|26 | i-brew-026 | `brew install $(echo $(echo $(echo $(echo $(unknowncmd)))))` | fallback | fallback | nested subshell failure |
-|27 | i-brew-027 | `brew install python | grep version | | grep python` | fallback | fallback | malformed pipeline |
-|28 | i-brew-028 | `brew install openssl --with-invalid-feature` | fallback | fallback | invalid brew flag |
-|29 | i-brew-029 | `brew install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash`) | wrong‑PM rewritten |
-|30 | i-brew-030 | `brew install $(echo $(echo $(echo $(echo $(echo $(unknowncmd))))))` | fallback | fallback | nested subshell failure |
-|31 | i-brew-031 | `brew install python | grep version | grep python | | wc -l` | fallback | fallback | malformed pipeline |
-|32 | i-brew-032 | `brew install openssl --with-unsupported-feature` | fallback | fallback | invalid brew flag |
-|33 | i-brew-033 | `brew install curl && pacman -Syu` | fallback | fallback | wrong‑PM system‑wide op → fallback |
-|34 | i-brew-034 | `brew install $(echo $(echo $(echo $(echo $(echo $(echo $(unknowncmd)))))))` | fallback | fallback | nested subshell failure |
-|35 | i-brew-035 | `brew install python | grep version | grep python | grep brew | | wc -l` | fallback | fallback | malformed pipeline |
-|36 | i-brew-036 | `brew install openssl --with-imaginary-flag` | fallback | fallback | invalid brew flag |
-
-</details>
-
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Instance ID</th>
+      <th>Command</th>
+      <th>Expected Action</th>
+      <th>Actual Action</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>i-brew-001</td><td><code>rm -rf /usr/local/Homebrew</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
+    <tr><td>2</td><td>i-brew-002</td><td><code>apt-get install curl</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl</code>)</td><td>wrong-PM rewritten</td></tr>
+    <tr><td>3</td><td>i-brew-003</td><td><code>brew install</code></td><td>fallback</td><td>fallback</td><td>missing formula</td></tr>
+    <tr><td>4</td><td>i-brew-004</td><td><code>brew install nonexistentpkg123</code></td><td>fallback</td><td>fallback</td><td>formula not found</td></tr>
+    <tr><td>5</td><td>i-brew-005</td><td><code>brew update</code></td><td>fallback</td><td>fallback</td><td>system-wide mutation</td></tr>
+    <tr><td>6</td><td>i-brew-006</td><td><code>brew install openssl</code></td><td>fallback</td><td>cleanup_and_retry</td><td>SHA256 mismatch; LLM chose cleanup_and_retry (you can decide whether to keep this as “acceptable” or note as stricter fallback-only expectation)</td></tr>
+    <tr><td>7</td><td>i-brew-007</td><td><code>brew doctor</code></td><td>fallback</td><td>fallback</td><td>diagnostic warning</td></tr>
+    <tr><td>8</td><td>i-brew-008</td><td><code>brew install python | | grep version</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>9</td><td>i-brew-009</td><td><code>brew install openssl | grep version | | wc -l</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>10</td><td>i-brew-010</td><td><code>brew install $(unknowncmd)</code></td><td>fallback</td><td>fallback</td><td>subshell unknown command</td></tr>
+    <tr><td>11</td><td>i-brew-011</td><td><code>brew install python --force</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
+    <tr><td>12</td><td>i-brew-012</td><td><code>brew uninstall</code></td><td>fallback</td><td>fallback</td><td>missing formula</td></tr>
+    <tr><td>13</td><td>i-brew-013</td><td><code>brew install nodejs | grep version</code></td><td>fallback</td><td>fallback</td><td>pipeline enters hook</td></tr>
+    <tr><td>14</td><td>i-brew-014</td><td><code>brew install $(echo $(unknowncmd))</code></td><td>fallback</td><td>fallback</td><td>nested subshell unknown command</td></tr>
+    <tr><td>15</td><td>i-brew-015</td><td><code>brew install python | | | grep x</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>16</td><td>i-brew-016</td><td><code>brew install openssl --with-random-flag</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
+    <tr><td>17</td><td>i-brew-017</td><td><code>brew install wget && apt-get update</code></td><td>fallback</td><td>fallback</td><td>system-wide wrong-PM op (validator false-positive)</td></tr>
+    <tr><td>18</td><td>i-brew-018</td><td><code>brew install openssl | grep</code></td><td>fallback</td><td>fallback</td><td>empty grep pattern</td></tr>
+    <tr><td>19</td><td>i-brew-019</td><td><code>brew install $(echo $(echo $(unknowncmd)))</code></td><td>fallback</td><td>fallback</td><td>nested subshell unknown command</td></tr>
+    <tr><td>20</td><td>i-brew-020</td><td><code>brew install python --with-nonexistent-flag</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
+    <tr><td>21</td><td>i-brew-021</td><td><code>brew install curl && yum install nano</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install nano</code>)</td><td>wrong-PM rewritten</td></tr>
+    <tr><td>22</td><td>i-brew-022</td><td><code>brew install</code></td><td>fallback</td><td>fallback</td><td>duplicate missing-formula case</td></tr>
+    <tr><td>23</td><td>i-brew-023</td><td><code>brew install openssl | | grep version</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>24</td><td>i-brew-024</td><td><code>brew install $(echo $(echo $(echo $(unknowncmd))))</code></td><td>fallback</td><td>fallback</td><td>nested subshell unknown command</td></tr>
+    <tr><td>25</td><td>i-brew-025</td><td><code>brew install openssl && dnf install git</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install openssl && brew install git</code>)</td><td>wrong-PM rewritten</td></tr>
+    <tr><td>26</td><td>i-brew-026</td><td><code>brew install $(echo $(echo $(echo $(echo $(unknowncmd)))))</code></td><td>fallback</td><td>fallback</td><td>nested subshell unknown command</td></tr>
+    <tr><td>27</td><td>i-brew-027</td><td><code>brew install python | grep version | | grep python</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>28</td><td>i-brew-028</td><td><code>brew install openssl --with-invalid-feature</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
+    <tr><td>29</td><td>i-brew-029</td><td><code>brew install curl && apk add bash</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install bash</code>)</td><td>wrong-PM rewritten</td></tr>
+    <tr><td>30</td><td>i-brew-030</td><td><code>brew install $(echo $(echo $(echo $(echo $(echo $(unknowncmd))))))</code></td><td>fallback</td><td>fallback</td><td>nested subshell unknown command</td></tr>
+    <tr><td>31</td><td>i-brew-031</td><td><code>brew install python | grep version | grep python | | wc -l</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>32</td><td>i-brew-032</td><td><code>brew install openssl --with-unsupported-feature</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
+    <tr><td>33</td><td>i-brew-033</td><td><code>brew install curl && pacman -Syu</code></td><td>fallback</td><td>fallback</td><td>system-wide wrong-PM op</td></tr>
+    <tr><td>34</td><td>i-brew-034</td><td><code>brew install $(echo $(echo $(echo $(echo $(echo $(echo $(unknowncmd)))))))</code></td><td>fallback</td><td>fallback</td><td>deeply nested subshell unknown command</td></tr>
+    <tr><td>35</td><td>i-brew-035</td><td><code>brew install python | grep version | grep python | grep brew | | wc -l</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+    <tr><td>36</td><td>i-brew-036</td><td><code>brew install openssl --with-imaginary-flag</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
+  </tbody>
+</table>
 
 
 
