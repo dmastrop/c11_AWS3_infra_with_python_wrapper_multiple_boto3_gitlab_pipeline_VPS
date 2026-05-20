@@ -4817,6 +4817,10 @@ Thus:
 - Invalid PM flags → fallback  
 - System‑wide wrong‑PM operations → fallback
 
+And, of course, if the incorrect OS PM is used, that can be safely rewritten to the correct PM for the OS using the 
+retry_with_modified_command action plan from the LLM.  And it does this very well (tested and validated).
+
+
 ---
 
 #### Abort — the “dangerous or impossible” path  
@@ -4846,7 +4850,7 @@ Abort means:
 > *“This command is dangerous or impossible. Stop immediately.”*
 
 
-So Busybox is treated quite differently than the other OSes for for good reason. 
+So Busybox is treated quite differently than the other OSes and for good reason. (It simply does not support a PM). 
 
 
 ---
@@ -4948,12 +4952,13 @@ This section deals only with native fallback, not derived fallback.
 
 ####  Final Notes  
 
-- **fallback → install_failed**  
-- **abort → immediate stop**  
-- **OS mutation is never destructive**, so fallback is correct  
-- **BusyBox is the only OS where wrong‑PM = abort** becasuse it has no package manager
-- **Destructive commands = abort everywhere** in all OSes
-- **This section describes native fallback, not derived fallback**
+- fallback → install_failed
+- abort → immediate stop  
+- OS mutation is never destructive, so fallback is correct  
+- BusyBox is the only OS where wrong‑PM = abort becasuse it has no package manager
+- Destructive commands = abort everywhere in all OSes
+- This section discussion concerns native fallback, not derived fallback. (For a much more detailed code-centric explanation of 
+all the differences between native and derived fallback see the earlier UPDATE chapters in this README). 
 
 
 
