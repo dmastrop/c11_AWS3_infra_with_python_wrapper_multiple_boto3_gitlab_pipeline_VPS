@@ -5367,7 +5367,7 @@ test cases using the original schema context based tests was performed again aft
 They conntinued to pass as shown in the table below:
 
 
-**LLM Contract Stress Tester — Ubuntu (apt/apt‑get) Environment (Original 20 Tests)**
+##### LLM Contract Stress Tester — Ubuntu (apt/apt‑get) Environment (Original 20 Tests)
 
 *With corrected rewritten commands shown in parentheses*
 
@@ -5430,7 +5430,7 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 
 
-**LLM Contract Stress Tester — Ubuntu Patch2‑Rev2 Pipeline Rewrite Tests (24 Cases)**  
+##### LLM Contract Stress Tester — Ubuntu Patch2‑Rev2 Pipeline Rewrite Tests (24 Cases)
 
 *With corrected rewritten commands shown in parentheses*
 
@@ -5482,8 +5482,14 @@ Similar to the Ubuntu testing above, the original schema context based test case
 passed as shown in the test matrix table below. 
 
 
-<h3>LLM Contract Stress Tester — macOS Homebrew Base Schema Tests (36 Cases)</h3>
-<p><em>With rewritten commands shown in parentheses where applicable</em></p>
+##### LLM Contract Stress Tester — macOS Homebrew Base Schema Tests (36 Cases)
+
+*With rewritten commands shown in parentheses where applicable*
+
+<details>
+<summary><b>Click to expand macOS Homebrew base test matrix</b></summary>
+
+<br>
 
 <table>
   <thead>
@@ -5535,6 +5541,8 @@ passed as shown in the test matrix table below.
     <tr><td>36</td><td>i-brew-036</td><td><code>brew install openssl --with-imaginary-flag</code></td><td>fallback</td><td>fallback</td><td>invalid flag</td></tr>
   </tbody>
 </table>
+
+</details>
 
 
 
