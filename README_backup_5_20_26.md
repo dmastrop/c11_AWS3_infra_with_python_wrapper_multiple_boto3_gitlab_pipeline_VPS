@@ -1542,11 +1542,11 @@ WORK IN PROGRESS
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
 - [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
-- [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
-- [Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost](#comments-in-the-payload-contract-block-of-ai_gateway_servicepy-and-llm-efficiency-reasoning-determinism-and-cost)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
 - [Continued testing with the semantics files (validator logic) hooked into the stress tester](#continued-testing-with-the-semantics-files-validator-logic-hooked-into-the-stress-tester)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
+- [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
+- [Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost](#comments-in-the-payload-contract-block-of-ai_gateway_servicepy-and-llm-efficiency-reasoning-determinism-and-cost)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
 
@@ -4968,364 +4968,6 @@ all the differences between native and derived fallback see the earlier UPDATE c
 ---
 
 
-### LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map
-
-The following sections pertain to all domain prikmitives blocks for all the current OSes/plaforms
-
-#### Code Location in the repo
-
-These can be found in the repo in the ../sequential_master_modules/ai_gateway_service.py file. 
-
-Some structural notes are given below on how the contract block is organized, along with a few complete snippets of some 
-of the domain primitives blocks (For Ubuntu, etc.)
-
-The contract rules domain primitives blocks are found here in the ai_gateway_service.py: 
-
-
-```
-
-        #Payload6 enhancments
-        # ================================================================
-        # PAYLOAD BLOCK — AI GATEWAY SERVICE
-        #
-        # This payload defines the *contract* between the AI Gateway Service
-        # and the LLM. It is the single most important component of the
-        # recovery engine architecture.
-        #
-        # Key principles:
-        # - The contract is STATIC. It does not change between tests.
-        # - The context is DYNAMIC. It is injected from the curl request.
-        # - The LLM must ALWAYS return a JSON object that conforms to the schema.
-        # - The validator enforces the contract and rejects malformed plans.
-        #
-        # This block is the result of iterative white‑box testing using curl.
-        # Each iteration revealed ambiguities or weaknesses in the contract,
-        # which were then tightened to produce deterministic behavior.
-        #
-        # The comments in this block will be used directly in the README
-        # chapter: "Developing the AI Gateway Service through iterative
-        # white‑box LLM response testing with curl".
-        # ================================================================
-
-        payload = {
-            #"model": "gpt-4.1",
-            "model": "gpt-5.4",
-            "temperature": 0,
-            "max_output_tokens": 256,
-
-            # The "input" field contains the entire contract, rules, and context.
-            # The LLM receives this as a single string and MUST return a JSON object.
-            "input": (
-                "You are a recovery engine. "
-                "Follow the contract and rules provided inside the input JSON. "
-                "Return ONLY a JSON object.\n\n"
-
-
-
-
-                ##### HIGH LEVEL ORGANIZATION ####
-                #Global rules
-                #CONTEXT
-                #Linux-generic malformed rules
-                #OS-specific domain blocks (domain primitives)
-
-
-
-
-                # ============================================================
-                # CONTRACT — STATIC SPECIFICATION
-                # Revision 1: Added the messages requirement for abort and notes as well to the LLM
-                # ============================================================
-                "CONTRACT:\n"
-                "You must return ONLY a JSON object with this schema:\n\n"
-                "{\n"
-                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
-                "  \"cleanup\": [string],\n"
-                "  \"retry\": string\n"
-                "  \"message\": string\n"
-                "}\n\n"
-                "Notes:\n"
-                "- \"message\" is REQUIRED when action = \"abort\".\n"
-                "- \"message\" is OPTIONAL for all other actions.\n"
-                "- \"cleanup\" MUST be an array of literal shell commands.\n"
-                "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
-
-                <<<< TRUNCATED FOR BREVITY>>>>
-
-```
-
-
-#### Contract Structure (High‑Level & All 17 OS/Platforms)
-
-The contract is organized into **five major layers**, each forming a strict semantic boundary that prevents rule leakage across OS families.
-
-The rules are explicitly stated as a part of the contract sent to the LLM to ensure no leakage between the domain primitives.
-
----
-
-**1. Global Contract Rules**  
-These rules apply to *every* OS/platform and define the universal behavior of the LLM contract.
-
-- JSON schema  
-- action semantics  
-- cleanup rules  
-- retry rules  
-- fallback rules  
-- abort rules  
-- safety constraints  
-- literal‑precedence meta‑rule  
-- network‑failure semantics  
-
-These rules form the **root of the contract** and are evaluated before any OS‑specific logic.
-
----
-
-**2. Malformed‑Linux Rules**  
-Applies to all Linux‑family OSes before OS‑specific domain primitives.
-
-- incomplete commands  
-- unrecognized commands  
-- show‑command fallback  
-- Revision 6.7 (core malformed‑Linux logic)  
-- Revision 6.8 (bash malformed‑command hardening, included in all Linux OS blocks)  
-
-This layer ensures malformed or ambiguous Linux commands are handled deterministically.
-
----
-
-**3. Linux OS‑Specific Domain Primitives (11 of 17)**  
-Each Linux OS/platform has its own domain‑primitive block, including Revision 6.8.
-
-- Ubuntu (Rev 5, 6.6)  
-- Debian (Rev 7)  
-- RHEL (Rev 8)  
-- Amazon Linux 2 (Rev 9)  
-- **Amazon Linux 2023 (Rev 20)**  
-- CentOS 7 (Rev 10)  
-- CentOS 8 (Rev 11)  
-- Fedora (Rev 12)  
-- Alpine (Rev 13, 13.1)  
-- BusyBox (Rev 14 with 6.9)  
-- Linux generic (bash, Rev 6.8)  
-
-These blocks define OS‑specific package‑manager semantics, corruption indicators, idempotency rules, and recovery flows.
-
----
-
-**4. Non‑Linux Domain Primitives (6 of 17)**  
-These platforms have **fully isolated** domain‑primitive blocks with no Linux inheritance.
-
-- Cisco IOS (Rev 3, 3.2, 3.3, 3.4)  
-- PAN‑OS (Rev 19)  
-- macOS brew (Rev 15 with 6.10)  
-- macOS zsh (Rev 16 with 6.11)  
-- Windows Server PowerShell (Rev 17 with 6.12)  
-- Linux PowerShell Core (pwsh, Rev 18 with 6.13)  
-
-These blocks define command‑mode semantics, privilege‑mode logic, PowerShell/pwsh behavior, and macOS‑specific command handling.
-
----
-
-**5. Context Injection**  
-This is the final layer and applies to *all* OS/platforms.
-
-- dynamic stderr  
-- dynamic stdout  
-- dynamic exit_status  
-- dynamic command  
-- dynamic OS identity  
-
-This layer ensures the LLM receives the **exact execution context** for each test case, enabling deterministic rule selection.
-
-
-
-
-
-#### Contract Structural Map (All 17 Domain‑Primitives Blocks)
-
-| **Section** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
-|-------------|------------------|-------------|------------------|-----------|
-| **Global JSON Schema** | 1 | Defines allowed actions and fields | None | Hard boundary for validator |
-| **Core Rules** | 1–4 | Action semantics, retry rules | Low | Precedes OS logic |
-| **Cleanup Rules** | 6.5 | Safe cleanup semantics | Low | Applies to all OSes |
-| **cleanup_and_retry Semantics** | 4, 6.5 | Multi‑step retry logic | Low | Critical for dpkg/rpmdb flows |
-| **Idempotency Rules** | 4 | Handle “already installed” cases | Low | Applies to all OSes |
-| **Literal‑Precedence Meta‑Rule** | 6.3 | Exact‑match overrides | Medium | Ensures deterministic rule selection |
-| **Fallback Rules** | 2 | Avoid guessing | Medium | Prevents test‑induced bias |
-| **Network Failure Semantics** | 6.5 | DNS/connectivity → fallback | Low | Global override |
-| **Malformed‑Linux Rules** | 2, 6.7 | Incomplete commands | Medium | Precedes OS‑specific blocks |
-| **Revision 6.8 (per‑OS)** | 6.8 | Bash malformed‑command hardening | **High** | Included in all Linux‑family OS blocks |
-
----
-
-**Linux OS‑Specific Domain Primitives (All 17 Blocks)**
-
-NOTE: The Linux generic is integrated into each linux distro domain primitives block below (Ubuntu, Debian, etc....) as a
-sub-block noted in the code comments (Revision 6.8)
-
-| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
-|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
-| **Ubuntu** | apt | 5, 6.6 | Hash Sum mismatch, dpkg repair | Medium | APT‑specific |
-| **Debian** | apt | 7 | fix‑broken, quote variants | Medium | APT variant |
-| **RHEL** | yum | 8 | metadata corruption, rpmdb | Medium | YUM‑specific |
-| **Amazon Linux 2** | yum | 9 | amazon‑linux‑extras | Medium | AL2‑specific |
-| **Amazon Linux 2023** | dnf | **20** | DNF metadata/mirrorlist logic, missing‑repo fallback | Medium | AL2023‑specific |
-| **CentOS 7** | yum | 10 | legacy YUM | Medium | C7‑specific |
-| **CentOS 8** | dnf | 11 | DNF + yum wrapper | Medium | C8‑specific |
-| **Fedora** | dnf | 12 | DNF semantics | Medium | Fedora‑specific |
-| **Alpine** | apk | 13, 13.1 | APK cache corruption | Medium | APK‑specific |
-| **Linux generic** | bash | 6.8 | malformed‑command hardening | High | Global Linux fallback |
-| **BusyBox** | ash | 14 (with 6.9) | ash‑specific malformed‑command logic | Medium | BusyBox‑specific |
-| **PAN‑OS** | — | 19 | operational‑mode vs config‑mode | Low | Fully isolated |
-| **Cisco IOS** | — | 3–3.4 | privilege‑mode logic | Low | Fully isolated |
-
----
- 
-**macOS Domain Primitives**
-
-| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
-|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
-| **macOS brew** | brew | 15 (with 6.10) | Homebrew semantics | Low | macOS‑specific |
-| **macOS zsh** | none | 16 (with 6.11) | zsh‑specific malformed‑command logic | Low | macOS‑specific |
-
----
-
-**Windows Domain Primitives**
-
-| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
-|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
-| **Windows Server** | PowerShell | 17 (with 6.12) | PowerShell semantics | Low | Windows‑specific |
-| **Linux (PowerShell Core)** | pwsh | 18 (with 6.13) | pwsh‑specific semantics | Low | Cross‑platform pwsh |
-
----
-
-**Context Injection Layer**
-
-| Section | Revision(s) | Purpose | Leakage Risk | Notes |
-|--------|-------------|---------|--------------|-------|
-| **Context Injection** | — | dynamic stderr/stdout/exit_status, dynamic command, dynamic OS identity | None | End of contract |
-
-
-
-In the payload the Context Injection Layer is this part right here:
-
-```
-
-                # ============================================================
-                # CONTEXT — DYNAMIC INPUT FROM CURL
-                # ============================================================
-                f"CONTEXT:\n{context}"
-
-
-
-
-                ##### DOMAIN SPECIFIC PRIMITIVES ######
-                ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
-                ##### rule leakage between different OSes and platforms, etc.
-```
-This is the context block that is injected into the payload to the LLM by the AI/MCP HOOK in module2f:
-
-```
-
-        context = {
-            "command": original_command,
-            "stdout": stdout_output,
-            "stderr": stderr_output,
-            "exit_status": exit_status,
-            "attempt": attempt + 1,
-            "instance_id": instance_id,
-            "ip": ip,
-            "tags": extra_tags,
-            "os_info": globals().get("os_info", None),
-            "history": globals().get("command_history", None),
-        }
-```
-
----
-
-[Back to top](#top-update59)
-
----
-
-
-### Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost 
-
-
-The full LLM contract is defined inside `ai_gateway_service.py` and includes detailed domain‑primitive blocks for every supported OS and platform. These blocks describe the exact semantics, safety rules, and recovery behaviors the LLM must follow when interpreting shell commands, handling package‑manager failures, or performing remediation. The file also contains extensive commentary explaining the differences between operating systems (e.g., Debian vs. Ubuntu APT behavior, Fedora vs. RHEL DNF semantics, Alpine APK quirks, BusyBox limitations). These comments are intended for developers maintaining the contract and are not part of the runtime logic. 
-
-This README section provides a high‑level overview, but the authoritative source of truth for all specific contract rules is the 
-domain‑primitive section inside the payload block of the `ai_gateway_service.py`.
-
-The notes and comments are placed at the bottom of the `ai_gateway_service.py'.  These notes were generated during the formative
-stages of contract rule development and testing.
-
-
-It is important that the commentary be moved out of the payload in the `ai_gateway_service.py`
-
-
-- (1) Comments do NOT improve model reasoning, and
-- (2) Comments DO reduce determinism.
-- (3) Long comments will increase the prefill tokenization cost for each transaction with the LLM.
-
-The last thing we want to do is reduce determinism in this complex system.
-
-Regarding the reduction in determinism, it is counter-intuiitve at first thought, but very true:
-
-Determinism in LLMs comes from:
-
-- a clean instruction signal  
-- low entropy  
-- minimal ambiguity  
-- minimal competing patterns  
-- minimal irrelevant text  
-
-Long comments introduce the following issues with the contract payload processing by the LLM:
-
-- Increase in the token count  
-More tokens → more branching → more variance.
-
-- Ingroduce alternative phrasings  
-The language model may latch onto a comment instead of a rule.
-
-- Introduce narrative text  
-Narrative text is high‑entropy and encourages creative continuation.
-
-- Increases the chance of the model “hallucinating” patterns  
-Because it sees more examples, more words, more structures.
-
-- Weakens the ratio of “rules” to “noise”  
-LLMs follow the **dominant pattern** in the prompt.  
-Comments dilute the dominance of the rules.
-
-- Increases the chance of drift  
-Especially in long-running systems like this AI gateway.
-
-
-By removing heavy comments:
-
-- the instruction signal becomes cleaner
-
-- the model has fewer competing patterns
-
-- the rules dominate the prompt
-
-- the model becomes more consistent
-
-- the model becomes more predictable
-
-- the model becomes more stable across runs
-
-
-
-
-
-
----
-
-[Back to top](#top-update59)
-
----
-
 
 ### Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete) 
 
@@ -6231,6 +5873,364 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 
 
 
+
+### LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map
+
+The following sections pertain to all domain prikmitives blocks for all the current OSes/plaforms
+
+#### Code Location in the repo
+
+These can be found in the repo in the ../sequential_master_modules/ai_gateway_service.py file. 
+
+Some structural notes are given below on how the contract block is organized, along with a few complete snippets of some 
+of the domain primitives blocks (For Ubuntu, etc.)
+
+The contract rules domain primitives blocks are found here in the ai_gateway_service.py: 
+
+
+```
+
+        #Payload6 enhancments
+        # ================================================================
+        # PAYLOAD BLOCK — AI GATEWAY SERVICE
+        #
+        # This payload defines the *contract* between the AI Gateway Service
+        # and the LLM. It is the single most important component of the
+        # recovery engine architecture.
+        #
+        # Key principles:
+        # - The contract is STATIC. It does not change between tests.
+        # - The context is DYNAMIC. It is injected from the curl request.
+        # - The LLM must ALWAYS return a JSON object that conforms to the schema.
+        # - The validator enforces the contract and rejects malformed plans.
+        #
+        # This block is the result of iterative white‑box testing using curl.
+        # Each iteration revealed ambiguities or weaknesses in the contract,
+        # which were then tightened to produce deterministic behavior.
+        #
+        # The comments in this block will be used directly in the README
+        # chapter: "Developing the AI Gateway Service through iterative
+        # white‑box LLM response testing with curl".
+        # ================================================================
+
+        payload = {
+            #"model": "gpt-4.1",
+            "model": "gpt-5.4",
+            "temperature": 0,
+            "max_output_tokens": 256,
+
+            # The "input" field contains the entire contract, rules, and context.
+            # The LLM receives this as a single string and MUST return a JSON object.
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+
+
+
+
+                ##### HIGH LEVEL ORGANIZATION ####
+                #Global rules
+                #CONTEXT
+                #Linux-generic malformed rules
+                #OS-specific domain blocks (domain primitives)
+
+
+
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # Revision 1: Added the messages requirement for abort and notes as well to the LLM
+                # ============================================================
+                "CONTRACT:\n"
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "  \"message\": string\n"
+                "}\n\n"
+                "Notes:\n"
+                "- \"message\" is REQUIRED when action = \"abort\".\n"
+                "- \"message\" is OPTIONAL for all other actions.\n"
+                "- \"cleanup\" MUST be an array of literal shell commands.\n"
+                "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
+
+                <<<< TRUNCATED FOR BREVITY>>>>
+
+```
+
+
+#### Contract Structure (High‑Level & All 17 OS/Platforms)
+
+The contract is organized into **five major layers**, each forming a strict semantic boundary that prevents rule leakage across OS families.
+
+The rules are explicitly stated as a part of the contract sent to the LLM to ensure no leakage between the domain primitives.
+
+---
+
+**1. Global Contract Rules**  
+These rules apply to *every* OS/platform and define the universal behavior of the LLM contract.
+
+- JSON schema  
+- action semantics  
+- cleanup rules  
+- retry rules  
+- fallback rules  
+- abort rules  
+- safety constraints  
+- literal‑precedence meta‑rule  
+- network‑failure semantics  
+
+These rules form the **root of the contract** and are evaluated before any OS‑specific logic.
+
+---
+
+**2. Malformed‑Linux Rules**  
+Applies to all Linux‑family OSes before OS‑specific domain primitives.
+
+- incomplete commands  
+- unrecognized commands  
+- show‑command fallback  
+- Revision 6.7 (core malformed‑Linux logic)  
+- Revision 6.8 (bash malformed‑command hardening, included in all Linux OS blocks)  
+
+This layer ensures malformed or ambiguous Linux commands are handled deterministically.
+
+---
+
+**3. Linux OS‑Specific Domain Primitives (11 of 17)**  
+Each Linux OS/platform has its own domain‑primitive block, including Revision 6.8.
+
+- Ubuntu (Rev 5, 6.6)  
+- Debian (Rev 7)  
+- RHEL (Rev 8)  
+- Amazon Linux 2 (Rev 9)  
+- **Amazon Linux 2023 (Rev 20)**  
+- CentOS 7 (Rev 10)  
+- CentOS 8 (Rev 11)  
+- Fedora (Rev 12)  
+- Alpine (Rev 13, 13.1)  
+- BusyBox (Rev 14 with 6.9)  
+- Linux generic (bash, Rev 6.8)  
+
+These blocks define OS‑specific package‑manager semantics, corruption indicators, idempotency rules, and recovery flows.
+
+---
+
+**4. Non‑Linux Domain Primitives (6 of 17)**  
+These platforms have **fully isolated** domain‑primitive blocks with no Linux inheritance.
+
+- Cisco IOS (Rev 3, 3.2, 3.3, 3.4)  
+- PAN‑OS (Rev 19)  
+- macOS brew (Rev 15 with 6.10)  
+- macOS zsh (Rev 16 with 6.11)  
+- Windows Server PowerShell (Rev 17 with 6.12)  
+- Linux PowerShell Core (pwsh, Rev 18 with 6.13)  
+
+These blocks define command‑mode semantics, privilege‑mode logic, PowerShell/pwsh behavior, and macOS‑specific command handling.
+
+---
+
+**5. Context Injection**  
+This is the final layer and applies to *all* OS/platforms.
+
+- dynamic stderr  
+- dynamic stdout  
+- dynamic exit_status  
+- dynamic command  
+- dynamic OS identity  
+
+This layer ensures the LLM receives the **exact execution context** for each test case, enabling deterministic rule selection.
+
+
+
+
+
+#### Contract Structural Map (All 17 Domain‑Primitives Blocks)
+
+| **Section** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------|------------------|-------------|------------------|-----------|
+| **Global JSON Schema** | 1 | Defines allowed actions and fields | None | Hard boundary for validator |
+| **Core Rules** | 1–4 | Action semantics, retry rules | Low | Precedes OS logic |
+| **Cleanup Rules** | 6.5 | Safe cleanup semantics | Low | Applies to all OSes |
+| **cleanup_and_retry Semantics** | 4, 6.5 | Multi‑step retry logic | Low | Critical for dpkg/rpmdb flows |
+| **Idempotency Rules** | 4 | Handle “already installed” cases | Low | Applies to all OSes |
+| **Literal‑Precedence Meta‑Rule** | 6.3 | Exact‑match overrides | Medium | Ensures deterministic rule selection |
+| **Fallback Rules** | 2 | Avoid guessing | Medium | Prevents test‑induced bias |
+| **Network Failure Semantics** | 6.5 | DNS/connectivity → fallback | Low | Global override |
+| **Malformed‑Linux Rules** | 2, 6.7 | Incomplete commands | Medium | Precedes OS‑specific blocks |
+| **Revision 6.8 (per‑OS)** | 6.8 | Bash malformed‑command hardening | **High** | Included in all Linux‑family OS blocks |
+
+---
+
+**Linux OS‑Specific Domain Primitives (All 17 Blocks)**
+
+NOTE: The Linux generic is integrated into each linux distro domain primitives block below (Ubuntu, Debian, etc....) as a
+sub-block noted in the code comments (Revision 6.8)
+
+| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
+| **Ubuntu** | apt | 5, 6.6 | Hash Sum mismatch, dpkg repair | Medium | APT‑specific |
+| **Debian** | apt | 7 | fix‑broken, quote variants | Medium | APT variant |
+| **RHEL** | yum | 8 | metadata corruption, rpmdb | Medium | YUM‑specific |
+| **Amazon Linux 2** | yum | 9 | amazon‑linux‑extras | Medium | AL2‑specific |
+| **Amazon Linux 2023** | dnf | **20** | DNF metadata/mirrorlist logic, missing‑repo fallback | Medium | AL2023‑specific |
+| **CentOS 7** | yum | 10 | legacy YUM | Medium | C7‑specific |
+| **CentOS 8** | dnf | 11 | DNF + yum wrapper | Medium | C8‑specific |
+| **Fedora** | dnf | 12 | DNF semantics | Medium | Fedora‑specific |
+| **Alpine** | apk | 13, 13.1 | APK cache corruption | Medium | APK‑specific |
+| **Linux generic** | bash | 6.8 | malformed‑command hardening | High | Global Linux fallback |
+| **BusyBox** | ash | 14 (with 6.9) | ash‑specific malformed‑command logic | Medium | BusyBox‑specific |
+| **PAN‑OS** | — | 19 | operational‑mode vs config‑mode | Low | Fully isolated |
+| **Cisco IOS** | — | 3–3.4 | privilege‑mode logic | Low | Fully isolated |
+
+---
+ 
+**macOS Domain Primitives**
+
+| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
+| **macOS brew** | brew | 15 (with 6.10) | Homebrew semantics | Low | macOS‑specific |
+| **macOS zsh** | none | 16 (with 6.11) | zsh‑specific malformed‑command logic | Low | macOS‑specific |
+
+---
+
+**Windows Domain Primitives**
+
+| **OS / Platform** | **Package Manager / Shell** | **Revision(s)** | **Purpose** | **Leakage Risk** | **Notes** |
+|-------------------|-----------------------------|------------------|-------------|------------------|-----------|
+| **Windows Server** | PowerShell | 17 (with 6.12) | PowerShell semantics | Low | Windows‑specific |
+| **Linux (PowerShell Core)** | pwsh | 18 (with 6.13) | pwsh‑specific semantics | Low | Cross‑platform pwsh |
+
+---
+
+**Context Injection Layer**
+
+| Section | Revision(s) | Purpose | Leakage Risk | Notes |
+|--------|-------------|---------|--------------|-------|
+| **Context Injection** | — | dynamic stderr/stdout/exit_status, dynamic command, dynamic OS identity | None | End of contract |
+
+
+
+In the payload the Context Injection Layer is this part right here:
+
+```
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+
+
+
+
+                ##### DOMAIN SPECIFIC PRIMITIVES ######
+                ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
+                ##### rule leakage between different OSes and platforms, etc.
+```
+This is the context block that is injected into the payload to the LLM by the AI/MCP HOOK in module2f:
+
+```
+
+        context = {
+            "command": original_command,
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "exit_status": exit_status,
+            "attempt": attempt + 1,
+            "instance_id": instance_id,
+            "ip": ip,
+            "tags": extra_tags,
+            "os_info": globals().get("os_info", None),
+            "history": globals().get("command_history", None),
+        }
+```
+
+---
+
+[Back to top](#top-update59)
+
+---
+
+
+### Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost 
+
+
+The full LLM contract is defined inside `ai_gateway_service.py` and includes detailed domain‑primitive blocks for every supported OS and platform. These blocks describe the exact semantics, safety rules, and recovery behaviors the LLM must follow when interpreting shell commands, handling package‑manager failures, or performing remediation. The file also contains extensive commentary explaining the differences between operating systems (e.g., Debian vs. Ubuntu APT behavior, Fedora vs. RHEL DNF semantics, Alpine APK quirks, BusyBox limitations). These comments are intended for developers maintaining the contract and are not part of the runtime logic. 
+
+This README section provides a high‑level overview, but the authoritative source of truth for all specific contract rules is the 
+domain‑primitive section inside the payload block of the `ai_gateway_service.py`.
+
+The notes and comments are placed at the bottom of the `ai_gateway_service.py'.  These notes were generated during the formative
+stages of contract rule development and testing.
+
+
+It is important that the commentary be moved out of the payload in the `ai_gateway_service.py`
+
+
+- (1) Comments do NOT improve model reasoning, and
+- (2) Comments DO reduce determinism.
+- (3) Long comments will increase the prefill tokenization cost for each transaction with the LLM.
+
+The last thing we want to do is reduce determinism in this complex system.
+
+Regarding the reduction in determinism, it is counter-intuiitve at first thought, but very true:
+
+Determinism in LLMs comes from:
+
+- a clean instruction signal  
+- low entropy  
+- minimal ambiguity  
+- minimal competing patterns  
+- minimal irrelevant text  
+
+Long comments introduce the following issues with the contract payload processing by the LLM:
+
+- Increase in the token count  
+More tokens → more branching → more variance.
+
+- Ingroduce alternative phrasings  
+The language model may latch onto a comment instead of a rule.
+
+- Introduce narrative text  
+Narrative text is high‑entropy and encourages creative continuation.
+
+- Increases the chance of the model “hallucinating” patterns  
+Because it sees more examples, more words, more structures.
+
+- Weakens the ratio of “rules” to “noise”  
+LLMs follow the **dominant pattern** in the prompt.  
+Comments dilute the dominance of the rules.
+
+- Increases the chance of drift  
+Especially in long-running systems like this AI gateway.
+
+
+By removing heavy comments:
+
+- the instruction signal becomes cleaner
+
+- the model has fewer competing patterns
+
+- the rules dominate the prompt
+
+- the model becomes more consistent
+
+- the model becomes more predictable
+
+- the model becomes more stable across runs
+
+
+
+
+
+
+---
+
+[Back to top](#top-update59)
+
+---
 
 
 ### Stress tester complete code review
