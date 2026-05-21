@@ -5359,7 +5359,7 @@ Mixed system‑ops
 
 
 
-#### Schema-based tests for Ubuntu (with test matrix)
+#### 1.Schema-based tests for Ubuntu (with test matrices)
 
 To ensure that the patches did not disrupt the legacy testing of the domain primitives block for Ubuntu, the original 20 
 test cases using the original schema context based tests was performed again after the patches were applied. 
@@ -5470,11 +5470,17 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 
 
+#### 2.Schema based tests for the other linix distro domain primtives blocks
+
+
+The pathes have been applied uniformly to all of the other linux distro domain primitives blocks and there is no need to regression
+test these again with the patch given how well the test passed on the Ubuntu (above).
 
 
 
 
-#### Schema based tests for macos Brew (with test matrix)
+
+#### 3.Schema based tests for macos Brew (with test matrices)
 
 The macos brew domain primitives block required some slight modifications to the patch2 revision2
 
