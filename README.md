@@ -5551,6 +5551,14 @@ passed as shown in the test matrix table below.
 </details>
 
 
+##### LLM Contract Stress Tester — macOS Homebrew Patch2‑Rev3 Pipeline Rewrite Tests (24 Cases)
+
+*With corrected rewritten commands shown in parentheses*
+
+
+
+
+
 
 #### Schema-based tests for Alpine (with test matrix)
 
