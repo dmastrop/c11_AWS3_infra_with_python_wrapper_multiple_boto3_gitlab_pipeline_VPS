@@ -2249,7 +2249,7 @@ def recover(request: RecoveryRequest):
                 "These rules also apply when BusyBox applets are invoked on macOS.\n"
                 "BusyBox installed on macOS does NOT activate the BusyBox domain primitives block.\n"
                 "\n"
-                ##### macOS Homebrew domain primitives #####
+                ##### macOS Homebrew domain primitives. Added minor fix that brew update and brew update are system-wide fallback #####
                 "- macOS-brew uses 'brew' as its primary package manager.\n"
                 "- Canonical commands include:\n"
                 "    brew update\n"
@@ -2258,6 +2258,9 @@ def recover(request: RecoveryRequest):
                 "    brew uninstall <pkg>\n"
                 "    brew doctor\n"
                 "    brew cleanup\n"
+                "\n"
+                "- 'brew update' and 'brew upgrade' are system-wide operations.\n"
+                "- The LLM MUST use 'fallback' when these appear in any segment of a pipeline.\n"
                 "\n"
                 "- The LLM MUST NOT invent flags such as '--force' or '--fix'.\n"
                 "- The LLM MUST NOT guess package names.\n"
@@ -2270,7 +2273,9 @@ def recover(request: RecoveryRequest):
                 "- If no package name is present, the LLM MUST use 'fallback'.\n"
                 "\n"
 
-                ##### Wrong package manager in pipelines (&&) — macOS Homebrew semantics #####   #### PATCH stress_tester1 patch2 rev2 ####
+                ##### Wrong package manager in pipelines (&&) — macOS Homebrew semantics #### PATCH stress_tester1 patch2 rev3 ####
+                ##### Note that this is revision3 of patch2 for the brew only (linux os uses patch2 rev2). ANY package manager 
+                ##### for system-wide ops is fallback, not just non-macos PMs.
                 "- If the command is a pipeline using '&&' and includes a non-macOS package manager\n"
                 "  (apt, apt-get, yum, dnf, apk, pacman), the LLM MUST treat each segment independently.\n"
                 "\n"
@@ -2285,7 +2290,11 @@ def recover(request: RecoveryRequest):
                 "      • ALL other segments (including existing 'brew' segments and non-PM commands) are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
-                "- If ANY segment in the pipeline performs a system-wide operation with a non-macOS package manager, such as:\n"
+
+                "- If ANY segment in the pipeline performs a system-wide operation with ANY package manager,\n"
+                "  including Homebrew itself, such as:\n"
+                "      brew update\n"
+                "      brew upgrade\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
                 "      yum update\n"
@@ -2293,9 +2302,6 @@ def recover(request: RecoveryRequest):
                 "      pacman -Syu\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into brew equivalents.\n"
-                "\n"
-                "- If ANY segment contains an invalid or unsupported flag for 'brew' (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
                 "\n"
 
 
