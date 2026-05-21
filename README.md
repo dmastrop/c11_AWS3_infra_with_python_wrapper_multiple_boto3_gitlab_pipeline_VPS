@@ -1544,11 +1544,10 @@ WORK IN PROGRESS
 - [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
 - [Continued testing with the semantics files (validator logic) hooked into the stress tester](#continued-testing-with-the-semantics-files-validator-logic-hooked-into-the-stress-tester)
-- [Stress tester complete code review](#stress-tester-complete-code-review)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
 - [Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost](#comments-in-the-payload-contract-block-of-ai_gateway_servicepy-and-llm-efficiency-reasoning-determinism-and-cost)
-
+- [Stress tester complete code review](#stress-tester-complete-code-review)
 
 
 
@@ -5551,30 +5550,204 @@ passed as shown in the test matrix table below.
 </details>
 
 
-##### LLM Contract Stress Tester — macOS Homebrew Patch2‑Rev3 Pipeline Rewrite Tests (24 Cases)
+
+##### LLM Contract Stress Tester — macOS Homebrew Patch2‑Rev4 Pipeline Rewrite Tests (24 Cases)
 
 *With corrected rewritten commands shown in parentheses*
 
+<details>
+<summary><b>Click to expand macOS Homebrew Patch2‑Rev4 test matrix</b></summary>
+
+<br>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Instance ID</th>
+      <th>Command</th>
+      <th>Expected Action</th>
+      <th>Actual Action</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr><td>1</td>
+        <td><a href="ca://s?q=Explain_brew-patch-001">brew-patch-001</a></td>
+        <td><code>apt-get install curl</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>2</td>
+        <td><a href="ca://s?q=Explain_brew-patch-002">brew-patch-002</a></td>
+        <td><code>brew install wget && yum install nano</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install wget && brew install nano</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>3</td>
+        <td><a href="ca://s?q=Explain_brew-patch-003">brew-patch-003</a></td>
+        <td><code>brew install curl && apt-get update</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>system‑wide op → fallback (validator false‑negative)</td></tr>
+
+    <tr><td>4</td>
+        <td><a href="ca://s?q=Explain_brew-patch-004">brew-patch-004</a></td>
+        <td><code>brew install curl && apt-get install python3 --badflag</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>invalid flag → fallback</td></tr>
+
+    <tr><td>5</td>
+        <td><a href="ca://s?q=Explain_brew-patch-005">brew-patch-005</a></td>
+        <td><code>brew install curl && pacman -Syu</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>system‑wide op → fallback</td></tr>
+
+    <tr><td>6</td>
+        <td><a href="ca://s?q=Explain_brew-patch-006">brew-patch-006</a></td>
+        <td><code>brew install curl && apk add bash</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl && brew install bash</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>7</td>
+        <td><a href="ca://s?q=Explain_brew-patch-007">brew-patch-007</a></td>
+        <td><code>brew install curl && rm -rf /usr/local/Homebrew</code></td>
+        <td>abort</td>
+        <td>abort</td>
+        <td>destructive command</td></tr>
+
+    <tr><td>8</td>
+        <td><a href="ca://s?q=Explain_brew-patch-008">brew-patch-008</a></td>
+        <td><code>yum install nano && brew install curl</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install nano && brew install curl</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>9</td>
+        <td><a href="ca://s?q=Explain_brew-patch-009">brew-patch-009</a></td>
+        <td><code>dnf install git && yum install nano</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install git && brew install nano</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>10</td>
+        <td><a href="ca://s?q=Explain_brew-patch-010">brew-patch-010</a></td>
+        <td><code>brew install curl && brew install python3 --force</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>invalid brew flag</td></tr>
+
+    <tr><td>11</td>
+        <td><a href="ca://s?q=Explain_brew-patch-011">brew-patch-011</a></td>
+        <td><code>brew install curl && brew install python3</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>HOOK entry — will be prevented in Phase 4a.1.4/4a.1.5</td></tr>
+
+    <tr><td>12</td>
+        <td><a href="ca://s?q=Explain_brew-patch-012">brew-patch-012</a></td>
+        <td><code>brew install curl && apt-get install python3 && yum install nano</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl && brew install python3 && brew install nano</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>13</td>
+        <td><a href="ca://s?q=Explain_brew-patch-013">brew-patch-013</a></td>
+        <td><code>yum install nano && brew install curl && apk add bash</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install nano && brew install curl && brew install bash</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>14</td>
+        <td><a href="ca://s?q=Explain_brew-patch-014">brew-patch-014</a></td>
+        <td><code>brew install curl && dnf install git && brew install nano</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl && brew install git && brew install nano</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>15</td>
+        <td><a href="ca://s?q=Explain_brew-patch-015">brew-patch-015</a></td>
+        <td><code>yum install nano && apk add bash && pacman -S htop</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install nano && brew install bash && brew install htop</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>16</td>
+        <td><a href="ca://s?q=Explain_brew-patch-016">brew-patch-016</a></td>
+        <td><code>brew install curl && brew install nano && apk add bash</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl && brew install nano && brew install bash</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>17</td>
+        <td><a href="ca://s?q=Explain_brew-patch-017">brew-patch-017</a></td>
+        <td><code>yum install nano && brew install curl && brew update</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>system‑wide op → fallback (validator false‑negative)</td></tr>
+
+    <tr><td>18</td>
+        <td><a href="ca://s?q=Explain_brew-patch-018">brew-patch-018</a></td>
+        <td><code>apk add bash && echo 'hello' && yum install nano</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install bash && echo 'hello' && brew install nano</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>19</td>
+        <td><a href="ca://s?q=Explain_brew-patch-019">brew-patch-019</a></td>
+        <td><code>brew install curl && echo 'test' && pacman -S htop</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl && echo 'test' && brew install htop</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+    <tr><td>20</td>
+        <td><a href="ca://s?q=Explain_brew-patch-020">brew-patch-020</a></td>
+        <td><code>yum install nano --badflag && brew install curl</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>invalid flag → fallback (validator false‑negative)</td></tr>
+
+    <tr><td>21</td>
+        <td><a href="ca://s?q=Explain_brew-patch-021">brew-patch-021</a></td>
+        <td><code>brew install curl && apk add bash --badflag && brew install nano</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>invalid flag → fallback (validator false‑negative)</td></tr>
+
+    <tr><td>22</td>
+        <td><a href="ca://s?q=Explain_brew-patch-022">brew-patch-022</a></td>
+        <td><code>yum install nano && apk add bash && brew update</code></td>
+        <td>fallback</td>
+        <td>fallback</td>
+        <td>system‑wide op → fallback (validator false‑negative)</td></tr>
+
+    <tr><td>23</td>
+        <td><a href="ca://s?q=Explain_brew-patch-023">brew-patch-023</a></td>
+        <td><code>apk add bash && brew install curl && rm -rf /usr/local/Homebrew</code></td>
+        <td>abort</td>
+        <td>abort</td>
+        <td>destructive command</td></tr>
+
+    <tr><td>24</td>
+        <td><a href="ca://s?q=Explain_brew-patch-024">brew-patch-024</a></td>
+        <td><code>brew install curl && yum install nano && echo hi && apk add bash</code></td>
+        <td>retry_with_modified_command</td>
+        <td>retry_with_modified_command (<code>brew install curl && brew install nano && echo hi && brew install bash</code>)</td>
+        <td>wrong-PM rewritten</td></tr>
+
+  </tbody>
+</table>
+
+</details>
 
 
 
-
-
-#### Schema-based tests for Alpine (with test matrix)
-
-Some new schema based tests were written to test the patches above and these were run against Alpine, Fedora and Ubuntu. 
-
-
-Here is a sample output from the Alpine schema based test on the patches. Note that the validator FAILED is a false
-negative. The logic in the validator is not refined enough to catch such a subtle test case nuance and that is fine. We 
-are not attepting to fix every validator bug, just the contract based issues. 
-
-```
-
-
-```
-
-#### Schema-based tests for Fedora (with test matrix)
 
 
 #### Schema-based tests for macos zh
@@ -5609,82 +5782,6 @@ are not attepting to fix every validator bug, just the contract based issues.
 ---
 
 
-### Stress tester complete code review
-
-The code is in the following directory on the repo: 
-
-```
-../sequential_master_modules/LLM_contract_stress_tester$ tree
-.
-├── LLM_contract_stress_tester_readme
-├── NOTE_these_tests_are_run_on_deploy_container
-├── artifacts
-│   ├── __init__.py
-│   └── collector.py
-├── command_corpus
-│   ├── __init__.py
-│   └── corpus.py
-├── context_generator
-│   ├── __init__.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-310.pyc
-│   │   └── loaders.cpython-310.pyc
-│   ├── generator.py
-│   ├── loaders.py
-│   ├── loaders_examples
-│   ├── mutators.py
-│   └── schemas
-│       ├── alpine_apk.json
-│       ├── amazonlinux_yum.json
-│       ├── bash_linux.json
-│       ├── busybox_sh.json
-│       ├── centos7_yum.json
-│       ├── centos8_dnf.json
-│       ├── cisco_ios.json
-│       ├── debian_apt.json
-│       ├── fedora_dnf.json
-│       ├── macos_brew.json
-│       ├── old_windows_powershell.json
-│       ├── paloalto_pan.json
-│       ├── powershell_linux.json
-│       ├── rhel_yum.json
-│       ├── ubuntu_apt.json
-│       ├── windows_powershell.json
-│       └── zsh_macos.json
-├── curl_harness
-│   ├── 1
-│   ├── __init__.py
-│   └── harness.py
-├── os_matrix
-│   ├── __init__.py
-│   └── matrix.py
-├── reports
-│   ├── __init__.py
-│   └── summary.py
-├── schema_descriptions_readme
-├── scoring
-│   ├── __init__.py
-│   └── scoring.py
-├── stress_tester.py
-└── validator
-    ├── __init__.py
-    └── validator.py
-
-11 directories, 42 files
-```
-
-The following sections reivew the code that forms the stress tester framework 
-
-#### Code block 1, etc
-
-WORK IN PROGRESS
-
-
----
-
-[Back to top](#top-update59)
-
----
 
 
 
@@ -6136,6 +6233,82 @@ By removing heavy comments:
 ---
 
 
+### Stress tester complete code review
+
+The code is in the following directory on the repo: 
+
+```
+../sequential_master_modules/LLM_contract_stress_tester$ tree
+.
+├── LLM_contract_stress_tester_readme
+├── NOTE_these_tests_are_run_on_deploy_container
+├── artifacts
+│   ├── __init__.py
+│   └── collector.py
+├── command_corpus
+│   ├── __init__.py
+│   └── corpus.py
+├── context_generator
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-310.pyc
+│   │   └── loaders.cpython-310.pyc
+│   ├── generator.py
+│   ├── loaders.py
+│   ├── loaders_examples
+│   ├── mutators.py
+│   └── schemas
+│       ├── alpine_apk.json
+│       ├── amazonlinux_yum.json
+│       ├── bash_linux.json
+│       ├── busybox_sh.json
+│       ├── centos7_yum.json
+│       ├── centos8_dnf.json
+│       ├── cisco_ios.json
+│       ├── debian_apt.json
+│       ├── fedora_dnf.json
+│       ├── macos_brew.json
+│       ├── old_windows_powershell.json
+│       ├── paloalto_pan.json
+│       ├── powershell_linux.json
+│       ├── rhel_yum.json
+│       ├── ubuntu_apt.json
+│       ├── windows_powershell.json
+│       └── zsh_macos.json
+├── curl_harness
+│   ├── 1
+│   ├── __init__.py
+│   └── harness.py
+├── os_matrix
+│   ├── __init__.py
+│   └── matrix.py
+├── reports
+│   ├── __init__.py
+│   └── summary.py
+├── schema_descriptions_readme
+├── scoring
+│   ├── __init__.py
+│   └── scoring.py
+├── stress_tester.py
+└── validator
+    ├── __init__.py
+    └── validator.py
+
+11 directories, 42 files
+```
+
+The following sections reivew the code that forms the stress tester framework 
+
+#### Code block 1, etc
+
+WORK IN PROGRESS
+
+
+---
+
+[Back to top](#top-update59)
+
+---
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
