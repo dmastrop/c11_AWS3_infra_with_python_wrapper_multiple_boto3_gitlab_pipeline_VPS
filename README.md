@@ -6457,7 +6457,7 @@ Patch block after the Patch2. And this is when the "strange" divergence in the t
 
 ---
 
-#### F. Relevant to LLM-based contract engineering  
+#### F. Relevance to LLM-based contract engineering  
 
 This work sits at the intersection of:
 
@@ -6488,6 +6488,143 @@ Documenting this behavior will be valuable to:
 
 
 ### Deep‑Dive2 Patch2-Rev4: Transformer Attention, Salience, and Rule Interaction
+
+Digging deeper, the failure example that occurred with the brew based testing of Patch2 reveals more about transform attention,
+salience and rule interaction.   
+
+#### A. Why three added lines can change behavior
+ 
+As noted in the previous section, transformers do not treat all rules equally.  
+
+A rule’s influence depends on:
+
+- how early it appears  
+- how long it is  
+- how specific it is  
+- how many examples it contains  
+- how similar it is to the input command  
+- how strongly its tokens activate attention heads  
+
+Even **three lines** (added from Patch2-Rev2 to Patch2-Rev3) can:
+
+- increase the length of a rule block  
+- increase its specificity  
+- increase its lexical overlap with the input  
+- increase its internal attention weight  
+- shift the model’s “center of gravity” toward that rule block  
+
+This is why Patch2‑Rev3’s small change caused the rewrite block to overshadow the invalid‑flag block, which for brew was 
+unfortunately placed after the Patch2 block. (unlike the linux os domain primitives blocks)
+
+This is normal transformer behavior.
+
+---
+
+#### B. How transformers actually “apply” rules
+  
+Transformers do not:
+
+- parse rules  
+- execute them  
+- evaluate conditions  
+- run logic branches  
+
+This was detail in the previous section in light of the validator semantics python based code. That is strictly rules based and 
+is quite fallible relative to the LLM (it gets the test case validation result correct only  about 90-95% of the time; not 
+very good).
+
+Instead, transformers perform **pattern‑weighted inference**:
+
+1. The entire contract is embedded into a high‑dimensional vector space.  
+2. Each attention head learns to detect certain patterns (e.g., “wrong PM,” “invalid flag,” “system‑wide op”).  
+3. When the input command is processed, each head activates based on token similarity.  
+4. The strongest pattern dominates the logits for the next token. This is key. 
+
+This is why rule ordering and salience matter.
+
+---
+
+#### C. Why the invalid‑flag cases diverged
+  
+The three invalid‑flag cases differ in **token‑level structure**, not semantics.
+
+- 1. **Token proximity**  
+When `--badflag` appears at the end of the command, it forms a clean, isolated pattern that strongly activates the invalid‑flag rule.
+
+When it appears mid‑segment, it is surrounded by rewrite‑triggering tokens (`install`, `<pkg>`, `&&`), which dilute its influence.
+
+- 2. **Local token neighborhood**  
+Rewrite patterns like:
+
+- `yum install <pkg>`
+- `apk add <pkg>`
+- `apt-get install <pkg>`
+
+are extremely strong patterns in the training distribution.
+
+They activate rewrite logic before the invalid‑flag rule can fire.
+
+- 3. **Cross‑segment attention**  
+The model may route attention from the invalid flag to:
+
+- the rewrite rule  
+- the wrong‑PM rule  
+- the pipeline segmentation rule  
+
+…instead of the invalid‑flag rule.
+
+This depends on token order.
+
+- 4. **Salience shift from Patch2‑Rev3**  
+The expanded Patch2 block increased:
+
+- length  
+- specificity  
+- concreteness  
+- lexical overlap with the input  
+
+This made rewrite logic more dominant.
+And in combination of the invalid flag block positioned after the Patch2 rewrite logic, this caused a problem, enough so that
+the LLM responded in an inconsistent manner between very similar tests.
+
+- 5. **Commitment effect**  
+Once the model “commits” to rewrite logic, it does not backtrack to apply invalid‑flag logic, even if the logic is clear and 
+present after the rewrite Patch2 logic block.
+
+This is why the invalid‑flag rule must appear *before* rewrite logic.
+
+---
+
+#### D. Why Patch2‑Rev4 fixes the issue  
+By adding:
+
+```
+If ANY segment contains an invalid or unsupported flag...
+the LLM MUST use 'fallback' BEFORE applying any rewrite rules.
+```
+
+The model is forced to:
+
+- activate invalid‑flag logic early  
+- override rewrite logic  
+- eliminate attention‑routing divergence  
+- restore determinism, which is always the objective here 
+
+This is the correct way to enforce rule precedence in transformer‑based contract systems.
+
+---
+
+#### E. Propensity for further research
+
+This project is effectively:
+
+- designing a formal contract layer  
+- on top of a probabilistic model  
+- using white‑box testing  
+- to enforce deterministic behavior  
+- in a multi‑segment command‑reasoning domain  
+
+This is the frontier of LLM contract engineering.
 
 
 
