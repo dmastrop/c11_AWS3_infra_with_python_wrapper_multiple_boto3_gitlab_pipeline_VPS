@@ -1546,6 +1546,9 @@ WORK IN PROGRESS
 - [Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost](#comments-in-the-payload-contract-block-of-ai_gateway_servicepy-and-llm-efficiency-reasoning-determinism-and-cost)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
 - [Continued testing with the semantics files (validator logic) hooked into the stress tester](#continued-testing-with-the-semantics-files-validator-logic-hooked-into-the-stress-tester)
+- [LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)
+- [Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)
+- [Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
