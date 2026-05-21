@@ -2276,6 +2276,13 @@ def recover(request: RecoveryRequest):
                 ##### Wrong package manager in pipelines (&&) — macOS Homebrew semantics #### PATCH stress_tester1 patch2 rev3 ####
                 ##### Note that this is revision3 of patch2 for the brew only (linux os uses patch2 rev2). ANY package manager 
                 ##### for system-wide ops is fallback, not just non-macos PMs.
+                ##### Also since the invalid brew flags block is after this patch (see below) we need to add a similar statement
+                ##### for the same in this block to prevent some other corner cases with bad flags getting through.
+                ##### This bumps the rev to rev4     Patch2 rev4:
+                "- If ANY segment contains an invalid or unsupported flag for ANY package manager,\n"
+                "  the LLM MUST use 'fallback' BEFORE applying any rewrite rules.\n"
+                "\n"
+
                 "- If the command is a pipeline using '&&' and includes a non-macOS package manager\n"
                 "  (apt, apt-get, yum, dnf, apk, pacman), the LLM MUST treat each segment independently.\n"
                 "\n"
