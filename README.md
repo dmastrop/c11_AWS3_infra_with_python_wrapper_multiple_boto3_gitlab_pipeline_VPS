@@ -5931,180 +5931,58 @@ passed as shown in the test matrix table below.
   </thead>
   <tbody>
 
-    <tr><td>1</td>
-        <td><a href="ca://s?q=Explain_brew-patch-001">brew-patch-001</a></td>
-        <td><code>apt-get install curl</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>1</td><td>brew-patch-001</td><td><code>apt-get install curl</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>2</td>
-        <td><a href="ca://s?q=Explain_brew-patch-002">brew-patch-002</a></td>
-        <td><code>brew install wget && yum install nano</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install wget && brew install nano</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>2</td><td>brew-patch-002</td><td><code>brew install wget && yum install nano</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install wget && brew install nano</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>3</td>
-        <td><a href="ca://s?q=Explain_brew-patch-003">brew-patch-003</a></td>
-        <td><code>brew install curl && apt-get update</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>system‑wide op → fallback (validator false‑negative)</td></tr>
+<tr><td>3</td><td>brew-patch-003</td><td><code>brew install curl && apt-get update</code></td><td>fallback</td><td>fallback</td><td>system‑wide op → fallback (validator false‑negative)</td></tr>
 
-    <tr><td>4</td>
-        <td><a href="ca://s?q=Explain_brew-patch-004">brew-patch-004</a></td>
-        <td><code>brew install curl && apt-get install python3 --badflag</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>invalid flag → fallback</td></tr>
+<tr><td>4</td><td>brew-patch-004</td><td><code>brew install curl && apt-get install python3 --badflag</code></td><td>fallback</td><td>fallback</td><td>invalid flag → fallback</td></tr>
 
-    <tr><td>5</td>
-        <td><a href="ca://s?q=Explain_brew-patch-005">brew-patch-005</a></td>
-        <td><code>brew install curl && pacman -Syu</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>system‑wide op → fallback</td></tr>
+<tr><td>5</td><td>brew-patch-005</td><td><code>brew install curl && pacman -Syu</code></td><td>fallback</td><td>fallback</td><td>system‑wide op → fallback</td></tr>
 
-    <tr><td>6</td>
-        <td><a href="ca://s?q=Explain_brew-patch-006">brew-patch-006</a></td>
-        <td><code>brew install curl && apk add bash</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl && brew install bash</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>6</td><td>brew-patch-006</td><td><code>brew install curl && apk add bash</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install bash</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>7</td>
-        <td><a href="ca://s?q=Explain_brew-patch-007">brew-patch-007</a></td>
-        <td><code>brew install curl && rm -rf /usr/local/Homebrew</code></td>
-        <td>abort</td>
-        <td>abort</td>
-        <td>destructive command</td></tr>
+<tr><td>7</td><td>brew-patch-007</td><td><code>brew install curl && rm -rf /usr/local/Homebrew</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
 
-    <tr><td>8</td>
-        <td><a href="ca://s?q=Explain_brew-patch-008">brew-patch-008</a></td>
-        <td><code>yum install nano && brew install curl</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install nano && brew install curl</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>8</td><td>brew-patch-008</td><td><code>yum install nano && brew install curl</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install nano && brew install curl</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>9</td>
-        <td><a href="ca://s?q=Explain_brew-patch-009">brew-patch-009</a></td>
-        <td><code>dnf install git && yum install nano</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install git && brew install nano</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>9</td><td>brew-patch-009</td><td><code>dnf install git && yum install nano</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install git && brew install nano</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>10</td>
-        <td><a href="ca://s?q=Explain_brew-patch-010">brew-patch-010</a></td>
-        <td><code>brew install curl && brew install python3 --force</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>invalid brew flag</td></tr>
+<tr><td>10</td><td>brew-patch-010</td><td><code>brew install curl && brew install python3 --force</code></td><td>fallback</td><td>fallback</td><td>invalid brew flag</td></tr>
 
-    <tr><td>11</td>
-        <td><a href="ca://s?q=Explain_brew-patch-011">brew-patch-011</a></td>
-        <td><code>brew install curl && brew install python3</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>HOOK entry — will be prevented in Phase 4a.1.4/4a.1.5</td></tr>
+<tr><td>11</td><td>brew-patch-011</td><td><code>brew install curl && brew install python3</code></td><td>fallback</td><td>fallback</td><td>HOOK entry — will be prevented in Phase 4a.1.4/4a.1.5</td></tr>
 
-    <tr><td>12</td>
-        <td><a href="ca://s?q=Explain_brew-patch-012">brew-patch-012</a></td>
-        <td><code>brew install curl && apt-get install python3 && yum install nano</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl && brew install python3 && brew install nano</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>12</td><td>brew-patch-012</td><td><code>brew install curl && apt-get install python3 && yum install nano</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install python3 && brew install nano</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>13</td>
-        <td><a href="ca://s?q=Explain_brew-patch-013">brew-patch-013</a></td>
-        <td><code>yum install nano && brew install curl && apk add bash</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install nano && brew install curl && brew install bash</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>13</td><td>brew-patch-013</td><td><code>yum install nano && brew install curl && apk add bash</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install nano && brew install curl && brew install bash</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>14</td>
-        <td><a href="ca://s?q=Explain_brew-patch-014">brew-patch-014</a></td>
-        <td><code>brew install curl && dnf install git && brew install nano</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl && brew install git && brew install nano</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>14</td><td>brew-patch-014</td><td><code>brew install curl && dnf install git && brew install nano</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install git && brew install nano</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>15</td>
-        <td><a href="ca://s?q=Explain_brew-patch-015">brew-patch-015</a></td>
-        <td><code>yum install nano && apk add bash && pacman -S htop</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install nano && brew install bash && brew install htop</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>15</td><td>brew-patch-015</td><td><code>yum install nano && apk add bash && pacman -S htop</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install nano && brew install bash && brew install htop</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>16</td>
-        <td><a href="ca://s?q=Explain_brew-patch-016">brew-patch-016</a></td>
-        <td><code>brew install curl && brew install nano && apk add bash</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl && brew install nano && brew install bash</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>16</td><td>brew-patch-016</td><td><code>brew install curl && brew install nano && apk add bash</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install nano && brew install bash</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>17</td>
-        <td><a href="ca://s?q=Explain_brew-patch-017">brew-patch-017</a></td>
-        <td><code>yum install nano && brew install curl && brew update</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>system‑wide op → fallback (validator false‑negative)</td></tr>
+<tr><td>17</td><td>brew-patch-017</td><td><code>yum install nano && brew install curl && brew update</code></td><td>fallback</td><td>fallback</td><td>system‑wide op → fallback (validator false‑negative)</td></tr>
 
-    <tr><td>18</td>
-        <td><a href="ca://s?q=Explain_brew-patch-018">brew-patch-018</a></td>
-        <td><code>apk add bash && echo 'hello' && yum install nano</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install bash && echo 'hello' && brew install nano</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>18</td><td>brew-patch-018</td><td><code>apk add bash && echo 'hello' && yum install nano</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install bash && echo 'hello' && brew install nano</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>19</td>
-        <td><a href="ca://s?q=Explain_brew-patch-019">brew-patch-019</a></td>
-        <td><code>brew install curl && echo 'test' && pacman -S htop</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl && echo 'test' && brew install htop</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>19</td><td>brew-patch-019</td><td><code>brew install curl && echo 'test' && pacman -S htop</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && echo 'test' && brew install htop</code>)</td><td>wrong-PM rewritten</td></tr>
 
-    <tr><td>20</td>
-        <td><a href="ca://s?q=Explain_brew-patch-020">brew-patch-020</a></td>
-        <td><code>yum install nano --badflag && brew install curl</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>invalid flag → fallback (validator false‑negative)</td></tr>
+<tr><td>20</td><td>brew-patch-020</td><td><code>yum install nano --badflag && brew install curl</code></td><td>fallback</td><td>fallback</td><td>invalid flag → fallback (validator false‑negative)</td></tr>
 
-    <tr><td>21</td>
-        <td><a href="ca://s?q=Explain_brew-patch-021">brew-patch-021</a></td>
-        <td><code>brew install curl && apk add bash --badflag && brew install nano</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>invalid flag → fallback (validator false‑negative)</td></tr>
+<tr><td>21</td><td>brew-patch-021</td><td><code>brew install curl && apk add bash --badflag && brew install nano</code></td><td>fallback</td><td>fallback</td><td>invalid flag → fallback (validator false‑negative)</td></tr>
 
-    <tr><td>22</td>
-        <td><a href="ca://s?q=Explain_brew-patch-022">brew-patch-022</a></td>
-        <td><code>yum install nano && apk add bash && brew update</code></td>
-        <td>fallback</td>
-        <td>fallback</td>
-        <td>system‑wide op → fallback (validator false‑negative)</td></tr>
+<tr><td>22</td><td>brew-patch-022</td><td><code>yum install nano && apk add bash && brew update</code></td><td>fallback</td><td>fallback</td><td>system‑wide op → fallback (validator false‑negative)</td></tr>
 
-    <tr><td>23</td>
-        <td><a href="ca://s?q=Explain_brew-patch-023">brew-patch-023</a></td>
-        <td><code>apk add bash && brew install curl && rm -rf /usr/local/Homebrew</code></td>
-        <td>abort</td>
-        <td>abort</td>
-        <td>destructive command</td></tr>
+<tr><td>23</td><td>brew-patch-023</td><td><code>apk add bash && brew install curl && rm -rf /usr/local/Homebrew</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
 
-    <tr><td>24</td>
-        <td><a href="ca://s?q=Explain_brew-patch-024">brew-patch-024</a></td>
-        <td><code>brew install curl && yum install nano && echo hi && apk add bash</code></td>
-        <td>retry_with_modified_command</td>
-        <td>retry_with_modified_command (<code>brew install curl && brew install nano && echo hi && brew install bash</code>)</td>
-        <td>wrong-PM rewritten</td></tr>
+<tr><td>24</td><td>brew-patch-024</td><td><code>brew install curl && yum install nano && echo hi && apk add bash</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command (<code>brew install curl && brew install nano && echo hi && brew install bash</code>)</td><td>wrong-PM rewritten</td></tr>
 
   </tbody>
 </table>
 
 </details>
-
-
 
 
 
