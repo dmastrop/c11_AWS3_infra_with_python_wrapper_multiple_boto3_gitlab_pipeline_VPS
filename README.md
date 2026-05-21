@@ -6644,11 +6644,7 @@ This is the frontier of LLM contract engineering.
 ### Stress testing the contract rules with the automated framework
 
 
----
-
-[Back to top](#top-update59)
-
----The automated framework, as noted earlier, provides for a validator and schema expander so that 100s of schema context based
+The automated framework, as noted earlier, provides for a validator and schema expander so that 100s of schema context based
 test cases can be run against the domain primitives block for a given OS/platform.   This further hardens the rules in accordance
 with the LLM feedback loop described earlier. 
 
