@@ -5010,7 +5010,7 @@ It is a **design difference** based on the *semantics* of each environment.
 
 ---
 
-##### 1. BusyBox is a minimally embedded OS → wrong PM = fatal error
+#### 1. BusyBox is a minimally embedded OS → wrong PM = fatal error
 
 BusyBox is designed for:
 
@@ -5043,7 +5043,7 @@ BusyBox treats wrong‑PM usage as a **fatal semantic violation**.
 
 ---
 
-#### macOS‑zsh is a full desktop OS → wrong PM = unsupported feature, not fatal
+#### 2. macOS‑zsh is a full desktop OS → wrong PM = unsupported feature, not fatal
 
 macOS‑zsh is:
 
