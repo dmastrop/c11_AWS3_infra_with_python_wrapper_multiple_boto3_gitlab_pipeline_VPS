@@ -6179,7 +6179,37 @@ The fix itself was very very simple.
 
 
 
-#### Schema-based tests for macos zh
+#### Schema-based tests for macos-zh (with test matrix)
+
+Like BusyBox, macos-zsh is an odd ball. 
+
+See these earlier sections in this README UPDATE to fully understand the LLM contract rules design principles for 
+BusyBox vs. macos-zsh vs. linux distros/macos-brew.
+
+- [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
+- [Why BusyBox is abort, but macOS‑zsh is fallback, even though both have no package manager](#why-busybox-is-abort-but-macos-zsh-is-fallback-even-though-both-have-no-package-manager)
+
+macos-zsh requires predominantly fallback action plan responses for multi-segment PM rewrites and invalid flags. This is 
+different from the requirements of brew and linux OSes like Ubuntu, etc. (see the test matrices above)
+
+The contract only required some minor changes, moving the entire invalid flags block to before the malformed command block and
+the fallback PM rewrite block. This ensured that we did not see that similar issue that was seen in the brew testing above that 
+necessitated similar changes.
+
+For this context schema-based testing, regression on the original 36 test cases is unnecessary. Instead, 24 specialized tests have
+been performed as shown in the test matrix below.
+
+
+
+
+
+#### Schema-based tests for BusyBox
+
+BusyBox is another odd ball.  This requires predominantly abort plan responses for multi-segement PM rewrites and fallback for
+invalid flags. This is different from the requirements for linux OSes, brew and macos-zsh. 
+
+
+
 
 
 
