@@ -2396,6 +2396,16 @@ def recover(request: RecoveryRequest):
 
                 "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-zsh\".\n"
 
+                ##### Invalid flags (macOS‑zsh) #####   #### PATCH stress_tester1 ####
+                ##### This needs to be moved before all other blocks. An invalid flag is always an immedidate fallback
+                ##### for all domain primitives blocks.
+                "- If a command contains flags that are invalid for macOS‑zsh or any standard macOS POSIX utility\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not supported by the invoked command),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+                
                 ##### Revision 6.11 — Bash/ZSH malformed‑command hardening (adapted for macOS) #####
                 "- These rules harden malformed-command handling for macOS systems using the zsh shell.\n"
                 "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
@@ -2432,13 +2442,6 @@ def recover(request: RecoveryRequest):
                 "  destructive, in which case 'abort' applies.\n"
                 "\n"
 
-                ##### Invalid flags (macOS‑zsh) #####   #### PATCH stress_tester1 ####
-                "- If a command contains flags that are invalid for macOS‑zsh or any standard macOS POSIX utility\n"
-                "  (for example: 'invalid option', 'unknown option', or flags not supported by the invoked command),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
-                "- The LLM MUST NOT infer user intent for unknown flags.\n"
-                "\n"
 
 
                 # BusyBox addendum (adapted for macOS-zsh) Revision 6.11
