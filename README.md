@@ -1542,6 +1542,7 @@ WORK IN PROGRESS
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
 - [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
+- [Why BusyBox = abort, but macOS‑zsh = fallback, even though both have no package manager](#why-busybox--abort-but-macos-zsh--fallback-even-though-both-have-no-package-manager)
 - [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
 - [Comments in the payload contract block of `ai_gateway_service.py` and LLM efficiency: reasoning, determinism, and cost](#comments-in-the-payload-contract-block-of-ai_gateway_servicepy-and-llm-efficiency-reasoning-determinism-and-cost)
 - [Semantics Layer Overview — Full OS/Platform Validator Coverage (17 of 17 Complete)](#semantics-layer-overview--full-osplatform-validator-coverage-17-of-17-complete)
