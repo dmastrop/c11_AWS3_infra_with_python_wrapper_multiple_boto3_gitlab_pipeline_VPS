@@ -2442,8 +2442,6 @@ def recover(request: RecoveryRequest):
                 "  destructive, in which case 'abort' applies.\n"
                 "\n"
 
-
-
                 # BusyBox addendum (adapted for macOS-zsh) Revision 6.11
                 "These rules also apply when BusyBox-style applets or Linux-only commands are invoked.\n"
                 "macOS-zsh does NOT activate Linux or BusyBox domain primitives. Any Linux-specific\n"
