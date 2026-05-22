@@ -5001,8 +5001,8 @@ all the differences between native and derived fallback see the earlier UPDATE c
 ---
 
 
+### Why BusyBox is abort, but macOS-zsh is fallback, even though both have no package manager
 
-### Why BusyBox is abort, but macOS‑zsh is fallback, even though both have no package manager
 
 This is not a contradiction.  
 
@@ -5119,6 +5119,7 @@ This is consistent and correct.
 ---
 
 #### 5. Summary Table
+
 
 | OS Domain | Has PM? | Wrong PM Behavior | Why? |
 |----------|---------|------------------|------|
