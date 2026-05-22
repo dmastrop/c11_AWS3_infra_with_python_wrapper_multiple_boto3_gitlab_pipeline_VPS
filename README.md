@@ -6007,7 +6007,7 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 
 
-#### 2.Schema based tests for the other linix distro domain primtives blocks
+#### 2.Schema-based tests for the other linix distro domain primtives blocks
 
 
 The pathes have been applied uniformly to all of the other linux distro domain primitives blocks and there is no need to regression
@@ -6017,7 +6017,7 @@ test these again with the patch given how well the test passed on the Ubuntu (ab
 
 
 
-#### 3.Schema based tests for macos Brew (with test matrices)
+#### 3.Schema-based tests for macos Brew (with test matrices)
 
 The macos brew domain primitives block required some slight modifications to the patch2 revision2
 
@@ -6179,7 +6179,7 @@ The fix itself was very very simple.
 
 
 
-#### Schema-based tests for macos-zh (with test matrix)
+#### 4.Schema-based tests for macos-zh (with test matrix)
 
 Like BusyBox, macos-zsh is an odd ball. 
 
@@ -6203,7 +6203,7 @@ been performed as shown in the test matrix below.
 
 
 
-#### Schema-based tests for BusyBox
+#### 5.Schema-based tests for BusyBox
 
 BusyBox is another odd ball.  This requires predominantly abort plan responses for multi-segement PM rewrites and fallback for
 invalid flags. This is different from the requirements for linux OSes, brew and macos-zsh. 
@@ -6213,10 +6213,10 @@ invalid flags. This is different from the requirements for linux OSes, brew and 
 
 
 
-#### Schema-based tests for windows powershell
+#### 6.Schema-based tests for windows powershell
 
 
-#### Schema-based tests for linux powershell
+#### 7.Schema-based tests for linux powershell
 
 
 
