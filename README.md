@@ -6019,7 +6019,9 @@ test these again with the patch given how well the test passed on the Ubuntu (ab
 
 #### 3.Schema-based tests for macos Brew (with test matrices)
 
-The macos brew domain primitives block required some slight modifications to the patch2 revision2
+The macos brew domain primitives block required some slight modifications to the patch2 revision2 to accomodate the precise 
+semantics of macos-brew. This was patch3-rev3.  (which would be revised yet again to Patch2-rev4; see the section on specialized
+schema tests following this section).
 
 Similar to the Ubuntu testing above, the original schema context based test cases (36 of them) were regressed against the fix and
 passed as shown in the test matrix table below. 
@@ -6102,7 +6104,8 @@ The fix here has a complex etiology that is reviewed further in the sections bel
 - Deep‑Dive1 Patch2-Rev4: How Transformers Actually Apply Contract Rules
 - Deep‑Dive2 Patch2-Rev4: Transformer Attention, Salience, and Rule Interaction
 
-The fix itself was very very simple.
+The fix itself was very very simple, but in fixing this the LLM contract development docmentation was formalized in this README UPDATE in the sections above. This concepts will be applied moving forward as the contract domain primitives blocks continue to be
+refined through successive stress_tester.py iterative testing.
 
 
 
