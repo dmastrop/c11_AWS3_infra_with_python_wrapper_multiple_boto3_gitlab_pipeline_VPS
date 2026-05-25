@@ -6098,11 +6098,11 @@ passed as shown in the test matrix table below.
 Similar to the Ubuntu extended test cases, these 24 schema context based tests validate the Patch2-Rev4 fix in the brew domain
 primitives block for complex rewrite tests and invalid package manager (PM) flags.
 
-The fix here has a complex etiology that is reviewed further in the sections below (see Table of Contents)
+The fix here has a complex etiology that is reviewed further in the sections below (see Table of Contents also)
 
-- LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior: The Requirement for Patch2-Rev4 for Brew
-- Deep‑Dive1 Patch2-Rev4: How Transformers Actually Apply Contract Rules
-- Deep‑Dive2 Patch2-Rev4: Transformer Attention, Salience, and Rule Interaction
+- [LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)
+- [Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)
+- [Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)
 
 The fix itself was very very simple, but in fixing this the LLM contract development docmentation was formalized in this README UPDATE in the sections above. This concepts will be applied moving forward as the contract domain primitives blocks continue to be
 refined through successive stress_tester.py iterative testing.
