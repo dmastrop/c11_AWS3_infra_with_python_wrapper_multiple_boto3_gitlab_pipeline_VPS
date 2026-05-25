@@ -2532,7 +2532,7 @@ def recover(request: RecoveryRequest):
 
                 # ============================================================
                 # WINDOWS POWERSHELL DOMAIN RULES — Applies ONLY when os_name = "Windows"
-                # AND os_version = "2022". This entire block is Revision 17 + Patch2-Rev5
+                # AND os_version = "2022". This entire block is Revision 17.
                 # ============================================================
 
                 "These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
@@ -2542,8 +2542,7 @@ def recover(request: RecoveryRequest):
                 # Revision 6.12 — PowerShell malformed-command hardening
                 # ============================================================
 
-                "- Windows 2022 in this contract uses Windows PowerShell 5.1 as the primary shell.\n"
-                "- PowerShell 7+ semantics (including '&&' and '||') MUST NOT be assumed.\n"
+                "- These rules harden malformed-command handling for Windows PowerShell.\n"
                 "- The LLM MUST remain deterministic and MUST NOT guess user intent.\n"
                 "- When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
                 "\n"
@@ -2556,52 +2555,47 @@ def recover(request: RecoveryRequest):
                 "  malformed script blocks, unmatched quotes, or incomplete constructs) but NOT destructive,\n"
                 "  the LLM MUST use 'fallback' unless a safe, deterministic correction is directly implied.\n"
                 "\n"
+                "- 'retry_with_modified_command' MUST be used ONLY when the corrected PowerShell command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command.\n"
+                "  The LLM MUST NOT guess or invent corrected commands.\n"
+                "\n"
                 "- If stderr indicates a pipeline or parsing error (e.g., 'Unexpected token',\n"
                 "  'The string is missing the terminator', 'Missing argument', 'Unexpected end of input'),\n"
                 "  the LLM MUST return 'fallback' unless the command is destructive.\n"
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands,\n"
                 "  and MUST NOT infer user intent for pipeline stages.\n"
                 "\n"
-
-                # ============================================================
-                # Invalid flags / parameters (Windows PowerShell) — PATCH stress_tester1
-                # ============================================================
-
+                
+                ##### Invalid flags (Windows PowerShell) #####   #### PATCH stress_tester1 ####
                 "- If a PowerShell cmdlet, parameter, or flag is invalid or unrecognized\n"
                 "  (for example: 'A parameter cannot be found that matches', 'Unexpected parameter',\n"
-                "  or any error indicating an unsupported flag or parameter), the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag or parameter\n"
-                "  when it is not an obvious single-token typo.\n"
-                "- The LLM MUST NOT infer user intent for unknown parameters or flags.\n"
+                "  or any error indicating an unsupported flag), the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown parameters.\n"
                 "\n"
 
-                # ============================================================
-                # Unknown cmdlets / tools / cross-OS usage
-                # ============================================================
+                #### continued after patch insertion....
                 "- If stderr contains the EXACT PowerShell message:\n"
                 "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
                 "  the LLM MUST return 'fallback'.\n"
                 "\n"
                 "- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
                 "- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
-                "- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
-                "  unless explicitly referenced.\n"
                 "\n"
                 "- If a command references POSIX-style paths (e.g., '/usr/bin', '/etc', '/var/log') as primary targets,\n"
                 "  and no Windows mapping is explicitly provided, the LLM MUST use 'fallback'.\n"
-                "\n"
 
                 # ============================================================
                 # Windows PowerShell core domain primitives (Revision 17)
                 # ============================================================
 
+                "- Windows 2022 in this contract uses PowerShell as the primary shell.\n"
                 "- Canonical PowerShell concepts include:\n"
                 "    * cmdlets (Get-Service, Get-Process, Get-Item, Remove-Item, etc.)\n"
                 "    * pipelines using '|'\n"
                 "    * parameters prefixed with '-'\n"
-                "    * script blocks using '{ }'\n"
-                "    * subexpressions using '$()'\n"
                 "    * error records with categories and messages.\n"
                 "\n"
                 "- 'winget' MAY be available as the package manager, but the LLM MUST NOT assume optional features\n"
@@ -2609,7 +2603,16 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT invent winget subcommands, MUST NOT invent flags, and MUST NOT guess package IDs.\n"
                 "- If 'winget' is used without a concrete package identifier (e.g., 'winget install'),\n"
                 "  the LLM MUST treat the command as malformed and use 'fallback'.\n"
-                "\n"
+
+                # ============================================================
+                # Wrong OS / wrong tool usage
+                # ============================================================
+
+                "- If the command uses Linux/macOS package managers (apt, apt-get, yum, dnf, apk, brew)\n"
+                "  or POSIX-only tools, the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
+                "- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
+                "  unless explicitly referenced.\n"
 
                 # ============================================================
                 # Destructive commands (Windows PowerShell)
@@ -2627,7 +2630,6 @@ def recover(request: RecoveryRequest):
                 "    * Stop-Process -Force -Name wininit\n"
                 "    * Stop-Process -Force -Name lsass\n"
                 "- ANY attempt to recursively delete or irreversibly modify these locations MUST trigger 'abort'.\n"
-                "\n"
 
                 # ============================================================
                 # Idempotency and already-present state
@@ -2639,7 +2641,6 @@ def recover(request: RecoveryRequest):
                 "    * 'Cannot create a file when that file already exists.'\n"
                 "    * 'A positional parameter cannot be found that accepts argument ...'\n"
                 "  the LLM MUST use 'fallback' unless a deterministic, safe remediation is explicitly indicated.\n"
-                "\n"
 
                 # ============================================================
                 # Network failures (Windows PowerShell)
@@ -2651,7 +2652,6 @@ def recover(request: RecoveryRequest):
                 "    * 'Unable to connect to the remote server'\n"
                 "    * 'No such host is known'\n"
                 "  the LLM MUST use 'fallback'.\n"
-                "\n"
 
                 # ============================================================
                 # cleanup_and_retry usage (Windows PowerShell)
@@ -2665,43 +2665,21 @@ def recover(request: RecoveryRequest):
                 "    * 'retry' containing the suggested command.\n"
                 "- The LLM MUST NOT invent multi-step cleanup sequences.\n"
                 "- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
-                "\n"
 
                 # ============================================================
-                # retry_with_modified_command usage (Windows PowerShell) — ####patch stress_tester1: Patch2-Rev5
+                # retry_with_modified_command usage (Windows PowerShell)
                 # ============================================================
 
                 "- retry_with_modified_command MAY be used when the original command is a clear near-miss\n"
-                "  of a valid cmdlet, parameter, or structural PowerShell construct, and the correction is:\n"
-                "    * syntactically valid,\n"
-                "    * semantically safe,\n"
-                "    * and directly implied by the original command.\n"
-                "\n"
-                "- Examples of allowed cmdlet/parameter typo corrections include:\n"
+                "  of a valid cmdlet or parameter usage.\n"
+                "- Examples include:\n"
                 "    * 'Get-Servce' → 'Get-Service'\n"
-                "    * 'Get-Proces' → 'Get-Process'\n"
-                "    * 'Get-Service -Nam spooler' → 'Get-Service -Name spooler'\n"
-                "\n"
-                "- Examples of allowed structural corrections include:\n"
-                "    * Missing hyphen for a known parameter when intent is unambiguous and non-destructive,\n"
-                "      e.g., 'Get-Service Name spooler' → 'Get-Service -Name spooler'.\n"
-                "    * Missing braces in a simple script block when the body is already present and non-destructive,\n"
-                "      e.g., 'Get-Process | ForEach-Object $_.Name' → 'Get-Process | ForEach-Object { $_.Name }'.\n"
-                "    * Missing '$()' in a simple subexpression when the intent is clearly to evaluate a command inline,\n"
-                "      e.g., 'Write-Output \"Size: (Get-Item file.txt).Length\"' →\n"
-                "           'Write-Output \"Size: $(Get-Item file.txt).Length\"'.\n"
-                "\n"
+                "    * missing mandatory parameter names when intent is unambiguous and non-destructive.\n"
                 "- The LLM MUST NOT use retry_with_modified_command to:\n"
                 "    * guess module names,\n"
                 "    * guess package IDs,\n"
                 "    * introduce new tools or package managers,\n"
-                "    * change the high-level intent of the command,\n"
-                "    * invent new cmdlets, parameters, or flags,\n"
-                "    * or perform cross-OS translations (e.g., Linux PM → winget).\n"
-                "\n"
-                "- If the correction is not clearly implied, or multiple plausible corrections exist,\n"
-                "  the LLM MUST use 'fallback' instead of retry_with_modified_command.\n"
-                "\n"
+                "    * or change the high-level intent of the command.\n"
 
                 # ============================================================
                 # Fallback rules (Windows PowerShell)
@@ -2712,8 +2690,7 @@ def recover(request: RecoveryRequest):
                 "- Use 'fallback' when correcting the command would require guessing user intent,\n"
                 "  inventing capabilities, or inferring cross-OS behavior.\n"
                 "- Use 'fallback' when the OS, shell, or package manager context is unclear.\n"
-                "- Use 'fallback' whenever invalid flags/parameters are present, or when rewrite would\n"
-                "  require more than an obvious, single-step, non-destructive correction.\n"
+
 
 
 

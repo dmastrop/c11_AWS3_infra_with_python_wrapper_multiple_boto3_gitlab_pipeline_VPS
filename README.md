@@ -6323,7 +6323,7 @@ There is not patches required for Cisco IOS or PAN-OS domain primitives blocks.
 
 
 
-#### 7. Cross‑OS Contract Behavior Comparison Table  
+#### 7.Cross‑OS Contract Behavior Comparison Table  
 
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS)*
 
@@ -6477,10 +6477,72 @@ It highlights:
 
 
 
-#### 6.Schema-based tests for windows powershell
+#### 8.Schema-based tests for Windows PowerShell 5.1
+
+##### Why This Project Targets Windows PowerShell 5.1 (and Not PowerShell 7+)
+
+Since this stage of contract development involves a lot of command syntax and semantics, it is important to note why the 
+focus is on PowerShell 5.1 and not PowerShell 7+, which is far more semantically complex than 5.1.
+
+Windows Server 2022 ships with **Windows PowerShell 5.1** as the default and only guaranteed shell environment. PowerShell 7 is *never* installed unless an administrator explicitly adds it, and it introduces new semantics (`&&`, `||`, different pipeline behavior, different module loading, and different parameter‑binding rules) that would break determinism in this contract architecture. Enterprise automation tooling — WinRM, DSC, SCCM, Intune, Exchange modules, AD modules, Server Manager modules, and most legacy cmdlets — all depend on 5.1. For these reasons, the contract domain‑primitives block is written specifically for **PowerShell 5.1**, ensuring deterministic behavior and compatibility with real‑world Windows Server deployments. 
+
+If PowerShell 7 ever becomes mainstream, it would require its own `os_name`/`os_version` and a completely separate domain‑primitives block.
 
 
-#### 7.Schema-based tests for linux powershell
+##### LLM Contract Stress Tester — Windows PowerShell 5.1 Base Schema Tests (Original 36 Cases)
+
+For the full patch integration the entire contract domain primitives block had to be refactored. So the entire 36 base schema tests
+will need to be re-run against the new code in case there are any regression issues.   The next section will specifically target
+all of the different enhancements for the windows powershell rewriting of commands (even though powershell does not have a linux 
+style PM, rewrites are still possible).  In writing the new code, a balance between deterministic enforcement behavior of the LLM 
+and a moderate amount of permissive rewrites was adopted. 
+
+
+
+##### LLM Contract Stress Tester — Windows PowerShell 5.1 Patch2‑Rev5 Pipeline Rewrite Tests (24 Cases)
+
+Summary of PowerShell Patch2‑Rev5 Rewrite Behavior
+
+Windows PowerShell required a full Patch2‑Rev5 update because its command model is fundamentally different from Linux shells and macOS‑brew. PowerShell 5.1 (the default on Windows Server 2022) uses cmdlets, structured parameters, script blocks, and subexpressions—not POSIX pipelines or package‑manager semantics. To support safe and deterministic remediation, the contract now allows a limited set of **obvious, single‑step corrections** via `retry_with_modified_command` when the user’s intent is unambiguous and non‑destructive.
+
+Examples of permitted corrections include:
+
+- Cmdlet typos:
+  `Get-Servce` → `Get-Service`  
+  `Get-Proces` → `Get-Process`
+
+- Parameter typos:  
+  `Get-Service -Nam spooler` → `Get-Service -Name spooler`
+
+- Missing hyphens:  
+  `Get-Service Name spooler` → `Get-Service -Name spooler`
+
+- Missing braces in script blocks:  
+  `Get-Process | ForEach-Object $_.Name` → `Get-Process | ForEach-Object { $_.Name }`
+
+- Missing `$()` in subexpressions:  
+  `"Size: (Get-Item file.txt).Length"` → `"Size: $(Get-Item file.txt).Length"`
+
+These corrections are allowed **only** when the fix is syntactically valid, semantically safe, and directly implied by the original command.  
+All ambiguous, multi‑step, or invented corrections still fall back to `fallback`, and destructive operations continue to trigger `abort`.
+
+This expanded rewrite capability—combined with strict invalid‑flag precedence and hardened malformed‑command rules—is why the Windows PowerShell domain‑primitives block required a full rewrite and why Patch2‑Rev5 introduces new behavior that must be validated through a dedicated 24‑case schema.
+
+
+
+
+
+
+#### 9.Schema-based tests for linux powershell
+
+
+
+
+#### 10.Final Cross‑OS Contract Behavior Comparison Table  
+
+*(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS vs Windows PowerShell vs. Linux PowerShell)*
+
+
 
 
 
