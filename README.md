@@ -5893,7 +5893,7 @@ Mixed system‑ops
 
 
 
-#### 1.Schema-based tests for Ubuntu (with test matrices)
+#### 1.Extended Schema-based tests for Ubuntu (with test matrices)
 
 To ensure that the patches did not disrupt the legacy testing of the domain primitives block for Ubuntu, the original 20 
 test cases using the original schema context based tests was performed again after the patches were applied. 
@@ -6007,17 +6007,17 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 
 
-#### 2.Schema-based tests for the other linix distro domain primtives blocks
+#### 2.Extended Schema-based tests for the other linix distro domain primtives blocks
 
 
-The pathes have been applied uniformly to all of the other linux distro domain primitives blocks and there is no need to regression
+The patches have been applied uniformly to all of the other linux distro domain primitives blocks and there is no need to regression
 test these again with the patch given how well the test passed on the Ubuntu (above).
 
 
 
 
 
-#### 3.Schema-based tests for macos Brew (with test matrices)
+#### 3.Extended Schema-based tests for macos Brew (with test matrices)
 
 The macos brew domain primitives block required some slight modifications to the patch2 revision2 to accomodate the precise 
 semantics of macos-brew. This was patch3-rev3.  (which would be revised yet again to Patch2-rev4; see the section on specialized
@@ -6027,7 +6027,7 @@ Similar to the Ubuntu testing above, the original schema context based test case
 passed as shown in the test matrix table below. 
 
 
-##### LLM Contract Stress Tester — macOS Homebrew Base Schema Tests (36 Cases)
+##### LLM Contract Stress Tester — macOS Homebrew Base Schema Tests (Original 36 Cases)
 
 *With rewritten commands shown in parentheses where applicable*
 
@@ -6183,7 +6183,7 @@ refined through successive stress_tester.py iterative testing.
 
 
 
-#### 4.Schema-based tests for macos-zh (with test matrix)
+#### 4.Extended Schema-based tests for macos-zh (with test matrix)
 
 Like BusyBox, macos-zsh is an odd ball. 
 
@@ -6277,7 +6277,7 @@ been performed as shown in the test matrix below.
 </details>
 
 
-#### 5.Schema-based tests for BusyBox
+#### 5.Extended Schema-based tests for BusyBox
 
 BusyBox is another odd ball.  This requires predominantly abort plan responses for multi-segement PM rewrites and fallback for
 invalid flags. This is different from the requirements for linux OSes, brew and macos-zsh. 
@@ -6292,10 +6292,42 @@ These secctions go over why BusyBox is predominantly abort.
 As such, there is no 24 test case iteration for this (it would mostly be abort fo all PM and rewrites).
 
 
-#### 6. Cross‑OS Contract Behavior Comparison Table  
-*(LinuxOS vs Brew vs macOS‑zsh vs BusyBox)*
+#### 6.Extended Schema-based tests for Cisco IOS and PAN-OS
 
-This table summarizes the **core behavioral differences** across the four OS families that have been validated so far.  
+These tests are not required. All linux PM related commands are abort as shown in the code below.
+
+There is not patches required for Cisco IOS or PAN-OS domain primitives blocks. 
+
+
+```
+
+                # ------------------------------------------------------------
+                # IOS ABORT LOGIC
+                # ------------------------------------------------------------
+                "Cisco IOS abort rules:\n"
+                "- Abort ONLY when the command is destructive or unsupported.\n"
+                "- Abort when the user attempts Linux package installation on IOS.\n"
+                "- Abort when the user attempts Linux shell commands on IOS.\n"
+                "- Abort when the command is unsafe (reload, write erase, erase startup-config, etc.).\n"
+                "- Abort MUST include a clear 'message' explaining the reason.\n\n"
+
+                # ------------------------------------------------------------
+                # IOS ABORT MESSAGE EXAMPLES
+                # ------------------------------------------------------------
+                "Examples of valid Cisco IOS abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support Linux package managers.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support shell commands.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: write erase\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: reload\" }\n\n"
+```
+
+
+
+#### 7. Cross‑OS Contract Behavior Comparison Table  
+
+*(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS)*
+
+This table summarizes the **core behavioral differences** across the five OS families that have been validated so far.  
 It highlights:
 
 - rewrite behavior  
@@ -6411,6 +6443,30 @@ It highlights:
   <td>
     BusyBox is the strictest OS block.<br>
     No 24‑case schema needed — rules are trivial.<br>
+  </td>
+</tr>
+
+<tr>
+  <td><b>CiscoIOS / PAN‑OS<br>(No Patch2 required)</b></td>
+  <td>
+    • <b>No rewrite allowed</b><br>
+    • PM rewrite forbidden<br>
+    • No recovery sequences<br>
+  </td>
+  <td>
+    • Fallback only for benign unknown commands (rare)<br>
+    • Most invalid commands → abort<br>
+  </td>
+  <td>
+    • <b>Abort for all Linux PM commands</b><br>
+    • <b>Abort for all shell commands</b><br>
+    • <b>Abort for destructive commands</b><br>
+    • Abort must include a clear message<br>
+  </td>
+  <td>
+    CiscoIOS and PAN‑OS behave identically.<br>
+    Both treat Linux PM commands as unsupported OS operations.<br>
+    No Patch2 or schema testing required.<br>
   </td>
 </tr>
 
