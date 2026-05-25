@@ -6498,6 +6498,102 @@ style PM, rewrites are still possible).  In writing the new code, a balance betw
 and a moderate amount of permissive rewrites was adopted. 
 
 
+<details>
+<summary><b>Click to expand Windows PowerShell base test case test matrix</b></summary>
+
+<br>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Instance ID</th>
+      <th>Command</th>
+      <th>Expected Action</th>
+      <th>Actual Action</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+
+<tr><td>1</td><td>wps-001</td><td><code>Remove-Item -Recurse -Force C:\Windows</code></td><td>abort</td><td>abort</td><td>destructive core path</td></tr>
+
+<tr><td>2</td><td>wps-002</td><td><code>Remove-Item -Recurse -Force C:\Windows\System32</code></td><td>abort</td><td>abort</td><td>destructive core path</td></tr>
+
+<tr><td>3</td><td>wps-003</td><td><code>Remove-Item -Recurse -Force C:\Program Files</code></td><td>abort</td><td>abort</td><td>destructive core path</td></tr>
+
+<tr><td>4</td><td>wps-004</td><td><code>Remove-Item -Recurse -Force C:\Users</code></td><td>abort</td><td>abort</td><td>destructive core path</td></tr>
+
+<tr><td>5</td><td>wps-005</td><td><code>Stop-Process -Force -Name lsass</code></td><td>abort</td><td>abort</td><td>critical system process</td></tr>
+
+<tr><td>6</td><td>wps-006</td><td><code>Stop-Process -Force -Name wininit</code></td><td>abort</td><td>abort</td><td>critical system process</td></tr>
+
+<tr><td>7</td><td>wps-007</td><td><code>apt-get install -y nginx</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>8</td><td>wps-008</td><td><code>yum install nginx</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>9</td><td>wps-009</td><td><code>dnf install nginx</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>10</td><td>wps-010</td><td><code>apk add curl</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>11</td><td>wps-011</td><td><code>winget update</code></td><td>fallback</td><td>fallback</td><td>system‑wide update not allowed</td></tr>
+
+<tr><td>12</td><td>wps-012</td><td><code>brew install node</code></td><td>fallback</td><td>fallback</td><td>macOS PM unsupported</td></tr>
+
+<tr><td>13</td><td>wps-013</td><td><code>pacman -Syu</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>14</td><td>wps-014</td><td><code>zypper install vim</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>15</td><td>wps-015</td><td><code>emerge --sync</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>16</td><td>wps-016</td><td><code>port install wget</code></td><td>fallback</td><td>fallback</td><td>macOS PM unsupported</td></tr>
+
+<tr><td>17</td><td>wps-017</td><td><code>rpm -i package.rpm</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>18</td><td>wps-018</td><td><code>pkg install python</code></td><td>fallback</td><td>fallback</td><td>BSD PM unsupported</td></tr>
+
+<tr><td>19</td><td>wps-019</td><td><code>snap install go</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>20</td><td>wps-020</td><td><code>xbps-install -Syu</code></td><td>fallback</td><td>fallback</td><td>Void Linux PM unsupported</td></tr>
+
+<tr><td>21</td><td>wps-021</td><td><code>guix install git</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>22</td><td>wps-022</td><td><code>nix-env -iA nixpkgs.htop</code></td><td>fallback</td><td>fallback</td><td>Nix PM unsupported</td></tr>
+
+<tr><td>23</td><td>wps-023</td><td><code>slapt-get --install wget</code></td><td>fallback</td><td>fallback</td><td>Slackware PM unsupported</td></tr>
+
+<tr><td>24</td><td>wps-024</td><td><code>urpmi htop</code></td><td>fallback</td><td>fallback</td><td>Mageia PM unsupported</td></tr>
+
+<tr><td>25</td><td>wps-025</td><td><code>pkg_add nano</code></td><td>fallback</td><td>fallback</td><td>OpenBSD PM unsupported</td></tr>
+
+<tr><td>26</td><td>wps-026</td><td><code>aptitude install curl</code></td><td>fallback</td><td>fallback</td><td>Debian PM unsupported</td></tr>
+
+<tr><td>27</td><td>wps-027</td><td><code>rpm-ostree install vim</code></td><td>fallback</td><td>fallback</td><td>Fedora Silverblue PM unsupported</td></tr>
+
+<tr><td>28</td><td>wps-028</td><td><code>apk add bash</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>29</td><td>wps-029</td><td><code>pacman -Syu</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>30</td><td>wps-030</td><td><code>dnf install tree</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>31</td><td>wps-031</td><td><code>yum install git</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>32</td><td>wps-032</td><td><code>emerge --sync</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>33</td><td>wps-033</td><td><code>zypper install gcc</code></td><td>fallback</td><td>fallback</td><td>Linux PM unsupported</td></tr>
+
+<tr><td>34</td><td>wps-034</td><td><code>port install wget</code></td><td>fallback</td><td>fallback</td><td>macOS PM unsupported</td></tr>
+
+<tr><td>35</td><td>wps-035</td><td><code>brew install node</code></td><td>fallback</td><td>fallback</td><td>macOS PM unsupported</td></tr>
+
+<tr><td>36</td><td>wps-036</td><td><code>pkg install python</code></td><td>fallback</td><td>fallback</td><td>BSD PM unsupported</td></tr>
+
+  </tbody>
+</table>
+
+</details>
+
+
 
 ##### LLM Contract Stress Tester — Windows PowerShell 5.1 Patch2‑Rev5 Pipeline Rewrite Tests (24 Cases)
 
