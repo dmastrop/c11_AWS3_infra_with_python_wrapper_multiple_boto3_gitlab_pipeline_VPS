@@ -6284,17 +6284,18 @@ invalid flags. This is different from the requirements for linux OSes, brew and 
 
 These secctions go over why BusyBox is predominantly abort.
 
+- [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
+- [Why BusyBox is abort, but macOS‑zsh is fallback, even though both have no package manager](#why-busybox-is-abort-but-macos-zsh-is-fallback-even-though-both-have-no-package-manager)
 
 
 
 As such, there is no 24 test case iteration for this (it would mostly be abort fo all PM and rewrites).
 
-The summary table thus far is below:
 
-# ⭐ **Cross‑OS Contract Behavior Comparison Table**  
+#### 6. Cross‑OS Contract Behavior Comparison Table**  
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox)*
 
-This table summarizes the **core behavioral differences** across the four OS families we’ve validated so far.  
+This table summarizes the **core behavioral differences** across the four OS families that have been validated so far.  
 It highlights:
 
 - rewrite behavior  
@@ -6305,7 +6306,6 @@ It highlights:
 - whether Patch2 applies  
 - whether rewrite is ever allowed  
 
-Perfect for placing between Sections 4 and 5.
 
 ---
 
