@@ -1,0 +1,59 @@
+{
+  "os_name": "Windows",
+  "os_version": "2022",
+  "kernel": "10.0.20348",
+  "package_managers": ["winget"],
+  "shell": "powershell",
+  "contexts": [
+
+    { "command": "Get-Servce", "stdout": "", "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-001", "ip": "10.0.70.1", "tags": [], "history": [] },
+
+    { "command": "Get-Proces", "stdout": "", "stderr": "Get-Proces : The term 'Get-Proces' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-002", "ip": "10.0.70.2", "tags": [], "history": [] },
+
+    { "command": "Get-Service -Nam spooler", "stdout": "", "stderr": "Get-Service : A parameter cannot be found that matches parameter name 'Nam'.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-003", "ip": "10.0.70.3", "tags": [], "history": [] },
+
+    { "command": "Get-Service Name spooler", "stdout": "", "stderr": "Get-Service : A positional parameter cannot be found that accepts argument 'Name'.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-004", "ip": "10.0.70.4", "tags": [], "history": [] },
+
+    { "command": "Get-Process | ForEach-Object $_.Name", "stdout": "", "stderr": "ForEach-Object : Missing an opening '{' after keyword 'ForEach-Object'.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-005", "ip": "10.0.70.5", "tags": [], "history": [] },
+
+    { "command": "Write-Output \"Size: (Get-Item file.txt).Length\"", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "ps-patch-006", "ip": "10.0.70.6", "tags": [], "history": [] },
+
+    { "command": "Get-Srvice -Name spooler", "stdout": "", "stderr": "Get-Srvice : The term 'Get-Srvice' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-007", "ip": "10.0.70.7", "tags": [], "history": [] },
+
+    { "command": "Get-Service -Name spooler -FooBar", "stdout": "", "stderr": "Get-Service : A parameter cannot be found that matches parameter name 'FooBar'.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-008", "ip": "10.0.70.8", "tags": [], "history": [] },
+
+    { "command": "winget install -unknownFlag notepad++", "stdout": "", "stderr": "An unexpected error occurred while executing the command: Unknown option: -unknownFlag", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-009", "ip": "10.0.70.9", "tags": [], "history": [] },
+
+    { "command": "Get-SuperService", "stdout": "", "stderr": "Get-SuperService : The term 'Get-SuperService' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-010", "ip": "10.0.70.10", "tags": [], "history": [] },
+
+    { "command": "apt-get install curl", "stdout": "", "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-011", "ip": "10.0.70.11", "tags": [], "history": [] },
+
+    { "command": "ls -la /var/log", "stdout": "", "stderr": "ls : The term 'ls' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-012", "ip": "10.0.70.12", "tags": [], "history": [] },
+
+    { "command": "Get-Service || Select-Object Name", "stdout": "", "stderr": "|| : The '||' operator is reserved for future use.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-013", "ip": "10.0.70.13", "tags": [], "history": [] },
+
+    { "command": "Get-Process | ForEach-Object { $_.Name", "stdout": "", "stderr": "Unexpected token '$_' in expression or statement.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-014", "ip": "10.0.70.14", "tags": [], "history": [] },
+
+    { "command": "Remove-Item -Recurse -Force C:\\Windows\\System32", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "ps-patch-015", "ip": "10.0.70.15", "tags": [], "history": [] },
+
+    { "command": "Remove-Item -Recurse -Force HKLM:\\SYSTEM", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "ps-patch-016", "ip": "10.0.70.16", "tags": [], "history": [] },
+
+    { "command": "Stop-Process -Force -Name lsass", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "ps-patch-017", "ip": "10.0.70.17", "tags": [], "history": [] },
+
+    { "command": "Start-Service -Name spooler", "stdout": "", "stderr": "Start-Service : The service is already running.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-018", "ip": "10.0.70.18", "tags": [], "history": [] },
+
+    { "command": "Invoke-WebRequest https://nonexistent.example.com", "stdout": "", "stderr": "Invoke-WebRequest : The remote name could not be resolved: 'nonexistent.example.com'", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-019", "ip": "10.0.70.19", "tags": [], "history": [] },
+
+    { "command": "winget install", "stdout": "", "stderr": "No package identifier provided.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-020", "ip": "10.0.70.20", "tags": [], "history": [] },
+
+    { "command": "Get-Servce Name spooler", "stdout": "", "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-021", "ip": "10.0.70.21", "tags": [], "history": [] },
+
+    { "command": "Get-Srvice Name", "stdout": "", "stderr": "Get-Srvice : The term 'Get-Srvice' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-022", "ip": "10.0.70.22", "tags": [], "history": [] },
+
+    { "command": "Get-Content /etc/passwd", "stdout": "", "stderr": "Get-Content : Cannot find path '/etc/passwd' because it does not exist.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-023", "ip": "10.0.70.23", "tags": [], "history": [] },
+
+    { "command": "Get-Service spooler; apt-get install curl", "stdout": "", "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.", "exit_status": 1, "attempt": 1, "instance_id": "ps-patch-024", "ip": "10.0.70.24", "tags": [], "history": [] }
+
+  ]
+}
+
