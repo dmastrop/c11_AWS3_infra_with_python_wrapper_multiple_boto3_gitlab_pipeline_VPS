@@ -6205,6 +6205,76 @@ been performed as shown in the test matrix below.
 
 
 
+<details>
+<summary><b>Click to expand macOS-zsh Patch Integration test matrix</b></summary>
+
+<br>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Instance ID</th>
+      <th>Command</th>
+      <th>Expected Action</th>
+      <th>Actual Action</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+
+<tr><td>1</td><td>i-zsh-001</td><td><code>rm -rf /System</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
+
+<tr><td>2</td><td>i-zsh-002</td><td><code>apt-get install curl</code></td><td>fallback</td><td>fallback</td><td>package manager unsupported</td></tr>
+
+<tr><td>3</td><td>i-zsh-003</td><td><code>yum install nano</code></td><td>fallback</td><td>fallback</td><td>package manager unsupported</td></tr>
+
+<tr><td>4</td><td>i-zsh-004</td><td><code>brew install python</code></td><td>fallback</td><td>fallback</td><td>brew unsupported in macOS‑zsh</td></tr>
+
+<tr><td>5</td><td>i-zsh-005</td><td><code>dnf install git</code></td><td>fallback</td><td>fallback</td><td>package manager unsupported</td></tr>
+
+<tr><td>6</td><td>i-zsh-006</td><td><code>apk add bash</code></td><td>fallback</td><td>fallback</td><td>package manager unsupported</td></tr>
+
+<tr><td>7</td><td>i-zsh-007</td><td><code>pacman -Syu</code></td><td>fallback</td><td>fallback</td><td>package manager unsupported</td></tr>
+
+<tr><td>8</td><td>i-zsh-008</td><td><code>asdfasdfasdf</code></td><td>fallback</td><td>fallback</td><td>unknown command (127)</td></tr>
+
+<tr><td>9</td><td>i-zsh-009</td><td><code>echo $(unknowncmd)</code></td><td>fallback</td><td>fallback</td><td>unknown subshell command</td></tr>
+
+<tr><td>10</td><td>i-zsh-010</td><td><code>echo "unterminated string</code></td><td>fallback</td><td>fallback</td><td>unmatched quote</td></tr>
+
+<tr><td>11</td><td>i-zsh-011</td><td><code>echo hello &#124; &#124; grep h</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+
+<tr><td>12</td><td>i-zsh-012</td><td><code>echo $(echo $(echo $(unknowncmd)))</code></td><td>fallback</td><td>fallback</td><td>nested unknown subshell</td></tr>
+
+<tr><td>13</td><td>i-zsh-013</td><td><code>ls -l /nonexistent</code></td><td>fallback</td><td>fallback</td><td>POSIX error (No such file)</td></tr>
+
+<tr><td>14</td><td>i-zsh-014</td><td><code>grep</code></td><td>fallback</td><td>fallback</td><td>empty pattern</td></tr>
+
+<tr><td>15</td><td>i-zsh-015</td><td><code>echo $(echo $(echo</code></td><td>fallback</td><td>fallback</td><td>unexpected EOF</td></tr>
+
+<tr><td>16</td><td>i-zsh-016</td><td><code>show route everything</code></td><td>fallback</td><td>fallback</td><td>unknown command (127)</td></tr>
+
+<tr><td>17</td><td>i-zsh-017</td><td><code>echo hello &#124; grep h &#124; &#124; wc -l</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+
+<tr><td>18</td><td>i-zsh-018</td><td><code>echo $(unknowncmd &#124; grep h)</code></td><td>fallback</td><td>fallback</td><td>unknown subshell command</td></tr>
+
+<tr><td>19</td><td>i-zsh-019</td><td><code>rm -rf /Users</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
+
+<tr><td>20</td><td>i-zsh-020</td><td><code>echo hello &#124; &#124; &#124; grep x</code></td><td>fallback</td><td>fallback</td><td>malformed pipeline</td></tr>
+
+<tr><td>21</td><td>i-zsh-021</td><td><code>echo $(echo $(unknowncmd))</code></td><td>fallback</td><td>fallback</td><td>unknown subshell command</td></tr>
+
+<tr><td>22</td><td>i-zsh-022</td><td><code>rm -rf /Library</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
+
+<tr><td>23</td><td>i-zsh-023</td><td><code>echo $(echo $(echo $(echo $(unknowncmd))))</code></td><td>fallback</td><td>fallback</td><td>deep nested unknown subshell</td></tr>
+
+<tr><td>24</td><td>i-zsh-024</td><td><code>rm -rf /Applications</code></td><td>abort</td><td>abort</td><td>destructive command</td></tr>
+
+  </tbody>
+</table>
+
+</details>
 
 
 #### 5.Schema-based tests for BusyBox
