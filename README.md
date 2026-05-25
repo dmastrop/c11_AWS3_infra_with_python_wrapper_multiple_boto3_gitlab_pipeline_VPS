@@ -6292,7 +6292,7 @@ These secctions go over why BusyBox is predominantly abort.
 As such, there is no 24 test case iteration for this (it would mostly be abort fo all PM and rewrites).
 
 
-#### 6. Cross‑OS Contract Behavior Comparison Table**  
+#### 6. Cross‑OS Contract Behavior Comparison Table  
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox)*
 
 This table summarizes the **core behavioral differences** across the four OS families that have been validated so far.  
@@ -6329,19 +6329,19 @@ It highlights:
 <tr>
   <td><b>LinuxOS<br>(Patch2‑Rev2 and invalid flags patch)</b></td>
   <td>
-    ✔ Wrong‑PM rewrite allowed  
-    ✔ Multi‑segment rewrite allowed  
-    ✔ Deterministic rewrite rules  
+    - Wrong‑PM rewrite allowed  
+    - Multi‑segment rewrite allowed  
+    - Deterministic rewrite rules  
     <br>
     <i>(e.g., apt → apt‑get → yum → dnf → apk → pacman → correct PM)</i>
   </td>
   <td>
-    ✔ Fallback for invalid flags  
-    ✔ Fallback for malformed commands  
-    ✔ Fallback for unsupported PMs  
+    - Fallback for invalid flags  
+    - Fallback for malformed commands  
+    - Fallback for unsupported PMs  
   </td>
   <td>
-    ✔ Abort only for destructive commands  
+    - Abort only for destructive commands  
   </td>
   <td>
     Full Patch2 rewrite engine.  
@@ -6352,19 +6352,19 @@ It highlights:
 <tr>
   <td><b>macOS Homebrew<br>(Patch2‑Rev4 and invalid flags patch)</b></td>
   <td>
-    ✔ Wrong‑PM rewrite allowed  
-    ✔ Multi‑segment rewrite allowed  
-    ✔ Brew‑specific rewrite rules  
+    - Wrong‑PM rewrite allowed  
+    - Multi‑segment rewrite allowed  
+    - Brew‑specific rewrite rules  
     <br>
     <i>(e.g., apt/yum/dnf → brew install …)</i>
   </td>
   <td>
-    ✔ Fallback for invalid flags  
-    ✔ Fallback for system‑wide ops  
-    ✔ Fallback for malformed commands  
+    - Fallback for invalid flags  
+    - Fallback for system‑wide ops  
+    - Fallback for malformed commands  
   </td>
   <td>
-    ✔ Abort for destructive commands  
+    - Abort for destructive commands  
   </td>
   <td>
     Patch2‑Rev4 adds invalid‑flag precedence fix.  
@@ -6375,18 +6375,18 @@ It highlights:
 <tr>
   <td><b>macOS‑zsh<br>(Primitive Patch2 and invalid flags patch as well)</b></td>
   <td>
-    ❌ <b>No rewrite allowed</b>  
-    ❌ PM rewrite forbidden  
-    ❌ No deterministic recovery sequences  
+    -  <b>No rewrite allowed</b>  
+    -  PM rewrite forbidden  
+    - No deterministic recovery sequences  
   </td>
   <td>
-    ✔ <b>Fallback‑dominant OS</b>  
-    ✔ All PM commands → fallback  
-    ✔ All malformed pipelines → fallback  
-    ✔ All invalid flags → fallback  
+    - <b>Fallback‑dominant OS</b>  
+    - All PM commands → fallback  
+    - All malformed pipelines → fallback  
+    - All invalid flags → fallback  
   </td>
   <td>
-    ✔ Abort only for destructive commands  
+    - Abort only for destructive commands  
   </td>
   <td>
     Minimal OS block.  
@@ -6397,18 +6397,18 @@ It highlights:
 <tr>
   <td><b>BusyBox<br>(Primitive Patch2 and invalid flags patch as well)</b></td>
   <td>
-    ❌ <b>No rewrite allowed</b>  
-    ❌ PM rewrite forbidden  
-    ❌ No recovery sequences  
+    - <b>No rewrite allowed</b>  
+    - PM rewrite forbidden  
+    -  No recovery sequences  
   </td>
   <td>
-    ✔ Fallback for invalid flags  
-    ✔ Fallback for unknown commands  
+    - Fallback for invalid flags  
+    - Fallback for unknown commands  
   </td>
   <td>
-    ✔ <b>Abort‑dominant OS</b>  
-    ✔ All PM rewrites → abort  
-    ✔ All multi‑segment PM pipelines → abort  
+    - <b>Abort‑dominant OS</b>  
+    - All PM rewrites → abort  
+    - All multi‑segment PM pipelines → abort  
   </td>
   <td>
     BusyBox is the strictest OS block.  
