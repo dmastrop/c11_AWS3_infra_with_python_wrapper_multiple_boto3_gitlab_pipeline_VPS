@@ -1115,8 +1115,8 @@ def recover(request: RecoveryRequest):
 
                 # Idempotency
                 "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
-                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
+                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' ONLY when there is evidence of\n"
+                "  partial or inconsistent state. Otherwise, 'fallback' is acceptable.\n"
 
                 # <pkg> binding semantics
                 "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the\n"
@@ -1271,8 +1271,8 @@ def recover(request: RecoveryRequest):
 
                 # Idempotency
                 "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
-                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
+                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' ONLY when there is evidence of\n"
+                "  partial or inconsistent state. Otherwise, 'fallback' is acceptable.\n"
 
                 # <pkg> binding semantics
                 "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the\n"
@@ -1441,8 +1441,8 @@ def recover(request: RecoveryRequest):
 
                 # Idempotency
                 "- If stderr indicates idempotency ('Nothing to do', 'already installed',\n"
-                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
+                "  'No packages marked for update'), the LLM MUST use 'fallback' unless partial\n"
+                "  inconsistent state is indicated.\n"
                 "\n"
 
                 # <pkg> binding semantics
@@ -1599,8 +1599,8 @@ def recover(request: RecoveryRequest):
 
                 "- If stderr indicates the package is already installed, such as:\n"
                 "    * 'Package <pkg> is already installed. Nothing to do.'\n"
-                "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for this condition.\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
 
                 "- If 'yum update -y' or 'yum upgrade -y' completes successfully with stderr:\n"
                 "    * 'Nothing to do.'\n"
@@ -1757,8 +1757,7 @@ def recover(request: RecoveryRequest):
                 "- If stderr indicates the package is already installed, such as:\n"
                 "    * 'Package <pkg> is already installed.'\n"
                 "    * 'Nothing to do.'\n"
-                "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
+                "  the LLM MUST use 'fallback'.\n"
                 "\n"
 
                 "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with stderr:\n"
@@ -1925,8 +1924,7 @@ def recover(request: RecoveryRequest):
                 "- If stderr indicates the package is already installed, such as:\n"
                 "    * 'Package <pkg> is already installed.'\n"
                 "    * 'Nothing to do.'\n"
-                "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
+                "  the LLM MUST use 'fallback'.\n"
                 "\n"
 
                 "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with stderr:\n"
@@ -2165,14 +2163,11 @@ def recover(request: RecoveryRequest):
                 "- BusyBox does NOT support dpkg, rpm, apk, or any package database. Any reference to these MUST trigger 'abort'.\n"
 
                 ##### BusyBox idempotency rules #####
-                "- BusyBox idempotency failures include messages such as:
-                    * 'file exists'
-                    * 'directory exists'
-                    * 'not removed'
-                  These MUST use 'cleanup_and_retry' in accordance with the global Idempotency rules.
-                  Fallback MUST NOT be used for idempotency conditions.
-
-
+                "- BusyBox idempotency failures include messages such as:\n"
+                "    * 'file exists'\n"
+                "    * 'directory exists'\n"
+                "    * 'not removed'\n"
+                "- These MUST use 'fallback' unless a safe cleanup is explicitly implied (for example, removing a temporary file).\n"
 
                 ##### BusyBox destructive command rules #####
                 "- BusyBox supports 'rm', including recursive deletion. Destructive commands MUST trigger 'abort'.\n"
@@ -2382,10 +2377,8 @@ def recover(request: RecoveryRequest):
                 "    'Warning: <pkg> is already installed'\n"
                 "    'Nothing to do'\n"
                 "    'Already up-to-date'\n"
-                "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
+                "  the LLM MUST use 'fallback'.\n"
                 "\n"
-
                 ##### <pkg> binding semantics #####
                 "- The LLM MUST replace '<pkg>' with the actual package name used in the failing command.\n"
                 "- The LLM MUST NOT invent or guess a package name.\n"
@@ -2644,8 +2637,8 @@ def recover(request: RecoveryRequest):
                 "    * 'The process is already running.'\n"
                 "    * 'The service is already running.'\n"
                 "    * 'Cannot create a file when that file already exists.'\n"
-                "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
+                "    * 'A positional parameter cannot be found that accepts argument ...'\n"
+                "  the LLM MUST use 'fallback' unless a deterministic, safe remediation is explicitly indicated.\n"
                 "\n"
 
                 # ============================================================
