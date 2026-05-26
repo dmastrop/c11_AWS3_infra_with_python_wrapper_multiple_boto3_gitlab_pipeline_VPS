@@ -2165,13 +2165,12 @@ def recover(request: RecoveryRequest):
                 "- BusyBox does NOT support dpkg, rpm, apk, or any package database. Any reference to these MUST trigger 'abort'.\n"
 
                 ##### BusyBox idempotency rules #####
-                "- BusyBox idempotency failures include messages such as:
-                    * 'file exists'
-                    * 'directory exists'
-                    * 'not removed'
-                  These MUST use 'cleanup_and_retry' in accordance with the global Idempotency rules.
-                  Fallback MUST NOT be used for idempotency conditions.
-
+                "- BusyBox idempotency failures include messages such as:\n"
+                "    * 'file exists'\n"
+                "    * 'directory exists'\n"
+                "    * 'not removed'\n"
+                "- These MUST use 'cleanup_and_retry' in accordance with the global Idempotency rules.\n"
+                "- Fallback MUST NOT be used for idempotency conditions.\n"
 
 
                 ##### BusyBox destructive command rules #####
