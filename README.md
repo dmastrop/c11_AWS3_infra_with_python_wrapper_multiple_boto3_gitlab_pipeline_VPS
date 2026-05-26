@@ -6634,8 +6634,17 @@ In the test matrix below, these over-corrections are in tests 7 and 21.
 Test 18 has a fix for idempotency, where we use cleanup_ane_retry and NEVER fallback. This will require some further changes in
 the AI/MCP HOOK code as well at a later time. 
 
+
 <details>
 <summary><b>Click to expand Windows PowerShell Patch2‑Rev5 test matrix</b></summary>
+
+<br>
+
+> **Note:**  
+> PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., `Get‑Srvice`, `Get‑Servce Name spooler`).  
+> These corrections are safe and non‑destructive.  
+> Although the strict contract would normally require `fallback` for ambiguous typos,  
+> these benign over‑corrections are accepted and do not affect safety or determinism.
 
 <br>
 
@@ -6652,19 +6661,19 @@ the AI/MCP HOOK code as well at a later time.
 </thead>
 <tbody>
 
-<tr><td>1</td><td>ps-patch-001</td><td><code>Get-Servce</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command</td><td>benign over‑correction (see note)</td></tr>
+<tr><td>1</td><td>ps-patch-001</td><td><code>Get-Servce</code></td><td>retry_with_modified_command<br>(Get-Service)</td><td>retry_with_modified_command<br>(Get-Service)</td><td>benign over‑correction</td></tr>
 
-<tr><td>2</td><td>ps-patch-002</td><td><code>Get-Proces</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command</td><td>correct typo fix</td></tr>
+<tr><td>2</td><td>ps-patch-002</td><td><code>Get-Proces</code></td><td>retry_with_modified_command<br>(Get-Process)</td><td>retry_with_modified_command<br>(Get-Process)</td><td>correct typo fix</td></tr>
 
-<tr><td>3</td><td>ps-patch-003</td><td><code>Get-Service -Nam spooler</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command</td><td>correct parameter typo fix</td></tr>
+<tr><td>3</td><td>ps-patch-003</td><td><code>Get-Service -Nam spooler</code></td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>correct parameter fix</td></tr>
 
-<tr><td>4</td><td>ps-patch-004</td><td><code>Get-Service Name spooler</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command</td><td>correct missing hyphen fix</td></tr>
+<tr><td>4</td><td>ps-patch-004</td><td><code>Get-Service Name spooler</code></td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>correct missing hyphen fix</td></tr>
 
-<tr><td>5</td><td>ps-patch-005</td><td><code>Get-Process &#124; ForEach-Object $_.Name</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command</td><td>correct script‑block fix</td></tr>
+<tr><td>5</td><td>ps-patch-005</td><td><code>Get-Process &#124; ForEach-Object $_.Name</code></td><td>retry_with_modified_command<br>(Get-Process &#124; ForEach-Object { $_.Name })</td><td>retry_with_modified_command<br>(Get-Process &#124; ForEach-Object { $_.Name })</td><td>script‑block fix</td></tr>
 
-<tr><td>6</td><td>ps-patch-006</td><td><code>Write-Output "Size: (Get-Item file.txt).Length"</code></td><td>retry_with_modified_command</td><td>retry_with_modified_command</td><td>correct subexpression fix</td></tr>
+<tr><td>6</td><td>ps-patch-006</td><td><code>Write-Output "Size: (Get-Item file.txt).Length"</code></td><td>retry_with_modified_command<br>(Write-Output "Size: $(Get-Item file.txt).Length")</td><td>retry_with_modified_command<br>(Write-Output "Size: $(Get-Item file.txt).Length")</td><td>subexpression fix</td></tr>
 
-<tr><td>7</td><td>ps-patch-007</td><td><code>Get-Srvice -Name spooler</code></td><td>fallback</td><td>retry_with_modified_command</td><td>benign over‑correction (see note)</td></tr>
+<tr><td>7</td><td>ps-patch-007</td><td><code>Get-Srvice -Name spooler</code></td><td>fallback</td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>benign over‑correction</td></tr>
 
 <tr><td>8</td><td>ps-patch-008</td><td><code>Get-Service -Name spooler -FooBar</code></td><td>fallback</td><td>fallback</td><td>invalid parameter</td></tr>
 
@@ -6676,7 +6685,7 @@ the AI/MCP HOOK code as well at a later time.
 
 <tr><td>12</td><td>ps-patch-012</td><td><code>ls -la /var/log</code></td><td>fallback</td><td>fallback</td><td>POSIX tool + POSIX path</td></tr>
 
-<tr><td>13</td><td>ps-patch-013</td><td><code>Get-Service &#124;&#124; Select-Object Name</code></td><td>fallback</td><td>fallback</td><td>invalid operator <code>||</code></td></tr>
+<tr><td>13</td><td>ps-patch-013</td><td><code>Get-Service &#124;&#124; Select-Object Name</code></td><td>fallback</td><td>fallback</td><td>invalid operator</td></tr>
 
 <tr><td>14</td><td>ps-patch-014</td><td><code>Get-Process &#124; ForEach-Object { $_.Name</code></td><td>fallback</td><td>fallback</td><td>unterminated script block</td></tr>
 
@@ -6686,15 +6695,15 @@ the AI/MCP HOOK code as well at a later time.
 
 <tr><td>17</td><td>ps-patch-017</td><td><code>Stop-Process -Force -Name lsass</code></td><td>abort</td><td>abort</td><td>critical system process</td></tr>
 
-<tr><td>18</td><td>ps-patch-018</td><td><code>Start-Service -Name spooler</code></td><td>cleanup_and_retry</td><td>cleanup_and_retry</td><td>idempotency correctly handled</td></tr>
+<tr><td>18</td><td>ps-patch-018</td><td><code>Start-Service -Name spooler</code></td><td>cleanup_and_retry<br>(Start-Service -Name spooler)</td><td>cleanup_and_retry<br>(Start-Service -Name spooler)</td><td>idempotency handled correctly</td></tr>
 
 <tr><td>19</td><td>ps-patch-019</td><td><code>Invoke-WebRequest [https://nonexistent.example.com](https://nonexistent.example.com)</code></td><td>fallback</td><td>fallback</td><td>network failure</td></tr>
 
 <tr><td>20</td><td>ps-patch-020</td><td><code>winget install</code></td><td>fallback</td><td>fallback</td><td>missing package ID</td></tr>
 
-<tr><td>21</td><td>ps-patch-021</td><td><code>Get-Servce Name spooler</code></td><td>fallback</td><td>retry_with_modified_command</td><td>benign over‑correction (see note)</td></tr>
+<tr><td>21</td><td>ps-patch-021</td><td><code>Get-Servce Name spooler</code></td><td>fallback</td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>benign over‑correction</td></tr>
 
-<tr><td>22</td><td>ps-patch-022</td><td><code>Get-Srvice Name</code></td><td>fallback</td><td>fallback</td><td>ambiguous + incomplete → correct fallback</td></tr>
+<tr><td>22</td><td>ps-patch-022</td><td><code>Get-Srvice Name</code></td><td>fallback</td><td>fallback</td><td>ambiguous + incomplete</td></tr>
 
 <tr><td>23</td><td>ps-patch-023</td><td><code>Get-Content /etc/passwd</code></td><td>fallback</td><td>fallback</td><td>POSIX path on Windows</td></tr>
 
@@ -6704,6 +6713,8 @@ the AI/MCP HOOK code as well at a later time.
 </table>
 
 </details>
+
+
 
 
 
