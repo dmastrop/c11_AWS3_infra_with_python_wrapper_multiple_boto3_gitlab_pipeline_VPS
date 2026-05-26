@@ -6624,7 +6624,10 @@ All ambiguous, multi‑step, or invented corrections still fall back to `fallbac
 
 This expanded rewrite capability—combined with strict invalid‑flag precedence and hardened malformed‑command rules—is why the Windows PowerShell domain‑primitives block required a full rewrite and why Patch2‑Rev5 introduces new behavior that must be validated through a dedicated 24‑case schema.
 
-
+Note:  
+PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., Get‑Srvice, Get‑Servce Name spooler).
+These corrections are safe and non‑destructive, and although the strict contract would normally require fallback,
+these benign over‑corrections are accepted and do not affect safety or determinism.
 
 
 
