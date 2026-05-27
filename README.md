@@ -6896,47 +6896,112 @@ Could be:
 
 ---
 
-###### Summary — The Contract Logic Is Consistent
+Allowed in Linux PowerShell 7 (Patch2‑Rev6): Disambiguated `&&` Pipelines
 
-Windows PowerShell 5.1:
-  
+```
+Get-Servce && Get-Process
+```
+
+Here, the presence of a **valid PowerShell cmdlet** (`Get-Process`) in the same `&&` pipeline makes it overwhelmingly likely that:
+
+```
+Get-Servce
+```
+
+is a typo for:
+
+```
+Get-Service
+```
+
+Why?
+
+Because `&&` pipelines have **strong semantic constraints**:
+
+Single command = ambiguous context
+
+A lone unknown command could be:
+
+- A PowerShell cmdlet  
+- A Linux binary  
+- A user script  
+- A module function  
+- A symlink in `$PATH`  
+- Anything  
+
+**This would be a fallback.** on Linux PowerShell (but not on Windows PowerShell)
+
+
+
+But the `&&` pipeline = disambiguated context  
+
+
+```
+Get-Servce && Get-Process
+```
+
+- All segments must succeed  
+- All segments must be valid commands  
+- If one segment is a valid PowerShell cmdlet  
+- The others are overwhelmingly likely to be PowerShell cmdlets too  
+
+This is the **only safe place** where Patch2‑Rev6 is allowed to rewrite cmdlet typos.
+
+**Unambiguous in context → retry_with_modified_command (Linux PowerShell 7)**  
+
+Patch2‑Rev6 rewrites only the near‑miss PowerShell segments and replays the **entire** corrected pipeline.
+
+---
+
+###### Summary — The contract logic is consistent
+
+**Windows PowerShell 5.1**
+
 - Closed ecosystem  
 - No POSIX tools  
 - No shell mixing  
 - No `&&`  
-- No ambiguity  
-- Safe to repair certain `|` pipelines  
+- Low ambiguity  
+- Safe to repair certain `|` pipelines and structural constructs when the fix is unambiguous  
 
-Linux PowerShell 7:
-  
+**Linux PowerShell 7**
+
 - Hybrid shell  
 - PowerShell + Linux binaries  
 - POSIX pipelines  
 - Shell mixing  
-- Ambiguous semantics  
-- Unsafe to repair `|` pipelines or `$()`  
+- High ambiguity for standalone commands and `|` pipelines  
+- Unsafe to repair `|` pipelines or `$()` subshells  
 
-Therefore: **Linux PowerShell Patch2‑Rev6 only repairs:**
+**Therefore, Linux PowerShell Patch2‑Rev6 ONLY repairs:**
 
-- `&&` segmented pipelines  
-- PowerShell cmdlet typos  
-- Near‑miss PowerShell parameters  
+- **`&&` segmented pipelines where:**
+  - At least one segment is a valid, non‑destructive PowerShell cmdlet, and  
+  - Another segment is a clear near‑miss of a PowerShell cmdlet or parameter, and  
+  - The overall intent is unambiguous and non‑destructive  
+- **Near‑miss PowerShell cmdlets/parameters *inside those `&&` pipelines only***  
 
 **Linux PowerShell Patch2‑Rev6 NEVER repairs:**
 
+- Standalone unknown commands  
 - `|` pipelines  
 - `$()` subshells  
-- Script blocks  
-- Structural constructs  
-- Package manager segments  
+- Script blocks or other structural constructs  
+- Any segment involving a package manager  
+
+
+> **Linux PowerShell 7 may only correct cmdlet typos when the surrounding `&&` pipeline context makes the user’s intent unambiguous; everything else must fallback.**
+
 
 This ensures:
 
-- determinism  
-- safety  
-- cross‑OS consistency  
-- no guessing  
-- no cross‑shell inference  
+- determinism
+- safety
+- cross‑OS consistency
+- no guessing
+- no cross‑shell inference
+
+
 
 ---
 
