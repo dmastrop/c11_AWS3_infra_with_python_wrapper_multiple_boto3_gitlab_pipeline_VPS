@@ -6597,7 +6597,9 @@ and a moderate amount of permissive rewrites was adopted.
 
 ##### LLM Contract Stress Tester — Windows PowerShell 5.1 Patch2‑Rev5 Pipeline Rewrite Tests (24 Cases)
 
-Summary of PowerShell Patch2‑Rev5 Rewrite Behavior
+*With corrected rewritten commands shown in parentheses*
+
+Summary of PowerShell Patch2‑Rev5 Rewrite Behavior:
 
 Windows PowerShell required a full Patch2‑Rev5 update because its command model is fundamentally different from Linux shells and macOS‑brew. PowerShell 5.1 (the default on Windows Server 2022) uses cmdlets, structured parameters, script blocks, and subexpressions—not POSIX pipelines or package‑manager semantics. To support safe and deterministic remediation, the contract now allows a limited set of **obvious, single‑step corrections** via `retry_with_modified_command` when the user’s intent is unambiguous and non‑destructive.
 
@@ -6626,8 +6628,7 @@ This expanded rewrite capability—combined with strict invalid‑flag precedenc
 
 Note:  
 PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., `Get‑Srvice`, `Get‑Servce Name spooler`, `Get‑Srvice Name`).  
-These corrections are safe and non‑destructive.  
-Although the strict contract would normally require `fallback` for ambiguous typos,  
+These corrections are safe and non‑destructive.  Although the strict contract would normally require `fallback` for ambiguous typos,  
 these benign over‑corrections are accepted and do not affect safety or determinism.
 
 In the test matrix below, these over-corrections are in tests 7 and 21 and 22.
@@ -6717,16 +6718,19 @@ the AI/MCP HOOK code in one of the python modules, as well, at a later time.
 </details>
 
 
+#### 9.Idempotency Regression testing
 
 
 
 
-#### 9.Schema-based tests for linux powershell
+
+
+#### 10.Schema-based tests for Linux Powershell
 
 
 
 
-#### 10.Final Cross‑OS Contract Behavior Comparison Table  
+#### 11.Final Cross‑OS Contract Behavior Comparison Table  
 
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS vs Windows PowerShell vs. Linux PowerShell)*
 
