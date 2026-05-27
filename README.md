@@ -3,7 +3,7 @@
 
 ```
 ```
-© 2026 Dave Mastrop. All rights reserved.
+© 2026 Dave Mastropolo. All rights reserved.
 
 ```
 ```
