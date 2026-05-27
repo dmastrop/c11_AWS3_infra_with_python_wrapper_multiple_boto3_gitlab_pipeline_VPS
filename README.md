@@ -6726,7 +6726,11 @@ the AI/MCP HOOK code in one of the python modules, as well, at a later time.
 During the testing above for Windows PowerShell 5.1 above, another issue was found. The global contract rules for idempotency were
 completely correct, namely cleanup_and_retry with the same command if the stderr suggests that the command has already been 
 executed. In addtion the LLM can use the history field of the context to determine idempotency treatment as well. Both of these
-indicators should always instruct the LLM to use and idempotency cleanup_and_retry and never a fallback. 
+signals are used to instruct the LLM to use an idempotency cleanup_and_retry and never a fallback. 
+
+However, many of the individual domain primitives blocks were infilterated with fallback logic for the idempotency use case. 
+These all had to be manually revised to ensure alignment to the cleanup_and_retry action plan response specified in the global 
+idempotency rule block. As such all of the OSes need to be regression tested with idempotency context based (schema) test cases.
 
 This regression testing methodology and results is in a new section further down below. See this link:
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
