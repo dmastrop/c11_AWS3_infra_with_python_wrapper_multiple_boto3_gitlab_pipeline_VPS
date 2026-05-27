@@ -6751,6 +6751,210 @@ Unlike Windows Server 2022, which standardizes on **Windows PowerShell 5.1**, th
 
 Because PowerShell Core on Linux supports `&&` pipelines, multi‑segment commands, and mixing PowerShell cmdlets with shell commands, it **must** participate in the Patch2 rewrite model. Patch2‑Rev6 for Linux PowerShell is therefore required to: (1) reason about segmented pipelines, (2) safely rewrite malformed or near‑miss PowerShell cmdlets, (3) preserve non‑mutating segments verbatim, and (4) replay the **entire** corrected pipeline (not just the fixed segment), exactly as Patch2‑Rev2 does for Linux distros and Patch2‑Rev4 does for macOS Homebrew. However, this OS block intentionally defines **no package‑manager semantics**: any appearance of `apt`, `apt-get`, `yum`, `dnf`, `apk`, `pacman`, `brew`, `snap`, or similar tools MUST result in `fallback`, never rewrite. Patch2‑Rev6 for Linux PowerShell is therefore narrowly scoped: it rewrites **PowerShell segments only**, never package‑manager segments, and always replays the full corrected pipeline to maintain determinism and avoid overloading future fallback heuristics.
 
+##### Understanding Why Linux PowerShell 7 Cannot Repair `|` Pipelines or Subshells — and Why Windows PowerShell 5.1 Can
+
+PowerShell Core on Linux (`os_name = "Linux"`, `os_version = "powershell-core"`) behaves fundamentally differently from Windows PowerShell 5.1. These differences are not cosmetic — they directly determine what the contract engine can and cannot safely rewrite. In particular, Linux PowerShell 7 **must never repair malformed `|` pipelines or subshells (`$()`)**, while Windows PowerShell 5.1 **may** repair certain pipeline structures when the correction is unambiguous.
+
+This distinction is essential for maintaining determinism, safety, and cross‑OS consistency.
+
+---
+
+###### Linux PowerShell 7 Is a Hybrid Shell — and Ambiguous by Design
+
+PowerShell Core on Linux is not a closed ecosystem. It can execute:
+
+- PowerShell cmdlets  
+- Linux binaries  
+- POSIX pipelines  
+- Mixed PowerShell + POSIX constructs  
+- Arbitrary shell expressions  
+
+This hybrid nature means that a malformed pipeline such as:
+
+```
+Get-ChildItem | | Get-Process
+```
+
+has **multiple valid interpretations**, depending on:
+
+- PowerShell pipeline semantics  
+- POSIX pipeline semantics  
+- Whether the middle `|` was intended to be a command  
+- Whether the user intended a script block  
+- Whether the user intended a Linux binary  
+- Whether the user intended a subexpression  
+- Whether the user intended a placeholder for a missing stage  
+
+There is **no deterministic correction**.
+
+Therefore:  **Linux PowerShell 7 MUST NOT repair `|` pipelines or `$()` subshells.**  
+
+Any attempt to do so would require guessing user intent — which the contract forbids.
+
+---
+
+###### Windows PowerShell 5.1 Is a Closed, Deterministic Environment
+
+Windows PowerShell 5.1 is:
+
+- A **closed ecosystem**  
+- With **fixed cmdlets**  
+- With **no POSIX tools**  
+- With **no Linux binaries**  
+- With **no shell mixing**  
+- With **no `&&` operator**  
+- With **no POSIX pipeline semantics**  
+
+Because of this, a malformed pipeline like:
+
+```
+Get-Process | ForEach-Object $_.Name
+```
+
+has **exactly one valid interpretation**:
+
+```
+Get-Process | ForEach-Object { $_.Name }
+```
+
+This is because:
+
+- `ForEach-Object` **requires** a script block  
+- There is **no alternative meaning**  
+- There is **no POSIX pipeline**  
+- There is **no Linux binary**  
+- There is **no ambiguity**  
+
+Therefore:  **Windows PowerShell 5.1 MAY repair certain `|` pipelines when the correction is unambiguous.**
+
+This is why Patch2‑Rev5 for Windows allows:
+
+- Adding missing `{ }` script blocks  
+- Adding missing `$()` subexpressions  
+- Fixing missing hyphens  
+- Fixing obvious cmdlet typos  
+
+But Linux PowerShell Patch2‑Rev6 forbids all of these structural repairs.
+
+---
+
+###### Concrete Examples — Windows vs. Linux
+
+This is allowed in Windows PowerShell 5.1 (Patch2‑Rev5)
+
+```
+Get-Process | ForEach-Object $_.Name
+→ Get-Process | ForEach-Object { $_.Name }
+```
+
+```
+Write-Output "Size: (Get-Item file.txt).Length"
+→ Write-Output "Size: $(Get-Item file.txt).Length"
+```
+
+These are unambiguous corrections in a closed ecosystem.
+
+---
+
+This is forbidden in Linux PowerShell 7 (Patch2‑Rev6)
+
+```
+Get-Process | ForEach-Object $_.Name
+```
+
+This could mean:
+
+- A PowerShell script block missing `{ }`  
+- A Linux binary named `ForEach-Object`  
+- A POSIX pipeline stage  
+- A malformed shell pipeline  
+- A missing command between pipes  
+- A user mixing PowerShell and bash syntax  
+
+**Ambiguous → fallback.** on Linux PowerShell
+
+---
+
+
+Subshells `$()` are also ambiguous on Linux
+
+```
+echo $(ls
+```
+
+Could be:
+
+- A PowerShell subexpression  
+- A bash subshell  
+- A zsh subshell  
+- A POSIX command substitution  
+- A missing closing parenthesis  
+- A missing command  
+- A malformed pipeline  
+
+**Ambiguous → fallback.** on Linux PowerShell
+
+---
+
+###### Summary — The Contract Logic Is Consistent
+
+Windows PowerShell 5.1:
+  
+- Closed ecosystem  
+- No POSIX tools  
+- No shell mixing  
+- No `&&`  
+- No ambiguity  
+- Safe to repair certain `|` pipelines  
+
+Linux PowerShell 7:
+  
+- Hybrid shell  
+- PowerShell + Linux binaries  
+- POSIX pipelines  
+- Shell mixing  
+- Ambiguous semantics  
+- Unsafe to repair `|` pipelines or `$()`  
+
+Therefore: **Linux PowerShell Patch2‑Rev6 only repairs:**
+
+- `&&` segmented pipelines  
+- PowerShell cmdlet typos  
+- Near‑miss PowerShell parameters  
+
+**Linux PowerShell Patch2‑Rev6 NEVER repairs:**
+
+- `|` pipelines  
+- `$()` subshells  
+- Script blocks  
+- Structural constructs  
+- Package manager segments  
+
+This ensures:
+
+- determinism  
+- safety  
+- cross‑OS consistency  
+- no guessing  
+- no cross‑shell inference  
+
+---
+
+###### Final Note
+
+Linux PowerShell is one of the most complex OS blocks in the entire contract because it blends two execution models:
+
+- PowerShell semantics  
+- Linux runtime behavior  
+
+Patch2‑Rev6 is intentionally narrow and conservative — it rewrites only what is **unambiguously PowerShell**, and only within `&&` segmentation, while preserving the full pipeline exactly as Patch2‑Rev2 and Patch2‑Rev4 require.
+
+This design keeps the contract safe, deterministic, and fully aligned with the global rewrite architecture.
+
+---
+
+
+
 
 
 ##### LLM Contract Stress Tester — Linux PowerShell 7 Base Schema Tests (Original 36 Cases)
