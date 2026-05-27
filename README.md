@@ -7466,9 +7466,34 @@ Here is the updated contract rule block for idempotency (this can be found in ai
 Following the scrub of all domain primitives blocks for proper idempotency treatment that aligns with the global idempotency rules
 above, a specialized regression set of test cases has to be created from the original schema test cases across ALL OSes.
 
-Once the specialized test case schema json file is created, the suite needs to be run to ensure that the cleanup_and_retry is 
-consistently returned by the LLM for all idempotency scenario test cases. 
+The specialized schema test cases will run through the validator as well. The suite covers 11 OSes (the other OSes or platforms
+do not have PMs or idempotency related issues associated with them: BusyBox, macos-zxh, Cisco IOS, PAN-OS, etc).
 
+Each of these 11 OSes has a dedicated and specialized 5 test cases to test idempootency for that OS and this will ensure that
+the contract domain primitves blocks for each of the OSes are aligned with the globacl contract rule for idempotency above. 
+Namely cleanup_and_retry should ALWAYS be the action plan response from the LLM. The context based test cases test both
+history field signals and stderr field signals to instigate the idempotency treatment by the LLM.
+
+The schema files are located in the following directory in the repo:
+
+
+```
+../sequential_master_modules/LLM_contract_stress_tester/context_generator/schemas/idempotency_regression$ ls -la
+total 52
+drwxrwxr-x 2 ubuntu ubuntu 4096 May 27 03:54 .
+drwxrwxr-x 4 ubuntu ubuntu 4096 May 27 03:09 ..
+-rw-rw-r-- 1 ubuntu ubuntu 2068 May 27 03:40 alpine_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2059 May 27 03:36 amazonlinux2023_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2060 May 27 03:35 amazonlinux2_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2090 May 27 03:29 centos7_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2104 May 27 03:31 centos8_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2154 May 27 03:20 debian_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2090 May 27 03:38 fedora_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2259 May 27 03:54 linux_powershell_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2241 May 27 03:42 macos_brew_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2163 May 27 03:19 ubuntu_idempotency.json
+-rw-rw-r-- 1 ubuntu ubuntu 2323 May 27 03:44 windows_powershell_idempotency.json
+```
 
 
 ---

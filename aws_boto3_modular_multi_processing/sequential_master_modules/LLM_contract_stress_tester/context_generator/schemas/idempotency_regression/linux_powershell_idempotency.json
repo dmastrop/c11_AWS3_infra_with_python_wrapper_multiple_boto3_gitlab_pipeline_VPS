@@ -1,0 +1,85 @@
+{
+  "os_name": "Linux",
+  "os_version": "powershell-core",
+  "kernel": "5.15.0",
+  "package_managers": [],
+  "shell": "powershell",
+  "contexts": [
+
+    {
+      "command": "Start-Service -Name sshd",
+      "stdout": "",
+      "stderr": "Start-Service : Service 'sshd' cannot be started because it is already running.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-001",
+      "ip": "10.0.60.101",
+      "tags": ["idempotency", "service-already-running"],
+      "history": []
+    },
+
+    {
+      "command": "Stop-Service -Name sshd",
+      "stdout": "",
+      "stderr": "Stop-Service : Service 'sshd' cannot be stopped because it is already stopped.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-002",
+      "ip": "10.0.60.102",
+      "tags": ["idempotency", "service-already-stopped"],
+      "history": [
+        {
+          "command": "Stop-Service -Name sshd",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "New-Item -ItemType Directory -Path /var/www/html",
+      "stdout": "",
+      "stderr": "New-Item : The file '/var/www/html' already exists.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-003",
+      "ip": "10.0.60.103",
+      "tags": ["idempotency", "directory-exists"],
+      "history": []
+    },
+
+    {
+      "command": "New-Item -ItemType File -Path /etc/motd",
+      "stdout": "",
+      "stderr": "New-Item : The file '/etc/motd' already exists.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-004",
+      "ip": "10.0.60.104",
+      "tags": ["idempotency", "file-exists"],
+      "history": [
+        {
+          "command": "New-Item -ItemType File -Path /etc/motd",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "bash -c \"apt-get install -y curl\"",
+      "stdout": "curl is already the newest version (7.81.0-1ubuntu1.10).",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-005",
+      "ip": "10.0.60.105",
+      "tags": ["idempotency", "package-already-installed"],
+      "history": []
+    }
+
+  ]
+}
+

@@ -1,0 +1,85 @@
+{
+  "os_name": "CentOS",
+  "os_version": "8",
+  "kernel": "4.18.0",
+  "package_managers": ["dnf", "yum"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "Package nginx-1.20.1-10.module_el8.x86_64 is already installed.\nDependencies resolved.\nNothing to do.",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "centos8-idem-001",
+      "ip": "10.0.8.101",
+      "tags": ["idempotency", "package-already-installed"],
+      "history": []
+    },
+
+    {
+      "command": "dnf update -y",
+      "stdout": "",
+      "stderr": "Nothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "centos8-idem-002",
+      "ip": "10.0.8.102",
+      "tags": ["idempotency", "nothing-to-update"],
+      "history": []
+    },
+
+    {
+      "command": "dnf upgrade -y",
+      "stdout": "",
+      "stderr": "No packages marked for upgrade.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "centos8-idem-003",
+      "ip": "10.0.8.103",
+      "tags": ["idempotency", "nothing-to-update"],
+      "history": [
+        {
+          "command": "dnf upgrade -y",
+          "stdout": "",
+          "stderr": "No packages marked for upgrade.",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "systemctl start httpd",
+      "stdout": "",
+      "stderr": "Job for httpd.service is already running.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "centos8-idem-004",
+      "ip": "10.0.8.104",
+      "tags": ["idempotency", "service-already-running"],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /var/www/html",
+      "stdout": "",
+      "stderr": "mkdir: cannot create directory '/var/www/html': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "centos8-idem-005",
+      "ip": "10.0.8.105",
+      "tags": ["idempotency", "directory-exists"],
+      "history": [
+        {
+          "command": "mkdir /var/www/html",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    }
+
+  ]
+}
+

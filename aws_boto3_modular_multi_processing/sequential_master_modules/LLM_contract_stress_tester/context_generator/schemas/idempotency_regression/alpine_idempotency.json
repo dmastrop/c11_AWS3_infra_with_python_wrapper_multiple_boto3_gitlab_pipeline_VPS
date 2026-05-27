@@ -1,0 +1,85 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+    {
+      "command": "apk add nginx",
+      "stdout": "OK: 123 packages, 0 upgraded, 0 newly installed",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "alpine-idem-001",
+      "ip": "10.0.4.101",
+      "tags": ["idempotency", "package-already-installed"],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "OK: 123 packages, 0 upgraded, 0 newly installed",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "alpine-idem-002",
+      "ip": "10.0.4.102",
+      "tags": ["idempotency", "package-already-installed"],
+      "history": [
+        {
+          "command": "apk add curl",
+          "stdout": "OK: 123 packages, 0 upgraded, 0 newly installed",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "rc-service nginx start",
+      "stdout": "",
+      "stderr": " * WARNING: nginx is already running",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "alpine-idem-003",
+      "ip": "10.0.4.103",
+      "tags": ["idempotency", "service-already-running"],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /var/www/html",
+      "stdout": "",
+      "stderr": "mkdir: can't create directory '/var/www/html': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-idem-004",
+      "ip": "10.0.4.104",
+      "tags": ["idempotency", "directory-exists"],
+      "history": []
+    },
+
+    {
+      "command": "touch /etc/motd",
+      "stdout": "",
+      "stderr": "touch: /etc/motd: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-idem-005",
+      "ip": "10.0.4.105",
+      "tags": ["idempotency", "file-exists"],
+      "history": [
+        {
+          "command": "touch /etc/motd",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    }
+
+  ]
+}
+
