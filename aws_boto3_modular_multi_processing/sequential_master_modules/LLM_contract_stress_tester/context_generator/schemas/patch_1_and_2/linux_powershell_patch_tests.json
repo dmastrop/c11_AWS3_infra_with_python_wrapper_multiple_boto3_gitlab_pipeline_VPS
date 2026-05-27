@@ -1,0 +1,299 @@
+{
+  "os_name": "Linux",
+  "os_version": "powershell-core",
+  "kernel": "5.15.0",
+  "package_managers": [],
+  "shell": "powershell",
+  "contexts": [
+
+    {
+      "command": "Get-Servce",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-001",
+      "ip": "10.0.70.1",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Servce && Get-Process",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-002",
+      "ip": "10.0.70.2",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && Get-Servce",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-003",
+      "ip": "10.0.70.3",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Servce && Get-Proces && Get-Service",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-004",
+      "ip": "10.0.70.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Proces && Get-Service",
+      "stdout": "",
+      "stderr": "Get-Proces : The term 'Get-Proces' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-005",
+      "ip": "10.0.70.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process -Nam sshd",
+      "stdout": "",
+      "stderr": "Get-Process : A parameter cannot be found that matches parameter name 'Nam'.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-006",
+      "ip": "10.0.70.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process -Nam sshd && Get-Service",
+      "stdout": "",
+      "stderr": "Get-Process : A parameter cannot be found that matches parameter name 'Nam'.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-007",
+      "ip": "10.0.70.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Service && Get-Process -BadFlag",
+      "stdout": "",
+      "stderr": "Get-Process : A parameter cannot be found that matches parameter name 'BadFlag'.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-008",
+      "ip": "10.0.70.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-ChildItem | | Get-Process",
+      "stdout": "",
+      "stderr": "At line:1 char:16\n+ Get-ChildItem | | Get-Process\n+                ~\nUnexpected token '|' in expression or statement.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-009",
+      "ip": "10.0.70.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Write-Output $(Get-Item",
+      "stdout": "",
+      "stderr": "At line:1 char:15\n+ Write-Output $(Get-Item\n+               ~\nUnexpected end of input.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-010",
+      "ip": "10.0.70.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Servce && echo 'ok'",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-011",
+      "ip": "10.0.70.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo 'start' && Get-Proces && echo 'end'",
+      "stdout": "start\n",
+      "stderr": "Get-Proces : The term 'Get-Proces' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-012",
+      "ip": "10.0.70.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && apt-get install nginx",
+      "stdout": "",
+      "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-013",
+      "ip": "10.0.70.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install nginx && Get-Process",
+      "stdout": "",
+      "stderr": "apt-get : The term 'apt-get' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-014",
+      "ip": "10.0.70.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Service && yum install nano",
+      "stdout": "",
+      "stderr": "yum : The term 'yum' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-015",
+      "ip": "10.0.70.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && apk add curl && Get-Service",
+      "stdout": "",
+      "stderr": "apk : The term 'apk' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-016",
+      "ip": "10.0.70.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && Remove-Item -Recurse -Force /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-017",
+      "ip": "10.0.70.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Remove-Item -Recurse -Force /usr && Get-Process",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-018",
+      "ip": "10.0.70.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && kill -9 1",
+      "stdout": "",
+      "stderr": "kill : The term 'kill' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-019",
+      "ip": "10.0.70.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && Get-Service && Get-Item /etc/passwd",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-020",
+      "ip": "10.0.70.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Servce && Get-Item /etc/passwd && Get-Process",
+      "stdout": "",
+      "stderr": "Get-Servce : The term 'Get-Servce' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-021",
+      "ip": "10.0.70.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "ls && Get-Proces && echo 'done'",
+      "stdout": "",
+      "stderr": "Get-Proces : The term 'Get-Proces' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-022",
+      "ip": "10.0.70.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process -Name sshd && Get-Service -Nam ssh",
+      "stdout": "",
+      "stderr": "Get-Service : A parameter cannot be found that matches parameter name 'Nam'.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-023",
+      "ip": "10.0.70.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "Get-Process && dnf install git && Get-Service",
+      "stdout": "",
+      "stderr": "dnf : The term 'dnf' is not recognized as the name of a cmdlet, function, script file, or operable program.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-patch-024",
+      "ip": "10.0.70.24",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
