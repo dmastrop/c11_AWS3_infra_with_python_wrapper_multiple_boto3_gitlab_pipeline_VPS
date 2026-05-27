@@ -6742,7 +6742,23 @@ This regression testing methodology and results is in a new section further down
 
 
 
-#### 10.Schema-based tests for Linux Powershell
+#### 10.Schema-based tests for Linux PowerShell 7
+
+
+##### Why Linux PowerShell 7 Requires Patch2‑Rev6 Pipeline Rewrite
+
+Unlike Windows Server 2022, which standardizes on **Windows PowerShell 5.1**, the `os_name = "Linux", os_version = "powershell-core"` block explicitly targets **PowerShell 7.x (PowerShell Core)** running on Linux. This environment is fundamentally different from Windows PowerShell: it supports `&&`, rich pipelines, script blocks, and subexpressions; it runs on .NET Core; and it does **not** support Windows‑only cmdlets, Windows registry paths, or Windows‑specific process semantics. In other words, Linux PowerShell combines **PowerShell syntax** with **Linux runtime semantics**, and that combination makes it capable of expressing complex, multi‑segment command chains that simply do not exist in Windows PowerShell 5.1.
+
+Because PowerShell Core on Linux supports `&&` pipelines, multi‑segment commands, and mixing PowerShell cmdlets with shell commands, it **must** participate in the Patch2 rewrite model. Patch2‑Rev6 for Linux PowerShell is therefore required to: (1) reason about segmented pipelines, (2) safely rewrite malformed or near‑miss PowerShell cmdlets, (3) preserve non‑mutating segments verbatim, and (4) replay the **entire** corrected pipeline (not just the fixed segment), exactly as Patch2‑Rev2 does for Linux distros and Patch2‑Rev4 does for macOS Homebrew. However, this OS block intentionally defines **no package‑manager semantics**: any appearance of `apt`, `apt-get`, `yum`, `dnf`, `apk`, `pacman`, `brew`, `snap`, or similar tools MUST result in `fallback`, never rewrite. Patch2‑Rev6 for Linux PowerShell is therefore narrowly scoped: it rewrites **PowerShell segments only**, never package‑manager segments, and always replays the full corrected pipeline to maintain determinism and avoid overloading future fallback heuristics.
+
+
+
+##### LLM Contract Stress Tester — Linux PowerShell 7 Base Schema Tests (Original 36 Cases)
+
+
+##### LLM Contract Stress Tester — Linux PowerShell 7 Patch2‑Rev6 Pipeline Rewrite Tests (24 Cases)
+
+
 
 
 

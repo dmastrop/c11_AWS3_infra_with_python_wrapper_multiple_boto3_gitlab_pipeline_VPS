@@ -2556,6 +2556,7 @@ def recover(request: RecoveryRequest):
                 # ============================================================
                 # WINDOWS POWERSHELL DOMAIN RULES — Applies ONLY when os_name = "Windows"
                 # AND os_version = "2022". This entire block is Revision 17 + Patch2-Rev5
+                # This is windows powershell 5.1 and not 7
                 # ============================================================
 
                 "These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
@@ -2747,6 +2748,8 @@ def recover(request: RecoveryRequest):
                 # LINUX POWERSHELL CORE DOMAIN RULES — Applies ONLY when
                 # os_name = "Linux" AND os_version = "powershell-core".
                 # This entire block is Revision 18.
+                # This is PowerShell Core 6/7 → cross‑platform (Linux, macOS, Windows) and not windows powershell 5.1
+                # They are completely different from one another. Linux powershell will require patch2-rev6
                 # ============================================================
 
                 "These rules apply ONLY when os_name = \"Linux\" AND os_version = \"powershell-core\".\n"
