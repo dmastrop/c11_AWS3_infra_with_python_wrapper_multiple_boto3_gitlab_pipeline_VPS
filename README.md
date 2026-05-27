@@ -7461,6 +7461,200 @@ Here is the updated contract rule block for idempotency (this can be found in ai
 "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
 ```
 
+#### Idempotency Schema Test Case Design (Regression Test Suite of 55 Test cases across 11 OSes)
+
+
+
+##### Overview
+
+This section documents the **Idempotency Regression Suite**, a cross‑platform validation harness designed to ensure that the contract engine correctly identifies and handles **idempotent execution states** across **11 operating systems** and **55 curated test cases**.
+
+Idempotency is a core requirement of the contract model:
+
+> **If the system is already in the desired state, the LLM must not attempt to remediate.**  
+> Instead, it must return the `cleanup_and_retry` action.
+
+This suite verifies that behavior across:
+
+- Debian‑based systems  
+- RPM‑based systems  
+- Alpine  
+- macOS (Homebrew)  
+- Windows PowerShell  
+- Linux PowerShell (pwsh on Linux)  
+
+Each OS includes **exactly 5 idempotency scenarios**, covering:
+
+- Package already installed  
+- Service already running  
+- Service already stopped  
+- Directory exists  
+- File exists  
+- “Nothing to do” / “Already up‑to‑date”  
+- History‑based idempotency  
+
+Not all OSes support all categories, so synthetic cases were added where necessary to ensure uniform coverage.
+
+---
+
+##### Why This Suite Exists
+
+During contract review, several OS domain primitives were found to incorrectly use:
+
+- `fallback`  
+instead of  
+- `cleanup_and_retry`
+
+for idempotency conditions.
+
+This was incorrect because:
+
+- `fallback` leads to `install_failed`  
+- idempotency is **not** a failure  
+- idempotency must always return `cleanup_and_retry`  
+- idempotency must never trigger remediation or fallback logic
+
+This suite ensures that **every OS domain primitive** now conforms to the **global idempotency rules**, and that the LLM consistently recognizes idempotency across all platforms.
+
+This work is **independent** of rewrite logic, invalid flag handling, or Patch2 rewrite testing.
+
+---
+
+##### Test Suite Goals
+
+The suite validates that the contract engine:
+
+1. **Recognizes idempotency signals**  
+   - stdout patterns  
+   - stderr patterns  
+   - history patterns  
+   - implicit idempotency (exit code 0 + no‑op)
+
+2. **Returns the correct action**  
+   - `cleanup_and_retry`
+
+3. **Does not attempt remediation**  
+   - No rewrite  
+   - No fallback  
+   - No destructive action  
+   - No package manager invocation  
+
+4. **Behaves consistently across OS families**  
+   - APT, YUM, DNF, APK, Homebrew, winget, systemd, OpenRC, PowerShell Core
+
+---
+
+##### Cross‑OS Coverage Summary
+
+| OS | Package Manager | Shell | Idempotency Cases | Notes |
+|----|-----------------|--------|-------------------|-------|
+| Ubuntu 22.04 | apt/apt‑get | bash | 5 | Synthetic (no real idempotency in source schema) |
+| Debian 11 | apt/apt‑get | bash | 5 | Synthetic |
+| CentOS 7 | yum | bash | 5 | 3 real + 2 synthetic |
+| CentOS 8 | dnf/yum | bash | 5 | 3 real + 2 synthetic |
+| Amazon Linux 2 | yum | bash | 5 | 3 real + 2 synthetic |
+| Amazon Linux 2023 | dnf | bash | 5 | 3 real + 2 synthetic |
+| Fedora 39 | dnf | bash | 5 | 3 real + 2 synthetic |
+| Alpine 3.18 | apk | sh | 5 | Fully synthetic |
+| macOS 14 | brew | zsh | 5 | 1 real + 4 synthetic |
+| Windows Server 2022 | winget | PowerShell | 5 | Fully synthetic |
+| Linux PowerShell | none | PowerShell Core | 5 | Fully synthetic |
+
+Total: **55 idempotency test cases**
+
+---
+
+##### Directory Structure
+
+```
+schemas/
+   idempotency_regression/
+      ubuntu_idempotency.json
+      debian_idempotency.json
+      centos7_idempotency.json
+      centos8_idempotency.json
+      amazonlinux2_idempotency.json
+      amazonlinux2023_idempotency.json
+      fedora_idempotency.json
+      alpine_idempotency.json
+      macos_brew_idempotency.json
+      windows_powershell_idempotency.json
+      linux_powershell_idempotency.json
+```
+
+Each file contains:
+
+- OS metadata  
+- 5 idempotency contexts  
+- realistic stdout/stderr  
+- correct exit codes  
+- history entries where applicable  
+- tags for classification  
+
+---
+
+##### Idempotency Categories Covered
+
+**1. Package Already Installed**
+- APT: “already the newest version”
+- YUM/DNF: “already installed / nothing to do”
+- APK: “0 newly installed”
+- Homebrew: “already installed and up‑to‑date”
+- winget: “already installed”
+
+**2. Service Already Running / Stopped**
+- systemd (Linux)
+- OpenRC (Alpine)
+- PowerShell Core (Linux)
+- PowerShell (Windows)
+
+**3. Directory Exists**
+- mkdir errors across all OSes
+
+**4. File Exists**
+- touch / New‑Item errors
+
+**5. Update Already Up‑to‑Date**
+- apt‑get update  
+- yum update  
+- dnf update  
+- brew update  
+- winget upgrade  
+
+**6. History‑Based Idempotency**
+- repeated installs  
+- repeated file creation  
+- repeated service operations  
+
+---
+
+##### LLM Expected Behavior
+
+For **every** idempotency case:
+
+The LLM must return:
+
+```
+{
+  "action": "cleanup_and_retry",
+}
+```
+
+The LLM must NOT:
+
+- attempt remediation  
+- rewrite the command  
+- invoke a package manager  
+- attempt to fix anything  
+- escalate privileges  
+- propose destructive actions  
+
+This suite ensures the contract engine is **safe**, **predictable**, and **idempotency‑aware** across all supported platforms.
+
+
+
+
+
 #### Extended Schema Test Cases for Idempotency Regression
 
 Following the scrub of all domain primitives blocks for proper idempotency treatment that aligns with the global idempotency rules
@@ -7469,12 +7663,14 @@ above, a specialized regression set of test cases has to be created from the ori
 The specialized schema test cases will run through the validator as well. The suite covers 11 OSes (the other OSes or platforms
 do not have PMs or idempotency related issues associated with them: BusyBox, macos-zxh, Cisco IOS, PAN-OS, etc).
 
-Each of these 11 OSes has a dedicated and specialized 5 test cases to test idempootency for that OS and this will ensure that
+See the previous section for more information on the schema test case design.
+
+Each of these 11 OSes has a dedicated and specialized 5 test cases to test idempotency for that OS and this will ensure that
 the contract domain primitves blocks for each of the OSes are aligned with the globacl contract rule for idempotency above. 
 Namely cleanup_and_retry should ALWAYS be the action plan response from the LLM. The context based test cases test both
 history field signals and stderr field signals to instigate the idempotency treatment by the LLM.
 
-The schema files are located in the following directory in the repo:
+The schema files are located in the following directory in the repo as mentioned earlier in the section above
 
 
 ```
