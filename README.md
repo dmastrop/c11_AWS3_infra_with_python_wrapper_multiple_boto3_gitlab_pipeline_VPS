@@ -1,4 +1,5 @@
 © 2026 Dave Mastropolo. All rights reserved.
+
 ---
 
 # Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in High‑Concurrency Distributed Systems
