@@ -1,14 +1,11 @@
+© 2026 Dave Mastropolo. All rights reserved.
+---
+
 # Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in High‑Concurrency Distributed Systems
 ## An AI/MCP‑LLM‑Driven Universal Remediation Engine with ML‑Enhanced Prediction
 
 ```
 ```
-© 2026 Dave Mastropolo. All rights reserved.
-
-```
-```
-
-
 
 
 ## NOTE: for full README contents
