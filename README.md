@@ -6625,26 +6625,28 @@ All ambiguous, multi‑step, or invented corrections still fall back to `fallbac
 This expanded rewrite capability—combined with strict invalid‑flag precedence and hardened malformed‑command rules—is why the Windows PowerShell domain‑primitives block required a full rewrite and why Patch2‑Rev5 introduces new behavior that must be validated through a dedicated 24‑case schema.
 
 Note:  
-PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., Get‑Srvice, Get‑Servce Name spooler).
-These corrections are safe and non‑destructive, and although the strict contract would normally require fallback,
+PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., `Get‑Srvice`, `Get‑Servce Name spooler`, `Get‑Srvice Name`).  
+These corrections are safe and non‑destructive.  
+Although the strict contract would normally require `fallback` for ambiguous typos,  
 these benign over‑corrections are accepted and do not affect safety or determinism.
 
-In the test matrix below, these over-corrections are in tests 7 and 21.
+In the test matrix below, these over-corrections are in tests 7 and 21 and 22.
+
+For the test cases 7 and 22:  The missing "e" in Srvice is a problem because without
+the "e" it can be a match for many different powershell known commands. However this cleanup_and_retry is a benign over-correction 
+becasuse the command is not a critical high impact command, and because the most likely match is probably the one that the LLM 
+ended up using in the retry command: "Service".   
+
+For the test case 21, there is a double fix in there and that can be thought of as an over-correction, one that is too aggressive, 
+but once again the command is not a critical high impact command, and the over-correction is acceptable. The contract will not
+be modified to "correct" this slight over-correction.
 
 Test 18 has a fix for idempotency, where we use cleanup_ane_retry and NEVER fallback. This will require some further changes in
-the AI/MCP HOOK code as well at a later time. 
+the AI/MCP HOOK code in one of the python modules, as well, at a later time. 
 
 
 <details>
 <summary><b>Click to expand Windows PowerShell Patch2‑Rev5 test matrix</b></summary>
-
-<br>
-
-> **Note:**  
-> PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., `Get‑Srvice`, `Get‑Servce Name spooler`).  
-> These corrections are safe and non‑destructive.  
-> Although the strict contract would normally require `fallback` for ambiguous typos,  
-> these benign over‑corrections are accepted and do not affect safety or determinism.
 
 <br>
 
@@ -6703,7 +6705,7 @@ the AI/MCP HOOK code as well at a later time.
 
 <tr><td>21</td><td>ps-patch-021</td><td><code>Get-Servce Name spooler</code></td><td>fallback</td><td>retry_with_modified_command<br>(Get-Service -Name spooler)</td><td>benign over‑correction</td></tr>
 
-<tr><td>22</td><td>ps-patch-022</td><td><code>Get-Srvice Name</code></td><td>fallback</td><td>fallback</td><td>ambiguous + incomplete</td></tr>
+<tr><td>22</td><td>ps-patch-022</td><td><code>Get-Srvice Name</code></td><td>fallback</td><td>retry_with_modified_command<br>(Get-Service -Name)</td><td>benign over‑correction</td></tr>
 
 <tr><td>23</td><td>ps-patch-023</td><td><code>Get-Content /etc/passwd</code></td><td>fallback</td><td>fallback</td><td>POSIX path on Windows</td></tr>
 
