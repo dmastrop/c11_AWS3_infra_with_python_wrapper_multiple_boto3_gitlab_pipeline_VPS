@@ -1550,6 +1550,7 @@ WORK IN PROGRESS
 - [LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)
 - [Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)
 - [Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)
+- [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
@@ -6628,8 +6629,8 @@ This expanded rewrite capability—combined with strict invalid‑flag precedenc
 
 Note:  
 PowerShell occasionally over‑corrects ambiguous cmdlet typos (e.g., `Get‑Srvice`, `Get‑Servce Name spooler`, `Get‑Srvice Name`).  
-These corrections are safe and non‑destructive.  Although the strict contract would normally require `fallback` for ambiguous typos,  
-these benign over‑corrections are accepted and do not affect safety or determinism.
+These corrections are safe and non‑destructive.  Although the strict contract would normally require `fallback` for ambiguous typos, these benign over‑corrections are accepted and do not affect safety or determinism.
+
 
 In the test matrix below, these over-corrections are in tests 7 and 21 and 22.
 
@@ -6721,6 +6722,14 @@ the AI/MCP HOOK code in one of the python modules, as well, at a later time.
 #### 9.Idempotency Regression testing
 
 
+
+During the testing above for Windows PowerShell 5.1 above, another issue was found. The global contract rules for idempotency were
+completely correct, namely cleanup_and_retry with the same command if the stderr suggests that the command has already been 
+executed. In addtion the LLM can use the history field of the context to determine idempotency treatment as well. Both of these
+indicators should always instruct the LLM to use and idempotency cleanup_and_retry and never a fallback. 
+
+This regression testing methodology and results is in a new section further down below. See this link:
+- [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 
 
 
@@ -7361,6 +7370,108 @@ This is the frontier of LLM contract engineering.
 
 
 
+
+### Continued Testing: Idempotency Regression Testing
+
+#### Introduction
+
+As noted earlier:
+
+During the Windows PowerShell Patch2‑Rev5 testing, it was discovered that several OS‑specific domain‑primitive blocks were inconsistent with the **global idempotency rules**, even though the global rules themselves were correct.
+
+The global contract states that **all idempotency‑related failures MUST use `cleanup_and_retry`**, with the same command retried after any necessary cleanup. This applies whenever stderr indicates that the requested state is already achieved or that the operation is inherently repeatable without harm.
+
+In addition, the LLM can (and should) use the **history** field in the context to detect idempotency. Prior commands often reveal whether a failure is due to residue, partial installation, or repeated operations. Either signal — stderr or history — is sufficient to require `cleanup_and_retry`. Both together simply reinforce the decision.
+
+Therefore:
+
+> **Idempotency MUST always produce a `cleanup_and_retry` action plan.  
+> Fallback MUST NOT be used for idempotency under any circumstances.**
+
+To ensure consistency across all OS families, the contract has been scrubbed to remove all “idempotency → fallback” rules from every domain‑primitive block. A full regression is required to verify that the LLM now responds uniformly with `cleanup_and_retry` for all idempotency scenarios.
+
+**Canonical idempotency indicators (stderr)**
+
+- “already installed”  
+- “already exists”  
+- “nothing to do”  
+- “no packages marked for update”  
+- “service already running”  
+- “process already running”  
+- “directory not empty”  
+- “resource busy”  
+- “lock is held by PID …”  
+- “package is in a half‑installed state”  
+- “file exists”  
+- “directory exists”  
+- “not removed”  
+- “already up‑to‑date”  
+- “Warning: <pkg> is already installed”
+
+
+**Implicit idempotency cases**
+
+The LLM must also detect idempotency even when stderr does not explicitly say so:
+
+- `systemctl start <service>` when the service is already running  
+- `dnf install <pkg>` when the package is already installed  
+- `yum install <pkg>` when the package is already installed  
+- `apt-get install <pkg>` when the package is already installed  
+- `apk add <pkg>` when the package is already installed  
+- `brew install <pkg>` when the package is already installed  
+- `Start-Service` when the service is already running  
+- `touch <file>` when the file already exists (BusyBox)  
+- `mkdir <dir>` when the directory already exists (BusyBox)
+
+These implicit cases must also produce `cleanup_and_retry`.
+
+
+#### Global contract rule for idempotency: Revision5
+
+The global contract rule for idempotency for the most part was already correct (cleanup_and_retry). However the rule has been
+revised a bit to include the context history as a valid signal in addtion to the original stderr, as noted in the Introduction
+above.
+
+Here is the updated contract rule block for idempotency (this can be found in ai_gateway_service.py):
+
+
+```
+# ============================================================
+# IDEMPOTENCY RULES
+# Revision 5: Idempotency-related failures MUST use cleanup_and_retry
+# ============================================================
+"Idempotency rules (Revision 5):\n"
+"- Idempotency-related failures MUST use \"cleanup_and_retry\".\n"
+"- Idempotency may be detected from stderr, from command history, or both.\n"
+"- Idempotency conditions include messages such as:\n"
+"  - \"already installed\"\n"
+"  - \"already exists\"\n"
+"  - \"nothing to do\"\n"
+"  - \"resource busy\"\n"
+"  - \"lock is held by PID ...\"\n"
+"  - \"directory not empty\"\n"
+"  - \"service already running\"\n"
+"  - \"package is in a half-installed state\".\n"
+"- Repeated operations in history (e.g., repeated installs or service starts) also indicate idempotency.\n"
+"- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
+"- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
+```
+
+#### Extended Schema Test Cases for Idempotency Regression
+
+Following the scrub of all domain primitives blocks for proper idempotency treatment that aligns with the global idempotency rules
+above, a specialized regression set of test cases has to be created from the original schema test cases across ALL OSes.
+
+Once the specialized test case schema json file is created, the suite needs to be run to ensure that the cleanup_and_retry is 
+consistently returned by the LLM for all idempotency scenario test cases. 
+
+
+
+---
+
+[Back to top](#top-update59)
+
+---
 
 
 ### Stress testing the contract rules with the automated framework

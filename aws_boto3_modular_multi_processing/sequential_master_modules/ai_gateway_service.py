@@ -470,12 +470,15 @@ def recover(request: RecoveryRequest):
                 "  - retry: commands that re-run the failing operation and, if needed, reattempt the original goal (for example, 'apt-get update -y' followed by 'apt-get install -y <pkg>').\n\n"
 
 
+
                 # ============================================================
                 # IDEMPOTENCY RULES
-                # Revision 4: Idempotency-related failures MUST use cleanup_and_retry
+                # Revision 5: Idempotency-related failures MUST use cleanup_and_retry. Signals can be fronm stderr AND/OR history 
+                # both of which are presented in the context to the LLM
                 # ============================================================
-                "Idempotency rules (Revision 4):\n"
+                "Idempotency rules (Revision 5):\n"
                 "- Idempotency-related failures MUST use \"cleanup_and_retry\".\n"
+                "- Idempotency may be detected from stderr, from command history, or both.\n"
                 "- Idempotency conditions include messages such as:\n"
                 "  - \"already installed\"\n"
                 "  - \"already exists\"\n"
@@ -485,10 +488,9 @@ def recover(request: RecoveryRequest):
                 "  - \"directory not empty\"\n"
                 "  - \"service already running\"\n"
                 "  - \"package is in a half-installed state\".\n"
-                "- These failures are caused by environmental residue, not incorrect commands.\n"
+                "- Repeated operations in history (e.g., repeated installs or service starts) also indicate idempotency.\n"
+                "- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
                 "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
-
-
 
 
                 # ------------------------------------------------------------
