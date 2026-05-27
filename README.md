@@ -3,6 +3,12 @@
 
 ```
 ```
+© 2026 Dave Mastrop. All rights reserved.
+
+```
+```
+
+
 
 
 ## NOTE: for full README contents
