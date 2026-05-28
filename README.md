@@ -1538,8 +1538,7 @@ WORK IN PROGRESS
 ### **Table of Contents — LLM Contract Stress-Tesing Framework and Multi-OS Remediation Validation (Phase 4a.1.2)**  
 <a name="top-update59"></a>
 
-
-- [Introduction](#introduction)
+- [Introduction to LLM Contract Stress-Testing Framework](#introduction-to-llm-contract-stress-testing-framework)
 - [How the LLM Contract Stress Tester Works](#how-the-llm-contract-stress-tester-works)
 - [Schema context‑based test case design methodology](#schema-context-based-test-case-design-methodology)
 - [Stress tester high‑level file structure](#stress-tester-high-level-file-structure)
@@ -1562,7 +1561,7 @@ WORK IN PROGRESS
 
 
 
-### Introduction
+### Introduction to LLM Contract Stress-Testing Framework
 
 This important UPDATE introduces the stress_tester.py, a python schema bases stress tester for testing permutations of 
 command syntax over a wide variety of operating systems and some introductory platforms like Cisco IOS and PAN-OS.
@@ -5780,7 +5779,7 @@ The result is increasingly robust and increasingly deterministic LLM contract-ba
 #### **Table of Contents — Continued Testing with the Semantics Files (Validator Logic)**
 <a name="top-continued-testing-with-semantics-files"></a>
 
-- [Introduction](#introduction)
+- [Introduction to schema based testing with semantics files](#introduction-to-schema-based-testing-with-semantics-files)
 - [Two patches](#two-patches)
 - [1.Extended Schema-based tests for Ubuntu (with test matrices)](#1extended-schema-based-tests-for-ubuntu-with-test-matrices)
 - [2.Extended Schema-based tests for the other linix distro domain primtives blocks](#2extended-schema-based-tests-for-the-other-linix-distro-domain-primtives-blocks)
@@ -5795,7 +5794,7 @@ The result is increasingly robust and increasingly deterministic LLM contract-ba
 - [11.Final Cross‑OS Contract Behavior Comparison Table: Part2](#11final-cross-os-contract-behavior-comparison-table-part2)
 
 
-#### Introduction
+#### Introduction to schema based testing with semantics files
 
 To test the 17 semantics files some quick schema based testing was performed with several of the operating systems.
 
@@ -6376,8 +6375,7 @@ There is not patches required for Cisco IOS or PAN-OS domain primitives blocks.
 
 
 
-
-#### 7.Cross‑OS Contract Behavior Comparison Table: Part1  
+#### 7.Cross-OS Contract Behavior Comparison Table: Part1
 
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS)*
 
@@ -7655,9 +7653,7 @@ The test matrix along with pertinent notes is below.
 
 
 
-
-
-#### 11.Final Cross‑OS Contract Behavior Comparison Table: Part2  
+#### 11.Final Cross-OS Contract Behavior Comparison Table: Part2
 
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS vs Windows PowerShell vs. Linux PowerShell)*
 
