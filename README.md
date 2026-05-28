@@ -5780,20 +5780,19 @@ The result is increasingly robust and increasingly deterministic LLM contract-ba
 #### **Table of Contents — Continued Testing with the Semantics Files (Validator Logic)**
 <a name="top-continued-testing-with-semantics-files"></a>
 
-- [Introduction](#continued-testing-introduction)
-- [Two patches](#continued-testing-two-patches)
-- [1. Extended Schema‑based tests for Ubuntu (with test matrices)](#continued-testing-ubuntu-schema-tests)
-- [2. Extended Schema‑based tests for the other Linux distro domain‑primitives blocks](#continued-testing-other-linux-schema-tests)
-- [3. Extended Schema‑based tests for macOS Brew (with test matrices)](#continued-testing-brew-schema-tests)
-- [4. Extended Schema‑based tests for macOS‑zsh (with test matrix)](#continued-testing-zsh-schema-tests)
-- [5. Extended Schema‑based tests for BusyBox](#continued-testing-busybox-schema-tests)
-- [6. Extended Schema‑based tests for Cisco IOS and PAN‑OS](#continued-testing-cisco-pan-schema-tests)
-- [7. Cross‑OS Contract Behavior Comparison Table: Part 1](#continued-testing-crossos-table-part1)
-- [8. Extended Schema‑based tests for Windows PowerShell 5.1 (with test matrices)](#continued-testing-windows-powershell-tests)
-- [9. Idempotency Regression Testing](#continued-testing-idempotency-regression)
-- [10. Extended Schema‑based tests for Linux PowerShell 7 (with test matrices)](#continued-testing-linux-powershell-tests)
-- [11. Final Cross‑OS Contract Behavior Comparison Table: Part 2](#continued-testing-crossos-table-part2)
-
+- [Introduction](#introduction)
+- [Two patches](#two-patches)
+- [1.Extended Schema-based tests for Ubuntu (with test matrices)](#1extended-schema-based-tests-for-ubuntu-with-test-matrices)
+- [2.Extended Schema-based tests for the other linix distro domain primtives blocks](#2extended-schema-based-tests-for-the-other-linix-distro-domain-primtives-blocks)
+- [3.Extended Schema-based tests for macos Brew (with test matrices)](#3extended-schema-based-tests-for-macos-brew-with-test-matrices)
+- [4.Extended Schema-based tests for macos-zh (with test matrix)](#4extended-schema-based-tests-for-macos-zh-with-test-matrix)
+- [5.Extended Schema-based tests for BusyBox](#5extended-schema-based-tests-for-busybox)
+- [6.Extended Schema-based tests for Cisco IOS and PAN-OS](#6extended-schema-based-tests-for-cisco-ios-and-pan-os)
+- [7.Cross‑OS Contract Behavior Comparison Table: Part1](#7cross-os-contract-behavior-comparison-table-part1)
+- [8.Extended Schema-based tests for Windows PowerShell 5.1 (with test matrices)](#8extended-schema-based-tests-for-windows-powershell-51-with-test-matrices)
+- [9.Idempotency Regression testing](#9idempotency-regression-testing)
+- [10.Extended Schema-based tests for Linux PowerShell 7 (with test matrices)](#10extended-schema-based-tests-for-linux-powershell-7-with-test-matrices)
+- [11.Final Cross‑OS Contract Behavior Comparison Table: Part2](#11final-cross-os-contract-behavior-comparison-table-part2)
 
 
 #### Introduction
