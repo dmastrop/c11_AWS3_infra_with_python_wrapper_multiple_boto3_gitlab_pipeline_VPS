@@ -7594,6 +7594,204 @@ The test matrix along with pertinent notes is below.
 
 
 
+This is the final table after all the LLM contract rule development and testing in the sections above. 
+
+
+<details>
+<summary><b>Click to expand Cross‑OS Contract Behavior Comparison Table</b></summary>
+
+<br>
+
+<table>
+  <thead>
+    <tr>
+      <th>OS / Platform</th>
+      <th>Rewrite Behavior</th>
+      <th>Fallback Behavior</th>
+      <th>Abort Behavior</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+
+<!-- LinuxOS (existing row) -->
+<tr>
+  <td><b>LinuxOS<br>(Patch2‑Rev2 + invalid‑flags patch)</b></td>
+  <td>
+    • Wrong‑PM rewrite allowed<br>
+    • Multi‑segment rewrite allowed<br>
+    • Deterministic rewrite rules<br>
+    <i>(e.g., apt → apt‑get → yum → dnf → apk → pacman → correct PM)</i>
+  </td>
+  <td>
+    • Fallback for invalid flags<br>
+    • Fallback for malformed commands<br>
+    • Fallback for unsupported PMs<br>
+  </td>
+  <td>
+    • Abort only for destructive commands<br>
+  </td>
+  <td>
+    Full Patch2 rewrite engine.<br>
+    Most complex OS block.<br>
+  </td>
+</tr>
+
+<!-- macOS Homebrew (existing row) -->
+<tr>
+  <td><b>macOS Homebrew<br>(Patch2‑Rev4 + invalid‑flags patch)</b></td>
+  <td>
+    • Wrong‑PM rewrite allowed<br>
+    • Multi‑segment rewrite allowed<br>
+    • Brew‑specific rewrite rules<br>
+    <i>(e.g., apt/yum/dnf → brew install …)</i>
+  </td>
+  <td>
+    • Fallback for invalid flags<br>
+    • Fallback for system‑wide ops<br>
+    • Fallback for malformed commands<br>
+  </td>
+  <td>
+    • Abort for destructive commands<br>
+  </td>
+  <td>
+    Patch2‑Rev4 adds invalid‑flag precedence fix.<br>
+    Rewrite logic similar to LinuxOS but Brew‑specific.<br>
+  </td>
+</tr>
+
+<!-- macOS zsh (existing row) -->
+<tr>
+  <td><b>macOS‑zsh<br>(Primitive Patch2 + invalid‑flags patch)</b></td>
+  <td>
+    • <b>No rewrite allowed</b><br>
+    • PM rewrite forbidden<br>
+    • No deterministic recovery sequences<br>
+  </td>
+  <td>
+    • <b>Fallback‑dominant OS</b><br>
+    • All PM commands → fallback<br>
+    • All malformed pipelines → fallback<br>
+    • All invalid flags → fallback<br>
+  </td>
+  <td>
+    • Abort only for destructive commands<br>
+  </td>
+  <td>
+    Minimal OS block.<br>
+    Behaves like BusyBox but safer (fallback instead of abort).<br>
+  </td>
+</tr>
+
+<!-- BusyBox (existing row) -->
+<tr>
+  <td><b>BusyBox<br>(Primitive Patch2 + invalid‑flags patch)</b></td>
+  <td>
+    • <b>No rewrite allowed</b><br>
+    • PM rewrite forbidden<br>
+    • No recovery sequences<br>
+  </td>
+  <td>
+    • Fallback for invalid flags<br>
+    • Fallback for unknown commands<br>
+  </td>
+  <td>
+    • <b>Abort‑dominant OS</b><br>
+    • All PM rewrites → abort<br>
+    • All multi‑segment PM pipelines → abort<br>
+  </td>
+  <td>
+    BusyBox is the strictest OS block.<br>
+    No 24‑case schema needed — rules are trivial.<br>
+  </td>
+</tr>
+
+<!-- CiscoIOS / PAN-OS (existing row) -->
+<tr>
+  <td><b>CiscoIOS / PAN‑OS<br>(No Patch2 required)</b></td>
+  <td>
+    • <b>No rewrite allowed</b><br>
+    • PM rewrite forbidden<br>
+    • No recovery sequences<br>
+  </td>
+  <td>
+    • Fallback only for benign unknown commands (rare)<br>
+    • Most invalid commands → abort<br>
+  </td>
+  <td>
+    • <b>Abort for all Linux PM commands</b><br>
+    • <b>Abort for all shell commands</b><br>
+    • <b>Abort for destructive commands</b><br>
+    • Abort must include a clear message<br>
+  </td>
+  <td>
+    CiscoIOS and PAN‑OS behave identically.<br>
+    Both treat Linux PM commands as unsupported OS operations.<br>
+    No Patch2 or schema testing required.<br>
+  </td>
+</tr>
+
+<!-- NEW: Linux PowerShell 7 -->
+<tr>
+  <td><b>Linux PowerShell 7<br>(Patch2‑Rev6 + POSIX‑blocking rule)</b></td>
+  <td>
+    • Rewrite allowed ONLY in pure PowerShell `&&` pipelines<br>
+    • Single‑segment typos → fallback<br>
+    • <b>No rewrite allowed in mixed PowerShell + POSIX pipelines</b><br>
+    • <b>No rewrite of POSIX commands, POSIX paths, or POSIX binaries</b><br>
+  </td>
+  <td>
+    • Fallback for:<br>
+      – mixed pipelines<br>
+      – POSIX segments<br>
+      – parameter typos<br>
+      – malformed `|` pipelines<br>
+      – malformed `$()` subshells<br>
+      – unsupported PMs<br>
+    • Fallback for valid commands with no rewrite needed (Phase 4a.1.4 will handle these)<br>
+  </td>
+  <td>
+    • Abort only for destructive commands<br>
+    • Abort for PID 1 kill attempts<br>
+  </td>
+  <td>
+    Patch2‑Rev6 is intentionally narrow.<br>
+    Only corrects cmdlet typos when the entire `&&` pipeline is unambiguously PowerShell.<br>
+    Mixed pipelines are allowed but NEVER rewritten.<br>
+    Most complex OS block besides LinuxOS.<br>
+  </td>
+</tr>
+
+<!-- NEW: Windows PowerShell 5.1 -->
+<tr>
+  <td><b>Windows PowerShell 5.1<br>(Patch2‑Rev5)</b></td>
+  <td>
+    • Rewrite allowed for cmdlet typos<br>
+    • Rewrite allowed for parameter typos<br>
+    • Rewrite allowed for missing script blocks<br>
+    • Rewrite allowed for malformed pipelines<br>
+    • <b>Closed ecosystem → deterministic corrections</b><br>
+  </td>
+  <td>
+    • Fallback for invalid flags<br>
+    • Fallback for unsupported Linux PMs<br>
+    • Fallback for POSIX paths<br>
+  </td>
+  <td>
+    • Abort for destructive commands<br>
+    • Abort for critical system processes<br>
+  </td>
+  <td>
+    Most permissive Patch2 engine.<br>
+    No POSIX ambiguity → safe to repair `|` pipelines and `$()` subexpressions.<br>
+    Strongest rewrite capabilities of all OS blocks.<br>
+  </td>
+</tr>
+
+  </tbody>
+</table>
+
+</details>
 
 
 
