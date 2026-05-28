@@ -7126,7 +7126,7 @@ unless the entire `&&` pipeline is pure PowerShell. (see the previous section on
 
 ---
 
-###### Concrete Example — Why Mixed Pipelines Cannot Be Rewritten**
+###### Concrete Example — Why Mixed Pipelines Cannot Be Rewritten
 
 Consider:
 
@@ -7198,10 +7198,10 @@ not because the command is wrong, but because:
 - `fallback` = “I am not modifying this pipeline”  
 
 NOTE: This is a laboratory test case. A good command like this will not normally get passed to the AI/MCP HOOK by 
-heuristic code in the module2f, because the HOOK is designed only for failing codes.  But in this case, the LLM 
+heuristic code in the module2f, because the HOOK is designed only for failing commands.  But in this case, the LLM 
 will return fallback action plan (do nothing; or I cannot do anything)
 
-The Phase 4a.1.4+ logic will intercept these and treat them as success if they do happend to leak into the AI/MCP HOOK but
+The Phase 4a.1.4+ logic will intercept these and treat them as success if they do happen to leak into the AI/MCP HOOK but
 this is an edge case event and does not normally occur. It is only given here as an example. Normally the mixed pipeline
 command above will not be passed to the AI/MCP HOOK and will be successfully executed by the node that is running 
 linux powershell and the node will be install_success as a status in its registry_entry.
@@ -7237,6 +7237,16 @@ Patch2‑Rev6 rewrites only when the entire `&&` pipeline is unambiguously Power
 Everything else must fallback.
 
 Not enforcing this would lead to non-deterministic behavior from the LLM which is unacceptable.
+
+
+
+##### Final Patch2-Rev6 code
+
+The final code block is below. The complexity of this logic is explained in the sections above. As mentioned earlier, linux
+powershell is by far the most complicated OS environment to manage in terms of command remediation. Without an LLM the 
+amount of python code to do this would be immense because the logic and strngs are so complex and varied and have such a
+high potential for non-deterministic behavior with remediation.
+
 
 
 
