@@ -5774,6 +5774,28 @@ The result is increasingly robust and increasingly deterministic LLM contract-ba
 
 ### Continued testing with the semantics files (validator logic) hooked into the stress tester
 
+
+
+
+#### **Table of Contents — Continued Testing with the Semantics Files (Validator Logic)**
+<a name="top-continued-testing-with-semantics-files"></a>
+
+- [Introduction](#continued-testing-introduction)
+- [Two patches](#continued-testing-two-patches)
+- [1. Extended Schema‑based tests for Ubuntu (with test matrices)](#continued-testing-ubuntu-schema-tests)
+- [2. Extended Schema‑based tests for the other Linux distro domain‑primitives blocks](#continued-testing-other-linux-schema-tests)
+- [3. Extended Schema‑based tests for macOS Brew (with test matrices)](#continued-testing-brew-schema-tests)
+- [4. Extended Schema‑based tests for macOS‑zsh (with test matrix)](#continued-testing-zsh-schema-tests)
+- [5. Extended Schema‑based tests for BusyBox](#continued-testing-busybox-schema-tests)
+- [6. Extended Schema‑based tests for Cisco IOS and PAN‑OS](#continued-testing-cisco-pan-schema-tests)
+- [7. Cross‑OS Contract Behavior Comparison Table: Part 1](#continued-testing-crossos-table-part1)
+- [8. Extended Schema‑based tests for Windows PowerShell 5.1 (with test matrices)](#continued-testing-windows-powershell-tests)
+- [9. Idempotency Regression Testing](#continued-testing-idempotency-regression)
+- [10. Extended Schema‑based tests for Linux PowerShell 7 (with test matrices)](#continued-testing-linux-powershell-tests)
+- [11. Final Cross‑OS Contract Behavior Comparison Table: Part 2](#continued-testing-crossos-table-part2)
+
+
+
 #### Introduction
 
 To test the 17 semantics files some quick schema based testing was performed with several of the operating systems.
@@ -5791,7 +5813,7 @@ example of many. The os_name/os_version, as discussed earlier, are critical in t
 LLM contract decision domain primitives making, for proper validator code selection (semantic files are unique per OS), and for
 proper validation logic given the test results (semantic logic execution).
 
-
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
 
 #### Two patches
@@ -5876,27 +5898,22 @@ If ANY segment is unsafe (system‑wide op, mutation, invalid flag):
 
 This handles:
 
-Wrong && Right && Wrong
+- Wrong && Right && Wrong
+- Right && Wrong && Wrong
+- Wrong && Wrong && Right
+- Right && Right && Wrong
+- Wrong && Right
+- Right && Wrong
+- Single wrong
+- Single right
+- Mixed PMs
+- Mixed flags
+- Mixed system‑ops
 
-Right && Wrong && Wrong
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
-Wrong && Wrong && Right
 
-Right && Right && Wrong
 
-Wrong && Right
-
-Right && Wrong
-
-Single wrong
-
-Single right
-
-Mixed PMs
-
-Mixed flags
-
-Mixed system‑ops
 
 
 
@@ -6012,6 +6029,10 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 </details>
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
+
+
+
 
 
 #### 2.Extended Schema-based tests for the other linix distro domain primtives blocks
@@ -6019,6 +6040,10 @@ Thus the semantics based validator is prone to eventually fail in some cases, an
 
 The patches have been applied uniformly to all of the other linux distro domain primitives blocks and there is no need to regression
 test these again with the patch given how well the test passed on the Ubuntu (above).
+
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
+
+
 
 
 
@@ -6188,6 +6213,11 @@ refined through successive stress_tester.py iterative testing.
 
 </details>
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
+
+
+
+
 
 
 #### 4.Extended Schema-based tests for macos-zh (with test matrix)
@@ -6283,6 +6313,12 @@ been performed as shown in the test matrix below.
 
 </details>
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
+
+
+
+
+
 
 #### 5.Extended Schema-based tests for BusyBox
 
@@ -6297,6 +6333,12 @@ These secctions go over why BusyBox is predominantly abort.
 
 
 As such, there is no 24 test case iteration for this (it would mostly be abort fo all PM and rewrites).
+
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
+
+
+
+
 
 
 #### 6.Extended Schema-based tests for Cisco IOS and PAN-OS
@@ -6327,10 +6369,16 @@ There is not patches required for Cisco IOS or PAN-OS domain primitives blocks.
                 "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: write erase\" }\n"
                 "    { \"action\": \"abort\", \"message\": \"Unsafe command detected: reload\" }\n\n"
 ```
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
 
 
-#### 7.Cross‑OS Contract Behavior Comparison Table  
+
+
+
+
+
+#### 7.Cross‑OS Contract Behavior Comparison Table: Part1  
 
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS)*
 
@@ -6482,9 +6530,15 @@ It highlights:
 
 </details>
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
 
-#### 8.Schema-based tests for Windows PowerShell 5.1
+
+
+
+
+
+#### 8.Extended Schema-based tests for Windows PowerShell 5.1 (with test matrices)
 
 ##### Why This Project Targets Windows PowerShell 5.1 (and Not PowerShell 7+)
 
@@ -6724,6 +6778,12 @@ the AI/MCP HOOK code in one of the python modules, as well, at a later time.
 
 </details>
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
+
+
+
+
+
 
 #### 9.Idempotency Regression testing
 
@@ -6742,9 +6802,13 @@ This regression testing methodology and results is in a new section further down
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
 
-#### 10.Schema-based tests for Linux PowerShell 7
+
+
+
+#### 10.Extended Schema-based tests for Linux PowerShell 7 (with test matrices)
 
 
 ##### Why Linux PowerShell 7 Requires Patch2‑Rev6 Pipeline Rewrite
@@ -7587,8 +7651,14 @@ The test matrix along with pertinent notes is below.
 
 </details>
 
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
-#### 11.Final Cross‑OS Contract Behavior Comparison Table  
+
+
+
+
+
+#### 11.Final Cross‑OS Contract Behavior Comparison Table: Part2  
 
 *(LinuxOS vs Brew vs macOS‑zsh vs BusyBox vs CiscoIOS/PAN-OS vs Windows PowerShell vs. Linux PowerShell)*
 
@@ -7795,7 +7865,7 @@ This is the final table after all the LLM contract rule development and testing 
 
 
 
-
+[Back to top of Continued testing with semantics files](#top-continued-testing-with-semantics-files)
 
 ---
 
