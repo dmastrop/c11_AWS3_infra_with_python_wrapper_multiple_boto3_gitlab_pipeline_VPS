@@ -1,0 +1,136 @@
+cisco
+python3 stress_tester.py --os cisco_ios --index 0
+ubuntu
+python3 stress_tester.py --os ubuntu_apt --index 0
+
+
+python3 stress_tester.py --os debian_apt --index 0
+
+
+index 11 → Hash Sum mismatch
+
+index 14 → fix‑broken
+
+index 10 → dpkg interrupted
+
+index 0 → unable to locate package
+
+index 5 → malformed install
+
+index 7 → unknown command
+
+
+
+python3 stress_tester.py --os rhel_yum --index 0
+python3 stress_tester.py --os amazonlinux_yum --index 0
+
+python3 stress_tester.py --os centos7_yum --index 0
+python3 stress_tester.py --os centos8_dnf --index 0
+
+
+
+python3 stress_tester.py --os fedora_dnf --index 0
+
+python3 stress_tester.py --os alpine_apk --index 0
+
+python3 stress_tester.py --os bash_linux --index 0
+
+python3 stress_tester.py --os busybox_sh --index 0
+
+python3 stress_tester.py --os macos_brew --index 0
+
+python3 stress_tester.py --os zsh_macos --index 0
+
+python3 stress_tester.py --os windows_powershell --index 0
+
+python3 stress_tester.py --os powershell_linux --index 0
+
+python3 stress_tester.py --os paloalto_pan --index 0
+
+
+
+later on: 
+
+python3 stress_tester.py --os amazonlinux2023_dnf --index 0
+
+
+
+patches
+
+
+python3 stress_tester.py --os patch_1_and_2/alpine_patch_tests --index 0
+
+python3 stress_tester.py --os patch_1_and_2/fedora_patch_tests --index 0
+
+python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 0
+
+python3 stress_tester.py --os patch_1_and_2/mac_os_brew_patch_tests --index 0
+
+
+python3 stress_tester.py --os patch_1_and_2/mac_os_zsh_patch_tests --index 0
+
+
+python3 stress_tester.py --os patch_1_and_2/windows_powershell_patch_tests --index 0
+python3 stress_tester.py --os patch_1_and_2/linux_powershell_patch_tests --index 0
+
+
+
+
+
+idempotency tests
+python3 stress_tester.py --os idempotency_regression/alpine_idempotency --index 0
+
+
+# **Idempotency Regression — Manual Run Commands (Index 0 for All Remaining OSes)**
+
+### **Amazon Linux 2023**
+```
+python3 stress_tester.py --os idempotency_regression/amazonlinux2023_idempotency --index 0
+```
+
+### **Amazon Linux 2**
+```
+python3 stress_tester.py --os idempotency_regression/amazonlinux2_idempotency --index 0
+```
+
+### **CentOS 7**
+```
+python3 stress_tester.py --os idempotency_regression/centos7_idempotency --index 0
+```
+
+### **CentOS 8**
+```
+python3 stress_tester.py --os idempotency_regression/centos8_idempotency --index 0
+```
+
+### **Debian**
+```
+python3 stress_tester.py --os idempotency_regression/debian_idempotency --index 0
+```
+
+### **Fedora**
+```
+python3 stress_tester.py --os idempotency_regression/fedora_idempotency --index 0
+```
+
+### **Linux PowerShell (pwsh on Linux)**
+```
+python3 stress_tester.py --os idempotency_regression/linux_powershell_idempotency --index 0
+```
+
+### **macOS Homebrew**
+```
+python3 stress_tester.py --os idempotency_regression/macos_brew_idempotency --index 0
+```
+
+### **Ubuntu**
+```
+python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 0
+```
+
+### **Windows PowerShell 5.1**
+```
+python3 stress_tester.py --os idempotency_regression/windows_powershell_idempotency --index 0
+```
+
+
