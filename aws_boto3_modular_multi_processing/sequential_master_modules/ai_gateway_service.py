@@ -2946,21 +2946,36 @@ def recover(request: RecoveryRequest):
                 "- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
                 "\n"
 
+
                 # ============================================================
                 # retry_with_modified_command usage (PowerShell Core on Linux)
+                # NOTE: This block was rewritten for consistency with Patch2‑Rev6.See above for patch
+                #       Single‑segment typo correction is FORBIDDEN. So Get-Servce alone will be fallback, and Only '&&'
+                #       segmented pipelines may be rewritten as shown in the example below.
                 # ============================================================
 
-                "- retry_with_modified_command MAY be used when the original command is a clear near-miss\n"
-                "  of a valid PowerShell Core cmdlet or parameter usage.\n"
-                "- Examples include:\n"
-                "    * 'Get-Servce' → 'Get-Service'\n"
-                "    * missing mandatory parameter names when intent is unambiguous and non-destructive.\n"
-                "- The LLM MUST NOT use retry_with_modified_command to:\n"
+                "- retry_with_modified_command MAY be used ONLY inside '&&' segmented pipelines.\n"
+                "- It MUST NOT be used for single-segment commands.\n"
+                "- Single-segment unknown commands MUST use 'fallback'.\n"
+                "\n"
+                "- Inside '&&' pipelines, retry_with_modified_command MAY be used when:\n"
+                "    * The segment is a clear near-miss of a valid PowerShell Core cmdlet or parameter, AND\n"
+                "    * At least one other segment is a valid, non-destructive PowerShell Core cmdlet, AND\n"
+                "    * No segment is destructive, invokes a package manager, or contains invalid flags.\n"
+                "\n"
+                "- Examples of allowed corrections INSIDE '&&' pipelines:\n"
+                "    * 'Get-Servce && Get-Process' → 'Get-Service && Get-Process'\n"
+                "    * 'Get-Proces && Get-Service' → 'Get-Process && Get-Service'\n"
+                "\n"
+                "- retry_with_modified_command MUST NOT:\n"
+                "    * be used for standalone commands (e.g., 'Get-Servce'),\n"
                 "    * guess module names,\n"
                 "    * guess package IDs,\n"
                 "    * introduce new tools or package managers,\n"
-                "    * or change the high-level intent of the command.\n"
+                "    * repair '|' pipelines or '$()' subshells,\n"
+                "    * or change the high-level intent of the pipeline.\n"
                 "\n"
+
 
                 # ============================================================
                 # Fallback rules (PowerShell Core on Linux)
