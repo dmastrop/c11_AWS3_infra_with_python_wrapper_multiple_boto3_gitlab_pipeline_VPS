@@ -6775,7 +6775,7 @@ This hybrid nature means that a malformed pipeline such as:
 Get-ChildItem | | Get-Process
 ```
 
-has **multiple valid interpretations**, depending on:
+has multiple valid interpretations, depending on:
 
 - PowerShell pipeline semantics  
 - POSIX pipeline semantics  
@@ -6785,9 +6785,9 @@ has **multiple valid interpretations**, depending on:
 - Whether the user intended a subexpression  
 - Whether the user intended a placeholder for a missing stage  
 
-There is **no deterministic correction**.
+There is no deterministic correction.
 
-Therefore:  **Linux PowerShell 7 MUST NOT repair `|` pipelines or `$()` subshells.**  
+Therefore:  Linux PowerShell 7 MUST NOT repair `|` pipelines or `$()` subshells. 
 
 Any attempt to do so would require guessing user intent — which the contract forbids.
 
@@ -6797,13 +6797,13 @@ Any attempt to do so would require guessing user intent — which the contract f
 
 Windows PowerShell 5.1 is:
 
-- A **closed ecosystem**  
-- With **fixed cmdlets**  
-- With **no POSIX tools**  
-- With **no Linux binaries**  
-- With **no shell mixing**  
-- With **no `&&` operator**  
-- With **no POSIX pipeline semantics**  
+- A closed ecosystem  
+- With fixed cmdlets  
+- With no POSIX tools  
+- With no Linux binaries  
+- With no shell mixing  
+- With no `&&` operator
+- With no POSIX pipeline semantics  
 
 Because of this, a malformed pipeline like:
 
@@ -6811,7 +6811,7 @@ Because of this, a malformed pipeline like:
 Get-Process | ForEach-Object $_.Name
 ```
 
-has **exactly one valid interpretation**:
+has exactly one valid interpretation:
 
 ```
 Get-Process | ForEach-Object { $_.Name }
@@ -6819,13 +6819,13 @@ Get-Process | ForEach-Object { $_.Name }
 
 This is because:
 
-- `ForEach-Object` **requires** a script block  
-- There is **no alternative meaning**  
-- There is **no POSIX pipeline**  
-- There is **no Linux binary**  
-- There is **no ambiguity**  
+- `ForEach-Object` requires a script block  
+- There is no alternative meaning  
+- There is no POSIX pipeline
+- There is no Linux binary  
+- There is no ambiguity 
 
-Therefore:  **Windows PowerShell 5.1 MAY repair certain `|` pipelines when the correction is unambiguous.**
+Therefore:  Windows PowerShell 5.1 MAY repair certain `|` pipelines when the correction is unambiguous.
 
 This is why Patch2‑Rev5 for Windows allows:
 
@@ -6871,12 +6871,12 @@ This could mean:
 - A missing command between pipes  
 - A user mixing PowerShell and bash syntax  
 
-**Ambiguous → fallback.** on Linux PowerShell
+Ambiguous → fallback on Linux PowerShell
 
 ---
 
 
-Subshells `$()` are also ambiguous on Linux
+Subshells `$()` are also ambiguous on Linux PowerShell
 
 ```
 echo $(ls
@@ -6892,7 +6892,7 @@ Could be:
 - A missing command  
 - A malformed pipeline  
 
-**Ambiguous → fallback.** on Linux PowerShell
+Ambiguous → fallback on Linux PowerShell
 
 ---
 
@@ -6914,9 +6914,19 @@ is a typo for:
 Get-Service
 ```
 
-Why?
+Why is this possible? 
 
-Because `&&` pipelines have **strong semantic constraints**:
+Because `&&` pipelines have strong semantic constraints:
+
+So this would be corrected with retry_with_modified_command
+
+---
+
+HOWEVER, the single command Get-Servce is completely different
+
+```
+Get-Servce
+```
 
 Single command = ambiguous context
 
@@ -6929,11 +6939,13 @@ A lone unknown command could be:
 - A symlink in `$PATH`  
 - Anything  
 
-**This would be a fallback.** on Linux PowerShell (but not on Windows PowerShell)
+This would be a fallback on Linux PowerShell (but not on Windows PowerShell)
 
 
 
-But the `&&` pipeline = disambiguated context  
+---
+
+Regarding the `&&` pipeline = disambiguated context  
 
 
 ```
@@ -6945,17 +6957,17 @@ Get-Servce && Get-Process
 - If one segment is a valid PowerShell cmdlet  
 - The others are overwhelmingly likely to be PowerShell cmdlets too  
 
-This is the **only safe place** where Patch2‑Rev6 is allowed to rewrite cmdlet typos.
+This is the only safe place where Patch2‑Rev6 of Linux PowerShell is allowed to rewrite cmdlet typos.
 
-**Unambiguous in context → retry_with_modified_command (Linux PowerShell 7)**  
+Unambiguous in context → retry_with_modified_command (Linux PowerShell 7) 
 
-Patch2‑Rev6 rewrites only the near‑miss PowerShell segments and replays the **entire** corrected pipeline.
+Patch2‑Rev6 rewrites only the near‑miss PowerShell segments and replays the entire corrected pipeline.
 
 ---
 
 ###### Summary — The contract logic is consistent
 
-**Windows PowerShell 5.1**
+Windows PowerShell 5.1
 
 - Closed ecosystem  
 - No POSIX tools  
@@ -6964,7 +6976,10 @@ Patch2‑Rev6 rewrites only the near‑miss PowerShell segments and replays the 
 - Low ambiguity  
 - Safe to repair certain `|` pipelines and structural constructs when the fix is unambiguous  
 
-**Linux PowerShell 7**
+
+
+
+Linux PowerShell 7
 
 - Hybrid shell  
 - PowerShell + Linux binaries  
@@ -6973,15 +6988,19 @@ Patch2‑Rev6 rewrites only the near‑miss PowerShell segments and replays the 
 - High ambiguity for standalone commands and `|` pipelines  
 - Unsafe to repair `|` pipelines or `$()` subshells  
 
-**Therefore, Linux PowerShell Patch2‑Rev6 ONLY repairs:**
 
-- **`&&` segmented pipelines where:**
+
+Therefore, Linux PowerShell Patch2‑Rev6 ONLY repairs:
+
+- `&&` segmented pipelines where:
   - At least one segment is a valid, non‑destructive PowerShell cmdlet, and  
   - Another segment is a clear near‑miss of a PowerShell cmdlet or parameter, and  
   - The overall intent is unambiguous and non‑destructive  
-- **Near‑miss PowerShell cmdlets/parameters *inside those `&&` pipelines only***  
+- Near‑miss PowerShell cmdlets/parameters *inside those `&&` pipelines only*  
 
-**Linux PowerShell Patch2‑Rev6 NEVER repairs:**
+
+
+Linux PowerShell Patch2‑Rev6 NEVER repairs:
 
 - Standalone unknown commands  
 - `|` pipelines  
