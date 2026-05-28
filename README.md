@@ -161,6 +161,8 @@ artifact logs per pipeline)
 - Iterative curl context testing with LLM for AI Gateway Service payload contract action rule development and refinement 
 (whitebox testing)
 - Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) LLM contract rule formation (whitebox testing)
+- Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
+
 
 ## Latest milestone updates in this README:
 
@@ -6751,6 +6753,11 @@ Unlike Windows Server 2022, which standardizes on **Windows PowerShell 5.1**, th
 
 Because PowerShell Core on Linux supports `&&` pipelines, multi‑segment commands, and mixing PowerShell cmdlets with shell commands, it **must** participate in the Patch2 rewrite model. Patch2‑Rev6 for Linux PowerShell is therefore required to: (1) reason about segmented pipelines, (2) safely rewrite malformed or near‑miss PowerShell cmdlets, (3) preserve non‑mutating segments verbatim, and (4) replay the **entire** corrected pipeline (not just the fixed segment), exactly as Patch2‑Rev2 does for Linux distros and Patch2‑Rev4 does for macOS Homebrew. However, this OS block intentionally defines **no package‑manager semantics**: any appearance of `apt`, `apt-get`, `yum`, `dnf`, `apk`, `pacman`, `brew`, `snap`, or similar tools MUST result in `fallback`, never rewrite. Patch2‑Rev6 for Linux PowerShell is therefore narrowly scoped: it rewrites **PowerShell segments only**, never package‑manager segments, and always replays the full corrected pipeline to maintain determinism and avoid overloading future fallback heuristics.
 
+
+
+
+
+
 ##### Understanding Why Linux PowerShell 7 Cannot Repair `|` Pipelines or Subshells — and Why Windows PowerShell 5.1 Can
 
 PowerShell Core on Linux (`os_name = "Linux"`, `os_version = "powershell-core"`) behaves fundamentally differently from Windows PowerShell 5.1. These differences are not cosmetic — they directly determine what the contract engine can and cannot safely rewrite. In particular, Linux PowerShell 7 **must never repair malformed `|` pipelines or subshells (`$()`)**, while Windows PowerShell 5.1 **may** repair certain pipeline structures when the correction is unambiguous.
@@ -7024,7 +7031,6 @@ This ensures:
 
 ---
 
-
 ###### Final Note
 
 Linux PowerShell is one of the most complex OS blocks in the entire contract because it blends two execution models:
@@ -7037,6 +7043,200 @@ Patch2‑Rev6 is intentionally narrow and conservative — it rewrites only what
 This design keeps the contract safe, deterministic, and fully aligned with the global rewrite architecture.
 
 ---
+
+
+
+
+
+##### Understanding Why Linux PowerShell 7 Cannot Rewrite Mixed PowerShell + POSIX `&&` Pipelines (Patch2‑Rev6)
+
+Linux PowerShell 7 (`os_name = "Linux"`, `os_version = "powershell-core"`) supports hybrid execution: PowerShell cmdlets, Linux binaries, POSIX paths, and shell constructs can all appear in the same `&&` pipeline.  
+This flexibility is powerful — but it also introduces **semantic ambiguity** that makes Patch2‑Rev6 rewrite unsafe.
+
+Patch2‑Rev6 is intentionally conservative:  
+**it only rewrites cmdlet typos when the entire `&&` pipeline is unambiguously PowerShell.**  (See the previous section on this topic).
+
+Any presence of POSIX paths, POSIX binaries, or non‑PowerShell constructs makes the pipeline **ineligible** for rewrite.
+
+---
+
+
+
+
+
+###### Linux PowerShell 7 Allows Hybrid Pipelines — But Patch2‑Rev6 Cannot Rewrite Them
+
+A mixed pipeline such as:
+
+```
+Get-Servce && Get-Item /etc/passwd && Get-Process
+```
+
+is perfectly legal in Linux PowerShell 7.  
+
+PowerShell will happily run all of these in the same `&&` chain:
+
+- PowerShell cmdlets  
+- Linux binaries  
+- POSIX paths  
+- Scripts in `$PATH`  
+- Aliases  
+- Functions  
+- External tools  
+
+
+But this hybrid behavior creates a fundamental problem for Patch2‑Rev6: The LLM cannot know what a bare token actually is.
+
+
+
+In a mixed hybrid environment, a token like:
+
+```
+Get-Servce
+```
+
+could be:
+
+- a PowerShell cmdlet typo  
+- a user‑defined function  
+- a script in `$PATH`  
+- a POSIX binary  
+- a wrapper script  
+- a module command  
+- a typo in a POSIX binary  
+- a typo in a filename  
+- a typo in a function name  
+
+PowerShell resolves these at runtime, using:
+
+- `$PATH`  
+- user modules  
+- user functions  
+- aliases  
+- scripts  
+- environment state  
+
+The LLM has zero access to any of these.
+
+Therefore, Patch2‑Rev6 forbids the LLM from asserting:
+
+> “This is definitely a PowerShell cmdlet typo.”
+
+unless the entire `&&` pipeline is pure PowerShell. (see the previous section on this topic)
+
+---
+
+###### Concrete Example — Why Mixed Pipelines Cannot Be Rewritten**
+
+Consider:
+
+```
+Get-Servce && Get-Item /etc/passwd && Get-Process
+```
+
+This pipeline mixes:
+
+- PowerShell cmdlets (`Get-Item`, `Get-Process`)
+- A POSIX path (`/etc/passwd`)
+- A near‑miss token (`Get-Servce`)
+
+Patch2‑Rev6 asks:
+
+> “Is the user’s intent unambiguously PowerShell?”
+
+The answer is no, because:
+
+- `/etc/passwd` is a POSIX path  
+- The pipeline is hybrid  
+- The LLM cannot know whether `Get-Servce` is a cmdlet typo or a POSIX binary  
+- The LLM cannot know whether the user intended a PowerShell pipeline or a shell pipeline  
+- The LLM cannot know whether the user intended a script or function named `Get-Servce`  
+
+Because the intent is ambiguous, Patch2‑Rev6 MUST NOT rewrite the typo.
+
+Ambiguous in context → fallback (Linux PowerShell 7)
+
+---
+
+
+
+###### Mixed Pipelines Are Allowed — But Not Rewritten
+
+It is important to emphasize:
+
+Mixed pipelines are valid and supported by Linux PowerShell.
+  
+Patch2‑Rev6 does *not* forbid them.
+
+What Patch2‑Rev6 forbids is:
+
+- rewriting  
+- repairing  
+- correcting  
+- modifying  
+
+any part of a mixed pipeline, because doing so would require guessing intent across two execution models (PowerShell + POSIX),
+as explained above.
+
+
+So a command like:
+
+```
+Get-Process && Get-Service && Get-Item /etc/passwd
+```
+
+is perfectly valid, and the LLM returns:
+
+```
+fallback
+```
+
+not because the command is wrong, but because:
+
+- Patch2‑Rev6 has nothing to fix  
+- The action space has no “success” or “no-op”  
+- `fallback` = “I am not modifying this pipeline”  
+
+NOTE: This is a laboratory test case. A good command like this will not normally get passed to the AI/MCP HOOK by 
+heuristic code in the module2f, because the HOOK is designed only for failing codes.  But in this case, the LLM 
+will return fallback action plan (do nothing; or I cannot do anything)
+
+The Phase 4a.1.4+ logic will intercept these and treat them as success if they do happend to leak into the AI/MCP HOOK but
+this is an edge case event and does not normally occur. It is only given here as an example. Normally the mixed pipeline
+command above will not be passed to the AI/MCP HOOK and will be successfully executed by the node that is running 
+linux powershell and the node will be install_success as a status in its registry_entry.
+
+
+---
+
+###### Summary — Why Mixed Pipelines Cannot Be Rewritten
+
+Linux PowerShell 7:
+
+- is a hybrid shell  
+- mixes PowerShell + POSIX semantics  
+- resolves tokens at runtime  
+- allows arbitrary binaries, scripts, and functions  
+- cannot guarantee that a bare token is a PowerShell cmdlet  
+
+Therefore:
+
+> **If ANY segment contains a POSIX path or non‑PowerShell construct, the entire && pipeline is ineligible for Patch2 rewrite → MUST use fallback. If the pipeline is mixed (PowerShell + POSIX), the LLM MUST NOT assert “this token is definitely a cmdlet typo” and rewrite it.**
+
+This rule ensures:
+
+- determinism  
+- safety  
+- no cross‑shell inference  
+- no guessing  
+- no incorrect cmdlet rewrites  
+- no accidental modification of POSIX behavior  
+
+Patch2‑Rev6 rewrites only when the entire `&&` pipeline is unambiguously PowerShell. (See the previous section above)
+
+Everything else must fallback.
+
+Not enforcing this would lead to non-deterministic behavior from the LLM which is unacceptable.
 
 
 
@@ -7204,7 +7404,6 @@ This required a correction to the <code>retry_with_modified_command</code> block
 
 
 ##### LLM Contract Stress Tester — Linux PowerShell 7 Patch2‑Rev6 Pipeline Rewrite Tests (24 Cases)
-
 
 
 
