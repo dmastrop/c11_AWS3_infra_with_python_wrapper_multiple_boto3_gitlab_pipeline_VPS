@@ -78,6 +78,18 @@
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "dnf install -y some-nonexistent-package",
+      "stdout": "",
+      "stderr": "No match for argument: some-nonexistent-package\nError: Unable to find a match: some-nonexistent-package",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "rpm-osmut-001",
+      "ip": "10.0.5.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
     }
 
   ]

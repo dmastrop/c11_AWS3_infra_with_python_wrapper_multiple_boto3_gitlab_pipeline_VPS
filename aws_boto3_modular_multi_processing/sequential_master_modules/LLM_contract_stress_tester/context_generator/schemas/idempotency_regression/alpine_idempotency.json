@@ -78,7 +78,20 @@
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "apk add some-nonexistent-package",
+      "stdout": "",
+      "stderr": "ERROR: unable to select packages:\n  some-nonexistent-package (no such package)",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-osmut-001",
+      "ip": "10.0.10.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
     }
+    
 
   ]
 }

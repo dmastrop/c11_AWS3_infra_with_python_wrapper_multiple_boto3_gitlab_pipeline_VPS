@@ -78,7 +78,20 @@
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "brew install some-nonexistent-package",
+      "stdout": "",
+      "stderr": "Error: No available formula with the name \"some-nonexistent-package\"",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "brew-osmut-001",
+      "ip": "10.0.11.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
     }
+    
 
   ]
 }

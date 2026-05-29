@@ -78,7 +78,20 @@
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "Import-Module SomeMissingModule",
+      "stdout": "",
+      "stderr": "Import-Module : The specified module 'SomeMissingModule' was not loaded because no valid module file was found in any module directory.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "winps-osmut-001",
+      "ip": "10.0.12.201",
+      "tags": ["os-mutation-forbidden", "missing-module"],
+      "history": []
     }
+    
 
   ]
 }

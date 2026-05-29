@@ -78,7 +78,20 @@
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "dnf install -y docker",
+      "stdout": "",
+      "stderr": "No match for argument: docker\nError: Unable to find a match: docker",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "amzn2023-osmut-001",
+      "ip": "10.0.4.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
     }
+    
 
   ]
 }

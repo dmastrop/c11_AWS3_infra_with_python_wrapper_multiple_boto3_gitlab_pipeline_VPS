@@ -78,7 +78,20 @@
       "ip": "10.0.60.105",
       "tags": ["idempotency", "package-already-installed"],
       "history": []
+    },
+
+    {
+      "command": "Import-Module SomeMissingModule",
+      "stdout": "",
+      "stderr": "Import-Module: The specified module 'SomeMissingModule' was not loaded because no valid module file was found in any module directory.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pwsh-osmut-001",
+      "ip": "10.0.13.201",
+      "tags": ["os-mutation-forbidden", "missing-module"],
+      "history": []
     }
+    
 
   ]
 }

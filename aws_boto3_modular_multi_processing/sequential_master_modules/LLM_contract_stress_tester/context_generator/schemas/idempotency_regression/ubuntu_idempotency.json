@@ -78,7 +78,20 @@
           "exit_status": 0
         }
       ]
+    },
+
+    {
+      "command": "apt-get install -y some-nonexistent-package",
+      "stdout": "",
+      "stderr": "E: Unable to locate package some-nonexistent-package",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-001",
+      "ip": "10.0.8.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
     }
+    
 
   ]
 }

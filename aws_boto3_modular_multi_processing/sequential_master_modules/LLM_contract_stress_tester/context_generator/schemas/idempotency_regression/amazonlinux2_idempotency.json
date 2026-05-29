@@ -78,7 +78,20 @@
           "exit_status": 0
         }
       ]
+    },
+   
+    {
+      "command": "yum install -y redis",
+      "stdout": "",
+      "stderr": "No match for argument: redis\nError: Unable to find a match: redis",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "amzn2-osmut-001",
+      "ip": "10.0.3.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
     }
+
 
   ]
 }
