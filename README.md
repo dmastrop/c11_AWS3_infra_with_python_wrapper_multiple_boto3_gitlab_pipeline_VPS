@@ -9026,6 +9026,50 @@ Each file contains:
 - repeated file creation  
 - repeated service operations  
 
+**7. Non-idempotency vs Idempotency system-wide challenges (see the next section below)**
+- fallback scenaios
+- cleanup_and_retry scenarios
+
+
+
+##### System‑Wide Operations: Idempotency vs. Non‑Idempotency
+
+System‑wide operations (e.g., `update`, `upgrade`, metadata refresh, repo rebuild) require special handling because they can be triggered either by the **user** (allowed) or by the **LLM** (forbidden). The contract distinguishes between **idempotent** system‑wide outcomes and **non‑idempotent** system‑wide failures:
+
+Idempotent system‑wide outcomes → `cleanup_and_retry` 
+
+These occur when the user explicitly ran a system‑wide command and stderr/history indicates an idempotent state, such as:  
+- “already up to date”  
+- “nothing to do”  
+- “no packages marked for update”  
+- “already installed”  
+- repeated system‑wide operations in history  
+
+In these cases, the LLM must apply the global Idempotency rules and return a `cleanup_and_retry` plan.
+
+
+
+
+Non‑idempotent system‑wide operations initiated by the LLM → `fallback` 
+
+If a system‑wide operation appears only because the LLM attempted to fix something (e.g., inserting `apt-get update`, `yum update`, `dnf upgrade`, `brew update`, or any repo‑wide mutation), this is considered **LLM‑initiated OS mutation** and is strictly forbidden.  
+In these cases, the LLM must return **`fallback`**, not a rewrite.
+
+
+
+OS‑signaled deterministic remediation remains allowed
+
+If stderr explicitly identifies a deterministic, OS‑provided remediation path (e.g., Amazon Linux 2: “nginx is available in amazon-linux-extras”), the LLM may return a `cleanup_and_retry` sequence using that exact remediation. This is not considered mutation because the OS itself provides the instruction.
+
+This category ensures the contract cleanly separates:  
+- User‑initiated system‑wide idempotency (allowed → cleanup_and_retry)  
+- LLM‑initiated system‑wide mutation (forbidden → fallback)  
+- OS‑signaled deterministic remediation (allowed → cleanup_and_retry)
+
+
+This topic is discussed in further detail at the link below:
+- [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
+
 ---
 
 ##### LLM Expected Behavior
@@ -9090,6 +9134,29 @@ drwxrwxr-x 4 ubuntu ubuntu 4096 May 27 03:09 ..
 -rw-rw-r-- 1 ubuntu ubuntu 2163 May 27 03:19 ubuntu_idempotency.json
 -rw-rw-r-- 1 ubuntu ubuntu 2323 May 27 03:44 windows_powershell_idempotency.json
 ```
+
+##### An OS-Mutation Guard Rule
+
+During the specialized idempotency schema testing an issue was found with tests involving potential OS mutation commands. 
+There are times when OS mutation is permitted, namely if it has been initiated by the user (the command in the context that is
+presented to the LLM), and the stderr or history indicates that the command was tried previously and that this will be an 
+idempotent scenario.   Other situations require a fallback response from the LLM as noted in the block below, i.e. when the 
+remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS. 
+
+This topic is discussed in depth in a previous section at the link below: 
+
+- [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
+
+```
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+```
+
+
 
 ##### LLM Contract Stress Tester — Idempotency Schema Tests (55 Cases)
 
