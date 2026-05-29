@@ -1546,7 +1546,7 @@ WORK IN PROGRESS
 - [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
-- [LLM Contract Stress Tester — OS‑Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester--os-mutation-guard-rule-user-vs-llm-responsibilities)
+- [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
 - [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
 - [Why BusyBox is abort, but macOS‑zsh is fallback, even though both have no package manager](#why-busybox-is-abort-but-macos-zsh-is-fallback-even-though-both-have-no-package-manager)
 - [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
@@ -4773,8 +4773,7 @@ And it ensures AL2023 behaves consistently with all other Linux distributions in
 
 
 
-
-### LLM Contract Stress Tester — OS‑Mutation Guard Rule (User vs LLM Responsibilities)
+### LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)
 
 This section clarifies a subtle but critical distinction in the OS‑mutation policy:
 
