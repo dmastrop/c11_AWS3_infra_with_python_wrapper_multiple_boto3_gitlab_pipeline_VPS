@@ -4974,7 +4974,7 @@ Example response:
 ```
 
 
-Key distinction from Example 2:
+Key distinction:
 
 - Example 2 (forbidden): LLM guesses that extras might help → OS mutation → `fallback`.
 - Example 3 (allowed): OS explicitly says “available in amazon-linux-extras” → deterministic remediation → `cleanup_and_retry
@@ -4984,6 +4984,186 @@ The contract rules semantics instruct the LLM to handle cases of this degree of 
 
 
 ---
+
+#### Example 4 — CentOS 7 deterministic remediation: missing package with no prior update (allowed cleanup_and_retry)
+
+CentOS 7 schemas include realistic missing‑package errors where the OS expects a metadata refresh before the package can be resolved:
+
+```
+No package nginx available.
+```
+
+User command:
+
+```bash
+yum install -y nginx
+```
+
+If **no prior `yum update -y` exists in history**, the CentOS 7 schema defines a **deterministic remediation path**:
+
+- refresh metadata  
+- retry the install
+
+This is not a guess, is not speculative, and it is not explicit OS mutation.   
+This is **schema‑signaled deterministic remediation**, just like Amazon Linux 2 extras.
+
+Correct contract behavior:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "yum update -y"
+  ],
+  "retry": [
+    "yum install -y nginx"
+  ]
+}
+```
+
+This matches the CentOS 7 schema (i‑test‑702) and the historical test matrix.
+
+```
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "No package nginx available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-702",
+      "ip": "10.0.7.11",
+      "tags": [],
+      "history": []
+    },
+```
+
+The contract rule block that pertains to this is: 
+```
+                "- If 'yum install -y <pkg>' fails with wording similar to:\n"
+                "    * 'No package <pkg> available.'\n"
+                "  and there is NO prior 'yum update -y' in history,\n"
+                "  the LLM MUST use 'cleanup_and_retry' with:\n"
+                "    cleanup:\n"
+                "      - yum update -y\n"
+                "    retry:\n"
+                "      - yum install -y <pkg>\n"
+                "\n"
+```
+
+
+
+
+
+---
+
+
+#### Example 5 — CentOS 7 deterministic rewrite: wrong package manager (allowed retry_with_modified_command)
+
+CentOS 7 schemas include cases where the user runs a package‑manager command from the wrong OS family:
+
+```bash
+apt-get install -y nginx
+```
+
+or:
+
+```bash
+apt-get upgrade -y
+```
+
+
+In this case with CentOS7, the LLM is **not** introducing a new OS‑mutating operation.  
+
+It is simply rewriting the user’s intent into the correct CentOS 7 package manager (`yum`).
+
+Thus, an addtional rule needs to be added to the contract for CentOS7 because a System-wide command may be required:
+
+```
+               "- If the command uses a package manager that does NOT match CentOS 7 (apt, apt-get, dnf, apk),\n"
+                "  the LLM MUST rewrite the command using 'yum' and retry:\n"
+                "      yum install -y <pkg>   (for install commands)\n"
+                "      yum update -y          (for update/upgrade commands)\n"
+                "\n"
+```
+
+
+Correct contract behavior:
+
+```json
+{
+  "action": "retry_with_modified_command",
+  "modified_command": "yum install -y nginx"
+}
+```
+
+or for upgrade:
+
+```json
+{
+  "action": "retry_with_modified_command",
+  "modified_command": "yum update -y"
+}
+```
+
+This is **not** mutation.  
+This is a **deterministic rewrite** of the user’s intent.
+
+---
+
+#### Example 6 — CentOS 7 remediation already attempted (fallback)
+
+If the user already attempted the deterministic remediation (i.e., a prior `yum update -y` exists in history), and the package is still missing:
+
+Schema:
+
+```json
+{
+  "command": "yum install -y nginx",
+  "stderr": "No package nginx available.",
+  "history": [
+    { "command": "yum update -y", "exit_status": 0 }
+  ]
+}
+```
+
+Then:
+
+- remediation has already been attempted  
+- no deterministic fix remains  
+- the LLM must not mutate the OS  
+- the correct action is **fallback**
+
+Correct contract behavior:
+
+```json
+{"action": "fallback"}
+```
+
+This matches CentOS 7 schema i‑test‑701 and the historical test matrix.
+
+```
+{
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "No package nginx available.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-test-701",
+      "ip": "10.0.7.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "yum update -y",
+          "stdout": "Loaded plugins: fastestmirror\nDetermining fastest mirrors\n * base: mirror.centos.org",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+```
+
+
+
 
 #### How this interacts with idempotency
 
@@ -5048,7 +5228,31 @@ This preserves:
 - and deterministic, reproducible behavior in the stress tester.
 
 
+#### OS‑signaled deterministic remediation 
 
+Only two OS families require deterministic remediation logic:
+
+1. Amazon Linux 2
+2. CentOS 7
+
+This is because of the specific messages that they return in the context of the command being performed. For example, a 
+missing package is not always fallback, but rather can be remedidated with a cleanup_and_retry (Example 4 above) because of the 
+message returned by the OS. This is what permits a deterministic remediation path.
+
+Every other OS is much simpler:
+
+- Missing package → fallback
+- Wrong package manager → rewrite
+- No deterministic remediation
+
+This means the complexity is fully contained. Only Amazon Linux 2 and CentOS 7 require special-case deterministic remediation; all other OS families follow the standard contract rules without exceptions.
+
+
+
+
+
+This topic is discussed further in the link below:
+- [System‑Wide Operations: Idempotency vs. Non‑Idempotency and the OS‑Mutation Guard Rule Requirement](#system-wide-operations-idempotency-vs-non-idempotency-and-the-os-mutation-guard-rule-requirement)
 
 
 
