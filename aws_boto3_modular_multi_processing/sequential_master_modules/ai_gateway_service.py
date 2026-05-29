@@ -1090,6 +1090,13 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
@@ -1239,6 +1246,13 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"

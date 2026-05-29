@@ -4918,6 +4918,69 @@ Correct contract behavior:
 
 The LLM must not mutate the OS to “fix” missing packages, broken repos, or absent module streams. The user (or an external operator) must handle such OS‑level configuration changes outside the LLM contract.
 
+
+---
+
+
+
+#### Example 3 — OS‑signaled amazon‑linux‑extras remediation (allowed cleanup_and_retry)
+
+Amazon Linux 2 schema includes realistic errors where the OS explicitly tells you a package is only available via `amazon-linux-extras`:
+
+```text
+nginx is available in amazon-linux-extras
+Error: Unable to find a match: nginx
+```
+
+User command:
+
+```bash
+yum install -y nginx
+```
+
+In this case, stderr **explicitly** states that `nginx` is available in `amazon-linux-extras`.  
+The LLM is **not guessing**; it is following a deterministic, OS‑provided remediation path.
+
+A naive “mutation‑guard only” interpretation might incorrectly say:
+
+```json
+{"action": "fallback"}
+```
+
+on the grounds that “extras” is involved.
+
+This is **too strict** and would break real Amazon Linux 2 behavior.
+
+Correct contract behavior:
+
+- Recognize that stderr explicitly says the package is available in `amazon-linux-extras`.
+- Treat this as a **deterministic, OS‑signaled remediation**, not LLM‑initiated guessing.
+- Return a `cleanup_and_retry` plan that:
+  - enables/install the package via `amazon-linux-extras` for the specific `<pkg>`
+  - then retries the `yum install` for the same `<pkg>`.
+
+Example response:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "amazon-linux-extras install nginx -y"
+  ],
+  "retry": [
+    "yum install -y nginx"
+  ]
+}
+
+Key distinction from Example 2:
+
+- Example 2 (forbidden): LLM guesses that extras might help → OS mutation → `fallback`.
+- Example 3 (allowed): OS explicitly says “available in amazon-linux-extras” → deterministic remediation → `cleanup_and_retry
+
+The contract rules semantics instruct the LLM to handle cases of this degree of granularity.
+
+
+
 ---
 
 #### How this interacts with idempotency
