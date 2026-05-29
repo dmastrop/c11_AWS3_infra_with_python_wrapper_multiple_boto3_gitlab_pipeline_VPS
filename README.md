@@ -8779,7 +8779,22 @@ This is the frontier of LLM contract engineering.
 
 ### Continued Testing: Idempotency Regression Testing
 
-#### Introduction
+
+
+
+#### Table of Contents — Continued Testing: Idempotency Regression Testing
+<a name="top-continued-testing-idempotency-regression-testing"></a>
+
+- [Introduction to idempotency regression testing](#introduction-to-idempotency-regression-testing)
+- [Global contract rule for idempotency: Revision5](#global-contract-rule-for-idempotency-revision5)
+- [Idempotency Schema Test Case Design (Regression Test Suite of 66 Test cases across 11 OSes)](#idempotency-schema-test-case-design-regression-test-suite-of-66-test-cases-across-11-oses)
+- [System‑Wide Operations: Idempotency vs. Non‑Idempotency and the OS‑Mutation Guard Rule Requirement](#system-wide-operations-idempotency-vs-non-idempotency-and-the-os-mutation-guard-rule-requirement)
+- [Extended Schema Test Cases for Idempotency Regression](#extended-schema-test-cases-for-idempotency-regression)
+
+
+
+
+#### Introduction to idempotency regression testing
 
 As noted earlier:
 
@@ -8831,6 +8846,12 @@ The LLM must also detect idempotency even when stderr does not explicitly say so
 
 These implicit cases must also produce `cleanup_and_retry`.
 
+---
+
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
+
+
+
 
 #### Global contract rule for idempotency: Revision5
 
@@ -8862,14 +8883,25 @@ Here is the updated contract rule block for idempotency (this can be found in ai
 "- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
 "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
 ```
+---
 
-#### Idempotency Schema Test Case Design (Regression Test Suite of 55 Test cases across 11 OSes)
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
+
+
+
+#### Idempotency Schema Test Case Design (Regression Test Suite of 66 Test cases across 11 OSes)
 
 
 
 ##### Overview
 
 This section documents the **Idempotency Regression Suite**, a cross‑platform validation harness designed to ensure that the contract engine correctly identifies and handles **idempotent execution states** across **11 operating systems** and **55 curated test cases**.
+
+There is also 1 addtional test case per OS for a negative test case for NON-idempotency system-wide operations command test. (These 
+types of test cases are discussed in a section below). 
+
+So a total of 66 test cases.
+
 
 Idempotency is a core requirement of the contract model:
 
@@ -8895,7 +8927,6 @@ Each OS includes **exactly 5 idempotency scenarios**, covering:
 - “Nothing to do” / “Already up‑to‑date”  
 - History‑based idempotency  
 
-Not all OSes support all categories, so synthetic cases were added where necessary to ensure uniform coverage.
 
 ---
 
@@ -8948,21 +8979,24 @@ The suite validates that the contract engine:
 
 ##### Cross‑OS Coverage Summary
 
-| OS | Package Manager | Shell | Idempotency Cases | Notes |
-|----|-----------------|--------|-------------------|-------|
-| Ubuntu 22.04 | apt/apt‑get | bash | 5 | Synthetic (no real idempotency in source schema) |
-| Debian 11 | apt/apt‑get | bash | 5 | Synthetic |
-| CentOS 7 | yum | bash | 5 | 3 real + 2 synthetic |
-| CentOS 8 | dnf/yum | bash | 5 | 3 real + 2 synthetic |
-| Amazon Linux 2 | yum | bash | 5 | 3 real + 2 synthetic |
-| Amazon Linux 2023 | dnf | bash | 5 | 3 real + 2 synthetic |
-| Fedora 39 | dnf | bash | 5 | 3 real + 2 synthetic |
-| Alpine 3.18 | apk | sh | 5 | Fully synthetic |
-| macOS 14 | brew | zsh | 5 | 1 real + 4 synthetic |
-| Windows Server 2022 | winget | PowerShell | 5 | Fully synthetic |
-| Linux PowerShell | none | PowerShell Core | 5 | Fully synthetic |
+| **OS** | **Package Manager** | **Shell** | **Idempotency Cases** | **Non‑Idempotency Cases** | **Notes** |
+|-------|----------------------|-----------|------------------------|----------------------------|-----------|
+| **Ubuntu 22.04** | apt/apt‑get | bash | 5 | 1 | Fully new (no original idempotency in source schema) |
+| **Debian 11** | apt/apt‑get | bash | 5 | 1 | Fully new |
+| **CentOS 7** | yum | bash | 5 | 1 | 3 original + 2 new |
+| **CentOS 8** | dnf/yum | bash | 5 | 1 | 3 original + 2 new |
+| **Amazon Linux 2** | yum | bash | 5 | 1 | 3 original + 2 new |
+| **Amazon Linux 2023** | dnf | bash | 5 | 1 | 3 original + 2 new |
+| **Fedora 39** | dnf | bash | 5 | 1 | 3 original + 2 new |
+| **Alpine 3.18** | apk | sh | 5 | 1 | Fully new |
+| **macOS 14** | brew | zsh | 5 | 1 | 1 original + 4 new |
+| **Windows Server 2022** | winget | PowerShell | 5 | 1 | Fully new |
+| **Linux PowerShell** | none | PowerShell Core | 5 | 1 | Fully new |
 
-Total: **55 idempotency test cases**
+Total Test Cases
+- 55 idempotency cases 
+- 11 non‑idempotency system‑wide fallback cases  
+- 66 total  
 
 ---
 
@@ -8992,8 +9026,11 @@ Each file contains:
 - correct exit codes  
 - history entries where applicable  
 - tags for classification  
+- 1 nonidempotency context with system-wide op command for fallback
 
 ---
+
+
 
 ##### Idempotency Categories Covered
 
@@ -9028,15 +9065,144 @@ Each file contains:
 - repeated file creation  
 - repeated service operations  
 
-**7. Non-idempotency vs Idempotency system-wide challenges (see the next section below)**
+**7. Non-idempotency vs Idempotency system-wide challenges (see the next section below:System-Wide Operations: Idempotency vs. Non-Idempotency)**
 - fallback scenaios
 - cleanup_and_retry scenarios
 
+---
 
 
-##### System‑Wide Operations: Idempotency vs. Non‑Idempotency
+##### LLM Expected Behavior
+
+For **every** idempotency case:
+
+The LLM must return:
+
+```
+{
+  "action": "cleanup_and_retry",
+}
+```
+
+The LLM must NOT:
+
+- attempt remediation  
+- rewrite the command  
+- invoke a package manager  
+- attempt to fix anything  
+- escalate privileges  
+- propose destructive actions  
+
+This suite ensures the contract engine is **safe**, **predictable**, and **idempotency‑aware** across all supported platforms.
+
+
+---
+
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
+
+
+
+
+
+
+
+#### System‑Wide Operations: Idempotency vs. Non‑Idempotency and the OS-Mutation Guard Rule Requirement
+
+During the start of the Idempotency regression testing, it was discovered that certain idempotency test cases that involved
+OS mutating commands (System-Wide operations like PM upgrade or upddate) were causing the LLM to respond with fallback rather than 
+the desired cleanup_and_retry. 
+
+It is important to note in the context of idempotency, the cleanup_and_retry is not technically a 
+remediation, but rather a retry of a command that has already been executed. These scenarios are very unique in the world of command 
+remediation and the LLM has to be aware of such nuances through proper and concise LLM contract rule design.
+
+Fallback is technically remediation, whereas cleanup_and_retry in the context of an idempotency setting, is NOT remediation. 
+
+This aligns to how the LLM should always respond in idempotent scenaraios: not with remediation, where the retry command may
+be changed to address the issue, but rather with a retry command that is ALWAYS the same command. 
+
+As such, even a command that does a PM update or upgrade, that is considered an OS mutation system-wide operation, will be 
+properly addressed with a cleanup_and_retry response from the LLM in the case of idempotency. The command is mutating the OS
+but it was initiated by the user and NOT the LLM. In all other circumstances these types of commands are always fallback. 
+
+To guard against a fallback for system-side operations in the setting of idempotency, an OS guard has to be patched into the contract
+for all 11 OSes to prevent unconditional fallback, in this specific case. Yet for all other cases a fallback must be used. 
+
+The OS mutation guard code itself is simple: 
+
+```
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+```
+
+The placement of the guard has to be very strategic, inside the patch2 across all 11 OSes that have the patch2. It has to be placed 
+at the location shown below, right after the system-wide declarations, so that the LLM can be aware of the special treatment required 
+in the case of idempotency. 
+
+Otherwise, the LLM unconditionally does a fallback for all system-wide operations regardless of whether 
+or not idempotency is involved. This is because of the rule that preceeds the insertion point below.
+
+NOTE: Even though there is a GLOBAL idempotency rule block at the very top of the contract (see earlier section)
+which should override later rules that conflict, if the rule that follows is more specific (as in this case in patch2), that can 
+probabilistically override the the earlier GLOBAL rule. And that is what happens without the OS mutation guard. 
+
+LLM contract rules design often involves trial and error as the LLM is inherently probabilistic and we are making it fully 
+deterministic through a concise rule design.
+
+See below for the insertion point of the OS muation guard inside patch2:
+
+
+```
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, or\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+
+                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"  <<< MORE SPECIFIC SYSTEM-WIDE RULE
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
+                "\n"
+
+                # Idempotency regression patch — OS-Mutation Guard Rule   <<<<< INSERTION POINT IS HERE
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+```
+
 
 System‑wide operations (e.g., `update`, `upgrade`, metadata refresh, repo rebuild) require special handling because they can be triggered either by the **user** (allowed) or by the **LLM** (forbidden). The contract distinguishes between **idempotent** system‑wide outcomes and **non‑idempotent** system‑wide failures:
+
+Who it is that is initiating the command is the critical key. 
+
+
 
 Idempotent system‑wide outcomes → `cleanup_and_retry` 
 
@@ -9063,41 +9229,19 @@ OS‑signaled deterministic remediation remains allowed
 
 If stderr explicitly identifies a deterministic, OS‑provided remediation path (e.g., Amazon Linux 2: “nginx is available in amazon-linux-extras”), the LLM may return a `cleanup_and_retry` sequence using that exact remediation. This is not considered mutation because the OS itself provides the instruction.
 
+
 This category ensures the contract cleanly separates:  
 - User‑initiated system‑wide idempotency (allowed → cleanup_and_retry)  
 - LLM‑initiated system‑wide mutation (forbidden → fallback)  
 - OS‑signaled deterministic remediation (allowed → cleanup_and_retry)
 
 
-This topic is discussed in further detail at the link below:
+This topic is discussed in further detail in an earlier section (with Examples)  at the link below:
 - [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
 
 ---
 
-##### LLM Expected Behavior
-
-For **every** idempotency case:
-
-The LLM must return:
-
-```
-{
-  "action": "cleanup_and_retry",
-}
-```
-
-The LLM must NOT:
-
-- attempt remediation  
-- rewrite the command  
-- invoke a package manager  
-- attempt to fix anything  
-- escalate privileges  
-- propose destructive actions  
-
-This suite ensures the contract engine is **safe**, **predictable**, and **idempotency‑aware** across all supported platforms.
-
-
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
 
 
 
@@ -9112,7 +9256,8 @@ do not have PMs or idempotency related issues associated with them: BusyBox, mac
 See the previous section for more information on the schema test case design.
 
 Each of these 11 OSes has a dedicated and specialized 5 test cases to test idempotency for that OS and this will ensure that
-the contract domain primitves blocks for each of the OSes are aligned with the globacl contract rule for idempotency above. 
+the contract domain primitves blocks for each of the OSes are aligned with the global contract rule for idempotency above. 
+
 Namely cleanup_and_retry should ALWAYS be the action plan response from the LLM. The context based test cases test both
 history field signals and stderr field signals to instigate the idempotency treatment by the LLM.
 
@@ -9137,7 +9282,10 @@ drwxrwxr-x 4 ubuntu ubuntu 4096 May 27 03:09 ..
 -rw-rw-r-- 1 ubuntu ubuntu 2323 May 27 03:44 windows_powershell_idempotency.json
 ```
 
-##### An OS-Mutation Guard Rule
+##### An OS-Mutation Guard Rule Summary
+
+
+As noted earlier:
 
 During the specialized idempotency schema testing an issue was found with tests involving potential OS mutation commands. 
 There are times when OS mutation is permitted, namely if it has been initiated by the user (the command in the context that is
@@ -9160,13 +9308,14 @@ This topic is discussed in depth in a previous section at the link below:
 
 
 
-##### LLM Contract Stress Tester — Idempotency Schema Tests (55 Cases)
+##### LLM Contract Stress Tester — Idempotency Schema Tests (66 Cases)
 
 
 
+---
 
 
-
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
 
 
 ---
