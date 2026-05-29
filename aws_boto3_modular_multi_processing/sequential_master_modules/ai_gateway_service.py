@@ -1557,12 +1557,15 @@ def recover(request: RecoveryRequest):
                 "  and a prior 'yum update -y' exists in history,\n"
                 "  remediation has already been attempted. The LLM MAY use 'fallback'.\n"
                 "\n"
+                # patch this to use cleanup_and_retry and not retry_with_modified_command
                 "- If 'yum install -y <pkg>' fails with wording similar to:\n"
                 "    * 'No package <pkg> available.'\n"
                 "  and there is NO prior 'yum update -y' in history,\n"
-                "  the LLM MUST use 'retry_with_modified_command' with:\n"
-                "      yum update -y\n"
-                "      yum install -y <pkg>\n"
+                "  the LLM MUST use 'cleanup_and_retry' with:\n"
+                "    cleanup:\n"
+                "      - yum update -y\n"
+                "    retry:\n"
+                "      - yum install -y <pkg>\n"
                 "\n"
 
                 "- If the command uses a package manager that does NOT match CentOS 7 (apt, apt-get, dnf, apk),\n"
@@ -1595,6 +1598,13 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
