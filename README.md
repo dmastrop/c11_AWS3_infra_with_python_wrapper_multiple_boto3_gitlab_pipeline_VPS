@@ -9104,9 +9104,7 @@ This suite ensures the contract engine is **safe**, **predictable**, and **idemp
 
 
 
-
-
-#### System‑Wide Operations: Idempotency vs. Non‑Idempotency and the OS-Mutation Guard Rule Requirement
+#### System-Wide Operations: Idempotency vs. Non-Idempotency and the OS-Mutation Guard Rule Requirement
 
 During the start of the Idempotency regression testing, it was discovered that certain idempotency test cases that involved
 OS mutating commands (System-Wide operations like PM upgrade or upddate) were causing the LLM to respond with fallback rather than 
