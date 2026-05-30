@@ -9399,14 +9399,20 @@ See below for the insertion point of the OS muation guard inside patch2:
 
 ```
 
+##### Three different types of system-wide scenarios
 
-System‑wide operations (e.g., `update`, `upgrade`, metadata refresh, repo rebuild) require special handling because they can be triggered either by the **user** (allowed) or by the **LLM** (forbidden). The contract distinguishes between **idempotent** system‑wide outcomes and **non‑idempotent** system‑wide failures:
+System‑wide operations (e.g., `update`, `upgrade`, metadata refresh, repo rebuild) require special handling because they can be triggered either by the **user** (allowed) or by the **LLM** (forbidden). 
 
-Who it is that is initiating the command is the critical key. 
+Who it is that is initiating the system-wide command or remediation is THE critical key. 
+
+Is it the user, the LLM or the OS itsef?
+
+The contract distinguishes between **idempotent** system‑wide outcomes and **non‑idempotent** system‑wide failures:
 
 
 
-Idempotent system‑wide outcomes → `cleanup_and_retry` 
+
+###### 1.Idempotent system‑wide outcomes → `cleanup_and_retry` 
 
 These occur when the user explicitly ran a system‑wide command and stderr/history indicates an idempotent state, such as:  
 - “already up to date”  
@@ -9420,25 +9426,33 @@ In these cases, the LLM must apply the global Idempotency rules and return a `cl
 
 
 
-Non‑idempotent system‑wide operations initiated by the LLM → `fallback` 
+###### 2.Non‑idempotent system‑wide operations initiated by the LLM → `fallback` 
 
 If a system‑wide operation appears only because the LLM attempted to fix something (e.g., inserting `apt-get update`, `yum update`, `dnf upgrade`, `brew update`, or any repo‑wide mutation), this is considered **LLM‑initiated OS mutation** and is strictly forbidden.  
 In these cases, the LLM must return **`fallback`**, not a rewrite.
 
 
 
-OS‑signaled deterministic remediation remains allowed
+###### 3.OS‑signaled deterministic remediation remains allowed
 
 If stderr explicitly identifies a deterministic, OS‑provided remediation path (e.g., Amazon Linux 2: “nginx is available in amazon-linux-extras”), the LLM may return a `cleanup_and_retry` sequence using that exact remediation. This is not considered mutation because the OS itself provides the instruction.
 
+CentOS 7 also encounters OS-signaled deterministic remediation scenarios. All of the other OSes do not encounter this. 
 
-This category ensures the contract cleanly separates:  
+---
+
+
+In this respect, the contract cleanly separates:  
+
 - User‑initiated system‑wide idempotency (allowed → cleanup_and_retry)  
+
 - LLM‑initiated system‑wide mutation (forbidden → fallback)  
+
 - OS‑signaled deterministic remediation (allowed → cleanup_and_retry)
 
 
-This topic is discussed in further detail in an earlier section (with Examples)  at the link below:
+This topic is discussed in further detail in an earlier section (with Examples):
+
 - [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
 
 ---
