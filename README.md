@@ -1546,7 +1546,7 @@ WORK IN PROGRESS
 - [Dual-Schema Testing for Linux (Why It Exists and How It Works)](#dual-schema-testing-for-linux-why-it-exists-and-how-it-works)
 - [Why the LLM Must Never Autocorrect Bash Commands and Introduction to the OS Mutation Policy](#why-the-llm-must-never-autocorrect-bash-commands-and-introduction-to-the-os-mutation-policy)
 - [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
-- [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
 - [Fallback vs. Abort in the Contract Architecture Relative to OS](#fallback-vs-abort-in-the-contract-architecture-relative-to-os)
 - [Why BusyBox is abort, but macOS‑zsh is fallback, even though both have no package manager](#why-busybox-is-abort-but-macos-zsh-is-fallback-even-though-both-have-no-package-manager)
 - [LLM stress tested Contract rules: Code Location, Contract Structure, Contract Structural Map](#llm-stress-tested-contract-rules-code-location-contract-structure-contract-structural-map)
@@ -4771,18 +4771,23 @@ And it ensures AL2023 behaves consistently with all other Linux distributions in
 
 
 
+### LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics 
 
 
-### LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)
+#### Introduction to OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics
 
 This section clarifies a subtle but critical distinction in the OS‑mutation policy:
 
 > **The LLM must never mutate the OS.  
 > The user is allowed to mutate the OS.**
 
-The existing OS‑mutation policy and Amazon Linux behavior sections describe *what* kinds of operations are forbidden (enabling extras, enabling DNF modules, fixing missing dependencies by changing repos, etc.). This section defines *who* is constrained by that policy and how the contract engine must enforce it.
+The existing OS‑mutation policy and Amazon Linux behavior sections presented earlier  describe *what* kinds of operations are 
+forbidden (enabling extras, enabling DNF modules, fixing missing dependencies by changing repos, etc.). 
 
-This section also discusses the same in terms of CentOS7 as well.
+This section defines *who* is constrained by that policy and how the contract engine must enforce it.
+
+This section also discusses the same in terms of CentOS7 as well, specifically in terms of deterministic remediation and rewrite
+semantics.
 
 This section also touches upon idempotency and system-wide operations, and non-idempotent situations with system-wide operations. 
 
@@ -5411,7 +5416,7 @@ This means the complexity is fully contained. Only Amazon Linux 2 and CentOS 7 r
 
 
 
-
+---
 
 This topic is discussed further in the link below, in the Idempotency testing section:
 
