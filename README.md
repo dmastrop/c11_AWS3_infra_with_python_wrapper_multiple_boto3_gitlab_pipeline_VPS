@@ -9621,7 +9621,7 @@ In this respect, the contract cleanly separates:
 
 This topic is discussed in further detail in an earlier section (with Examples):
 
-- [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
 
 ---
 
@@ -9679,7 +9679,8 @@ remediation response requires an LLM-generated command(s) that are system-wide a
 
 This topic is discussed in depth in a previous section at the link below: 
 
-- [LLM Contract Stress Tester - OS Mutation Guard Rule (User vs LLM Responsibilities)](#llm-contract-stress-tester---os-mutation-guard-rule-user-vs-llm-responsibilities)
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
+
 
 ```
                 # Idempotency regression patch — OS-Mutation Guard Rule
