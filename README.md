@@ -5223,8 +5223,109 @@ This matches CentOS 7 schema i‑test‑701 and the historical test matrix.
     },
 ```
 
+#### Why CentOS 7 Requires Explicit Rewrite Rules (and Other OSes Don’t)
 
+CentOS 7 is one of only two OS families (along with Amazon Linux 2) that require explicit, OS‑specific rewrite and remediation rules in the contract. This is not due to LLM limitations, but because **CentOS 7’s stderr patterns are uniquely ambiguous** and cannot be reliably interpreted by Patch2 alone.
 
+CentOS 7 differs from all other OS families in three important ways:
+
+---
+
+##### 1. Ambiguous stderr for wrong‑package‑manager commands
+
+On most OSes, wrong‑PM commands produce clear, unambiguous errors:
+
+- Ubuntu/Debian: `yum: command not found`  
+- RHEL/CentOS 8/Fedora: `bash: apt-get: command not found`  
+- Alpine: `apk: command not found`  
+
+Patch2 can safely infer rewrite.
+
+But on **CentOS 7**, stderr is inconsistent:
+
+- `apt-get` → `command not found` (clean)  
+- `apk` → `command not found` (clean)  
+- **`dnf` → repo errors, metadata errors, Python binding errors, or partial failures**  
+
+CentOS 7 may emit errors that *look like real package‑manager failures*, not wrong‑PM failures.
+
+Because of this:
+
+> Patch2 cannot safely infer “wrong PM → rewrite” on CentOS 7.
+
+Explicit rewrite rules are required.
+
+---
+
+##### 2. CentOS 7 has a unique “missing package → update → install” remediation path
+
+No other OS family encodes this behavior.
+
+CentOS 7 schemas explicitly model:
+
+```
+If missing package AND no prior update:
+    yum update -y
+    yum install -y <pkg>
+```
+
+This is:
+
+- not speculative  
+- not LLM‑invented  
+- not mutation  
+- **OS‑signaled deterministic remediation**  
+
+Patch2 cannot infer this automatically, so explicit rules are required.
+
+---
+
+##### 3. Wrong‑PM and missing‑package errors can produce identical stderr
+
+On CentOS 7, the message:
+
+```
+No package <pkg> available.
+```
+
+can mean:
+
+- wrong package manager  
+- stale metadata  
+- missing package  
+- repo misconfiguration  
+- partial OS state  
+
+No other OS collapses these unrelated failure modes into the same stderr string.
+
+Because of this:
+
+> Patch2 cannot reliably distinguish rewrite vs remediation vs fallback.
+
+Explicit rules are required to disambiguate these cases.
+
+---
+
+##### Putting it all together
+
+CentOS 7 is the only OS where:
+
+| Behavior | Unique to CentOS 7? | Why it matters |
+|---------|----------------------|----------------|
+| Wrong PM stderr is ambiguous | ✔️ | Patch2 cannot infer rewrite |
+| Missing‑package remediation exists | ✔️ | Requires cleanup_and_retry |
+| Wrong‑PM and missing‑package share stderr | ✔️ | Must disambiguate explicitly |
+| dnf may exist but be broken | ✔️ | Cannot rely on “command not found” |
+| Metadata refresh is schema‑signaled | ✔️ | Must implement two‑step remediation |
+
+Therefore:
+
+> **CentOS 7 must have explicit rewrite rules, explicit remediation rules, and explicit fallback rules.  
+> Other OS families do not require this.**
+
+This is why CentOS 7 joins Amazon Linux 2 as the only OS families with OS‑signaled deterministic remediation.
+
+---
 
 #### How this interacts with idempotency
 
