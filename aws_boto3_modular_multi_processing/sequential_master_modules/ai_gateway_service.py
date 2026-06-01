@@ -1651,7 +1651,7 @@ def recover(request: RecoveryRequest):
                 "- If 'yum update -y' or 'yum upgrade -y' completes successfully with stderr:\n"
                 "    * 'Nothing to do.'\n"
                 "    * 'No packages marked for update.'\n"
-                "  the LLM MUST use 'fallback'.\n"
+                "  the LLM MUST use 'cleanup_and_retry' in accordance with the global Idempotency rules.\n"
                 "\n"
 
                 "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'\n"
