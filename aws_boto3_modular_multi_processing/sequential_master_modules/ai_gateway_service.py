@@ -1724,22 +1724,15 @@ def recover(request: RecoveryRequest):
                 "- The command 'dnf makecache' rebuilds the DNF metadata cache.\n"
                 "\n"
 
-                "- If 'dnf install -y <pkg>' fails with:\n"
-                "    * 'No match for argument: <pkg>'\n"
-                "    * 'Unable to find a match: <pkg>'\n"
-                "  and a prior 'dnf update -y' exists in history,\n"
-                "  remediation has already been attempted. The LLM MAY use 'fallback'.\n"
-                "\n"
+                # CentOS8, unlike Amazon linux2 and CentOS7, does NOT support deterministic remediation. It has to fallback here. 
+                # CentOS8 cannot fix or recover this situation.
                 "- If 'dnf install -y <pkg>' fails with wording similar to:\n"
                 "    * 'No match for argument: <pkg>'\n"
                 "    * 'Unable to find a match: <pkg>'\n"
-                "  and there is NO prior 'dnf update -y' in history,\n"
-                "  the LLM MUST use 'retry_with_modified_command' with:\n"
-                "      dnf update -y\n"
-                "      dnf install -y <pkg>\n"
+                "  the LLM MUST use 'fallback'.\n"
                 "\n"
 
-                "- If 'yum install -y <pkg>' is used on CentOS 8, the LLLM MAY normalize it to:\n"
+                "- If 'yum install -y <pkg>' is used on CentOS 8, the LLM MAY normalize it to:\n"
                 "      dnf install -y <pkg>\n"
                 "  and retry.\n"
                 "\n"
@@ -1777,6 +1770,14 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
+                
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
@@ -1815,10 +1816,11 @@ def recover(request: RecoveryRequest):
                 "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
                 "\n"
 
+                # Idempotency always uses cleanup_and_retry and NOT fallback. 
                 "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with stderr:\n"
                 "    * 'Nothing to do.'\n"
                 "    * 'No packages marked for upgrade.'\n"
-                "  the LLM MUST use 'fallback'.\n"
+                "  the LLM MUST use 'cleanup_and_retry' in accordance with the global Idempotency rules.\n"
                 "\n"
 
                 "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'\n"
