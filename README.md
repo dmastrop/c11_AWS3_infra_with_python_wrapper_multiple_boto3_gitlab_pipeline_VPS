@@ -5026,7 +5026,11 @@ system‑wide mutations during Patch2 rewrite logic.
 
 
 
+
+
+
 #### Example 1 - User-initiated OS mutation with idempotency allowed
+<a name="example-1-user-initiated-os-mutation-with-idempotency-allowed"></a>
 
 Schema context (CentOS 7 idempotency case):
 
@@ -5069,9 +5073,8 @@ The LLM is not introducing a new OS‑mutating command; it is simply acknowledgi
 
 
 
-
-
 #### Example 2 - LLM-initiated OS mutation to fix missing packages forbidden
+<a name="example-2-llm-initiated-os-mutation-to-fix-missing-packages-forbidden"></a>
 
 Amazon Linux 2 schema often includes realistic missing‑package errors:
 
@@ -5122,7 +5125,12 @@ The LLM must not mutate the OS to “fix” missing packages, broken repos, or a
 [Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
 
 
+
+
+
+
 #### Example 3 - OS-signaled amazon-linux-extras remediation allowed cleanup_and_retry
+<a name="example-3-os-signaled-amazon-linux-extras-remediation-allowed-cleanup_and_retry"></a>
 
 Amazon Linux 2 schema includes realistic errors where the OS explicitly tells you a package is only available via `amazon-linux-extras`:
 
