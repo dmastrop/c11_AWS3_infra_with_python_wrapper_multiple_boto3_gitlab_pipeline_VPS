@@ -4910,6 +4910,86 @@ This guard is what allows idempotency tests for `yum update`, `dnf upgrade`, `ap
 
 ---
 
+
+
+
+#### OS Exceptions That Do Not Require the OS‑Mutation Guard
+
+There are three OS environments in the contract that do NOT require the OS‑Mutation Guard.
+All three share the same fundamental property:
+
+**They have no package‑manager semantics and no system‑wide package‑manager operations.**
+
+Because the OS‑Mutation Guard exists solely to prevent *LLM‑generated* system‑wide
+package‑manager mutations (e.g., `apt-get update`, `yum update`, `dnf upgrade`),
+these three OSes are structurally incapable of triggering such mutations.
+
+Therefore, the OS‑Mutation Guard MUST NOT be applied to:
+
+---
+
+##### 1. Windows PowerShell (Windows Server 2022)
+
+- Windows PowerShell uses **winget**, but winget semantics are isolated and do NOT
+  participate in Patch2 rewrite logic.
+- The OS block does NOT define any system‑wide package‑manager operations.
+- Windows PowerShell does NOT support CentOS7/AmazonLinux2‑style deterministic remediation.
+- `cleanup_and_retry` is limited to single‑step, stderr‑suggested remediations only.
+- No multi‑step cleanup, no repo repair, no PM updates.
+
+In short:  
+Windows PowerShell has no cross‑OS PM semantics → **no OS‑Mutation Guard**.
+
+---
+
+##### 2. Linux PowerShell Core (pwsh on Linux)
+
+- PowerShell Core on Linux has **NO package‑manager semantics**.
+- It MUST NOT assume the presence of `apt`, `apt-get`, `yum`, `dnf`, `apk`, `pacman`,
+  `zypper`, `brew`, or `snap`.
+- ANY use of a package manager MUST trigger **fallback** — no rewrites, no cleanup,
+  no mutation.
+- PowerShell Core on Linux does NOT support deterministic remediation.
+- `cleanup_and_retry` is allowed ONLY for literal, single‑step, stderr‑suggested fixes.
+
+In short:  
+Linux PowerShell Core is a PM‑less environment → **no OS‑Mutation Guard**.
+
+---
+
+##### 3. BusyBox (ash)
+
+- BusyBox has **NO package manager** and NO system‑wide PM operations.
+- ANY package‑manager reference MUST trigger abort.
+- BusyBox NEVER performs deterministic remediation.
+- BusyBox idempotency is limited to filesystem/app‑level conditions only.
+- BusyBox does NOT require the 6‑case idempotency regression schema.
+
+In short:
+BusyBox is a PM‑less environment → **no OS‑Mutation Guard, no PM idempotency tests**.
+
+---
+
+##### Summary
+
+These three OS environments:
+
+- Windows PowerShell  
+- Linux PowerShell Core  
+- BusyBox
+
+are explicit exceptions to the OS‑Mutation Guard because they cannot generate,
+rewrite, or participate in system‑wide package‑manager operations.
+
+For all other OSes (Ubuntu, Debian, CentOS7/8, RHEL, Amazon Linux 2/2023, Fedora,
+Alpine, macOS Brew), the OS‑Mutation Guard is REQUIRED to prevent LLM‑initiated
+system‑wide mutations during Patch2 rewrite logic.
+
+
+---
+
+
+
 #### Example 1 — User‑initiated OS mutation with idempotency (allowed)
 
 Schema context (CentOS 7 idempotency case):
@@ -9714,6 +9794,82 @@ This topic is discussed in depth in a previous section at the link below:
                 "  global Idempotency rules determine the correct action.\n"
                 "\n"
 ```
+
+
+##### OS Exceptions That Do Not Require the OS‑Mutation Guard
+
+There are three OS environments in the contract that do NOT require the OS‑Mutation Guard.
+All three share the same fundamental property:
+
+**They have no package‑manager semantics and no system‑wide package‑manager operations.**
+
+Because the OS‑Mutation Guard exists solely to prevent *LLM‑generated* system‑wide
+package‑manager mutations (e.g., `apt-get update`, `yum update`, `dnf upgrade`),
+these three OSes are structurally incapable of triggering such mutations.
+
+Therefore, the OS‑Mutation Guard MUST NOT be applied to:
+
+---
+
+###### 1. Windows PowerShell (Windows Server 2022)
+
+- Windows PowerShell uses **winget**, but winget semantics are isolated and do NOT
+  participate in Patch2 rewrite logic.
+- The OS block does NOT define any system‑wide package‑manager operations.
+- Windows PowerShell does NOT support CentOS7/AmazonLinux2‑style deterministic remediation.
+- `cleanup_and_retry` is limited to single‑step, stderr‑suggested remediations only.
+- No multi‑step cleanup, no repo repair, no PM updates.
+
+In short:  
+Windows PowerShell has no cross‑OS PM semantics → **no OS‑Mutation Guard**.
+
+---
+
+###### 2. Linux PowerShell Core (pwsh on Linux)
+
+- PowerShell Core on Linux has **NO package‑manager semantics**.
+- It MUST NOT assume the presence of `apt`, `apt-get`, `yum`, `dnf`, `apk`, `pacman`,
+  `zypper`, `brew`, or `snap`.
+- ANY use of a package manager MUST trigger **fallback** — no rewrites, no cleanup,
+  no mutation.
+- PowerShell Core on Linux does NOT support deterministic remediation.
+- `cleanup_and_retry` is allowed ONLY for literal, single‑step, stderr‑suggested fixes.
+
+In short:  
+Linux PowerShell Core is a PM‑less environment → **no OS‑Mutation Guard**.
+
+---
+
+###### 3. BusyBox (ash)
+
+- BusyBox has **NO package manager** and NO system‑wide PM operations.
+- ANY package‑manager reference MUST trigger abort.
+- BusyBox NEVER performs deterministic remediation.
+- BusyBox idempotency is limited to filesystem/app‑level conditions only.
+- BusyBox does NOT require the 6‑case idempotency regression schema.
+
+In short:
+BusyBox is a PM‑less environment → **no OS‑Mutation Guard, no PM idempotency tests**.
+
+---
+
+###### Summary
+
+These three OS environments:
+
+- Windows PowerShell  
+- Linux PowerShell Core  
+- BusyBox
+
+are explicit exceptions to the OS‑Mutation Guard because they cannot generate,
+rewrite, or participate in system‑wide package‑manager operations.
+
+For all other OSes (Ubuntu, Debian, CentOS7/8, RHEL, Amazon Linux 2/2023, Fedora,
+Alpine, macOS Brew), the OS‑Mutation Guard is REQUIRED to prevent LLM‑initiated
+system‑wide mutations during Patch2 rewrite logic.
+
+
+---
 
 
 
