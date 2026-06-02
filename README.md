@@ -4912,8 +4912,7 @@ This distinction is essential for correctly handling idempotency, Amazon Linux b
 
 
 
-
-#### OS‑Mutation Guard Rule
+#### OS-Mutation Guard Rule
 
 To make this explicit, the contract must enforce the following guard:
 
@@ -5320,6 +5319,10 @@ This is **not** mutation.
 This is a **deterministic rewrite** of the user’s intent.
 
 ---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
 
 #### Example 6 — CentOS 7 remediation already attempted (fallback)
 
