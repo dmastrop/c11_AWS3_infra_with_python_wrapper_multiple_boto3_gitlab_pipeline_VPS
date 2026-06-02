@@ -2172,6 +2172,17 @@ def recover(request: RecoveryRequest):
 
 
                 ##### BUSYBOX (ash) DOMAIN RULES (Revision 14)— Applies ONLY when os_name == "Linux" AND os_version == "busybox" #####
+                # NOTE — BusyBox has NO package manager and NO system‑wide package‑manager operations.
+                # Therefore:
+                #   • The OS‑Mutation Guard does NOT apply to BusyBox.
+                #   • BusyBox NEVER performs deterministic remediation (CentOS7/AmazonLinux2‑style).
+                #   • BusyBox NEVER rewrites package‑manager commands — ANY PM reference MUST trigger 'abort'.
+                #   • BusyBox idempotency is limited to filesystem/app‑level conditions only.
+                #   • Because BusyBox has no package‑manager semantics, it does NOT require the 6‑case
+                #     idempotency regression schema used for Linux-family OSes.
+                #
+                # In short: BusyBox is a PM‑less environment → no OS‑Mutation Guard, no PM idempotency tests.
+
                 "These rules apply ONLY when os_name == 'Linux' AND os_version == 'busybox'.\n"
                 "These BusyBox domain primitives apply ONLY when BusyBox is the primary OS environment. They MUST NOT override Linux-family domain primitives when BusyBox is installed as a package or command suite on Ubuntu, Debian, RHEL, CentOS, Fedora, Amazon Linux, or Alpine.\n"
 
@@ -2255,6 +2266,8 @@ def recover(request: RecoveryRequest):
                 "    * rm -rf /bin\n"
                 "    * rm -rf /etc\n"
                 "- Abort MUST include a clear message.\n"
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+
 
                 ##### BusyBox rewrite rules #####
                 "- If the command uses a Linux-specific path that does not exist in BusyBox (for example, /usr/bin/apt), the LLM MUST use 'fallback'.\n"
