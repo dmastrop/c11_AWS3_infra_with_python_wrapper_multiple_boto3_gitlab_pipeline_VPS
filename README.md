@@ -5026,7 +5026,6 @@ system‑wide mutations during Patch2 rewrite logic.
 
 
 
-
 #### Example 1 - User-initiated OS mutation with idempotency allowed
 
 Schema context (CentOS 7 idempotency case):
@@ -5067,6 +5066,9 @@ The LLM is not introducing a new OS‑mutating command; it is simply acknowledgi
 ---
 
 [Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
 
 
 #### Example 2 - LLM-initiated OS mutation to fix missing packages forbidden
@@ -5118,8 +5120,6 @@ The LLM must not mutate the OS to “fix” missing packages, broken repos, or a
 ---
 
 [Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
-
-
 
 
 #### Example 3 - OS-signaled amazon-linux-extras remediation allowed cleanup_and_retry
