@@ -4946,7 +4946,8 @@ This guard is what allows idempotency tests for `yum update`, `dnf upgrade`, `ap
 [Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
 
 
-#### OS Exceptions That Do Not Require the OS‑Mutation Guard
+
+#### OS Exceptions That Do Not Require the OS-Mutation Guard
 
 There are three OS environments in the contract that do NOT require the OS‑Mutation Guard.
 All three share the same fundamental property:
@@ -5026,7 +5027,7 @@ system‑wide mutations during Patch2 rewrite logic.
 
 
 
-#### Example 1 — User‑initiated OS mutation with idempotency (allowed)
+#### Example 1 - User-initiated OS mutation with idempotency allowed
 
 Schema context (CentOS 7 idempotency case):
 
@@ -5068,8 +5069,7 @@ The LLM is not introducing a new OS‑mutating command; it is simply acknowledgi
 [Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
 
 
-
-#### Example 2 — LLM‑initiated OS mutation to “fix” missing packages (forbidden)
+#### Example 2 - LLM-initiated OS mutation to fix missing packages forbidden
 
 Amazon Linux 2 schema often includes realistic missing‑package errors:
 
@@ -5122,8 +5122,7 @@ The LLM must not mutate the OS to “fix” missing packages, broken repos, or a
 
 
 
-
-#### Example 3 — OS‑signaled amazon‑linux‑extras remediation (allowed cleanup_and_retry)
+#### Example 3 - OS-signaled amazon-linux-extras remediation allowed cleanup_and_retry
 
 Amazon Linux 2 schema includes realistic errors where the OS explicitly tells you a package is only available via `amazon-linux-extras`:
 
@@ -5567,8 +5566,7 @@ This preserves:
 
 
 
-
-#### OS‑signaled deterministic remediation 
+#### OS-signaled deterministic remediation
 
 Only two OS families require deterministic remediation logic:
 
