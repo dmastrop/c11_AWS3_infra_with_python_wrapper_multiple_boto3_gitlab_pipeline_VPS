@@ -9169,7 +9169,7 @@ This is the frontier of LLM contract engineering.
 
 - [Introduction to idempotency regression testing](#introduction-to-idempotency-regression-testing)
 - [Global contract rule for idempotency: Revision5](#global-contract-rule-for-idempotency-revision5)
-- [Idempotency Schema Test Case Design (Regression Test Suite of 66 Test cases across 11 OSes)](#idempotency-schema-test-case-design-regression-test-suite-of-66-test-cases-across-11-oses)
+- [Idempotency Schema Test Case Design (Regression Test Suite of 72 Test cases across 12 OSes)](#idempotency-schema-test-case-design-regression-test-suite-of-72-test-cases-across-12-oses)
 - [System‑Wide Operations: Idempotency vs. Non‑Idempotency and the OS‑Mutation Guard Rule Requirement](#system-wide-operations-idempotency-vs-non-idempotency-and-the-os-mutation-guard-rule-requirement)
 - [Extended Schema Test Cases for Idempotency Regression](#extended-schema-test-cases-for-idempotency-regression)
 
@@ -9271,18 +9271,20 @@ Here is the updated contract rule block for idempotency (this can be found in ai
 
 
 
-#### Idempotency Schema Test Case Design (Regression Test Suite of 66 Test cases across 11 OSes)
+#### Idempotency Schema Test Case Design (Regression Test Suite of 72 Test cases across 12 OSes)
 
 
 
 ##### Overview
 
-This section documents the **Idempotency Regression Suite**, a cross‑platform validation harness designed to ensure that the contract engine correctly identifies and handles **idempotent execution states** across **11 operating systems** and **55 curated test cases**.
+This section documents the **Idempotency Regression Suite**, a cross‑platform validation harness designed to ensure that the contract engine correctly identifies and handles **idempotent execution states** across **12 operating systems** and **72 curated test cases**.
 
-There is also 1 addtional test case per OS for a negative test case for NON-idempotency system-wide operations command test. (These 
-types of test cases are discussed in a section below). 
+There are 5 idempotency related tests per OS for a total of 60 idempotency tests.
 
-So a total of 66 test cases.
+There is also 1 addtional test case per OS for a negative test case for a NON-idempotency system-wide operations command test. (These 
+types of test cases are discussed in a section below). This adds an additional 12 test cases.
+
+So a total of 72 test cases.
 
 
 Idempotency is a core requirement of the contract model:
@@ -9370,34 +9372,36 @@ The suite validates that the contract engine:
 | **Amazon Linux 2** | yum | bash | 5 | 1 | 3 original + 2 new |
 | **Amazon Linux 2023** | dnf | bash | 5 | 1 | 3 original + 2 new |
 | **Fedora 39** | dnf | bash | 5 | 1 | 3 original + 2 new |
+| **RHEL 9** | yum | bash | 5 | 1 | Fully new (aligned with CentOS 8/Fedora semantics) |
 | **Alpine 3.18** | apk | sh | 5 | 1 | Fully new |
 | **macOS 14** | brew | zsh | 5 | 1 | 1 original + 4 new |
 | **Windows Server 2022** | winget | PowerShell | 5 | 1 | Fully new |
 | **Linux PowerShell** | none | PowerShell Core | 5 | 1 | Fully new |
 
 Total Test Cases
-- 55 idempotency cases 
-- 11 non‑idempotency system‑wide fallback cases  
-- 66 total  
+- 60 idempotency cases 
+- 12 non‑idempotency system‑wide fallback cases  
+- 72 total  
 
 ---
 
 ##### Directory Structure
 
 ```
-schemas/
-   idempotency_regression/
-      ubuntu_idempotency.json
-      debian_idempotency.json
-      centos7_idempotency.json
-      centos8_idempotency.json
-      amazonlinux2_idempotency.json
-      amazonlinux2023_idempotency.json
-      fedora_idempotency.json
-      alpine_idempotency.json
-      macos_brew_idempotency.json
-      windows_powershell_idempotency.json
-      linux_powershell_idempotency.json
+schemas/idempotency_regression/
+├── alpine_idempotency.json
+├── amazonlinux2023_idempotency.json
+├── amazonlinux2_idempotency.json
+├── centos7_idempotency.json
+├── centos8_idempotency.json
+├── debian_idempotency.json
+├── fedora_idempotency.json
+├── linux_powershell_idempotency.json
+├── macos_brew_idempotency.json
+├── rhel_idempotency.json
+├── ubuntu_idempotency.json
+└── windows_powershell_idempotency.json
+
 ```
 
 Each file contains:
@@ -9506,7 +9510,7 @@ properly addressed with a cleanup_and_retry response from the LLM in the case of
 but it was initiated by the user and NOT the LLM. In all other circumstances these types of commands are always fallback. 
 
 To guard against a fallback for system-side operations in the setting of idempotency, an OS guard has to be patched into the contract
-for all 11 OSes to prevent unconditional fallback, in this specific case. Yet for all other cases a fallback must be used. 
+for all 12 OSes to prevent unconditional fallback, in this specific case. Yet for all other cases a fallback must be used. 
 
 The OS mutation guard code itself is simple: 
 
@@ -9519,7 +9523,7 @@ The OS mutation guard code itself is simple:
                 "\n"
 ```
 
-The placement of the guard has to be very strategic, inside the patch2 across all 11 OSes that have the patch2. It has to be placed 
+The placement of the guard has to be very strategic, inside the patch2 across all 12 OSes that have the patch2. It has to be placed 
 at the location shown below, right after the system-wide declarations, so that the LLM can be aware of the special treatment required 
 in the case of idempotency. 
 
@@ -9656,12 +9660,12 @@ This topic is discussed in further detail in an earlier section (with Examples):
 Following the scrub of all domain primitives blocks for proper idempotency treatment that aligns with the global idempotency rules
 above, a specialized regression set of test cases has to be created from the original schema test cases across ALL OSes.
 
-The specialized schema test cases will run through the validator as well. The suite covers 11 OSes (the other OSes or platforms
+The specialized schema test cases will run through the validator as well. The suite covers 12 OSes (the other OSes or platforms
 do not have PMs or idempotency related issues associated with them: BusyBox, macos-zxh, Cisco IOS, PAN-OS, etc).
 
 See the previous section for more information on the schema test case design.
 
-Each of these 11 OSes has a dedicated and specialized 5 test cases to test idempotency for that OS and this will ensure that
+Each of these 12 OSes has a dedicated and specialized 5 test cases to test idempotency for that OS and this will ensure that
 the contract domain primitves blocks for each of the OSes are aligned with the global contract rule for idempotency above. 
 
 Namely cleanup_and_retry should ALWAYS be the action plan response from the LLM. The context based test cases test both
@@ -9671,21 +9675,19 @@ The schema files are located in the following directory in the repo as mentioned
 
 
 ```
-../sequential_master_modules/LLM_contract_stress_tester/context_generator/schemas/idempotency_regression$ ls -la
-total 52
-drwxrwxr-x 2 ubuntu ubuntu 4096 May 27 03:54 .
-drwxrwxr-x 4 ubuntu ubuntu 4096 May 27 03:09 ..
--rw-rw-r-- 1 ubuntu ubuntu 2068 May 27 03:40 alpine_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2059 May 27 03:36 amazonlinux2023_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2060 May 27 03:35 amazonlinux2_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2090 May 27 03:29 centos7_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2104 May 27 03:31 centos8_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2154 May 27 03:20 debian_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2090 May 27 03:38 fedora_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2259 May 27 03:54 linux_powershell_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2241 May 27 03:42 macos_brew_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2163 May 27 03:19 ubuntu_idempotency.json
--rw-rw-r-- 1 ubuntu ubuntu 2323 May 27 03:44 windows_powershell_idempotency.json
+schemas/idempotency_regression/
+├── alpine_idempotency.json
+├── amazonlinux2023_idempotency.json
+├── amazonlinux2_idempotency.json
+├── centos7_idempotency.json
+├── centos8_idempotency.json
+├── debian_idempotency.json
+├── fedora_idempotency.json
+├── linux_powershell_idempotency.json
+├── macos_brew_idempotency.json
+├── rhel_idempotency.json
+├── ubuntu_idempotency.json
+└── windows_powershell_idempotency.json
 ```
 
 ##### An OS-Mutation Guard Rule Summary
@@ -9715,7 +9717,7 @@ This topic is discussed in depth in a previous section at the link below:
 
 
 
-##### LLM Contract Stress Tester — Idempotency Schema Tests (66 Cases)
+##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases)
 
 
 
