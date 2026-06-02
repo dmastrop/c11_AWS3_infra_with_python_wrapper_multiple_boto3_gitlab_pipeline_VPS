@@ -2825,6 +2825,18 @@ def recover(request: RecoveryRequest):
                 # This is PowerShell Core 6/7 → cross‑platform (Linux, macOS, Windows) and not windows powershell 5.1
                 # They are completely different from one another. Linux powershell will require patch2-rev6
                 # ============================================================
+                # NOTE — PowerShell Core on Linux has NO package‑manager semantics and NO system‑wide
+                # package‑manager operations. Therefore:
+                #   • The OS‑Mutation Guard does NOT apply to this OS block.
+                #   • PowerShell Core on Linux does NOT support CentOS7/AmazonLinux2‑style deterministic
+                #     remediation (no multi‑step cleanup sequences, no repo/metadata repair, no PM updates).
+                #   • Any use of apt, apt‑get, yum, dnf, apk, pacman, zypper, brew, or snap MUST trigger
+                #     'fallback' — no rewrites, no cleanup, no mutation.
+                #   • cleanup_and_retry is allowed ONLY for literal, single‑step remediation explicitly
+                #     suggested by stderr, and NEVER for package‑manager or system‑wide operations.
+                #
+                # In short: Linux PowerShell Core is a PM‑less environment → no OS‑Mutation Guard,
+                # no deterministic remediation, and strictly limited cleanup_and_retry semantics.
 
                 "These rules apply ONLY when os_name = \"Linux\" AND os_version = \"powershell-core\".\n"
                 "They MUST NOT apply to Windows, macOS, BusyBox, PAN-OS, or Cisco IOS.\n"
@@ -3080,7 +3092,7 @@ def recover(request: RecoveryRequest):
                 "- Use 'fallback' when correcting the command would require guessing user intent,\n"
                 "  inventing capabilities, or inferring cross-OS behavior.\n"
                 "- Use 'fallback' when the OS, shell, or package manager context is unclear.\n"
-                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                "- If the command is unrecognized (exit_status 127) and not obviously a PowerShell Core primitive, the LLM MUST use 'fallback'.\n"
                 "- If the command uses ANY package manager (apt, apt-get, yum, dnf, apk, pacman, brew, snap, etc.),\n"
                 "  and this OS block does NOT define a deterministic rewrite, the LLM MUST return 'fallback'.\n"
                 "\n"
