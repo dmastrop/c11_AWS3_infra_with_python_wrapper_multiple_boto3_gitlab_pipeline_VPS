@@ -4774,6 +4774,28 @@ And it ensures AL2023 behaves consistently with all other Linux distributions in
 ### LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics 
 
 
+#### Table of Contents — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics
+<a name="top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics"></a>
+
+- [Introduction to OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#introduction-to-os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
+- [Three different types of system-wide scenarios](#three-different-types-of-system-wide-scenarios)
+- [Separation of responsibilities: user vs LLM](#separation-of-responsibilities-user-vs-llm)
+- [OS‑Mutation Guard Rule](#os-mutation-guard-rule)
+- [OS Exceptions That Do Not Require the OS‑Mutation Guard](#os-exceptions-that-do-not-require-the-os-mutation-guard)
+- [Example 1 — User‑initiated OS mutation with idempotency (allowed)](#example-1--user-initiated-os-mutation-with-idempotency-allowed)
+- [Example 2 — LLM‑initiated OS mutation to “fix” missing packages (forbidden)](#example-2--llm-initiated-os-mutation-to-fix-missing-packages-forbidden)
+- [Example 3 — OS‑signaled amazon‑linux‑extras remediation (allowed cleanup_and_retry)](#example-3--os-signaled-amazon-linux-extras-remediation-allowed-cleanup_and_retry)
+- [Example 4 — CentOS 7 deterministic remediation: missing package with no prior update (allowed cleanup_and_retry)](#example-4--centos7-deterministic-remediation-missing-package-with-no-prior-update-allowed-cleanup_and_retry)
+- [Example 5 — CentOS 7 deterministic rewrite: wrong package manager (allowed retry_with_modified_command)](#example-5--centos7-deterministic-rewrite-wrong-package-manager-allowed-retry_with_modified_command)
+- [Example 6 — CentOS 7 remediation already attempted (fallback)](#example-6--centos7-remediation-already-attempted-fallback)
+- [Why CentOS 7 Requires Explicit Rewrite Rules (and Other OSes Don’t)](#why-centos7-requires-explicit-rewrite-rules-and-other-oses-dont)
+- [How this interacts with idempotency](#how-this-interacts-with-idempotency)
+- [Contract implications and test expectations](#contract-implications-and-test-expectations)
+- [OS‑signaled deterministic remediation](#os-signaled-deterministic-remediation)
+
+---
+
+
 #### Introduction to OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics
 
 This section clarifies a subtle but critical distinction in the OS‑mutation policy:
@@ -4793,6 +4815,8 @@ This section also touches upon idempotency and system-wide operations, and non-i
 
 
 ---
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
 
 
 #### Three different types of system-wide scenarios
@@ -4856,6 +4880,11 @@ In this respect, the contract in general must cleanly separate:
 
 - OS‑signaled deterministic remediation (allowed → cleanup_and_retry)
 
+---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
 
 
 
@@ -4878,6 +4907,11 @@ The OS‑mutation policy applies **only** to LLM‑generated commands.
 This distinction is essential for correctly handling idempotency, Amazon Linux behavior, and cross‑OS determinism.
 
 ---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
 
 #### OS‑Mutation Guard Rule
 
@@ -4910,7 +4944,7 @@ This guard is what allows idempotency tests for `yum update`, `dnf upgrade`, `ap
 
 ---
 
-
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
 
 
 #### OS Exceptions That Do Not Require the OS‑Mutation Guard
@@ -4988,6 +5022,9 @@ system‑wide mutations during Patch2 rewrite logic.
 
 ---
 
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
 
 
 #### Example 1 — User‑initiated OS mutation with idempotency (allowed)
@@ -5028,6 +5065,10 @@ The retry command would be to attempt to re-execute the original command due to 
 The LLM is not introducing a new OS‑mutating command; it is simply acknowledging that the user’s command is idempotent and, if retried, remains safe.
 
 ---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
 
 #### Example 2 — LLM‑initiated OS mutation to “fix” missing packages (forbidden)
 
@@ -5076,6 +5117,10 @@ The LLM must not mutate the OS to “fix” missing packages, broken repos, or a
 
 
 ---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
 
 
 
@@ -5140,6 +5185,11 @@ The contract rules semantics instruct the LLM to handle cases of this degree of 
 
 
 ---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
 
 #### Example 4 — CentOS 7 deterministic remediation: missing package with no prior update (allowed cleanup_and_retry)
 
@@ -5211,6 +5261,11 @@ The contract rule block that pertains to this is:
 
 
 ---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
 
 
 #### Example 5 — CentOS 7 deterministic rewrite: wrong package manager (allowed retry_with_modified_command)
@@ -5318,6 +5373,14 @@ This matches CentOS 7 schema i‑test‑701 and the historical test matrix.
     },
 ```
 
+
+---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
+
 #### Why CentOS 7 Requires Explicit Rewrite Rules (and Other OSes Don’t)
 
 CentOS 7 is one of only two OS families (along with Amazon Linux 2) that require explicit, OS‑specific rewrite and remediation rules in the contract. This is not due to LLM limitations, but because **CentOS 7’s stderr patterns are uniquely ambiguous** and cannot be reliably interpreted by Patch2 alone.
@@ -5422,6 +5485,12 @@ This is why CentOS 7 joins Amazon Linux 2 as the only OS families with OS‑si
 
 ---
 
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
+
 #### How this interacts with idempotency
 
 The OS‑Mutation Guard Rule is what separates two superficially similar but semantically different situations:
@@ -5441,6 +5510,11 @@ The OS‑Mutation Guard Rule is what separates two superficially similar but sem
 Without this guard, the contract engine can incorrectly treat user‑initiated idempotent OS‑mutation commands as if they were LLM‑initiated mutation attempts, leading to incorrect `fallback` decisions in idempotency regression tests (as seen in some CentOS and other RPM‑based cases).
 
 ---
+
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
 
 #### Contract implications and test expectations
 
@@ -5484,6 +5558,12 @@ This preserves:
 - correct idempotency handling across all OS families,
 - and deterministic, reproducible behavior in the stress tester.
 
+---
+
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
 
 #### OS‑signaled deterministic remediation 
 
@@ -5508,7 +5588,11 @@ This means the complexity is fully contained. Only Amazon Linux 2 and CentOS 7 r
 
 ---
 
-This topic is discussed further in the link below, in the Idempotency testing section:
+[Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
+
+
+
+These topics are discussed further in the Idempotency testing section at the link below:
 
 - [System‑Wide Operations: Idempotency vs. Non‑Idempotency and the OS‑Mutation Guard Rule Requirement](#system-wide-operations-idempotency-vs-non-idempotency-and-the-os-mutation-guard-rule-requirement)
 
