@@ -4835,6 +4835,16 @@ If stderr explicitly identifies a deterministic, OS‑provided remediation path 
 
 CentOS 7 also encounters OS-signaled deterministic remediation scenarios. All of the other OSes do not encounter this.
 
+In simple terms  “deterministic remediation” consists of the following:
+
+- Multi‑step cleanup_and_retry sequences,
+
+- Triggered by OS‑signaled errors (e.g., “enable this repo”, “metadata out of date”),
+
+- Where the OS itself effectively tells the user the fix,
+
+- And the contract encodes that exact sequence.
+
 ---
 
 
@@ -9606,6 +9616,18 @@ In these cases, the LLM must return **`fallback`**, not a rewrite.
 If stderr explicitly identifies a deterministic, OS‑provided remediation path (e.g., Amazon Linux 2: “nginx is available in amazon-linux-extras”), the LLM may return a `cleanup_and_retry` sequence using that exact remediation. This is not considered mutation because the OS itself provides the instruction.
 
 CentOS 7 also encounters OS-signaled deterministic remediation scenarios. All of the other OSes do not encounter this. 
+
+In simple terms  “deterministic remediation” consists of the following:
+
+- Multi‑step cleanup_and_retry sequences,
+
+- Triggered by OS‑signaled errors (e.g., “enable this repo”, “metadata out of date”),
+
+- Where the OS itself effectively tells the user the fix,
+
+- And the contract encodes that exact sequence.
+
+
 
 ---
 

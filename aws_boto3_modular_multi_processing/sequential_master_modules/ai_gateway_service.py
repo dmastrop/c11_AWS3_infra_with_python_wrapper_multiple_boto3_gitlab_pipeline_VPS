@@ -2107,6 +2107,14 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
+                
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
@@ -2116,8 +2124,8 @@ def recover(request: RecoveryRequest):
 
                 #### continued after patch insertion.....
 
-                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST abort.\n"
-                "- If the command is unrecognized (exit_status 127), 'fallback' is allowed.\n"
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+                "- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
                 "\n"
                 "- If stderr indicates APK cache or index corruption (for example, messages such as\n"
                 "  'ERROR: failed to update apk cache' or other corruption-like wording that does NOT\n"
@@ -2141,6 +2149,8 @@ def recover(request: RecoveryRequest):
                 "        - apk add <pkg>\n"
 
                 # Revision 13.1
+
+                # This is not the same as the deterministic remediation of CentOS7/Amazon Linux2
                 "- If stderr contains 'unable to select packages:' AND the history contains a prior 'apk update',\n"
                 "  the LLM MUST use 'cleanup_and_retry' instead of 'fallback'.\n"
                 "  The cleanup list MUST contain:\n"
@@ -2606,6 +2616,9 @@ def recover(request: RecoveryRequest):
                 # AND os_version = "2022". This entire block is Revision 17 + Patch2-Rev5
                 # This is windows powershell 5.1 and not 7
                 # ============================================================
+                # Note: Windows PowerShell does NOT use the OS-Mutation Guard and does NOT support
+                # CentOS7/AmazonLinux2-style deterministic remediation. cleanup_and_retry here is
+                # limited to single-step, stderr-suggested commands.
 
                 "These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
                 "They MUST NOT apply to Linux-family OSes, BusyBox, macOS, PAN-OS, or Cisco IOS.\n"
