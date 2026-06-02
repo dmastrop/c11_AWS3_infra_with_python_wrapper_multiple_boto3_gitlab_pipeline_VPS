@@ -5591,6 +5591,8 @@ This means the complexity is fully contained. Only Amazon Linux 2 and CentOS 7 r
 [Back to top of OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#top-os-mutation-policy-determninistic-remediation-and-rewrite-semantics)
 
 
+---
+
 
 These topics are discussed further in the Idempotency testing section at the link below:
 
@@ -9966,6 +9968,14 @@ system‑wide mutations during Patch2 rewrite logic.
 
 [Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
 
+
+---
+
+
+
+These topics are  discussed in further detail in an earlier section (with Examples):
+
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
 
 ---
 
