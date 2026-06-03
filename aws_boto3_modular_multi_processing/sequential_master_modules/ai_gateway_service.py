@@ -2487,6 +2487,18 @@ def recover(request: RecoveryRequest):
                 # macOS (ZSH) DOMAIN RULES — Applies ONLY when os_name = "macOS"
                 # AND os_version ends with "-zsh".
                 # ============================================================
+                # NOTE — macOS‑zsh has NO package‑manager semantics and NO system‑wide
+                # package‑manager operations. Therefore:
+                #   • The OS‑Mutation Guard does NOT apply to macOS‑zsh.
+                #   • macOS‑zsh MUST treat all package‑manager commands (apt, apt‑get, yum,
+                #     dnf, apk, pacman, brew, etc.) as unsupported and return 'fallback'.
+                #   • macOS‑zsh does NOT support deterministic remediation (no multi‑step
+                #     cleanup, no repo/metadata repair, no PM updates).
+                #   • macOS‑zsh idempotency is limited to shell‑level behavior only; it has
+                #     no PM‑level idempotency cases.
+                #
+                # In short: macOS‑zsh is a PM‑less environment → no OS‑Mutation Guard,
+                # no deterministic remediation, and no PM idempotency semantics.
 
                 "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-zsh\".\n"
 
