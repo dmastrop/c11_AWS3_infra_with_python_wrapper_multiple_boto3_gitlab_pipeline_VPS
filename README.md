@@ -4949,14 +4949,14 @@ This guard is what allows idempotency tests for `yum update`, `dnf upgrade`, `ap
 
 #### OS Exceptions That Do Not Require the OS-Mutation Guard
 
-There are three OS environments in the contract that do NOT require the OS‑Mutation Guard.
-All three share the same fundamental property:
+There are four OS environments in the contract that do NOT require the OS‑Mutation Guard.
+All four share the same fundamental property:
 
 **They have no package‑manager semantics and no system‑wide package‑manager operations.**
 
 Because the OS‑Mutation Guard exists solely to prevent *LLM‑generated* system‑wide
 package‑manager mutations (e.g., `apt-get update`, `yum update`, `dnf upgrade`),
-these three OSes are structurally incapable of triggering such mutations.
+these four OSes are structurally incapable of triggering such mutations.
 
 Therefore, the OS‑Mutation Guard MUST NOT be applied to:
 
@@ -5004,13 +5004,30 @@ BusyBox is a PM‑less environment → **no OS‑Mutation Guard, no PM idempoten
 
 ---
 
+##### 4. macOS‑zsh
+
+- macOS‑zsh has **NO package manager** and MUST NOT introduce one.
+- ANY reference to a package manager (apt, yum, dnf, apk, pacman, brew, etc.) MUST trigger **fallback**.
+- macOS‑zsh does NOT support deterministic remediation.
+- macOS‑zsh idempotency is limited to shell‑level behavior only.
+- macOS‑zsh does NOT participate in Patch2 rewrite logic.
+- macOS-zsh does NOT require the 6-case idempotency regression schema.
+
+In short:
+macOS‑zsh is a PM‑less environment → **no OS‑Mutation Guard, no PM idempotency tests**.
+
+
+---
+
+
 ##### Summary
 
-These three OS environments:
+These four OS environments:
 
 - Windows PowerShell  
 - Linux PowerShell Core  
 - BusyBox
+- macOS-zsh
 
 are explicit exceptions to the OS‑Mutation Guard because they cannot generate,
 rewrite, or participate in system‑wide package‑manager operations.
@@ -9684,6 +9701,10 @@ As such, even a command that does a PM update or upgrade, that is considered an 
 properly addressed with a cleanup_and_retry response from the LLM in the case of idempotency. The command is mutating the OS
 but it was initiated by the user and NOT the LLM. In all other circumstances these types of commands are always fallback. 
 
+
+
+##### The OS-Muation Guard patch
+
 To guard against a fallback for system-side operations in the setting of idempotency, an OS guard has to be patched into the contract
 for all 12 OSes to prevent unconditional fallback, in this specific case. Yet for all other cases a fallback must be used. 
 
@@ -9820,87 +9841,19 @@ In this respect, the contract cleanly separates:
 - OS‑signaled deterministic remediation (allowed → cleanup_and_retry)
 
 
-This topic is discussed in further detail in an earlier section (with Examples):
-
-- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
-
----
-
-[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
 
 
 
-#### Extended Schema Test Cases for Idempotency Regression
+##### OS Exceptions That Do Not Require the OS-Mutation Guard
 
-Following the scrub of all domain primitives blocks for proper idempotency treatment that aligns with the global idempotency rules
-above, a specialized regression set of test cases has to be created from the original schema test cases across ALL OSes.
-
-The specialized schema test cases will run through the validator as well. The suite covers 12 OSes (the other OSes or platforms
-do not have PMs or idempotency related issues associated with them: BusyBox, macos-zxh, Cisco IOS, PAN-OS, etc).
-
-See the previous section for more information on the schema test case design.
-
-Each of these 12 OSes has a dedicated and specialized 5 test cases to test idempotency for that OS and this will ensure that
-the contract domain primitves blocks for each of the OSes are aligned with the global contract rule for idempotency above. 
-
-Namely cleanup_and_retry should ALWAYS be the action plan response from the LLM. The context based test cases test both
-history field signals and stderr field signals to instigate the idempotency treatment by the LLM.
-
-The schema files are located in the following directory in the repo as mentioned earlier in the section above
-
-
-```
-schemas/idempotency_regression/
-├── alpine_idempotency.json
-├── amazonlinux2023_idempotency.json
-├── amazonlinux2_idempotency.json
-├── centos7_idempotency.json
-├── centos8_idempotency.json
-├── debian_idempotency.json
-├── fedora_idempotency.json
-├── linux_powershell_idempotency.json
-├── macos_brew_idempotency.json
-├── rhel_idempotency.json
-├── ubuntu_idempotency.json
-└── windows_powershell_idempotency.json
-```
-
-##### An OS-Mutation Guard Rule Summary
-
-
-As noted earlier:
-
-During the specialized idempotency schema testing an issue was found with tests involving potential OS mutation commands. 
-There are times when OS mutation is permitted, namely if it has been initiated by the user (the command in the context that is
-presented to the LLM), and the stderr or history indicates that the command was tried previously and that this will be an 
-idempotent scenario.   Other situations require a fallback response from the LLM as noted in the block below, i.e. when the 
-remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS. 
-
-This topic is discussed in depth in a previous section at the link below: 
-
-- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
-
-
-```
-                # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-```
-
-
-##### OS Exceptions That Do Not Require the OS‑Mutation Guard
-
-There are three OS environments in the contract that do NOT require the OS‑Mutation Guard.
-All three share the same fundamental property:
+There are four OS environments in the contract that do NOT require the OS‑Mutation Guard.
+All four share the same fundamental property:
 
 **They have no package‑manager semantics and no system‑wide package‑manager operations.**
 
 Because the OS‑Mutation Guard exists solely to prevent *LLM‑generated* system‑wide
 package‑manager mutations (e.g., `apt-get update`, `yum update`, `dnf upgrade`),
-these three OSes are structurally incapable of triggering such mutations.
+these four OSes are structurally incapable of triggering such mutations.
 
 Therefore, the OS‑Mutation Guard MUST NOT be applied to:
 
@@ -9948,13 +9901,30 @@ BusyBox is a PM‑less environment → **no OS‑Mutation Guard, no PM idempoten
 
 ---
 
+###### 4. macOS‑zsh
+
+- macOS‑zsh has **NO package manager** and MUST NOT introduce one.
+- ANY reference to a package manager (apt, yum, dnf, apk, pacman, brew, etc.) MUST trigger **fallback**.
+- macOS‑zsh does NOT support deterministic remediation.
+- macOS‑zsh idempotency is limited to shell‑level behavior only.
+- macOS‑zsh does NOT participate in Patch2 rewrite logic.
+- macOS-zsh does NOT require the 6-case idempotency regression schema.
+
+In short:
+macOS‑zsh is a PM‑less environment → **no OS‑Mutation Guard, no PM idempotency tests**.
+
+
+---
+
+
 ###### Summary
 
-These three OS environments:
+These four OS environments:
 
 - Windows PowerShell  
 - Linux PowerShell Core  
 - BusyBox
+- macOS-zsh
 
 are explicit exceptions to the OS‑Mutation Guard because they cannot generate,
 rewrite, or participate in system‑wide package‑manager operations.
@@ -9968,7 +9938,96 @@ system‑wide mutations during Patch2 rewrite logic.
 
 
 
+
+
+
+These topics are discussed in further detail in an earlier section (with Examples):
+
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
+
+---
+
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
+
+
+
+
+
+
+#### Extended Schema Test Cases for Idempotency Regression
+
+Following the scrub of all domain primitives blocks for proper idempotency treatment that aligns with the global idempotency rules
+above, a specialized regression set of test cases has to be created from the original schema test cases across ALL OSes.
+
+The specialized schema test cases will run through the validator as well. The suite covers 12 OSes (the other OSes or platforms
+do not have PMs or idempotency related issues associated with them: BusyBox, macos-zxh, Cisco IOS, PAN-OS, etc).
+
+See the previous section for more information on the schema test case design.
+
+Each of these 12 OSes has a dedicated and specialized 5 test cases to test idempotency for that OS and this will ensure that
+the contract domain primitves blocks for each of the OSes are aligned with the global contract rule for idempotency above. 
+
+Namely cleanup_and_retry should ALWAYS be the action plan response from the LLM. The context based test cases test both
+history field signals and stderr field signals to instigate the idempotency treatment by the LLM.
+
+The schema files are located in the following directory in the repo as mentioned earlier in the section above
+
+
+```
+schemas/idempotency_regression/
+├── alpine_idempotency.json
+├── amazonlinux2023_idempotency.json
+├── amazonlinux2_idempotency.json
+├── centos7_idempotency.json
+├── centos8_idempotency.json
+├── debian_idempotency.json
+├── fedora_idempotency.json
+├── linux_powershell_idempotency.json
+├── macos_brew_idempotency.json
+├── rhel_idempotency.json
+├── ubuntu_idempotency.json
+└── windows_powershell_idempotency.json
+```
+
+##### An OS-Mutation Guard Rule Summary
+
+
+As noted above:
+
+During the specialized idempotency schema testing an issue was found with tests involving potential OS mutation commands. 
+There are times when OS mutation is permitted, namely if it has been initiated by the user (the command in the context that is
+presented to the LLM), and the stderr or history indicates that the command was tried previously and that this will be an 
+idempotent scenario.   Other situations require a fallback response from the LLM as noted in the block below, i.e. when the 
+remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS. 
+
+
+```
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+```
+
+
+
+This topic is discussed in depth in a previous section at the link below: 
+
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
+
+
+
+
+
+
+
 ##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases)
+
+
+
+
+
 
 
 
