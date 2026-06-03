@@ -10024,6 +10024,19 @@ These topics are discussed in depth in a previous section at the link below:
 
 ##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases)
 
+The idempotency schema based test suite consists of the following as indicated earlier:
+
+- 12 OSes with OS‑Mutation Guard  
+- 4 OSes without it  
+- 72 idempotency cases  
+- 12 domain‑primitive blocks  
+- 2 classes of deterministic remediation  
+- full Patch2 rewrite logic  
+- full malformed‑command hardening  
+- full invalid‑flag precedence  
+
+There are 12 OSes that will be tested, each with 6 context schema based test cases.
+
 
 The test results are given in the test matrix table below:
 
