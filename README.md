@@ -10012,7 +10012,7 @@ remediation response requires an LLM-generated command(s) that are system-wide a
 
 
 
-This topic is discussed in depth in a previous section at the link below: 
+These topics are discussed in depth in a previous section at the link below: 
 
 - [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
 
@@ -10025,6 +10025,7 @@ This topic is discussed in depth in a previous section at the link below:
 ##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases)
 
 
+The test results are given in the test matrix table below:
 
 
 
@@ -10039,17 +10040,15 @@ This topic is discussed in depth in a previous section at the link below:
 
 ---
 
-
-
-These topics are  discussed in further detail in an earlier section (with Examples):
-
-- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
-
----
-
 [Back to top](#top-update59)
 
 ---
+
+
+
+
+
+
 
 
 ### Stress testing the contract rules with the automated framework
