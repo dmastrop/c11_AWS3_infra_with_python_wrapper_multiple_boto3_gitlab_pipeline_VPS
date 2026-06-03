@@ -9841,7 +9841,7 @@ In this respect, the contract cleanly separates:
 - OS‑signaled deterministic remediation (allowed → cleanup_and_retry)
 
 
-
+---
 
 
 ##### OS Exceptions That Do Not Require the OS-Mutation Guard
@@ -9849,7 +9849,7 @@ In this respect, the contract cleanly separates:
 There are four OS environments in the contract that do NOT require the OS‑Mutation Guard.
 All four share the same fundamental property:
 
-**They have no package‑manager semantics and no system‑wide package‑manager operations.**
+- They have no package‑manager semantics and no system‑wide package‑manager operations.
 
 Because the OS‑Mutation Guard exists solely to prevent *LLM‑generated* system‑wide
 package‑manager mutations (e.g., `apt-get update`, `yum update`, `dnf upgrade`),
