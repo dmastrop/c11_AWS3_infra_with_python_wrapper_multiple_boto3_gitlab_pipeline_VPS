@@ -2365,16 +2365,31 @@ def recover(request: RecoveryRequest):
                 "- If no package name is present, the LLM MUST use 'fallback'.\n"
                 "\n"
 
+
                 ##### Wrong package manager in pipelines (&&) — macOS Homebrew semantics #### PATCH stress_tester1 patch2 rev3 ####
                 ##### Note that this is revision3 of patch2 for the brew only (linux os uses patch2 rev2). ANY package manager 
                 ##### for system-wide ops is fallback, not just non-macos PMs.
                 ##### Also since the invalid brew flags block is after this patch (see below) we need to add a similar statement
                 ##### for the same in this block to prevent some other corner cases with bad flags getting through.
                 ##### This bumps the rev to rev4     Patch2 rev4:
+                
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
                 "- If ANY segment contains an invalid or unsupported flag for ANY package manager,\n"
                 "  the LLM MUST use 'fallback' BEFORE applying any rewrite rules.\n"
                 "\n"
 
+                # rev4 adds explicit invalid flag rule BEFORE the rewrite logic so that there is deterministic LLM response
+                # with rewrites
+                "- If ANY segment contains an invalid or unsupported flag for ANY package manager,\n"
+                "  the LLM MUST use 'fallback' BEFORE applying any rewrite rules.\n"
+                "\n"
+
+                # rewrite rules
                 "- If the command is a pipeline using '&&' and includes a non-macOS package manager\n"
                 "  (apt, apt-get, yum, dnf, apk, pacman), the LLM MUST treat each segment independently.\n"
                 "\n"
@@ -2390,6 +2405,8 @@ def recover(request: RecoveryRequest):
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
 
+                # system-wide operations are used but only under the OS mutation guard above. For idempotency cases the LLM 
+                # response will be cleanup_and_retry and NOT fallback
                 "- If ANY segment in the pipeline performs a system-wide operation with ANY package manager,\n"
                 "  including Homebrew itself, such as:\n"
                 "      brew update\n"
@@ -2402,6 +2419,7 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to translate system-wide operations into brew equivalents.\n"
                 "\n"
+                # END of patch2-rev4
 
 
                 ##### Malformed brew install commands #####
@@ -2413,6 +2431,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST use 'fallback' unless a safe correction is directly implied.\n"
                 "- The LLM MUST NOT guess a package name.\n"
                 "\n"
+                
                 ##### Invalid brew install flags #####   #### PATCH stress_tester1 #####
                 "- If a 'brew install' command contains any unknown or unsupported flags (e.g., 'invalid option:' in stderr),\n"
                 "  the LLM MUST use 'fallback'.\n"
@@ -2424,10 +2443,12 @@ def recover(request: RecoveryRequest):
                 "- If the command is destructive (e.g., 'rm -rf /', 'rm -rf /System', 'rm -rf /usr/local/Homebrew'),\n"
                 "  the LLM MUST return 'abort' with a clear message.\n"
                 "\n"
+                
                 ##### Unknown commands #####
                 "- If exit_status = 127 and the command is not obviously a brew primitive,\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
+                
                 ##### Brew metadata / cache corruption #####
                 "- If stderr indicates brew metadata corruption, such as:\n"
                 "    'Error: failed to download'\n"
@@ -2436,6 +2457,8 @@ def recover(request: RecoveryRequest):
                 "    'Error: No available formula'\n"
                 "    'Error: Corrupt cache'\n"
                 "  the LLM MUST return a 'cleanup_and_retry' action.\n"
+                "  This is a SOFT OS-signaled deterministic remediation sequence and is allowed to use\n"
+                "  'brew update' in the retry phase despite the OS-Mutation Guard.\n"
                 "\n"
                 "  cleanup:\n"
                 "      - brew cleanup\n"
@@ -2445,6 +2468,7 @@ def recover(request: RecoveryRequest):
                 "      - brew update\n"
                 "      - brew install <pkg>   (ONLY if a package name is present)\n"
                 "\n"
+                
                 ##### Formula not found #####
                 "- If stderr contains:\n"
                 "    'Error: No available formula with the name \"<pkg>\"'\n"
@@ -2452,11 +2476,13 @@ def recover(request: RecoveryRequest):
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT guess alternative package names.\n"
                 "\n"
+                
                 ##### Brew doctor warnings #####
                 "- If stderr contains brew doctor warnings or environment warnings,\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "- The LLM MUST NOT attempt to fix environment issues.\n"
                 "\n"
+                
                 ##### Network failures #####
                 "- If stderr contains network failures such as:\n"
                 "    'Could not resolve host'\n"
@@ -2464,6 +2490,7 @@ def recover(request: RecoveryRequest):
                 "    'No route to host'\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
+                
                 ##### Idempotency rules #####
                 "- If stderr indicates:\n"
                 "    'Warning: <pkg> is already installed'\n"
