@@ -493,6 +493,48 @@ def recover(request: RecoveryRequest):
                 "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
 
 
+
+                # =======================================================
+                # OS‑Mutation Guard — applies BEFORE any Ubuntu APT primitives or rewrite logic\n"
+                "- The following commands are considered system‑wide operations on Linux-family OSes:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- The LLM MUST NOT generate or propose ANY of these system‑wide operations\n"
+                "  as part of a rewrite, retry, or cleanup sequence. These operations are\n"
+                "  allowed ONLY when they appear in the original user command being validated.\n"
+                "\n"
+                "- OS‑signaled deterministic remediation is EXEMPT from this restriction.\n"
+                "  OS‑signaled remediation refers to recovery sequences that are explicitly\n"
+                "  indicated by stderr or system output (for example: 'Hash Sum mismatch',\n"
+                "  'dpkg --configure -a', 'apt --fix-broken install', or other OS-provided\n"
+                "  instructions). These remediation flows MAY include system‑wide operations\n"
+                "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
+                "\n"
+                "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
+                "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
+                "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
+                "  remediation and are therefore allowed to include system‑wide operations.\n"
+                "\n"
+                "- If a rewrite, retry, or cleanup sequence would require ANY system‑wide\n"
+                "  operation that is NOT part of an OS‑signaled remediation flow, the LLM\n"
+                "  MUST return \"fallback\" instead.\n"
+                "\n"
+                "- When validating an already-executed user command from the context\n"
+                "  (including idempotent 'update' or 'upgrade' operations), the OS‑Mutation\n"
+                "  Guard MUST NOT be applied; instead, the global Idempotency rules apply.\n"
+                "  Under the global Idempotency rules, idempotent system‑wide operations\n"
+                "  MUST result in a \"cleanup_and_retry\" action.\n"
+
+
+
                 # ------------------------------------------------------------
                 # Literal precedence meta-rule (Revision 6.3). This must be before Linux Malformed block  and global fallback
                 # ruels for precedence
@@ -736,13 +778,11 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
                 "- The LLM MUST NOT infer user intent for unknown flags.\n"
                 "\n"
-                
+               
+
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
+                # Moved this to top as a global block
+
 
                 # Busybox addendum to Revision 6.8:
                 "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
