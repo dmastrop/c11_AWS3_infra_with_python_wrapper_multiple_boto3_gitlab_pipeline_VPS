@@ -347,10 +347,23 @@ def recover(request: RecoveryRequest):
 
 
                 ##### HIGH LEVEL ORGANIZATION ####
-                #Global rules
-                #CONTEXT
-                #Linux-generic malformed rules
-                #OS-specific domain blocks (domain primitives)
+                #GLOBAL CONTRACT RULES
+                #GLOBAL RETRY RULES
+                #GLOBAL CLEANUP RULES
+                #GLOBAL CLEANUP_AND_RETRY SEMANTICS
+                #GLOBAL IDEMPOTENCY RULES   ← anchor point
+                #GLOBAL OS‑MUTATION GUARD   ← inserted here
+                #GLOBAL LITERAL PRECEDENCE RULES
+                #GLOBAL FALLBACK RULES
+                #GLOBAL ACTION MEANINGS
+                #GLOBAL ABORT RULES
+                #GLOBAL NETWORK FAILURE SEMANTICS
+                #GLOBAL SAFETY CONSTRAINTS
+                #GLOBAL ADDITIONAL SAFETY CONSTRAINTS
+                #GLOBAL CLEANUP SEQUENCE RULES
+                #GLOBAL CONTEXT (dynamic)
+                #GLOBAL LINUX MALFORMED COMMAND RULES
+                #OS-SPECIFIC DOMAIN PRIMITIVES (Ubuntu, Debian, RHEL, etc.)
 
 
 
@@ -496,6 +509,7 @@ def recover(request: RecoveryRequest):
 
                 # =======================================================
                 # OS‑Mutation Guard — applies BEFORE any Ubuntu APT primitives or rewrite logic\n"
+                "- This rule OVERRIDES any conflicting OS‑specific domain‑primitives.\n"
                 "- The following commands are considered system‑wide operations on Linux-family OSes:\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
