@@ -9644,7 +9644,7 @@ Each file contains:
 - repeated service operations  
 
 **7. Non-idempotency vs Idempotency system-wide challenges (see the next section below:System-Wide Operations: Idempotency vs. Non-Idempotency)**
-- fallback scenaios
+- fallback scenarios
 - cleanup_and_retry scenarios
 
 ---
@@ -9998,7 +9998,13 @@ During the specialized idempotency schema testing an issue was found with tests 
 There are times when OS mutation is permitted, namely if it has been initiated by the user (the command in the context that is
 presented to the LLM), and the stderr or history indicates that the command was tried previously and that this will be an 
 idempotent scenario.   Other situations require a fallback response from the LLM as noted in the block below, i.e. when the 
-remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS. 
+remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS.
+
+In short, cleanup_and_retry with system-wide commands are permitted responses from the LLM when idempotency is involved OR when
+os-signalled remediation is invovled. Otherwise, the LLM has to respond with fallback to prevent system-wide operatioin usage in
+its response (this aligns with the OS mutation policy and why the guard is present).
+
+Its a very complex line of reasoning as some of the test cases in the next section illustrate.  
 
 
 ```
@@ -10020,8 +10026,6 @@ These topics are discussed in depth in a previous section at the link below:
 
 
 
-
-
 ##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases)
 
 The idempotency schema based test suite consists of the following as indicated earlier:
@@ -10038,7 +10042,269 @@ The idempotency schema based test suite consists of the following as indicated e
 There are 12 OSes that will be tested, each with 6 context schema based test cases.
 
 
-The test results are given in the test matrix table below:
+
+
+
+
+##### LLM Contract Stress Tester - Idempotency Ubuntu testing
+
+Due to the complexity of the idempotency global rule block above, to validate the logic in the block with Ubuntu, regression had
+to be performed following the testing with the idempotency test suite (6 total test cases per OS: 5 idempotency test cases and 
+one test case for a test of the fallback logic where it is not idempotency and not os-signalled remediation.
+
+
+
+###### Idempotency test cases
+
+Idempotency and os-signalled remediation ALWAYS use a cleanup_and_retry action plan response from the LLM. The fallback is the 
+negative logic test case.
+
+The idempotency test results (6 test cases) are given in the matrix below:
+
+
+
+###### OS-signalled remediation test cases
+
+Following the above, 3 additional test cases were run to verify that the os-signalled remeidation logic worked in the contract. 
+The proper response here is always a cleanup_and_retry response from the LLM
+
+
+###### Regresion with the base 20 test cases
+
+Following the above, regression had to be performed to ensure that the existing Ubuntu domain primitives block logic was intact.
+This is a suite of 20 base test cases that were run very early in the contract development process. 
+The only deviation from previous test results was the first test case. Prior to the introducation of the global idempotency rule
+block, the LLM response to test case 1 (index 0) was cleanup_and_retry. This is NOT the proper response given the new logic and
+the new proper policy constraints. The proper LLM response to this test case is fallback.
+
+The LLM reasoning analysis is very complex but a simplified analysis is given below. This test case is important because it sets
+the precedent for how all the other 11 OSes should operate under similar test case circumstances.
+
+The schema for the context based test case is the following: 
+
+```
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "E: Unable to locate package nginx",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "i-test-001",
+      "ip": "10.0.0.10",
+      "tags": [],
+      "history": [
+        {
+          "command": "apt-get update -y",
+          "stdout": "Hit:1 http://archive.ubuntu.com/ubuntu jammy InRelease",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+```
+
+The first thing to note here is the history. The command history is not a repeat of the current commmand apt-get install -y nginx.
+Rather it is a successful attempt at updating the package list. 
+
+The above tells us: 
+
+- The package lists are fresh  
+- The repository is reachable  
+- The metadata is valid  
+- There is no corruption  
+- There is no stale metadata  
+- There is no OS‑signaled remediation. This is very important. If this were true, cleanup_and_retry would be attempted by the LLM 
+- The package truly does not exist in this environment  
+
+Thus this is NOT  a case of idempotency.
+
+Idempotency only applies when:
+
+- The same command has already been executed (as noted in the history of the context that is sent to the LLM) 
+- And the OS indicates “already done” or “nothing to do”  
+
+But here:
+
+- The history contains apt-get update, not apt-get install nginx  
+- There is no prior install attempt  
+- There is no dpkg residue  
+- There is no partial install  
+- There is no lock file  
+- There is no idempotent signal  
+
+This is also not a case of OS-signalled remediation
+
+The global idempotency rule above specifically states:
+
+“OS‑signaled remediation refers to recovery sequences explicitly indicated by stderr.”
+
+Examples:
+
+- Hash Sum mismatch  
+- dpkg --configure -a  
+- apt --fix-broken install  
+- index corruption  
+- partial downloads  
+- signature mismatch  
+- repository 404s  
+
+But here the stderr contains only:
+
+```
+E: Unable to locate package nginx
+```
+
+This is ambiguous and not deterministic.
+
+It could mean:
+
+- nonexistent package  
+- wrong OS  
+- wrong architecture  
+- wrong repository  
+- disabled repository  
+- misconfigured sources.list  
+
+But none of these are OS-signalled remediation. So the inference is completely non-deterministic and to ask the LLM 
+to act accordingly is not correct.
+
+
+This is the exact scenario the new disambiguation rule was designed for. The disambiguation rule is the following part of the 
+global idempotency rule block:
+
+```
+                "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
+                "  considered OS‑signaled remediation. When this phrase appears alone with\n"
+                "  no additional repository, index, integrity, or dpkg context, the LLM\n"
+                "  MUST treat the condition as ambiguous and MUST return \"fallback\".\n"
+                "\n"
+```
+
+Note the word alone with no addtional...... That is precisely this test case above.
+The rule above disambiguates the following rule that is stated later on in the Ubuntu domain primitives block:
+
+```
+               # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
+                "- If a package cannot be located (E: Unable to locate package),\n"
+                "  the LLM MUST retry with:\n"
+                "    * apt-get update\n"
+                "    * apt-get install -y <pkg>\n"
+```
+This rule first appears to be to broad and open but it is a "good" rule. 
+
+Originally without the OS mutation guard/global idempotency rule block, the rule above  was flawed because:
+
+- It treated all missing packages as stale metadata (Very non-deterministic)  
+- It allowed system‑wide operations without OS‑signaled justification  
+- It violated the OS‑Mutation Guard  
+- It caused the LLM to hallucinate remediation  
+- It was not realistic for nonexistent packages  
+- It was not safe  
+
+
+
+It is now contrained to only os-signalled remediation situations as dictated in the global idempotency block (OS mutation guard). 
+These are very specific restrictions. 
+If the case were an os-signalled remediation case (more information present in the stderr and/or history) then a cleanup_and_retry would be permitted
+by the rule above which exists later  in the Ubuntu domain primitives block as long as the stderr included the generic \
+Unable to locate package......(along with other os-signalling for remediation)
+
+In this particilar test case this is NOT the case. This is not a case of os-signalled remediation and the test case should
+now result in fallback. And that is precisely what happens: 
+
+```
+root@e1b1776e601b:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os ubuntu_apt --index 0
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+```
+
+The history in the context ultimately helps the LLM reason this through:
+
+- The history shows apt-get update succeeded  
+- That means the metadata is fresh
+- That means the package really does not exist  
+- That means retrying with `apt-get update` is pointless  
+- That means retrying with `apt-get install` is pointless  
+- That means the LLM must not propose system‑wide operations (and shoud fallback)
+
+
+In summary to this very complex test case:
+
+> Test Case 1 Divergence (Expected Under New Contract)  
+>  
+> The original contract treated all “Unable to locate package <pkg>” errors as stale metadata and required `cleanup_and_retry` with `apt-get update`.  
+>  
+> The new global OS‑Mutation Guard introduces a disambiguation rule:  
+>  
+> Bare “Unable to locate package <pkg>” with no additional stderr context is NOT OS‑signaled remediation and MUST result in `fallback`.
+>  
+> Because the history shows a successful `apt-get update`, the metadata is fresh and the package truly does not exist.  
+>  
+> Therefore the correct action is now `fallback`, and the old behavior was incorrect.
+
+ 
+Finally, is fallback truly the desired action plan response from the LLM. The default treatement in the python module code for
+a fallback response is that the command innately failed and this will lead to a regitry_entry install_failed status for the node.
+Is this truly what is desired in this case?   Yes.  This case is extremely rare but illustrates that the LLM contract reasoning
+is far beyond what conditional python coding could ever do. The semantics of the stderr and the command and the history are 
+analyzed by the LLM in conjunction with the rule constraints to make the proper decision, which is to fail the command using a
+fallback action plan. This is the LLM stating basically that it cannot do anything more in this situation. 
+
+This is a very rare but good test case:
+
+A bare:
+
+```
+E: Unable to locate package nginx
+```
+
+with no other stderr AND after a successful apt-get update is almost never seen in real systems, but nonetheless must be 
+accounted for in proper LLM constructed rule constraints.
+
+This only happens when:
+
+- the package is truly nonexistent  
+- the package name is wrong  
+- the OS image is minimal and missing repos  
+- the user is on the wrong OS family  
+- the user is on the wrong architecture  
+- the user is using a custom repo configuration  
+
+This is exactly why this test case is so valuable — it forces the contract to distinguish:
+
+- real OS‑signalled remediation 
+vs an  
+- ambiguous / nonexistent package  
+
+One is cleanup_and_retry and the other (this case) is fallback and command failure.
+
+The rest of the test cases aligned with the previous results, so there were no other collateral regression issues with the 
+added contract rule logic. 
+
+The test matrix for the base 20 Ubuntu test cases is below:
+
+
+
+
+
+###### Regresion with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
+
+This is the second part of the regression with Ubuntu. 
+
+
+
+The test matrix is below:
+
+
+
+
+
+##### Debian
+
+#### Etc.... WIP
 
 
 
