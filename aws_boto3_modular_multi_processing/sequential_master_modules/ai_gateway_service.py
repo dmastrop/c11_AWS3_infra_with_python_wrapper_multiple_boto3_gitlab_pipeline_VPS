@@ -508,7 +508,8 @@ def recover(request: RecoveryRequest):
 
 
                 # =======================================================
-                # OS‑Mutation Guard — applies BEFORE any Ubuntu APT primitives or rewrite logic\n"
+                # OS‑Mutation Guard (GLOBAL) — applies BEFORE any OS specific domain  primitives or rewrite logic\n"
+                # =======================================================
                 "- This rule OVERRIDES any conflicting OS‑specific domain‑primitives.\n"
                 "- The following commands are considered system‑wide operations on Linux-family OSes:\n"
                 "      apt-get update\n"
@@ -812,11 +813,13 @@ def recover(request: RecoveryRequest):
                 "- Ubuntu uses 'apt' and 'apt-get' as its package managers.\n"
                 "- The command 'apt-get update' refreshes package indexes.\n"
                 "- The command 'apt-get install <pkg>' installs packages.\n"
-                "- The flag '-y' auto-confirms installation.\n"
+                "- The flag '-y' auto-confirms installation.\n"         
+                # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
                 "- If a package cannot be located (E: Unable to locate package),\n"
                 "  the LLM MUST retry with:\n"
                 "    * apt-get update\n"
                 "    * apt-get install -y <pkg>\n"
+                #
                 "- If the command is missing arguments (e.g., 'apt-get install'),\n"
                 "  treat it as malformed and use retry_with_modified_command.\n"
                 "- If the command uses a package manager that does not match Ubuntu (yum, dnf, apk),\n"
