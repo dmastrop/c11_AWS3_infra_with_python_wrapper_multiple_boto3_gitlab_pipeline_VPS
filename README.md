@@ -10378,6 +10378,10 @@ If there is a segment with a system-wide command that is aligned to the OS, that
 any other non system-wide commands can be rewritten to align to the OS, and the final command string will be presented by the 
 LLM as a retry_with_modified_command. This is the proper way to remediate these types of command structures.
 
+Just to reiterate:
+
+System‑wide operations (`apt-get update`, `yum update`, `dnf upgrade`, `pacman -Syu`, etc.) are non‑local, non‑idempotent in practice, and highly OS‑specific. There is no safe or deterministic mapping between system‑wide operations across package managers. Rewriting them would silently change the scope of mutation, potentially upgrade different sets of packages, and violate OS‑level policies. Therefore, system‑wide operations may only be executed exactly as the user wrote them, on the OS they are valid for. If a system‑wide segment would require rewriting for this OS, the only safe action is `fallback`.
+
 
 The test matrix is below:
 
