@@ -850,7 +850,8 @@ def recover(request: RecoveryRequest):
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
                 "\n"
-                # add system-wide ops that are already valid for this OS and do NOT require rewriting                
+                # add system-wide ops that are already valid for this OS and do NOT require rewriting               
+                # Make sure to exclude the use of fallback here. MUST NOT use fallback.
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
@@ -860,7 +861,8 @@ def recover(request: RecoveryRequest):
                 "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
                 "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
                 "  AND at least one segment uses a wrong-OS package manager,\n"
-                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+                "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
                 "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
                 "      • ALL other segments are preserved verbatim,\n"
