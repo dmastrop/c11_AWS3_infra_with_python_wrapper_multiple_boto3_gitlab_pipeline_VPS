@@ -10115,14 +10115,14 @@ There are 12 OSes that will be tested, each with 6 context schema based idempote
 
 Due to the complexity of the idempotency global rule block above, to validate the logic in the block with Ubuntu, regression had
 to be performed following the testing with the idempotency test suite (6 total test cases per OS: 5 idempotency test cases and 
-one test case for a test of the fallback logic where it is not idempotency and not os-signalled remediation.
+one test case for a test of the fallback logic where it is not idempotency and not OS-signalled remediation).
 
 
 
 ###### Idempotency test cases
 
 Idempotency and os-signalled remediation ALWAYS use a cleanup_and_retry action plan response from the LLM. The fallback is the 
-negative logic test case.
+negative logic test case that cannot use OS-signalled remediation because there is no stderr or history in the context. 
 
 The idempotency test results (6 test cases) are given in the matrix below:
 
@@ -10132,6 +10132,9 @@ The idempotency test results (6 test cases) are given in the matrix below:
 
 Following the above, 3 additional test cases were run to verify that the os-signalled remeidation logic worked in the contract. 
 The proper response here is always a cleanup_and_retry response from the LLM
+
+
+
 
 
 ###### Regresion with the base 20 test cases
@@ -10360,7 +10363,20 @@ The test matrix for the base 20 Ubuntu test cases is below:
 ###### Regresion with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
 
 This is the second part of the regression with Ubuntu. 
+These are the segmental rewrite test cases and involve the patch2 that was added to each of the domain primitives blocks in the 
+contract. The patch2 code was posted in an earlier section above. Several small modifications had to be made to the patch in 
+the course of this regression testing namely as a result of test indices 4, 10, 16, and 21. 
 
+The test case indices 4,16, and 21 are related to system-wide operations and segmental rewrite. As detailed in the earlier section
+on patch2 revisions, if there is a system-wide operation command in the segment and it is not aligned to the OS, it cannot be
+rewritten by the LLM under any circumstances. The reasons for this were listed earlier: namely it is vefy very risky to do so, and
+it is also highly non-deterministic. There is no simple and deterministic rewrite patch for upgrade and update system-wide commands
+across different OSes. Thus, in these cases the LLM MUST return fallback which will fail the command and node installation. This is
+proper. 
+
+If there is a segment with a system-wide command that is aligned to the OS, that command should be left alone and let through, and
+any other non system-wide commands can be rewritten to align to the OS, and the final command string will be presented by the 
+LLM as a retry_with_modified_command. This is the proper way to remediate these types of command structures.
 
 
 The test matrix is below:
