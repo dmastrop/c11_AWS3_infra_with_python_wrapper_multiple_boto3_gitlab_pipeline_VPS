@@ -831,6 +831,14 @@ def recover(request: RecoveryRequest):
 
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                #
+                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
+                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
+                # command does not fail the command and node(thread).
+                "- If ALL segments in the pipeline are already valid for this OS AND the command\n"
+                "  succeeded (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                #
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
@@ -845,8 +853,10 @@ def recover(request: RecoveryRequest):
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
-                # revision to patch2: don't allow segmental rewrites for system-wide operations. Leave as is if no rewrite is required
-                "- ANY segment in the pipeline performs a system-wide operation when using such commands as listed below:\n"
+                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites)
+                "- The following commands are considered system-wide operations:\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
                 "      yum update\n"
@@ -860,7 +870,7 @@ def recover(request: RecoveryRequest):
                 "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
                 "  because it is system-wide.\n"
                 "\n"
-                # reiterated here, but there is a previous rule as well
+                # reiterated here, but there is a previous more global rule as well
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
