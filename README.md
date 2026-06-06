@@ -9878,13 +9878,6 @@ These topics are discussed in further detail in an earlier section (with Example
 
 ---
 
-[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
-
-
-
-
-
-
 
 
 ##### The OS-Muation Guard patch
@@ -9978,15 +9971,15 @@ its own accord outside of idempotency or OS-signalled remediation cases.
 
 ##### Patch2 reallignment with the OS-signalled remediation, system-wide operations and idempotency global command construct
 
-The above global rules blocks also precede the patch2 integration inside each OS's domain primitives block. For example, for 
-Ubuntu, the patch2 looks like this:
+The above global rules blocks also precede the patch2 integration inside each OS's domain primitives block. 
 
+The improved decision making integrated into the global OS mutation guard above did affect some of the inferences that the LLM
+made regarding segmental rewrites, which is the focus of patch2.   Namely, system-wide operations began to be indiscriminately 
+cause an action plan of fallback regardless of whether or not the system-wide operation was correct and did not need to be 
+rewritten. This is incorrect and this is a collateral regression issue from the enhanced awareness that the LLM now has in
+regards to OS-signalled remediation, OS mutations in general, idempotency, etc.
 
-```
-```
-
-XXXXXXX
-These are the segmental rewrite rules. The LLM is instructed once again about segments that involve system-wide operations. 
+Patch2 has the segmental rewrite rules. The LLM is instructed about segments that involve system-wide operations. 
 
 System-wide operations that are aligned to the OS and do not have to be rewritten can pass through and be processed by 
 patch2 as a retry_with_modified_command. The regression test cases in this are will ensure that this is done properly. 
@@ -10001,20 +9994,74 @@ There are schema based test cases that will test for this as well as for system-
 
 This is the core principle behind the corrected Patch2 rules during the idempotency testing and regression testing.
 
-
-
 NOTE: Even though there is a GLOBAL idempotency rule block at the very top of the contract (see earlier section)
 which should override later rules that conflict, if the rule that follows is more specific (as in this case in patch2), that can 
-probabilistically override the the earlier GLOBAL rule. And that is what happens without the OS mutation guard. 
+probabilistically override the the earlier GLOBAL rule. And that is what happens without the OS mutation guard. This also 
+occurs with invalid flag processing.
 
 LLM contract rules design often involves trial and error as the LLM is inherently probabilistic and we are making it fully 
 deterministic through a concise rule design.
 
-XXXXX post the updated patch2 code with the minor fixes.
+The updated patch2 is below. In the next section the test case matrices will be presented. The 24 extended test cases are the 
+ones that regression test all the segmental rewrite contract rules make up patch2. Note the very very clear rule 
+language semantics in regards to system-wide operations. 
 
 
+```
 
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                #
+                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
+                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
+                # command does not fail the command and node(thread).
+                "- If ALL segments in the pipeline are already valid for this OS AND the command\n"
+                "  succeeded (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                #
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                # add system-wide ops that are already valid for this OS and do NOT require rewriting                
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, OR\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
+                "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "\n"
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+                # reiterated here, but there is a previous more global rule as well
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
 
+```
 
 
 ---
@@ -10062,21 +10109,36 @@ schemas/idempotency_regression/
 ##### An OS-Mutation Guard Rule Summary
 
 
-As noted above:
+As noted in the earlier section:
 
 During the specialized idempotency schema testing an issue was found with tests involving potential OS mutation commands. 
 There are times when OS mutation is permitted, namely if it has been initiated by the user (the command in the context that is
 presented to the LLM), and the stderr or history indicates that the command was tried previously and that this will be an 
-idempotent scenario.   Other situations require a fallback response from the LLM as noted in the block below, i.e. when the 
+idempotent scenario.  Other situations where OS mutation is permitted by using system-wide operations occurs with OS-signalled
+remediation, as discussed earlier. These scnearios are all clearly presented in the GLOBLAL OS mutation guard rule block.
+
+ALL Other situations require a fallback response from the LLM as noted in the OS mutation guard block. i.e. when the 
 remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS.
 
+This is clearly defined in the OS mutation guard block:
+
+```
+                "- If a rewrite, retry, or cleanup sequence would require ANY system‑wide\n"
+                "  operation that is NOT part of an OS‑signaled remediation flow, the LLM\n"
+                "  MUST return \"fallback\" instead.\n"
+                "\n"
+                "- When validating an already-executed user command from the context\n"
+                "  (including idempotent 'update' or 'upgrade' operations), the OS‑Mutation\n"
+                "  Guard MUST NOT be applied; instead, the global Idempotency rules apply.\n"
+                "  Under the global Idempotency rules, idempotent system‑wide operations\n"
+                "  MUST result in a \"cleanup_and_retry\" action.\n"
+```
+
 In short, cleanup_and_retry with system-wide commands are permitted responses from the LLM when idempotency is involved OR when
-os-signalled remediation is invovled. Otherwise, the LLM has to respond with fallback to prevent system-wide operatioin usage in
-its response (this aligns with the OS mutation policy and why the guard is present).
+os-signalled remediation is invovled. Otherwise, the LLM has to respond with fallback to prevent system-wide operation usage in
+its response.
 
 Its a very complex line of reasoning as some of the test cases in the next section illustrate.  
-
-
 
 
 
@@ -10086,7 +10148,7 @@ These topics regarding system-wide commands, are discussed in depth in a previou
 
 
 
-
+---
 
 ##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases) and test approach
 
@@ -10098,7 +10160,7 @@ is increased in complexity. The following needs to be tested:
 - 12 OSes that deal with idempotency but are under the global Idempotency and the global OS mutation guard rule blocks now
 - 4 OSes without any need for the OS mutation guard because the PM does not suport system-wide ops or there is no PM at all
 - 72 idempotency cases for the 12 relevant OSes 
-- 12 domain‑primitive blocks are covered by the tests 
+- 12 domain‑primitive blocks are covered by the idempotency tests 
 - 2 classes of deterministic remediation (soft and hard) in extra test cases added as a supplement beyond the original 72
 - full Patch2 rewrite logic will be excercised as regression
 - full malformed‑command hardening logic will be exercised as regression
@@ -10113,13 +10175,13 @@ There are 12 OSes that will be tested, each with 6 context schema based idempote
 
 ##### LLM Contract Stress Tester - Idempotency Ubuntu testing
 
-Due to the complexity of the idempotency global rule block above, to validate the logic in the block with Ubuntu, regression had
-to be performed following the testing with the idempotency test suite (6 total test cases per OS: 5 idempotency test cases and 
-one test case for a test of the fallback logic where it is not idempotency and not OS-signalled remediation).
+Due to the complexity of the global OS mutation guard block in conjunction with the global idempotency rule block, to validate the logic in the block with Ubuntu, regression had to be performed following the testing with the idempotency test suite. This did reveal that
+there were collateral affects in the segmental rewrite as well as how system-wide operations are dealt with, in general, by the LLM.
+All issues were addressed and fixed by the latest code in ai_gateway_service.py.
 
 
 
-###### Idempotency test cases
+###### Idempotency test cases (6)
 
 Idempotency and os-signalled remediation ALWAYS use a cleanup_and_retry action plan response from the LLM. The fallback is the 
 negative logic test case that cannot use OS-signalled remediation because there is no stderr or history in the context. 
@@ -10128,7 +10190,7 @@ The idempotency test results (6 test cases) are given in the matrix below:
 
 
 
-###### OS-signalled remediation test cases
+###### OS-signalled remediation test cases (3)
 
 Following the above, 3 additional test cases were run to verify that the os-signalled remeidation logic worked in the contract. 
 The proper response here is always a cleanup_and_retry response from the LLM
@@ -10239,7 +10301,7 @@ to act accordingly is not correct.
 
 
 This is the exact scenario the new disambiguation rule was designed for. The disambiguation rule is the following part of the 
-global idempotency rule block:
+global OS mutation guard rule block:
 
 ```
                 "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
@@ -10250,6 +10312,7 @@ global idempotency rule block:
 ```
 
 Note the word alone with no addtional...... That is precisely this test case above.
+
 The rule above disambiguates the following rule that is stated later on in the Ubuntu domain primitives block:
 
 ```
@@ -10259,9 +10322,9 @@ The rule above disambiguates the following rule that is stated later on in the U
                 "    * apt-get update\n"
                 "    * apt-get install -y <pkg>\n"
 ```
-This rule first appears to be to broad and open but it is a "good" rule. 
+This rule first appears to be too broad and open but it is a "good" rule. 
 
-Originally without the OS mutation guard/global idempotency rule block, the rule above  was flawed because:
+Originally without the OS mutation guard/global idempotency rule block, the rule above was flawed because:
 
 - It treated all missing packages as stale metadata (Very non-deterministic)  
 - It allowed system‑wide operations without OS‑signaled justification  
@@ -10272,11 +10335,12 @@ Originally without the OS mutation guard/global idempotency rule block, the rule
 
 
 
-It is now contrained to only os-signalled remediation situations as dictated in the global idempotency block (OS mutation guard). 
+It is now contrained to only os-signalled remediation situations as dictated in the globalOS mutation guard block. 
 These are very specific restrictions. 
-If the case were an os-signalled remediation case (more information present in the stderr and/or history) then a cleanup_and_retry would be permitted
-by the rule above which exists later  in the Ubuntu domain primitives block as long as the stderr included the generic \
-Unable to locate package......(along with other os-signalling for remediation)
+
+If the case were an os-signalled remediation case (more information present in the stderr and/or history) then a cleanup_and_retry 
+would be permitted by the rule above, even though there is a system-wide operation (apt-get update) that mutates the OS.
+
 
 In this particilar test case this is NOT the case. This is not a case of os-signalled remediation and the test case should
 now result in fallback. And that is precisely what happens: 
@@ -10314,8 +10378,11 @@ In summary to this very complex test case:
 > Therefore the correct action is now `fallback`, and the old behavior was incorrect.
 
  
-Finally, is fallback truly the desired action plan response from the LLM. The default treatement in the python module code for
-a fallback response is that the command innately failed and this will lead to a regitry_entry install_failed status for the node.
+Finally, is fallback truly the desired action plan response from the LLM? 
+
+The default treatement in the python module code for a fallback response is that the command innately failed and this will lead to 
+a registry_entry install_failed status for the node.
+
 Is this truly what is desired in this case?   Yes.  This case is extremely rare but illustrates that the LLM contract reasoning
 is far beyond what conditional python coding could ever do. The semantics of the stderr and the command and the history are 
 analyzed by the LLM in conjunction with the rule constraints to make the proper decision, which is to fail the command using a
@@ -10332,7 +10399,10 @@ E: Unable to locate package nginx
 with no other stderr AND after a successful apt-get update is almost never seen in real systems, but nonetheless must be 
 accounted for in proper LLM constructed rule constraints.
 
-This only happens when:
+This is a very good "stress" test of the cababilities of the LLM to reason through very complicated scenarios. The Unable to locate
+package is a very important message in linux syntax lineage.
+
+The situation where the message occurs in isolation with no stderr AND after a successful apt-get update only happens when:
 
 - the package is truly nonexistent  
 - the package name is wrong  
@@ -10340,6 +10410,8 @@ This only happens when:
 - the user is on the wrong OS family  
 - the user is on the wrong architecture  
 - the user is using a custom repo configuration  
+
+Thus fallback is the correct response here. The command has truly failed.
 
 This is exactly why this test case is so valuable — it forces the contract to distinguish:
 
@@ -10363,27 +10435,41 @@ The test matrix for the base 20 Ubuntu test cases is below:
 ###### Regresion with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
 
 This is the second part of the regression with Ubuntu. 
+
 These are the segmental rewrite test cases and involve the patch2 that was added to each of the domain primitives blocks in the 
-contract. The patch2 code was posted in an earlier section above. Several small modifications had to be made to the patch in 
-the course of this regression testing namely as a result of test indices 4, 10, 16, and 21. 
+contract. 
+
+The patch2 code was posted in an earlier section above. Several small modifications had to be made to the patch in 
+the course of this regression testing namely as a result of test indices 4, 10, 16, and 21. (test cases 5, 11, 17 and 22).
 
 The test case indices 4,16, and 21 are related to system-wide operations and segmental rewrite. As detailed in the earlier section
 on patch2 revisions, if there is a system-wide operation command in the segment and it is not aligned to the OS, it cannot be
 rewritten by the LLM under any circumstances. The reasons for this were listed earlier: namely it is vefy very risky to do so, and
 it is also highly non-deterministic. There is no simple and deterministic rewrite patch for upgrade and update system-wide commands
 across different OSes. Thus, in these cases the LLM MUST return fallback which will fail the command and node installation. This is
-proper. 
+the proper remediation response.
 
 If there is a segment with a system-wide command that is aligned to the OS, that command should be left alone and let through, and
 any other non system-wide commands can be rewritten to align to the OS, and the final command string will be presented by the 
 LLM as a retry_with_modified_command. This is the proper way to remediate these types of command structures.
 
+
+
 Just to reiterate:
 
 System‑wide operations (`apt-get update`, `yum update`, `dnf upgrade`, `pacman -Syu`, etc.) are non‑local, non‑idempotent in practice, and highly OS‑specific. There is no safe or deterministic mapping between system‑wide operations across package managers. Rewriting them would silently change the scope of mutation, potentially upgrade different sets of packages, and violate OS‑level policies. Therefore, system‑wide operations may only be executed exactly as the user wrote them, on the OS they are valid for. If a system‑wide segment would require rewriting for this OS, the only safe action is `fallback`.
 
+Thus it is clear now how idempotency, OS-signalled remediation, rewrites, and OS mutation are all heavily intertwined with one another.
+
+
 
 The test matrix is below:
+
+
+
+
+
+
 
 
 

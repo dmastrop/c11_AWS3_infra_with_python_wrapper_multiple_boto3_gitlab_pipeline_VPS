@@ -861,7 +861,8 @@ def recover(request: RecoveryRequest):
                 "\n"
                 # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
                 # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
-                # (retry_with_modified_command with rewrites)
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
                 "- The following commands are considered system-wide operations:\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
