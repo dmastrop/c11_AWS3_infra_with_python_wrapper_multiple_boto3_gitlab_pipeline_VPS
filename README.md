@@ -9694,88 +9694,22 @@ remediation and the LLM has to be aware of such nuances through proper and conci
 
 Fallback is technically remediation, whereas cleanup_and_retry in the context of an idempotency setting, is NOT remediation. 
 
-This aligns to how the LLM should always respond in idempotent scenaraios: not with remediation, where the retry command may
+This aligns to how the LLM should always respond in idempotent scenarios: not with remediation, where the retry command may
 be changed to address the issue, but rather with a retry command that is ALWAYS the same command. 
 
 As such, even a command that does a PM update or upgrade, that is considered an OS mutation system-wide operation, will be 
 properly addressed with a cleanup_and_retry response from the LLM in the case of idempotency. The command is mutating the OS
-but it was initiated by the user and NOT the LLM. In all other circumstances these types of commands are always fallback. 
+but it was initiated by the user and NOT the LLM. 
+
+The other class of commands that allow for cleanup_and_retry with OS system-wide operations (update or upgrade) are OS-signalled
+remediation type scenarios. These were reviewed in an earlier section and will be presented again, below, for review. 
+
+In all other instances (i.e., LLM generated commands), OS system-wide mutating command are forbidden and should result in the 
+action plan of fallback from the LLM. This is the LLM stating essentially that to fix the issue would require a system-wide
+operation command and it cannot do that outside of the above scenarios. It cannot generate these types of commands as remediation 
+by its (the LLM's) own volition.  
 
 
-
-##### The OS-Muation Guard patch
-
-To guard against a fallback for system-side operations in the setting of idempotency, an OS guard has to be patched into the contract
-for all 12 OSes to prevent unconditional fallback, in this specific case. Yet for all other cases a fallback must be used. 
-
-The OS mutation guard code itself is simple: 
-
-```
-                # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-```
-
-The placement of the guard has to be very strategic, inside the patch2 across all 12 OSes that have the patch2. It has to be placed 
-at the location shown below, right after the system-wide declarations, so that the LLM can be aware of the special treatment required 
-in the case of idempotency. 
-
-Otherwise, the LLM unconditionally does a fallback for all system-wide operations regardless of whether 
-or not idempotency is involved. This is because of the rule that preceeds the insertion point below.
-
-NOTE: Even though there is a GLOBAL idempotency rule block at the very top of the contract (see earlier section)
-which should override later rules that conflict, if the rule that follows is more specific (as in this case in patch2), that can 
-probabilistically override the the earlier GLOBAL rule. And that is what happens without the OS mutation guard. 
-
-LLM contract rules design often involves trial and error as the LLM is inherently probabilistic and we are making it fully 
-deterministic through a concise rule design.
-
-See below for the insertion point of the OS muation guard inside patch2:
-
-
-```
-
-                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
-                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
-                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
-                "  the LLM MUST treat each segment independently.\n"
-                "\n"
-                "- If ALL segments in the pipeline are either:\n"
-                "      • simple package-install commands, or\n"
-                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
-                "  AND at least one segment uses a wrong-OS package manager,\n"
-                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
-                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
-                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
-                "      • ALL other segments are preserved verbatim,\n"
-                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
-                "\n"
-
-                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"  <<< MORE SPECIFIC SYSTEM-WIDE RULE
-                "      apt-get update\n"
-                "      apt-get upgrade\n"
-                "      yum update\n"
-                "      dnf upgrade\n"
-                "      pacman -Syu\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
-                "\n"
-
-                # Idempotency regression patch — OS-Mutation Guard Rule   <<<<< INSERTION POINT IS HERE
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
-```
 
 ##### Three different types of system-wide scenarios
 
@@ -9938,9 +9872,6 @@ system‑wide mutations during Patch2 rewrite logic.
 
 
 
-
-
-
 These topics are discussed in further detail in an earlier section (with Examples):
 
 - [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
@@ -9950,6 +9881,165 @@ These topics are discussed in further detail in an earlier section (with Example
 [Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
 
 
+
+
+
+
+
+
+##### The OS-Muation Guard patch
+
+To guard against a fallback for system-side operations in the setting of idempotency OR OS-signalled remedation cases, an OS guard has to be patched into the contract. Rather than integrating this into each of the 12 OSes that require this type of construct, it is 
+better to make the OS mutation guard a GLOBAL rule block that prefaces all of the OS domain primitives specific blocks. It must
+be placed right after the Idempotency global rule block (that was presented earlier). These two rule blocks work togther very 
+closely and both must be present for proper LLM remediation action plan responses under these very complex scenarios. 
+
+
+The OS mutation guard block has evolved into something that is more complex throughout the testing process. Note that it follows
+the Idempotency global rule block. This is intentional. 
+
+```
+
+                # ============================================================
+                # IDEMPOTENCY RULES
+                # Revision 5: Idempotency-related failures MUST use cleanup_and_retry. Signals can be fronm stderr AND/OR history 
+                # both of which are presented in the context to the LLM
+                # ============================================================
+                "Idempotency rules (Revision 5):\n"
+                "- Idempotency-related failures MUST use \"cleanup_and_retry\".\n"
+                "- Idempotency may be detected from stderr, from command history, or both.\n"
+                "- Idempotency conditions include messages such as:\n"
+                "  - \"already installed\"\n"
+                "  - \"already exists\"\n"
+                "  - \"nothing to do\"\n"
+                "  - \"resource busy\"\n"
+                "  - \"lock is held by PID ...\"\n"
+                "  - \"directory not empty\"\n"
+                "  - \"service already running\"\n"
+                "  - \"package is in a half-installed state\".\n"
+                "- Repeated operations in history (e.g., repeated installs or service starts) also indicate idempotency.\n"
+                "- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
+                "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
+
+
+
+                # =======================================================
+                # OS‑Mutation Guard (GLOBAL) — applies BEFORE any OS specific domain  primitives or rewrite logic\n"
+                # =======================================================
+                "- This rule OVERRIDES any conflicting OS‑specific domain‑primitives.\n"
+                "- The following commands are considered system‑wide operations on Linux-family OSes:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- The LLM MUST NOT generate or propose ANY of these system‑wide operations\n"
+                "  as part of a rewrite, retry, or cleanup sequence. These operations are\n"
+                "  allowed ONLY when they appear in the original user command being validated.\n"
+                "\n"
+                "- OS‑signaled deterministic remediation is EXEMPT from this restriction.\n"
+                "  OS‑signaled remediation refers to recovery sequences that are explicitly\n"
+                "  indicated by stderr or system output (for example: 'Hash Sum mismatch',\n"
+                "  'dpkg --configure -a', 'apt --fix-broken install', or other OS-provided\n"
+                "  instructions). These remediation flows MAY include system‑wide operations\n"
+                "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
+                "\n"
+                "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
+                "  considered OS‑signaled remediation. When this phrase appears alone with\n"
+                "  no additional repository, index, integrity, or dpkg context, the LLM\n"
+                "  MUST treat the condition as ambiguous and MUST return \"fallback\".\n"
+                "\n"
+                "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
+                "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
+                "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
+                "  remediation and are therefore allowed to include system‑wide operations.\n"
+                "\n"
+                "- If a rewrite, retry, or cleanup sequence would require ANY system‑wide\n"
+                "  operation that is NOT part of an OS‑signaled remediation flow, the LLM\n"
+                "  MUST return \"fallback\" instead.\n"
+                "\n"
+                "- When validating an already-executed user command from the context\n"
+                "  (including idempotent 'update' or 'upgrade' operations), the OS‑Mutation\n"
+                "  Guard MUST NOT be applied; instead, the global Idempotency rules apply.\n"
+                "  Under the global Idempotency rules, idempotent system‑wide operations\n"
+                "  MUST result in a \"cleanup_and_retry\" action.\n"
+
+```
+
+Note that the OS mutation guard block above consists of rules regarding OS-signalled remediation as well as the last part which
+is for idempotency scenarios. Note also that the LLM is prohibited from generating system-wide operations that mutate the OS by 
+its own accord outside of idempotency or OS-signalled remediation cases.
+
+
+
+
+The above global rules blocks also precede the patch2 integration inside each OS's domain primitives block. For example, for 
+Ubuntu, the patch2 looks like this:
+
+
+```
+```
+
+XXXXXXX
+These are the segmental rewrite rules. The LLM is instructed once again about segments that involve system-wide operations. 
+The LLM cannot rewrite segments that involve system-wide operations. 
+
+
+NOTE: Even though there is a GLOBAL idempotency rule block at the very top of the contract (see earlier section)
+which should override later rules that conflict, if the rule that follows is more specific (as in this case in patch2), that can 
+probabilistically override the the earlier GLOBAL rule. And that is what happens without the OS mutation guard. 
+
+LLM contract rules design often involves trial and error as the LLM is inherently probabilistic and we are making it fully 
+deterministic through a concise rule design.
+
+See below for the insertion point of the OS muation guard inside patch2:
+
+
+```
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, or\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+
+                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"  <<< MORE SPECIFIC SYSTEM-WIDE RULE
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
+                "\n"
+
+                # Idempotency regression patch — OS-Mutation Guard Rule   <<<<< INSERTION POINT IS HERE
+                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
+                "- When validating an already-executed user command from the context (including idempotent\n"
+                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
+                "  global Idempotency rules determine the correct action.\n"
+                "\n"
+
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+```
 
 
 
@@ -10005,16 +10095,7 @@ os-signalled remediation is invovled. Otherwise, the LLM has to respond with fal
 its response (this aligns with the OS mutation policy and why the guard is present).
 
 Its a very complex line of reasoning as some of the test cases in the next section illustrate.  
-
-
-```
-                # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-```
+``
 
 
 
@@ -10026,20 +10107,23 @@ These topics are discussed in depth in a previous section at the link below:
 
 
 
-##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases)
+##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases) and test approach
 
-The idempotency schema based test suite consists of the following as indicated earlier:
+The testing approach here is muti-dimensional. There are regression issues to be considered since the rule logic
+is increased in complexity. The following needs to be tested:
 
-- 12 OSes with OS‑Mutation Guard  
-- 4 OSes without it  
-- 72 idempotency cases  
-- 12 domain‑primitive blocks  
-- 2 classes of deterministic remediation  
-- full Patch2 rewrite logic  
-- full malformed‑command hardening  
-- full invalid‑flag precedence  
+- Regression test the base test cases from earlier
+- Patch2 regression testing involving rewrite (as some of the test cases involve system-wide commands)
+- 12 OSes that deal with idempotency but are under the global Idempotency and the global OS mutation guard rule blocks now
+- 4 OSes without any need for the OS mutation guard because the PM does not suport system-wide ops or there is no PM at all
+- 72 idempotency cases for the 12 relevant OSes 
+- 12 domain‑primitive blocks are covered by the tests 
+- 2 classes of deterministic remediation (soft and hard) in extra test cases added as a supplement beyond the original 72
+- full Patch2 rewrite logic will be excercised as regression
+- full malformed‑command hardening logic will be exercised as regression
+- full invalid‑flag precedence will be exercised as regression
 
-There are 12 OSes that will be tested, each with 6 context schema based test cases.
+There are 12 OSes that will be tested, each with 6 context schema based idempotency test cases as the main focus here.
 
 
 

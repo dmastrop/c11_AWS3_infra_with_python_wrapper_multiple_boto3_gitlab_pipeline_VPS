@@ -829,6 +829,7 @@ def recover(request: RecoveryRequest):
                
 
 
+
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
@@ -844,16 +845,22 @@ def recover(request: RecoveryRequest):
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
-                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"
+                # revision to patch2: don't allow segmental rewrites for system-wide operations. Leave as is if no rewrite is required
+                "- ANY segment in the pipeline performs a system-wide operation when using such commands as listed below:\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
                 "      yum update\n"
                 "      dnf upgrade\n"
                 "      pacman -Syu\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
-
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+                # reiterated here, but there is a previous rule as well
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
