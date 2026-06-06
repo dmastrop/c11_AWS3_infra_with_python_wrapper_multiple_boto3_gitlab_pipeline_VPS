@@ -9761,6 +9761,37 @@ In simple terms  “deterministic remediation” consists of the following:
 
 - And the contract encodes that exact sequence.
 
+To discriminate further on this topic of OS-signalled deterministic remediation, the OS mutation guard block, which will be presented
+in full later, now describes both soft and hard forms of OS-signalled remediation. Both of these types allow for non-fallback 
+responses from the LLM with system-wide operations that mutate the OS. The hard form is very clearnly signalled by the OS (Amazon
+Linux2 and CentOS7), whereas the soft form is more subtle in the stderr messages of the other linux OSes.
+
+The rules state this in the global OS muation guard as:
+
+```
+                "- OS‑signaled deterministic remediation is EXEMPT from this restriction.\n"
+                "  OS‑signaled remediation refers to recovery sequences that are explicitly\n"
+                "  indicated by stderr or system output (for example: 'Hash Sum mismatch',\n"
+                "  'dpkg --configure -a', 'apt --fix-broken install', or other OS-provided\n"
+                "  instructions). These remediation flows MAY include system‑wide operations\n"
+                "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
+                "\n"
+```
+
+And this:
+
+
+```
+                "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
+                "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
+                "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
+                "  remediation and are therefore allowed to include system‑wide operations.\n"
+                "\n"
+
+```
+
+In short, these bypass the OS mutation guard and permit the LLM to use system-wide operations to cleanup_and_retry the command.
+
 
 
 ---
@@ -10196,6 +10227,125 @@ Following the above, 3 additional test cases were run to verify that the os-sign
 The proper response here is always a cleanup_and_retry response from the LLM
 
 
+So far the testing in Ubuntu with these add on test cases, are working. So the LLM is doing a good job at reasoning these complex
+scenarios.  Some examples of the context schema based test cases in this area (for ubuntu) are the following: 
+
+Test case 1:  
+
+```
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "Err:1 http://archive.ubuntu.com/ubuntu jammy/main amd64 nginx amd64 1.18.0-0ubuntu1\n  404  Not Found\nE: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/n/nginx/nginx_1.18.0-0ubuntu1_amd64.deb  404  Not Found\nE: Unable to locate package nginx",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-002",
+      "ip": "10.0.8.202",
+      "tags": ["os-signaled-remediation", "stale-metadata"],
+      "history": []
+    },
+```
+
+Result, note the retry involves the use of a system-wide command that mutates the OS. The LLM knows that it is allowed to do this
+because this is clearnly a case of OS-signalled remediation. The OS mutation guard is effectively bypassed.
+
+```
+root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_add_on_os_signalled_remediation --index 0
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":["apt-get update -y","apt-get install -y nginx"]}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y nginx
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+
+
+
+
+
+Test case 2:
+```
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "W: Failed to fetch http://archive.ubuntu.com/ubuntu/dists/jammy/InRelease  Hash Sum mismatch\nE: Some index files failed to download. They have been ignored, or old ones used instead.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-003",
+      "ip": "10.0.8.203",
+      "tags": ["os-signaled-remediation", "hash-sum-mismatch"],
+      "history": []
+    },
+```
+
+Results, note that the retry is using a system-wide operation:
+
+```
+root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_add_on_os_signalled_remediation --index 1
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -rf /var/lib/apt/lists/partial/*","rm -rf /var/cache/apt/archives/partial/*"],"retry":["apt-get update -y","apt-get install -y nginx"]}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y nginx
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+
+
+
+Test case 3: 
+
+```
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "dpkg was interrupted, you must run 'dpkg --configure -a' to correct the problem.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-004",
+      "ip": "10.0.8.204",
+      "tags": ["os-signaled-remediation", "dpkg-interrupt"],
+      "history": []
+    }
+```
+
+Result:
+
+
+
+```
+root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_add_on_os_signalled_remediation --index 2
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":["dpkg --configure -a","apt-get install -y nginx"]}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y nginx
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+
+```
+
+These are all very good examples of the soft OS-signalled remedation that is desribed in the OS mutation guard block. 
+
+
+
+
 
 
 
@@ -10459,7 +10609,120 @@ Just to reiterate:
 
 System‑wide operations (`apt-get update`, `yum update`, `dnf upgrade`, `pacman -Syu`, etc.) are non‑local, non‑idempotent in practice, and highly OS‑specific. There is no safe or deterministic mapping between system‑wide operations across package managers. Rewriting them would silently change the scope of mutation, potentially upgrade different sets of packages, and violate OS‑level policies. Therefore, system‑wide operations may only be executed exactly as the user wrote them, on the OS they are valid for. If a system‑wide segment would require rewriting for this OS, the only safe action is `fallback`.
 
-Thus it is clear now how idempotency, OS-signalled remediation, rewrites, and OS mutation are all heavily intertwined with one another.
+**Thus it is clear now how idempotency, OS-signalled remediation, rewrites, and OS mutation are all heavily intertwined with one another and form a very complex set of reasoning criteria for the LLM.**
+
+
+---
+
+
+Test case index 10 (test case 11) is a "good" command that has somehow leaked through the AI/MCP HOOK and is now being processed by the LLM. 
+This will never happen in real life. There is no stderr and the exit code is 0, but this test case attempts to "confuse" the LLM
+and trick the LLM into trying to remediate the command. It should not attempt to remediate a good command. The only response should
+be fallback, indiating that it cannot suggest or do anything in this situation. 
+
+The schema is the following: 
+
+```
+    { "command": "apt-get install curl && apt-get install python3", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-011", "ip": "10.0.50.11", "tags": [], "history": [] },
+
+```
+
+There is no stderr and the exit_status is 0. 
+
+The resonse from the LLM is the following:
+
+```
+root@cabb9ffcc562:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 10
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install curl && apt-get install python3
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+
+Prior to some patching this test case started to fail after adding the OS mutation guard. The addtional logic caused the LLM to 
+attempt to cleanup_and_retry the command, but this is not correct. 
+
+```
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":["apt-get install curl","apt-get install python3"]}
+```
+
+One could argue that this is not detremental, but logic wise this contradicts the LLM's use of fallback. If such a command were
+to ever get to the LLM, safeguard logic will be added to prevent this fallback from failing the node (the stderr will be re-examined
+by the LLM as well as the exit_status of 0, and the command will be let through so the node does not fail.
+
+---
+
+
+Test case index 4 is another interesting case. 
+
+The schema is the following:
+
+```
+
+    { "command": "apt-get install curl && pacman -Syu", "stdout": "", "stderr": "bash: pacman: command not found", "exit_status": 127, "attempt": 1, "instance_id": "u-patch-005", "ip": "10.0.50.5", "tags": [], "history": [] },
+
+```
+Note that the pacman -Syu is an archlinux system-wide OS mutating package update command. This command is a very powerful command.
+Note the response from the LLM below is fallback which is correct:
+
+
+```
+root@4ec5758dd6a2:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 4
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install curl && pacman -Syu
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+
+```
+
+The reason this is fallback is because pacma -Syu is a system-wide OS mutating command and it is from another OS (the OS under test
+here is Ubunut). It would be dangerous and non-deterninistic for the LLM to try to remediate this command with an apt-get style
+command to upgrade all of the packages. Fallback is the correct action plan and the command should fail and the node installaton 
+should fail. This command is not the correct command and the user had to fix the command manually. There is no automatic 
+remediation here by the LLM that can safely be performed. 
+
+
+
+---
+
+Test case index 16 is another interesting test case.
+
+The schema is:
+
+```
+    { "command": "yum install nano && apt-get install curl && apt-get update", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-017", "ip": "10.0.50.17", "tags": [], "history": [] },
+```
+
+
+Note here that there is a system-wide command apt-get update. But this command is native to the OS (Ubuntu). The LLM needs to let
+this command pass through as is (there is no rewrite required), and rewrite any other commands that are using incorrect PMs
+(that would be the yum install nano segment), and then retry the entire rewritten command.
+
+And that is precisely what the LLM does:
+
+
+
+
+
+
+
 
 
 

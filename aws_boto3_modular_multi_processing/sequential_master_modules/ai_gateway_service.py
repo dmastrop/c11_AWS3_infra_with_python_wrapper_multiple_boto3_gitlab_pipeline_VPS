@@ -838,6 +838,13 @@ def recover(request: RecoveryRequest):
                 "- If ALL segments in the pipeline are already valid for this OS AND the command\n"
                 "  succeeded (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
                 "\n"
+                # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
+                # command is "good". These commands need to have non-system-wide commands rewritten and teh system-wide command
+                # preserved using retry_with_modified_command
+                "- When evaluating pipelines under this Patch2 rule, the presence of a system-wide\n"
+                "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
+                "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
+                "\n"
                 #
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
