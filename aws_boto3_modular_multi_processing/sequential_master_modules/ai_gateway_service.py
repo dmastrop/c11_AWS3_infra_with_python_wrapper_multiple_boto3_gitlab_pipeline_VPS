@@ -837,7 +837,7 @@ def recover(request: RecoveryRequest):
                 # command does not fail the command and node(thread). Add explicit NO segement uses a PM that does not belong to this
                 # OS to clarify any ambiguity with the word "valid" segment. A "valid" segment is a sgement that does not use a 
                 # PM that belongs to another OS.
-                "- If ALL segments in the pipeline are already valid for this OS, NO segment uses\n"
+                "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
                 "  a package manager that does NOT belong to this OS, and the command succeeded\n"
                 "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
                 "\n"
