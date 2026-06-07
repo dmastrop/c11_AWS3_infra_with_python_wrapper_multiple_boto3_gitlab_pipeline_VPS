@@ -10715,6 +10715,11 @@ Note here that there is a system-wide command apt-get update. But this command i
 this command pass through as is (there is no rewrite required), and rewrite any other commands that are using incorrect PMs
 (that would be the yum install nano segment), and then retry the entire rewritten command.
 
+This test case was failing due to the complexity introduced with the OS mutation guard. Patch2 rules had to be made much more
+semantically clear so that the LLM would not use fallback for this index 16 case and the index 21 test case that follows, below.
+Both of these test cases should result in a rewrite of the segments that are using incorrect PMs while retaining the OS compliant
+system-wide sgement (apt-get update).
+
 And that is precisely what the LLM does:
 
 
