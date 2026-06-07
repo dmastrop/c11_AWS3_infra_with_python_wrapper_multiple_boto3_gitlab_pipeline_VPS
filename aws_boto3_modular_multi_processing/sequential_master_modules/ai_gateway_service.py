@@ -834,7 +834,9 @@ def recover(request: RecoveryRequest):
                 #
                 # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
                 # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
-                # command does not fail the command and node(thread).
+                # command does not fail the command and node(thread). Add explicit NO segement uses a PM that does not belong to this
+                # OS to clarify any ambiguity with the word "valid" segment. A "valid" segment is a sgement that does not use a 
+                # PM that belongs to another OS.
                 "- If ALL segments in the pipeline are already valid for this OS, NO segment uses\n"
                 "  a package manager that does NOT belong to this OS, and the command succeeded\n"
                 "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
