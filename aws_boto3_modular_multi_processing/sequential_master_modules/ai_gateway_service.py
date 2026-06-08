@@ -848,6 +848,14 @@ def recover(request: RecoveryRequest):
                 "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
                 "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
                 "\n"
+                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
+                # wide command should be left as is and the segments that are using a PM that does not belong to this OS
+                # should be re-written using all the patch2 rewrite rules below.
+                "- This previous exception for valid system-wide operations applies ONLY when the\n"
+                "  pipeline contains at least one segment that uses a package manager that does\n"
+                "  NOT belong to this OS. If NO such wrong-OS package-manager segment exists, the\n"
+                "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
+                "\n"
                 #
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"

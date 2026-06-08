@@ -10025,10 +10025,9 @@ There are schema based test cases that will test for this as well as for system-
 
 This is the core principle behind the corrected Patch2 rules during the idempotency testing and regression testing.
 
-NOTE: Even though there is a GLOBAL idempotency rule block at the very top of the contract (see earlier section)
-which should override later rules that conflict, if the rule that follows is more specific (as in this case in patch2), that can 
-probabilistically override the the earlier GLOBAL rule. And that is what happens without the OS mutation guard. This also 
-occurs with invalid flag processing.
+NOTE that ordering in the contact can be critical. For example, the invalid PM flags logic should take precedence over segmental 
+rewrites, etc.  And to do this the invalid flags rules must be placed before any of the rewrite logic. This is just one example
+of many related to proper ordering.
 
 LLM contract rules design often involves trial and error as the LLM is inherently probabilistic and we are making it fully 
 deterministic through a concise rule design.
@@ -10040,57 +10039,9 @@ language semantics in regards to system-wide operations.
 
 ```
 
-                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
-                #
-                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
-                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
-                # command does not fail the command and node(thread).
-                "- If ALL segments in the pipeline are already valid for this OS AND the command\n"
-                "  succeeded (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
-                "\n"
-                #
-                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
-                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
-                "  the LLM MUST treat each segment independently.\n"
-                "\n"
-                # add system-wide ops that are already valid for this OS and do NOT require rewriting                
-                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
-                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
-                "  the LLM MUST treat each segment independently.\n"
-                "\n"
-                "- If ALL segments in the pipeline are either:\n"
-                "      • simple package-install commands, OR\n"
-                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
-                "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
-                "  AND at least one segment uses a wrong-OS package manager,\n"
-                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
-                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
-                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
-                "      • ALL other segments are preserved verbatim,\n"
-                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
-                "\n"
-                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
-                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
-                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
-                # this OS and do NOT require rewriting)
-                "- The following commands are considered system-wide operations:\n"
-                "      apt-get update\n"
-                "      apt-get upgrade\n"
-                "      yum update\n"
-                "      dnf upgrade\n"
-                "      pacman -Syu\n"
-                "\n"
-                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
-                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
-                "\n"
-                "- If a system-wide segment is already valid for this OS and does NOT require\n"
-                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
-                "  because it is system-wide.\n"
-                "\n"
-                # reiterated here, but there is a previous more global rule as well
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
+
+
+
 
 ```
 
@@ -10204,7 +10155,7 @@ There are 12 OSes that will be tested, each with 6 context schema based idempote
 
 
 
-##### LLM Contract Stress Tester - Idempotency Ubuntu testing
+#### 1.LLM Contract Stress Tester - Idempotency Ubuntu testing and test matrices
 
 Due to the complexity of the global OS mutation guard block in conjunction with the global idempotency rule block, to validate the logic in the block with Ubuntu, regression had to be performed following the testing with the idempotency test suite. This did reveal that
 there were collateral affects in the segmental rewrite as well as how system-wide operations are dealt with, in general, by the LLM.
@@ -10212,16 +10163,22 @@ All issues were addressed and fixed by the latest code in ai_gateway_service.py.
 
 
 
-###### Idempotency test cases (6)
+##### Idempotency test cases (6)
 
 Idempotency and os-signalled remediation ALWAYS use a cleanup_and_retry action plan response from the LLM. The fallback is the 
 negative logic test case that cannot use OS-signalled remediation because there is no stderr or history in the context. 
+
+As noted above there are 6 test cases for idempotency over 12 OSes for a total of 72 test cases.
+
+
+##### Test matrix for the 6 Idempotency test cases on Ubuntu
+
 
 The idempotency test results (6 test cases) are given in the matrix below:
 
 
 
-###### OS-signalled remediation test cases (3)
+##### OS-signalled remediation test cases (3)
 
 Following the above, 3 additional test cases were run to verify that the os-signalled remeidation logic worked in the contract. 
 The proper response here is always a cleanup_and_retry response from the LLM
@@ -10341,7 +10298,11 @@ Status: PASS
 
 ```
 
-These are all very good examples of the soft OS-signalled remedation that is desribed in the OS mutation guard block. 
+These are all very good examples of the soft OS-signalled remedation that is described in the OS mutation guard block. 
+
+
+
+##### Test matrix for the 3 OS-signalled remediation tests on Ubuntu
 
 
 
@@ -10349,7 +10310,8 @@ These are all very good examples of the soft OS-signalled remedation that is des
 
 
 
-###### Regresion with the base 20 test cases
+
+##### Regresion with the base 20 test cases
 
 Following the above, regression had to be performed to ensure that the existing Ubuntu domain primitives block logic was intact.
 This is a suite of 20 base test cases that were run very early in the contract development process. 
@@ -10576,13 +10538,19 @@ One is cleanup_and_retry and the other (this case) is fallback and command failu
 The rest of the test cases aligned with the previous results, so there were no other collateral regression issues with the 
 added contract rule logic. 
 
+
+
+
+##### Test matrix for the 20 base regression test cases on Ubuntu
+
+
 The test matrix for the base 20 Ubuntu test cases is below:
 
 
 
 
 
-###### Regresion with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
+##### Regresion with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
 
 This is the second part of the regression with Ubuntu. 
 
@@ -10731,11 +10699,35 @@ And that is precisely what the LLM does:
 
 
 
-The test matrix is below:
 
 
 
 
+
+---
+
+
+Finally, test case index 21 is very very similar to test case index 16 above, but with two rather than one segment that is
+using an incorrect PM. Surprisingly, prior to tightening up the rules to expressly prohibit the use of fallback in these 
+cases where one of the segments is a valid system-wide operation, and the other segments require rewritting, test case
+21 had a correct response from the LLM (retry_with_modified_command) whereas test case index 16 contnued to fallback. This 
+illustrates how difficult it is sometimes to make the LLM behave entirely deterministic.
+
+
+The schema is:
+
+
+```
+    { "command": "yum install nano && apk add bash && apt-get update", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "u-patch-022", "ip": "10.0.50.22", "tags": [], "history": [] },
+
+```
+
+
+Test case result:
+
+
+
+##### Test matrix for the regresion of the 24 segmental rewrite test cases on Ubuntu
 
 
 
