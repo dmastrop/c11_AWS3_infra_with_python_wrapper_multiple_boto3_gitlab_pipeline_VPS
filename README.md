@@ -10040,8 +10040,77 @@ language semantics in regards to system-wide operations.
 ```
 
 
-
-
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                #
+                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
+                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
+                # command does not fail the command and node(thread). Add explicit NO segement uses a PM that does not belong to this
+                # OS to clarify any ambiguity with the word "valid" segment. A "valid" segment is a sgement that does not use a 
+                # PM that belongs to another OS.
+                "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
+                "  a package manager that does NOT belong to this OS, and the command succeeded\n"
+                "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
+                # command is "good". These commands need to have non-system-wide commands rewritten and teh system-wide command
+                # preserved using retry_with_modified_command
+                "- When evaluating pipelines under this Patch2 rule, the presence of a system-wide\n"
+                "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
+                "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
+                "\n"
+                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
+                # wide command should be left as is and the segments that are using a PM that does not belong to this OS
+                # should be re-written using all the patch2 rewrite rules below.
+                "- This previous exception for valid system-wide operations applies ONLY when the\n"
+                "  pipeline contains at least one segment that uses a package manager that does\n"
+                "  NOT belong to this OS. If NO such wrong-OS package-manager segment exists, the\n"
+                "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
+                "\n"
+                #
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                # add system-wide ops that are already valid for this OS and do NOT require rewriting               
+                # Make sure to exclude the use of fallback here. MUST NOT use fallback.
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, OR\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
+                "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+                "  It MUST return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      yum update\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "\n"
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+                # reiterated here, but there is a previous more global rule as well
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
 
 ```
 
@@ -10593,6 +10662,14 @@ System‑wide operations (`apt-get update`, `yum update`, `dnf upgrade`, `pacman
 
 **Thus it is clear now how idempotency, OS-signalled remediation, rewrites, and OS mutation are all heavily intertwined with one another and form a very complex set of reasoning criteria for the LLM.**
 
+It is important to note that these test cases are designed for the maximum amount of "reasoning stress" on the LLM.  The 
+way that this is done, particularly for test case indices 16 and 21 is to intentionally leave the stderr and the exit_status blank.
+These 2 cases in real life would have an exit_status of 127 or something similar which would help the LLM more easily recognize
+that incorrect PMs for the OS under test are being used. However even with an exit_status of 0 and no stderr, the contract has
+been tuned so that the LLM can reason through these very difficult test cases properly (with a retry_with_modified_command that
+rewrites the improper segments; this with a valid system-wide operation also present).
+
+
 
 ---
 
@@ -10704,18 +10781,19 @@ system-wide sgement (apt-get update).
 
 And that is precisely what the LLM does:
 
+```
+root@217c839527e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install curl && apt-get update"}
+========================
 
 
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: yum install nano && apt-get install curl && apt-get update
 
-
-
-
-
-
-
-
-
-
+```
 
 
 ---
@@ -10738,6 +10816,22 @@ The schema is:
 
 
 Test case result:
+
+```
+root@217c839527e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 21
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install -y bash && apt-get update"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: yum install nano && apk add bash && apt-get update
+```
+
+
+
 
 
 
