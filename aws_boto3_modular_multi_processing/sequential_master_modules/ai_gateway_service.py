@@ -856,7 +856,7 @@ def recover(request: RecoveryRequest):
                 "  NOT belong to this OS. If NO such wrong-OS package-manager segment exists, the\n"
                 "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
                 "\n"
-                #
+                # rewrite rules follow below:
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"

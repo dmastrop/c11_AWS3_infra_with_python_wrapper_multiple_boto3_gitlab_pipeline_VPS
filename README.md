@@ -10264,7 +10264,71 @@ All issues were addressed and fixed by the latest code in ai_gateway_service.py.
 Idempotency and os-signalled remediation ALWAYS use a cleanup_and_retry action plan response from the LLM. The fallback is the 
 negative logic test case that cannot use OS-signalled remediation because there is no stderr or history in the context. 
 
-As noted above there are 6 test cases for idempotency over 12 OSes for a total of 72 test cases.
+As noted above there are 6 test cases for idempotency over 12 OSes for a total of 72 test cases.  The prototype validation was
+performed on Ubuntu. The last test case of the 6 is the fallback negative logic case that is NOT idempotent and is not 
+OS-siganlled remediation. Therefore, the correct LLM response is action plan of fallback.
+
+The schema for this special 6th test case is: 
+
+
+```
+      "command": "apt-get install -y some-nonexistent-package",
+      "stdout": "",
+      "stderr": "E: Unable to locate package some-nonexistent-package",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-001",
+      "ip": "10.0.8.201",
+      "tags": ["os-mutation-forbidden", "missing-package"],
+      "history": []
+    }
+
+```
+
+Note that there is no history and there is no OS signalling in the stderr to indicated taht this is OS-signalled remediation. 
+To fix this issue the LLM would have to issue an apt-get update system-wide command in an attempt to install this 
+"some-nonexistent-package", but that would be an OS mutation, which is forbidden under these circumstances (no idempotency and 
+no OS-signalled remediation).  Therefore the LLM must return an action plan of fallback indicating that it cannot do anything
+to remediate this issue. This is proper and the ptyhon code after the AI/MCP HOOK returns the action plan will be to fail the 
+command and fail the installation on the node (install_failed status in the node's registry_entry). This is precisely what should
+happen in this case. 
+
+The LLM response is given below:
+
+
+
+
+---
+
+The other 5 test cases (test case indices 0 through 4) area all idempotency test cases as follows:
+
+Test case 1:
+
+
+
+---
+
+Test case 2:
+
+
+---
+
+Test case 3:
+
+
+---
+
+Test case 4:
+
+
+---
+
+Test case 5:
+
+
+
+
+
 
 
 ##### Test matrix for the 6 Idempotency test cases on Ubuntu
