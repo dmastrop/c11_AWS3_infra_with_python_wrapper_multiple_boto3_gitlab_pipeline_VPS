@@ -1052,16 +1052,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"                
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. OS muatation guard is now GLOBAL
 
                 # dpkg interrupted
                 "- If stderr suggests running 'dpkg --configure -a', the LLM MUST return\n"
@@ -1198,16 +1189,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
                 # Malformed install
                 "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
@@ -1354,16 +1336,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
                 # Malformed install
                 "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
@@ -1517,16 +1490,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
                 # Malformed install
                 "- If 'dnf install' or 'yum install' is called without a package name and stderr\n"
@@ -1706,16 +1670,7 @@ def recover(request: RecoveryRequest):
                 "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
                 "\n"
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
                 #### continued... after patch insertion
 
@@ -1879,16 +1834,7 @@ def recover(request: RecoveryRequest):
                 "\n"
                 
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
                 #### continued after patch insertion......
 
@@ -2057,16 +2003,7 @@ def recover(request: RecoveryRequest):
                 "\n"
                 
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
                 #### continued after patch insertion.....
 
@@ -2216,16 +2153,7 @@ def recover(request: RecoveryRequest):
                 "\n"
                 
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-
-                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-
+                # Remove this local copy. The OS mutation guard is now GLOBAL
 
 
 
@@ -2481,14 +2409,8 @@ def recover(request: RecoveryRequest):
                 ##### This bumps the rev to rev4     Patch2 rev4:
                 
                 # Idempotency regression patch — OS-Mutation Guard Rule
-                "- These system-wide rules apply ONLY to LLM-generated commands (rewrites, retries, or cleanup).\n"
-                "- When validating an already-executed user command from the context (including idempotent\n"
-                "  'update' or 'upgrade' operations), OS-mutation rules MUST NOT be applied; instead, the\n"
-                "  global Idempotency rules determine the correct action.\n"
-                "\n"
-                "- If ANY segment contains an invalid or unsupported flag for ANY package manager,\n"
-                "  the LLM MUST use 'fallback' BEFORE applying any rewrite rules.\n"
-                "\n"
+                # Remove this local copy. The OS mutation guard is now GLOBAL
+
 
                 # rev4 adds explicit invalid flag rule BEFORE the rewrite logic so that there is deterministic LLM response
                 # with rewrites
