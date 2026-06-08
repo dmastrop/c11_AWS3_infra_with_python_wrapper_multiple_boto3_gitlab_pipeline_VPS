@@ -10837,6 +10837,39 @@ Command: yum install nano && apk add bash && apt-get update
 
 ##### Test matrix for the regresion of the 24 segmental rewrite test cases on Ubuntu
 
+<details>
+# <summary><b>Click to expand Ubuntu Patch2 Updated Matrix (24 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | u-patch-001 | `apt-get install nginx --badflag` | fallback | fallback | **Invalid flag → MUST fallback.** Correct. |
+| 2 | u-patch-002 | `apt-get install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install -y nano`) | Wrong‑OS PM (`yum`) rewritten. Correct. |
+| 3 | u-patch-003 | `apt-get install curl && apt-get update` | fallback | fallback | **Good pipeline** (all valid, exit=0, no stderr) → hits Rule A. Also system‑wide op cannot be replayed. Correct. |
+| 4 | u-patch-004 | `apt-get install curl && apt-get update --badflag` | fallback | fallback | Invalid flag → fallback. Correct. |
+| 5 | u-patch-005 | `apt-get install curl && pacman -Syu` | fallback | fallback | `pacman -Syu` is system‑wide AND wrong‑OS → rewrite forbidden → fallback. Correct. |
+| 6 | u-patch-006 | `apt-get install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install -y bash`) | Wrong‑OS PM rewritten. Correct. |
+| 7 | u-patch-007 | `apt-get install curl && rm -rf /` | abort | abort | Destructive command → abort. Correct. |
+| 8 | u-patch-008 | `yum install nano && apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install curl`) | Wrong‑OS PM rewritten. Correct. |
+| 9 | u-patch-009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y git && apt-get install -y nano`) | Two wrong‑OS PMs rewritten. Correct. |
+| 10 | u-patch-010 | `apt-get install curl && apt-get install python3` | fallback | fallback | **Important:** This is a *good* pipeline (all valid, exit=0, no stderr). Rule A → fallback. In real life this never reaches LLM (Phase 4a.1.4). Correct. |
+| 11 | u-patch-011 | `apt-get install curl && apt-get install python3 && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install python3 && apt-get install -y nano`) | Wrong‑OS PM rewritten. Correct. |
+| 12 | u-patch-012 | `yum install nano && apt-get install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install curl && apt-get install -y bash`) | Two wrong‑OS PMs rewritten. Correct. |
+| 13 | u-patch-013 | `apt-get install curl && dnf install git && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y git && apt-get install nano`) | Wrong‑OS PM rewritten. Correct. |
+| 14 | u-patch-014 | `yum install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y bash && apt-get install -y htop`) | All wrong‑OS PMs rewritten. Correct. |
+| 15 | u-patch-015 | `apt-get install curl && apt-get install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install curl && apt-get install nano && apt-get install -y bash`) | Wrong‑OS PM rewritten. Correct. |
+| 16 | u-patch-016 | `yum install nano && apt-get install curl && apt-get update` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install curl && apt-get update`) | **Critical case:** Valid system‑wide op + wrong‑OS PM → MUST rewrite wrong‑PM and preserve system‑wide. Fixed by final disambiguation rule. Correct. |
+| 17 | u-patch-017 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y bash && echo 'hello' && apt-get install -y nano`) | Wrong‑OS PMs rewritten. Correct. |
+| 18 | u-patch-018 | `apt-get install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && echo 'test' && apt-get install -y htop`) | Wrong‑OS PM rewritten. Correct. |
+| 19 | u-patch-019 | `yum install nano --badflag && apt-get install curl` | fallback | fallback | Invalid flag → fallback. Correct. |
+| 20 | u-patch-020 | `apt-get install curl && apk add bash --badflag && apt-get install nano` | fallback | fallback | Invalid flag → fallback. Correct. |
+| 21 | u-patch-021 | `yum install nano && apk add bash && apt-get update` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y bash && apt-get update`) | **Critical case:** Same pattern as #16 but with two wrong‑OS PMs. Correct. |
+| 22 | u-patch-022 | `apk add bash && apt-get install curl && rm -rf /` | abort | abort | Destructive command → abort. Correct. |
+| 23 | u-patch-023 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`) | Wrong‑OS PMs rewritten. Correct. |
+| 24 | u-patch-024 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`) | Duplicate of #23. Correct. |
+
+</details>
 
 
 ---
