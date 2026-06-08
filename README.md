@@ -10088,7 +10088,7 @@ schemas/idempotency_regression/
 └── windows_powershell_idempotency.json
 ```
 
-##### An OS-Mutation Guard Rule Summary
+##### An OS-Mutation Guard Rule Resummarization
 
 
 As noted in the earlier section:
@@ -10132,7 +10132,7 @@ These topics regarding system-wide commands, are discussed in depth in a previou
 
 ---
 
-##### LLM Contract Stress Tester — Idempotency Schema Tests (72 Cases) and test approach
+##### Idempotency Schema Tests (72 Cases) and test approach
 
 The testing approach here is muti-dimensional. There are regression issues to be considered since the rule logic
 is increased in complexity. The following needs to be tested:
@@ -10149,6 +10149,10 @@ is increased in complexity. The following needs to be tested:
 - full invalid‑flag precedence will be exercised as regression
 
 There are 12 OSes that will be tested, each with 6 context schema based idempotency test cases as the main focus here.
+
+The testing for the various OSes along with the test matrices will be presented OS by OS in the sections that follow. 
+The test cases are simple context-wise but the LLM reasoning, as described for some of the test cases, is very very complex 
+and impressive.
 
 
 
