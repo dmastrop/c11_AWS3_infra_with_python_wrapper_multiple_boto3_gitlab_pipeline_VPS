@@ -10156,6 +10156,16 @@ and impressive.
 
 
 
+---
+
+
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
+
+
+
+
+
+
 
 
 
@@ -10732,6 +10742,16 @@ Test case result:
 
 
 ##### Test matrix for the regresion of the 24 segmental rewrite test cases on Ubuntu
+
+
+
+---
+
+
+[Back to top of Continued testing Idempotency Regression Testing](#top-continued-testing-idempotency-regression-testing)
+
+
+
 
 
 
