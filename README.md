@@ -10272,6 +10272,8 @@ OS-siganlled remediation. Therefore, the correct LLM response is action plan of 
 The schema for this special 6th test case is: 
 
 
+Test case 6:
+
 ```
       "command": "apt-get install -y some-nonexistent-package",
       "stdout": "",
@@ -10296,14 +10298,67 @@ happen in this case.
 
 The LLM response is given below:
 
+```
+root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 5
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
 
 
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y some-nonexistent-package
+```
+
+This test case regressed following the introduction of several new rules in the patch2 of the Ubuntu domain-primitives block.
+The issue was related to teh semantic priority graph that the LLM uses to assign weights to the rules. 
+
+This test case  is discussed in the context of LLM reasoning in this section that follows the idempotency testing:
+
+- [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
 
 ---
+
+
+
+
+
 
 The other 5 test cases (test case indices 0 through 4) area all idempotency test cases as follows:
 
 Test case 1:
+
+```
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "nginx is already the newest version (1.18.0-6ubuntu14.4).",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-001",
+      "ip": "10.0.0.101",
+      "tags": ["idempotency", "package-already-installed"],
+      "history": []
+    },
+```
+
+```
+root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 0
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":"apt-get install -y nginx"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y nginx
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+
 
 
 
@@ -10311,22 +10366,162 @@ Test case 1:
 
 Test case 2:
 
+```
+    {
+      "command": "apt-get install -y curl",
+      "stdout": "curl is already the newest version (7.81.0-1ubuntu1.10).",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-002",
+      "ip": "10.0.0.102",
+      "tags": ["idempotency", "package-already-installed"],
+      "history": [
+        {
+          "command": "apt-get install -y curl",
+          "stdout": "curl is already the newest version (7.81.0-1ubuntu1.10).",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+```
+
+```
+root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 1
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":"apt-get install -y curl"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y curl
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+
 
 ---
 
 Test case 3:
 
 
+```
+    {
+      "command": "systemctl start nginx",
+      "stdout": "",
+      "stderr": "Job for nginx.service is already running.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-003",
+      "ip": "10.0.0.103",
+      "tags": ["idempotency", "service-already-running"],
+      "history": []
+    },
+
+```
+
+
+```
+root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 2
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":"systemctl start nginx"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: systemctl start nginx
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+
+
+
 ---
 
 Test case 4:
+
+```
+   {
+      "command": "mkdir /var/www/html",
+      "stdout": "",
+      "stderr": "mkdir: cannot create directory '/var/www/html': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-004",
+      "ip": "10.0.0.104",
+      "tags": ["idempotency", "directory-exists"],
+      "history": []
+    },
+```
+
+```
+root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 3
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":[],"retry":"mkdir -p /var/www/html"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: mkdir /var/www/html
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
 
 
 ---
 
 Test case 5:
 
+```
+    {
+      "command": "touch /etc/motd",
+      "stdout": "",
+      "stderr": "touch: cannot touch '/etc/motd': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-005",
+      "ip": "10.0.0.105",
+      "tags": ["idempotency", "file-exists"],
+      "history": [
+        {
+          "command": "touch /etc/motd",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+```
 
+
+
+
+
+```
+root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 4
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -f /etc/motd"],"retry":"touch /etc/motd"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: touch /etc/motd
+Status: PASS
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
 
 
 
@@ -10336,6 +10531,22 @@ Test case 5:
 
 
 The idempotency test results (6 test cases) are given in the matrix below:
+
+<details>
+# <summary><b>Click to expand Ubuntu Idempotency Test Case Matrix (6 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | ubuntu-idem-001 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get install -y nginx`) | **Package already installed → idempotency signal.** No stderr, exit=0, and tag `package-already-installed`. Global Idempotency rules require `cleanup_and_retry`. Correct. |
+| 2 | ubuntu-idem-002 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (`apt-get install -y curl`) | **Idempotency with history.** History shows the same command already executed successfully. Global Idempotency rules treat this as idempotent → `cleanup_and_retry`. Correct. |
+| 3 | ubuntu-idem-003 | `systemctl start nginx` | cleanup_and_retry | cleanup_and_retry (`systemctl start nginx`) | **Service already running.** stderr indicates “already running”. This is a classic idempotency case → `cleanup_and_retry`. Correct. |
+| 4 | ubuntu-idem-004 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Directory exists.** stderr indicates “File exists”. Global Idempotency rules require `cleanup_and_retry` with a safe retry (`mkdir -p`). Correct. |
+| 5 | ubuntu-idem-005 | `touch /etc/motd` | cleanup_and_retry | cleanup_and_retry (`rm -f /etc/motd` → `touch /etc/motd`) | **File exists.** stderr indicates file already exists. History shows prior successful creation. Global Idempotency rules require cleanup (remove file) then retry. Correct. |
+| 6 | ubuntu-osmut-001 | `apt-get install -y some-nonexistent-package` | fallback | fallback | **Not idempotency. Not OS‑signaled remediation.** stderr contains ONLY “Unable to locate package \<pkg\>”. No repo/index/dpkg context. No history. Under the **OS‑Mutation Guard**, the LLM is forbidden from introducing `apt-get update` unless OS‑signaled remediation is present. Therefore → **MUST fallback**. Correct. |
+
+</details>
 
 
 
@@ -10725,7 +10936,13 @@ One is cleanup_and_retry (OS-signalled remediation) and the other (this case) is
 The rest of the test cases aligned with the previous results, so there were no other collateral regression issues with the 
 added contract rule logic. 
 
-This topic is discussed in the context of LLM reasoning in the section that follows the Ubuntu testing:
+This test case  is discussed in the context of LLM reasoning in this section that follows the idempotency testing:
+
+- [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
+
+
+---
+
 
 
 
@@ -11146,6 +11363,15 @@ Rules that appear near related examples or in the same conceptual block are more
 
 G. Pattern salience
 If the input resembles a rule’s trigger phrase, that rule becomes dominant.
+
+
+The result is that the model does not follow the contract top‑to‑bottom like a compiler.
+Instead, it builds a weighted network of rule candidates, and the highest‑priority rule “wins.”
+
+In the next example below, this is precisely why the overly broad APT rule began overriding the OS‑Mutation Guard after Patch2 expanded the contract — its specificity and imperative force made it more salient in the semantic priority graph than the OS mutation guard
+rule that is should have followed. 
+
+
 
 
 
