@@ -331,7 +331,11 @@ Instead, it performs **pattern‑completion under constraints**, guided by inter
 
 Because of these behaviors, the greatest danger in contract engineering is **accidentally encoding a test case into the rules**, rather than defining a general invariant that governs a whole family of behaviors.
 
-The following guidelines synthesize both the practical lessons learned during the “Unable to locate package” regression and the deeper transformer‑level principles that govern how LLMs interpret rules.
+The following guidelines synthesize both the practical lessons learned during the “Unable to locate package” regression and many 
+other testing issues that were hit along the way, and they also synthesize the deeper transformer‑level principles that govern how 
+LLMs actually interpret rules.
+
+
 
 ---
 
