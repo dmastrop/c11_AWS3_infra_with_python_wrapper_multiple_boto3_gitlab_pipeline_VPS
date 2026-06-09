@@ -1559,7 +1559,6 @@ WORK IN PROGRESS
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
 - [LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
-
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
