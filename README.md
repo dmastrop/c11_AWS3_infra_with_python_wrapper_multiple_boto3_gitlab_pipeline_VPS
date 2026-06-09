@@ -257,6 +257,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update2: Phase4a AI/MCP incorporation and Phase4b ML for prediction/anomaly detection High Level Overview](#preface-update2-phase4a-aimcp-incorporation-and-phase4b-ml-for-predictionanomaly-detection-high-level-overview)
 
+- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
 
 
 << WORK IN PROGRESS
