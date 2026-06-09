@@ -339,6 +339,82 @@ LLMs actually interpret rules.
 
 ---
 
+
+### **Introduction**
+
+Over the course of Phase 4a.1.2, as the LLM contract expanded to support Patch2 rewrite semantics, multi‑OS remediation, and the global OS‑Mutation Guard, we repeatedly encountered a class of failures that could not be explained by traditional rule‑based reasoning. These failures were not bugs in the Python validator, nor errors in the schema, nor gaps in the domain‑primitive blocks. They were failures in **how the transformer interpreted the rules themselves**.
+
+Two patterns emerged:
+
+1. **Rules that were logically correct still produced incorrect behavior.**  
+2. **Adding new rules sometimes caused regressions in previously stable test cases.**
+
+These issues surfaced most clearly in:
+
+- **Idempotency Test Case #6** (Ubuntu “Unable to locate package” with no history)  
+- **Base‑20 Test Case #0** (Ubuntu “Unable to locate package” with history)  
+- **Patch2‑Rev4 Brew invalid‑flag nondeterminism**  
+- **Patch2‑Rev4 segmental rewrite vs. system‑wide operation conflicts (test cases #16 and #21)**  
+
+In each case, the LLM’s output was not wrong because the rule was wrong — it was wrong because the **model prioritized the wrong rule**.
+
+This led to the realization that:
+
+> **Transformers do not follow rules in textual order.  
+> They follow rules in *salience order*.**
+
+This behavior was explored in detail in:
+
+- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)**  
+- **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
+
+Those sections documented the first time we observed:
+
+- rule ordering effects  
+- pattern‑matching dominance  
+- adjacency bias  
+- positive‑rule override of negative constraints  
+- nondeterministic behavior caused by rule salience  
+
+The “Unable to locate package” regressions in Ubuntu were the second major case study confirming the same underlying mechanisms.
+
+These incidents made it clear that **LLM contract engineering is not simply writing rules**.  
+It is the discipline of writing rules that:
+
+- survive transformer attention dynamics  
+- remain stable as the contract grows  
+- do not encode test cases  
+- do not create bright‑spot patterns  
+- do not override global invariants  
+- do not depend on real‑world knowledge  
+- do not require multi‑step implicit inference  
+- and do not collapse under Patch2‑style expansion  
+
+This chapter distills those lessons into a **formal rule‑engineering framework**.
+
+It explains:
+
+- how transformers implicitly rank rules using a **semantic priority graph**  
+- how rule specificity, imperative force, and concreteness affect determinism  
+- how global invariants must be written to dominate domain‑specific rules  
+- how to avoid writing rules that encode test cases  
+- how to prevent regressions when adding new rules  
+- how to design rules that remain stable across OSes, package managers, and rewrite semantics  
+
+Most importantly, this chapter shows how these principles were applied to fix real regressions — including the two “Unable to locate package” cases — and how they now guide the design of all future contract rules.
+
+This is not theory.  
+This is the **operational playbook** that emerged from months of real‑world failures, debugging, and architectural refinement.
+
+It is now a core part of the Phase 4a.1.2 contract architecture.
+
+
+[Back to top](#top-preface3)
+
+
+---
+
+
 ### **1. Prefer invariants over examples**
 
 A good contract rule expresses a **general truth** about the system:
