@@ -533,11 +533,13 @@ def recover(request: RecoveryRequest):
                 "  instructions). These remediation flows MAY include system‑wide operations\n"
                 "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
                 "\n"
+                # Disambiguation rule
                 "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
                 "  considered OS‑signaled remediation. When this phrase appears alone with\n"
                 "  no additional repository, index, integrity, or dpkg context, the LLM\n"
                 "  MUST treat the condition as ambiguous and MUST return \"fallback\".\n"
                 "\n"
+                #
                 "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
                 "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
                 "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
@@ -815,7 +817,7 @@ def recover(request: RecoveryRequest):
                 "- The command 'apt-get install <pkg>' installs packages.\n"
                 "- The flag '-y' auto-confirms installation.\n"         
                 # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
-                # Revised this for more specificity. Orignally far too general and it has the potential to override legitimate
+                # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
                 # fallback scenarios that do NOT involve OS-signalled remediation.
                 "- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
                 "  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
