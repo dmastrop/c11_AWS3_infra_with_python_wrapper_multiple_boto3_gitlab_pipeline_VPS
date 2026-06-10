@@ -6229,6 +6229,34 @@ Every other OS is much simpler:
 This means the complexity is fully contained. Only Amazon Linux 2 and CentOS 7 require special-case deterministic remediation; all other OS families follow the standard contract rules without exceptions.
 
 
+To discriminate further on this topic of OS-signalled deterministic remediation, the OS mutation guard block, which will be presented
+in full later, now describes both soft and hard forms of OS-signalled remediation. Both of these types allow for non-fallback 
+responses from the LLM with system-wide operations that mutate the OS. The hard form is very clearly signalled by the OS (Amazon
+Linux2 and CentOS7), whereas the soft form is more subtle in the stderr messages of the other linux OSes.
+
+The rules state this in the global OS muation guard as:
+
+```
+                "- OS‑signaled deterministic remediation is EXEMPT from this restriction.\n"
+                "  OS‑signaled remediation refers to recovery sequences that are explicitly\n"
+                "  indicated by stderr or system output (for example: 'Hash Sum mismatch',\n"
+                "  'dpkg --configure -a', 'apt --fix-broken install', or other OS-provided\n"
+                "  instructions). These remediation flows MAY include system‑wide operations\n"
+                "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
+                "\n"
+```
+
+And this:
+
+
+```
+                "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
+                "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
+                "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
+                "  remediation and are therefore allowed to include system‑wide operations.\n"
+                "\n"
+
+```
 
 ---
 
@@ -10393,7 +10421,7 @@ In simple terms  “deterministic remediation” consists of the following:
 
 To discriminate further on this topic of OS-signalled deterministic remediation, the OS mutation guard block, which will be presented
 in full later, now describes both soft and hard forms of OS-signalled remediation. Both of these types allow for non-fallback 
-responses from the LLM with system-wide operations that mutate the OS. The hard form is very clearnly signalled by the OS (Amazon
+responses from the LLM with system-wide operations that mutate the OS. The hard form is very clearly signalled by the OS (Amazon
 Linux2 and CentOS7), whereas the soft form is more subtle in the stderr messages of the other linux OSes.
 
 The rules state this in the global OS muation guard as:
