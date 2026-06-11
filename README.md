@@ -5110,6 +5110,10 @@ This document explains one of the most important architectural principles that t
 
 **“Fix the command, not the OS.”**
 
+Cross reference with this section:
+
+- [LLM Contract Stress Tester — OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics](#llm-contract-stress-tester--os-mutation-policy-deterministic-remediation-and-rewrite-semantics)
+
   
 This principle is the foundation of deterministic, reproducible multi‑OS behavior across:
 
@@ -5478,6 +5482,10 @@ And it ensures AL2023 behaves consistently with all other Linux distributions in
 - [OS‑signaled deterministic remediation](#os-signaled-deterministic-remediation)
 
 ---
+
+
+Cross reference with this section:
+- [LLM Contract Stress Tester — OS Mutation Policy & Amazon Linux Behavior](#llm-contract-stress-tester--os-mutation-policy--amazon-linux-behavior)
 
 
 #### Introduction to OS Mutation Policy, Deterministic Remediation, and Rewrite Semantics
