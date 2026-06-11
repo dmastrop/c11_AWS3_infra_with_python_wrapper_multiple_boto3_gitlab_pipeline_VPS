@@ -314,7 +314,19 @@ STATUS_TAGS = {
 ---
 
 ## PREFACE UPDATE3: **Phase 4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract**
+
+
+
+
+### **Table of Contents**
 <a name="top-preface3"></a>
+- [The need for efficient LLM contract engineering principles](#the-need-for-efficient-llm-contract-engineering-principles)
+- [Introduction to LLM Contract Engineering principles](#introduction-to-llm-contract-engineering-principles)
+- [Formal rule-enginerring framework principles 1-14](#formal-rule-enginerring-framework-principles-1-14)
+- [Summary of the Guidelines](#summary-of-the-guidelines)
+- [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
+- [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
+
 ---
 
 
