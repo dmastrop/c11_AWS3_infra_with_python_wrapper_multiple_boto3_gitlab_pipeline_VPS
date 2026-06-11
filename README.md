@@ -10626,7 +10626,7 @@ These topics are discussed in further detail in an earlier section (with Example
 
 
 
-##### The OS-Muation Guard patch
+##### The OS-Mutation Guard patch
 
 To guard against a fallback for system-side operations in the setting of idempotency OR OS-signalled remedation cases, an OS guard has to be patched into the contract. Rather than integrating this into each of the 12 OSes that require this type of construct, it is 
 better to make the OS mutation guard a GLOBAL rule block that prefaces all of the OS domain primitives specific blocks. It must
@@ -11384,8 +11384,38 @@ These are all very good examples of the soft OS-signalled remedation that is des
 
 ##### Test matrix for the 3 OS-signalled remediation tests on Ubuntu
 
+These three cases represent Ubuntu’s “soft” OS‑signaled remediation category:
+
+- Metadata stale  
+- Hash Sum mismatch  
+- dpkg interrupted  
+
+Unlike the “hard” OS‑signaled remediation cases on CentOS7 and Amazon Linux 2 (where the OS provides explicit, mandatory corrective commands like `yum clean all`, `yum makecache`, or `rpm --rebuilddb`), Ubuntu’s signals are softer but still unambiguous.
+
+In all three cases:
+
+- The OS explicitly indicates a recoverable state  
+- The OS suggests or implies the corrective action  
+- The OS‑Mutation Guard allows system‑wide operations **only because** the OS signaled them  
+- Therefore the correct action is always cleanup_and_retry 
+
+All three test cases passed exactly as expected.
 
 
+The test matrix is below: 
+
+<details>
+# <summary><b>Click to expand Ubuntu OS‑signaled Remediation Test Case Matrix (3 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | ubuntu‑osmut‑002 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get update -y` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (stale metadata).** stderr contains `404 Not Found`, `Failed to fetch`, and repository path failures. These are classic Ubuntu/Debian signals that the package index is stale. Under the global OS‑Mutation Guard, system‑wide operations are allowed **only** when the OS explicitly signals remediation. Here it does, so the LLM MUST run `apt-get update` before retrying. Correct. |
+| 2 | ubuntu‑osmut‑003 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/*`, `rm -rf /var/cache/apt/archives/partial/*` → `apt-get update -y` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (Hash Sum mismatch).** stderr includes `Hash Sum mismatch` and `Some index files failed to download`. These are well‑known Ubuntu index corruption signals. The OS is explicitly telling the user to refresh metadata. Cleanup of partial lists + update is correct. This is the canonical soft‑remediation path. Correct. |
+| 3 | ubuntu‑osmut‑004 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (dpkg interrupt).** stderr contains: `dpkg was interrupted, you must run 'dpkg --configure -a'`. This is the strongest possible OS‑signaled remediation on Debian/Ubuntu. The OS explicitly instructs the corrective command. Under the OS‑Mutation Guard, this MUST be honored. Running `dpkg --configure -a` before retrying is the correct deterministic remediation. Correct. |
+
+</details>
 
 
 
