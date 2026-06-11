@@ -394,7 +394,10 @@ This led to the realization that:
 
 This behavior was explored in detail in:
 
+- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
+
 - **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)**  
+
 - **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
 
 Those sections documented the first time we observed:
@@ -797,10 +800,13 @@ The principles in this chapter — invariants, negative constraints, salience co
 
 They emerged directly from the real‑world failures analyzed in:
 
-- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)**  
+- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
+
+- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)** 
+ 
 - **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
 
-Those two sections documented the first time we encountered **nondeterministic behavior** caused by:
+Those three sections documented the first time we encountered **nondeterministic behavior** caused by:
 
 - rule ordering  
 - rule specificity  
@@ -955,7 +961,10 @@ These two test cases are the canonical examples of what happens when these princ
 
 These regression cases also reinforce the findings from:
 
+- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
+
 - **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)**  
+
 - **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
 
 Those sections documented the first time we observed:
@@ -7702,7 +7711,9 @@ primitives block for complex rewrite tests and invalid package manager (PM) flag
 The fix here has a complex etiology that is reviewed further in the sections below (see Table of Contents also)
 
 - [LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)
+
 - [Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)
+
 - [Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)
 
 The fix itself was very very simple, but in fixing this the LLM contract engineering development principles were refined in the 
