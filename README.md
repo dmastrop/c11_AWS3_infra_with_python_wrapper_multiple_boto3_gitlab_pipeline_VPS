@@ -11693,13 +11693,53 @@ For a more comprehensive chapter on Contract Engineering Rules that have been le
 ##### Test matrix for the 20 base regression test cases on Ubuntu
 
 
+The regression testing on the base 20 test cases went fine. 
+
+
+- All 20 test cases passed under the new contract.  
+- Test Case #1 (index 0) — the “Unable to locate package nginx” regression — is now stable and correctly returns **fallback**.  
+- All soft OS‑signaled remediation cases (Hash Sum mismatch, stale metadata, dpkg interrupt, fix‑broken) correctly produce cleanup_and_retry.  
+- All wrong package manager cases rewrite correctly.  
+- All invalid syntax, unknown commands, and permission errors correctly fallback.  
+- Destructive command correctly aborts.  
+
+
 The test matrix for the base 20 Ubuntu test cases is below:
 
+<details>
+# <summary><b>Click to expand Ubuntu Base‑20 Test Case Matrix (20 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | i‑test‑001 | `apt-get install -y nginx` | fallback | fallback | **“Unable to locate package nginx” with prior `apt-get update` in history.** No OS‑signaled remediation. Not idempotency. History supports fallback (update already attempted). Under the **OS‑Mutation Guard**, LLM is forbidden from issuing another update. Correct. |
+| 2 | i‑test‑002 | `apt install nginx` | fallback | fallback | **Invalid command (`apt` not found).** stderr: `E: Command 'apt' not found`. This is a malformed command, not a package error. Global rules → fallback. Correct. |
+| 3 | i‑test‑003 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong package manager.** stderr: `bash: yum: command not found`. History irrelevant. Global rewrite rules convert to correct Ubuntu package manager. Correct. |
+| 4 | i‑test‑004 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong package manager.** stderr: `bash: dnf: command not found`. Rewrite to apt-get. Correct. |
+| 5 | i‑test‑005 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl`) | **Wrong package manager.** stderr: `bash: apk: command not found`. Rewrite to apt-get. Correct. |
+| 6 | i‑test‑006 | `apt-get install` | fallback | fallback | **Invalid operation.** stderr: `E: Invalid operation install`. This is not OS‑signaled remediation. Global invalid‑flag/invalid‑syntax rules → fallback. Correct. |
+| 7 | i‑test‑007 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard triggers immediate abort. Correct. |
+| 8 | i‑test‑008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `command not found`. No rewrite possible. Fallback. Correct. |
+| 9 | i‑test‑009 | `show route everything` | fallback | fallback | **Unknown command.** stderr: `bash: show: command not found`. Fallback. Correct. |
+| 10 | i‑test‑010 | `apt-get update -y` | fallback | fallback | **Network failure.** stderr: `Temporary failure resolving 'archive.ubuntu.com'`. This is *not* OS‑signaled remediation. No cleanup allowed. Must fallback. Correct. |
+| 11 | i‑test‑011 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a` → install) | **dpkg interrupt.** stderr: `dpkg was interrupted, you must run 'dpkg --configure -a'`. This is **explicit OS‑signaled remediation**. `dpkg --configure -a` is a system‑wide mutation but allowed because OS signaled it. Correct. |
+| 12 | i‑test‑012 | `apt-get update -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** stderr: `Failed to fetch ... Hash Sum mismatch`. This is a classic **soft OS‑signaled remediation**. Cleanup + update is required. Correct. |
+| 13 | i‑test‑013 | `apt-get install -y nginx` | fallback | fallback | **Held broken packages.** stderr: `Unable to correct problems, you have held broken packages.` This is *not* OS‑signaled remediation. No dpkg/apt‑fix instructions given. Must fallback. Correct. |
+| 14 | i‑test‑014 | `apt-get install -y nginx` | fallback | fallback | **Permission denied on dpkg lock.** stderr: `Could not open lock file ... Permission denied`. This is not OS‑signaled remediation. LLM cannot mutate OS. Must fallback. Correct. |
+| 15 | i‑test‑015 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt --fix-broken install -y` → install) | **OS‑signaled remediation.** stderr: `You might want to run 'apt --fix-broken install'`. This is explicit remediation. Allowed under OS‑Mutation Guard. Correct. |
+| 16 | i‑test‑016 | `apt-get install -y mysql-server` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** stderr indicates corrupted index. OS‑signaled remediation. Correct. |
+| 17 | i‑test‑017 | `apt-get upgrade -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+| 18 | i‑test‑018 | `apt-get dist-upgrade -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+| 19 | i‑test‑019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+| 20 | i‑test‑020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+
+</details>
 
 
 
 
-##### Regresion with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
+##### Regression with the extended Ubuntu schema test cases (24) for segmental rewrites, etc.
 
 This is the second part of the regression with Ubuntu. 
 
