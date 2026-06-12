@@ -10829,7 +10829,7 @@ This is for Ubuntu and each OS will vary accordingly.
                 "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
                 "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
-                "      • ALL rewritten 'apt-get install' commands MUST include the '-y' flag to ensure non-interactive behavior,\n"
+                "      • ALL 'apt-get install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'apt-get' and did not require a package-manager rewrite.\n"
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
@@ -10875,6 +10875,18 @@ Patch2 Normalization Table (Ubuntu APT)
 | **6. Native apt‑get install only (single segment)** | `apt-get install curl` | No | `apt-get install curl` | Not rewritten. Never reaches LLM in real life. |
 | **7. Wrong‑OS PM only (single segment)** | `yum install nano` | Yes (base rewrite) | `apt-get install -y nano` | Base rewrite rule applies. |
 | **8. Wrong‑OS PM + system‑wide op requiring rewrite** | `apk add bash && pacman -Syu` | Yes → fallback | fallback | System‑wide op cannot be rewritten. |
+
+
+In short, 
+
+- System‑wide segments → preserved verbatim
+- Shell segments → preserved verbatim
+- Wrong‑OS PM segments → rewritten
+- Native apt‑get install segments → normalized (add -y)
+
+And this is all encoded into the latest patch2 contract rule constructs.
+
+
 
 The regression testing matrix in the sections below will validate all of this. 
 
