@@ -890,7 +890,7 @@ def recover(request: RecoveryRequest):
                 "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
                 "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
-                "      • ALL rewritten 'apt-get install' commands MUST include the '-y' flag to ensure non-interactive behavior,\n"
+                "      • ALL 'apt-get install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'apt-get' and did not require a package-manager rewrite.\n"
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
