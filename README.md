@@ -10766,10 +10766,19 @@ of many related to proper ordering.
 LLM contract rules design often involves trial and error as the LLM is inherently probabilistic and we are making it fully 
 deterministic through a concise rule design.
 
+There are several sections now in this README regarding LLM contract engineering core princples that should be used when 
+testing and constructing the contract rules payload in the ai_gateway_service.py
+
+This is the main reference link:
+
+- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
+
+
 The updated patch2 is below. In the next section the test case matrices will be presented. The 24 extended test cases are the 
 ones that regression test all the segmental rewrite contract rules make up patch2. Note the very very clear rule 
-language semantics in regards to system-wide operations. 
+language semantics in regards to system-wide operations.
 
+This is for Ubuntu and each OS will vary accordingly.
 
 ```
 
@@ -10849,6 +10858,28 @@ language semantics in regards to system-wide operations.
 
 
 ```
+
+Following much of the regression testing on patch2, the following matrix represents the desired rewrite for multi-segment
+commands (Ubuntu example, but each OS will vary accordingly):
+
+Patch2 Normalization Table (Ubuntu APT)  
+*How apt‑get install segments are treated inside rewritten pipelines*
+
+| Scenario | Original Pipeline | Patch2 Trigger? | Correct Rewritten Pipeline | Notes |
+|---------|------------------|------------------|-----------------------------|-------|
+| **1. Wrong‑OS PM + native apt‑get install** | `yum install nano && apt-get install curl` | Yes | `apt-get install -y nano && apt-get install -y curl` | Both segments normalized. |
+| **2. Native apt‑get install + wrong‑OS PM** | `apt-get install curl && apk add bash` | Yes | `apt-get install -y curl && apt-get install -y bash` | Native apt‑get normalized. |
+| **3. Multiple native apt‑get installs** | `apt-get install curl && apt-get install nano && yum install git` | Yes | `apt-get install -y curl && apt-get install -y nano && apt-get install -y git` | All apt‑get installs normalized. |
+| **4. Native apt‑get install + shell command + wrong‑OS PM** | `apt-get install curl && echo hi && apk add bash` | Yes | `apt-get install -y curl && echo hi && apt-get install -y bash` | Shell preserved verbatim. |
+| **5. Wrong‑OS PM + system‑wide op** | `yum install nano && apt-get update` | Yes | `apt-get install -y nano && apt-get update` | System‑wide op preserved verbatim. |
+| **6. Native apt‑get install only (single segment)** | `apt-get install curl` | No | `apt-get install curl` | Not rewritten. Never reaches LLM in real life. |
+| **7. Wrong‑OS PM only (single segment)** | `yum install nano` | Yes (base rewrite) | `apt-get install -y nano` | Base rewrite rule applies. |
+| **8. Wrong‑OS PM + system‑wide op requiring rewrite** | `apk add bash && pacman -Syu` | Yes → fallback | fallback | System‑wide op cannot be rewritten. |
+
+The regression testing matrix in the sections below will validate all of this. 
+
+
+
 
 
 ---
