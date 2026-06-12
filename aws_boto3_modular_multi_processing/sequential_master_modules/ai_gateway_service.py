@@ -834,7 +834,8 @@ def recover(request: RecoveryRequest):
                 "  treat it as malformed and use retry_with_modified_command.\n"
                 "- If the command uses a package manager that does not match Ubuntu (yum, dnf, apk),\n"
                 "  the LLM MUST rewrite the command using the correct Ubuntu package manager ('apt-get') and retry.\n"
-                # patch with -y. Must be noninteractive
+                # patch with -y. Must be noninteractive for single segment rewrites. For multiple segment rewrites as well (see 
+                # patch2 below)
                 "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
                 "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
@@ -879,6 +880,7 @@ def recover(request: RecoveryRequest):
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
                 "\n"
+                # make sure multi-segment rewrites also use -y non-interactive mode
                 "- If ALL segments in the pipeline are either:\n"
                 "      • simple package-install commands, OR\n"
                 "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"

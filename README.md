@@ -10810,6 +10810,7 @@ language semantics in regards to system-wide operations.
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
                 "\n"
+                # make sure multi-segment rewrites also use -y non-interactive mode
                 "- If ALL segments in the pipeline are either:\n"
                 "      • simple package-install commands, OR\n"
                 "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
@@ -10819,6 +10820,7 @@ language semantics in regards to system-wide operations.
                 "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
                 "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL rewritten 'apt-get install' commands MUST include the '-y' flag to ensure non-interactive behavior,\n"
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
