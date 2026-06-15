@@ -10889,9 +10889,28 @@ In short,
 
 And this is all encoded into the latest patch2 contract rule constructs.
 
+In summary here is a partial list of the items that need to be watched for when porting these changes in patch2 to the other 
+11 OSes:
 
 
-The regression testing matrix in the sections below will validate all of this. 
+- Ubuntu is now the **canonical reference**  
+- Each OS will get its own **Patch2 block**, structurally identical  
+- Each OS will have its own **system‑wide list**, plus the other OSes’ system‑wide commands  
+- System‑wide ops are **never rewritten**, **never normalized**, **never touched**  
+- Install/remove ops are the only ones that get **normalization**  
+- Wrong‑OS system‑wide ops → **fallback**  
+- Wrong‑OS install ops → **rewrite**  
+- Single‑segment wrong‑OS install ops → **rewrite + non‑interactive flag**  
+- Patch2 multi‑segment → **normalize only install/remove ops**  
+- System‑wide ops → **preserved verbatim**  
+- The corner case (`yum upgrade && wrong‑OS install`) is acceptable and safe  
+- The design is robust enough that this tradeoff is negligible in real deployments  
+
+Normalize in the above list pertains to adding the noninteractive flag to the affected segment. 
+
+
+
+The regression testing matrix in the sections below will validate all of this across the other 11 OSes.
 
 
 
