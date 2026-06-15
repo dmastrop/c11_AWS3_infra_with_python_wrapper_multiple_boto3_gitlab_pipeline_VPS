@@ -10775,7 +10775,7 @@ This is the main reference link:
 
 
 The updated patch2 is below. In the next section the test case matrices will be presented. The 24 extended test cases are the 
-ones that regression test all the segmental rewrite contract rules make up patch2. Note the very very clear rule 
+ones that regression test all the segmental rewrite contract rules that make up patch2. Note the very very clear rule 
 language semantics in regards to system-wide operations.
 
 This is for Ubuntu and each OS will vary accordingly.
@@ -10841,8 +10841,10 @@ This is for Ubuntu and each OS will vary accordingly.
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
                 "      yum update\n"
+                "      yum upgrade\n"
                 "      dnf upgrade\n"
                 "      pacman -Syu\n"
+                "      apk update\n"
                 "\n"
                 "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
                 "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
@@ -10855,6 +10857,7 @@ This is for Ubuntu and each OS will vary accordingly.
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
+
 
 
 ```
