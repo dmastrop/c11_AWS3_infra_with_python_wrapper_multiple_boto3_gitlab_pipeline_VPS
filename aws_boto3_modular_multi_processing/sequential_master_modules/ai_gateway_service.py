@@ -846,6 +846,7 @@ def recover(request: RecoveryRequest):
 
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                # Ubuntu canonical version that will be ported to the other 11 OSes the support segmental rewrite
                 #
                 # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
                 # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
@@ -1030,6 +1031,8 @@ def recover(request: RecoveryRequest):
                 # Busybox addendum to Revision 6.8:
                 "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
                 
+
+                # Debian APT domain primitives block 
                 "Debian APT domain primitives:\n"
                 "- Debian uses 'apt-get' as the canonical package manager for scripted operations.\n"
                 "- The command 'apt-get update' refreshes package indexes.\n"
@@ -1042,38 +1045,99 @@ def recover(request: RecoveryRequest):
                 "- If the command is missing arguments (e.g., 'apt-get install'),\n"
                 "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
                 "  can be constructed WITHOUT guessing a package name.\n"
+                # Add single segment interactive flag -y processsing:
                 "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew),\n"
                 "  the LLM MUST rewrite the command using the correct Debian package manager ('apt-get')\n"
                 "  and retry when a safe, concrete package name is present.\n"
+                "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
+                #
                 "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
                 "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
                 "  primitive, the LLM MUST use 'fallback'.\n"
 
 
-                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2 ####
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                # Ported changes from Ubuntu canonical version with all the latest changes
+                #
+                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
+                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
+                # command does not fail the command and node(thread). Add explicit NO segement uses a PM that does not belong to this
+                # OS to clarify any ambiguity with the word "valid" segment. A "valid" segment is a sgement that does not use a 
+                # PM that belongs to another OS.
+                "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
+                "  a package manager that does NOT belong to this OS, and the command succeeded\n"
+                "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
+                # command is "good". These commands need to have non-system-wide commands rewritten and teh system-wide command
+                # preserved using retry_with_modified_command
+                "- When evaluating pipelines under this Patch2 rule, the presence of a system-wide\n"
+                "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
+                "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
+                "\n"
+                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
+                # wide command should be left as is and the segments that are using a PM that does not belong to this OS
+                # should be re-written using all the patch2 rewrite rules below.
+                "- This previous exception for valid system-wide operations applies ONLY when the\n"
+                "  pipeline contains at least one segment that uses a package manager that does\n"
+                "  NOT belong to this OS. If NO such wrong-OS package-manager segment exists, the\n"
+                "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
+                "\n"
+                # rewrite rules follow below:
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
                 "  the LLM MUST treat each segment independently.\n"
                 "\n"
+                # add system-wide ops that are already valid for this OS and do NOT require rewriting               
+                # Make sure to exclude the use of fallback here. MUST NOT use fallback.
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                # make sure multi-segment rewrites also use -y non-interactive mode
                 "- If ALL segments in the pipeline are either:\n"
-                "      • simple package-install commands, or\n"
-                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
+                "      • simple package-install commands, OR\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
+                "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
                 "  AND at least one segment uses a wrong-OS package manager,\n"
-                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+                "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
-                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu/Debian, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL 'apt-get install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'apt-get' and did not require a package-manager rewrite.\n"
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
-                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"
+                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
+                "- The following commands are considered system-wide operations:\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
                 "      yum update\n"
+                "      yum upgrade\n"
                 "      dnf upgrade\n"
                 "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+                # reiterated here, but there is a previous more global rule as well
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
-                "\n"                
+                "\n"
+
                 # Idempotency regression patch — OS-Mutation Guard Rule
                 # Remove this local copy. OS muatation guard is now GLOBAL
 
