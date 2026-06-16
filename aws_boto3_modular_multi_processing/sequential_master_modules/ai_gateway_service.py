@@ -1038,10 +1038,20 @@ def recover(request: RecoveryRequest):
                 "- The command 'apt-get update' refreshes package indexes.\n"
                 "- The command 'apt-get install <pkg>' installs packages.\n"
                 "- The flag '-y' auto-confirms installation.\n"
-                "- If a package cannot be located (e.g., 'E: Unable to locate package <pkg>' or\n"
-                "  'E: Unable to locate package '<pkg>''), the LLM MUST retry with:\n"
-                "    * apt-get update -y\n"
-                "    * apt-get install -y <pkg>\n"
+                # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
+                # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
+                # fallback scenarios that do NOT involve OS-signalled remediation.
+                "- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
+                "  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
+                "  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
+                "  the LLM MUST retry with:\n"
+                "      * apt-get update\n"
+                "      * apt-get install -y <pkg>\n"
+                "\n"
+                "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
+                "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
+                "\n"
+                #
                 "- If the command is missing arguments (e.g., 'apt-get install'),\n"
                 "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
                 "  can be constructed WITHOUT guessing a package name.\n"
