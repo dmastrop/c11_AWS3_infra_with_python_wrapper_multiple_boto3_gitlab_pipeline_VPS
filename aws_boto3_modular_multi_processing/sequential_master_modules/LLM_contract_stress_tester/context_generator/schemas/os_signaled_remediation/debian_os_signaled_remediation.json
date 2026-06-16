@@ -1,0 +1,47 @@
+{
+  "os_name": "Debian",
+  "os_version": "11",
+  "kernel": "5.10.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "Err:1 http://deb.debian.org/debian bullseye/main amd64 nginx amd64 1.18.0-6+deb11u3\n  404  Not Found\nE: Failed to fetch http://deb.debian.org/debian/pool/main/n/nginx/nginx_1.18.0-6+deb11u3_amd64.deb  404  Not Found\nE: Unable to locate package nginx",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "debian-osmut-002",
+      "ip": "10.0.9.202",
+      "tags": ["os-signaled-remediation", "stale-metadata"],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "W: Failed to fetch http://deb.debian.org/debian/dists/bullseye/InRelease  Hash Sum mismatch\nE: Some index files failed to download. They have been ignored, or old ones used instead.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "debian-osmut-003",
+      "ip": "10.0.9.203",
+      "tags": ["os-signaled-remediation", "hash-sum-mismatch"],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "dpkg was interrupted, you must run 'dpkg --configure -a' to correct the problem.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "debian-osmut-004",
+      "ip": "10.0.9.204",
+      "tags": ["os-signaled-remediation", "dpkg-interrupt"],
+      "history": []
+    }
+
+  ]
+}
+
