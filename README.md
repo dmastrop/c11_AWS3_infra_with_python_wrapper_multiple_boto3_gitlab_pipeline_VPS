@@ -10679,20 +10679,20 @@ the Idempotency global rule block. This is intentional.
                 "- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
                 "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
 
-
-
-                # =======================================================
+    # =======================================================
                 # OS‑Mutation Guard (GLOBAL) — applies BEFORE any OS specific domain  primitives or rewrite logic\n"
                 # =======================================================
                 "- This rule OVERRIDES any conflicting OS‑specific domain‑primitives.\n"
-                "- The following commands are considered system‑wide operations on Linux-family OSes:\n"
+                "- The following commands are considered system-wide operations on Linux-family OSes:\n"
                 "      apt-get update\n"
                 "      apt-get upgrade\n"
                 "      apt update\n"
                 "      apt upgrade\n"
                 "      yum update\n"
+                "      yum upgrade\n"
                 "      dnf upgrade\n"
                 "      pacman -Syu\n"
+                "      apk update\n"
                 "      zypper refresh\n"
                 "      zypper update\n"
                 "\n"
@@ -10707,11 +10707,13 @@ the Idempotency global rule block. This is intentional.
                 "  instructions). These remediation flows MAY include system‑wide operations\n"
                 "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
                 "\n"
+                # Disambiguation rule
                 "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
                 "  considered OS‑signaled remediation. When this phrase appears alone with\n"
                 "  no additional repository, index, integrity, or dpkg context, the LLM\n"
                 "  MUST treat the condition as ambiguous and MUST return \"fallback\".\n"
                 "\n"
+                #
                 "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
                 "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
                 "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
@@ -10726,6 +10728,7 @@ the Idempotency global rule block. This is intentional.
                 "  Guard MUST NOT be applied; instead, the global Idempotency rules apply.\n"
                 "  Under the global Idempotency rules, idempotent system‑wide operations\n"
                 "  MUST result in a \"cleanup_and_retry\" action.\n"
+
 
 ```
 
@@ -10837,15 +10840,19 @@ This is for Ubuntu and each OS will vary accordingly.
                 # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
                 # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
                 # this OS and do NOT require rewriting)
-                "- The following commands are considered system-wide operations:\n"
-                "      apt-get update\n"
-                "      apt-get upgrade\n"
-                "      yum update\n"
-                "      yum upgrade\n"
-                "      dnf upgrade\n"
-                "      pacman -Syu\n"
-                "      apk update\n"
-                "\n"
+		"- The following commands are considered system-wide operations:\n"
+		"      apt-get update\n"
+		"      apt-get upgrade\n"
+		"      apt update\n"
+		"      apt upgrade\n"
+		"      yum update\n"
+		"      yum upgrade\n"
+		"      dnf upgrade\n"
+		"      pacman -Syu\n"
+		"      apk update\n"
+		"      zypper refresh\n"
+		"      zypper update\n"
+		"\n"
                 "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
                 "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
                 "\n"
