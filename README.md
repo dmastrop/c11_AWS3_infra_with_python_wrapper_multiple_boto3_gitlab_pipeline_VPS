@@ -12093,6 +12093,77 @@ The patch2 changes can now be ported to the other OSes.
 #### 2. LLM Contract Stress Tester – Idempotency Debian testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-debian-testing-and-test-matrices"></a>
 
+
+##### Debian test matrix for idempotency (6) test cases
+
+This is the test matrix for all 6 idempotency test cases on debian OS. There are extensive notes in the notes column:
+
+# <details>
+<summary><b>Click to expand Debian Idempotency Test Case Matrix (6 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | debian-idem-001 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get install -y nginx`) | **Package already installed → idempotency signal.** No stderr, exit=0, tag `package-already-installed`. Global Idempotency rules require `cleanup_and_retry`. Correct. |
+| 2 | debian-idem-002 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (`apt-get install -y curl`) | **Idempotency with history.** History shows the same command already executed successfully. Global Idempotency rules treat this as idempotent → `cleanup_and_retry`. Correct. |
+| 3 | debian-idem-003 | `systemctl start ssh` | cleanup_and_retry | cleanup_and_retry (`systemctl start ssh`) | **Service already running.** stderr indicates “already running”. This is a classic idempotency case → `cleanup_and_retry`. Correct. |
+| 4 | debian-idem-004 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Directory exists.** stderr indicates “File exists”. Global Idempotency rules require `cleanup_and_retry` with a safe retry (`mkdir -p`). Correct. |
+| 5 | debian-idem-005 | `touch /etc/motd` | cleanup_and_retry | cleanup_and_retry (`rm -f /etc/motd` → `touch /etc/motd`) | **File exists.** stderr indicates file already exists. History shows prior successful creation. Global Idempotency rules require cleanup (remove file) then retry. Correct. |
+| 6 | debian-osmut-001 | `apt-get install -y some-nonexistent-package` | fallback | fallback | **Not idempotency. Not OS‑signaled remediation.** stderr contains ONLY “Unable to locate package \<pkg\>”. No repo/index/dpkg context. Under the **OS‑Mutation Guard**, the LLM is forbidden from introducing `apt-get update` unless OS‑signaled remediation is present. Therefore → **MUST fallback**. Correct. |
+
+</details>
+
+
+
+
+##### Debian test matrix for os-signaled remeidation (3) test cases
+
+This is the test matrix for all 3 OS-signaled remeidation test cases on debian OS. There are extensive notes in the notes column:
+
+# <details>
+<summary><b>Click to expand Debian OS‑signaled Remediation Test Case Matrix (3 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | debian‑osmut‑002 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get update -y` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (stale metadata).** stderr contains `404 Not Found`, `Failed to fetch`, and repository path failures. These are classic Debian/Ubuntu signals that the package index is stale. Under the global OS‑Mutation Guard, system‑wide operations are allowed **only** when the OS explicitly signals remediation. Here it does, so the LLM MUST run `apt-get update` before retrying. LLM adds `-y` (allowed). Correct. |
+| 2 | debian‑osmut‑003 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/*`, `rm -rf /var/cache/apt/archives/partial/*` → `apt-get update -y` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (Hash Sum mismatch).** stderr includes `Hash Sum mismatch`. This is a deterministic index corruption signal. Cleanup of partial lists + update is correct. LLM uses `apt-get update -y` as prescribed by the Hash‑Sum rule. Correct. |
+| 3 | debian‑osmut‑004 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (dpkg interrupt).** stderr contains: `dpkg was interrupted, you must run 'dpkg --configure -a'`. This is a deterministic dpkg remediation signal. Under the OS‑Mutation Guard, this MUST be honored. Running `dpkg --configure -a` before retrying is correct. |
+
+</details>
+
+
+
+
+
+##### Debian test matrix for selected regression on base 20 test cases (4 test cases)
+
+This section will regression test the test cases index:
+
+- 1  
+- 4  
+- 10  
+- 16  
+
+
+
+
+##### Debian test matrix for selected regression on 24 rewrite patch2 test cases (6 test cases)
+
+This section will regression test the test cases index:
+
+- 4  
+- 10  
+- 16  
+- 21  
+- 22  
+- 23  
+
+
+
+
 ---
 
 
