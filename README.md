@@ -10976,7 +10976,7 @@ presented to the LLM), and the stderr or history indicates that the command was 
 idempotent scenario.  Other situations where OS mutation is permitted by using system-wide operations occurs with OS-signalled
 remediation, as discussed earlier. These scnearios are all clearly presented in the GLOBLAL OS mutation guard rule block.
 
-ALL Other situations require a fallback response from the LLM as noted in the OS mutation guard block. i.e. when the 
+ALL other situations require a fallback response from the LLM as noted in the OS mutation guard block. i.e. when the 
 remediation response requires an LLM-generated command(s) that are system-wide and would mutate the OS.
 
 This is clearly defined in the OS mutation guard block:
