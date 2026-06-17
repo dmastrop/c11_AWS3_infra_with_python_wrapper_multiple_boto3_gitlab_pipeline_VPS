@@ -12098,7 +12098,7 @@ The patch2 changes can now be ported to the other OSes.
 
 This is the test matrix for all 6 idempotency test cases on debian OS. There are extensive notes in the notes column:
 
-# <details>
+<details>
 <summary><b>Click to expand Debian Idempotency Test Case Matrix (6 test cases)</b></summary>
 
 <br>
@@ -12121,7 +12121,7 @@ This is the test matrix for all 6 idempotency test cases on debian OS. There are
 
 This is the test matrix for all 3 OS-signaled remeidation test cases on debian OS. There are extensive notes in the notes column:
 
-# <details>
+<details>
 <summary><b>Click to expand Debian OS‑signaled Remediation Test Case Matrix (3 test cases)</b></summary>
 
 <br>
