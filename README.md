@@ -440,6 +440,64 @@ To prevent runaway mutation or catastrophic rule collapse:
 
 These ensure that evolution remains controlled and safe.
 
+
+
+                         ┌──────────────────────────────────────────┐
+                         │        Phase 5 Autonomous Engine         │
+                         └──────────────────────────────────────────┘
+                                        ▲
+                                        │
+                                        │  Semantic Scoring
+                                        │  (LLM Evaluation)
+                                        │
+                         ┌──────────────────────────────────────────┐
+                         │            Scoring Engine                │
+                         └──────────────────────────────────────────┘
+                                        ▲
+                                        │
+                                        │  Test Results
+                                        │
+                         ┌──────────────────────────────────────────┐
+                         │          Autonomous Test Harness         │
+                         │   (17 OSes, mutation classes, pipelines) │
+                         └──────────────────────────────────────────┘
+                                        ▲
+                                        │
+                                        │  Mutated Rules
+                                        │
+                         ┌──────────────────────────────────────────┐
+                         │            Mutation Engine               │
+                         │ (schema expansion, mutators, generators) │
+                         └──────────────────────────────────────────┘
+                                        ▲
+                                        │
+                                        │  Rule Diffs
+                                        │
+                         ┌──────────────────────────────────────────┐
+                         │        Contract Rule Synthesizer         │
+                         │ (rewrite, adjust, restructure Patch2)    │
+                         └──────────────────────────────────────────┘
+                                        ▲
+                                        │
+                                        │  Reinforcement Loop
+                                        │  (accept / reject mutations)
+                                        │
+                         ┌──────────────────────────────────────────┐
+                         │          Plane‑1 Contract Layer          │
+                         │ (LLM semantics, rewrite, fallback, etc.) │
+                         └──────────────────────────────────────────┘
+                                        ▲
+                                        │
+                                        │  Context Object
+                                        │
+                         ┌──────────────────────────────────────────┐
+                         │         Plane‑2 Deterministic Layer      │
+                         │ (OS nodes, APIs, IaC, workflows, etc.)   │
+                         └──────────────────────────────────────────┘
+
+
+
+
 [Back to top](#top-preface4)
 
 ---
@@ -480,6 +538,49 @@ The underlying execution environment:
 - compliance evaluators  
 
 As long as Plane‑2 exists, Plane‑1 can be adapted to any domain where LLM‑driven contract rules govern behavior.
+
+
+                   ┌──────────────────────────────────────────────┐
+                   │              Plane‑2 Substrate                │
+                   │  Deterministic Execution Environment          │
+                   │                                              │
+                   │  • OS nodes (stdout/stderr/exit codes)       │
+                   │  • API gateways (HTTP req/resp)              │
+                   │  • IaC engines (plan/apply)                  │
+                   │  • Security compilers (IAM, SELinux)         │
+                   │  • Workflow runners (CI/CD, Airflow)         │
+                   │  • Data engines (SQL, ETL, migrations)       │
+                   │  • Compliance evaluators                     │
+                   └──────────────────────────────────────────────┘
+                                      │
+                                      │  Structured Signals
+                                      ▼
+                   ┌──────────────────────────────────────────────┐
+                   │              Context Object                   │
+                   │  (input, output, errors, metadata, history)  │
+                   └──────────────────────────────────────────────┘
+                                      │
+                                      │  LLM Semantic Interpretation
+                                      ▼
+                   ┌──────────────────────────────────────────────┐
+                   │            Plane‑1 LLM Contract Layer (Rules)│
+                   │  • rewrite logic                             │
+                   │  • fallback logic                            │
+                   │  • idempotency                               │
+                   │  • safety invariants                         │
+                   │  • remediation flows                         │
+                   └──────────────────────────────────────────────┘
+                                      │
+                                      │  Deterministic Action
+                                      ▼
+                   ┌──────────────────────────────────────────────┐
+                   │              Plane‑2 Substrate                │
+                   │         (execution of chosen action)          │
+                   └──────────────────────────────────────────────┘
+
+
+
+
 
 ---
 
