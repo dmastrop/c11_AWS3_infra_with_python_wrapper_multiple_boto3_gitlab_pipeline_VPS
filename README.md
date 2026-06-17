@@ -267,7 +267,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
 
-- [Preface Update4: Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture](#preface-update4-autonomous-llm-based-contract-evolution-phase5-and-universal-remediation-architecture)
+- [Preface Update4: Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture](#preface-update4)
 
 ---
 
@@ -326,17 +326,15 @@ STATUS_TAGS = {
 
 
 
-
-
-
-## PREFACE UPDATE4: Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture
+<a name="preface-update4"></a>
+## PREFACE UPDATE4: **Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture**
 
 
 ### **Table of Contents — Preface Update 4**
 <a name="top-preface4"></a>
 
 - [I. General Introduction](#i-general-introduction)  
-- [II. Phase 5: Autonomous LLM‑Based Contract Evolution and Hardening](#ii-phase-5-autonomous-llm-based-contract-evolution-and-hardening)
+- [II. Phase 5: Autonomous LLM‑Based Contract Evolution and Hardening](#preface-update4-section-ii)
 - [III. Universal Remediation Across Arbitrary Substrates](#iii-universal-remediation-across-arbitrary-substrates)  
 - [IV. Extensible Domains](#iv-extensible-domains)  
 - [V. Conceptual Unification](#v-conceptual-unification)  
@@ -368,8 +366,9 @@ This Preface Update outlines both dimensions of Phase 5: the autonomous evolutio
 
 ---
 
-### **II. Phase 5: Autonomous LLM‑Based Contract Evolution and Hardening**
 
+<a name="preface-update4-section-ii"></a>
+### **II. Phase 5: Autonomous LLM‑Based Contract Evolution and Hardening**
 
 Phase 5 introduces **Autonomous LLM‑Based Contract Evolution and Hardening**, transforming the contract layer from a manually engineered ruleset into a self‑optimizing semantic engine. This evolution is driven by structured test harnesses, mutation frameworks, semantic scoring, and reinforcement‑based refinement loops.
 
