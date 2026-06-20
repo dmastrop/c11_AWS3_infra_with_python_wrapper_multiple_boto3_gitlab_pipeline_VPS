@@ -1,0 +1,98 @@
+{
+  "os_name": "Debian",
+  "os_version": "11",
+  "kernel": "5.10.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "nginx is already the newest version (1.18.0-6+deb11u3).",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "debian-idem-001",
+      "ip": "10.0.1.101",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y curl",
+      "stdout": "curl is already the newest version (7.74.0-1.3+deb11u7).",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "debian-idem-002",
+      "ip": "10.0.1.102",
+      "tags": [],
+      "history": [
+        {
+          "command": "apt-get install -y curl",
+          "stdout": "curl is already the newest version (7.74.0-1.3+deb11u7).",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "systemctl start ssh",
+      "stdout": "",
+      "stderr": "Job for ssh.service is already running.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "debian-idem-003",
+      "ip": "10.0.1.103",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /var/www/html",
+      "stdout": "",
+      "stderr": "mkdir: cannot create directory '/var/www/html': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "debian-idem-004",
+      "ip": "10.0.1.104",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "touch /etc/motd",
+      "stdout": "",
+      "stderr": "touch: cannot touch '/etc/motd': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "debian-idem-005",
+      "ip": "10.0.1.105",
+      "tags": [],
+      "history": [
+        {
+          "command": "touch /etc/motd",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apt-get install -y some-nonexistent-package",
+      "stdout": "",
+      "stderr": "E: Unable to locate package some-nonexistent-package",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "debian-osmut-001",
+      "ip": "10.0.9.201",
+      "tags": [],
+      "history": []
+    }
+    
+
+  ]
+}
+
