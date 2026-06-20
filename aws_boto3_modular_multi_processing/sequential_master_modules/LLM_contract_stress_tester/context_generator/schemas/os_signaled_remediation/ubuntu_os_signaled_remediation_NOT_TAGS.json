@@ -1,0 +1,47 @@
+{
+  "os_name": "Ubuntu",
+  "os_version": "22.04",
+  "kernel": "5.15.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "Err:1 http://archive.ubuntu.com/ubuntu jammy/main amd64 nginx amd64 1.18.0-0ubuntu1\n  404  Not Found\nE: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/n/nginx/nginx_1.18.0-0ubuntu1_amd64.deb  404  Not Found\nE: Unable to locate package nginx",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-002",
+      "ip": "10.0.8.202",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "W: Failed to fetch http://archive.ubuntu.com/ubuntu/dists/jammy/InRelease  Hash Sum mismatch\nE: Some index files failed to download. They have been ignored, or old ones used instead.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-003",
+      "ip": "10.0.8.203",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "dpkg was interrupted, you must run 'dpkg --configure -a' to correct the problem.",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "ubuntu-osmut-004",
+      "ip": "10.0.8.204",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
