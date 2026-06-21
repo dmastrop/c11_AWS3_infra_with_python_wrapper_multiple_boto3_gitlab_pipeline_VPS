@@ -397,7 +397,7 @@ def recover(request: RecoveryRequest):
                 "- NEVER return text outside the JSON.\n"
                 "- NEVER explain your reasoning.\n"
                 "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
-                # this refers to the tags field in the context and not the tags field in the per thread registry_entry
+                # This refers to the tags field in the context and not the tags field in the per thread registry_entry
                 "- The \\\"tags\\\" field is metadata ONLY. You MUST NOT use it to determine the action.\\n"
                 "- You MUST ignore the \\\"tags\\\" field completely when deciding between\\n"
                 "  \\\"fallback\\\", \\\"cleanup_and_retry\\\", \\\"retry_with_modified_command\\\", or \\\"abort\\\".\\n"
