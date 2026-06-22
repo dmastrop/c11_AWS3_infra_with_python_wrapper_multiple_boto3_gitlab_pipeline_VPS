@@ -848,7 +848,7 @@ def recover(request: RecoveryRequest):
                 "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
                 "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
                 "\n"
-                # more specificity for unable to locate package
+                # More specificity for "Unable to locate package" with repository/index failures
                 "- Additionally, if stderr contains \"E: Unable to locate package <pkg>\" AND also contains ANY\n"
                 "  repository-level failure indicators such as (but NOT limited to):\n"
                 "      * \"E: Failed to fetch http://\"\n"
@@ -866,10 +866,12 @@ def recover(request: RecoveryRequest):
                 "      * \"Some index files failed to download\"\n"
                 "      * \"Index is corrupted\"\n"
                 "      * \"dpkg was interrupted\"\n"
-                "  then this MUST be treated as OS-signaled stale-metadata remediation. In this case, the LLM MUST\n"
-                "  retry with:\n"
-                "      * apt-get update -y\n"
-                "      * apt-get install -y <pkg>\n"
+                "  then this MUST be treated as OS-signaled stale-metadata remediation.\n"
+                "  The LLM MUST return a \"cleanup_and_retry\" action with:\n"
+                "      * cleanup: []   (cleanup MAY be empty)\n"
+                "      * retry:\n"
+                "          - apt-get update -y\n"
+                "          - apt-get install -y <pkg>\n"
                 "\n"
                 #
                 "- If the command is missing arguments (e.g., 'apt-get install'),\n"
@@ -1097,7 +1099,7 @@ def recover(request: RecoveryRequest):
                 "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
                 "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
                 "\n"
-                # more specificity for unable to locate package
+                # More specificity for "Unable to locate package" with repository/index failures
                 "- Additionally, if stderr contains \"E: Unable to locate package <pkg>\" AND also contains ANY\n"
                 "  repository-level failure indicators such as (but NOT limited to):\n"
                 "      * \"E: Failed to fetch http://\"\n"
@@ -1115,10 +1117,12 @@ def recover(request: RecoveryRequest):
                 "      * \"Some index files failed to download\"\n"
                 "      * \"Index is corrupted\"\n"
                 "      * \"dpkg was interrupted\"\n"
-                "  then this MUST be treated as OS-signaled stale-metadata remediation. In this case, the LLM MUST\n"
-                "  retry with:\n"
-                "      * apt-get update -y\n"
-                "      * apt-get install -y <pkg>\n"
+                "  then this MUST be treated as OS-signaled stale-metadata remediation.\n"
+                "  The LLM MUST return a \"cleanup_and_retry\" action with:\n"
+                "      * cleanup: []   (cleanup MAY be empty)\n"
+                "      * retry:\n"
+                "          - apt-get update -y\n"
+                "          - apt-get install -y <pkg>\n"
                 "\n"
                 #
                 "- If the command is missing arguments (e.g., 'apt-get install'),\n"
