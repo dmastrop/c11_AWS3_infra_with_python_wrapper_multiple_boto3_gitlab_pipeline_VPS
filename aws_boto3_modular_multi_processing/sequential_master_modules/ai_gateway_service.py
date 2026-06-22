@@ -542,6 +542,11 @@ def recover(request: RecoveryRequest):
                 "  instructions). These remediation flows MAY include system‑wide operations\n"
                 "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
                 "\n"
+                # adding clarification for ALL os-signalled remediation to use cleanup_and_retry. Globally.
+                "- Any OS-signaled deterministic remediation flow (hard or soft) MUST use the \"cleanup_and_retry\" action.\n"
+                "- The \"retry_with_modified_command\" action MUST NOT be used for OS-signaled remediation.\n"
+                "- OS-signaled remediation includes explicit instructions or repository/index/dpkg error patterns in stderr that indicate a deterministic recovery sequence (e.g., \"Hash Sum mismatch\", \"dpkg was interrupted\", \"apt --fix-broken install\", repository 404 errors combined with \"Unable to locate package\", or similar).\n"
+                "\n"
                 # Disambiguation rule
                 "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
                 "  considered OS‑signaled remediation. When this phrase appears alone with\n"
