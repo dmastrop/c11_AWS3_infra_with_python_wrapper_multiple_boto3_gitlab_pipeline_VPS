@@ -11602,7 +11602,8 @@ the Idempotency global rule block. This is intentional.
                 "- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
                 "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
 
-    # =======================================================
+
+                # =======================================================
                 # OS‑Mutation Guard (GLOBAL) — applies BEFORE any OS specific domain  primitives or rewrite logic\n"
                 # =======================================================
                 "- This rule OVERRIDES any conflicting OS‑specific domain‑primitives.\n"
@@ -11630,6 +11631,11 @@ the Idempotency global rule block. This is intentional.
                 "  instructions). These remediation flows MAY include system‑wide operations\n"
                 "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
                 "\n"
+                # adding clarification for ALL os-signalled remediation to use cleanup_and_retry. Globally.
+                "- Any OS-signaled deterministic remediation flow (hard or soft) MUST use the \"cleanup_and_retry\" action.\n"
+                "- The \"retry_with_modified_command\" action MUST NOT be used for OS-signaled remediation.\n"
+                "- OS-signaled remediation includes explicit instructions or repository/index/dpkg error patterns in stderr that indicate a deterministic recovery sequence (e.g., \"Hash Sum mismatch\", \"dpkg was interrupted\", \"apt --fix-broken install\", repository 404 errors combined with \"Unable to locate package\", or similar).\n"
+                "\n"
                 # Disambiguation rule
                 "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
                 "  considered OS‑signaled remediation. When this phrase appears alone with\n"
@@ -11651,6 +11657,7 @@ the Idempotency global rule block. This is intentional.
                 "  Guard MUST NOT be applied; instead, the global Idempotency rules apply.\n"
                 "  Under the global Idempotency rules, idempotent system‑wide operations\n"
                 "  MUST result in a \"cleanup_and_retry\" action.\n"
+
 
 
 ```
