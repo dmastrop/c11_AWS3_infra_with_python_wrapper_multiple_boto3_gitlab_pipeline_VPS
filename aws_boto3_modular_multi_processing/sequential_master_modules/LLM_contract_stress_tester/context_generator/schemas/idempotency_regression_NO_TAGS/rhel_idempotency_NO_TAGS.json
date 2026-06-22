@@ -1,49 +1,49 @@
 {
-  "os_name": "CentOS",
-  "os_version": "7",
-  "kernel": "3.10.0",
+  "os_name": "RHEL",
+  "os_version": "9",
+  "kernel": "5.14.0",
   "package_managers": ["yum"],
   "shell": "bash",
   "contexts": [
 
     {
       "command": "yum install -y nginx",
-      "stdout": "Package nginx-1.16.1-1.el7.x86_64 already installed and latest version\nNothing to do",
+      "stdout": "Package nginx-1.20.1-1.el9.x86_64 is already installed.\nNothing to do.",
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "centos7-idem-001",
-      "ip": "10.0.7.101",
-      "tags": ["idempotency", "package-already-installed"],
+      "instance_id": "rhel-idem-001",
+      "ip": "10.0.9.101",
+      "tags": [],
       "history": []
     },
 
     {
       "command": "yum update -y",
       "stdout": "",
-      "stderr": "No packages marked for update",
+      "stderr": "Nothing to do.",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "centos7-idem-002",
-      "ip": "10.0.7.102",
-      "tags": ["idempotency", "nothing-to-update"],
+      "instance_id": "rhel-idem-002",
+      "ip": "10.0.9.102",
+      "tags": [],
       "history": []
     },
 
     {
       "command": "yum upgrade -y",
       "stdout": "",
-      "stderr": "No packages marked for update",
+      "stderr": "No packages marked for update.",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "centos7-idem-003",
-      "ip": "10.0.7.103",
-      "tags": ["idempotency", "nothing-to-update"],
+      "instance_id": "rhel-idem-003",
+      "ip": "10.0.9.103",
+      "tags": [],
       "history": [
         {
           "command": "yum upgrade -y",
           "stdout": "",
-          "stderr": "No packages marked for update",
+          "stderr": "No packages marked for update.",
           "exit_status": 0
         }
       ]
@@ -55,9 +55,9 @@
       "stderr": "Job for httpd.service is already running.",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "centos7-idem-004",
-      "ip": "10.0.7.104",
-      "tags": ["idempotency", "service-already-running"],
+      "instance_id": "rhel-idem-004",
+      "ip": "10.0.9.104",
+      "tags": [],
       "history": []
     },
 
@@ -67,9 +67,9 @@
       "stderr": "mkdir: cannot create directory '/var/www/html': File exists",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "centos7-idem-005",
-      "ip": "10.0.7.105",
-      "tags": ["idempotency", "directory-exists"],
+      "instance_id": "rhel-idem-005",
+      "ip": "10.0.9.105",
+      "tags": [],
       "history": [
         {
           "command": "mkdir /var/www/html",
@@ -79,19 +79,18 @@
         }
       ]
     },
-   
+
     {
       "command": "yum install -y some-nonexistent-package",
       "stdout": "",
-      "stderr": "No package some-nonexistent-package available.\nError: Nothing to do",
+      "stderr": "No match for argument: some-nonexistent-package\nError: Unable to find a match: some-nonexistent-package",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "centos7-osmut-001",
-      "ip": "10.0.7.201",
-      "tags": ["os-mutation-forbidden", "missing-package"],
+      "instance_id": "rhel-osmut-001",
+      "ip": "10.0.9.201",
+      "tags": [],
       "history": []
     }
-    
 
   ]
 }

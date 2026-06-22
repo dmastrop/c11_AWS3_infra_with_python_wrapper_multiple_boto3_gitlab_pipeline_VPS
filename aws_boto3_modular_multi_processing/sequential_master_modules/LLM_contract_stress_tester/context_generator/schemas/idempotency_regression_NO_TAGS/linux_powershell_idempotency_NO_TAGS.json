@@ -14,7 +14,7 @@
       "attempt": 1,
       "instance_id": "pslinux-idem-001",
       "ip": "10.0.60.101",
-      "tags": ["idempotency", "service-already-running"],
+      "tags": [],
       "history": []
     },
 
@@ -26,7 +26,7 @@
       "attempt": 1,
       "instance_id": "pslinux-idem-002",
       "ip": "10.0.60.102",
-      "tags": ["idempotency", "service-already-stopped"],
+      "tags": [],
       "history": [
         {
           "command": "Stop-Service -Name sshd",
@@ -45,7 +45,7 @@
       "attempt": 1,
       "instance_id": "pslinux-idem-003",
       "ip": "10.0.60.103",
-      "tags": ["idempotency", "directory-exists"],
+      "tags": [],
       "history": []
     },
 
@@ -57,7 +57,7 @@
       "attempt": 1,
       "instance_id": "pslinux-idem-004",
       "ip": "10.0.60.104",
-      "tags": ["idempotency", "file-exists"],
+      "tags": [],
       "history": [
         {
           "command": "New-Item -ItemType File -Path /etc/motd",
@@ -76,7 +76,7 @@
       "attempt": 1,
       "instance_id": "pslinux-idem-005",
       "ip": "10.0.60.105",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": []
     },
 
@@ -88,7 +88,7 @@
       "attempt": 1,
       "instance_id": "pwsh-osmut-001",
       "ip": "10.0.13.201",
-      "tags": ["os-mutation-forbidden", "missing-module"],
+      "tags": [],
       "history": []
     }
     

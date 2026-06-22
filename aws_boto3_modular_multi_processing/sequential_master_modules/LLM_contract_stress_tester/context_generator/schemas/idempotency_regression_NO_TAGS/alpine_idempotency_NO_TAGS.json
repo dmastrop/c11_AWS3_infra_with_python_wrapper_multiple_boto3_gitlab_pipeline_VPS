@@ -14,7 +14,7 @@
       "attempt": 1,
       "instance_id": "alpine-idem-001",
       "ip": "10.0.4.101",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": []
     },
 
@@ -26,7 +26,7 @@
       "attempt": 1,
       "instance_id": "alpine-idem-002",
       "ip": "10.0.4.102",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": [
         {
           "command": "apk add curl",
@@ -45,7 +45,7 @@
       "attempt": 1,
       "instance_id": "alpine-idem-003",
       "ip": "10.0.4.103",
-      "tags": ["idempotency", "service-already-running"],
+      "tags": [],
       "history": []
     },
 
@@ -57,7 +57,7 @@
       "attempt": 1,
       "instance_id": "alpine-idem-004",
       "ip": "10.0.4.104",
-      "tags": ["idempotency", "directory-exists"],
+      "tags": [],
       "history": []
     },
 
@@ -69,7 +69,7 @@
       "attempt": 1,
       "instance_id": "alpine-idem-005",
       "ip": "10.0.4.105",
-      "tags": ["idempotency", "file-exists"],
+      "tags": [],
       "history": [
         {
           "command": "touch /etc/motd",
@@ -88,7 +88,7 @@
       "attempt": 1,
       "instance_id": "alpine-osmut-001",
       "ip": "10.0.10.201",
-      "tags": ["os-mutation-forbidden", "missing-package"],
+      "tags": [],
       "history": []
     }
     

@@ -14,7 +14,7 @@
       "attempt": 1,
       "instance_id": "win-idem-001",
       "ip": "10.0.50.101",
-      "tags": ["idempotency", "service-already-running"],
+      "tags": [],
       "history": []
     },
 
@@ -26,7 +26,7 @@
       "attempt": 1,
       "instance_id": "win-idem-002",
       "ip": "10.0.50.102",
-      "tags": ["idempotency", "service-already-stopped"],
+      "tags": [],
       "history": [
         {
           "command": "Stop-Service -Name spooler",
@@ -45,7 +45,7 @@
       "attempt": 1,
       "instance_id": "win-idem-003",
       "ip": "10.0.50.103",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": []
     },
 
@@ -57,7 +57,7 @@
       "attempt": 1,
       "instance_id": "win-idem-004",
       "ip": "10.0.50.104",
-      "tags": ["idempotency", "directory-exists"],
+      "tags": [],
       "history": []
     },
 
@@ -69,7 +69,7 @@
       "attempt": 1,
       "instance_id": "win-idem-005",
       "ip": "10.0.50.105",
-      "tags": ["idempotency", "file-exists"],
+      "tags": [],
       "history": [
         {
           "command": "New-Item -ItemType File -Path C:\\Temp\\motd.txt",
@@ -88,7 +88,7 @@
       "attempt": 1,
       "instance_id": "winps-osmut-001",
       "ip": "10.0.12.201",
-      "tags": ["os-mutation-forbidden", "missing-module"],
+      "tags": [],
       "history": []
     }
     

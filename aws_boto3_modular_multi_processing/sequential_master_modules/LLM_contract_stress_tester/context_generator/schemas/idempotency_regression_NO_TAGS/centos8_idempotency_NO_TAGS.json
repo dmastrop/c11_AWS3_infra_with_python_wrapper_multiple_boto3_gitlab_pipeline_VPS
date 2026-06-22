@@ -14,7 +14,7 @@
       "attempt": 1,
       "instance_id": "centos8-idem-001",
       "ip": "10.0.8.101",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": []
     },
 
@@ -26,7 +26,7 @@
       "attempt": 1,
       "instance_id": "centos8-idem-002",
       "ip": "10.0.8.102",
-      "tags": ["idempotency", "nothing-to-update"],
+      "tags": [],
       "history": []
     },
 
@@ -38,7 +38,7 @@
       "attempt": 1,
       "instance_id": "centos8-idem-003",
       "ip": "10.0.8.103",
-      "tags": ["idempotency", "nothing-to-update"],
+      "tags": [],
       "history": [
         {
           "command": "dnf upgrade -y",
@@ -57,7 +57,7 @@
       "attempt": 1,
       "instance_id": "centos8-idem-004",
       "ip": "10.0.8.104",
-      "tags": ["idempotency", "service-already-running"],
+      "tags": [],
       "history": []
     },
 
@@ -69,7 +69,7 @@
       "attempt": 1,
       "instance_id": "centos8-idem-005",
       "ip": "10.0.8.105",
-      "tags": ["idempotency", "directory-exists"],
+      "tags": [],
       "history": [
         {
           "command": "mkdir /var/www/html",
@@ -88,7 +88,7 @@
       "attempt": 1,
       "instance_id": "rpm-osmut-001",
       "ip": "10.0.5.201",
-      "tags": ["os-mutation-forbidden", "missing-package"],
+      "tags": [],
       "history": []
     }
 
