@@ -12002,6 +12002,7 @@ The schema for this special 6th test case is:
 Test case 6:
 
 ```
+    {
       "command": "apt-get install -y some-nonexistent-package",
       "stdout": "",
       "stderr": "E: Unable to locate package some-nonexistent-package",
@@ -12009,10 +12010,9 @@ Test case 6:
       "attempt": 1,
       "instance_id": "ubuntu-osmut-001",
       "ip": "10.0.8.201",
-      "tags": ["os-mutation-forbidden", "missing-package"],
+      "tags": [],
       "history": []
     }
-
 ```
 
 Note that there is no history and there is no OS signalling in the stderr to indicated taht this is OS-signalled remediation. 
@@ -12026,7 +12026,7 @@ happen in this case.
 The LLM response is given below:
 
 ```
-root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 5
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 5
 
 === RAW LLM RESPONSE ===
 {"action":"fallback"}
@@ -12036,7 +12036,10 @@ root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: apt-get install -y some-nonexistent-package
+
 ```
+
+
 
 This test case regressed following the introduction of several new rules in the patch2 of the Ubuntu domain-primitives block.
 The issue was related to teh semantic priority graph that the LLM uses to assign weights to the rules. 
@@ -12063,6 +12066,7 @@ The other 5 test cases (test case indices 0 through 4) area all idempotency test
 Test case 1:
 
 ```
+
     {
       "command": "apt-get install -y nginx",
       "stdout": "nginx is already the newest version (1.18.0-6ubuntu14.4).",
@@ -12071,13 +12075,15 @@ Test case 1:
       "attempt": 1,
       "instance_id": "ubuntu-idem-001",
       "ip": "10.0.0.101",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": []
     },
+
 ```
 
 ```
-root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 0
+
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 0
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":[],"retry":"apt-get install -y nginx"}
@@ -12087,9 +12093,8 @@ root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: apt-get install -y nginx
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+
+
 ```
 
 
@@ -12108,7 +12113,7 @@ Test case 2:
       "attempt": 1,
       "instance_id": "ubuntu-idem-002",
       "ip": "10.0.0.102",
-      "tags": ["idempotency", "package-already-installed"],
+      "tags": [],
       "history": [
         {
           "command": "apt-get install -y curl",
@@ -12117,11 +12122,10 @@ Test case 2:
           "exit_status": 0
         }
       ]
-    },
-```
+    },  
 
 ```
-root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 1
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 1
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":[],"retry":"apt-get install -y curl"}
@@ -12131,9 +12135,9 @@ root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: apt-get install -y curl
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+```
+
+
 ```
 
 
@@ -12143,6 +12147,7 @@ Test case 3:
 
 
 ```
+
     {
       "command": "systemctl start nginx",
       "stdout": "",
@@ -12151,15 +12156,17 @@ Test case 3:
       "attempt": 1,
       "instance_id": "ubuntu-idem-003",
       "ip": "10.0.0.103",
-      "tags": ["idempotency", "service-already-running"],
+      "tags": [],
       "history": []
     },
 
+
 ```
 
 
+
 ```
-root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 2
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 2
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":[],"retry":"systemctl start nginx"}
@@ -12169,9 +12176,9 @@ root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: systemctl start nginx
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+
+
+
 ```
 
 
@@ -12181,7 +12188,8 @@ Status: PASS
 Test case 4:
 
 ```
-   {
+
+    {
       "command": "mkdir /var/www/html",
       "stdout": "",
       "stderr": "mkdir: cannot create directory '/var/www/html': File exists",
@@ -12189,13 +12197,13 @@ Test case 4:
       "attempt": 1,
       "instance_id": "ubuntu-idem-004",
       "ip": "10.0.0.104",
-      "tags": ["idempotency", "directory-exists"],
+      "tags": [],
       "history": []
     },
 ```
 
 ```
-root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 3
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 3
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":[],"retry":"mkdir -p /var/www/html"}
@@ -12205,9 +12213,9 @@ root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: mkdir /var/www/html
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+
+
+
 ```
 
 
@@ -12216,7 +12224,7 @@ Status: PASS
 Test case 5:
 
 ```
-    {
+   {
       "command": "touch /etc/motd",
       "stdout": "",
       "stderr": "touch: cannot touch '/etc/motd': File exists",
@@ -12224,7 +12232,7 @@ Test case 5:
       "attempt": 1,
       "instance_id": "ubuntu-idem-005",
       "ip": "10.0.0.105",
-      "tags": ["idempotency", "file-exists"],
+      "tags": [],
       "history": [
         {
           "command": "touch /etc/motd",
@@ -12234,14 +12242,16 @@ Test case 5:
         }
       ]
     },
-```
-
-
-
 
 
 ```
-root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_idempotency --index 4
+
+
+
+
+
+```
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 4
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":["rm -f /etc/motd"],"retry":"touch /etc/motd"}
@@ -12251,9 +12261,8 @@ root@cab5d35d0d8f:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: touch /etc/motd
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+
+
 ```
 
 
@@ -12294,6 +12303,7 @@ scenarios.  Some examples of the context schema based test cases in this area (f
 
 Test case 1:  
 
+
 ```
     {
       "command": "apt-get install -y nginx",
@@ -12303,16 +12313,20 @@ Test case 1:
       "attempt": 1,
       "instance_id": "ubuntu-osmut-002",
       "ip": "10.0.8.202",
-      "tags": ["os-signaled-remediation", "stale-metadata"],
+      "tags": [],
       "history": []
     },
+
 ```
 
 Result, note the retry involves the use of a system-wide command that mutates the OS. The LLM knows that it is allowed to do this
-because this is clearnly a case of OS-signalled remediation. The OS mutation guard is effectively bypassed.
+because this is clearly a case of OS-signalled remediation, based upon the stderr. The OS mutation guard is effectively bypassed.
+
 
 ```
-root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_add_on_os_signalled_remediation --index 0
+
+
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os os_signaled_remediation_NO_TAGS/ubuntu_os_signaled_remediation_NO_TAGS --index 0
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":[],"retry":["apt-get update -y","apt-get install -y nginx"]}
@@ -12322,12 +12336,16 @@ root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: apt-get install -y nginx
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+
 ```
 
+This particular test case experienced significant regression issues due to LLM salience misalignment after unrelated contract rules
+were modified and/or added. 
 
+The discussion on this topic is at this link below in the PREFACE UPDATE3, which delves into proper LLM Contract Rule Engineering.
+The fix is also discussed in this link as well.
+
+- [Salience Engineering: Why Contract Rules Behave Differently Than Expected](#salience-engineering)
 
 
 
@@ -12341,15 +12359,19 @@ Test case 2:
       "attempt": 1,
       "instance_id": "ubuntu-osmut-003",
       "ip": "10.0.8.203",
-      "tags": ["os-signaled-remediation", "hash-sum-mismatch"],
+      "tags": [],
       "history": []
     },
+
+
 ```
 
 Results, note that the retry is using a system-wide operation:
 
+
 ```
-root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_add_on_os_signalled_remediation --index 1
+
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os os_signaled_remediation_NO_TAGS/ubuntu_os_signaled_remediation_NO_TAGS --index 1
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":["rm -rf /var/lib/apt/lists/partial/*","rm -rf /var/cache/apt/archives/partial/*"],"retry":["apt-get update -y","apt-get install -y nginx"]}
@@ -12359,9 +12381,7 @@ root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: apt-get install -y nginx
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
+
 ```
 
 
@@ -12369,6 +12389,7 @@ Status: PASS
 Test case 3: 
 
 ```
+
     {
       "command": "apt-get install -y nginx",
       "stdout": "",
@@ -12377,17 +12398,19 @@ Test case 3:
       "attempt": 1,
       "instance_id": "ubuntu-osmut-004",
       "ip": "10.0.8.204",
-      "tags": ["os-signaled-remediation", "dpkg-interrupt"],
+      "tags": [],
       "history": []
     }
+
+  ]
 ```
 
 Result:
 
 
-
 ```
-root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression/ubuntu_add_on_os_signalled_remediation --index 2
+
+root@9a0420e486e6:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os os_signaled_remediation_NO_TAGS/ubuntu_os_signaled_remediation_NO_TAGS --index 2
 
 === RAW LLM RESPONSE ===
 {"action":"cleanup_and_retry","cleanup":[],"retry":["dpkg --configure -a","apt-get install -y nginx"]}
@@ -12397,9 +12420,6 @@ root@a39da2114127:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester#
 === VALIDATION RESULT ===
 OS: Ubuntu 22.04
 Command: apt-get install -y nginx
-Status: PASS
-[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
-========================
 
 ```
 
@@ -12594,7 +12614,7 @@ Originally without the OS mutation guard/global OS mutation rule block, the orig
 
 
 
-It is now contrained to only os-signalled remediation situations as dictated in the global lOS mutation guard block. 
+It is now constrained to only os-signalled remediation situations as dictated in the global lOS mutation guard block. 
 These are very specific restrictions. 
 
 If the case were an os-signalled remediation case (more information present in the stderr and/or history) then a cleanup_and_retry 
