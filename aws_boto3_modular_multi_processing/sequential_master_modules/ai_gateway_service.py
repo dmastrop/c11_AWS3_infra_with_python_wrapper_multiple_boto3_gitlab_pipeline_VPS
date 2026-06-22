@@ -838,13 +838,14 @@ def recover(request: RecoveryRequest):
                 # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
                 # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
                 # fallback scenarios that do NOT involve OS-signalled remediation.
-                "- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
-                "  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
-                "  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
-                "  the LLM MUST retry with:\n"
-                "      * apt-get update\n"
-                "      * apt-get install -y <pkg>\n"
-                "\n"
+                # COMMENT OUT THIS AND USE THE VERSION FURTHER BELOW
+                #"- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
+                #"  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
+                #"  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
+                #"  the LLM MUST retry with:\n"
+                #"      * apt-get update\n"
+                #"      * apt-get install -y <pkg>\n"
+                #"\n"
                 "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
                 "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
                 "\n"
@@ -1089,13 +1090,14 @@ def recover(request: RecoveryRequest):
                 # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
                 # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
                 # fallback scenarios that do NOT involve OS-signalled remediation.
-                "- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
-                "  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
-                "  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
-                "  the LLM MUST retry with:\n"
-                "      * apt-get update\n"
-                "      * apt-get install -y <pkg>\n"
-                "\n"
+                # COMMENT THIS OUT AND USE THE VERSION FURTHER BELOW
+                #"- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
+                #"  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
+                #"  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
+                #"  the LLM MUST retry with:\n"
+                #"      * apt-get update\n"
+                #"      * apt-get install -y <pkg>\n"
+                #"\n"
                 "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
                 "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
                 "\n"
