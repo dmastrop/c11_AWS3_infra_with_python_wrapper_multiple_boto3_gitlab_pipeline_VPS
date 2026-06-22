@@ -13000,32 +13000,32 @@ The patch2 changes can now be ported to the other OSes.
 <details>
 <summary><strong>Ubuntu Patch2 24‑case rewrite matrix (LLM behavior only)</strong></summary>
 
-| Idx | Instance     | Original command                                                                 | Expected action                 | LLM action / rewrite                                                                                          | Notes |
+|  #  | Instance     | Original command                                                                 | Expected action                 | LLM action / rewrite                                                                                          | Notes |
 |-----|--------------|----------------------------------------------------------------------------------|---------------------------------|----------------------------------------------------------------------------------------------------------------|-------|
-| 0   | u‑patch‑001  | `apt-get install nginx --badflag`                                                | fallback                        | `{"action":"fallback"}`                                                                                       | Invalid flag on apt‑get → invalid‑flag rule → fallback. |
-| 1   | u‑patch‑002  | `apt-get install curl && yum install nano`                                       | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y nano`                                                          | Wrong‑OS `yum` rewritten; native apt‑get normalized to `-y`; full pipeline rewritten. |
-| 2   | u‑patch‑003  | `apt-get install curl && apt-get update`                                         | fallback                        | `{"action":"fallback"}`                                                                                       | All segments valid for Ubuntu, exit_status 0, no stderr → “good pipeline → fallback”. |
-| 3   | u‑patch‑004  | `apt-get install curl && apt-get update --badflag`                               | fallback                        | `{"action":"fallback"}`                                                                                       | Invalid flag on system‑wide op → invalid‑flag rule → fallback. |
-| 4   | u‑patch‑005  | `apt-get install curl && pacman -Syu`                                            | fallback                        | `{"action":"fallback"}`                                                                                       | Wrong‑OS system‑wide op (`pacman -Syu`) that would require rewrite → Patch2: must fallback. |
-| 5   | u‑patch‑006  | `apt-get install curl && apk add bash`                                           | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y bash`                                                          | Wrong‑OS `apk` rewritten to apt‑get; both apt‑get installs normalized to `-y`. |
-| 6   | u‑patch‑007  | `apt-get install curl && rm -rf /`                                               | abort                           | `{"action":"abort","message":"Destructive command detected: rm -rf /"}`                                       | Destructive segment present → abort overrides rewrite/fallback. |
-| 7   | u‑patch‑008  | `yum install nano && apt-get install curl`                                       | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y curl`                                                          | Wrong‑OS `yum` rewritten; native apt‑get normalized; matches normalization table case 1. |
-| 8   | u‑patch‑009  | `dnf install git && yum install nano`                                            | retry_with_modified_command     | `apt-get install -y git && apt-get install -y nano`                                                           | Both wrong‑OS PMs rewritten to apt‑get with `-y`. |
-| 9   | u‑patch‑010  | `apt-get install curl && apt-get install python3 --badflag`                      | fallback                        | `{"action":"fallback"}`                                                                                       | Invalid flag on second apt‑get → invalid‑flag rule → fallback. |
-| 10  | u‑patch‑011  | `apt-get install curl && apt-get install python3`                                | fallback                        | `{"action":"fallback"}`                                                                                       | All segments valid, exit_status 0, no stderr → “good pipeline → fallback”. |
-| 11  | u‑patch‑012  | `apt-get install curl && apt-get install python3 && yum install nano`            | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y python3 && apt-get install -y nano`                            | Wrong‑OS `yum` rewritten; both native apt‑get installs normalized. |
-| 12  | u‑patch‑013  | `yum install nano && apt-get install curl && apk add bash`                       | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y curl && apt-get install -y bash`                               | Wrong‑OS `yum` and `apk` rewritten; apt‑get normalized; full pipeline rewritten. |
-| 13  | u‑patch‑014  | `apt-get install curl && dnf install git && apt-get install nano`                | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y git && apt-get install -y nano`                                | Wrong‑OS `dnf` rewritten; both native apt‑get installs normalized. |
-| 14  | u‑patch‑015  | `yum install nano && apk add bash && pacman -S htop`                             | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y bash && apt-get install -y htop`                               | All three wrong‑OS PMs rewritten to apt‑get with `-y`. |
-| 15  | u‑patch‑016  | `apt-get install curl && apt-get install nano && apk add bash`                   | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y nano && apt-get install -y bash`                               | Wrong‑OS `apk` rewritten; both native apt‑get installs normalized. |
-| 16  | u‑patch‑017  | `yum install nano && apt-get install curl && apt-get update`                     | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y curl && apt-get update`                                        | Wrong‑OS `yum` rewritten; apt‑get installs normalized; system‑wide `apt-get update` preserved verbatim. |
-| 17  | u‑patch‑018  | `apk add bash && echo 'hello' && yum install nano`                               | retry_with_modified_command     | `apt-get install -y bash && echo 'hello' && apt-get install -y nano`                                          | Wrong‑OS `apk`/`yum` rewritten; echo preserved verbatim; both installs normalized. |
-| 18  | u‑patch‑019  | `apt-get install curl && echo 'test' && pacman -S htop`                          | retry_with_modified_command     | `apt-get install -y curl && echo 'test' && apt-get install -y htop`                                           | Wrong‑OS `pacman` rewritten; native apt‑get normalized; echo preserved. |
-| 19  | u‑patch‑020  | `yum install nano --badflag && apt-get install curl`                             | fallback                        | `{"action":"fallback"}`                                                                                       | Wrong‑OS PM with invalid flag → invalid‑flag rule wins → fallback (validator expectation is wrong). |
-| 20  | u‑patch‑021  | `apt-get install curl && apk add bash --badflag && apt-get install nano`         | fallback                        | `{"action":"fallback"}`                                                                                       | Wrong‑OS PM with invalid flag → invalid‑flag rule → fallback (validator expectation is wrong). |
-| 21  | u‑patch‑022  | `yum install nano && apk add bash && apt-get update`                             | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y bash && apt-get update`                                        | Wrong‑OS PMs rewritten; system‑wide `apt-get update` preserved; validator’s “install -y update” requirement is incorrect. |
-| 22  | u‑patch‑023  | `apk add bash && apt-get install curl && rm -rf /`                               | abort                           | `{"action":"abort","message":"Destructive command detected: rm -rf /"}`                                       | Destructive segment present → abort; safety correctly overrides wrong‑OS rewrite (validator expectation is wrong). |
-| 23  | u‑patch‑024  | `apt-get install curl && yum install nano && echo hi && apk add bash`            | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`                    | Wrong‑OS `yum`/`apk` rewritten; native apt‑get normalized; echo preserved; full pipeline rewritten. |
+| 1   | u‑patch‑001  | `apt-get install nginx --badflag`                                                | fallback                        | `{"action":"fallback"}`                                                                                       | Invalid flag on apt‑get → invalid‑flag rule → fallback. |
+| 2   | u‑patch‑002  | `apt-get install curl && yum install nano`                                       | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y nano`                                                          | Wrong‑OS `yum` rewritten; native apt‑get normalized to `-y`; full pipeline rewritten. |
+| 3   | u‑patch‑003  | `apt-get install curl && apt-get update`                                         | fallback                        | `{"action":"fallback"}`                                                                                       | All segments valid for Ubuntu, exit_status 0, no stderr → “good pipeline → fallback”. |
+| 4   | u‑patch‑004  | `apt-get install curl && apt-get update --badflag`                               | fallback                        | `{"action":"fallback"}`                                                                                       | Invalid flag on system‑wide op → invalid‑flag rule → fallback. |
+| 5   | u‑patch‑005  | `apt-get install curl && pacman -Syu`                                            | fallback                        | `{"action":"fallback"}`                                                                                       | Wrong‑OS system‑wide op (`pacman -Syu`) that would require rewrite → Patch2: must fallback. |
+| 6   | u‑patch‑006  | `apt-get install curl && apk add bash`                                           | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y bash`                                                          | Wrong‑OS `apk` rewritten to apt‑get; both apt‑get installs normalized to `-y`. |
+| 7   | u‑patch‑007  | `apt-get install curl && rm -rf /`                                               | abort                           | `{"action":"abort","message":"Destructive command detected: rm -rf /"}`                                       | Destructive segment present → abort overrides rewrite/fallback. |
+| 8   | u‑patch‑008  | `yum install nano && apt-get install curl`                                       | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y curl`                                                          | Wrong‑OS `yum` rewritten; native apt‑get normalized; matches normalization table case 1. |
+| 9   | u‑patch‑009  | `dnf install git && yum install nano`                                            | retry_with_modified_command     | `apt-get install -y git && apt-get install -y nano`                                                           | Both wrong‑OS PMs rewritten to apt‑get with `-y`. |
+| 10  | u‑patch‑010  | `apt-get install curl && apt-get install python3 --badflag`                      | fallback                        | `{"action":"fallback"}`                                                                                       | Invalid flag on second apt‑get → invalid‑flag rule → fallback. |
+| 11  | u‑patch‑011  | `apt-get install curl && apt-get install python3`                                | fallback                        | `{"action":"fallback"}`                                                                                       | All segments valid, exit_status 0, no stderr → “good pipeline → fallback”. |
+| 12  | u‑patch‑012  | `apt-get install curl && apt-get install python3 && yum install nano`            | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y python3 && apt-get install -y nano`                            | Wrong‑OS `yum` rewritten; both native apt‑get installs normalized. |
+| 13  | u‑patch‑013  | `yum install nano && apt-get install curl && apk add bash`                       | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y curl && apt-get install -y bash`                               | Wrong‑OS `yum` and `apk` rewritten; apt‑get normalized; full pipeline rewritten. |
+| 14  | u‑patch‑014  | `apt-get install curl && dnf install git && apt-get install nano`                | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y git && apt-get install -y nano`                                | Wrong‑OS `dnf` rewritten; both native apt‑get installs normalized. |
+| 15  | u‑patch‑015  | `yum install nano && apk add bash && pacman -S htop`                             | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y bash && apt-get install -y htop`                               | All three wrong‑OS PMs rewritten to apt‑get with `-y`. |
+| 16  | u‑patch‑016  | `apt-get install curl && apt-get install nano && apk add bash`                   | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y nano && apt-get install -y bash`                               | Wrong‑OS `apk` rewritten; both native apt‑get installs normalized. |
+| 17  | u‑patch‑017  | `yum install nano && apt-get install curl && apt-get update`                     | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y curl && apt-get update`                                        | Wrong‑OS `yum` rewritten; apt‑get installs normalized; system‑wide `apt-get update` preserved verbatim. |
+| 18  | u‑patch‑018  | `apk add bash && echo 'hello' && yum install nano`                               | retry_with_modified_command     | `apt-get install -y bash && echo 'hello' && apt-get install -y nano`                                          | Wrong‑OS `apk`/`yum` rewritten; echo preserved verbatim; both installs normalized. |
+| 19  | u‑patch‑019  | `apt-get install curl && echo 'test' && pacman -S htop`                          | retry_with_modified_command     | `apt-get install -y curl && echo 'test' && apt-get install -y htop`                                           | Wrong‑OS `pacman` rewritten; native apt‑get normalized; echo preserved. |
+| 20  | u‑patch‑020  | `yum install nano --badflag && apt-get install curl`                             | fallback                        | `{"action":"fallback"}`                                                                                       | Wrong‑OS PM with invalid flag → invalid‑flag rule wins → fallback (validator expectation is wrong). |
+| 21  | u‑patch‑021  | `apt-get install curl && apk add bash --badflag && apt-get install nano`         | fallback                        | `{"action":"fallback"}`                                                                                       | Wrong‑OS PM with invalid flag → invalid‑flag rule → fallback (validator expectation is wrong). |
+| 22  | u‑patch‑022  | `yum install nano && apk add bash && apt-get update`                             | retry_with_modified_command     | `apt-get install -y nano && apt-get install -y bash && apt-get update`                                        | Wrong‑OS PMs rewritten; system‑wide `apt-get update` preserved; validator’s “install -y update” requirement is incorrect. |
+| 23  | u‑patch‑023  | `apk add bash && apt-get install curl && rm -rf /`                               | abort                           | `{"action":"abort","message":"Destructive command detected: rm -rf /"}`                                       | Destructive segment present → abort; safety correctly overrides wrong‑OS rewrite (validator expectation is wrong). |
+| 24  | u‑patch‑024  | `apt-get install curl && yum install nano && echo hi && apk add bash`            | retry_with_modified_command     | `apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`                    | Wrong‑OS `yum`/`apk` rewritten; native apt‑get normalized; echo preserved; full pipeline rewritten. |
 
 </details>
 
@@ -13066,7 +13066,7 @@ This is the test matrix for all 6 idempotency test cases on debian OS. There are
 
 </details>
 
-
+For more detail on some of the interesting test cases in this test suite, see the ubuntu section above. 
 
 
 ##### Debian test matrix for os-signaled remeidation (3) test cases
@@ -13087,6 +13087,7 @@ This is the test matrix for all 3 OS-signaled remeidation test cases on debian O
 </details>
 
 
+For more detail on some of the interesting test cases in this test suite, see the ubuntu section above. 
 
 
 
@@ -13094,12 +13095,16 @@ This is the test matrix for all 3 OS-signaled remeidation test cases on debian O
 
 This section will regression test the test cases index:
 
+- 0
 - 1  
 - 4  
 - 10  
 - 16  
 
 
+
+
+Test case index 0 was analyzed in detail in the previous ubuntu section. See that section for more insight into the test case.
 
 
 ##### Debian test matrix for selected regression on 24 rewrite patch2 test cases (6 test cases)
@@ -13114,6 +13119,9 @@ This section will regression test the test cases index:
 - 23  
 
 
+
+
+Several of these test cases were analyzed in detail in the ubuntu section. See that section for more insight into these test cases.
 
 
 ---
