@@ -961,6 +961,7 @@ This evolution elevates the project from an OS‑specific remediation engine to 
 - [Introduction to LLM Contract Engineering principles](#introduction-to-llm-contract-engineering-principles)
 - [Formal LLM Contract-rule engineering framework principles 1-14](#formal-llm-contract-rule-engineering-framework-principles-1-14)
 - [Summary of the Guidelines](#summary-of-the-guidelines)
+- [Salience Engineering: Why Contract Rules Behave Differently Than Expected](#salience-engineering)
 - [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
 
@@ -1428,6 +1429,291 @@ A small set of strong invariants is more stable than a large set of recipes.
 
 ---
 
+### **Salience Engineering: Why Contract Rules Behave Differently Than Expected**
+<a name="salience-engineering"></a>
+
+This section explains why certain contract rules—especially global invariants—sometimes fail to influence the model’s behavior in cases where a human engineer would expect them to apply. The analysis is grounded in the principles defined earlier in this chapter, particularly:
+
+- **Write rules to control salience, not just logic**  
+- **Ensure global invariants are lexically stronger**  
+- **Avoid rules requiring multi‑step implicit inference**  
+- **Re‑evaluate the semantic priority graph after adding rules**  
+
+These four principles collectively describe the phenomenon referred to here as **salience engineering**.
+
+---
+
+#### **1. Background: Transformers Do Not Apply Rules Symbolically**
+
+Transformers do not implement a symbolic rule engine. They do not:
+
+- propagate global constraints downward  
+- unify conditions across distant text blocks  
+- apply “if X then Y” logic in the way a human engineer would  
+- maintain a persistent table of rules  
+
+Instead, transformers operate by **ranking patterns** based on:
+
+- adjacency  
+- recency  
+- lexical strength  
+- concreteness  
+- local density  
+- example proximity  
+- token‑level attention  
+
+This means that **global rules** only influence behavior when they remain **salient** at the point where the model generates the action plan.
+
+This is the core reason why contract engineering is fundamentally **salience engineering**.
+
+---
+
+#### **2. The Example: Ubuntu OS‑Signaled Remediation Test Case**
+
+The following schema test case illustrates the issue:
+
+```
+command: apt-get install -y nginx
+stderr:
+  Err:1 http://archive.ubuntu.com/ubuntu jammy/main amd64 nginx amd64 1.18.0-0ubuntu1
+    404  Not Found
+  E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/n/nginx/nginx_1.18.0-0ubuntu1_amd64.deb 404 Not Found
+  E: Unable to locate package nginx
+exit_status: 100
+tags: []
+history: []
+```
+
+This stderr clearly contains:
+
+- `Err:1 http://`  
+- `404 Not Found`  
+- `E: Failed to fetch http://`  
+- `E: Unable to locate package nginx`  
+
+The domain‑specific rule that matches this case is:
+
+```
+If stderr contains "Unable to locate package <pkg>" AND also contains ANY
+repository‑level failure indicators (e.g., "Err:1 http://", "404 Not Found",
+"Failed to fetch", "Hash Sum mismatch", "dpkg was interrupted", etc.),
+then this MUST be treated as OS‑signaled stale‑metadata remediation.
+In this case, the LLM MUST retry with:
+    * apt-get update -y
+    * apt-get install -y <pkg>
+```
+
+This rule correctly classifies the case as **OS‑signaled remediation**.
+
+However, the model sometimes chooses:
+
+```
+action: retry_with_modified_command
+retry: "apt-get update -y && apt-get install -y nginx"
+```
+
+instead of the expected:
+
+```
+action: cleanup_and_retry
+cleanup: []
+retry: ["apt-get update -y", "apt-get install -y nginx"]
+```
+
+This discrepancy is not due to nondeterminism.  
+It is due to **salience misalignment**.
+
+---
+
+#### **3. Why the Domain Rule Alone Was Not Sufficient**
+
+The domain rule identifies the condition (“this is OS‑signaled remediation”) and specifies the retry commands, but it does **not** specify the **action type**.
+
+The model therefore sees:
+
+- two retry commands  
+- no cleanup commands  
+- no explicit action type in the local block  
+- a nearby definition stating that `retry_with_modified_command` is used for “fixing commands”  
+- a global definition stating that `cleanup_and_retry` is used for “multi‑step recovery”  
+
+Because the retry sequence resembles a “fixed command” more than a “cleanup sequence”, the model sometimes selects the **local pattern** (`retry_with_modified_command`) rather than the **global invariant**.
+
+This is a direct example of:
+
+- **Write rules to control salience, not just logic**  
+- **Avoid rules requiring multi‑step implicit inference**  
+
+The model does not perform the multi‑step reasoning:
+
+1. “This is OS‑signaled remediation.”  
+2. “OS‑signaled remediation MUST use cleanup_and_retry.”  
+3. “Therefore, the action type is cleanup_and_retry.”  
+
+Instead, it performs **local pattern matching**.
+
+---
+
+#### **4. Why Adding a Global Rule Was Necessary**
+
+To correct this, the following global invariant was added to the OS‑Mutation Guard:
+
+```
+Any OS-signaled deterministic remediation flow (hard or soft) MUST use the "cleanup_and_retry" action.
+The "retry_with_modified_command" action MUST NOT be used for OS-signaled remediation.
+OS-signaled remediation includes explicit instructions or repository/index/dpkg error patterns
+(e.g., "Hash Sum mismatch", "dpkg was interrupted", "apt --fix-broken install",
+repository 404 errors combined with "Unable to locate package", etc.).
+```
+
+This rule explicitly binds:
+
+- **classification** → **action type**
+
+This is an example of:
+
+- **Ensure global invariants are lexically stronger**  
+- **Re‑evaluate the semantic priority graph after adding rules**  
+
+The global rule increases the **lexical strength** of the cleanup_and_retry requirement, making it more salient than the local “fix the command” pattern.
+
+---
+
+#### **5. Why the Global Rule May Still Need Local Reinforcement**
+If the global rule alone does not cause the model to select `cleanup_and_retry`, then the domain‑specific block must be strengthened to explicitly state:
+
+```
+The LLM MUST return a cleanup_and_retry action for this remediation.
+```
+
+This is not redundancy; it is **salience anchoring**.
+
+Anchoring ensures that:
+
+- the classification (“OS‑signaled remediation”)  
+- the action type (“cleanup_and_retry”)  
+- and the retry commands  
+
+are all **adjacent** in the prompt.
+
+This adjacency is required because transformers do not propagate global rules symbolically; they rely on **local pattern reinforcement**.
+
+This directly reflects:
+
+- **Write rules to control salience, not just logic**  
+- **Avoid rules requiring multi‑step implicit inference**  
+
+---
+
+#### **6. Stability Considerations and Salience Preservation**
+
+Although the global OS‑signaled remediation invariant restores the correct behavior for the “Unable to locate package + repository failure” class, its long‑term stability depends on maintaining a consistent **salience landscape** within the contract. This is not a matter of nondeterminism; it is a matter of **salience stability**.
+
+The behavior will remain stable **as long as** the following conditions hold:
+
+- **No major reordering** of global or domain‑specific rule blocks  
+- **No large new rule blocks inserted above** the OS‑signaled remediation invariant  
+- **No new examples** that resemble “fix the command” patterns placed near the Ubuntu/Debian APT rules  
+- **No new domain rules** that overshadow or weaken the OS‑signaled remediation classification  
+- **No removal or weakening** of the global OS‑signaled remediation invariant  
+- **No new cleanup patterns** that could confuse the classification boundary  
+
+Under these conditions, the global invariant remains lexically dominant and continues to:
+
+- anchor the correct **action type**  
+- override the local “fix the command” pattern  
+- bind OS‑signaled remediation to **cleanup_and_retry**  
+- maintain consistent behavior across future revisions  
+
+This is not nondeterminism; it is the expected behavior of a transformer‑based system whose output is governed by **pattern salience**, **lexical strength**, and **semantic priority**, rather than symbolic rule application.
+
+This stability model directly reflects the principles:
+
+- **Write rules to control salience, not just logic**  
+- **Ensure global invariants are lexically stronger**  
+- **Avoid rules requiring multi‑step implicit inference**  
+- **Re‑evaluate the semantic priority graph after adding rules**  
+
+These principles collectively define the practice of **salience engineering**, which is essential for maintaining predictable behavior in LLM contract systems.
+
+Using the previous example, to increase the salience stability, the domain primitives specific block could be modified to directly indicate that cleanup_and_retry must be used by the LLM for the action plan.
+
+
+```
+                # More specificity for "Unable to locate package" with repository/index failures
+                "- Additionally, if stderr contains \"E: Unable to locate package <pkg>\" AND also contains ANY\n"
+                "  repository-level failure indicators such as (but NOT limited to):\n"
+                "      * \"E: Failed to fetch http://\"\n"
+                "      * \"Err:1 http://\"\n"
+                "      * \"404  Not Found\"\n"
+                "      * \"Temporary failure resolving\"\n"
+                "      * \"Could not resolve\"\n"
+                "      * \"Connection failed\"\n"
+                "      * \"Release file is not valid\"\n"
+                "      * \"Clearsigned file isn't valid\"\n"
+                "      * \"NO_PUBKEY\"\n"
+                "      * \"does not have a Release file\"\n"
+                "      * \"File has unexpected size\"\n"
+                "      * \"Hash Sum mismatch\"\n"
+                "      * \"Some index files failed to download\"\n"
+                "      * \"Index is corrupted\"\n"
+                "      * \"dpkg was interrupted\"\n"
+                "  then this MUST be treated as OS-signaled stale-metadata remediation.\n"
+                "  The LLM MUST return a \"cleanup_and_retry\" action with:\n"
+                "      * cleanup: []   (cleanup MAY be empty)\n"
+                "      * retry:\n"
+                "          - apt-get update -y\n"
+                "          - apt-get install -y <pkg>\n"
+                "\n"
+
+```
+
+This was what was actually done to increase the salience stability of the contract in regards to future rule edits and
+changes. It was not absoulutely necessary to pass the test case, but provides stability for future changes. 
+
+
+
+
+---
+
+
+#### **7. Mapping Salience Engineering to the Guideline Framework**
+
+The earlier “Summary of the Guidelines” section in this chapter did not explicitly name salience engineering, but four of its principles directly describe it:
+
+Salience Engineering = “Write rules to control salience, not just logic. 
+Transformers respond to **pattern strength**, not logical structure.
+
+Salience Engineering = “Ensure global invariants are lexically stronger 
+Global rules must be written with stronger lexical force than domain rules.
+
+Salience Engineering = “Avoid rules requiring multi‑step implicit inference. 
+If a rule requires the model to combine distant conditions, it will fail unless reinforced locally.
+
+Salience Engineering = “Re‑evaluate the semantic priority graph after adding rules.  
+Adding new rules changes the salience landscape; previously stable behavior may shift.
+
+The current “Unable to locate package + 404” regression is a direct illustration of these four principles.
+
+---
+
+#### **8. Summary**
+
+The observed behavior in the Ubuntu OS‑signaled remediation test case is not nondeterminism. It is a predictable consequence of how transformers prioritize patterns:
+
+- Local rules dominate distant global rules unless the global rule is lexically stronger.  
+- Classification and action type must be adjacent to ensure binding.  
+- Conditional rules require explicit anchoring; definitions alone are insufficient.  
+- Adding new rules changes the semantic priority graph and may shift salience.  
+
+The global OS‑signaled remediation invariant is the correct fix.  
+If the global rule alone does not stabilize the behavior, the domain‑specific block must be strengthened to explicitly require `cleanup_and_retry`.
+
+This is the essence of **salience engineering** within LLM contract design.
+
+[Back to top](#top-preface3)
+
+---
 
 
 
