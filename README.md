@@ -11709,6 +11709,7 @@ This is for Ubuntu and each OS will vary accordingly.
 ```
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                # Ubuntu canonical version that will be ported to the other 11 OSes the support segmental rewrite
                 #
                 # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
                 # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
@@ -11763,19 +11764,19 @@ This is for Ubuntu and each OS will vary accordingly.
                 # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
                 # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
                 # this OS and do NOT require rewriting)
-		"- The following commands are considered system-wide operations:\n"
-		"      apt-get update\n"
-		"      apt-get upgrade\n"
-		"      apt update\n"
-		"      apt upgrade\n"
-		"      yum update\n"
-		"      yum upgrade\n"
-		"      dnf upgrade\n"
-		"      pacman -Syu\n"
-		"      apk update\n"
-		"      zypper refresh\n"
-		"      zypper update\n"
-		"\n"
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      yum upgrade\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
                 "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
                 "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
                 "\n"
@@ -11787,6 +11788,7 @@ This is for Ubuntu and each OS will vary accordingly.
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
+
 
 
 
