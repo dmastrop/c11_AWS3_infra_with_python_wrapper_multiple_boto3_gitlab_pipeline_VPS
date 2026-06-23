@@ -12141,7 +12141,6 @@ Command: apt-get install -y curl
 ```
 
 
-```
 
 
 ---
@@ -12353,6 +12352,8 @@ The fix is also discussed in this link as well.
 
 
 Test case 2:
+
+
 ```
     {
       "command": "apt-get install -y nginx",
