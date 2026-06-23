@@ -167,6 +167,8 @@ artifact logs per pipeline)
 (whitebox testing)
 - Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) LLM contract rule formation (whitebox testing)
 - Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
+- LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
+
 
 ---
 
@@ -962,6 +964,7 @@ This evolution elevates the project from an OS‑specific remediation engine to 
 - [Formal LLM Contract-rule engineering framework principles 1-14](#formal-llm-contract-rule-engineering-framework-principles-1-14)
 - [Summary of the Guidelines](#summary-of-the-guidelines)
 - [Salience Engineering: Why Contract Rules Behave Differently Than Expected](#salience-engineering)
+- [Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing](#empty‑message-leakage-in-non‑abort-action-plans-schema‑level-contract-interference-in-patch2-testing)
 - [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
 
@@ -1714,6 +1717,286 @@ This is the essence of **salience engineering** within LLM contract design.
 [Back to top](#top-preface3)
 
 ---
+
+
+### Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing
+
+During Patch2 regression testing on Ubuntu and Debian, a second class of failure emerged alongside the salience‑ordering divergence documented in the Patch2‑24 case study. This issue appeared in **test case index 16**, which exercises a multi‑segment wrong‑OS package‑manager rewrite:
+
+```bash
+yum install nano && apt-get install curl && apt-get update
+```
+
+Unlike the Patch2‑24 divergence, which was caused by **instruction overshadowing** and **contextual dominance** in the Debian domain‑primitive block (see the next section), the index 16 anomaly was rooted in a **schema‑level contract violation**. 
+
+The index 16 anomaly affected both domains Ubuntu and Debian.
+
+The LLM model’s reasoning was correct, the rewrite was correct, and the Patch2 logic was correct — but the outbound validator in the gateway service intermittently rejected the model’s output due to an unexpected `message` field.
+
+---
+
+#### Observed Behavior
+
+Most runs of index 16 produced the expected action plan:
+
+```
+root@87f30ffdae72:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/debian_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install -y curl && apt-get update"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Debian 11
+Command: yum install nano && apt-get install curl && apt-get update
+```
+
+
+
+However, intermittently, the gateway returned this error message below:
+
+```
+root@87f30ffdae72:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/debian_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"error":"Message not allowed for non-abort action","action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Debian 11
+Command: yum install nano && apt-get install curl && apt-get update
+```
+
+The message is from an output validator in the ai_gateway_service.py.
+
+This indicated that the **gateway**, not the model, was forcing fallback.
+
+Inspection of the raw GitLab logs that run the pipeline deploymnet container, revealed the cause.
+
+#### Correct output (no message field)
+
+```
+"output": [
+    {
+      "id": "msg_09ce9a1c169bacda006a39fd3a9930819bb0682e8a1c3b19b6",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\"action\":\"retry_with_modified_command\",\"cleanup\":[],\"retry\":\"apt-get install -y nano && apt-get install -y curl && apt-get update\"}"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+```
+
+
+#### Intermittent output (empty message field)
+
+```
+ {
+      "id": "msg_042423ea76f6ce92006a39fd5bb658819997718d37c95d7047",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\"action\":\"retry_with_modified_command\",\"cleanup\":[],\"retry\":\"apt-get install -y nano && apt-get install -y curl && apt-get update\",\"message\":\"\"}"<<<< SEE HERE
+        }
+      ],
+```
+
+
+The model’s action plan was **correct**, but the outbound validator rejected it because the contract previously stated:
+
+```
+For non-abort actions, message MUST NOT appear.
+```
+
+Thus, even an empty string (`""`) triggered a forced fallback.
+
+---
+
+#### Root Cause: Contract Boundary Leakage
+
+This behavior is a classic example of **instruction competition** and **contract boundary leakage**:
+
+- Abort actions **must** include a message.  
+- Non‑abort actions **must not** include a message.  
+- The model internalizes both constraints.  
+- Under high constraint pressure (Patch2 multi‑segment rewrites), the model sometimes emits an empty string as a “compromise” that satisfies both constraints superficially.
+
+This is not a reasoning failure.  
+It is a **schema‑template leak** — the model is trying to obey both structural rules simultaneously.
+
+This phenomenon is closely related to:
+
+- **prompt interference**  
+- **locality and adjacency effects**  
+- **instruction overshadowing** at the field‑level rather than the rule‑level  
+
+It demonstrates that contract engineering must account not only for rule semantics but also for **output serialization behavior**.
+
+---
+
+#### Why This Only Appeared After Patch2 additional code adds
+
+Patch2 pipelines in the latest code are now:
+
+- longer  
+- multi‑segment  
+- involve wrong‑OS PM rewrites  
+- preserve system‑wide operations  
+- interact with idempotency and OS‑signaled remediation logic (added a lot of new rule logic here) 
+
+This increases the model’s internal constraint pressure, making template leakage more likely.
+
+Before Patch2, action plans were simpler and the model never crossed this boundary.
+
+---
+
+#### The Fix: Allow Empty or Whitespace‑Only Messages
+
+The outbound validator was updated from:
+
+```
+
+        else:
+            # message MUST NOT appear for non-abort actions
+            if message is not None:
+                return {"error": "Message not allowed for non-abort action", "action": "fallback"}
+```
+
+
+to:
+
+
+```
+
+        else:
+            # message MUST NOT contain meaningful content for non-abort actions
+            # Allow None, empty string, or whitespace-only message fields
+            if message not in (None, "", " ", "   "):
+                return {"error": "Message not allowed for non-abort action", "action": "fallback"}
+
+```
+
+
+This preserves the contract’s intent:
+
+- **Non‑abort actions still cannot include meaningful messages.**  
+- **Abort actions still require a real message.**  
+- **Empty or whitespace‑only messages are treated as “no message.”**
+
+This eliminates the intermittent fallback while maintaining strict schema safety.
+
+---
+
+#### Validation after the fix
+
+As seen below, after the fix repeated invocatoin of the test index 16 case did evoke a blank message response from the LLM 
+intermittently, BUT now the full LLM response (which is a correct rewrite with retry_with_modified_command) is let through by
+the output validator in the ai_gateway_service.py code:
+
+
+Attempt 1 does not evoke the blank message:
+
+```
+root@d6fb3416adb5:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install -y curl && apt-get update"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: yum install nano && apt-get install curl && apt-get update
+```
+
+Attempt 2 does evoke the blank message but now the output validator does not block the message from getting to the MCP Client:
+
+```
+root@d6fb3416adb5:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install -y curl && apt-get update","message":""}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: yum install nano && apt-get install curl && apt-get update
+```
+
+Attempt 3, the blank message appears again but is not blocked by the output validator:
+
+```
+root@d6fb3416adb5:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/ubuntu_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install -y curl && apt-get update","message":""}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: yum install nano && apt-get install curl && apt-get update
+```
+
+So the fix is working very well. 
+
+
+
+#### Why This Belongs in Contract Engineering
+
+This case demonstrates that **contract engineering is not only about rule semantics**. It also requires:
+
+- schema‑level robustness  
+- output‑validator design  
+- tolerance for harmless formatting variance  
+- understanding how LLMs internalize field‑level constraints  
+- recognizing when a failure is not reasoning but serialization  
+
+It highlights a key principle:
+
+> **LLMs do not think in JSON. They generate JSON‑shaped text under constraint.  
+> Contract engineers must design validators that distinguish between semantic violations and harmless template noise.**
+
+This is a subtle but critical part of building deterministic LLM systems.
+The point of this demonstration is to show that LLMs can be "unpredictable" at times, and the code has to accomdate for such 
+behavior from the LLM.
+
+---
+
+#### Summary
+
+- The model’s reasoning for index 16 was always correct.  
+- The intermittent fallback was caused by the outbound validator rejecting empty `message` fields.  
+- This was fixed by allowing `None`, `""`, and whitespace‑only messages.  
+- This case is a clean example of **schema‑level contract interference**, not a logic or salience failure.  
+- It belongs in PREFACE UPDATE3 because it illustrates how contract engineering must account for both **instruction semantics** and **output serialization behavior**.
+
+---
+
+[Back to top](#top-preface3)
+
+---
+
+
+
+
+
+
 
 
 
@@ -13128,7 +13411,7 @@ Test case index 0 was analyzed in detail in the previous ubuntu section. See tha
 
 
 
-##### Debian test matrix for selected regression on 24 rewrite patch2 test cases (6 test cases)
+##### Debian test matrix for regression on 24 rewrite patch2 test cases (24 test cases)
 
 This section will regression test the test cases index:
 
@@ -13141,6 +13424,22 @@ This section will regression test the test cases index:
 
 Several of these test cases were analyzed in detail in the ubuntu section. See that section for more insight into these test cases.
 
+Initially, the regression was going to be performed only on the 6 test cases above. However several more regression issues involving
+contract engineering emerged when testing the index 16 and index 21 test cases. 
+
+The issues with the indext 21 test case were complex and resolved. A full write up of the issue, and the fix are detailed in the
+PREFACE UPDATE3 chapter on LLM Contract Engineering at the link below. 
+
+Likewise the index 16 test case presented with a more benign issue involving the AI Gatway Service LLM message outbound validator
+code. This case study is also detailed in the PREFACE UPDATE3 chapter on LLM Contract Engineering at the link below. Outbound
+validator code is also an important part of LLM Contract Engineering to "protect" the MCP Client from unexpected LLM responses to
+a given context payload. 
+
+- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
+
+
+
+The full 24 test case test matrix for Debian is presented below: 
 
 
 
