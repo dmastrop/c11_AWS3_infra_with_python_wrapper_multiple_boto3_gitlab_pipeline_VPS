@@ -916,10 +916,6 @@ def recover(request: RecoveryRequest):
                 "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
                 "\n"
                 # rewrite rules follow below:
-                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
-                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
-                "  the LLM MUST treat each segment independently.\n"
-                "\n"
                 # add system-wide ops that are already valid for this OS and do NOT require rewriting               
                 # Make sure to exclude the use of fallback here. MUST NOT use fallback.
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
@@ -1170,10 +1166,6 @@ def recover(request: RecoveryRequest):
                 "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
                 "\n"
                 # rewrite rules follow below:
-                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
-                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
-                "  the LLM MUST treat each segment independently.\n"
-                "\n"
                 # add system-wide ops that are already valid for this OS and do NOT require rewriting               
                 # Make sure to exclude the use of fallback here. MUST NOT use fallback.
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
