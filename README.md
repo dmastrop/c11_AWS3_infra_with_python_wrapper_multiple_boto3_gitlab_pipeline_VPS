@@ -13101,10 +13101,27 @@ This section will regression test the test cases index:
 - 10  
 - 16  
 
-
-
-
 Test case index 0 was analyzed in detail in the previous ubuntu section. See that section for more insight into the test case.
+
+<details>
+<summary><b>Click to expand Debian Base‑20 Test Case Matrix (5 subset test cases for regression)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | debian‑base20‑001 | `apt-get install -y nginx` | **fallback** | fallback | stderr contains ONLY `Unable to locate package nginx`. No repo/index/dpkg context. This is *not* OS‑signaled remediation. Under the OS‑Mutation Guard, the LLM is forbidden from issuing `apt-get update`. MUST fallback. Correct. |
+| **2** | debian‑base20‑002 | `apt install nginx` | **fallback** | fallback | `apt` is not available on Debian 11. stderr: `E: Command 'apt' not found`. This is invalid syntax, not OS‑signaled remediation. MUST fallback. Correct. |
+| **5** | debian‑base20‑005 | `apk add curl` | **retry_with_modified_command** | retry_with_modified_command (`apt-get install -y curl`) | Wrong package manager (`apk`). MUST rewrite to Debian’s PM (`apt-get install -y curl`). MUST NOT fallback. Correct. |
+| **11** | debian‑base20‑011 | `apt-get install -y nginx` | **cleanup_and_retry** | cleanup_and_retry (`dpkg --configure -a` → install) | stderr contains `dpkg was interrupted`. This is explicit OS‑signaled remediation. MUST run `dpkg --configure -a` then retry install. Correct. |
+| **17** | debian‑base20‑017 | `apt-get upgrade -y` | **cleanup_and_retry** | cleanup_and_retry (cleanup partial lists → update -y → upgrade -y) | stderr contains Hash Sum mismatch. MUST cleanup partial lists, MUST update, MUST retry upgrade. Correct. |
+
+</details>
+
+
+
+
+
 
 
 ##### Debian test matrix for selected regression on 24 rewrite patch2 test cases (6 test cases)
@@ -13118,10 +13135,13 @@ This section will regression test the test cases index:
 - 22  
 - 23  
 
-
-
-
 Several of these test cases were analyzed in detail in the ubuntu section. See that section for more insight into these test cases.
+
+
+
+
+
+
 
 
 ---
