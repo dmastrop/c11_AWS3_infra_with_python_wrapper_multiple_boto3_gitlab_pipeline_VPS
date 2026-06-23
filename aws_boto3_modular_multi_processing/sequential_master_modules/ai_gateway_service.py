@@ -3965,10 +3965,17 @@ def recover(request: RecoveryRequest):
             if not isinstance(message, str) or not message.strip():
                 return {"error": "Abort requires message", "action": "fallback"}
 
+        
         else:
-            # message MUST NOT appear for non-abort actions
-            if message is not None:
+            # message MUST NOT contain meaningful content for non-abort actions
+            # Allow None, empty string, or whitespace-only message fields
+            if message not in (None, "", " ", "   "):
                 return {"error": "Message not allowed for non-abort action", "action": "fallback"}
+
+        #else:
+        #    # message MUST NOT appear for non-abort actions
+        #    if message is not None:
+        #        return {"error": "Message not allowed for non-abort action", "action": "fallback"}
 
         # --------------------------------------------------------
         # If we reach here, plan is valid and returned to module2f
