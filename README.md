@@ -964,7 +964,7 @@ This evolution elevates the project from an OS‑specific remediation engine to 
 - [Formal LLM Contract-rule engineering framework principles 1-14](#formal-llm-contract-rule-engineering-framework-principles-1-14)
 - [Summary of the Guidelines](#summary-of-the-guidelines)
 - [Salience Engineering: Why Contract Rules Behave Differently Than Expected](#salience-engineering)
-- [Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing](#empty‑message-leakage-in-non‑abort-action-plans-schema‑level-contract-interference-in-patch2-testing)
+- [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
 - [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
 
@@ -1718,8 +1718,7 @@ This is the essence of **salience engineering** within LLM contract design.
 
 ---
 
-
-### Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing
+### Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing
 
 During Patch2 regression testing on Ubuntu and Debian, a second class of failure emerged alongside the salience‑ordering divergence documented in the Patch2‑24 case study. This issue appeared in **test case index 16**, which exercises a multi‑segment wrong‑OS package‑manager rewrite:
 
