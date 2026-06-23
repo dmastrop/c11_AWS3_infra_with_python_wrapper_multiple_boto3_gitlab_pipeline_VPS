@@ -1122,8 +1122,19 @@ def recover(request: RecoveryRequest):
                 "          - apt-get update -y\n"
                 "          - apt-get install -y <pkg>\n"
                 "\n"
-                # REMOVE Fallback block here and move it to after patch2 block, below. This is for the saliency issues that
-                # are seen under specific rewrite test cases with Debian and not Ubuntu
+                #
+                "- If the command is missing arguments (e.g., 'apt-get install'),\n"
+                "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
+                "  can be constructed WITHOUT guessing a package name.\n"
+                # Add single segment interactive flag -y processsing:
+                "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew),\n"
+                "  the LLM MUST rewrite the command using the correct Debian package manager ('apt-get')\n"
+                "  and retry when a safe, concrete package name is present.\n"
+                "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
+                #
+                "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
+                "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
+                "  primitive, the LLM MUST use 'fallback'.\n"
 
 
 
@@ -1203,22 +1214,6 @@ def recover(request: RecoveryRequest):
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
-
-            
-                # THIS is the Fallback block: moved this to after the patch2 to resolve Debian specific salience issues.
-                "- If the command is missing arguments (e.g., 'apt-get install'),\n"
-                "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
-                "  can be constructed WITHOUT guessing a package name.\n"
-                # Add single segment interactive flag -y processsing:
-                "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew),\n"
-                "  the LLM MUST rewrite the command using the correct Debian package manager ('apt-get')\n"
-                "  and retry when a safe, concrete package name is present.\n"
-                "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
-                #
-                "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
-                "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
-                "  primitive, the LLM MUST use 'fallback'.\n"
-
 
                 # Idempotency regression patch — OS-Mutation Guard Rule
                 # Remove this local copy. OS muatation guard is now GLOBAL
