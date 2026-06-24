@@ -13426,18 +13426,27 @@ Several of these test cases were analyzed in detail in the ubuntu section. See t
 Initially, the regression was going to be performed only on the 6 test cases above. However several more regression issues involving
 contract engineering emerged when testing the index 16 and index 21 test cases. 
 
-The issues with the indext 21 test case were complex and resolved. A full write up of the issue, and the fix are detailed in the
+The issues with the index 21 test case were complex and resolved. A full write up of the issue, and the fix are detailed in the
 PREFACE UPDATE3 chapter on LLM Contract Engineering at the link below. 
+The section is named: 
+
+"Debian Patch2‑24 salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control" and is a very interesting read with empirical validation of the theory.
+
+See the link below.
 
 Likewise the index 16 test case presented with a more benign issue involving the AI Gatway Service LLM message outbound validator
 code. This case study is also detailed in the PREFACE UPDATE3 chapter on LLM Contract Engineering at the link below. Outbound
 validator code is also an important part of LLM Contract Engineering to "protect" the MCP Client from unexpected LLM responses to
 a given context payload. 
 
+This section is entited: "Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing"
+
 - [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
 
 Finally there was a divergence between Ubuntu and Debian for test case index 14, which required a patch to explicitly list the incorrect
 PMs for each domain primitives block in the contract. The code, for example, for Debian looks like this:
+
+
 
 ```
 
@@ -13476,7 +13485,7 @@ before the fix it was being let through similar to a bash command, for example. 
 
 The full 24 test case test matrix for Debian is presented below along with the notes for the regression issues above:
 
-# <details>
+ <details>
 <summary><strong>Debian Patch2 24‑case rewrite matrix (LLM behavior only)</strong></summary>
 
 | # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
