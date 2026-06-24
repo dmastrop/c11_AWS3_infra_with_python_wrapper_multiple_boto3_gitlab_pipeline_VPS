@@ -963,7 +963,7 @@ This evolution elevates the project from an OS‑specific remediation engine to 
 - [Introduction to LLM Contract Engineering principles](#introduction-to-llm-contract-engineering-principles)
 - [Formal LLM Contract-rule engineering framework principles 1-14](#formal-llm-contract-rule-engineering-framework-principles-1-14)
 - [Summary of the Guidelines](#summary-of-the-guidelines)
-- [Salience Engineering: Why Contract Rules Behave Differently Than Expected](#salience-engineering)
+- [Salience Engineering: Why Contract Rules Behave Differently Than Expected: OS-signaled remediation case study](#salience-engineering)
 - [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
 - [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
@@ -1432,7 +1432,7 @@ A small set of strong invariants is more stable than a large set of recipes.
 
 ---
 
-### **Salience Engineering: Why Contract Rules Behave Differently Than Expected**
+### **Salience Engineering: Why Contract Rules Behave Differently Than Expected: OS-signaled remediation case study**
 <a name="salience-engineering"></a>
 
 This section explains why certain contract rules—especially global invariants—sometimes fail to influence the model’s behavior in cases where a human engineer would expect them to apply. The analysis is grounded in the principles defined earlier in this chapter, particularly:
@@ -12629,7 +12629,7 @@ were modified and/or added.
 The discussion on this topic is at this link below in the PREFACE UPDATE3, which delves into proper LLM Contract Rule Engineering.
 The fix is also discussed in this link as well.
 
-- [Salience Engineering: Why Contract Rules Behave Differently Than Expected](#salience-engineering)
+- [Salience Engineering: Why Contract Rules Behave Differently Than Expected: OS-signaled remediation case study](#salience-engineering)
 
 
 
