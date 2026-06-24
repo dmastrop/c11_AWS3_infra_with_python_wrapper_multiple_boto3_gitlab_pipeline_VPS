@@ -886,6 +886,32 @@ def recover(request: RecoveryRequest):
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
                
 
+                ##### Package Manager Classification (Linux-family OSes) #####
+                "\n"
+                "- The LLM MUST treat the following commands as package-manager install commands\n"
+                "  when a concrete package name <pkg> is present:\n"
+                "\n"
+                "      * 'apt-get install <pkg>'\n"
+                "      * 'apt install <pkg>'\n"
+                "      * 'yum install <pkg>'\n"
+                "      * 'dnf install <pkg>'\n"
+                "      * 'apk add <pkg>'\n"
+                "      * 'pacman -S <pkg>'\n"
+                "      * 'zypper install <pkg>'\n"
+                "      * 'brew install <pkg>'\n"
+                "\n"
+                "- For Ubuntu, the ONLY native package managers are:\n"
+                "      * apt\n"
+                "      * apt-get\n"
+                "\n"
+                "- ALL other package managers listed above MUST be treated as wrong-OS\n"
+                "  package managers on Ubuntu.\n"
+                "\n"
+                "- When a wrong-OS package-manager install command appears in a segment and a\n"
+                "  concrete package name is present, the LLM MUST treat that segment as a\n"
+                "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
+                "  wrong-OS package-manager installs for Ubuntu, that segment MUST be rewritten\n"
+                "  to use 'apt-get install -y <pkg>'.\n"
 
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
@@ -1125,6 +1151,33 @@ def recover(request: RecoveryRequest):
                 # REMOVE Fallback block here and move it to after patch2 block, below. This is for the saliency issues that
                 # are seen under specific rewrite test cases with Debian and not Ubuntu
 
+
+
+                ##### Package Manager Classification (Linux-family OSes) #####
+                "\n"
+                "- The LLM MUST treat the following commands as package-manager install commands\n"
+                "  when a concrete package name <pkg> is present:\n"
+                "\n"
+                "      * 'apt-get install <pkg>'\n"
+                "      * 'apt install <pkg>'\n"
+                "      * 'yum install <pkg>'\n"
+                "      * 'dnf install <pkg>'\n"
+                "      * 'apk add <pkg>'\n"
+                "      * 'pacman -S <pkg>'\n"
+                "      * 'zypper install <pkg>'\n"
+                "      * 'brew install <pkg>'\n"
+                "\n"
+                "- For Debian, the ONLY native package manager is:\n"
+                "      * apt-get\n"
+                "\n"
+                "- ALL other package managers listed above MUST be treated as wrong-OS\n"
+                "  package managers on Debian.\n"
+                "\n"
+                "- When a wrong-OS package-manager install command appears in a segment and a\n"
+                "  concrete package name is present, the LLM MUST treat that segment as a\n"
+                "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
+                "  wrong-OS package-manager installs for Debian, that segment MUST be rewritten\n"
+                "  to use 'apt-get install -y <pkg>'.\n"
 
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
