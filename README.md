@@ -13436,9 +13436,78 @@ a given context payload.
 
 - [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
 
+Finally there was a divergence between Ubuntu and Debian for test case index 14, which required a patch to explicitly list the incorrect
+PMs for each domain primitives block in the contract. The code, for example, for Debian looks like this:
+
+```
+
+                ##### Package Manager Classification (Linux-family OSes) #####
+                "\n"
+                "- The LLM MUST treat the following commands as package-manager install commands\n"
+                "  when a concrete package name <pkg> is present:\n"
+                "\n"
+                "      * 'apt-get install <pkg>'\n"
+                "      * 'apt install <pkg>'\n"
+                "      * 'yum install <pkg>'\n"
+                "      * 'dnf install <pkg>'\n"
+                "      * 'apk add <pkg>'\n"
+                "      * 'pacman -S <pkg>'\n"
+                "      * 'zypper install <pkg>'\n"
+                "      * 'brew install <pkg>'\n"
+                "\n"
+                "- For Debian, the ONLY native package manager is:\n"
+                "      * apt-get\n"
+                "\n"
+                "- ALL other package managers listed above MUST be treated as wrong-OS\n"
+                "  package managers on Debian.\n"
+                "\n"
+                "- When a wrong-OS package-manager install command appears in a segment and a\n"
+                "  concrete package name is present, the LLM MUST treat that segment as a\n"
+                "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
+                "  wrong-OS package-manager installs for Debian, that segment MUST be rewritten\n"
+                "  to use 'apt-get install -y <pkg>'.\n"
+```
+
+It is somewhat redundant but got the Debian test case index 14 working so that pacman segment was correctly rewritten to apt-get, whereas
+before the fix it was being let through similar to a bash command, for example. That was not correct.
 
 
-The full 24 test case test matrix for Debian is presented below: 
+
+
+The full 24 test case test matrix for Debian is presented below along with the notes for the regression issues above:
+
+# <details>
+<summary><strong>Debian Patch2 24‑case rewrite matrix (LLM behavior only)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|-----------------------|-------|
+| 1 | d‑patch‑001 | `apt-get install nginx --badflag` | fallback | `{"action":"fallback"}` | Invalid flag on apt‑get → invalid‑flag rule → fallback. |
+| 2 | d‑patch‑002 | `apt-get install curl && yum install nano` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y nano` | Wrong‑OS `yum` rewritten; native apt‑get normalized to `-y`. |
+| 3 | d‑patch‑003 | `apt-get install curl && apt-get update` | fallback | `{"action":"fallback"}` | All segments valid, exit_status 0, no stderr → “good pipeline → fallback”. |
+| 4 | d‑patch‑004 | `apt-get install curl && apt-get update --badflag` | fallback | `{"action":"fallback"}` | Invalid flag on system‑wide op → invalid‑flag rule → fallback. |
+| 5 | d‑patch‑005 | `apt-get install curl && pacman -Syu` | fallback | `{"action":"fallback"}` | Wrong‑OS system‑wide op (`pacman -Syu`) requiring rewrite → must fallback. |
+| 6 | d‑patch‑006 | `apt-get install curl && apk add bash` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash` | Wrong‑OS `apk` rewritten; apt‑get normalized. |
+| 7 | d‑patch‑007 | `apt-get install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Destructive command → immediate abort (overrides rewrite). |
+| 8 | d‑patch‑008 | `yum install nano && apt-get install curl` | retry_with_modified_command | `apt-get install -y nano && apt-get install -y curl` | Wrong‑OS `yum` rewritten; apt‑get normalized. |
+| 9 | d‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | `apt-get install -y git && apt-get install -y nano` | Both wrong‑OS PMs rewritten to apt‑get. |
+| 10 | d‑patch‑010 | `apt-get install curl && apt-get install python3 --badflag` | fallback | `{"action":"fallback"}` | Invalid flag on apt‑get → fallback. |
+| 11 | d‑patch‑011 | `apt-get install curl && apt-get install python3` | fallback | `{"action":"fallback"}` | All segments valid, exit_status 0 → fallback. |
+| 12 | d‑patch‑012 | `apt-get install curl && apt-get install python3 && yum install nano` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y python3 && apt-get install -y nano` | Wrong‑OS `yum` rewritten; apt‑get normalized. |
+| 13 | d‑patch‑013 | `yum install nano && apt-get install curl && apk add bash` | retry_with_modified_command | `apt-get install -y nano && apt-get install -y curl && apt-get install -y bash` | Wrong‑OS `yum` + `apk` rewritten; apt‑get normalized. |
+| 14 | d‑patch‑014 | `yum install nano && apk add bash && pacman -S htop` | retry_with_modified_command | `apt-get install -y nano && apt-get install -y bash && apt-get install -y htop` | **FIXED:** Previously failed on Debian due to pacman misclassification. Resolved by adding explicit PM‑classification block (pacman recognized as wrong‑OS PM). |
+| 15 | d‑patch‑015 | `apt-get install curl && apt-get install nano && apk add bash` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y nano && apt-get install -y bash` | Wrong‑OS `apk` rewritten; apt‑get normalized. |
+| 16 | d‑patch‑016 | `yum install nano && apt-get install curl && apt-get update` | retry_with_modified_command | `apt-get install -y nano && apt-get install -y curl && apt-get update` | **FIXED:** Previously intermittent fallback due to empty `message` field. Resolved by outbound‑validator update allowing empty/whitespace messages. |
+| 17 | d‑patch‑017 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | `apt-get install -y bash && echo 'hello' && apt-get install -y nano` | Wrong‑OS `apk` + `yum` rewritten; echo preserved. |
+| 18 | d‑patch‑018 | `apt-get install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | `apt-get install -y curl && echo 'test' && apt-get install -y htop` | **STABLE:** pacman rewrite correct; confirms PM‑classification block did not regress existing correct behavior. |
+| 19 | d‑patch‑019 | `yum install nano --badflag && apt-get install curl` | fallback | `{"action":"fallback"}` | Wrong‑OS PM with invalid flag → invalid‑flag rule → fallback. |
+| 20 | d‑patch‑020 | `apt-get install curl && apk add bash --badflag && apt-get install nano` | fallback | `{"action":"fallback"}` | Wrong‑OS PM with invalid flag → fallback. |
+| 21 | d‑patch‑021 | `yum install nano && apk add bash && apt-get update` | retry_with_modified_command | `apt-get install -y nano && apt-get install -y bash && apt-get update` | **FIXED:** This was the original salience failure (Debian fell back). Resolved by reordering domain‑primitive blocks to match Ubuntu’s rewrite‑cluster adjacency. |
+| 22 | d‑patch‑022 | `apk add bash && apt-get install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Destructive command → immediate abort (correct). |
+| 23 | d‑patch‑023 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash` | Wrong‑OS `yum` + `apk` rewritten; echo preserved. |
+| 24 | d‑patch‑024 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash` | Same as #23 (duplicate test case in schema). |
+
+</details>
+
 
 
 
