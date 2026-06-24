@@ -1684,17 +1684,17 @@ changes. It was not absoulutely necessary to pass the test case, but provides st
 
 The earlier “Summary of the Guidelines” section in this chapter did not explicitly name salience engineering, but four of its principles directly describe it:
 
-Salience Engineering = “Write rules to control salience, not just logic. 
-Transformers respond to **pattern strength**, not logical structure.
+Salience Engineering = “Write rules to control salience, not just logic." 
+- Transformers respond to **pattern strength**, not logical structure.
 
-Salience Engineering = “Ensure global invariants are lexically stronger 
-Global rules must be written with stronger lexical force than domain rules.
+Salience Engineering = “Ensure global invariants are lexically stronger."
+- Global rules must be written with stronger lexical force than domain rules.
 
-Salience Engineering = “Avoid rules requiring multi‑step implicit inference. 
-If a rule requires the model to combine distant conditions, it will fail unless reinforced locally.
+Salience Engineering = “Avoid rules requiring multi‑step implicit inference." 
+- If a rule requires the model to combine distant conditions, it will fail unless reinforced locally.
 
-Salience Engineering = “Re‑evaluate the semantic priority graph after adding rules.  
-Adding new rules changes the salience landscape; previously stable behavior may shift.
+Salience Engineering = “Re‑evaluate the semantic priority graph after adding rules."  
+- Adding new rules changes the salience landscape; previously stable behavior may shift.
 
 The current “Unable to locate package + 404” regression is a direct illustration of these four principles.
 
