@@ -13430,7 +13430,7 @@ The issues with the index 21 test case were complex and resolved. A full write u
 PREFACE UPDATE3 chapter on LLM Contract Engineering at the link below. 
 The section is named: 
 
-"Debian Patch2‑24 salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control" and is a very interesting read with empirical validation of the theory.
+"Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control" and is a very interesting read with empirical validation of the theory.
 
 See the link below.
 
