@@ -2274,6 +2274,237 @@ Key empirical conclusions:
 
 ---
 
+#### **SECTION 3 — Root‑Cause Analysis**  
+
+##### Debian Patch2 package‑manager rewrite salience failure (Index 21)
+##### Instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control
+
+This section explains **why** Debian misclassified the Index 21 pipeline and produced a `fallback` action instead of the required `retry_with_modified_command`, despite having **identical Patch2 rewrite logic** to Ubuntu. The failure was not semantic, not logical, and not due to missing rules. It was a **salience‑ordering failure** caused by the placement of a fallback‑heavy rule block **above** the Patch2 rewrite cluster.
+
+---
+
+##### **3.1 The Core Mechanism: Transformers Do Not Apply Rules Symbolically**
+
+Transformers do not:
+
+- propagate global constraints  
+- unify conditions across distant text blocks  
+- maintain a symbolic rule table  
+- apply “if X then Y” logic in a deterministic, programmatic way  
+
+Instead, they operate by **pattern salience**:
+
+- adjacency  
+- lexical strength  
+- local density  
+- recency  
+- cluster coherence  
+- example proximity  
+- token‑level attention  
+
+This means:
+
+> **The order and clustering of rules determines which instruction group dominates the model’s behavior.**
+
+Patch2 rewrite logic is not a symbolic rule engine — it is a **salience‑weighted instruction cluster**.
+
+---
+
+##### **3.2 The Structural Difference Between Ubuntu and Debian**
+
+Ubuntu’s domain‑primitive block places the Patch2 rewrite cluster **directly adjacent** to:
+
+- the system‑wide‑operation rules  
+- the multi‑segment rewrite rules  
+- the wrong‑OS PM rewrite rules  
+
+This forms a **tight, high‑salience rewrite cluster**.
+
+Debian, before the fix, placed a large fallback‑heavy block **above** Patch2:
+
+```
+Debian APT primitives
+single‑segment rewrite rules
+↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+FALLBACK BLOCK (BEFORE FIX)   <<<<<< PROBLEM
+↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+Patch2 rewrite cluster
+dpkg/fix‑broken rules
+Hash Sum mismatch rules
+```
+
+This fallback block contained **multiple strong fallback cues**, including:
+
+```
+"- If the command is missing arguments (e.g., 'apt-get install'), treat it as malformed and use 'fallback' ..."
+"- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew) ..."
+"- If the command is destructive (rm -rf /), return 'abort'."
+"- If the command is unrecognized (exit_status 127) ... MUST use 'fallback'."
+```
+
+This block is:
+
+- long  
+- lexically strong  
+- fallback‑oriented  
+- placed immediately above Patch2  
+
+This created a **fallback‑dominant prior** before the model reached the rewrite cluster.
+
+Ubuntu does **not** have this block above Patch2.
+
+---
+
+##### **3.3 Instruction Overshadowing and Contextual Dominance**
+
+Because the fallback block was above Patch2, the model entered the Patch2 cluster with a **fallback‑heavy contextual prior**.
+
+This is a classic case of:
+
+- **instruction overshadowing**  
+- **contextual dominance**  
+- **instruction competition**  
+- **locality/adjacency effects**  
+- **prompt interference**  
+
+The fallback block “pulled” the model toward fallback interpretations, even though the Patch2 rules explicitly forbid fallback when:
+
+- at least one wrong‑OS PM segment exists  
+- and the system‑wide op is valid  
+
+This is why the model misclassified the valid system‑wide op (`apt-get update`) as “requiring rewrite,” triggering the system‑wide‑op fallback rule.
+
+---
+
+##### **3.4 Rewrite‑Cluster Dilution and Fallback‑Cluster Contamination**
+
+Patch2 rewrite logic is a **cluster** of rules:
+
+- wrong‑OS PM → rewrite  
+- valid system‑wide op → preserve  
+- multi‑segment rewrite → retry_with_modified_command  
+- MUST NOT fallback  
+
+This cluster must be **tight** and **high** in the rule stack to remain dominant.
+
+In Debian BEFORE FIX:
+
+- The fallback block diluted the rewrite cluster  
+- The rewrite cluster was pushed lower  
+- The fallback cluster contaminated the rewrite cluster  
+- The model’s salience landscape shifted toward fallback  
+
+This is why Debian failed Index 21 but not Index 16.
+
+---
+
+##### **3.5 Regime‑Shift Thresholding: Why Index 21 Failed but Index 16 Did Not**
+
+Index 16 (Debian)
+
+```
+yum install nano && apt-get install curl && apt-get update
+```
+
+- Only **one** wrong‑OS PM segment  
+- Rewrite cluster still strong enough  
+- No fallback contamination threshold crossed  
+- Debian produced correct rewrite
+
+Index 21 (Debian)
+
+```
+yum install nano && apk add bash && apt-get update
+```
+
+- **Two** wrong‑OS PM segments  
+- Higher rewrite complexity  
+- More rewrite decisions required  
+- Model crossed a **salience threshold**  
+- Fallback cluster dominated  
+- System‑wide op misclassified  
+- Fallback triggered  
+
+This is a **regime‑shift phenomenon**:
+
+> When enough fallback‑oriented cues accumulate above Patch2, and the pipeline complexity crosses a threshold (two wrong‑OS PM segments), the model switches from the rewrite instruction cluster to the fallback instruction cluster.
+
+Ubuntu never crosses this threshold because its rewrite cluster is not diluted.
+
+---
+
+##### **3.6 Why Ubuntu Was Immune**
+
+Ubuntu’s ordering:
+
+```
+APT primitives
+single‑segment rewrite rules
+PATCH2 CLUSTER (adjacent)
+dpkg/fix‑broken rules
+Hash Sum mismatch rules
+```
+
+There is **no fallback block** between:
+
+- the APT primitives  
+- and the Patch2 rewrite cluster  
+
+This preserves:
+
+- rewrite‑cluster adjacency  
+- rewrite‑cluster dominance  
+- system‑wide‑op preservation  
+- correct multi‑segment rewrite behavior  
+
+Ubuntu’s salience landscape is stable and rewrite‑dominant.
+
+---
+
+##### **3.7 Why the Fix Works**
+
+The fix was:
+
+> **Move the fallback block below the Patch2 rewrite cluster.**
+
+This restores:
+
+- rewrite‑cluster adjacency  
+- rewrite‑cluster dominance  
+- correct system‑wide‑op classification  
+- correct multi‑segment rewrite behavior  
+- symmetry with Ubuntu  
+
+No rule text changed.  
+Only **ordering** changed.
+
+This confirms:
+
+> The failure was not semantic — it was structural.
+
+---
+
+##### **3.8 Summary of Root Cause**
+
+The Index 21 failure was caused by:
+
+- **Instruction overshadowing** from the fallback block  
+- **Contextual dominance** of fallback cues  
+- **Rewrite‑cluster dilution**  
+- **Fallback‑cluster contamination**  
+- **Regime‑shift thresholding** when two wrong‑OS PM segments were present  
+- **Loss of rewrite‑cluster adjacency**  
+- **Prompt interference** between fallback and rewrite rules  
+
+The fix restored:
+
+- rewrite‑cluster adjacency  
+- rewrite‑cluster dominance  
+- correct Patch2 behavior  
+
+This is a textbook example of **salience engineering** in LLM contract design.
+
+---
 
 
 
