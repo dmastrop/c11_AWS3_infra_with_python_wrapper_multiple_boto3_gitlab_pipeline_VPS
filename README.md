@@ -2844,7 +2844,8 @@ This is the definitive empirical confirmation that the salience‑ordering fix w
 
 To ensure no regressions were introduced:
 
-### **Debian Index 0 (invalid flag)**  
+Debian Index 0 (invalid flag)
+ 
 ```
 {"action":"fallback"}
 ```
