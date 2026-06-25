@@ -965,7 +965,7 @@ This evolution elevates the project from an OS‑specific remediation engine to 
 - [Summary of the Guidelines](#summary-of-the-guidelines)
 - [Salience Engineering: Why Contract Rules Behave Differently Than Expected: OS-signaled remediation case study](#salience-engineering)
 - [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
-- [Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control](#debian-patch2-package-manager-rewrite-salience-case-study-instruction-overshadowing-contextual-dominance-and-prompt-interference-in-rule-based-llm-control)
+- [Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control](#debian-patch2-salience-case-study)
 - [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
 
@@ -2001,8 +2001,7 @@ behavior from the LLM.
 
 
 
-
-
+<a name="debian-patch2-salience-case-study"></a>
 ### Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control
 
 
