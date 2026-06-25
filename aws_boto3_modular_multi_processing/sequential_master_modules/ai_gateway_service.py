@@ -399,9 +399,9 @@ def recover(request: RecoveryRequest):
                 "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
                 # This refers to the tags field in the context and not the tags field in the per thread registry_entry
                 # comment out the tags restriction. We will need tags in the Phase4a.1.3 real life pipeline testing. 
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST NOT use it to determine the action.\\n"
-                "- You MUST ignore the \\\"tags\\\" field completely when deciding between\\n"
-                "  \\\"fallback\\\", \\\"cleanup_and_retry\\\", \\\"retry_with_modified_command\\\", or \\\"abort\\\".\\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST NOT use it to determine the action.\\n"
+                #"- You MUST ignore the \\\"tags\\\" field completely when deciding between\\n"
+                #"  \\\"fallback\\\", \\\"cleanup_and_retry\\\", \\\"retry_with_modified_command\\\", or \\\"abort\\\".\\n"
                 # Keep the restriction on instance_id and ip fields in the context.
                 "- The \\\"instance_id\\\" field MUST be ignored. It is metadata only.\\n"
                 "- The \\\"ip\\\" field MUST be ignored. It is metadata only.\\n"
