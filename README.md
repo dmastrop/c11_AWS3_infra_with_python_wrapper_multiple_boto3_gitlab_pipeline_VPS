@@ -2069,8 +2069,8 @@ This case demonstrates how **locality and adjacency effects**, **instruction com
 
 #### **SECTION 2 — Full Reproduction of the Failure**  
 
-##### Debian Patch2 package‑manager rewrite salience failure (Test Case Index 21)*  
-##### “yum install nano && apk add bash && apt‑get update”*
+##### Debian Patch2 package‑manager rewrite salience failure (Test Case Index 21) 
+##### “yum install nano && apk add bash && apt‑get update”
 
 
 This section documents the empirical behavior of the model on **Index 21**, both **before** and **after** the salience‑ordering fix, and contrasts it with:
