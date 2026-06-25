@@ -3335,6 +3335,209 @@ This case is a clean demonstration of why **LLM contract engineering is fundamen
 
 ---
 
+#### **SECTION 8 — Final Case Study Narrative**  
+
+##### Debian Patch2 package‑manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control
+
+This case study documents a subtle but academically significant failure mode in rule‑based LLM contract systems: a **salience‑driven collapse of the Patch2 rewrite cluster** in Debian, triggered not by incorrect rules, but by the **ordering** of rule blocks within the domain‑primitive structure.
+
+The failure occurred in **Index 21**, a multi‑segment pipeline containing two wrong‑OS package‑manager install commands followed by a valid system‑wide operation:
+
+```
+yum install nano && apk add bash && apt-get update
+```
+
+Under Patch2 semantics, this pipeline must always be rewritten using:
+
+```
+apt-get install -y nano && apt-get install -y bash && apt-get update
+```
+
+Ubuntu consistently produced the correct rewrite.  
+Debian did not.  
+Debian incorrectly returned:
+
+```
+{"action":"fallback"}
+```
+
+This divergence was not due to:
+
+- invalid flags  
+- malformed syntax  
+- destructive commands  
+- OS‑signaled remediation  
+- schema issues  
+- missing rules  
+
+The rewrite logic was correct.  
+The failure was caused by **salience**, not semantics.
+
+---
+
+##### **8.1 The Structural Cause: A Fallback Block in the Wrong Place**
+
+In Debian’s domain‑primitive block, a large fallback‑heavy rule cluster appeared **directly above** the Patch2 rewrite cluster.  
+This block included:
+
+- missing‑argument fallback  
+- unrecognized‑command fallback  
+- destructive‑command abort  
+- wrong‑OS PM single‑segment rewrite rules  
+- imperative fallback instructions  
+
+This block was:
+
+- lexically strong  
+- dense  
+- imperative  
+- broad in scope  
+- placed immediately before Patch2  
+
+This created a **fallback‑dominant prior** before the model reached the rewrite rules.
+
+Ubuntu did **not** have this block above Patch2.  
+Ubuntu’s rewrite cluster remained tight, high, and dominant.
+
+---
+
+##### **8.2 Why the Model Failed: Salience‑Engineering Mechanisms**
+
+The failure is explained by several well‑documented transformer phenomena:
+
+**Instruction Overshadowing**  
+The fallback block’s imperative language (“MUST use fallback”) overshadowed the rewrite rules below it.
+
+**Contextual Dominance**  
+Because the fallback block appeared earlier, it shaped the model’s prior before Patch2 was evaluated.
+
+**Prompt Interference**  
+The fallback block introduced noise that interfered with the interpretation of the multi‑segment rewrite logic.
+
+**Locality / Adjacency Effects**  
+Rewrite rules were too far from the APT primitives and too close to fallback rules, weakening their cluster coherence.
+
+**Instruction Competition**  
+The fallback cluster and rewrite cluster competed; fallback won due to higher salience.
+
+**Rewrite‑Cluster Dilution**  
+The rewrite rules were diluted by the fallback block sitting above them.
+
+**Fallback‑Cluster Contamination**  
+Fallback cues contaminated the interpretation of the system‑wide operation.
+
+**Regime‑Shift Thresholding**  
+Index 16 (one wrong‑OS PM segment) passed.  
+Index 21 (two wrong‑OS PM segments) crossed a complexity threshold that triggered a regime shift into the fallback instruction cluster.
+
+These mechanisms collectively caused the model to misclassify the valid system‑wide operation (`apt-get update`) as requiring rewrite, which incorrectly triggered the system‑wide‑op fallback rule.
+
+---
+
+##### **8.3 The Fix: Restoring Rewrite‑Cluster Adjacency**
+
+The fix was **purely structural**:
+
+> **Move the fallback block below the Patch2 rewrite cluster.**
+
+No rule text changed.  
+No semantics changed.  
+No new rules were added.
+
+This reordering restored:
+
+- rewrite‑cluster adjacency  
+- rewrite‑cluster dominance  
+- correct system‑wide‑op classification  
+- correct multi‑segment rewrite behavior  
+- cross‑OS consistency with Ubuntu  
+
+After the fix, Debian produced the correct rewrite deterministically across repeated runs.
+
+---
+
+##### **8.4 Why the Fix Works: Transformer Mechanics**
+
+Transformers do not execute rules symbolically.  
+They execute **clusters of instructions** based on:
+
+- adjacency  
+- lexical strength  
+- local density  
+- recency  
+- cluster coherence  
+
+Thus:
+
+- A fallback block above Patch2 → fallback‑dominant salience landscape  
+- A fallback block below Patch2 → rewrite‑dominant salience landscape  
+
+The fix restored the intended salience ordering.
+
+---
+
+##### **8.5 Why Ubuntu Never Failed**
+
+Ubuntu’s domain‑primitive block already had the correct structure:
+
+- APT primitives  
+- OS‑signaled remediation  
+- single‑segment rewrite rules  
+- **Patch2 rewrite cluster (high, tight, dominant)**  
+- dpkg/fix‑broken rules  
+- Hash Sum mismatch rules  
+
+Ubuntu never had a fallback block above Patch2.  
+Thus:
+
+- No fallback contamination  
+- No rewrite‑cluster dilution  
+- No regime shift  
+- No misclassification  
+
+Ubuntu served as the canonical reference for the correct ordering.
+
+---
+
+##### **8.6 Why This Case Study Matters**
+
+This case study demonstrates that:
+
+- **Correct rules can still fail if placed incorrectly.**  
+- **Salience, not logic, determines which rule “wins.”**  
+- **Rule ordering is as important as rule content.**  
+- **Transformers operate on pattern salience, not symbolic logic.**  
+- **Rewrite clusters must be contiguous and high in the rule stack.**  
+- **Fallback clusters must never sit above rewrite clusters.**  
+- **Structural fixes can resolve failures without changing semantics.**  
+
+This is a textbook example of **salience engineering** in LLM contract design.
+
+---
+
+##### **8.7 Final Summary**
+
+The Index 21 failure was not a semantic bug.  
+It was a **salience‑ordering failure** caused by a fallback‑heavy block placed above the Patch2 rewrite cluster in Debian.
+
+The fix — moving the fallback block below Patch2 — restored rewrite‑cluster dominance and eliminated the failure.
+
+This case study illustrates how:
+
+- instruction overshadowing  
+- contextual dominance  
+- prompt interference  
+- adjacency effects  
+- instruction competition  
+- rewrite‑cluster dilution  
+- fallback‑cluster contamination  
+- regime‑shift thresholding  
+
+can combine to produce divergent behavior in rule‑based LLM systems, even when the rules themselves are correct.
+
+This is why **LLM contract engineering is fundamentally salience engineering**.
+
+---
 
 
 
