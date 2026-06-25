@@ -2979,6 +2979,218 @@ This completes the empirical validation of the salience‑ordering fix.
 
 
 
+#### **SECTION 6 — The Fix (Engineering Explanation)**  
+
+##### Why reordering the fallback block restored rewrite‑cluster dominance in Debian
+
+This section explains **exactly** what was changed in the Debian domain‑primitive block, **why** the change works, and **why** it restores deterministic Patch2 rewrite behavior without modifying any rule semantics.
+
+---
+
+##### **6.1 The Fix in One Sentence**
+
+> **The fallback‑heavy block in Debian was moved from above the Patch2 rewrite cluster to below it, restoring rewrite‑cluster adjacency and eliminating fallback‑cluster contamination.**
+
+This was a **pure structural fix**, not a semantic one.
+
+---
+
+##### **6.2 What Was Changed**
+
+Before Fix (Debian)
+  
+The fallback block appeared **above** Patch2:
+
+```
+Debian APT primitives
+single‑segment rewrite rules
+🟥 FALLBACK BLOCK (problem)
+🟦 Patch2 rewrite cluster
+dpkg/fix‑broken rules
+Hash Sum mismatch rules
+```
+
+After Fix (Debian)
+ 
+The fallback block was moved **below** Patch2:
+
+```
+Debian APT primitives
+single‑segment rewrite rules
+🟦 Patch2 rewrite cluster (now dominant)
+🟥 FALLBACK BLOCK (demoted)
+dpkg/fix‑broken rules
+Hash Sum mismatch rules
+```
+
+It is very important to note that no rule text changed. (No rule addtions, or semantic modifications of existing rules) 
+ 
+Only the **ordering** changed.
+
+---
+
+##### **6.3 Why This Fix Works (Mechanistic Explanation)**
+
+Transformers do not execute rules symbolically.  
+They execute **clusters of instructions** based on:
+
+- adjacency  
+- lexical strength  
+- local density  
+- recency  
+- cluster coherence  
+
+Thus:
+
+> **The vertical ordering of rule blocks *is* the effective control flow of the LLM.**
+
+Before the fix:
+
+- The fallback block was large, lexically strong, and placed directly above Patch2.  
+- This created a **fallback‑dominant prior**.  
+- When the pipeline contained **two wrong‑OS PM segments**, the model crossed a **regime‑shift threshold**.  
+- The system‑wide op (`apt-get update`) was misclassified as requiring rewrite.  
+- The system‑wide‑op fallback rule fired incorrectly.  
+- Debian produced **fallback** instead of rewrite.
+
+After the fix:
+
+- Patch2 rewrite cluster is now **adjacent** to APT primitives and OS‑signaled remediation.  
+- Rewrite cluster regains **dominance**.  
+- System‑wide op is correctly preserved.  
+- Wrong‑OS PM segments are correctly rewritten.  
+- Debian matches Ubuntu exactly.  
+- No fallback contamination occurs.  
+- No regime shift occurs.  
+- Behavior is deterministic across repeated runs.
+
+---
+
+##### **6.4 Why Ubuntu Never Needed the Fix**
+
+Ubuntu’s domain‑primitive block already had the correct structure:
+
+```
+APT primitives
+OS‑signaled remediation
+single‑segment rewrite rules
+🟦 Patch2 rewrite cluster (high, tight, dominant)
+dpkg/fix‑broken rules
+Hash Sum mismatch rules
+```
+
+Ubuntu **never** had a fallback block above Patch2.
+
+Thus:
+
+- Rewrite cluster was always dominant  
+- No fallback contamination  
+- No salience collapse  
+- No misclassification  
+- No regime shift  
+
+Ubuntu served as the **canonical reference** for the correct ordering.
+
+---
+
+##### **6.5 Why the Fix Does Not Overfit to Index 21**
+
+The fix is **structural**, not case‑specific.
+
+It generalizes because:
+
+- It restores the intended adjacency of rewrite rules  
+- It preserves the intended dominance of Patch2  
+- It prevents fallback contamination in *all* multi‑segment rewrite cases  
+- It does not modify rule semantics  
+- It does not introduce new rules  
+- It does not weaken any existing rule  
+- It does not affect OS‑signaled remediation  
+- It does not affect malformed‑command handling  
+- It does not affect dpkg/fix‑broken behavior  
+- It does not affect Hash Sum mismatch behavior  
+
+This is a **robust, architecture‑level fix**, not a patch for a single test case.
+
+This is one of the most important precepts in LLM contract engineering. One should not write literal test cases into the contract.
+
+
+---
+
+##### **6.6 Why No Rule Text Needed to Change**
+
+This is the most important engineering insight:
+
+> **The rules were already correct.  
+> The model simply could not *reach* them with the correct salience weighting.**
+
+The contamination to the rewrite cluster prevented the correct rule from "kicking" in given the test case.  Instead, the other rule, 
+cited earlier (system-wide operations that require rewrite are fallback) kicked in and the LLM presented an incorrect action plan.
+
+
+The failure was not:
+
+- a missing rule  
+- a wrong rule  
+- a mis-specified condition  
+- a malformed rewrite instruction  
+- a semantic misunderstanding  
+
+It was:
+
+- **instruction overshadowing**  
+- **contextual dominance**  
+- **rewrite‑cluster dilution**  
+- **fallback‑cluster contamination**  
+- **loss of adjacency**  
+
+Reordering the blocks restored the intended salience landscape.
+
+Reordering the blocks permittted the rewrite cluster (patch2) to apply the correct rule for the particular test case (index21):
+Rewrite the non-system-wide segements that are using an incorrect PM, and preserve the correct system-wide command verbatim.
+
+
+---
+
+##### **6.7 Why This Fix Is Stable**
+
+The fix is stable because:
+
+- Patch2 rewrite cluster is now high and contiguous  
+- Fallback block is now low and isolated  
+- System‑wide‑op rules are now adjacent to rewrite rules  
+- Rewrite cluster is now lexically reinforced by proximity  
+- No future rule additions above Patch2 will dilute rewrite salience  
+- Debian now mirrors Ubuntu’s effective structure  
+
+This ensures:
+
+- deterministic behavior  
+- cross‑OS consistency  
+- no regression in multi‑segment rewrite cases  
+- no misclassification of system‑wide ops  
+- no fallback contamination  
+
+---
+
+##### **6.8 Summary of Section 6**
+
+The fix was:
+
+> **Move the fallback block below the Patch2 rewrite cluster.**
+
+This restored:
+
+- rewrite‑cluster adjacency  
+- rewrite‑cluster dominance  
+- correct system‑wide‑op classification  
+- correct multi‑segment rewrite behavior  
+- cross‑OS consistency with Ubuntu  
+
+This is a textbook example of **salience‑engineering‑driven contract repair**.
+
+---
+
 
 
 
