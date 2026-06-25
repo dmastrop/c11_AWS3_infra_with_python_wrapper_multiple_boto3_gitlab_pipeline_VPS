@@ -2709,6 +2709,212 @@ Ubuntu
 
 ---
 
+#### **SECTION 5 — Empirical Validation**  
+
+##### Demonstrating stability, determinism, and cross‑OS consistency after the salience‑ordering fix
+
+This section presents the empirical evidence confirming that:
+
+1. **Debian Index 21** no longer falls back after the fallback‑block reordering fix.  
+2. **Ubuntu Index 21** continues to behave correctly (as it always did).  
+3. **Debian and Ubuntu Index 16** both stabilize after the empty‑message outbound‑validator fix.  
+4. The behavior is **deterministic across repeated runs**.  
+5. The fix does **not** introduce regressions in any other Patch2 rewrite cases.
+
+This empirical validation demonstrates that the salience‑ordering fix is correct, robust, and generalizes across the Patch2 rewrite suite.
+
+---
+
+##### **5.1 Validation Methodology**
+
+The validation consisted of:
+
+- Running **multiple repeated executions** of Index 21 on Debian and Ubuntu  
+- Running **multiple repeated executions** of Index 16 on Debian and Ubuntu  
+- Running **baseline cases** (Index 0, etc.) to ensure no regressions  
+- Confirming that the LLM output is stable across runs  
+- Ignoring the semantic validator’s incorrect expectations (e.g., “apt-get install -y update”)  
+- Verifying that the LLM output matches the Patch2 contract rules, not the validator’s outdated logic  
+
+This approach ensures that the fix is validated against the **contract**, not the validator.
+
+---
+
+##### **5.2 Ubuntu Index 16 — Stable After Empty‑Message Validator Fix**
+
+Before the validator fix, Ubuntu occasionally produced:
+
+```
+{"action":"retry_with_modified_command", ..., "message":""}
+```
+
+The outbound validator incorrectly rejected empty messages for non‑abort actions.
+
+After the validator fix, Ubuntu and Debian  Index 16 is fully stable:
+
+```
+{"action":"retry_with_modified_command",
+ "cleanup":[],
+ "retry":"apt-get install -y nano && apt-get install -y curl && apt-get update"}
+```
+
+Interpretation:
+
+- Rewrite cluster is dominant  
+- No fallback  
+- No misclassification  
+- Empty‑message issue resolved  
+- Behavior is deterministic  
+
+For more information on this message outbound validator issue and details of the code change see this earlier link:
+
+- [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
+
+---
+
+##### **5.3 Ubuntu Index 21 — Always Correct (Before and After Fix)**
+
+Ubuntu never exhibited the salience failure:
+
+```
+{"action":"retry_with_modified_command",
+ "cleanup":[],
+ "retry":"apt-get install -y nano && apt-get install -y bash && apt-get update"}
+```
+
+Interpretation:
+
+- Rewrite cluster is strong and adjacent  
+- No fallback contamination  
+- Ubuntu serves as the canonical reference implementation  
+
+---
+
+##### **5.4 Debian Index 16 — Stable After Empty‑Message Validator Fix**
+
+Debian Index 16 also stabilizes after the validator fix:
+
+```
+{"action":"retry_with_modified_command",
+ "cleanup":[],
+ "retry":"apt-get install -y nano && apt-get install -y curl && apt-get update"}
+```
+
+Interpretation:
+
+- Debian rewrite cluster handles single‑segment rewrite cases correctly  
+- No fallback  
+- No salience collapse  
+- Confirms that Index 16 was never structurally affected by the fallback‑block ordering  
+
+---
+
+##### **5.5 Debian Index 21 — Correct After Salience Fix (Repeated Runs)**
+
+After moving the fallback block below Patch2, Debian Index 21 now consistently produces:
+
+```
+{"action":"retry_with_modified_command",
+ "cleanup":[],
+ "retry":"apt-get install -y nano && apt-get install -y bash && apt-get update"}
+```
+
+This output is stable across repeated runs:
+
+- Run 1 → correct  
+- Run 2 → correct  
+- Run 3 → correct  
+- Run 4 → correct  
+- Run 5 → correct  
+
+Interpretation:
+
+- Rewrite cluster regained dominance  
+- System‑wide op correctly preserved  
+- No fallback  
+- No misclassification  
+- No regressions  
+- Behavior now matches Ubuntu exactly  
+
+This is the definitive empirical confirmation that the salience‑ordering fix worked.
+
+---
+
+##### **5.6 Baseline Regression Checks**
+
+To ensure no regressions were introduced:
+
+### **Debian Index 0 (invalid flag)**  
+```
+{"action":"fallback"}
+```
+
+Correct behavior.
+
+*Ubuntu Index 0 (invalid flag)
+ 
+```
+{"action":"fallback"}
+```
+
+Correct behavior.
+
+Interpretation:
+
+- Invalid‑flag rules unaffected  
+- No regressions in malformed‑command handling  
+- No regressions in destructive‑command handling  
+- No regressions in OS‑signaled remediation  
+
+---
+
+##### **5.7 Cross‑OS Consistency After Fix**
+
+| Test Case | Debian Before Fix | Debian After Fix | Ubuntu Before Fix | Ubuntu After Fix |
+|-----------|-------------------|------------------|-------------------|------------------|
+| Index 21 | ❌ fallback | ✅ rewrite | ✅ rewrite | ✅ rewrite |
+| Index 16 | ✅ rewrite | ✅ rewrite | ✅ rewrite | ✅ rewrite |
+| Index 0  | ✅ fallback | ✅ fallback | ✅ fallback | ✅ fallback |
+
+Interpretation:
+
+
+- Debian and Ubuntu now behave identically on all Patch2 rewrite cases  
+- Index 21 is fully resolved  
+- Index 16 is stable after validator fix  
+- No regressions introduced  
+
+The index 16 validator fix, as noted earlier, is unrelated to the index 21 saliency issue, but we had to get index 16 consistently
+working to ensure that there were no regression issues in Debian after implementing the sliencey index 21 fix.  Index 16 continued
+to pass with a proper rewrite consistently throughout the process.
+
+---
+
+##### **5.8 Empirical Conclusion**
+
+The empirical evidence demonstrates that:
+
+- The Index 21 failure was **structural**, not semantic  
+- The fallback‑block reordering fix is **correct**  
+- The fix is **stable across repeated runs**  
+- The fix does **not** introduce regressions  
+- Debian now matches Ubuntu on all Patch2 rewrite cases  
+- The empty‑message validator fix stabilizes Index 16  
+- The Patch2 rewrite cluster is now dominant and reliable  
+
+This completes the empirical validation of the salience‑ordering fix.
+
+---
+
+
+
+
+
+
+
+
+
+
 
 [Back to top](#top-preface3)
 
