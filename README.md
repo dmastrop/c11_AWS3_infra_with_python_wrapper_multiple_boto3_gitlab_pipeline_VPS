@@ -2507,6 +2507,207 @@ This is a textbook example of **salience engineering** in LLM contract design.
 ---
 
 
+#### **SECTION 4 — Structural Salience Map**  
+
+##### Debian Patch2 package‑manager rewrite salience failure (Index 21)  
+##### Adjacency, cluster dominance, and salience‑weighted rule ordering
+
+This section presents the **structural salience maps** for:
+
+- Debian **before** the fix  
+- Ubuntu (stable reference)  
+- Debian **after** the fix  
+
+These maps illustrate the **vertical rule‑cluster ordering** that determines which instruction group dominates the model’s behavior during Patch2 multi‑segment rewrite evaluation.
+
+Transformers do not apply rules symbolically.  
+They apply **clusters of instructions** based on:
+
+- adjacency  
+- lexical density  
+- local dominance  
+- recency  
+- cluster coherence  
+
+Thus, the **vertical ordering** of rule blocks is the effective “control flow” of the LLM.
+
+---
+
+##### **4.1 Visual Legend**
+
+Each OS block is represented as a **vertical stack**:
+
+- **Higher blocks** exert stronger prior influence  
+- **Adjacent blocks** form coherent instruction clusters  
+- **Large blocks** with strong lexical cues dominate weaker ones  
+- **Fallback‑heavy blocks** suppress rewrite clusters if placed above them  
+- **Rewrite clusters** must be tight and high to remain dominant  
+
+We use the following symbols:
+
+- **🟥 Fallback‑heavy cluster** (dangerous above Patch2)  
+- **🟦 Rewrite cluster (Patch2)**  
+- **🟩 APT domain primitives**  
+- **🟨 OS‑signaled remediation**  
+- **⬜ Neutral / malformed‑command hardening**  
+- **⬛ dpkg / fix‑broken / Hash‑Sum mismatch**  
+
+---
+
+##### **4.2 Debian BEFORE FIX — Rewrite Cluster Diluted by Fallback Block**
+
+This is the exact structure that caused the Index 21 failure.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ⬜ 1. Bash malformed‑command hardening                         │
+│ ⬜ 2. Invalid package‑manager flags                            │
+│ 🟩 3. Debian APT domain primitives                             │
+│ 🟨 4. OS‑signaled remediation block                            │
+│                                                                │
+│ 🟥 5. FALLBACK BLOCK (BEFORE FIX)                              │
+│      - missing arguments → fallback                            │
+│      - wrong‑OS PM (single‑segment) rewrite rules              │
+│      - destructive commands → abort                            │
+│      - unrecognized commands → fallback                        │
+│                                                                │
+│ 🟦 6. PATCH2 REWRITE CLUSTER (WEAK, LOWER)                     │
+│      - good pipeline → fallback                                │
+│      - valid system‑wide op MUST NOT trigger fallback          │
+│      - multi‑segment rewrite MUST use retry_with_modified_cmd  │
+│      - system‑wide op requiring rewrite → fallback             │
+│      - invalid flag → fallback                                 │
+│                                                                │
+│ ⬛ 7. dpkg/fix‑broken rules                                     │
+│ ⬛ 8. Hash Sum mismatch rules                                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Interpretation:
+
+- The fallback block (🟥) sits **directly above** Patch2 (🟦).  
+- This creates a **fallback‑dominant prior** before the model reaches the rewrite rules.  
+- When the pipeline contains **two wrong‑OS PM segments**, the model crosses a **regime‑shift threshold** and misclassifies the valid system‑wide op.  
+- The system‑wide‑op fallback rule fires incorrectly.  
+- Debian produces **fallback** instead of rewrite.
+
+This is the exact structural cause of the Index 21 failure.
+
+---
+
+##### **4.3 Ubuntu (Stable Reference) — Rewrite Cluster Dominant**
+
+Ubuntu’s ordering is the canonical, stable structure.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ⬜ 1. Bash malformed‑command hardening                         │
+│ ⬜ 2. Invalid package‑manager flags                            │
+│ 🟩 3. Ubuntu APT domain primitives                             │
+│ 🟨 4. OS‑signaled remediation block                            │
+│                                                                │
+│ 🟦 5. PATCH2 REWRITE CLUSTER (TIGHT, HIGH, DOMINANT)           │
+│      - good pipeline → fallback                                │
+│      - valid system‑wide op MUST NOT trigger fallback          │
+│      - multi‑segment rewrite MUST use retry_with_modified_cmd  │
+│      - system‑wide op requiring rewrite → fallback             │
+│      - invalid flag → fallback                                 │
+│                                                                │
+│ ⬛ 6. dpkg/fix‑broken rules                                     │
+│ ⬛ 7. Hash Sum mismatch rules                                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Interpretation:
+
+- Patch2 rewrite cluster (🟦) is **high** and **adjacent** to APT primitives and OS‑signaled remediation.  
+- No fallback block sits above Patch2.  
+- Rewrite cluster remains **dominant**.  
+- Ubuntu always rewrites Index 21 correctly.
+
+This is why Ubuntu never exhibited the failure.
+
+---
+
+##### **4.4 Debian AFTER FIX — Rewrite Cluster Restored**
+
+After moving the fallback block **below** Patch2, Debian’s structure now matches Ubuntu’s effective salience ordering.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ⬜ 1. Bash malformed‑command hardening                         │
+│ ⬜ 2. Invalid package‑manager flags                            │
+│ 🟩 3. Debian APT domain primitives                             │
+│ 🟨 4. OS‑signaled remediation block                            │
+│                                                                │
+│ 🟦 5. PATCH2 REWRITE CLUSTER (RESTORED, DOMINANT)              │
+│      - good pipeline → fallback                                │
+│      - valid system‑wide op MUST NOT trigger fallback          │
+│      - multi‑segment rewrite MUST use retry_with_modified_cmd  │
+│      - system‑wide op requiring rewrite → fallback             │
+│      - invalid flag → fallback                                 │
+│                                                                │
+│ 🟥 6. FALLBACK BLOCK (AFTER FIX)                               │
+│      - missing arguments → fallback                            │
+│      - wrong‑OS PM (single‑segment) rewrite rules              │
+│      - destructive commands → abort                            │
+│      - unrecognized commands → fallback                        │
+│                                                                │
+│ ⬛ 7. dpkg/fix‑broken rules                                     │
+│ ⬛ 8. Hash Sum mismatch rules                                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Interpretation:
+
+- Rewrite cluster (🟦) is now **above** the fallback block (🟥).  
+- Rewrite cluster regains **adjacency** and **dominance**.  
+- System‑wide‑op classification is now correct.  
+- Debian now matches Ubuntu on Index 21.  
+- The fix required **no rule changes**, only **reordering**.
+
+This is the structural correction that resolved the salience failure.
+
+---
+
+##### **4.5 Cluster Interference Explanation**
+
+The Index 21 failure is explained by **cluster interference**:
+
+Before Fix (Debian)
+  
+- Fallback cluster (🟥) sits above rewrite cluster (🟦).  
+- Fallback cues accumulate:  
+  - malformed → fallback  
+  - unrecognized → fallback  
+  - missing arguments → fallback  
+- Rewrite cluster is diluted and weakened.  
+- When pipeline complexity increases (two wrong‑OS PM segments), the model crosses a **regime‑shift threshold**.  
+- System‑wide op is misclassified.  
+- Fallback fires incorrectly.
+
+After Fix (Debian)
+  
+- Rewrite cluster (🟦) is restored to a dominant position.  
+- Fallback cluster (🟥) is demoted below Patch2.  
+- Rewrite cluster becomes coherent and strong.  
+- Multi‑segment rewrite behavior stabilizes.  
+- Debian matches Ubuntu.
+
+Ubuntu
+  
+- Rewrite cluster is always dominant.  
+- No fallback contamination.  
+- No salience collapse.  
+- No regime shift.
+
+---
+
+##### **4.6 One‑Sentence Summary of Section 4**
+
+> **Debian failed Index 21 because a fallback‑heavy cluster sat above the Patch2 rewrite cluster, diluting rewrite salience; moving the fallback block below Patch2 restored rewrite‑cluster dominance and eliminated the failure.**
+
+---
 
 
 [Back to top](#top-preface3)
