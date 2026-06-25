@@ -2187,7 +2187,7 @@ Interpretation:
 - This contrast is essential to the case study
 
 The important note is that index16 test case has a similar structure to the index21 test case, execpt for the 1 addtional 
-rewrite. Everything else is very similar.
+rewrite present with teh index21 test case.  Everything else is very similar.
 
 ---
 
@@ -2259,8 +2259,10 @@ Interpretation:
 
 
 Note there was an intermittent message issue with the outbound validator for index 16 but that is not relevant to this index 21
-case study
-For more information on that issue see this section:
+case study.
+
+For more information on that issue see this section that was presented earlier:
+
 - [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
 
 
@@ -2273,6 +2275,11 @@ Key empirical conclusions:
 - Behavior is now stable and deterministic  
 
 ---
+
+
+
+
+
 
 #### **SECTION 3 — Root‑Cause Analysis**  
 
@@ -2372,7 +2379,56 @@ The fallback block “pulled” the model toward fallback interpretations, even 
 - at least one wrong‑OS PM segment exists  
 - and the system‑wide op is valid  
 
-This is why the model misclassified the valid system‑wide op (`apt-get update`) as “requiring rewrite,” triggering the system‑wide‑op fallback rule.
+This is why the model misclassified the valid system‑wide op (`apt-get update`) as “requiring rewrite,” triggering the system‑wide‑op fallback rule.  
+
+The prohibition of rewritting system-wide operations in is the OS-Mutation guard (global):
+
+```
+            "- If a rewrite, retry, or cleanup sequence would require ANY system‑wide\n"
+                "  operation that is NOT part of an OS‑signaled remediation flow, the LLM\n"
+                "  MUST return \"fallback\" instead.\n"
+```
+This is reinforced later in each domain primitives block as the following: 
+
+```
+                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      yum upgrade\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+```
+This is the rule that is involved in the misclassifcation leading to the fallback:
+
+```
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+```
+
+This is not the fallback rule block cited earlier that actually causes the problem. That block was presented in the Section 3.2.
+That block "contaminates" LLM reasoning because it creates  a **fallback‑dominant prior** before the model reaches the rewrite cluster.
+Then once the model does reach the rewrite cluster the rule above leads to the actual fallback application.
+So the root cause of the problem is not straightforward.
+
 
 ---
 
@@ -2429,7 +2485,9 @@ This is a **regime‑shift phenomenon**:
 
 > When enough fallback‑oriented cues accumulate above Patch2, and the pipeline complexity crosses a threshold (two wrong‑OS PM segments), the model switches from the rewrite instruction cluster to the fallback instruction cluster.
 
-Ubuntu never crosses this threshold because its rewrite cluster is not diluted.
+Ubuntu never crosses this threshold because its rewrite cluster is not diluted. It does not have this fallback contamination of the 
+rewrite cluster. Thus, the fix is to target the fallback contamaination and NOT to change rules in the rewrite patch2 cluster.
+This is very important. We don't want to explicitly be writing each and every test case into the rules.
 
 ---
 
@@ -2463,6 +2521,9 @@ Ubuntu’s salience landscape is stable and rewrite‑dominant.
 
 ##### **3.7 Why the Fix Works**
 
+Although the root cause is very complex, the fix is very straightfoward.
+
+
 The fix was:
 
 > **Move the fallback block below the Patch2 rewrite cluster.**
@@ -2481,6 +2542,9 @@ Only **ordering** changed.
 This confirms:
 
 > The failure was not semantic — it was structural.
+
+As such, no rules need to be changed or added to address this issue. This is a structural issue not a rule semantic issue.
+
 
 ---
 
@@ -2505,6 +2569,12 @@ The fix restored:
 This is a textbook example of **salience engineering** in LLM contract design.
 
 ---
+
+
+
+
+
+
 
 
 #### **SECTION 4 — Structural Salience Map**  
@@ -2852,7 +2922,7 @@ Debian Index 0 (invalid flag)
 
 Correct behavior.
 
-*Ubuntu Index 0 (invalid flag)
+Ubuntu Index 0 (invalid flag)
  
 ```
 {"action":"fallback"}
