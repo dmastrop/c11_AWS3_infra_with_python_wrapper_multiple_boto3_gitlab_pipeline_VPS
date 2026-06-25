@@ -3192,6 +3192,148 @@ This is a textbook example of **salience‑engineering‑driven contract repair*
 ---
 
 
+#### **SECTION 7a — Glossary of Salience‑Engineering Terms**  
+
+This glossary defines the core concepts used throughout the Index 21 case study.  
+All terms are grounded in established transformer‑interpretability literature (Anthropic, OpenAI, DeepMind, Redwood Research, Stanford HAI, etc.).
+
+---
+
+
+**Instruction Overshadowing**  
+A phenomenon where a **stronger, more lexically forceful, or more proximal instruction** suppresses or overrides a weaker one.  
+Transformers allocate attention to high‑salience patterns; when two rules compete, the “louder” one wins.
+
+**Contextual Dominance**  
+The effect where **earlier or denser rule clusters** shape the model’s prior before it evaluates later rules.  
+Transformers do not reset context between rule blocks; earlier clusters bias the interpretation of later ones.
+The fallback-heavy cluster, a very dense rule cluster shapes the later rules present in the rewrite cluster (patch2).
+
+**Instruction Competition**  
+When two or more rule clusters provide conflicting guidance, the model resolves the conflict by selecting the cluster with higher **attention weight**, **adjacency**, or **lexical strength**.  In this case, there are 2 segments that need rewrite, and one segment (system-wide
+operation) that should be preserved. The fallback-heavy block contaminates te rewrite (patch2) cluster such that the system-wide
+operation is mistakenly categorized as a rewrite. Thus fallback is incorrectly used as the action plan, because system-wide operations 
+should never be rewritten (if they actually exist then a fallback action plan needs to be used, i.e. nothing can be done).
+
+**Locality / Adjacency Effects**  
+Transformers heavily weight **nearby tokens**.  
+Rules placed close together form a **coherent instruction cluster**; rules separated by unrelated blocks lose influence.
+
+**Prompt Interference**  
+When unrelated or overly broad rules introduce noise that disrupts the intended interpretation of a later rule.  
+This is especially common when fallback‑heavy blocks appear above rewrite logic. In this case, the prompt is that fallback-heavy block
+that was placed right before the rewrite (patch2) cluster.
+
+**Regime‑Shift Thresholding**  
+A nonlinear effect where the model behaves correctly for simple cases but switches to a different instruction regime once complexity crosses a threshold (e.g., two wrong‑OS PM segments that require rewrite, instead of one).
+
+**Salience‑Cluster Activation**  
+A cluster of related rules (e.g., all Patch2 rewrite rules) acts as a single attractor.  
+If the cluster is diluted (this case) or displaced, it may fail to activate, OR improperly activate (this case) by applying an incorrect rule in that cluster.
+
+**Rewrite‑Cluster Dilution**  
+Occurs when rewrite rules are separated by fallback rules or placed too low in the rule stack.  
+Dilution weakens the rewrite cluster’s ability to dominate.
+
+**Fallback‑Cluster Contamination**  
+When fallback‑heavy rules appear above rewrite rules, they create a fallback‑dominant prior that contaminates the interpretation of rewrite cases.
+
+**Semantic Priority Graph**  
+A conceptual model describing how transformers implicitly rank rules based on salience, adjacency, lexical strength, and pattern density.  
+This is not symbolic logic — it is a weighted attention landscape.
+
+---
+
+
+#### **SECTION 7b — Lessons Learned (Mapped to the 14 Contract‑Engineering Principles)**  
+
+##### How the Index 21 salience failure illustrates the core principles of LLM contract engineering
+
+This section maps the **Index 21 Patch2 rewrite salience failure** — and ONLY that failure — to the 14 principles defined earlier in this chapter.
+
+---
+
+##### **Principle‑by‑Principle Mapping**
+
+###### **1. Prefer invariants over examples**  
+Index 21 failed because the rewrite invariant (“wrong‑OS PM → rewrite”) was structurally overshadowed by fallback examples placed above Patch2.  
+The invariant was correct — but its placement made it non‑salient.
+
+###### **2. Prefer negative constraints over positive recipes**  
+The fallback block contained several positive recipes (“If X, fallback”), which were lexically strong and overshadowed the negative constraint (“MUST NOT fallback when wrong‑OS PM segments exist”).  
+This contributed to fallback‑cluster dominance.
+
+###### **3. Use test cases to discover missing invariants, not to mint new rules**  
+Index 21 did **not** require a new rule.  
+The invariant already existed.  
+The failure revealed a **structural salience problem**, not a missing invariant.
+
+###### **4. Avoid rules that reference specific history patterns unless structural**  
+Index 21 had no history component, but the principle applies indirectly:  
+The fallback block contained rules that were too specific and too local, increasing their salience relative to the general rewrite invariant.
+
+###### **5. Avoid rules that depend on real‑world facts**  
+Not directly implicated in Index 21, but relevant because the rewrite logic depends only on textual evidence (wrong‑OS PM segments), not real‑world package metadata.
+
+###### **6. Make domain‑specific rules narrower, not broader**  
+The fallback block contained broad rules (“missing arguments → fallback”, “unrecognized → fallback”), which were too general and too loud.  
+These broad rules diluted the rewrite cluster.
+
+###### **7. Keep global rules more explicit than domain‑specific rules**  
+The Patch2 rewrite invariant was global in intent but not lexically stronger than the fallback block.  
+The fallback block’s imperative tone (“MUST use fallback”) overshadowed the rewrite logic.
+
+###### **8. When a regression appears, ask: “Which invariant is missing?”**  
+The invariant was not missing — it was **mis‑positioned**.  
+This case demonstrates that sometimes the invariant exists but is **not salient enough** due to ordering.
+
+###### **9. Write rules to control salience, not just logic**  
+This is the core principle illustrated by Index 21.  
+The logic was correct; the salience was not.  
+Reordering the fallback block restored the intended salience landscape.
+
+###### **10. Avoid bright‑spot rules**  
+The fallback block contained bright‑spot rules (highly specific, imperative, concrete).  
+These bright‑spot rules overshadowed the rewrite cluster and caused the misclassification.
+
+###### **11. Ensure global invariants are lexically stronger than local rules**  
+The rewrite invariant (“MUST rewrite wrong‑OS PM segments”) was lexically weaker than the fallback block.  
+This allowed fallback to dominate.
+
+###### **12. Avoid rules requiring multi‑step implicit inference**  
+The rewrite logic required the model to:  
+1. Identify wrong‑OS PM segments  
+2. Identify valid system‑wide ops  
+3. Preserve the system‑wide op  
+4. Rewrite only the PM segments  
+This multi‑step inference chain was disrupted by fallback contamination.
+
+###### **13. Re‑evaluate the semantic priority graph after adding new rules**  
+Debian had accumulated more fallback rules than Ubuntu.  
+These additions shifted the semantic priority graph, weakening the rewrite cluster.  
+Index 21 exposed this shift.
+
+###### **14. Keep the contract small, orthogonal, and invariant‑driven**  
+Debian’s fallback block was large, dense, and non‑orthogonal.  
+Its size and density made it too salient, violating this principle.  
+Moving it below Patch2 restored orthogonality.
+
+---
+
+###### **Section 7b. Summary**
+
+The Index 21 failure illustrates that:
+
+- The rules were correct.  
+- The ordering was not.  
+- Salience, not logic, determines which rule “wins.”  
+- Structural adjacency is as important as semantic correctness.  
+- Fallback clusters must never sit above rewrite clusters.  
+- Transformers follow salience, not symbolic logic.  
+
+This case is a clean demonstration of why **LLM contract engineering is fundamentally salience engineering**.
+
+---
 
 
 
