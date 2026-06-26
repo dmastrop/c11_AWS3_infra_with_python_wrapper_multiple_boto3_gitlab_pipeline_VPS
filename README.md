@@ -3515,7 +3515,52 @@ This is a textbook example of **salience engineering** in LLM contract design.
 
 ---
 
-##### **8.7 Final Summary**
+##### **8.7 What Edits or Cluster Block Changes  Would NOT Affect Saliency**
+
+After root causing this issue, one could ask what edits or cluster block edits, in genera, would not affect saliency of the 
+contract evaluation by the LLM. 
+
+
+If the lines or clusters that are being edited have the following characteristics, it is unlikely that editing them (within reason)
+will cause saliency issues in the LLM contract evaluation.
+
+
+- negative constraints
+
+- low salience
+
+- not part of any rewrite cluster
+
+- not part of any fallback cluster
+
+- not adjacent to Patch2
+
+- not adjacent to OS‑signaled remediation
+
+- not adjacent to idempotency
+
+- not lexically dominant 
+
+
+This is because even completely removing such lines or clusters will NOT, in general:
+
+- strengthen fallback
+
+- weaken rewrite
+
+- change adjacency
+
+- change cluster boundaries
+
+- change lexical density
+
+- change the semantic priority graph
+
+
+---
+
+
+##### **8.8 Final Summary**
 
 The Index 21 failure was not a semantic bug.  
 It was a **salience‑ordering failure** caused by a fallback‑heavy block placed above the Patch2 rewrite cluster in Debian.
