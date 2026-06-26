@@ -403,9 +403,9 @@ def recover(request: RecoveryRequest):
                 #"- You MUST ignore the \\\"tags\\\" field completely when deciding between\\n"
                 #"  \\\"fallback\\\", \\\"cleanup_and_retry\\\", \\\"retry_with_modified_command\\\", or \\\"abort\\\".\\n"
                 # Keep the restriction on instance_id and ip fields in the context.
-                "- The \\\"instance_id\\\" field MUST be ignored. It is metadata only.\\n"
-                "- The \\\"ip\\\" field MUST be ignored. It is metadata only.\\n"
-                "- You MUST base your decision ONLY on: command, stdout, stderr, exit_status, history, and os_info.\\n"
+                "- The \"instance_id\" field MUST be ignored. It is metadata only.\n"
+                "- The \"ip\" field MUST be ignored. It is metadata only.\n"
+                "- You MUST base your decision ONLY on: command, stdout, stderr, exit_status, history, and os_info.\n"
 
 
 
@@ -775,11 +775,13 @@ def recover(request: RecoveryRequest):
                 # UBUNTU (APT) DOMAIN RULES — Applies ONLY when os_name = "Ubuntu"
                 # ============================================================
                 "These rules apply ONLY when os_name = \"Ubuntu\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+                
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -1052,11 +1054,12 @@ def recover(request: RecoveryRequest):
                 # ============================================================
 
                 "These rules apply ONLY when os_name = \"Debian\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
@@ -1328,11 +1331,13 @@ def recover(request: RecoveryRequest):
                 # ============================================================
 
                 "These rules apply ONLY when os_name == 'RHEL' AND os_version starts with '9'. They MUST NOT apply to CentOS 7, CentOS 8, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n
+                "
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
                 "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
@@ -1480,10 +1485,12 @@ def recover(request: RecoveryRequest):
                 # are identical across these OS families.
 
                 "These rules apply ONLY when os_name = \"Amazon Linux\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -1634,10 +1641,12 @@ def recover(request: RecoveryRequest):
                 # ============================================================
 
                 "These rules apply ONLY when os_name == 'Amazon Linux 2023'. They MUST NOT apply to Amazon Linux 1/2, RHEL, CentOS, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -1804,11 +1813,13 @@ def recover(request: RecoveryRequest):
                 ##### Revision 10 — CentOS 7 YUM domain primitives and error handling rules #####
                 
                 "These rules apply ONLY when os_name == 'CentOS' AND os_version starts with '7'. They MUST NOT apply to RHEL, CentOS 8, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-                
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"                
+
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
                 "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
@@ -1970,11 +1981,12 @@ def recover(request: RecoveryRequest):
                 ##### Revision 11 — CentOS 8 DNF/YUM domain primitives and error handling rules #####
 
                 "These rules apply ONLY when os_name == 'CentOS' AND os_version starts with '8'. They MUST NOT apply to RHEL, CentOS 7, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -2143,10 +2155,12 @@ def recover(request: RecoveryRequest):
                 # compatibility shim, but DNF is the canonical package manager.
 
                 "These rules apply ONLY when os_name == 'Fedora'. They MUST NOT apply to RHEL, CentOS, Amazon Linux, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -2311,10 +2325,12 @@ def recover(request: RecoveryRequest):
                 # ============================================================
 
                 "These rules apply ONLY when os_name = \"Alpine\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -2473,11 +2489,12 @@ def recover(request: RecoveryRequest):
 
                 "These rules apply ONLY when os_name == 'Linux' AND os_version == 'busybox'.\n"
                 "These BusyBox domain primitives apply ONLY when BusyBox is the primary OS environment. They MUST NOT override Linux-family domain primitives when BusyBox is installed as a package or command suite on Ubuntu, Debian, RHEL, CentOS, Fedora, Amazon Linux, or Alpine.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.9 — ash malformed-command hardening (BusyBox-only) #####
                 ##### This block is analagous to the bash malformed command harndening that is included in the linux os 
@@ -2602,11 +2619,12 @@ def recover(request: RecoveryRequest):
                 "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-brew\".\n"
                 "They MUST NOT apply to macOS-zsh, Linux-family OSes, BusyBox, Windows, PAN-OS, or Cisco IOS.\n"
                 "\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Revision 6.10 — Bash/zsh malformed-command hardening (macOS-brew) #####
                 "- These rules harden malformed-command handling for macOS-brew.\n"
@@ -2821,11 +2839,12 @@ def recover(request: RecoveryRequest):
                 # no deterministic remediation, and no PM idempotency semantics.
 
                 "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-zsh\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 ##### Invalid flags (macOS‑zsh) #####   #### PATCH stress_tester1 ####
                 ##### This needs to be moved before all other blocks. An invalid flag is always an immedidate fallback
@@ -2972,10 +2991,12 @@ def recover(request: RecoveryRequest):
 
                 "These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
                 "They MUST NOT apply to Linux-family OSes, BusyBox, macOS, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 # ============================================================
                 # Revision 6.12 — PowerShell malformed-command hardening
@@ -3182,11 +3203,12 @@ def recover(request: RecoveryRequest):
                 "These rules apply ONLY when os_name = \"Linux\" AND os_version = \"powershell-core\".\n"
                 "They MUST NOT apply to Windows, macOS, BusyBox, PAN-OS, or Cisco IOS.\n"
                 "They MUST NOT apply when os_version == \"busybox\" even if PowerShell is installed as a package.\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 # ============================================================
                 # Revision 6.13 — PowerShell Core on Linux malformed-command hardening
@@ -3456,11 +3478,12 @@ def recover(request: RecoveryRequest):
                 # CISCO IOS DOMAIN RULES — Applies ONLY when os_name = "Cisco IOS" (This entire block is Revsion 3)
                 # ============================================================
                 "These rules apply ONLY when os_name = \"Cisco IOS\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 # ============================================================
                 # CISCO IOS RULES
@@ -3653,10 +3676,12 @@ def recover(request: RecoveryRequest):
                 # PAN-OS DOMAIN RULES — Applies ONLY when os_name = "PAN-OS" (Revision 19)
                 # ============================================================
                 "These rules apply ONLY when os_name = \"PAN-OS\".\n"
-                "IMPORTANT:\\n"
-                "- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                "- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                "- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
                 # ============================================================
                 # PAN-OS RULES
