@@ -2006,6 +2006,25 @@ behavior from the LLM.
 
 
 
+#### **Table of Contents — Debian Patch2 Salience Case Study**
+<a name="top-patch2-case-study"></a>
+
+- [Abstract — Debian Patch2 Package‑Manager Rewrite Salience Case Study](#patch2-abstract)
+- [SECTION 1 — Introduction to the Debian Patch2 Package‑Manager Rewrite Salience Case Study](#patch2-section1)
+- [SECTION 2 — Full Reproduction of the Failure](#patch2-section2)
+- [SECTION 3 — Root‑Cause Analysis](#patch2-section3)
+- [SECTION 4 — Structural Salience Map](#patch2-section4)
+- [SECTION 5 — Empirical Validation](#patch2-section5)
+- [SECTION 6 — The Fix (Engineering Explanation)](#patch2-section6)
+- [SECTION 7a — Glossary of Salience‑Engineering Terms](#patch2-section7a)
+- [SECTION 7b — Lessons Learned (Mapped to the 14 Contract‑Engineering Principles)](#patch2-section7b)
+- [SECTION 8 — Final Case Study Narrative](#patch2-section8)
+
+
+
+
+
+<a name="patch2-abstract"></a>
 #### **Abstract — Debian Patch2 Package‑Manager Rewrite Salience Case Study**
 
 This case study analyzes a deterministic but non‑obvious failure mode in a rule‑based LLM contract system, where Debian incorrectly returned a `fallback` action for a multi‑segment Patch2 rewrite test case despite having the same rewrite rules as Ubuntu. The divergence occurred in **Index 21**, a pipeline containing two wrong‑OS package‑manager segments followed by a valid system‑wide operation. Ubuntu consistently produced the correct `retry_with_modified_command` rewrite, while Debian incorrectly selected `fallback`.
@@ -2018,6 +2037,15 @@ The fix required **no changes to rule semantics**. The fallback block was moved 
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
+
+
+
+
+
+
+
+<a name="patch2-section1"></a>
 #### **SECTION 1 — Introduction to the  Debian Patch2 Package-Manager Rewrite Salience Case Study**
 
 This case illustrates a clean, empirically verifiable example of **instruction overshadowing**, **contextual dominance**, and **prompt interference** in a rule‑based LLM control stack. The Ubuntu and Debian Patch2 rewrite rules for wrong‑OS package‑manager pipelines are textually identical, yet the model initially behaved differently on the two OSes for a specific test case:
@@ -2066,7 +2094,16 @@ This case demonstrates how **locality and adjacency effects**, **instruction com
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
+
+
+
+
+
+
+
+<a name="patch2-section2"></a>
 #### **SECTION 2 — Full Reproduction of the Failure**  
 
 ##### Debian Patch2 package‑manager rewrite salience failure (Test Case Index 21) 
@@ -2276,11 +2313,17 @@ Key empirical conclusions:
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
 
 
 
 
+
+
+
+
+<a name="patch2-section3"></a>
 #### **SECTION 3 — Root‑Cause Analysis**  
 
 ##### Debian Patch2 package‑manager rewrite salience failure (Index 21)
@@ -2570,6 +2613,7 @@ This is a textbook example of **salience engineering** in LLM contract design.
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
 
 
@@ -2577,6 +2621,9 @@ This is a textbook example of **salience engineering** in LLM contract design.
 
 
 
+
+
+<a name="patch2-section4"></a>
 #### **SECTION 4 — Structural Salience Map**  
 
 ##### Debian Patch2 package‑manager rewrite salience failure (Index 21)  
@@ -2779,6 +2826,17 @@ Ubuntu
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
+
+
+
+
+
+
+
+
+
+<a name="patch2-section5"></a>
 #### **SECTION 5 — Empirical Validation**  
 
 ##### Demonstrating stability, determinism, and cross‑OS consistency after the salience‑ordering fix
@@ -2977,8 +3035,16 @@ This completes the empirical validation of the salience‑ordering fix.
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
 
+
+
+
+
+
+
+<a name="patch2-section6"></a>
 #### **SECTION 6 — The Fix (Engineering Explanation)**  
 
 ##### Why reordering the fallback block restored rewrite‑cluster dominance in Debian
@@ -3191,7 +3257,16 @@ This is a textbook example of **salience‑engineering‑driven contract repair*
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
+
+
+
+
+
+
+
+<a name="patch2-section7a"></a>
 #### **SECTION 7a — Glossary of Salience‑Engineering Terms**  
 
 This glossary defines the core concepts used throughout the Index 21 case study.  
@@ -3244,7 +3319,15 @@ This is not symbolic logic — it is a weighted attention landscape.
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
+
+
+
+
+
+
+<a name="patch2-section7b"></a>
 #### **SECTION 7b — Lessons Learned (Mapped to the 14 Contract‑Engineering Principles)**  
 
 ##### How the Index 21 salience failure illustrates the core principles of LLM contract engineering
@@ -3335,6 +3418,15 @@ This case is a clean demonstration of why **LLM contract engineering is fundamen
 
 ---
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
+
+
+
+
+
+
+
+<a name="patch2-section8"></a>
 #### **SECTION 8 — Final Case Study Narrative**  
 
 ##### Debian Patch2 package‑manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control
@@ -3585,8 +3677,10 @@ This is why **LLM contract engineering is fundamentally salience engineering**.
 ---
 
 
+[Back to top of Debian Patch2 package manager rewrite salience case study](#debian-patch2-salience-case-study)
 
 
+---
 
 
 [Back to top](#top-preface3)
