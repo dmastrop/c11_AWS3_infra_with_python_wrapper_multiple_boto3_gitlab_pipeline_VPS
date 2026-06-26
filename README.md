@@ -607,7 +607,7 @@ As long as Plane‑2 exists, Plane‑1 can be adapted to any domain where LLM‑
 ---
 
 
-### **B. Current OS Remediation Architecture and Context Model**
+#### **B. Current OS Remediation Architecture and Context Model**
 
 The existing remediation engine operates over a Plane‑2 substrate composed of distributed AWS nodes, each executing real system commands and producing deterministic machine signals such as stdout, stderr, exit codes, registry entries, and installation state markers. This substrate provides the stable execution environment required for semantic interpretation. Above it, Plane‑1 implements the LLM‑driven contract layer, which interprets command semantics, applies rewrite logic, enforces safety invariants, and selects deterministic remediation actions.
 
