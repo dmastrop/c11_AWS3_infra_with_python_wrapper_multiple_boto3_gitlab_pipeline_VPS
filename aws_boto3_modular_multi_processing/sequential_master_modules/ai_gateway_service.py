@@ -1336,8 +1336,8 @@ def recover(request: RecoveryRequest):
                 #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
                 #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
                 "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
-                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n
-                "
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
                 "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
