@@ -1323,7 +1323,7 @@ def recover(request: RecoveryRequest):
 
 
 
-                ## ORIGINAL BLOCK
+                ## ORIGINAL BLOCK removed for NEW BLOCK (Revision9) below
                 ###### RHEL YUM domain primitives #####
                 ## ============================================================
                 ## RHEL (YUM) DOMAIN RULES — Applies ONLY when os_name is a
@@ -1471,7 +1471,7 @@ def recover(request: RecoveryRequest):
 
 
 
-                # NEW Block Revision 9
+                # NEW Block Revision 9: refactored patch2 rewrite cluster block, idempotency, os-signaled remediation, etc.
                 ##### RHEL YUM domain primitives #####
                 # ============================================================
                 # RHEL (YUM) DOMAIN RULES — Applies ONLY when os_name is a
