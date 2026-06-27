@@ -1,0 +1,47 @@
+{
+  "os_name": "RHEL",
+  "os_version": "9",
+  "kernel": "5.14.0",
+  "package_managers": ["yum"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'appstream': Cannot download repomd.xml: repomd.xml signature could not be verified\nMetadata file does not match checksum\nError: Unable to find a match: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "rhel-osmut-001",
+      "ip": "10.0.9.201",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed\nBDB0113 Thread/process 12345/0x7f... failed: BDB1507 Thread died in Berkeley DB library\nerror: db5 error(-30973) from dbenv->open: BDB0087 DB_RUNRECOVERY: Fatal error, run database recovery",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "rhel-osmut-002",
+      "ip": "10.0.9.202",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Error: Failed to download metadata for repo 'baseos': Cannot prepare internal mirrorlist: No URLs in mirrorlist\nSome index files failed to download. They have been ignored, or old ones used instead.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "rhel-osmut-003",
+      "ip": "10.0.9.203",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
