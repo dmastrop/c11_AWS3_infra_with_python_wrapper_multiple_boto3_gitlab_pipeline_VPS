@@ -771,6 +771,10 @@ def recover(request: RecoveryRequest):
 
 
 
+
+
+
+
                 # ============================================================
                 # UBUNTU (APT) DOMAIN RULES — Applies ONLY when os_name = "Ubuntu"
                 # ============================================================
@@ -1623,6 +1627,7 @@ def recover(request: RecoveryRequest):
                 "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
                 "        for this OS (e.g., 'yum install -y <pkg>' on RHEL, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL 'yum install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'yum' and did not require a package-manager rewrite.\n"
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
