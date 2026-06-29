@@ -1271,8 +1271,8 @@ def recover(request: RecoveryRequest):
                 "- If the command is missing arguments (e.g., 'apt-get install'),\n"
                 "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
                 "  can be constructed WITHOUT guessing a package name.\n"
-                # Add single segment interactive flag -y processsing:
-                "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew),\n"
+                # Add single segment interactive flag -y processsing:   Add pacman to the list below.
+                "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew, pacman),\n"
                 "  the LLM MUST rewrite the command using the correct Debian package manager ('apt-get')\n"
                 "  and retry when a safe, concrete package name is present.\n"
                 "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
@@ -1543,10 +1543,14 @@ def recover(request: RecoveryRequest):
                 "- The command 'yum update -y' refreshes package metadata.\n"
                 "- The command 'yum install -y <pkg>' installs packages.\n"
                 "- The flag '-y' auto-confirms installation.\n"
-                "- If the command uses a package manager that does NOT match RHEL (apt, apt-get, apt-cache, dnf, apk, brew),\n"
-                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name is present. This includes commands\n"
-                "  such as 'apt install <pkg>' and 'apt-get install <pkg>', which MUST be rewritten to:\n"
+                # Make sure this refers to SINGLE-SEGMENT so this does not corrupt multiple segment in patch2 and also add pacman to the PM list.
+                "- If the command is a SINGLE-SEGMENT command (no '&&') and uses a package manager\n"
+                "  that does NOT match RHEL (apt, apt-get, apt-cache, dnf, apk, pacman, brew),\n"
+                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name\n"
+                "  is present. This includes commands such as 'apt install <pkg>' and\n"
+                "  'apt-get install <pkg>', which MUST be rewritten to:\n"
                 "      yum install -y <pkg>\n"
+                "\n"
                 "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
                 "  unless a safe, concrete correction can be constructed WITHOUT guessing a package name.\n"
                 "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
