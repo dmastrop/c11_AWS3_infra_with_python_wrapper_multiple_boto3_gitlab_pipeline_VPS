@@ -905,12 +905,18 @@ This architecture scales because:
 - Mutation, scoring, and reinforcement enable continuous improvement  
 - The paradigm is domain‑agnostic  
 
-Why Plane-2 as the substrate and Plane-1 as the semantic contract layer?  This too is visually semenatic
+Why Plane-2 as the substrate and Plane-1 as the semantic contract layer?  This too is visually semenatic:
 
 Plane-1
+---
 Plane-2
 
+
+
 Plane-1 "rides" over the Plane-2 deterministic substrate executor.
+
+Plane-1 (LLM) takes action based upon a context that is a result of an interaction with the Plane-2 deterministic substrate, 
+with the objective being global and universal remediation across the Plane-2 substrate.  
 
 
 This clean architecture transforms the system into a general‑purpose LLM contract engine capable of stabilizing, correcting, and 
