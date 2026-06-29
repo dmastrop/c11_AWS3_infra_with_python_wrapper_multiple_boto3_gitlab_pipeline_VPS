@@ -1544,14 +1544,9 @@ def recover(request: RecoveryRequest):
                 "- The command 'yum install -y <pkg>' installs packages.\n"
                 "- The flag '-y' auto-confirms installation.\n"
                 # Make sure this refers to SINGLE-SEGMENT so this does not corrupt multiple segment in patch2 and also add pacman to the PM list.
-                # This block is affecting saliency in patch2 block below.
-                "- If the command is a SINGLE-SEGMENT command (no '&&') and uses a package manager\n"
-                "  that does NOT match RHEL (apt, apt-get, apt-cache, dnf, apk, pacman, brew),\n"
-                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name\n"
-                "  is present. This includes commands such as 'apt install <pkg>' and\n"
-                "  'apt-get install <pkg>', which MUST be rewritten to:\n"
-                "      yum install -y <pkg>\n"
-                "\n"
+                # The SINGLE-SEGEMENT  block is affecting saliency in patch2 block below.
+                # MOVE this block to after the patch2 rewrite cluster block
+                #
                 "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
                 "  unless a safe, concrete correction can be constructed WITHOUT guessing a package name.\n"
                 "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
@@ -1664,6 +1659,21 @@ def recover(request: RecoveryRequest):
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
+
+
+                # MOVE this SINGLE-SEGMENT block to AFTER the patch2 rewrite cluster block above. 
+                # There is a saliency issue that can only be resolved by moving this block to the location below. 
+                # Otherwise index 16 and 21 rewrite patch2 test cases fail. Somehting simlar was done for Debian domain primitives block.
+                # There is a long write up on this case study in the README PREFACE UPDATE3
+                "- If the command is a SINGLE-SEGMENT command (no '&&') and uses a package manager\n"
+                "  that does NOT match RHEL (apt, apt-get, apt-cache, dnf, apk, pacman, brew),\n"
+                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name\n"
+                "  is present. This includes commands such as 'apt install <pkg>' and\n"
+                "  'apt-get install <pkg>', which MUST be rewritten to:\n"
+                "      yum install -y <pkg>\n"
+                "\n"
+
+
 
 
                 # YUM metadata / repo corruption (OS-signaled remediation — RHEL-specific)
