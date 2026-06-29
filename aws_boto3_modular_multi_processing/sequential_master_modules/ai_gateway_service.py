@@ -1600,17 +1600,6 @@ def recover(request: RecoveryRequest):
                 "  a package manager that does NOT belong to this OS, and the command succeeded\n"
                 "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
                 "\n"
-                # Saliency in this RHEL domain is being affected by teh SINGLE-SEGMENT rule above, before this patch2 so to rebalance saliency here
-                # for system-wide commands that are part of multi-segment commands need this:
-                "- A system-wide operation that is already valid for this OS MUST NEVER be considered\n"
-                "  as 'requiring rewriting' solely because other segments in the pipeline require\n"
-                "  rewriting. The LLM MUST preserve such system-wide segments verbatim and MUST NOT\n"
-                "  use 'fallback' on the basis of their presence.\n"
-                "\n"
-                "- Only when the system-wide segment ITSELF uses a package manager that does NOT\n"
-                "  belong to this OS (e.g., 'apt-get update' on RHEL) does it 'require rewriting',\n"
-                "  and ONLY in that case MUST the LLM use 'fallback'.\n"
-                "\n"
                 # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
                 # command is "good". These commands need to have non-system-wide commands rewritten and the system-wide command
                 # preserved using retry_with_modified_command.
