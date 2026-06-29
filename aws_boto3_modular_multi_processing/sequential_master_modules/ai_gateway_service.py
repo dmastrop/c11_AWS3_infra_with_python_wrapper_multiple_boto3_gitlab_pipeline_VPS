@@ -1544,6 +1544,7 @@ def recover(request: RecoveryRequest):
                 "- The command 'yum install -y <pkg>' installs packages.\n"
                 "- The flag '-y' auto-confirms installation.\n"
                 # Make sure this refers to SINGLE-SEGMENT so this does not corrupt multiple segment in patch2 and also add pacman to the PM list.
+                # This block is affecting saliency in patch2 block below.
                 "- If the command is a SINGLE-SEGMENT command (no '&&') and uses a package manager\n"
                 "  that does NOT match RHEL (apt, apt-get, apt-cache, dnf, apk, pacman, brew),\n"
                 "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name\n"
@@ -1598,6 +1599,17 @@ def recover(request: RecoveryRequest):
                 "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
                 "  a package manager that does NOT belong to this OS, and the command succeeded\n"
                 "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                # Saliency in this RHEL domain is being affected by teh SINGLE-SEGMENT rule above, before this patch2 so to rebalance saliency here
+                # for system-wide commands that are part of multi-segment commands need this:
+                "- A system-wide operation that is already valid for this OS MUST NEVER be considered\n"
+                "  as 'requiring rewriting' solely because other segments in the pipeline require\n"
+                "  rewriting. The LLM MUST preserve such system-wide segments verbatim and MUST NOT\n"
+                "  use 'fallback' on the basis of their presence.\n"
+                "\n"
+                "- Only when the system-wide segment ITSELF uses a package manager that does NOT\n"
+                "  belong to this OS (e.g., 'apt-get update' on RHEL) does it 'require rewriting',\n"
+                "  and ONLY in that case MUST the LLM use 'fallback'.\n"
                 "\n"
                 # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
                 # command is "good". These commands need to have non-system-wide commands rewritten and the system-wide command
