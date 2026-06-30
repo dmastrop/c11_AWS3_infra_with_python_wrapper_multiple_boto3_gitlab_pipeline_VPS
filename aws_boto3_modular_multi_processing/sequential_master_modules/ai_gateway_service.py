@@ -483,6 +483,13 @@ GLOBAL_RULES = (
 
 
 
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+
+
+
                 ##### DOMAIN SPECIFIC PRIMITIVES ######
                 ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
                 ##### rule leakage between different OSes and platforms, etc.
