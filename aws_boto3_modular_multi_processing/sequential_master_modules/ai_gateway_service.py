@@ -845,6 +845,9 @@ def recover(request: RecoveryRequest):
     os_info = context.get("os_info", {})
 
 
+    # Select the correct OS block from above (Ubuntu, Debian, etc.....)
+    os_rules = get_os_rules(os_info)
+
     if request.schema_version != "1.0":
         return {"error": "Unsupported schema version", "action": "fallback"}
 
