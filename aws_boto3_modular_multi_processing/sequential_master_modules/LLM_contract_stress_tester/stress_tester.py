@@ -216,11 +216,12 @@ def main():
     print("\n=== VALIDATION RESULT ===")
     print(f"OS: {validation['os_name']} {validation['os_version']}")
     print(f"Command: {validation['command']}")
-    print(f"Status: {validation['status']}")
-    if validation["errors"]:
-        print("Errors:")
-        for err in validation["errors"]:
-            print(f"  - {err}")
+    # Deprecate the output of the validator as the semantics rules python files are not being maintained.
+    #print(f"Status: {validation['status']}")
+    #if validation["errors"]:
+    #    print("Errors:")
+    #    for err in validation["errors"]:
+    #        print(f"  - {err}")
     print(f"[DEBUG] schema os_name={schema.get('os_name')}, schema os_version={schema.get('os_version')}")
     print("========================\n")
 
