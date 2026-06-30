@@ -839,6 +839,12 @@ def recover(request: RecoveryRequest):
 
     # Extract context from AI Request Sender POST to this AI Gateway Service
     context = request.context
+    
+    # Extract the os_info out of the context. The context can be either from real life module2f in which case the os_name and
+    # os_version are used in os_info, or from the stress_tester.py, where name and version are used in the os_info
+    os_info = context.get("os_info", {})
+
+
     if request.schema_version != "1.0":
         return {"error": "Unsupported schema version", "action": "fallback"}
 
