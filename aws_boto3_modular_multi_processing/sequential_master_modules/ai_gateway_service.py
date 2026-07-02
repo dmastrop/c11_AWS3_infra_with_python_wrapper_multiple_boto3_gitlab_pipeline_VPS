@@ -101,9 +101,15 @@ import requests
 import os
 import json
 
+
+
+
+
+
 # ============================================================
-# GLOBAL RULES BLOCK
+#################################### GLOBAL RULES BLOCK  #################################################################
 # ============================================================
+
 
 GLOBAL_RULES = (
 
@@ -526,6 +532,9 @@ GLOBAL_RULES = (
 
                 )
 
+
+
+####################################### BEGIN OS RULES BLOCKS ############################################################
 
 
 UBUNTU_RULES = (
@@ -1324,8 +1333,46 @@ RHEL_RULES = (
 
 )        
 
+CENTOS_7_RULES = (
+)
 
+CENTOS_8_RULES = (
+)
 
+FEDORA_RULES = (
+)
+
+AMAZON_LINUX_2_RULES = (
+)
+
+AMAZON_LINUX_2023_RULES = (
+)
+
+ALPINE_RULES = (
+)
+
+BUSYBOX_RULES = (
+)
+
+MACOS_BREW_RULES = (
+)
+
+MACOS_ZSH_RULES = (
+)
+
+WINDOWS_POWERSHELL_2022_RULES = (
+)
+
+LINUX_POWERSHELL_CORE_6_and_7_RULES = (
+)
+
+CISCO_IOS_RULES = (
+)
+
+PANOS_RULES = (
+)
+
+############################################### END of RULES BLOCKS #######################################################
 
 app = FastAPI()
 
