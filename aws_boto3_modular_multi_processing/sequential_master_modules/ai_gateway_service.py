@@ -529,7 +529,6 @@ GLOBAL_RULES = (
 
 
 UBUNTU_RULES = (
-
                 # ============================================================
                 # UBUNTU (APT) DOMAIN RULES — Applies ONLY when os_name = "Ubuntu"
                 # ============================================================
@@ -540,7 +539,7 @@ UBUNTU_RULES = (
                 #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
                 "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
                 "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
-
+                
 
                 ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
                 "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
@@ -572,7 +571,7 @@ UBUNTU_RULES = (
                 "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
-                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"                
                 "\n"
 
                 ##### Invalid package‑manager flags (Linux-family OSes) PATCH stress_tester1  #####
@@ -582,7 +581,7 @@ UBUNTU_RULES = (
                 "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
                 "- The LLM MUST NOT infer user intent for unknown flags.\n"
                 "\n"
-
+               
 
                 # Idempotency regression patch — OS-Mutation Guard Rule
                 # Moved this to top as a global block
@@ -597,7 +596,7 @@ UBUNTU_RULES = (
                 "- Ubuntu uses 'apt' and 'apt-get' as its package managers.\n"
                 "- The command 'apt-get update' refreshes package indexes.\n"
                 "- The command 'apt-get install <pkg>' installs packages.\n"
-                "- The flag '-y' auto-confirms installation.\n"
+                "- The flag '-y' auto-confirms installation.\n"         
                 # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
                 # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
                 # fallback scenarios that do NOT involve OS-signalled remediation.
@@ -647,7 +646,7 @@ UBUNTU_RULES = (
                 "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
                 "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
-
+               
 
                 ##### Package Manager Classification (Linux-family OSes) #####
                 "\n"
@@ -696,7 +695,7 @@ UBUNTU_RULES = (
                 "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
                 "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
                 "\n"
-                                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
+                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
                 # wide command should be left as is and the segments that are using a PM that does not belong to this OS
                 # should be re-written using all the patch2 rewrite rules below.
                 "- This previous exception for valid system-wide operations applies ONLY when the\n"
@@ -705,7 +704,7 @@ UBUNTU_RULES = (
                 "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
                 "\n"
                 # rewrite rules follow below:
-                # add system-wide ops that are already valid for this OS and do NOT require rewriting
+                # add system-wide ops that are already valid for this OS and do NOT require rewriting               
                 # Make sure to exclude the use of fallback here. MUST NOT use fallback.
                 "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
                 "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
@@ -721,7 +720,7 @@ UBUNTU_RULES = (
                 "  It MUST return a FULL rewritten pipeline where:\n"
                 "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
                 "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
-                                "      • ALL 'apt-get install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'apt-get' and did not require a package-manager rewrite.\n"
+                "      • ALL 'apt-get install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'apt-get' and did not require a package-manager rewrite.\n"
                 "      • ALL other segments are preserved verbatim,\n"
                 "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
                 "\n"
@@ -754,6 +753,7 @@ UBUNTU_RULES = (
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
 
+               
                 #### Revision 6.4 (Hash Sum mismatch)  (replaced with Revision 6.5)
 
                 ##### Revision 6 addtions to the ubuntu domain primitives  #####
@@ -761,7 +761,7 @@ UBUNTU_RULES = (
                 "  a cleanup_and_retry action with the following retry sequence:\n"
                 "    * dpkg --configure -a\n"
                 "    * apt-get install -y <pkg>\n"
-
+               
                 ##### Revision 6.2
                 "- If stderr CONTAINS the EXACT phrase 'held broken packages', the LLM MUST NOT run 'apt --fix-broken install'.\n"
                 "  This condition is non-deterministic and MUST use fallback.\n"

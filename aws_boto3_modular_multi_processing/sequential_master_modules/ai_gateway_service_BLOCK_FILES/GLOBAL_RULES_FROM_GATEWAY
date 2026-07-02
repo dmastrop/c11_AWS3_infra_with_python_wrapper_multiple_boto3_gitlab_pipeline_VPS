@@ -1,0 +1,421 @@
+                ##### HIGH LEVEL ORGANIZATION ####
+                #GLOBAL CONTRACT RULES
+                #GLOBAL RETRY RULES
+                #GLOBAL CLEANUP RULES
+                #GLOBAL CLEANUP_AND_RETRY SEMANTICS
+                #GLOBAL IDEMPOTENCY RULES   ← anchor point
+                #GLOBAL OS‑MUTATION GUARD   ← inserted here
+                #GLOBAL LITERAL PRECEDENCE RULES
+                #GLOBAL FALLBACK RULES
+                #GLOBAL ACTION MEANINGS
+                #GLOBAL ABORT RULES
+                #GLOBAL NETWORK FAILURE SEMANTICS
+                #GLOBAL SAFETY CONSTRAINTS
+                #GLOBAL ADDITIONAL SAFETY CONSTRAINTS
+                #GLOBAL CLEANUP SEQUENCE RULES
+                #GLOBAL CONTEXT (dynamic)
+                #GLOBAL LINUX MALFORMED COMMAND RULES
+                #OS-SPECIFIC DOMAIN PRIMITIVES (Ubuntu, Debian, RHEL, etc.)
+
+
+
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # Revision 1: Added the messages requirement for abort and notes as well to the LLM
+                # ============================================================
+                "CONTRACT:\n"
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "  \"message\": string\n"
+                "}\n\n"
+                "Notes:\n"
+                "- \"message\" is REQUIRED when action = \"abort\".\n"
+                "- \"message\" is OPTIONAL for all other actions.\n"
+                "- \"cleanup\" MUST be an array of literal shell commands.\n"
+                "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
+
+
+
+
+                # ============================================================
+                # CORE RULES
+                # ============================================================
+                "Rules:\n"
+                "- ALWAYS choose one of the allowed actions.\n"
+                "- NEVER return text outside the JSON.\n"
+                "- NEVER explain your reasoning.\n"
+                "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
+                # This refers to the tags field in the context and not the tags field in the per thread registry_entry
+                # comment out the tags restriction. We will need tags in the Phase4a.1.3 real life pipeline testing. 
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST NOT use it to determine the action.\\n"
+                #"- You MUST ignore the \\\"tags\\\" field completely when deciding between\\n"
+                #"  \\\"fallback\\\", \\\"cleanup_and_retry\\\", \\\"retry_with_modified_command\\\", or \\\"abort\\\".\\n"
+                # Keep the restriction on instance_id and ip fields in the context.
+                "- The \"instance_id\" field MUST be ignored. It is metadata only.\n"
+                "- The \"ip\" field MUST be ignored. It is metadata only.\n"
+                "- You MUST base your decision ONLY on: command, stdout, stderr, exit_status, history, and os_info.\n"
+
+
+
+                # ============================================================
+                # RETRY COMMAND RULES — NEWLY ADDED FOR ROBUSTNESS
+                # ============================================================
+                "Retry command rules:\n"
+                "- The \"retry\" field MUST be a literal shell command that can be executed directly.\n"
+                "- The retry command MUST NOT reference \"previous command\", \"original command\", or any vague instruction.\n"
+                "- The retry command MUST NOT be an English sentence. It MUST be a valid shell command.\n"
+                "- The retry command MUST NOT contain placeholders like \"<command>\" or \"<package>\".\n"
+                "- The retry command MUST NOT contain commentary or explanation.\n"
+                "- The retry command MUST NOT contain multiple commands chained with \"&&\" unless necessary.\n"
+                "- The retry command MUST NOT contain dangerous operations (rm -rf /, shutdown, reboot, etc.).\n\n"
+
+
+
+                # ============================================================
+                # RETRY FIELD SEMANTICS
+                # Revision 4: Clarified per-action retry shape (string vs list)
+                # This revision aligns the Contract with the module2f code itself, which can support multiple commands for the retry
+                # command but only with the cleanup_and_retry contract action and not the retry_with_modified_command contract action
+                # The cleanup_and_retry has specific use cases and those will be clarified as well in this CONTRACT with Revision 4
+                # See CLEANUP_AND_RETRY_SEMANTICS further below (also part of Revsion 4)
+                # Module2f already will mark the cleanup_and_retry action as failed if any one of the commands in a retry list fails.
+                # Revision 6.5: "- For \"cleanup_and_retry\", the \"retry\" commands SHOULD include all commands that actively attempt to re-run the failing operation and/or reattempt the original high-level goal.\n\n"
+
+                # ============================================================
+                "Retry field semantics (Revision 4):\n"
+                "- For \"retry_with_modified_command\", the \"retry\" field MUST be exactly one corrected command (a single string).\n"
+                "- For \"cleanup_and_retry\", the \"retry\" field MAY be either:\n"
+                "    * a single command (string), OR\n"
+                "    * a list of commands for multi-step recovery.\n"
+                "- When \"retry\" is a list, commands are executed sequentially in the order provided.\n"
+                "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
+                "- Only if ALL retry commands succeed is the cleanup_and_retry action considered successful.\n\n"
+
+                "- For \"cleanup_and_retry\", the \"retry\" commands SHOULD include all commands that actively attempt to re-run the failing operation and/or reattempt the original high-level goal.\n\n"
+
+
+
+
+                # ============================================================
+                # CLEANUP RULES  
+                # Revision 6.5 "- Cleanup commands MUST NOT attempt to perform the original high-level goal (such as installing a package or starting a service).\n"
+                # ============================================================
+                "Cleanup rules:\n"
+                "- The \"cleanup\" field MUST be a list of literal shell commands.\n"
+                "- Cleanup commands MUST be safe, minimal, and directly related to resolving the failure.\n"
+                "- Cleanup commands MUST NOT include vague instructions or commentary.\n"
+                "- Cleanup commands MUST NOT include dangerous operations.\n\n"
+                "- Cleanup commands MUST NOT attempt to perform the original high-level goal (such as installing a package or starting a service).\n"
+
+
+                # ============================================================
+                # CLEANUP_AND_RETRY SEMANTICS
+                # Revision 4: Restored original multi-step cleanup_and_retry behavior
+                # Revision 6.5: "- A \"cleanup_and_retry\" plan MUST include at least one retry command. A cleanup-only plan is allowed syntactically, but it accomplishes nothing and SHOULD be avoided.\n"
+                # Revision 6.5: "- For multi-step recovery, a typical pattern is:\n"
+                #
+                # ============================================================
+                "Cleanup-and-retry rules (Revision 4, Revision 6.5 addendum):\n"
+                "- Use \"cleanup_and_retry\" when the failure can be resolved by removing temporary files, stale locks, partial installations, or other artifacts blocking success.\n"
+                "- Typical cleanup-and-retry conditions include:\n"
+                "  - leftover PID files or lock files\n"
+                "  - partially installed packages or corrupted temp directories\n"
+                "  - stale processes that must be terminated before retrying\n"
+                "  - insufficient disk space that can be reclaimed safely\n"
+                "  - any reversible condition where cleanup restores a safe state.\n"
+                
+                "- When returning \"cleanup_and_retry\", provide:\n"
+                "  - a list of cleanup commands in the \"cleanup\" field (which MAY be empty), and\n"
+                "  - one or more retry commands in the \"retry\" field.\n"
+                
+                "- A \"cleanup_and_retry\" plan MUST include at least one retry command. A cleanup-only plan is allowed syntactically, but it accomplishes nothing and SHOULD be avoided.\n"
+                
+                "- For \"cleanup_and_retry\", the \"retry\" field MAY be a single string or a list of commands.\n"
+                "- When multiple retry commands are provided, they are executed sequentially.\n"
+                "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
+                "- Only if ALL retry commands succeed is the action considered successful.\n\n"
+
+                "- For multi-step recovery, a typical pattern is:\n"
+                "  - cleanup: commands that remove corrupted or partial state (for example, deleting partial apt lists or caches).\n"
+                "  - retry: commands that re-run the failing operation and, if needed, reattempt the original goal (for example, 'apt-get update -y' followed by 'apt-get install -y <pkg>').\n\n"
+
+
+
+                # ============================================================
+                # IDEMPOTENCY RULES
+                # Revision 5: Idempotency-related failures MUST use cleanup_and_retry. Signals can be fronm stderr AND/OR history 
+                # both of which are presented in the context to the LLM
+                # ============================================================
+                "Idempotency rules (Revision 5):\n"
+                "- Idempotency-related failures MUST use \"cleanup_and_retry\".\n"
+                "- Idempotency may be detected from stderr, from command history, or both.\n"
+                "- Idempotency conditions include messages such as:\n"
+                "  - \"already installed\"\n"
+                "  - \"already exists\"\n"
+                "  - \"nothing to do\"\n"
+                "  - \"resource busy\"\n"
+                "  - \"lock is held by PID ...\"\n"
+                "  - \"directory not empty\"\n"
+                "  - \"service already running\"\n"
+                "  - \"package is in a half-installed state\".\n"
+                "- Repeated operations in history (e.g., repeated installs or service starts) also indicate idempotency.\n"
+                "- These failures are caused by environmental residue or repeated operations, not incorrect commands.\n"
+                "- When idempotency is detected, return a \"cleanup_and_retry\" plan with cleanup commands that restore a safe state, followed by one or more retry commands.\n\n"
+
+
+
+                # =======================================================
+                # OS‑Mutation Guard (GLOBAL) — applies BEFORE any OS specific domain  primitives or rewrite logic\n"
+                # =======================================================
+                "- This rule OVERRIDES any conflicting OS‑specific domain‑primitives.\n"
+                "- The following commands are considered system-wide operations on Linux-family OSes:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      yum upgrade\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- The LLM MUST NOT generate or propose ANY of these system‑wide operations\n"
+                "  as part of a rewrite, retry, or cleanup sequence. These operations are\n"
+                "  allowed ONLY when they appear in the original user command being validated.\n"
+                "\n"
+                "- OS‑signaled deterministic remediation is EXEMPT from this restriction.\n"
+                "  OS‑signaled remediation refers to recovery sequences that are explicitly\n"
+                "  indicated by stderr or system output (for example: 'Hash Sum mismatch',\n"
+                "  'dpkg --configure -a', 'apt --fix-broken install', or other OS-provided\n"
+                "  instructions). These remediation flows MAY include system‑wide operations\n"
+                "  and MUST NOT be blocked by the OS‑Mutation Guard.\n"
+                "\n"
+                # adding clarification for ALL os-signalled remediation to use cleanup_and_retry. Globally.
+                "- Any OS-signaled deterministic remediation flow (hard or soft) MUST use the \"cleanup_and_retry\" action.\n"
+                "- The \"retry_with_modified_command\" action MUST NOT be used for OS-signaled remediation.\n"
+                "- OS-signaled remediation includes explicit instructions or repository/index/dpkg error patterns in stderr that indicate a deterministic recovery sequence (e.g., \"Hash Sum mismatch\", \"dpkg was interrupted\", \"apt --fix-broken install\", repository 404 errors combined with \"Unable to locate package\", or similar).\n"
+                "\n"
+                # Disambiguation rule
+                "- The stderr phrase \"E: Unable to locate package <pkg>\" by itself is NOT\n"
+                "  considered OS‑signaled remediation. When this phrase appears alone with\n"
+                "  no additional repository, index, integrity, or dpkg context, the LLM\n"
+                "  MUST treat the condition as ambiguous and MUST return \"fallback\".\n"
+                "\n"
+                #
+                "- Hard deterministic remediation (CentOS 7 and Amazon Linux 2) and soft\n"
+                "  deterministic remediation (Ubuntu, Debian, RHEL, Fedora, CentOS 8,\n"
+                "  Amazon Linux 2023, macOS Homebrew) are BOTH considered OS‑signaled\n"
+                "  remediation and are therefore allowed to include system‑wide operations.\n"
+                "\n"
+                "- If a rewrite, retry, or cleanup sequence would require ANY system‑wide\n"
+                "  operation that is NOT part of an OS‑signaled remediation flow, the LLM\n"
+                "  MUST return \"fallback\" instead.\n"
+                "\n"
+                "- When validating an already-executed user command from the context\n"
+                "  (including idempotent 'update' or 'upgrade' operations), the OS‑Mutation\n"
+                "  Guard MUST NOT be applied; instead, the global Idempotency rules apply.\n"
+                "  Under the global Idempotency rules, idempotent system‑wide operations\n"
+                "  MUST result in a \"cleanup_and_retry\" action.\n"
+
+
+
+                # ------------------------------------------------------------
+                # Literal precedence meta-rule (Revision 6.3). This must be before Linux Malformed block  and global fallback
+                # ruels for precedence
+                # ------------------------------------------------------------
+                "- Literal‑match rules take precedence over semantic or general rules.\n"
+                "  If stderr contains an EXACT phrase referenced by any rule, the LLM MUST apply that rule\n"
+                "  even if earlier rules appear semantically similar.\n"
+                "  Only when no literal phrase matches may the LLM fall back to general or earlier rules.\n\n"
+
+
+
+                # ============================================================
+                # FALLBACK RULES
+                # Revision 2: Clarified when to prefer fallback over abort or retry
+                # This revsion 2 is in reference to incomplete or ambigous commands (not necessarily malformed; see above)
+                # The reference to test-induced bias is important as much of the contract refinement is performed in an interative
+                # python schema based test environment where schemas for particular os or platform may focus on a specific package, for
+                # example nginx. We do NOT want the LLM to infer that the missing package in a given incomplete command based upon 
+                # the test design itself. This does not conform to real-world empirically desired results. It is better to fallback instead
+                # of retry_with_modified_command or cleanup_and_retry.
+                # ============================================================
+                "Fallback rules:\n"
+                "- When returning \"fallback\", return ONLY:\n"
+                "  { \"action\": \"fallback\" }\n"
+                "- Do NOT include \"cleanup\".\n"
+                "- Do NOT include \"retry\".\n"
+                "- Use \"fallback\" when the command is incomplete or ambiguous and no safe, concrete fix can be inferred.\n"
+                "- Use \"fallback\" instead of \"abort\" when the situation is non-destructive but under-specified (e.g., missing package name).\n"
+                "- Use \"fallback\" when OS, package manager, or shell context is unclear and any guess would be speculative.\n"
+                "- Use \"fallback\" when correcting the command would require unsafe inference or assumptions.\n\n"
+                "- NEVER infer missing arguments (such as package names) based solely on patterns in previous test cases or schema examples; avoid test-induced bias.\n\n"
+
+
+
+
+                ## ============================================================
+                ## ACTION MEANINGS
+                ## ============================================================
+                #"Action meanings:\n"
+                #"- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
+                #"- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
+                #"- abort: Use when the failure is unsafe or cannot be recovered.\n"
+                #"- fallback: Use when there is not enough information to choose another action.\n\n"
+
+
+
+
+                # ============================================================
+                # ACTION MEANINGS Revision 4 addendum.This is a rewrite of the original ACTION MEANINGS to align to the 
+                # multiple command support for retry in the cleanup_and_retry command action
+                # Revision 6.5: "  A cleanup_and_retry plan that contains cleanup commands but no retry commands does not meaningfully remediate the original failure and SHOULD be avoided.\n"
+                # ============================================================
+                "Action meanings:\n"
+                "- cleanup_and_retry: Use for environmental or state-related failures that can be fixed by cleanup and/or multi-step recovery before retrying.\n"
+                "  A cleanup_and_retry plan that contains cleanup commands but no retry commands does not meaningfully remediate the original failure and SHOULD be avoided.\n"
+                "  Examples: idempotency residue, lock files, half-installed packages, stale processes, privilege or mode setup sequences.\n"
+                "- retry_with_modified_command: Use for simple, single-command corrections where adjusting the original command is sufficient.\n"
+                "  Examples: fixing a package name, adding a missing flag, choosing the correct package manager, correcting a mistyped command.\n"
+                "- abort: Use when the failure is unsafe or cannot be recovered without risk of data loss, instability, or security exposure.\n"
+                "- fallback: Use when there is not enough safe, concrete information to choose another action without guessing.\n\n"
+
+
+
+
+                # ============================================================
+                # ABORT RULES
+                # Revision 1:  added the messages requirement after doing LLM testing with various os and platforms
+                # ============================================================
+                "Abort rules:\n"
+                "- Use \"abort\" when the command or system state is unsafe or non-recoverable.\n"
+                "- Abort when the plan would risk data loss, node instability, or security exposure.\n"
+                "- Abort when the failure suggests corrupted or inconsistent system state.\n"
+                "- Abort when the only apparent fixes involve destructive or non-reversible operations.\n"
+                "- When returning \"abort\", do NOT include \"cleanup\" or \"retry\".\n\n"
+                "- When returning \"abort\", you MUST include a \"message\" field explaining WHY the abort was chosen.\n"
+                "- The \"message\" must be a short, factual, non-emotional explanation.\n"
+                "- The \"message\" must NOT include reasoning steps, chain-of-thought, or internal deliberation.\n"
+                "- The \"message\" must NOT include instructions, commands, or suggestions.\n"
+                "- The \"message\" must NOT hallucinate OS capabilities or package managers.\n"
+                "- Examples of valid abort messages:\n"
+                "    { \"action\": \"abort\", \"message\": \"Destructive command detected: rm -rf /\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Unsupported OS: Cisco IOS does not support package installation.\" }\n"
+                "    { \"action\": \"abort\", \"message\": \"Invalid or malformed command; no safe recovery available.\" }\n\n"
+
+
+                # ============================================================
+                # NETWORK FAILURE SEMANTICS — Revision 6.5 (GLOBAL)
+                # ============================================================
+                "Network failure semantics (Revision 6.5):\n"
+                "- A network failure is defined as a condition where the system cannot reach remote package sources or remote hosts due to connectivity issues.\n"
+                "- Network failures MUST be handled with \"fallback\".\n"
+                "- Network failures include (but are not limited to):\n"
+                "    * DNS resolution errors (e.g., 'Temporary failure resolving ...')\n"
+                "    * connection refused\n"
+                "    * connection timed out\n"
+                "    * no route to host\n"
+                "    * host unreachable\n"
+                "    * network unreachable\n"
+                "    * TLS/SSL handshake failures\n"
+                "    * proxy connection failures\n"
+                "    * interface down or missing network device\n"
+                "- These conditions indicate connectivity problems, NOT package corruption.\n\n"
+
+                "- The following ARE NOT network failures:\n"
+                "    * 'Hash Sum mismatch'\n"
+                "    * integrity check mismatch\n"
+                "    * cryptographic signature mismatch\n"
+                "    * corrupted package index files\n"
+                "    * partial or inconsistent package downloads\n"
+                "    * cache corruption under /var/lib/apt or /var/cache/apt\n"
+                "- These conditions MUST NOT be treated as DNS or connectivity issues.\n"
+                "- These conditions SHOULD be handled using cleanup_and_retry when safe.\n\n"
+
+                "- The error 'Hash Sum mismatch' is NOT a network failure.\n"
+                "  It indicates corrupted or inconsistent package index files.\n"
+                "  The LLM MUST NOT classify this as a DNS or connectivity issue.\n\n"
+
+                "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use \"fallback\".\n"
+                "- It MUST treat this as a corruption/integrity failure and apply a \"cleanup_and_retry\" plan using the OS-specific rules (for Ubuntu, the Hash Sum mismatch recovery sequence).\n\n"
+
+
+
+                # ============================================================
+                # SAFETY CONSTRAINTS
+                # ============================================================
+                "Safety constraints:\n"
+                "- NEVER propose commands that modify or delete /etc/passwd, /etc/shadow, or user home directories.\n"
+                "- NEVER propose commands that delete system directories outside package/cache paths (e.g., no \"rm -rf /\", no \"rm -rf /usr\", etc.).\n"
+                "- Prefer minimal, targeted cleanup under /var/lib, /var/cache, or other known safe system paths.\n\n"
+
+
+
+                # ============================================================
+                # ADDITIONAL SAFETY CONSTRAINTS
+                # ============================================================
+                "Additional safety constraints:\n"
+                "- NEVER propose commands that pipe remote content into a shell (e.g., no \"curl ... | sh\").\n"
+                "- NEVER propose commands that disable or mask system services (e.g., no \"systemctl disable\", no \"systemctl mask\").\n"
+                "- NEVER propose commands that modify kernel, bootloader, or low-level system configuration (e.g., no \"update-grub\", no \"grub-install\", no kernel package installation).\n"
+                "- NEVER propose commands that modify package manager configuration files or sources lists.\n\n"
+
+                # ============================================================
+                # CLEANUP SEQUENCE RULES
+                # ============================================================
+                "Cleanup sequence rules:\n"
+                "- Cleanup steps MUST be ordered from least invasive to most invasive.\n"
+                "- Cleanup steps MUST be idempotent (safe to run multiple times).\n"
+                "- Cleanup steps MUST NOT exceed 3 commands.\n"
+                "- Cleanup steps MUST NOT include commentary or explanation.\n\n"
+
+
+
+
+                # ============================================================
+                # CONTEXT — DYNAMIC INPUT FROM CURL
+                # ============================================================
+                f"CONTEXT:\n{context}"
+
+
+
+
+                ##### DOMAIN SPECIFIC PRIMITIVES ######
+                ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
+                ##### rule leakage between different OSes and platforms, etc.
+
+
+
+                # ============================================================
+                # MALFORMED COMMAND RULES (LINUX)
+                # Revision 2: Added explicit handling for incomplete but fixable Linux commands. This ENTIRE block is newly added
+                # with revision 2. 
+                # ============================================================
+                # NOTE these primitives apply to all Linux OSes: Ubuntu Debian CentOS RHEL Fedora Alpine BusyBox
+                # There are domain primitives for each one of these OSes further below
+
+                "These rules apply ONLY to Linux-family OSes: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine, BusyBox.\n"
+
+                "Malformed command rules (Linux):\n"
+                "- Treat commands like \"apt-get install\", \"yum install\", \"dnf install\", and \"apk add\" with no package as INCOMPLETE, not unsafe.\n"
+                "- If the command is incomplete but the missing argument CANNOT be safely inferred, prefer \"fallback\" over \"abort\".\n"
+                "- Do NOT guess a package name based solely on prior examples or patterns in the input.\n"
+                "- Only use \"retry_with_modified_command\" when you can safely construct a complete, realistic command.\n"
+                "- Incomplete commands MUST NOT trigger \"abort\" unless they are also unsafe or destructive.\n\n"
+                
+                # Revision 6.7 All show style commands performed in any linux variant os should return fallback. There are no 
+                # show commands in any linux variant.
+                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                "- Linux-family OSes (Ubuntu, Debian, RHEL, CentOS, Amazon Linux) do NOT use Cisco-style 'show' commands. If a command begins with 'show ' and is not a valid Linux command, the LLM MUST NOT attempt to correct it using Cisco IOS rules. It MUST return a 'fallback' action.\n"
+
+
+                ##### Revision 6.8 — Linux malformed-command hardening (applies to bash and BusyBox shells) #####
+                ##### THIS needs to be added to each linux distro domain primitives block below. That is the cleanest
+                ##### way to apply bash contract rule semantics to the various linux os's. The LLM will be less likely
+                ##### to get confused and plan actions from the LLM for bash like issues will be much more deterministic.

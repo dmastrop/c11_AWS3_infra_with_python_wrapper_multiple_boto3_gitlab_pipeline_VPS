@@ -1,0 +1,132 @@
+--- GLOBAL_RULES	2026-07-01 22:40:49.305357270 +0000
++++ GLOBAL_RULES_FROM_GATEWAY	2026-07-02 03:13:11.790535250 +0000
+@@ -1,19 +1,3 @@
+-
+-        payload = {
+-            #"model": "gpt-4.1",
+-            "model": "gpt-5.4",
+-            "temperature": 0,
+-            "max_output_tokens": 256,
+-
+-            # The "input" field contains the entire contract, rules, and context.
+-            # The LLM receives this as a single string and MUST return a JSON object.
+-            "input": (
+-                "You are a recovery engine. "
+-                "Follow the contract and rules provided inside the input JSON. "
+-                "Return ONLY a JSON object.\n\n"
+-
+-
+-
+                 ##### HIGH LEVEL ORGANIZATION ####
+                 #GLOBAL CONTRACT RULES
+                 #GLOBAL RETRY RULES
+@@ -35,6 +19,7 @@
+ 
+ 
+ 
++
+                 # ============================================================
+                 # CONTRACT — STATIC SPECIFICATION
+                 # Revision 1: Added the messages requirement for abort and notes as well to the LLM
+@@ -55,6 +40,7 @@
+ 
+ 
+ 
++
+                 # ============================================================
+                 # CORE RULES
+                 # ============================================================
+@@ -113,6 +99,7 @@
+ 
+ 
+ 
++
+                 # ============================================================
+                 # CLEANUP RULES  
+                 # Revision 6.5 "- Cleanup commands MUST NOT attempt to perform the original high-level goal (such as installing a package or starting a service).\n"
+@@ -125,7 +112,6 @@
+                 "- Cleanup commands MUST NOT attempt to perform the original high-level goal (such as installing a package or starting a service).\n"
+ 
+ 
+-
+                 # ============================================================
+                 # CLEANUP_AND_RETRY SEMANTICS
+                 # Revision 4: Restored original multi-step cleanup_and_retry behavior
+@@ -141,13 +127,13 @@
+                 "  - stale processes that must be terminated before retrying\n"
+                 "  - insufficient disk space that can be reclaimed safely\n"
+                 "  - any reversible condition where cleanup restores a safe state.\n"
+-
++                
+                 "- When returning \"cleanup_and_retry\", provide:\n"
+                 "  - a list of cleanup commands in the \"cleanup\" field (which MAY be empty), and\n"
+                 "  - one or more retry commands in the \"retry\" field.\n"
+-
++                
+                 "- A \"cleanup_and_retry\" plan MUST include at least one retry command. A cleanup-only plan is allowed syntactically, but it accomplishes nothing and SHOULD be avoided.\n"
+-
++                
+                 "- For \"cleanup_and_retry\", the \"retry\" field MAY be a single string or a list of commands.\n"
+                 "- When multiple retry commands are provided, they are executed sequentially.\n"
+                 "- If ANY retry command fails (non-zero exit status or non-empty stderr), the entire cleanup_and_retry action is considered failed immediately.\n"
+@@ -159,7 +145,6 @@
+ 
+ 
+ 
+-
+                 # ============================================================
+                 # IDEMPOTENCY RULES
+                 # Revision 5: Idempotency-related failures MUST use cleanup_and_retry. Signals can be fronm stderr AND/OR history 
+@@ -272,6 +257,9 @@
+                 "- Use \"fallback\" when correcting the command would require unsafe inference or assumptions.\n\n"
+                 "- NEVER infer missing arguments (such as package names) based solely on patterns in previous test cases or schema examples; avoid test-induced bias.\n\n"
+ 
++
++
++
+                 ## ============================================================
+                 ## ACTION MEANINGS
+                 ## ============================================================
+@@ -298,6 +286,9 @@
+                 "- abort: Use when the failure is unsafe or cannot be recovered without risk of data loss, instability, or security exposure.\n"
+                 "- fallback: Use when there is not enough safe, concrete information to choose another action without guessing.\n\n"
+ 
++
++
++
+                 # ============================================================
+                 # ABORT RULES
+                 # Revision 1:  added the messages requirement after doing LLM testing with various os and platforms
+@@ -354,6 +345,8 @@
+                 "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use \"fallback\".\n"
+                 "- It MUST treat this as a corruption/integrity failure and apply a \"cleanup_and_retry\" plan using the OS-specific rules (for Ubuntu, the Hash Sum mismatch recovery sequence).\n\n"
+ 
++
++
+                 # ============================================================
+                 # SAFETY CONSTRAINTS
+                 # ============================================================
+@@ -392,6 +385,7 @@
+ 
+ 
+ 
++
+                 ##### DOMAIN SPECIFIC PRIMITIVES ######
+                 ##### NOTE: create semantic boundaries with clear demarcation of "these rules only apply to x OS" to prevent
+                 ##### rule leakage between different OSes and platforms, etc.
+@@ -414,7 +408,7 @@
+                 "- Do NOT guess a package name based solely on prior examples or patterns in the input.\n"
+                 "- Only use \"retry_with_modified_command\" when you can safely construct a complete, realistic command.\n"
+                 "- Incomplete commands MUST NOT trigger \"abort\" unless they are also unsafe or destructive.\n\n"
+-
++                
+                 # Revision 6.7 All show style commands performed in any linux variant os should return fallback. There are no 
+                 # show commands in any linux variant.
+                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+@@ -425,6 +419,3 @@
+                 ##### THIS needs to be added to each linux distro domain primitives block below. That is the cleanest
+                 ##### way to apply bash contract rule semantics to the various linux os's. The LLM will be less likely
+                 ##### to get confused and plan actions from the LLM for bash like issues will be much more deterministic.
+-
+-
+-
