@@ -1374,6 +1374,92 @@ PANOS_RULES = (
 
 ############################################### END of RULES BLOCKS #######################################################
 
+
+
+
+### OS selector function that is used to create the prompt (GLOBAL_RULES + os_rules) and payload
+## os_info will be extracted directly from the context (see below)
+
+
+def get_os_rules(os_info):
+    """
+    Select the correct OS-specific rules block.
+
+    Supports both:
+      - stress_tester.py (uses "name" and "version")
+      - real module2f pipeline (uses "os_name" and "os_version")
+    """
+
+    os_name = os_info.get("os_name") or os_info.get("name")
+    os_version = os_info.get("os_version") or os_info.get("version") or ""
+
+    # ---------------- Linux-family OSes ----------------
+
+    if os_name == "Ubuntu":
+        return UBUNTU_RULES
+
+    if os_name == "Debian":
+        return DEBIAN_RULES
+
+    if os_name == "RHEL":
+        return RHEL_RULES
+
+    if os_name == "CentOS" and os_version == "7":
+        return CENTOS_7_RULES
+
+    if os_name == "CentOS" and os_version == "8":
+        return CENTOS_8_RULES
+
+    if os_name == "Fedora":
+        return FEDORA_RULES
+
+    if os_name == "Amazon Linux" and os_version == "2":
+        return AMAZON_LINUX_2_RULES
+
+    if os_name == "Amazon Linux 2023":
+        return AMAZON_LINUX_2023_RULES
+
+    if os_name == "Alpine":
+        return ALPINE_RULES
+
+    if os_name == "Linux" and os_version == "busybox":
+        return BUSYBOX_RULES
+
+    if os_name == "Linux" and os_version == "generic":
+        return LINUX_POWERSHELL_CORE_6_and_7_RULES  # bash-like generic Linux
+
+    if os_name == "Linux" and os_version == "powershell-core":
+        return LINUX_POWERSHELL_CORE_6_and_7_RULES
+
+    # ---------------- macOS ----------------
+
+    if os_name == "macOS" and "brew" in os_version:
+        return MACOS_BREW_RULES
+
+    if os_name == "macOS" and "zsh" in os_version:
+        return MACOS_ZSH_RULES
+
+    # ---------------- Windows ----------------
+
+    if os_name == "Windows" and os_version == "2022":
+        return WINDOWS_POWERSHELL_2022_RULES
+
+    # ---------------- Network OSes ----------------
+
+    if os_name == "Cisco IOS":
+        return CISCO_IOS_RULES
+
+    if os_name == "PAN-OS":
+        return PANOS_RULES
+
+    # Default: no OS-specific rules
+    return ""
+
+
+
+
+
+
 app = FastAPI()
 
 # URL of the LLM API endpoint
@@ -1412,14 +1498,17 @@ def recover(request: RecoveryRequest):
 
     # Extract context from AI Request Sender POST to this AI Gateway Service
     context = request.context
-    
+   
+    # This is for the per-OS prompt assembly
     # Extract the os_info out of the context. The context can be either from real life module2f in which case the os_name and
     # os_version are used in os_info, or from the stress_tester.py, where name and version are used in the os_info
     os_info = context.get("os_info", {})
 
 
+    # This is for the per-OS prompt assembly
     # Select the correct OS block from above (Ubuntu, Debian, etc.....)
     os_rules = get_os_rules(os_info)
+
 
     if request.schema_version != "1.0":
         return {"error": "Unsupported schema version", "action": "fallback"}
