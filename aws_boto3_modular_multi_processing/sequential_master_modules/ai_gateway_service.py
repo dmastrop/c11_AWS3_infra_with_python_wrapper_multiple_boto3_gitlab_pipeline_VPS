@@ -801,6 +801,288 @@ UBUNTU_RULES = (
 )
 
 
+
+
+
+DEBIAN_RULES = (
+
+                ##### Debian APT domain primitives #####
+                # ============================================================
+                # DEBIAN (APT) DOMAIN RULES — Applies ONLY when os_name = "Debian" (Revision 7)
+                # ============================================================
+
+                "These rules apply ONLY when os_name = \"Debian\".\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+
+
+                ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
+                "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+                "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+                "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+                "  inventing or hallucinating a corrected command.\n"
+                "\n"
+                "- If a command is syntactically malformed (for example, missing arguments, truncated\n"
+                "  flags, partial pipelines, or incomplete constructs) but NOT destructive, the LLM\n"
+                "  SHOULD use 'fallback' unless a safe, deterministic correction is directly implied\n"
+                "  by the original command.\n"
+                "\n"
+                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command.\n"
+                "  The LLM MUST NOT guess or invent corrected commands.\n"
+                "\n"
+                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+                "  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
+                "  the LLM MUST use 'fallback'. This OS block MUST NOT guess which package manager is\n"
+                "  correct.\n"
+                "\n"
+                "- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
+                "  correction. If a command fails due to permission issues and no deterministic\n"
+                "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
+                "\n"
+
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+
+                ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                "- If an 'apt', 'apt-get', 'yum', 'dnf', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+
+
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+
+
+                # Debian APT domain primitives block
+                "Debian APT domain primitives:\n"
+                "- Debian uses 'apt-get' as the canonical package manager for scripted operations.\n"
+                "- The command 'apt-get update' refreshes package indexes.\n"
+                "- The command 'apt-get install <pkg>' installs packages.\n"
+                "- The flag '-y' auto-confirms installation.\n"
+                # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
+                # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
+                # fallback scenarios that do NOT involve OS-signalled remediation.
+                # COMMENT THIS OUT AND USE THE VERSION FURTHER BELOW
+                #"- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
+                #"  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
+                #"  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
+                #"  the LLM MUST retry with:\n"
+                #"      * apt-get update\n"
+                #"      * apt-get install -y <pkg>\n"
+                #"\n"
+                "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
+                "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
+                "\n"
+                # More specificity for "Unable to locate package" with repository/index failures
+                "- Additionally, if stderr contains \"E: Unable to locate package <pkg>\" AND also contains ANY\n"
+                "  repository-level failure indicators such as (but NOT limited to):\n"
+                "      * \"E: Failed to fetch http://\"\n"
+                "      * \"Err:1 http://\"\n"
+                "      * \"404  Not Found\"\n"
+                "      * \"Temporary failure resolving\"\n"
+                "      * \"Could not resolve\"\n"
+                "      * \"Connection failed\"\n"
+                "      * \"Release file is not valid\"\n"
+                "      * \"Clearsigned file isn't valid\"\n"
+                "      * \"NO_PUBKEY\"\n"
+                "      * \"does not have a Release file\"\n"
+                "      * \"File has unexpected size\"\n"
+                "      * \"Hash Sum mismatch\"\n"
+                "      * \"Some index files failed to download\"\n"
+                "      * \"Index is corrupted\"\n"
+                "      * \"dpkg was interrupted\"\n"
+                "  then this MUST be treated as OS-signaled stale-metadata remediation.\n"
+                "  The LLM MUST return a \"cleanup_and_retry\" action with:\n"
+                "      * cleanup: []   (cleanup MAY be empty)\n"
+                "      * retry:\n"
+                "          - apt-get update -y\n"
+                "          - apt-get install -y <pkg>\n"
+                "\n"
+                # REMOVE Fallback block here and move it to after patch2 block, below. This is for the saliency issues that
+                # are seen under specific rewrite test cases with Debian and not Ubuntu
+
+
+
+                ##### Package Manager Classification (Linux-family OSes) #####
+                "\n"
+                "- The LLM MUST treat the following commands as package-manager install commands\n"
+                "  when a concrete package name <pkg> is present:\n"
+                "\n"
+                "      * 'apt-get install <pkg>'\n"
+                "      * 'apt install <pkg>'\n"
+                "      * 'yum install <pkg>'\n"
+                "      * 'dnf install <pkg>'\n"
+                "      * 'apk add <pkg>'\n"
+                "      * 'pacman -S <pkg>'\n"
+                "      * 'zypper install <pkg>'\n"
+                "      * 'brew install <pkg>'\n"
+                "\n"
+                "- For Debian, the ONLY native package manager is:\n"
+                "      * apt-get\n"
+                "\n"
+                "- ALL other package managers listed above MUST be treated as wrong-OS\n"
+                "  package managers on Debian.\n"
+                "\n"
+                "- When a wrong-OS package-manager install command appears in a segment and a\n"
+                "  concrete package name is present, the LLM MUST treat that segment as a\n"
+                "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
+                "  wrong-OS package-manager installs for Debian, that segment MUST be rewritten\n"
+                "  to use 'apt-get install -y <pkg>'.\n"
+
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                # Ported changes from Ubuntu canonical version with all the latest changes
+                #
+                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry
+                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
+                # command does not fail the command and node(thread). Add explicit NO segement uses a PM that does not belong to this
+                # OS to clarify any ambiguity with the word "valid" segment. A "valid" segment is a sgement that does not use a
+                # PM that belongs to another OS.
+                "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
+                "  a package manager that does NOT belong to this OS, and the command succeeded\n"
+                "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
+                # command is "good". These commands need to have non-system-wide commands rewritten and teh system-wide command
+                # preserved using retry_with_modified_command
+                "- When evaluating pipelines under this Patch2 rule, the presence of a system-wide\n"
+                "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
+                "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
+                "\n"
+                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
+                # wide command should be left as is and the segments that are using a PM that does not belong to this OS
+                # should be re-written using all the patch2 rewrite rules below.
+                "- This previous exception for valid system-wide operations applies ONLY when the\n"
+                "  pipeline contains at least one segment that uses a package manager that does\n"
+                "  NOT belong to this OS. If NO such wrong-OS package-manager segment exists, the\n"
+                "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
+                "\n"
+                # rewrite rules follow below:
+                # add system-wide ops that are already valid for this OS and do NOT require rewriting
+                # Make sure to exclude the use of fallback here. MUST NOT use fallback.
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                # make sure multi-segment rewrites also use -y non-interactive mode
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, OR\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
+                "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+                "  It MUST return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu/Debian, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL 'apt-get install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'apt-get' and did not require a package-manager rewrite.\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+                # revision to patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      yum upgrade\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+                # reiterated here, but there is a previous more global rule as well
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+
+                # THIS is the Fallback block: moved this to after the patch2 to resolve Debian specific salience issues.
+                "- If the command is missing arguments (e.g., 'apt-get install'),\n"
+                "  treat it as malformed and use 'fallback' unless a safe, concrete correction\n"
+                "  can be constructed WITHOUT guessing a package name.\n"
+                # Add single segment interactive flag -y processsing:   Add pacman to the list below.
+                "- If the command uses a package manager that does not match Debian (yum, dnf, apk, brew, pacman),\n"
+                "  the LLM MUST rewrite the command using the correct Debian package manager ('apt-get')\n"
+                "  and retry when a safe, concrete package name is present.\n"
+                "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
+                #
+                "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
+                "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
+                "  primitive, the LLM MUST use 'fallback'.\n"
+
+
+                # Idempotency regression patch — OS-Mutation Guard Rule
+                # Remove this local copy. OS muatation guard is now GLOBAL
+
+                # dpkg interrupted
+                "- If stderr suggests running 'dpkg --configure -a', the LLM MUST return\n"
+                "  a cleanup_and_retry action with the following retry sequence:\n"
+                "    * dpkg --configure -a\n"
+                "    * apt-get install -y <pkg>\n"
+
+                # held broken packages
+                "- If stderr CONTAINS the EXACT phrase 'held broken packages', the LLM MUST NOT run\n"
+                "  'apt --fix-broken install' or 'apt-get -f install'.\n"
+                "  This condition is non-deterministic and MUST use 'fallback'.\n"
+
+                # fix-broken suggestions (Debian canonical form)
+                "- If stderr suggests running 'apt --fix-broken install' OR 'apt-get -f install',\n"
+                "  the LLM MUST return a cleanup_and_retry action with the following retry sequence:\n"
+                "    * apt-get -f install -y\n"
+                "    * apt-get install -y <pkg>\n"
+
+                # Hash Sum mismatch — reuse Revision 6.6 semantics
+                "- If stderr CONTAINS the EXACT phrase 'Hash Sum mismatch', the LLM MUST NOT use fallback.\n"
+                "  It MUST return a cleanup_and_retry action with:\n"
+                "    * \"cleanup\" containing EXACTLY these commands:\n"
+                "        - rm -rf /var/lib/apt/lists/partial/*\n"
+                "        - rm -rf /var/cache/apt/archives/partial/*\n"
+                "\n"
+                "    * \"retry\" containing a list of commands that MUST include, in this order:\n"
+                "        - apt-get update -y\n"
+                "\n"
+                "- For any rule that references \"<pkg>\", the LLM MUST replace \"<pkg>\" with the\n"
+                "  package name used in the failing command (for example, nginx, mysql-server, etc.).\n"
+                "\n"
+                "- If the failing command does NOT include a package name (for example, 'apt-get update',\n"
+                "  'apt-get upgrade -y', or 'apt-get dist-upgrade -y'), the LLM MUST NOT invent or guess\n"
+                "  a package name, and MUST omit any install step.\n"
+                "\n"
+                "- If the failing command DOES include a package name (for example,\n"
+                "  'apt-get install -y mysql-server' or 'apt-get install -y curl'), then the \"retry\" list\n"
+                "  MUST include, after 'apt-get update -y', the command:\n"
+                "        - apt-get install -y <pkg>\n"
+
+
+)
+
+
+
 app = FastAPI()
 
 # URL of the LLM API endpoint
