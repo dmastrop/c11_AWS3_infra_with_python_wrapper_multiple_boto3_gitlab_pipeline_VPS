@@ -1380,7 +1380,6 @@ PANOS_RULES = (
 ### OS selector function that is used to create the prompt (GLOBAL_RULES + os_rules) and payload
 ## os_info will be extracted directly from the context (see below)
 
-
 def get_os_rules(os_info):
     """
     Select the correct OS-specific rules block.
@@ -1426,7 +1425,7 @@ def get_os_rules(os_info):
         return BUSYBOX_RULES
 
     if os_name == "Linux" and os_version == "generic":
-        return LINUX_POWERSHELL_CORE_6_and_7_RULES  # bash-like generic Linux
+        return LINUX_POWERSHELL_CORE_6_and_7_RULES
 
     if os_name == "Linux" and os_version == "powershell-core":
         return LINUX_POWERSHELL_CORE_6_and_7_RULES
@@ -1454,10 +1453,6 @@ def get_os_rules(os_info):
 
     # Default: no OS-specific rules
     return ""
-
-
-
-
 
 
 app = FastAPI()
@@ -1539,145 +1534,6 @@ def recover(request: RecoveryRequest):
         #auditable, and easy to document.
         # If the fix involves more than one comamnd to resolve it it will use the action cleanup_and_retry.
 
-        
-        
-
-
-
-
-
-
-
-
-        # Payload1
-        #payload = {
-        #    "model": "gpt-4.1",
-        #    "temperature": 0,
-        #    "max_output_tokens": 256,
-        #    "system": (
-        #        "You are a recovery engine. "
-        #        "Follow the contract and rules provided inside the input JSON. "
-        #        "Return ONLY a JSON object."
-        #    ),
-        #    "input": {
-        #        "contract": "test",
-        #        "context": context
-        #    }
-        #}
-
-
-
-
-        ## Payload2
-        ## Build payload in a variable so we can inspect it
-        ## Remove the frickin system field. That is causing the 400 issue. Use instruction field.
-        #payload = {
-        #    "model": "gpt-4.1",
-        #    "temperature": 0,
-        #    "max_output_tokens": 256,
-        #    "input": {
-        #        "instruction": (
-        #            "You are a recovery engine. "
-        #            "Follow the contract and rules provided inside the input JSON. "
-        #            "Return ONLY a JSON object."
-        #        ),
-        #        "contract": "test",
-        #        "context": context
-        #    }
-        #}
-
-
-
-
-        ##Payload3 First working prototype with LLM interaction
-        #payload = {
-        #    "model": "gpt-4.1",
-        #    "temperature": 0,
-        #    "max_output_tokens": 256,
-        #    "input": (
-        #        "You are a recovery engine. "
-        #        "Follow the contract and rules provided inside the input JSON. "
-        #        "Return ONLY a JSON object.\n\n"
-        #        "CONTRACT:\n"
-        #        "test\n\n"
-        #        f"CONTEXT:\n{context}"
-        #    )
-        #}
-
-
-
-        ## Payload 4
-
-        #payload = {
-        #    "model": "gpt-4.1",
-        #    "temperature": 0,
-        #    "max_output_tokens": 256,
-        #    "input": (
-        #        "You are a recovery engine. "
-        #        "Follow the contract and rules provided inside the input JSON. "
-        #        "Return ONLY a JSON object.\n\n"
-        #        "CONTRACT:\n"
-        #        "You must return ONLY a JSON object with this schema:\n\n"
-        #        "{\n"
-        #        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
-        #        "  \"cleanup\": [string],\n"
-        #        "  \"retry\": string\n"
-        #        "}\n\n"
-        #        "Rules:\n"
-        #        "- ALWAYS choose one of the allowed actions.\n"
-        #        "- NEVER return text outside the JSON.\n"
-        #        "- NEVER explain your reasoning.\n"
-        #        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
-        #        "Action meanings:\n"
-        #        "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
-        #        "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
-        #        "- abort: Use when the failure is unsafe or cannot be recovered.\n"
-        #        "- fallback: Use when there is not enough information to choose another action.\n\n"
-        #        f"CONTEXT:\n{context}"
-        #    )
-        #}
-
-
-        ## Payload 5. NOTE that the CONTEXT is {context} which is provided by the curl test command from within the container during 
-        ## whitebox testing. So Payload5 can be used for tests5,6,7 etc until we need to edit the contract.
-        #payload = {
-        #    "model": "gpt-4.1",
-        #    "temperature": 0,
-        #    "max_output_tokens": 256,
-        #    "input": (
-        #        "You are a recovery engine. "
-        #        "Follow the contract and rules provided inside the input JSON. "
-        #        "Return ONLY a JSON object.\n\n"
-        #        "CONTRACT:\n"
-        #        "You must return ONLY a JSON object with this schema:\n\n"
-        #        "{\n"
-        #        "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
-        #        "  \"cleanup\": [string],\n"
-        #        "  \"retry\": string\n"
-        #        "}\n\n"
-        #        "Rules:\n"
-        #        "- ALWAYS choose one of the allowed actions.\n"
-        #        "- NEVER return text outside the JSON.\n"
-        #        "- NEVER explain your reasoning.\n"
-        #        "- Use \"fallback\" if you cannot produce a valid plan.\n\n"
-        #        "Fallback rules:\n"
-        #        "- When returning \"fallback\", return ONLY:\n"
-        #        "  { \"action\": \"fallback\" }\n"
-        #        "- Do NOT include \"cleanup\".\n"
-        #        "- Do NOT include \"retry\".\n\n"
-        #        "Action meanings:\n"
-        #        "- cleanup_and_retry: Use when the failure can be fixed by cleanup steps before retrying.\n"
-        #        "- retry_with_modified_command: Use when the failure can be fixed by adjusting the command.\n"
-        #        "- abort: Use when the failure is unsafe or cannot be recovered.\n"
-        #        "- fallback: Use when there is not enough information to choose another action.\n\n"
-        #        f"CONTEXT:\n{context}"
-        #    )
-        #}
-
-
-
-
-
 
         #Payload6 enhancments
         # ================================================================
@@ -1701,6 +1557,35 @@ def recover(request: RecoveryRequest):
         # chapter: "Developing the AI Gateway Service through iterative
         # white‑box LLM response testing with curl".
         # ================================================================
+
+
+
+
+
+
+        # This is the new per-OS prompt assembly
+        # NOTE that the full CONTEXT (dynamic content from the stress_tester or the AI/MCP hook in module2f) is embedded inside
+        # the GLOBAL_RULES block
+
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+        )
+
+
+        payload = {
+            "model": "gpt-5.4",
+            "temperature": 0,
+            "max_output_tokens": 256,
+            "input": prompt,
+        }
+
+
+        # This is payload6 which is deprecated for the above
+        # This entire payload needs to be commented out
 
         payload = {
             #"model": "gpt-4.1",
