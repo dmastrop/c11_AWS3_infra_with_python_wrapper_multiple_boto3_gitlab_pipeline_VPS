@@ -1083,6 +1083,250 @@ DEBIAN_RULES = (
 
 
 
+RHEL_RULES = (
+
+                # NEW Block Revision 9: refactored patch2 rewrite cluster block, idempotency, os-signaled remediation, etc.
+                ##### RHEL YUM domain primitives #####
+                # ============================================================
+                # RHEL (YUM) DOMAIN RULES — Applies ONLY when os_name is a
+                # RHEL-family YUM-based distribution (This entire block is Revision 8)
+                # ============================================================
+
+                "These rules apply ONLY when os_name == 'RHEL' AND os_version starts with '9'. They MUST NOT apply to CentOS 7, CentOS 8, Amazon Linux, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+
+
+                ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
+                "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+                "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+                "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+                "  inventing or hallucinating a corrected command.\n"
+                "\n"
+                "- If a command is syntactically malformed (for example, missing arguments, truncated\n"
+                "  flags, partial pipelines, or incomplete constructs) but NOT destructive, the LLM\n"
+                "  SHOULD use 'fallback' unless a safe, deterministic correction is directly implied\n"
+                "  by the original command.\n"
+                "\n"
+                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                "    * syntactically valid,\n"
+                "    * semantically safe,\n"
+                "    * and directly implied by the original command.\n"
+                "  The LLM MUST NOT guess or invent corrected commands.\n"
+                "\n"
+                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+                "  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
+                "  the LLM MUST use 'fallback'. This OS block MUST NOT guess which package manager is\n"
+                "  correct.\n"
+                "\n"
+                "- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
+                "  correction. If a command fails due to permission issues and no deterministic\n"
+                "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
+                "\n"
+                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                "\n"
+
+
+                ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                "- If a 'yum', 'dnf', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                "- The LLM MUST NOT infer user intent for unknown flags.\n"
+                "\n"
+
+
+                # Busybox addendum to Revision 6.8:
+                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+
+
+                # RHEL (YUM) Domain Primitives (Minimal Required Knowledge)
+                "RHEL YUM domain primitives:\n"
+                "- RHEL uses 'yum' as the primary package manager.\n"
+                "- The command 'yum update -y' refreshes package metadata.\n"
+                "- The command 'yum install -y <pkg>' installs packages.\n"
+                "- The flag '-y' auto-confirms installation.\n"
+                # Make sure this refers to SINGLE-SEGMENT so this does not corrupt multiple segment in patch2 and also add pacman to the PM list.
+                # The SINGLE-SEGEMENT  block is affecting saliency in patch2 block below.
+                # MOVE this block to after the patch2 rewrite cluster block
+                #
+                "- If the command is missing arguments (e.g., 'yum install'), treat it as malformed and prefer 'fallback'\n"
+                "  unless a safe, concrete correction can be constructed WITHOUT guessing a package name.\n"
+                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+                "- If the command is unrecognized (exit_status 127) and not obviously a shell primitive, the LLM MUST use 'fallback'.\n"
+                "\n"
+
+
+                ##### Package Manager Classification (Linux-family OSes) #####
+                "\n"
+                "- The LLM MUST treat the following commands as package-manager install commands\n"
+                "  when a concrete package name <pkg> is present:\n"
+                "\n"
+                "      * 'apt-get install <pkg>'\n"
+                "      * 'apt install <pkg>'\n"
+                "      * 'yum install <pkg>'\n"
+                "      * 'dnf install <pkg>'\n"
+                "      * 'apk add <pkg>'\n"
+                "      * 'pacman -S <pkg>'\n"
+                "      * 'zypper install <pkg>'\n"
+                "      * 'brew install <pkg>'\n"
+                "\n"
+                "- For RHEL, the ONLY native package manager is:\n"
+                "      * yum\n"
+                "\n"
+                "- ALL other package managers listed above MUST be treated as wrong-OS\n"
+                "  package managers on RHEL.\n"
+                "\n"
+                "- When a wrong-OS package-manager install command appears in a segment and a\n"
+                "  concrete package name is present, the LLM MUST treat that segment as a\n"
+                "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
+                "  wrong-OS package-manager installs for RHEL, that segment MUST be rewritten\n"
+                "  to use 'yum install -y <pkg>'.\n"
+                "\n"
+
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+
+                # Ubuntu canonical version ported to RHEL (yum). This is the Patch2 rewrite cluster.
+                #
+                # Add this to ensure that multi-segment commands that are "good" fallback and not cleanup_and_retry.
+                # Good commands will rarely get processed by LLM but this is a safeguard. Post processing will ensure the successful
+                # command does not fail the command and node(thread). Add explicit NO segment uses a PM that does not belong to this
+                # OS to clarify any ambiguity with the word "valid" segment. A "valid" segment is a segment that does not use a
+                # PM that belongs to another OS.
+                "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
+                "  a package manager that does NOT belong to this OS, and the command succeeded\n"
+                "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+                "\n"
+                # Add this to ensure that command pipelines that are not completely "good" will NOT fallback if the system-wide
+                # command is "good". These commands need to have non-system-wide commands rewritten and the system-wide command
+                # preserved using retry_with_modified_command.
+                "- When evaluating pipelines under this Patch2 rule, the presence of a system-wide\n"
+                "  operation that is already valid for this OS MUST NOT trigger the OS-Mutation Guard.\n"
+                "  Such system-wide segments MUST be preserved verbatim and MUST NOT cause fallback.\n"
+                "\n"
+                # Clarify that the rule above is only if there is at least one segment that requires rewrite. The valid system-
+                # wide command should be left as is and the segments that are using a PM that does not belong to this OS
+                # should be re-written using all the patch2 rewrite rules below.
+                "- This previous exception for valid system-wide operations applies ONLY when the\n"
+                "  pipeline contains at least one segment that uses a package manager that does\n"
+                "  NOT belong to this OS. If NO such wrong-OS package-manager segment exists, the\n"
+                "  LLM MUST apply the 'successful pipeline → fallback' rule instead.\n"
+                "\n"
+                # Rewrite rules follow below:
+                # Add system-wide ops that are already valid for this OS and do NOT require rewriting.
+                # Make sure to exclude the use of fallback here. MUST NOT use fallback.
+                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                "  the LLM MUST treat each segment independently.\n"
+                "\n"
+                # Make sure multi-segment rewrites also use -y non-interactive mode where applicable.
+                "- If ALL segments in the pipeline are either:\n"
+                "      • simple package-install commands, OR\n"
+                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim, OR\n"
+                "      • system-wide operations that are already valid for this OS and do NOT require rewriting,\n"
+                "  AND at least one segment uses a wrong-OS package manager,\n"
+                "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+                "  It MUST return a FULL rewritten pipeline where:\n"
+                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                "        for this OS (e.g., 'yum install -y <pkg>' on RHEL, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                "      • ALL 'yum install' commands in the rewritten pipeline MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment used 'yum' and did not require a package-manager rewrite.\n"
+                "      • ALL other segments are preserved verbatim,\n"
+                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                "\n"
+                # Revision to Patch2: don't allow segmental REWRITES for system-wide operations. (fallback)
+                # BUT: Leave as is if no rewrite is required even if it is a system-wide operation, and continue to process it.
+                # (retry_with_modified_command with rewrites; see above regarding system-wide operations that are already valid for
+                # this OS and do NOT require rewriting)
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      yum upgrade\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+                # Reiterated here, but there is a previous more global rule as well.
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+
+                # MOVE this SINGLE-SEGMENT block to AFTER the patch2 rewrite cluster block above. 
+                # There is a saliency issue that can only be resolved by moving this block to the location below. 
+                # Otherwise index 16 and 21 rewrite patch2 test cases fail. Somehting simlar was done for Debian domain primitives block.
+                # There is a long write up on this case study in the README PREFACE UPDATE3
+                "- If the command is a SINGLE-SEGMENT command (no '&&') and uses a package manager\n"
+                "  that does NOT match RHEL (apt, apt-get, apt-cache, dnf, apk, pacman, brew),\n"
+                "  the LLM MUST rewrite the command using 'yum' when a safe, concrete package name\n"
+                "  is present. This includes commands such as 'apt install <pkg>' and\n"
+                "  'apt-get install <pkg>', which MUST be rewritten to:\n"
+                "      yum install -y <pkg>\n"
+                "\n"
+
+
+
+
+                # YUM metadata / repo corruption (OS-signaled remediation — RHEL-specific)
+                "- If stderr indicates YUM metadata or repo corruption (e.g., 'Metadata file does not match checksum',\n"
+                "  'repomd.xml signature could not be verified', 'failed to retrieve repodata', 'Error: failed to download metadata'),\n"
+                "  the LLM MUST use 'cleanup_and_retry' with the following retry sequence:\n"
+                "    * yum clean all\n"
+                "    * yum makecache\n"
+                "    * yum install -y <pkg>   (only when a package name is present)\n"
+                "\n"
+                "- If stderr contains 'rpmdb open failed' or indicates rpm database corruption (e.g., Berkeley DB errors such as\n"
+                "  'BDB0113 Thread/process died', 'db5 error(-30973)', or 'BDB1507 Thread died'), the LLM MUST use 'cleanup_and_retry'\n"
+                "  with rpmdb recovery steps such as:\n"
+                "      rm -f /var/lib/rpm/.rpm.lock\n"
+                "      rpm --rebuilddb\n"
+                "      yum install -y <pkg>\n"
+                "\n"
+                # Repo errors without deterministic fix
+                "- If stderr indicates repository errors that are NOT corruption and NOT network failures (e.g., disabled repo,\n"
+                "  missing repo configuration), and no deterministic fix exists, the LLM MUST use 'fallback'.\n"
+                "\n"
+                # Network failures (global)
+                "- If stderr indicates DNS or connectivity failures (e.g., 'Could not resolve host', 'Connection timed out',\n"
+                "  'No route to host'), the LLM MUST treat this as a network failure and use 'fallback'.\n"
+                "\n"
+                # Idempotency (RHEL-specific reference to global rules)
+                "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
+                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
+                "  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
+                "\n"
+                # <pkg> binding semantics
+                "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the\n"
+                "  failing command (e.g., nginx, mysql-server, etc.).\n"
+                "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM MUST NOT invent\n"
+                "  or guess a package name, and MUST omit any install step.\n"
+                "\n"
+
+
+)        
+
+
+
+
 app = FastAPI()
 
 # URL of the LLM API endpoint
