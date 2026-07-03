@@ -108,6 +108,8 @@ import json
 
 # ============================================================
 #################################### GLOBAL RULES BLOCK  #################################################################
+# NOTE: need to move CONTEXT out of GLOBAL_RULES and into the prompt in def recover() so that it can be injected properly with
+# this new per-OS prompt assembly
 # ============================================================
 
 
@@ -492,11 +494,7 @@ GLOBAL_RULES = (
                 # ============================================================
                 # CONTEXT — DYNAMIC INPUT FROM CURL
                 # ============================================================
-                # Get rid of the fstring. Pyhhon is evaluating this at import now given that we are using GLOBAL_RULES and the 
-                # context not embedded directly in def recover()
-                #f"CONTEXT:\n{context}"
-                "CONTEXT:\n{context}\n"
-
+                # Move this to the prompt in def recover() for the per-OS prompt assembly
 
 
                 ##### DOMAIN SPECIFIC PRIMITIVES ######
@@ -1567,8 +1565,8 @@ def recover(request: RecoveryRequest):
 
 
         # This is the new per-OS prompt assembly
-        # NOTE that the full CONTEXT (dynamic content from the stress_tester or the AI/MCP hook in module2f) is embedded inside
-        # the GLOBAL_RULES block
+        # NOTE that the full CONTEXT (dynamic content from the stress_tester or the AI/MCP hook in module2f) can no longer beembedded 
+        # inside the GLOBAL_RULES block. It is moved to the prompt (see below).
 
         prompt = (
             "You are a recovery engine. "
@@ -1576,7 +1574,11 @@ def recover(request: RecoveryRequest):
             "Return ONLY a JSON object.\n\n"
             + GLOBAL_RULES
             + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
         )
+
+
 
 
         payload = {
