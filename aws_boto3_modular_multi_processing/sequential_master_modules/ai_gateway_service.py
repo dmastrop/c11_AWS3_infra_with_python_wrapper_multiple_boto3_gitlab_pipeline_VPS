@@ -1376,8 +1376,8 @@ PANOS_RULES = (
 
 
 
-
-### OS selector function that is used to create the prompt (GLOBAL_RULES + os_rules) and payload
+### This is for the per-OS prompt assembly. 
+### OS selector function that is used to create the prompt (GLOBAL_RULES + os_rules) and payload in def recover()
 ## os_info will be extracted directly from the context (see below)
 
 def get_os_rules(os_info):
@@ -1584,10 +1584,15 @@ def recover(request: RecoveryRequest):
         }
 
 
+
+
+
         # This is payload6 which is deprecated for the above
         # This entire payload needs to be commented out
+        # In the meantime rename this from payload to payload_old. This will prevent the AI gateway service from using this to create
+        # the full payload that is sent to the LLM. Instead the new payload using per-OS prompt assembly, above, will be used. 
 
-        payload = {
+        payload_old = {
             #"model": "gpt-4.1",
             "model": "gpt-5.4",
             "temperature": 0,
