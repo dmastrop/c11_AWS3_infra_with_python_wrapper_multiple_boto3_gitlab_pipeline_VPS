@@ -492,7 +492,10 @@ GLOBAL_RULES = (
                 # ============================================================
                 # CONTEXT — DYNAMIC INPUT FROM CURL
                 # ============================================================
-                f"CONTEXT:\n{context}"
+                # Get rid of the fstring. Pyhhon is evaluating this at import now given that we are using GLOBAL_RULES and the 
+                # context not embedded directly in def recover()
+                #f"CONTEXT:\n{context}"
+                "CONTEXT:\n{context}\n"
 
 
 
