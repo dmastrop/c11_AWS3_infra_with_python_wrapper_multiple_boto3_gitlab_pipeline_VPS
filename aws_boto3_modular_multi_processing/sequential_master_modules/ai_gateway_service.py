@@ -1331,7 +1331,7 @@ RHEL_RULES_legacy = (
                 "  or guess a package name, and MUST omit any install step.\n"
                 "\n"
 
-
+)
 
 #### The following is a refactor of RHEL_RULES_legacy due to index21 test case failure. It is not a straightforward saliency issue
 #### that was the case with Debian. 
@@ -1534,8 +1534,7 @@ RHEL_RULES = (
     "\n"
 )
 
-
-)        
+     
 
 CENTOS_7_RULES = (
 )
