@@ -1093,7 +1093,7 @@ DEBIAN_RULES = (
 
 
 
-RHEL_RULES = (
+RHEL_RULES_legacy = (
 
                 # NEW Block Revision 9: refactored patch2 rewrite cluster block, idempotency, os-signaled remediation, etc.
                 ##### RHEL YUM domain primitives #####
