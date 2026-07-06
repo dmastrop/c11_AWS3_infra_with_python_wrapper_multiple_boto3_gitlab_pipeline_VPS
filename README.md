@@ -1031,7 +1031,7 @@ one that leverages ML and LLM reasoning to stabilize and harden complex distribu
 <a name="top-preface3"></a>
 - [The need for efficient LLM contract engineering principles](#the-need-for-efficient-llm-contract-engineering-principles)
 - [Introduction to LLM Contract Engineering principles](#introduction-to-llm-contract-engineering-principles)
-- [Formal LLM Contract-rule engineering framework principles 1-14](#formal-llm-contract-rule-engineering-framework-principles-1-14)
+- [Formal LLM Contract-rule engineering framework principles 1-15](#formal-llm-contract-rule-engineering-framework-principles-1-15)
 - [Summary of the Guidelines](#summary-of-the-guidelines)
 - [Salience Engineering: Why Contract Rules Behave Differently Than Expected: OS-signaled remediation case study](#salience-engineering)
 - [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
@@ -1170,7 +1170,7 @@ It is now a core part of the Phase 4a.1.2 contract architecture.
 
 ---
 
-### **Formal LLM Contract-rule engineering framework principles 1-14**
+### **Formal LLM Contract-rule engineering framework principles 1-15**
 
 These principles are not static by any means. More will be added as new scenarios emerge.
 
@@ -1482,6 +1482,27 @@ A small set of strong invariants is more stable than a large set of recipes.
 
 ---
 
+#### **Per‑OS Prompt Isolation (Per-OS prompt assembly code)**
+
+All OS domain‑primitives blocks MUST be isolated in the prompt.  
+  
+The contract payload MUST be assembled as:  
+  
+**globals + domain_block_for(os_name) + context**  
+
+and MUST NOT include domain blocks for other OSes.  
+  
+All text inside the prompt string contributes to salience, including comments, obsolete blocks, and rules for other OSes.
+Multi‑OS concatenated prompts cause cross‑OS salience contamination, regression cascades, and unstable OS specific rule behavior/    
+Per‑OS prompt assembly is required for deterministic behavior across multiple OSes.
+
+
+[Back to top](#top-preface3)
+
+---
+
+
+
 ### **Summary of the Guidelines**
 
 - Prefer **invariants** over examples  
@@ -1498,6 +1519,8 @@ A small set of strong invariants is more stable than a large set of recipes.
 - Avoid rules requiring **multi‑step implicit inference**  
 - Re‑evaluate the **semantic priority graph** after adding rules  
 - Keep the contract **small, orthogonal, and invariant‑driven**
+- Per-domain prompt isolation is mandatory in multi-domain rule block environments
+
 
 [Back to top](#top-preface3)
 
