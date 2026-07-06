@@ -15395,12 +15395,46 @@ and
 The fix involved 2 layers of changes:
 1.A full implementation of a per-OS prompt assembly in the ai_gateway_service.py module, that replaces the monolithic payload code that
 was causing Cross-OS (domain) saliency issues
-2.A refactoring of the RHEL_RULES domain primitives block to more closely mirror the Ubuntu and Debian domain primitives blocks.
+2.A second refactoring of the RHEL_RULES domain primitives block to more closely mirror the Ubuntu and Debian domain primitives blocks.
 
 The combnination resolved the issue entirely. Index16 began passing with the first fix (per-OS prompt asssembly), and index21 began
 passing after the RHEL domain primitives block contract rules refactor.
 
+The RHEL 24 rewrite test case matrix for RHEL is below:
 
+<details>
+<summary><b>Click to expand RHEL Rewrite Patch‑24 Test Case Matrix (24 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | r‑patch‑001 | `yum install nginx --badflag` | fallback | fallback | **Invalid flag on native PM.** stderr: `unknown option --badflag`. Patch2 invalid‑flag rule → fallback. |
+| 2 | r‑patch‑002 | `yum install curl && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y nano`) | **Wrong‑OS PM (`apt-get`) rewritten to yum.** First segment already native; both normalized to `-y`. |
+| 3 | r‑patch‑003 | `yum install curl && yum update -y` | fallback | fallback | **Good pipeline with exit_status 0 and no stderr.** Patch2 rule: valid multi‑segment pipeline → fallback. |
+| 4 | r‑patch‑004 | `yum install curl && yum update --badflag` | fallback | fallback | **Invalid flag on system‑wide op.** Patch2 invalid‑flag rule → fallback. |
+| 5 | r‑patch‑005 | `yum install curl && pacman -Syu` | fallback | fallback | **Wrong‑OS system‑wide op (`pacman -Syu`).** Patch2 forbids rewriting system‑wide ops → fallback. |
+| 6 | r‑patch‑006 | `yum install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash`) | **Wrong‑OS PM (`apk`) rewritten to yum.** Both segments normalized. |
+| 7 | r‑patch‑007 | `yum install curl && rm -rf /` | abort | abort | **Destructive command present.** Global safety rule overrides rewrite → abort. |
+| 8 | r‑patch‑008 | `apt-get install nano && yum install curl` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y curl`) | **Wrong‑OS PM (`apt-get`) rewritten.** Full pipeline rewritten to yum. |
+| 9 | r‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y git && yum install -y nano`) | **Wrong‑OS PM (`dnf`) rewritten.** Both segments normalized. |
+| 10 | r‑patch‑010 | `yum install curl && yum install python3 --badflag` | fallback | fallback | **Invalid flag on second segment.** Patch2 invalid‑flag rule → fallback. |
+| 11 | r‑patch‑011 | `yum install curl && yum install python3` | fallback | fallback | **Good pipeline, exit_status 0, no stderr.** Patch2 rule → fallback. |
+| 12 | r‑patch‑012 | `yum install curl && yum install python3 && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y python3 && yum install -y nano`) | **Wrong‑OS PM (`apt-get`) rewritten.** Full pipeline rewritten to yum. |
+| 13 | r‑patch‑013 | `apt-get install nano && yum install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y curl && yum install -y bash`) | **Two wrong‑OS PMs (`apt-get`, `apk`) rewritten.** All segments normalized. |
+| 14 | r‑patch‑014 | `yum install curl && dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y git && yum install -y nano`) | **Wrong‑OS PM (`dnf`) rewritten.** Full pipeline normalized. |
+| 15 | r‑patch‑015 | `apt-get install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y bash && yum install -y htop`) | **Three wrong‑OS PMs rewritten.** Patch2 allows rewriting non‑system‑wide wrong‑OS PMs. |
+| 16 | r‑patch‑016 | `yum install curl && yum install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y nano && yum install -y bash`) | **Wrong‑OS PM (`apk`) rewritten.** Full pipeline normalized. |
+| 17 | r‑patch‑017 | `apt-get install nano && yum install curl && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y curl && yum update -y`) | **Previously failing case — now correct.** **Cross‑OS saliency fix in per‑OS prompt assembly resolved fallback issue.** Wrong‑OS PM rewritten; system‑wide `yum update -y` preserved verbatim. |
+| 18 | r‑patch‑018 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y bash && echo 'hello' && yum install -y nano`) | **Wrong‑OS PM (`apk`) rewritten.** Non‑PM segment (`echo`) preserved verbatim. |
+| 19 | r‑patch‑019 | `yum install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && echo 'test' && yum install -y htop`) | **Wrong‑OS PM (`pacman`) rewritten.** `echo` preserved. |
+| 20 | r‑patch‑020 | `apt-get install nano --badflag && yum install curl` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Patch2 invalid‑flag rule → fallback. |
+| 21 | r‑patch‑021 | `yum install curl && apk add bash --badflag && yum install nano` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Patch2 invalid‑flag rule → fallback. |
+| 22 | r‑patch‑022 | `apt-get install nano && apk add bash && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y bash && yum update -y`) | **Previously failing case — now correct.** **Fixed the per-oS prompt assembly fix used on index16 and also by complete rewrite of RHEL_RULES Patch2 block.** Wrong‑OS PMs rewritten; system‑wide `yum update -y` preserved. |
+| 23 | r‑patch‑023 | `apk add bash && yum install curl && rm -rf /` | abort | abort | **Destructive command present.** Safety rule overrides rewrite → abort. |
+| 24 | r‑patch‑024 | `yum install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y nano && echo hi && yum install -y bash`) | **Two wrong‑OS PMs rewritten.** Non‑PM segment preserved. Full pipeline normalized. |
+
+</details>
 
 
 ---
