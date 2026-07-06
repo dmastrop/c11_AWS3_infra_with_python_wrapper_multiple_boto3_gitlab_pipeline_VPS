@@ -1496,10 +1496,15 @@ All text inside the prompt string contributes to salience, including comments, o
 Multi‑OS concatenated prompts cause cross‑OS salience contamination, regression cascades, and unstable OS specific rule behavior.
 Per‑OS prompt assembly is required for deterministic behavior across multiple OSes.
 
+Extending this to any multiple domain primitives block contract, the approach should always be to use the per-OS prompt assembly 
+approach to create the prompt that is incorporated into the payload that is sent to the LLM. This prevents cross-domain saliency
+issues and reinforces deterministic behavior across multiple domains. 
 
 [Back to top](#top-preface3)
 
 ---
+
+
 
 
 
