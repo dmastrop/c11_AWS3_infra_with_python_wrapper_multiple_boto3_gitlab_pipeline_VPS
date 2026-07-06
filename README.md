@@ -1034,10 +1034,10 @@ one that leverages ML and LLM reasoning to stabilize and harden complex distribu
 - [Formal LLM Contract-rule engineering framework principles 1-15](#formal-llm-contract-rule-engineering-framework-principles-1-15)
 - [Summary of the Guidelines](#summary-of-the-guidelines)
 - [Salience Engineering: Why Contract Rules Behave Differently Than Expected: OS-signaled remediation case study](#salience-engineering)
-- [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
-- [Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control](#debian-patch2-salience-case-study)
 - [Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives](#crossreference-how-this-chapter-connects-to-the-patch2rev4-deepdives)
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
+- [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
+- [Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control](#debian-patch2-salience-case-study)
 
 ---
 
@@ -1819,6 +1819,197 @@ This is the essence of **salience engineering** within LLM contract design.
 
 
 
+
+
+### **Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives**
+
+The principles in this chapter — invariants, negative constraints, salience control, and avoiding test‑case‑encoded rules — are not abstract theory.  
+
+They emerged directly from the real‑world failures analyzed in:
+
+- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
+
+- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)** 
+ 
+- **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
+
+Those three sections documented the first time we encountered **nondeterministic behavior** caused by:
+
+- rule ordering  
+- rule specificity  
+- salience dominance  
+- pattern‑matching interference  
+- and the model’s internal “semantic priority graph”  
+
+Specifically:
+
+- The **invalid‑flag rule** in Brew Patch2 was placed *after* the segmental rewrite logic.  
+- Two nearly identical invalid‑flag test cases produced **different actions** (one fallback, one rewrite).  
+- This nondeterminism disappeared the moment we moved the invalid‑flag rule **above** the rewrite block.  
+
+That incident was the first clear demonstration that:
+
+> **Transformers do not follow rules in textual order — they follow rules in *salience order*.**
+
+The same phenomenon reappeared months later in the Ubuntu APT missing‑package regression:
+
+- The overly broad APT rule (“If package cannot be located → update + install”)  
+- Became more salient than the OS‑Mutation Guard  
+- After Patch2 expansion increased the density of rewrite‑related patterns  
+- Leading to a regression in idempotency test #6 and base‑20 test #0  
+
+Fixing that regression required applying the **same principles** uncovered in the Patch2 deep‑dives:
+
+- Narrow the domain‑specific rule  
+- Strengthen the global invariant  
+- Reduce pattern salience  
+- Avoid bright‑spot rules  
+- Ensure global constraints dominate local recipes  
+
+This chapter generalizes those lessons into a **formal rule‑engineering framework** that applies across all OSes, all package managers, and all future contract expansions.
+
+[Back to top](#top-preface3)
+
+---
+
+
+### **Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases**
+
+The principles in the section below are not theoretical abstractions:
+
+ **[Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)** 
+
+They emerged directly from two concrete regression cases that surfaced during Ubuntu testing:
+
+- **Idempotency Test Case #6** (index 5)  
+- **Base‑20 Test Case #0** (index 1)
+
+Both cases involved the same stderr pattern:
+
+```
+E: Unable to locate package <pkg>
+```
+
+Yet both initially behaved correctly (returning `fallback`), then regressed after Patch2 expansion, and finally stabilized again after the APT rule was narrowed. These two cases are the clearest real‑world demonstrations of how transformer‑level mechanisms—semantic priority graphs, rule salience, and pattern dominance—can override intended contract logic unless rules are engineered with invariants and negative constraints.
+
+---
+
+#### **Idempotency Test Case #6 — Why the Regression Happened**
+
+This case had:
+
+- no history  
+- no idempotency signal  
+- no OS‑signaled remediation  
+- stderr containing only “Unable to locate package”  
+
+Under the global OS‑Mutation Guard, the correct action is **fallback**.
+
+However, after Patch2 introduced additional rewrite‑related rules, the overly broad APT domain‑primitive rule:
+
+> “If package cannot be located → apt‑get update + install”
+
+became more **salient** than the OS‑Mutation Guard.  
+In the model’s semantic priority graph, it was:
+
+- more specific  
+- more imperative  
+- more concrete  
+- more pattern‑matched  
+
+This caused the LLM to incorrectly generate:
+
+```
+cleanup_and_retry → apt-get update
+```
+
+The fix was not to add a test‑case‑specific rule, but to **tighten the invariant**:
+
+> “Missing‑package remediation requires OS‑signaled context.”
+
+Once the APT rule was narrowed to require repo/index/dpkg context, the OS‑Mutation Guard regained priority, and the test case returned to the correct `fallback` behavior.
+
+---
+
+#### **Base‑20 Test Case #0 — Why the Same Invariant Fixes It**
+
+This case had:
+
+- history showing `apt-get update` already executed  
+- stderr still reporting “Unable to locate package nginx”  
+- no OS‑signaled remediation  
+- no idempotency signal  
+
+Even though the package *does* exist in real life, the model cannot rely on real‑world knowledge.  
+It must rely on:
+
+- stderr  
+- history  
+- global invariants  
+
+The correct action is again **fallback**, because:
+
+- the OS did not signal remediation  
+- the OS‑Mutation Guard forbids introducing `apt-get update`  
+- retrying the install would fail again  
+
+The same invariant that fixed idempotency #6 also fixed this case:
+
+> “Missing‑package remediation requires OS‑signaled context.”
+
+No test‑case‑specific rule was needed.
+
+---
+
+#### **Why These Two Cases Matter for Rule Engineering**
+
+These two regressions illustrate the core lesson of the entire chapter:
+
+> **If a domain‑specific rule is too broad, too imperative, or too concrete, it will override global invariants in the model’s semantic priority graph.**
+
+The APT rule was a “bright‑spot rule”—highly specific and highly actionable.  
+It overshadowed the OS‑Mutation Guard until it was narrowed.
+
+This is exactly why the guidelines emphasize:
+
+- invariants over examples  
+- negative constraints over recipes  
+- narrow domain‑specific rules  
+- explicit global rules  
+- avoiding rules that encode history patterns  
+- avoiding rules that require real‑world knowledge  
+- re‑evaluating salience after adding new rules  
+
+These two test cases are the canonical examples of what happens when these principles are not followed—and how quickly determinism returns once they are.
+
+---
+
+#### **Connection to the Patch2‑Rev4 Deep‑Dives**
+
+These regression cases also reinforce the findings from:
+
+- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
+
+- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)**  
+
+- **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
+
+Those sections documented the first time we observed:
+
+- rule ordering effects  
+- salience dominance  
+- pattern‑matching interference  
+- nondeterministic behavior caused by rule adjacency  
+- the need to strengthen global invariants  
+
+The “Unable to locate package” regressions are the **second major case study** confirming the same underlying transformer behaviors.
+
+Together, these cases form the empirical foundation for the rule‑engineering framework presented in this chapter.
+
+
+[Back to top](#top-preface3)
+
+---
 
 
 
@@ -3785,197 +3976,6 @@ This is why **LLM contract engineering is fundamentally salience engineering**.
 
 ---
 
-
-
-### **Cross‑Reference: How This Chapter Connects to the Patch2‑Rev4 Deep‑Dives**
-
-The principles in this chapter — invariants, negative constraints, salience control, and avoiding test‑case‑encoded rules — are not abstract theory.  
-
-They emerged directly from the real‑world failures analyzed in:
-
-- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
-
-- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)** 
- 
-- **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
-
-Those three sections documented the first time we encountered **nondeterministic behavior** caused by:
-
-- rule ordering  
-- rule specificity  
-- salience dominance  
-- pattern‑matching interference  
-- and the model’s internal “semantic priority graph”  
-
-Specifically:
-
-- The **invalid‑flag rule** in Brew Patch2 was placed *after* the segmental rewrite logic.  
-- Two nearly identical invalid‑flag test cases produced **different actions** (one fallback, one rewrite).  
-- This nondeterminism disappeared the moment we moved the invalid‑flag rule **above** the rewrite block.  
-
-That incident was the first clear demonstration that:
-
-> **Transformers do not follow rules in textual order — they follow rules in *salience order*.**
-
-The same phenomenon reappeared months later in the Ubuntu APT missing‑package regression:
-
-- The overly broad APT rule (“If package cannot be located → update + install”)  
-- Became more salient than the OS‑Mutation Guard  
-- After Patch2 expansion increased the density of rewrite‑related patterns  
-- Leading to a regression in idempotency test #6 and base‑20 test #0  
-
-Fixing that regression required applying the **same principles** uncovered in the Patch2 deep‑dives:
-
-- Narrow the domain‑specific rule  
-- Strengthen the global invariant  
-- Reduce pattern salience  
-- Avoid bright‑spot rules  
-- Ensure global constraints dominate local recipes  
-
-This chapter generalizes those lessons into a **formal rule‑engineering framework** that applies across all OSes, all package managers, and all future contract expansions.
-
-[Back to top](#top-preface3)
-
----
-
-
-### **Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases**
-
-The principles in the section below are not theoretical abstractions:
-
- **[Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)** 
-
-They emerged directly from two concrete regression cases that surfaced during Ubuntu testing:
-
-- **Idempotency Test Case #6** (index 5)  
-- **Base‑20 Test Case #0** (index 1)
-
-Both cases involved the same stderr pattern:
-
-```
-E: Unable to locate package <pkg>
-```
-
-Yet both initially behaved correctly (returning `fallback`), then regressed after Patch2 expansion, and finally stabilized again after the APT rule was narrowed. These two cases are the clearest real‑world demonstrations of how transformer‑level mechanisms—semantic priority graphs, rule salience, and pattern dominance—can override intended contract logic unless rules are engineered with invariants and negative constraints.
-
----
-
-#### **Idempotency Test Case #6 — Why the Regression Happened**
-
-This case had:
-
-- no history  
-- no idempotency signal  
-- no OS‑signaled remediation  
-- stderr containing only “Unable to locate package”  
-
-Under the global OS‑Mutation Guard, the correct action is **fallback**.
-
-However, after Patch2 introduced additional rewrite‑related rules, the overly broad APT domain‑primitive rule:
-
-> “If package cannot be located → apt‑get update + install”
-
-became more **salient** than the OS‑Mutation Guard.  
-In the model’s semantic priority graph, it was:
-
-- more specific  
-- more imperative  
-- more concrete  
-- more pattern‑matched  
-
-This caused the LLM to incorrectly generate:
-
-```
-cleanup_and_retry → apt-get update
-```
-
-The fix was not to add a test‑case‑specific rule, but to **tighten the invariant**:
-
-> “Missing‑package remediation requires OS‑signaled context.”
-
-Once the APT rule was narrowed to require repo/index/dpkg context, the OS‑Mutation Guard regained priority, and the test case returned to the correct `fallback` behavior.
-
----
-
-#### **Base‑20 Test Case #0 — Why the Same Invariant Fixes It**
-
-This case had:
-
-- history showing `apt-get update` already executed  
-- stderr still reporting “Unable to locate package nginx”  
-- no OS‑signaled remediation  
-- no idempotency signal  
-
-Even though the package *does* exist in real life, the model cannot rely on real‑world knowledge.  
-It must rely on:
-
-- stderr  
-- history  
-- global invariants  
-
-The correct action is again **fallback**, because:
-
-- the OS did not signal remediation  
-- the OS‑Mutation Guard forbids introducing `apt-get update`  
-- retrying the install would fail again  
-
-The same invariant that fixed idempotency #6 also fixed this case:
-
-> “Missing‑package remediation requires OS‑signaled context.”
-
-No test‑case‑specific rule was needed.
-
----
-
-#### **Why These Two Cases Matter for Rule Engineering**
-
-These two regressions illustrate the core lesson of the entire chapter:
-
-> **If a domain‑specific rule is too broad, too imperative, or too concrete, it will override global invariants in the model’s semantic priority graph.**
-
-The APT rule was a “bright‑spot rule”—highly specific and highly actionable.  
-It overshadowed the OS‑Mutation Guard until it was narrowed.
-
-This is exactly why the guidelines emphasize:
-
-- invariants over examples  
-- negative constraints over recipes  
-- narrow domain‑specific rules  
-- explicit global rules  
-- avoiding rules that encode history patterns  
-- avoiding rules that require real‑world knowledge  
-- re‑evaluating salience after adding new rules  
-
-These two test cases are the canonical examples of what happens when these principles are not followed—and how quickly determinism returns once they are.
-
----
-
-#### **Connection to the Patch2‑Rev4 Deep‑Dives**
-
-These regression cases also reinforce the findings from:
-
-- **[LLM Contract Execution Semantics: Why Patch2‑Rev3 Changed Behavior — The Requirement for Patch2‑Rev4 with Brew](#llm-contract-execution-semantics-why-patch2rev3-changed-behavior-the-requirement-for-patch2-rev4-with-brew)**
-
-- **[Deep‑Dive1 Patch2‑Rev4: How Transformers Actually Apply Contract Rules](#deepdive1-patch2-rev4-how-transformers-actually-apply-contract-rules)**  
-
-- **[Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)**  
-
-Those sections documented the first time we observed:
-
-- rule ordering effects  
-- salience dominance  
-- pattern‑matching interference  
-- nondeterministic behavior caused by rule adjacency  
-- the need to strengthen global invariants  
-
-The “Unable to locate package” regressions are the **second major case study** confirming the same underlying transformer behaviors.
-
-Together, these cases form the empirical foundation for the rule‑engineering framework presented in this chapter.
-
-
-[Back to top](#top-preface3)
-
----
 
 
 
