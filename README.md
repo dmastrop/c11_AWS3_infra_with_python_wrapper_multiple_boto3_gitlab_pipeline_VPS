@@ -15216,7 +15216,7 @@ The issues with the index 21 test case were complex and resolved. A full write u
 PREFACE UPDATE3 chapter on LLM Contract Engineering at the link below. 
 The section is named: 
 
-"Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control" and is a very interesting read with empirical validation of the theory.
+**"Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control"** and is a very interesting read with empirical validation of the theory.
 
 See the link below.
 
@@ -15225,7 +15225,7 @@ code. This case study is also detailed in the PREFACE UPDATE3 chapter on LLM Con
 validator code is also an important part of LLM Contract Engineering to "protect" the MCP Client from unexpected LLM responses to
 a given context payload. 
 
-This section is entited: "Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing"
+This section is entited: **"Empty‑Message Leakage in Non‑Abort Action Plans: Schema‑Level Contract Interference in Patch2 Testing"**
 
 - [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
 
@@ -15337,6 +15337,9 @@ This is the test matrix for the 20 base test cases on the refactored RHEL_RULES 
 assembly code refactor in ai_gateway_service.py. For more on the per-OS prompt assembly code, see the PREFACE UPDATE3 link below, in 
 the next section covering rewrite regression.
 
+Many of the more complex test cases have been reviewed in the earlier test sections above for Ubuntu and Debian. The test cases are all
+passing now on RHEL.
+
 
 
 <details>
@@ -15383,11 +15386,11 @@ Contract Engineering chapter of PREFACE UPDATE3 in the link below:
 
 The case study is in the following 2 subsections of the Preface Update3 Table of Contents:
 
-"Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)"
+**"Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)"**
 
 and
 
-"RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)"
+**"RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)"**
 
 The fix involved 2 layers of changes:
 1.A full implementation of a per-OS prompt assembly in the ai_gateway_service.py module, that replaces the monolithic payload code that
