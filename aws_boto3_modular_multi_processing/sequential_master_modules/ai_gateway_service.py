@@ -1500,6 +1500,22 @@ RHEL_RULES = (
     "      yum install -y <pkg>\n"
     "\n"
 
+
+
+
+
+    ##### YUM metadata + mirrorlist / index failure (OS-signaled remediation — RHEL-specific) #####
+    "- If stderr CONTAINS ANY of the following EXACT phrases:\n"
+    "    * \"Error: Failed to download metadata for repo\"\n"
+    "    * \"Error: failed to download metadata for repo\"\n"
+    "    * \"Cannot prepare internal mirrorlist: No URLs in mirrorlist\"\n"
+    "    * \"Some index files failed to download. They have been ignored, or old ones used instead.\"\n"
+    "  then this MUST be treated as OS-signaled stale-metadata remediation for YUM on RHEL.\n"
+    "  The LLM MUST return a \"cleanup_and_retry\" action with the following retry sequence:\n"
+    "      * yum clean all\n"
+    "      * yum makecache\n"
+    "      * yum install -y <pkg>   (only when a package name is present)\n"
+    "\n"
     ##### YUM metadata / repo corruption (OS-signaled remediation — RHEL-specific) #####
     "- If stderr indicates YUM metadata or repo corruption (e.g., 'Metadata file does not match checksum',\n"
     "  'repomd.xml signature could not be verified', 'failed to retrieve repodata', 'Error: failed to download metadata'),\n"
