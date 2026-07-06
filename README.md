@@ -15329,7 +15329,112 @@ The finaly passing test matrices are below with the notes indicating where the i
 
 ##### RHEL test matrix for idempotency (6) test cases
 
+The test cases are all passing on the RHEL with the per-OS prompt assembly code and the refactored RHEL_RULES domain primtives block.
+These tests were not problematic during the testing and adapted well to the new code changes. 
+
+The test matrix for the 6 RHEL idempotency test cases is below:
+
+<details>
+<summary><b>Click to expand RHEL Idempotency Test Case Matrix (6 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | rhel-idem-001 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | **Package already installed → idempotency signal.** stdout: “Package … already installed. Nothing to do.” Global idempotency rules require re‑issuing the same safe install command. |
+| 2 | rhel-idem-002 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | **Idempotent system‑wide operation.** stderr: “Nothing to do.” Global idempotency rules treat system‑wide ops with no changes as idempotent → safe retry. |
+| 3 | rhel-idem-003 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | **Idempotency with history.** History shows prior successful `yum upgrade -y` with identical stderr. Global idempotency rules → safe retry of same command. |
+| 4 | rhel-idem-004 | `systemctl start httpd` | cleanup_and_retry | cleanup_and_retry (`systemctl start httpd`) | **Service already running.** stderr: “Job for httpd.service is already running.” This is a classic idempotency case → safe retry of the same systemctl command. |
+| 5 | rhel-idem-005 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Directory exists.** stderr: “File exists.” History shows prior successful creation. Global idempotency rules require safe retry using `mkdir -p`. |
+| 6 | rhel-osmut-001 | `yum install -y some-nonexistent-package` | fallback | fallback | **Not idempotency. Not OS‑signaled remediation.** stderr: “No match for argument … Unable to find a match.” No corruption, no index failure, no rpmdb failure → MUST fallback under OS‑mutation guard. |
+
+</details>
+
+
+
+
 ##### RHEL test matrix for os-signaled remeidation (3) test cases
+
+The test case index2 (test case3) in this test suite was initally failing and the RHEL_RULES block had to be slighly modified to 
+accomodate the index2 test case. The test case was NOT written into the contract rules, but rather a very generalized rule block
+was added to handle a wide variety of os-signaled remdiation test cases as detailed below.
+
+
+The added block was strategically placed in the RHEL_RULES domain primitives block so as not to cause regressions in other areas.
+
+The hybrid RHEL error in index 2 is composed of three independent YUM/rpm failure classes:
+1.	Metadata download failure "Error: Failed to download metadata for repo"
+2.	Mirrorlist misconfiguration "Cannot prepare internal mirrorlist: No URLs in mirrorlist"
+3.	Index file corruption / stale metadata "Some index files failed to download. They have been ignored, or old ones used instead."
+
+These three signals are canonical YUM/rpm failure patterns that appear across:
+•	RHEL 7, 8, 9
+•	CentOS 7, 8
+•	Fedora
+•	Amazon Linux 2
+•	Amazon Linux 2023
+
+Thus, this same new rule block will be ported to the other OSes listed above.
+
+The three failure classes above  are NOT unique to this particular test case — they are real world YUM failure modes.
+
+By adding literal matches for these phrases, we are not encoding a test case; we are encoding the actual deterministic general remediation
+signals that YUM emits.
+
+This is exactly what the Ubuntu and Debian domain primitives blocks  do with:
+•	"Hash Sum mismatch"
+•	"Some index files failed to download"
+•	"dpkg was interrupted"
+•	"Failed to fetch"
+Those rules are also literal phrase matches — because literal precedence is the only way to guarantee deterministic behavior across OSes.
+
+This new  block will catch future RHEL/CentOS/Fedora failures because the block will catch any stderr containing:
+•	metadata download failure
+•	mirrorlist failure
+•	index file failure
+
+These appear in many real-life stderr combinations:
+•	metadata + mirrorlist
+•	metadata + index failure
+•	mirrorlist + index failure
+•	metadata only
+•	mirrorlist only
+•	index failure only
+
+The new rule block covers all of these because it uses:
+```
+“If stderr CONTAINS ANY of the following EXACT phrases:”
+```
+
+This means:
+•	ANY one of the phrases triggers remediation
+•	ANY combination triggers remediation
+•	ANY ordering triggers remediation
+•	ANY future hybrid variant triggers remediation
+
+This is exactly how Ubuntu/Debian handle their remediation signals.
+
+So we are mirroring the remediation model present in Ubuntu and Debian to RHEL.
+
+The 3 OS-signaled remedidation test matrix is below:
+
+
+<details>
+<summary><b>Click to expand RHEL OS‑signaled Remediation Test Case Matrix (3 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | rhel‑osmut‑001 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Explicit YUM metadata corruption + signature failure.** stderr includes: `repomd.xml signature could not be verified`, `Metadata file does not match checksum`, and `failed to download metadata`. These are canonical RHEL/YUM corruption signals. Under OS‑signaled remediation rules, the LLM MUST perform metadata cleanup (`yum clean all`, `yum makecache`) before retrying the install. |
+| 2 | rhel‑osmut‑002 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y nginx`) | **rpmdb corruption (Berkeley DB failure).** stderr contains: `rpmdb open failed`, `BDB0113 Thread died`, `db5 error(-30973)`, and `DB_RUNRECOVERY`. These are deterministic rpmdb corruption signals. OS‑signaled remediation requires rpmdb recovery steps (`rm -f` lock, `rpm --rebuilddb`) followed by a safe retry of the install. |
+| 3 | rhel‑osmut‑003 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Hybrid metadata + mirrorlist + index failure.** stderr includes: `Failed to download metadata`, `Cannot prepare internal mirrorlist: No URLs in mirrorlist`, and `Some index files failed to download`. This hybrid case is covered by the strengthened literal‑precedence rule in RHEL_RULES. OS‑signaled remediation requires metadata cleanup and cache rebuild before retrying. |
+
+</details>
+
+
+
+
 
 ##### RHEL test matrix for regression on base 20 test cases (20 test cases)
 
@@ -15430,7 +15535,7 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 | 19 | r‑patch‑019 | `yum install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && echo 'test' && yum install -y htop`) | **Wrong‑OS PM (`pacman`) rewritten.** `echo` preserved. |
 | 20 | r‑patch‑020 | `apt-get install nano --badflag && yum install curl` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Patch2 invalid‑flag rule → fallback. |
 | 21 | r‑patch‑021 | `yum install curl && apk add bash --badflag && yum install nano` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Patch2 invalid‑flag rule → fallback. |
-| 22 | r‑patch‑022 | `apt-get install nano && apk add bash && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y bash && yum update -y`) | **Previously failing case — now correct.** **Fixed the per-oS prompt assembly fix used on index16 and also by complete rewrite of RHEL_RULES Patch2 block.** Wrong‑OS PMs rewritten; system‑wide `yum update -y` preserved. |
+| 22 | r‑patch‑022 | `apt-get install nano && apk add bash && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y bash && yum update -y`) | **Previously failing case — now correct.** **Fixed by the per-oS prompt assembly fix used on index16 and also by complete rewrite of RHEL_RULES Patch2 block.** Wrong‑OS PMs rewritten; system‑wide `yum update -y` preserved. |
 | 23 | r‑patch‑023 | `apk add bash && yum install curl && rm -rf /` | abort | abort | **Destructive command present.** Safety rule overrides rewrite → abort. |
 | 24 | r‑patch‑024 | `yum install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y nano && echo hi && yum install -y bash`) | **Two wrong‑OS PMs rewritten.** Non‑PM segment preserved. Full pipeline normalized. |
 
