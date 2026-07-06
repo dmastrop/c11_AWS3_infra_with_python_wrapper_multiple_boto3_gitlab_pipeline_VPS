@@ -165,7 +165,7 @@ artifact logs per pipeline)
 - AI Gateway Service start integration during Gitlab pipeline deployment stage
 - Iterative curl context testing with LLM for AI Gateway Service payload contract action rule development and refinement 
 (whitebox testing)
-- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) LLM contract rule formation (whitebox testing)
+- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) (LLM Contract Engineering whitebox testing)
 - Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
 - LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
 
@@ -14118,6 +14118,9 @@ For a more comprehensive chapter on Contract Engineering Rules that have been le
 
 - [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
 
+This includes extensively detailed case studies regarding saliency issues, instruction overshadowing, contextual dominance, prompt 
+interference, Cross-OS (domain) salience interference, etc.
+
 
 ---
 
@@ -15316,6 +15319,86 @@ The full 24 test case test matrix for Debian is presented below along with the n
 
 #### 3. LLM Contract Stress Tester – Idempotency RHEL testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-rhel-testing-and-test-matrices"></a>
+
+Due to the number of issues that were encountered when refactoring the patch2 rewrite cluster block for RHEL, all test cases had
+to be regression tested on RHEL. After the 6 idempotency test cases and the 3 os-signaled remediation test cases were executed, the
+complete regression involved all 20 base test cases and all 24 patch2 rewrite test cases.
+
+The finaly passing test matrices are below with the notes indicating where the issues were encountered.
+
+
+##### RHEL test matrix for idempotency (6) test cases
+
+##### RHEL test matrix for os-signaled remeidation (3) test cases
+
+##### RHEL test matrix for regression on base 20 test cases (20 test cases)
+
+This is the test matrix for the 20 base test cases on the refactored RHEL_RULES domain primitives block, and with the per-OS prompt
+assembly code refactor in ai_gateway_service.py. For more on the per-OS prompt assembly code, see the PREFACE UPDATE3 link below, in 
+the next section covering rewrite regression.
+
+
+
+<details>
+<summary><b>Click to expand RHEL Base‑20 Test Case Matrix (20 test cases)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | i‑test‑001 | `yum install -y nginx` | fallback | fallback | **Package not found, no OS‑signaled remediation.** stderr: `No match for argument: nginx` with prior `yum update -y` in history. Ambiguous repo/package state → fallback. |
+| 2 | i‑test‑002 | `dnf install -y nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager on RHEL.** Concrete package name present → deterministic rewrite from `dnf` to `yum`. |
+| 3 | i‑test‑003 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager (`apt-get`) on RHEL.** stderr: `bash: apt-get: command not found`. Rewrite to native `yum`. |
+| 4 | i‑test‑004 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl`) | **Wrong package manager (`apk`) on RHEL.** Concrete package name present → rewrite to `yum install -y curl`. |
+| 5 | i‑test‑005 | `yum install` | fallback | fallback | **Incomplete install command, missing package list.** stderr: `Error: Need to pass a list of packages`. No safe package inference → fallback. |
+| 6 | i‑test‑006 | `dnf install` | fallback | fallback | **Incomplete install command with wrong PM.** Missing package list, no deterministic correction without guessing → fallback. |
+| 7 | i‑test‑007 | `rm -rf /` | abort | abort | **Destructive command.** Global safety constraints trigger `abort` with message: `Destructive command detected: rm -rf /`. |
+| 8 | i‑test‑008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `bash: asdfasdfasdf: command not found`. No rewrite or remediation → fallback. |
+| 9 | i‑test‑009 | `show route everything` | fallback | fallback | **Cisco‑style “show” on Linux.** stderr: `bash: show: command not found`. Global malformed‑command rules for Linux → fallback. |
+| 10 | i‑test‑010 | `yum update -y` | fallback | fallback | **Network failure.** stderr: `Could not resolve host: mirrorlist.centos.org`. Classified as connectivity issue → must use fallback, no cleanup_and_retry. |
+| 11 | i‑test‑011 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **YUM metadata corruption.** stderr: `Metadata file does not match checksum for repomd.xml from baseos`. OS‑signaled stale metadata → cleanup_and_retry. |
+| 12 | i‑test‑012 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Signature verification failure.** stderr: `repomd.xml signature could not be verified for repo 'baseos'`. Treated as repo/metadata corruption → cleanup_and_retry. |
+| 13 | i‑test‑013 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Hybrid metadata + mirrorlist failure.** stderr includes `Error: failed to download metadata` and `No URLs in mirrorlist`. Literal hybrid remediation rule → cleanup_and_retry. |
+| 14 | i‑test‑014 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | **Idempotent install.** stderr: `Package ... is already installed. Nothing to do.` Global idempotency rules → cleanup_and_retry (re‑run install as safe idempotent retry). |
+| 15 | i‑test‑015 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | **Idempotent update.** stderr: `Nothing to do.` Global idempotency rules for system‑wide ops → cleanup_and_retry with same command. |
+| 16 | i‑test‑016 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | **Idempotent upgrade.** stderr: `No packages marked for update.` Treated as idempotent system‑wide operation → cleanup_and_retry. |
+| 17 | i‑test‑017 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager (`apt`) on RHEL.** Concrete package name present → rewrite to `yum install -y nginx`. |
+| 18 | i‑test‑018 | `yum install -y mysql-server` | fallback | fallback | **Package not found, no remediation context.** stderr: `No match for argument: mysql-server`. No repo/index corruption or OS‑signaled remediation → fallback. |
+| 19 | i‑test‑019 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y httpd`) | **rpmdb corruption.** stderr: `Error: rpmdb open failed` with Berkeley DB errors. RHEL rpmdb recovery sequence → cleanup_and_retry. |
+| 20 | i‑test‑020 | `yum install -y curl` | fallback | fallback | **Repo misconfiguration without corruption.** stderr: `Cannot prepare internal mirrorlist: No URLs in mirrorlist` for repo `extras`. Classified as non‑corruption repo error → fallback. |
+
+</details>
+
+
+
+
+##### RHEL test matrix for regression on 24 rewrite patch2 test cases (24 test cases)
+
+The regression testing of the patch2 rewrite cluster block on RHEL failed in a few different areas. This was after the initial 
+refactoring of the patch2 block. The most signficant failure was one involving the schema test case indexes 16 and 21.  The case study
+was far more complex than the Debian failure case (which was a failure of index 21 test case). The case study is detailed in the LLM
+Contract Engineering chapter of PREFACE UPDATE3 in the link below:
+
+- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
+
+The case study is in the following 2 subsections of the Preface Update3 Table of Contents:
+
+"Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)"
+
+and
+
+"RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)"
+
+The fix involved 2 layers of changes:
+1.A full implementation of a per-OS prompt assembly in the ai_gateway_service.py module, that replaces the monolithic payload code that
+was causing Cross-OS (domain) saliency issues
+2.A refactoring of the RHEL_RULES domain primitives block to more closely mirror the Ubuntu and Debian domain primitives blocks.
+
+The combnination resolved the issue entirely. Index16 began passing with the first fix (per-OS prompt asssembly), and index21 began
+passing after the RHEL domain primitives block contract rules refactor.
+
+
+
 
 ---
 
