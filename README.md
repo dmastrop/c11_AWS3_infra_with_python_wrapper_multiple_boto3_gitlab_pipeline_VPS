@@ -1482,7 +1482,7 @@ A small set of strong invariants is more stable than a large set of recipes.
 
 ---
 
-#### **Per‑OS Prompt Isolation (Per-OS prompt assembly code)**
+#### **15. Per‑OS Prompt Isolation (Per-OS prompt assembly code)**
 
 All OS domain‑primitives blocks MUST be isolated in the prompt.  
   
@@ -1493,7 +1493,7 @@ The contract payload MUST be assembled as:
 and MUST NOT include domain blocks for other OSes.  
   
 All text inside the prompt string contributes to salience, including comments, obsolete blocks, and rules for other OSes.
-Multi‑OS concatenated prompts cause cross‑OS salience contamination, regression cascades, and unstable OS specific rule behavior/    
+Multi‑OS concatenated prompts cause cross‑OS salience contamination, regression cascades, and unstable OS specific rule behavior.
 Per‑OS prompt assembly is required for deterministic behavior across multiple OSes.
 
 
