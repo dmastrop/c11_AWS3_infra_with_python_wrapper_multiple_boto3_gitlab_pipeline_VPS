@@ -1038,6 +1038,11 @@ one that leverages ML and LLM reasoning to stabilize and harden complex distribu
 - [Cross‑Reference: How These Lessons Apply to the “Unable to Locate Package” Regression Cases](#crossreference-how-these-lessons-apply-to-the-unable-to-locate-package-regression-cases)
 - [Empty-Message Leakage in Non-Abort Action Plans: Schema-Level Contract Interference in Patch2 Testing](#empty-message-leakage-in-non-abort-action-plans-schema-level-contract-interference-in-patch2-testing)
 - [Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control](#debian-patch2-salience-case-study)
+- [Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)](#per-os-prompt-assembly)
+- [RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)](#rhel-patch2-rewrite-salience)
+
+
+
 
 ---
 
@@ -3977,6 +3982,40 @@ This is why **LLM contract engineering is fundamentally salience engineering**.
 ---
 
 
+
+<a name="per-os-prompt-assembly"></a>
+### Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)
+
+
+
+
+
+
+---
+
+
+[Back to top](#top-preface3)
+
+---
+
+
+
+<a name="rhel-patch2-rewrite-salience"></a>
+### RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)
+
+
+
+
+
+
+
+
+---
+
+
+[Back to top](#top-preface3)
+
+---
 
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
