@@ -168,7 +168,7 @@ artifact logs per pipeline)
 - Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) (LLM Contract Engineering whitebox testing)
 - Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
 - LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
-
+- Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
 
 ---
 
