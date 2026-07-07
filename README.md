@@ -3987,10 +3987,664 @@ This is why **LLM contract engineering is fundamentally salience engineering**.
 ### Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)
 
 
-This section
+*This section introduces the architectural redesign that enabled deterministic behavior across all operating‑system domains. The shift from a monolithic prompt to a per‑OS prompt assembly model eliminated cross‑OS salience interference, reduced prefill cost, and restored correct Patch2 rewrite behavior for RHEL. This redesign is foundational to the subsequent RHEL case study that follows:
 
-####
+"RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2–4 of 4)"
 
+
+---
+
+#### 1.1 Motivation for Per‑OS Prompt Assembly
+
+The original monolithic prompt concatenated all OS domain‑primitive blocks into a single prompt:
+
+```
+GLOBAL_RULES
+Ubuntu_RULES
+Debian_RULES
+RHEL_RULES
+Alpine_RULES
+Fedora_RULES
+CentOS_RULES
+AmazonLinux_RULES
+BusyBox_RULES
+...
+```
+
+Although each block was correctly guarded by `os_name` and `os_version`, the model still constructed a **single salience map** across the entire prompt. This meant that:
+
+- Ubuntu’s Patch2 rewrite cluster contributed strong rewrite patterns.  
+- Debian’s malformed‑command fallback language contributed strong fallback patterns.  
+- Alpine’s rewrite rules contributed additional package‑manager semantics.  
+- Fedora and CentOS contributed overlapping yum/dnf semantics.  
+- BusyBox contributed malformed‑command hardening rules.  
+
+None of these rules executed on RHEL, but all of them influenced the model’s **attention**, **priority**, and **interpretation** of the 
+rules that did execute (RHEL_RULES domain primitives block)
+
+This produced nondeterministic behavior in RHEL Patch2 tests, especially in multi‑segment pipelines.
+
+---
+
+#### 1.2 Why OS‑Gating Was Logically Correct but Salience‑Wise Insufficient
+
+Each OS block contained explicit guards:
+
+```
+These rules apply ONLY when os_name == 'RHEL'
+```
+
+This prevented Ubuntu or Debian rules from *executing* on RHEL.
+
+However, OS‑gating does **not** prevent salience interference.
+
+The model still *reads* all blocks and constructs a blended salience map.  
+As a result:
+
+- Ubuntu’s larger Patch2 cluster overshadowed RHEL’s Patch2 cluster.  
+- Debian’s fallback language overshadowed RHEL’s fallback language.  
+- Alpine’s rewrite rules competed with RHEL’s rewrite rules.  
+- BusyBox malformed‑command rules competed with RHEL’s malformed‑command rules.
+
+Thus:
+
+- **Rule‑gating:** correct  
+- **Salience behavior:** incorrect  
+- **Fix:** per‑OS prompt assembly
+
+This distinction is essential for understanding why the monolithic prompt failed.
+
+---
+
+#### 1.3 How Cross‑OS Salience Pollution Works
+
+Cross‑OS salience pollution occurs when:
+
+1. Multiple OS blocks coexist in the same prompt (the prompt is incorporated into the payload that is sent directly to the LLM via the AI Gateway Service.
+2. The model constructs a single salience map across all blocks.  
+3. Stronger or more explicit rule clusters dominate weaker ones.  
+4. The model prioritizes the wrong rule cluster for the active OS.  This is critical. Even though the other OS rules are not actually executed, the salience map affects the priority of the rule cluster that is executed for the active OS.
+
+For example:
+
+- Ubuntu’s Patch2 cluster is large, explicit, and highly structured.  
+- RHEL’s original Patch2 cluster was smaller and less explicit.  
+- In the monolithic prompt, Ubuntu’s Patch2 cluster dominated the salience map.  
+- As a result, RHEL pipelines were interpreted using Ubuntu‑like semantics.  
+
+This explains why:
+
+- RHEL index 16 failed under the monolithic prompt.  
+- RHEL index 21 failed under the monolithic prompt.  
+- Ubuntu and Debian passed the same tests.  
+- RHEL’s failures did not match its own rule block.
+
+The salience map was simply not RHEL‑specific.
+
+---
+
+#### 1.4 Why Per‑OS Prompt Assembly Was Required
+
+Per‑OS prompt assembly physically removes irrelevant OS blocks from the prompt.  
+Under this architecture, the model receives:
+
+```
+GLOBAL_RULES + RHEL_RULES
+```
+
+instead of:
+
+```
+GLOBAL_RULES + Ubuntu_RULES + Debian_RULES + RHEL_RULES + ...
+```
+
+This eliminates cross‑OS salience interference entirely.
+
+The effect was immediate:
+
+- RHEL index 16 began passing.  
+- RHEL index 21 continued failing, but the failure became internally consistent.  (more on this in Parts 2-4)
+- Rewrite determinism improved.  
+- Fallback behavior became predictable.  
+- Repo‑error semantics became stable.  
+- Idempotency semantics became stable.
+
+Per‑OS assembly provided a clean salience environment in which RHEL’s own rules could operate correctly.
+
+---
+
+#### 1.5 Why Prefill Cost Dropped from ~6¢ → ~1¢
+
+The monolithic prompt was large, containing all OS blocks.  
+Per‑OS assembly reduces prompt size by removing irrelevant blocks.
+
+This reduces:
+
+- token count  
+- attention‑map size  
+- prefill computation  
+- inference cost  
+
+Empirical results:
+
+- 59 test cases dropped from **$12.45 → $11.85**  
+- ~60¢ total reduction  
+- ~1¢ per test case  
+- previously ~6¢ per test case, and the same amount of testing would have costed $3.60.
+
+This confirms that per‑OS assembly improves both correctness and cost efficiency.
+
+---
+
+#### 1.6 Why RHEL Index 16 Started Passing Immediately
+
+Index 16 is a two‑segment pipeline:
+
+```
+apt-get install nano && yum install curl && yum update -y
+```
+
+Under the monolithic prompt:
+
+- Ubuntu’s Patch2 cluster overshadowed RHEL’s Patch2 cluster.  
+- Debian’s fallback language overshadowed RHEL’s fallback language.  
+- The model interpreted the pipeline as ambiguous intent.  
+- The model chose fallback.
+
+```
+
+
+Under per‑OS assembly:
+
+- Only RHEL rules were present.  
+- RHEL’s Patch2 cluster became salient.  
+- The yum system‑wide anchor became salient.  
+- The model rewrote both wrong‑OS segments correctly.  
+- The model preserved the yum update anchor.  
+- The model returned `retry_with_modified_command`.
+
+This confirmed that cross‑OS salience interference was responsible for the index 16 failure.
+
+---
+
+
+#### 1.7 Test results after the per-OS prompt assembly implementation
+
+The index 16 test case started passing. The index 21 test case continued to fail, and this required the fix outlined in the Parts2-4.
+
+
+```
+root@6aec648c0168:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/rhel_patch_tests --index 16
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"yum install -y nano && yum install -y curl && yum update -y"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: RHEL 9
+Command: apt-get install nano && yum install curl && yum update -y
+[DEBUG] schema os_name=RHEL, schema os_version=9
+========================
+
+root@6aec648c0168:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/rhel_patch_tests --index 21
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: RHEL 9
+Command: apt-get install nano && apk add bash && yum update -y
+[DEBUG] schema os_name=RHEL, schema os_version=9
+========================
+```
+
+
+---
+
+
+#### 1.8 Per-OS prompt assembly code review
+
+This section outlines the code changes involved in ai_gateway_service.py. For the full module see the repository.
+In addition, it outlines how the code selects the OS specific rules blocks using a specialized function. 
+
+
+##### 1.8.1 Code Review
+
+The implementation at a high level involved several changes.
+
+First de-activate the current payload block in the def recover() function. The def recover() function is the function that packages the payload that has the prompt (the contract rules and the context from the calling module), and sends it to the LLM for evaluation. The current payload is the monolithic format described above. This entire payload will be reconstructed using the per-OS prompt assembly approach. The original payload is renamed payload_old. This will prevent it from being used. 
+
+
+
+```
+        # This is payload6 which is deprecated for the above
+        # This entire payload needs to be commented out
+        # In the meantime rename this from payload to payload_old. This will prevent the AI gateway service from using this to create
+        # the full payload that is sent to the LLM. Instead the new payload using per-OS prompt assembly, above, will be used. 
+
+        payload_old = {
+            #"model": "gpt-4.1",
+            "model": "gpt-5.4",
+            "temperature": 0,
+            "max_output_tokens": 256,
+
+            # The "input" field contains the entire contract, rules, and context.
+            # The LLM receives this as a single string and MUST return a JSON object.
+            "input": (
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+```
+
+Next, migrate the domain primitives OS specific blocks inside the original payload (the renamed payload_old) to dedicated blocks using Python module level tuple constants representing OS domain primitive rule blocks. This must be done for each OS in the original payload_old block. This is what will eliminate the cross-OS salience problem of having all the OS domain primitives blocks in a single payload. 
+
+There is a dedicated section 1.8.2 below on the nature of this design that uses python module-level tuple constants.
+
+For example (partial code):
+
+```
+UBUNTU_RULES = (
+                # ============================================================
+                # UBUNTU (APT) DOMAIN RULES — Applies ONLY when os_name = "Ubuntu"
+                # ============================================================
+                "These rules apply ONLY when os_name = \"Ubuntu\".\n"
+                "IMPORTANT:\n"
+                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+… (continued
+)
+
+```
+
+The global rules that precede all the domain primitives blocks similarly had to be put into a dedicated Python module level tuple constant block as shown below (partial). Of note here, the context must be extracted out of the original global rules and into the prompt of the def recover() function itself so that it can be injected properly into the prompt which is added to the payload that is sent to the LLM. More on this part of the code later.
+
+```
+# ============================================================
+#################################### GLOBAL RULES BLOCK  #################################################################
+# NOTE: need to move CONTEXT out of GLOBAL_RULES and into the prompt in def recover() so that it can be injected properly with
+# this new per-OS prompt assembly
+# ============================================================
+
+
+GLOBAL_RULES = (
+
+
+                "You are a recovery engine. "
+                "Follow the contract and rules provided inside the input JSON. "
+                "Return ONLY a JSON object.\n\n"
+… (continued)
+
+```
+
+
+Next, after the blocks have been created, the def recover() function that packages the payload and sends the payload to the LLM, needs to be refactored a bit. 
+
+As shown below, the context needs to be explicitly extracted now, because as dynamic content it can no longer be embedded in the global rules. Python will evaluate the GLOBAL_RULES block and try to populate a context that is not defined yet. The GLOBAL_RULES block and the OS specific rules blocks above are no longer inside of the def recover() function.   The def recover() function is where the context is actually extracted as shown below. This has always been the case. 
+
+Thus, instead of the context being embedded into the GLOBAL_RULES, it needs to instead be explicitly appended as part of the prompt as shown below. 
+
+Once the context is fetched this has an os_info field that is populated either through module2f in real life scenarios (the os_info will be built from the os_name and os_version), or in the case of the stress_tester.py tool, the os_info will be injected from the schema context that has the name and version which make up the os_info. In both cases at this point the OS information is now available. This will be used in a secondary function named def get os_rules as described further below. 
+
+Partial of the def recover() function as described above:
+
+```
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from AI Request Sender (MCP Client)
+# ------------------------------------------------------------
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient,
+    forward it to the LLM,
+    return the LLM's plan.
+    """
+
+    # Extract context from AI Request Sender POST to this AI Gateway Service
+    context = request.context
+
+    # This is for the per-OS prompt assembly
+    # Extract the os_info out of the context. The context can be either from real life module2f in which case the os_name and
+    # os_version are used in os_info, or from the stress_tester.py, where name and version are used in the os_info
+    os_info = context.get("os_info", {})
+
+
+    # This is for the per-OS prompt assembly
+    # Select the correct OS block from above (Ubuntu, Debian, etc.....)
+    os_rules = get_os_rules(os_info)
+
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+
+
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+```
+
+This line calls the OS selector function based upon the os_info:
+
+```
+    # This is for the per-OS prompt assembly
+    # Select the correct OS block from above (Ubuntu, Debian, etc.....)
+    os_rules = get_os_rules(os_info)
+
+```
+
+This will get the os_rules which is the relevant OS block (discussed earlier, for example UBUNTU_RULES) that will be used to create the prompt. 
+
+
+The def get_os_rules function is below. It is simply an OS block selector function that returns the proper OS block according to the submitted os_info. 
+
+```
+
+### This is for the per-OS prompt assembly. 
+### OS selector function that is used to create the prompt (GLOBAL_RULES + os_rules) and payload in def recover()
+## os_info will be extracted directly from the context (see below)
+
+def get_os_rules(os_info):
+    """
+    Select the correct OS-specific rules block.
+
+    Supports both:
+      - stress_tester.py (uses "name" and "version")
+      - real module2f pipeline (uses "os_name" and "os_version")
+    """
+
+    os_name = os_info.get("os_name") or os_info.get("name")
+    os_version = os_info.get("os_version") or os_info.get("version") or ""
+
+    # ---------------- Linux-family OSes ----------------
+
+    if os_name == "Ubuntu":
+        return UBUNTU_RULES
+
+    if os_name == "Debian":
+        return DEBIAN_RULES
+
+    if os_name == "RHEL":
+        return RHEL_RULES
+
+    if os_name == "CentOS" and os_version == "7":
+        return CENTOS_7_RULES
+
+    if os_name == "CentOS" and os_version == "8":
+        return CENTOS_8_RULES
+
+    if os_name == "Fedora":
+        return FEDORA_RULES
+
+    if os_name == "Amazon Linux" and os_version == "2":
+        return AMAZON_LINUX_2_RULES
+
+    if os_name == "Amazon Linux 2023":
+        return AMAZON_LINUX_2023_RULES
+
+    if os_name == "Alpine":
+        return ALPINE_RULES
+
+    if os_name == "Linux" and os_version == "busybox":
+        return BUSYBOX_RULES
+
+    if os_name == "Linux" and os_version == "generic":
+        return LINUX_POWERSHELL_CORE_6_and_7_RULES
+
+    if os_name == "Linux" and os_version == "powershell-core":
+        return LINUX_POWERSHELL_CORE_6_and_7_RULES
+
+    # ---------------- macOS ----------------
+
+    if os_name == "macOS" and "brew" in os_version:
+        return MACOS_BREW_RULES
+
+    if os_name == "macOS" and "zsh" in os_version:
+        return MACOS_ZSH_RULES
+
+    # ---------------- Windows ----------------
+
+    if os_name == "Windows" and os_version == "2022":
+        return WINDOWS_POWERSHELL_2022_RULES
+
+    # ---------------- Network OSes ----------------
+
+    if os_name == "Cisco IOS":
+        return CISCO_IOS_RULES
+
+    if os_name == "PAN-OS":
+        return PANOS_RULES
+
+    # Default: no OS-specific rules
+    return ""
+```
+
+
+At this point the OS block is known and the GLOBAL_RULES block is known and the def recover() function can now create the prompt that will be used in the payload that is sent to the LLM. 
+
+The prompt is created inside the try block of that def recover() partial function shown earlier. To repost:
+
+
+```
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from AI Request Sender (MCP Client)
+# ------------------------------------------------------------
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient,
+    forward it to the LLM,
+    return the LLM's plan.
+    """
+
+    # Extract context from AI Request Sender POST to this AI Gateway Service
+    context = request.context
+
+    # This is for the per-OS prompt assembly
+    # Extract the os_info out of the context. The context can be either from real life module2f in which case the os_name and
+    # os_version are used in os_info, or from the stress_tester.py, where name and version are used in the os_info
+    os_info = context.get("os_info", {})
+
+
+    # This is for the per-OS prompt assembly
+    # Select the correct OS block from above (Ubuntu, Debian, etc.....)
+    os_rules = get_os_rules(os_info)
+
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+
+
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+
+
+
+        # This is the new per-OS prompt assembly
+        # NOTE that the full CONTEXT (dynamic content from the stress_tester or the AI/MCP hook in module2f) can no longer beembedded 
+        # inside the GLOBAL_RULES block. It is moved to the prompt (see below).
+
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+
+
+
+
+        payload = {
+            "model": "gpt-5.4",
+            "temperature": 0,
+            "max_output_tokens": 256,
+            "input": prompt,
+        }
+```
+
+In looking at the code above, once can see that the prompt is created from the os_rules (known), GLOBAL_RULES (known), and the context (known).    
+
+Once the prompt is created the payload can be created as shown above using the prompt as the input that is sent directly to the LLM for evaluation. 
+
+Thus, the prompt (payload) now only consists of the GLOBAL_RULES that apply to all domain primitives blocks (OSes), the os_rules (the OS specific block), and the context (CONTEXT), completely eliminating the cross-OS saliency issues that were present before this implementation. 
+
+This has been tested and it works very well and is precisely suited for such a complex LLM contract engineering project involving multiple OSes, GLOBAL_RULES and contexts.
+
+---
+
+
+##### 1.8.2 Structure and Role of Python Module‑Level Tuple Constants in OS Domain‑Primitive Rule Blocks
+
+The AI Gateway Service implements each operating system’s domain‑primitive rule block as a **Python module‑level tuple constant**. These constants contain the full rule text for a given OS and are selected at runtime by the per‑OS prompt assembly logic. This design provides a clean, deterministic, and easily maintainable mechanism for organizing OS‑specific rule sets.
+
+---
+
+###### Module‑Level Tuple Constants: Definition and Purpose
+
+Each OS rule block is defined as a **named tuple literal** at module scope:
+
+```python
+CENTOS_7_RULES = ()
+CENTOS_8_RULES = ()
+FEDORA_RULES = ()
+AMAZON_LINUX_2_RULES = ()
+AMAZON_LINUX_2023_RULES = ()
+ALPINE_RULES = ()
+BUSYBOX_RULES = ()
+```
+
+These objects are:
+
+- Python constants  
+- immutable tuple literals  
+- containers of rule text  
+- not environment variables  
+- not class attributes  
+- not dictionaries  
+
+They are loaded when the module is imported and never mutated.
+
+---
+
+###### Why They Are Not Environment Variables (even though they look like they are)
+
+Environment variables are:
+
+- external to Python  
+- stored in the OS process environment  
+- accessed via `os.environ`  
+- always strings  
+
+In contrast, OS rule blocks are:
+
+- Python objects  
+- immutable tuple literals  
+- defined inside the module  
+- selected by the prompt assembly logic  
+
+Thus the correct classification is:
+
+> **Python module‑level tuple constants representing OS domain‑primitive rule blocks.**
+
+---
+
+###### Three‑Layer Structure of the Rule Architecture
+
+The rule architecture consists of three layers:
+
+1. GLOBAL_RULES
+  
+Cross‑OS rules (destructive‑command guards, malformed‑command hardening, invalid‑flag rules, global idempotency, global remediation primitives).
+
+
+2. OS‑Specific Rule Blocks
+ 
+Module‑level tuple constants:
+
+- `UBUNTU_RULES`  
+- `DEBIAN_RULES`  
+- `RHEL_RULES`  
+- `CENTOS_7_RULES`  
+- `CENTOS_8_RULES`  
+- `FEDORA_RULES`  
+- `AMAZON_LINUX_2_RULES`  
+- `AMAZON_LINUX_2023_RULES`  
+- `ALPINE_RULES`  
+- `BUSYBOX_RULES`  
+- etc.
+
+
+
+3. Function‑Based Dispatch Mapping (`get_os_rules`)
+
+Instead of using a dictionary, the AI Gateway Service uses a function‑based dispatch table:
+
+```python
+if os_name == "Ubuntu": return UBUNTU_RULES
+if os_name == "Debian": return DEBIAN_RULES
+if os_name == "RHEL": return RHEL_RULES
+...
+```
+
+This function:
+
+- extracts `os_name` and `os_version` from the context  
+- selects the correct module‑level tuple constant  
+- returns it to the prompt assembly logic  
+
+This is conceptually identical to a dictionary dispatch, but implemented via conditional selection.
+
+---
+
+###### Integration with Per‑OS Prompt Assembly
+
+During prompt assembly, the AI Gateway Service constructs:
+
+```
+GLOBAL_RULES + os_rules
+```
+
+where:
+
+```python
+os_rules = get_os_rules(os_info)
+```
+
+This ensures:
+
+- only the relevant OS rule block is included  
+- cross‑OS salience interference is eliminated  
+- rule‑gating and salience‑gating are aligned  
+- Patch2 rewrite determinism is preserved  
+- prefill cost is minimized  
+
+---
+
+###### Summary
+
+- OS rule blocks are **Python module‑level tuple constants**, not environment variables.  
+- They contain the full domain‑primitive rule text for each OS.  
+- `get_os_rules()` performs the dispatch mapping.  
+- The selected rule block is combined with `GLOBAL_RULES` during per‑OS prompt assembly.  
+- This architecture is essential for eliminating cross‑OS salience interference and ensuring deterministic contract‑rule execution.
+
+---
+
+> **“The OS rule blocks are immutable Python tuple constants defined at module scope. Each tuple contains the domain‑primitive rule text for a specific operating system. The AI Gateway Service selects the appropriate tuple through a function‑based dispatch mapping implemented in `get_os_rules()`, which returns the correct rule block during per‑OS prompt assembly.”**
 
 
 ---
