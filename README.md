@@ -1027,8 +1027,8 @@ one that leverages ML and LLM reasoning to stabilize and harden complex distribu
 
 
 
-### **Table of Contents**
 <a name="top-preface3"></a>
+### **Table of Contents for the PREFACE UPDATE3**
 - [The need for efficient LLM contract engineering principles](#the-need-for-efficient-llm-contract-engineering-principles)
 - [Introduction to LLM Contract Engineering principles](#introduction-to-llm-contract-engineering-principles)
 - [Formal LLM Contract-rule engineering framework principles 1-15](#formal-llm-contract-rule-engineering-framework-principles-1-15)
@@ -4005,9 +4005,23 @@ This section
 <a name="rhel-patch2-rewrite-salience"></a>
 ### RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)
 
+#### **Table of Contents**
+- [Introduction to the RHEL Patch2 Rewrite Salience Case Study](#introduction-to-rhel-case-study)
+- [Part 2 — RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts](#rhel-part-2-case-study)
+- [Part 3 — Salience Map Explanation](#rhel-part-3-case-study)
+- [Part 4 — Lessons Learned](#rhel-part-4-case-study)
+
+
+
+<a name="introduction-to-rhel-case-study"></a>
+#### Introduction to the RHEL Patch2 Rewrite Salience Case Study
+
 This section is a continuation of the previous section which is Part 1 on the Per-OS prompt assembly case study, code design, and
 code review to eliminate Cross-OS LLM saliency issues in multi-domain LLM contract prompts/payloads. Part 1 is a prerequisite to this 
 section that has the following three addtional parts for the RHEL case study:
+
+This is a very good case study on LLM contract engineering in regards to cross-domain saliency issues and intra-domain saliency issues
+when they occur at the same time. The empirical results of the testing prove the theoretical concepts.
 
 
 
@@ -4045,8 +4059,20 @@ section that has the following three addtional parts for the RHEL case study:
 - Why system‑wide anchors must be explicitly defined  
 - Why rewrite determinism must be guaranteed for any number of segments  
 
+
 ---
 
+[Back to top of Parts 2-4 RHEL case study](#rhel-patch2-rewrite-salience)
+
+---
+
+
+
+
+
+
+
+<a name="rhel-part-2-case-study"></a>
 #### Part 2 — RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts
 
 This section documents the multi‑stage resolution of the RHEL Patch2 rewrite failures observed in the earlier monolithic‑prompt architecture. Unlike the Debian Patch2 salience issue—which was caused by a single misplaced fallback block inside the Debian domain primitives—RHEL’s failure was significantly more complex. It involved both **cross‑OS salience interference** and **internal salience conflicts** within the RHEL block itself. The final resolution required two independent architectural changes:
@@ -4388,6 +4414,10 @@ This case study is significantly more complex than the Debian Patch2 salience is
 ---
 
 
+
+
+
+<a name="rhel-part-3-case-study"></a>
 #### Part 3 — Salience Map Explanation
 
 The RHEL Patch2 rewrite failures provide a clear demonstration of how salience maps—not rule‑gating—determine the actual behavior of an LLM executing a contract‑rule system. Even when rules are logically correct, salience interference can cause the model to prioritize the wrong rule clusters, leading to nondeterministic or incorrect behavior. The RHEL case study illustrates two distinct forms of salience interference:
@@ -4599,8 +4629,7 @@ The salience map is now stable, deterministic, and aligned with Ubuntu/Debian.
 ---
 
 
-
-
+<a name="rhel-part-4-case-study"></a>
 #### Part 4 — Lessons Learned
 
 The RHEL case study provides several important lessons for LLM contract‑rule engineering. These lessons apply broadly to any multi‑domain rule system and are essential for designing deterministic, salience‑stable LLM contracts.
