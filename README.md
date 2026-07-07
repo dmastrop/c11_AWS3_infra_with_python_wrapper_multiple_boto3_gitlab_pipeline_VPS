@@ -3987,7 +3987,9 @@ This is why **LLM contract engineering is fundamentally salience engineering**.
 ### Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)
 
 
+This section
 
+####
 
 
 
@@ -4003,9 +4005,40 @@ This is why **LLM contract engineering is fundamentally salience engineering**.
 <a name="rhel-patch2-rewrite-salience"></a>
 ### RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)
 
+This section is a continuation of the previous section which is Part 1 on the Per-OS prompt assembly case study, code design, and
+code review to eliminate Cross-OS LLM saliency issues in multi-domain LLM contract prompts/payloads. It is a precursor to this section
+that has three addtional parts that build upon the Cross-OS saliency issue discussed in Part 1.
+
+
+Part 2 — RHEL Case Study (Two Stage Salience Fix)
+•	Stage 1: per OS prompt assembly
+•	Stage 2: full RHEL refactor
+•	Why RHEL’s failure was fundamentally different from Debian’s
+•	Why RHEL index 21 required both fixes
+•	Why RHEL’s malformed command block overshadowed Patch2
+•	Why multi PM pipelines were interpreted as ambiguous intent
+•	Why the refactor restored determinism
+•	Full architectural diff between RHEL legacy and RHEL refactored
+Part 3 — Salience Map Explanation
+•	How malformed command rules overshadowed Patch2
+•	How cross OS blocks polluted RHEL’s salience map
+•	How per OS isolation changed the salience map
+•	How the refactor made Patch2 dominant
+•	How rewrite determinism now holds for any number of segments
+Part 4 — Lessons Learned
+•	Why per OS prompt assembly is mandatory
+•	Why OS blocks must follow Ubuntu/Debian ordering
+•	Why Patch2 must be placed above fallback blocks
+•	Why explicit override language is required for multi PM pipelines
+•	Why system wide anchors must be explicitly defined
+•	Why rewrite determinism must be guaranteed for any number of segments
 
 
 
+
+
+
+####
 
 
 
