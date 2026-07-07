@@ -4151,7 +4151,6 @@ Under the monolithic prompt:
 - The model interpreted the pipeline as ambiguous intent.  
 - The model chose fallback.
 
-```
 
 
 Under per‑OS assembly:
