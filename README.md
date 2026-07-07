@@ -4365,7 +4365,7 @@ Command: apt-get install nano && apk add bash && yum update -y
 The RHEL Patch2 rewrite failure was caused by **two independent salience problems**:
 
 Stage 1 — Cross‑OS salience interference  
-Resolved by **per‑OS prompt assembly.
+Resolved by per‑OS prompt assembly.
 
 Stage 2 — Internal RHEL salience conflicts
 Resolved by full RHEL domain‑block refactor.
@@ -4385,19 +4385,332 @@ This case study is significantly more complex than the Debian Patch2 salience is
 
 [Back to top of Parts 2-4 RHEL case study](#rhel-patch2-rewrite-salience)
 
+---
+
+
+#### Part 3 — Salience Map Explanation
+
+The RHEL Patch2 rewrite failures provide a clear demonstration of how salience maps—not rule‑gating—determine the actual behavior of an LLM executing a contract‑rule system. Even when rules are logically correct, salience interference can cause the model to prioritize the wrong rule clusters, leading to nondeterministic or incorrect behavior. The RHEL case study illustrates two distinct forms of salience interference:
+
+1. **Cross‑OS salience interference** (caused by the monolithic prompt)  
+2. **Intra‑OS salience conflicts** (caused by ordering and dominance issues inside the RHEL block)
+
+Both forms must be understood to fully explain the failure modes observed in RHEL index 16 and index 21.
+
+---
+
+##### 3.1 Cross‑OS Salience Interference in the Monolithic Prompt
+
+Under the monolithic prompt architecture, all OS domain‑primitive blocks were concatenated into a single prompt. Although each block was correctly guarded by `os_name` and `os_version`, the model still constructed a **single global salience map** across the entire prompt. This meant that:
+
+- Ubuntu’s Patch2 cluster contributed strong rewrite patterns  
+- Debian’s malformed‑command fallback language contributed strong fallback patterns  
+- Alpine’s rewrite rules contributed additional package‑manager rewrite semantics  
+- Fedora and CentOS contributed overlapping yum/dnf semantics  
+- BusyBox contributed malformed‑command hardening rules  
+- Amazon Linux contributed yum/dnf rewrite patterns
+
+None of these rules executed on RHEL (due to very efficent rule gating), but all of them influenced the model’s **attention**, 
+**priority**, and **interpretation**.
+
+This produced a blended salience landscape in which:
+
+- Ubuntu’s Patch2 cluster overshadowed RHEL’s Patch2 cluster  
+- Debian’s fallback language overshadowed RHEL’s fallback language  
+- Alpine’s rewrite rules competed with RHEL’s rewrite rules  
+- Fedora/CentOS yum/dnf semantics competed with RHEL’s yum semantics  
+- BusyBox malformed‑command rules competed with RHEL’s malformed‑command rules
+
+The result was nondeterministic behavior in RHEL Patch2 tests, especially in multi‑segment pipelines.
+
+This explains why:
+
+- RHEL index 16 failed under the monolithic prompt  
+- RHEL index 21 failed under the monolithic prompt  
+- Ubuntu and Debian passed the same tests  
+- RHEL’s failures did not match its own rule block
+
+The salience map was simply not RHEL‑specific.
+
+---
+
+
+##### 3.2 Another Perspective of the Problem: OS‑Gating vs Salience Interference
+
+###### Logical / rule‑gating level (correct even in the old design)
+
+Every OS block has explicit guards:
+
+```
+These rules apply ONLY when os_name == 'RHEL'
+```
+
+or
+
+```
+These rules apply ONLY when os_name == 'Ubuntu'
+```
+
+This means:
+
+- Ubuntu rules do not execute on RHEL  
+- Debian rules do not execute on RHEL  
+- Alpine rules do not execute on RHEL  
+- etc.
+
+Rule‑gating was always correct.  
+
+This part of the architecture was never broken.  
+It governs **logical rule execution** for a given OS. Execution is the key operative term here.
+
+---
+
+###### Salience / attention level (broken in the old design)
+
+Even though the rules were gated, all OS blocks lived in the same prompt sent to the LLM by the AI Gateway Service.
+
+So when the LLM was deciding how to handle a RHEL command, it was still *reading*:
+
+- Ubuntu’s Patch2 cluster  
+- Debian’s malformed‑command block  
+- Alpine’s rewrite rules  
+- Fedora’s rewrite rules  
+- CentOS’s rewrite rules  
+- Amazon Linux’s rewrite rules  
+- BusyBox’s malformed‑command block  
+
+The model builds a **single salience map** over the entire prompt.
+
+This means:
+
+- Ubuntu’s larger Patch2 cluster could overshadow RHEL’s Patch2 cluster  
+- Debian’s fallback language could overshadow RHEL’s fallback language  
+- Ubuntu’s repo‑error semantics could overshadow RHEL’s repo‑error semantics  
+- Debian’s rewrite rules could overshadow RHEL’s rewrite rules  
+- Alpine’s malformed‑command rules could overshadow RHEL’s malformed‑command rules  
+
+**Even though none of those rules executed, they still influenced the model’s attention, priority, and interpretation of the rules that were executed**.
+
+---
+
+###### Cross-OS saliency issue corrected with the per-OS prompt assembly
+
+Therefore:
+
+- **Rule‑gating for actual execution:** OS‑correct  
+- **Salience behavior:** cross‑OS polluted  
+- **Fix:** per‑OS prompt assembly  
+
+This explains why per‑OS assembly changed behavior even though the OS gates themselves did not change.
+
+---
+
+
+
+##### 3.3 Per‑OS Prompt Assembly and Salience Isolation
+
+Per‑OS prompt assembly eliminated cross‑OS salience interference by ensuring that the model receives:
+
+```
+GLOBAL_RULES + RHEL_RULES
+```
+
+instead of:
+
+```
+GLOBAL_RULES + Ubuntu_RULES + Debian_RULES + RHEL_RULES + Alpine_RULES + ...
+```
+
+This physically removed all non‑RHEL rule blocks from the prompt, allowing the model to construct a salience map that reflects only:
+
+- RHEL’s malformed‑command rules  
+- RHEL’s Patch2 rewrite cluster  
+- RHEL’s system‑wide semantics  
+- RHEL’s repo‑error semantics  
+- RHEL’s idempotency semantics  
+- RHEL’s rewrite rules
+
+The effect was immediate:
+
+- RHEL index 16 began passing  
+- RHEL index 21 continued failing, but the failure mode changed
+
+This empirically confirmed that:
+
+- Cross‑OS salience interference was responsible for the index 16 failure  
+- Internal RHEL salience conflicts were responsible for the index 21 failure
+
+Per‑OS assembly solved the first problem but not the second.
+
+---
+
+##### 3.3 Intra‑OS Salience Conflicts Inside the RHEL Block
+
+After per‑OS isolation, RHEL index 21 still failed. This indicated that the remaining salience conflict was internal to the RHEL block itself. A detailed intra-OS RHEL salience analysis revealed several issues:
+
+###### 3.3.1 Malformed‑command fallback language overshadowing Patch2
+The original RHEL block contained fallback language that treated multi‑PM pipelines as “ambiguous intent.”  
+This language appeared **above** the Patch2 rewrite cluster, causing the model to prioritize fallback over rewrite.
+
+###### 3.3.2 Missing explicit multi‑PM override semantics
+The original block did not contain explicit language stating that multi‑PM pipelines with a native yum anchor must be rewritten deterministically.
+
+###### 3.3.3 Missing explicit yum‑anchor semantics
+The original block did not state that `yum update -y` is a deterministic anchor that overrides malformed‑command fallback rules.
+
+###### 3.3.4 Missing rewrite determinism for three or more segments
+The original block implicitly supported two‑segment rewrites but did not guarantee determinism for three or more segments.
+
+###### 3.3.5 Incorrect ordering of fallback and rewrite blocks
+The single‑segment fallback block appeared above Patch2, causing malformed‑command rules to overshadow rewrite rules.
+
+These internal salience conflicts prevented Patch2 from activating correctly in the index21 scenario, even after cross‑OS interference 
+was eliminated by the per-OS prompt assembly implemenation.
+
+---
+
+##### 3.4 Intra-OS RHEL Salience Map After Refactor
+
+The refactored RHEL block:
+
+- moves Patch2 above fallback blocks  
+- adds explicit multi‑PM override semantics  
+- adds explicit yum‑anchor semantics  
+- adds explicit Patch2 dominance language  
+- aligns ordering with Ubuntu/Debian  
+- guarantees rewrite determinism for any number of segments
+
+After refactor:
+
+- RHEL index 16 passed  
+- RHEL index 21 passed  
+- All rewrite‑24 tests passed  
+- All base‑20 tests passed  
+- All idempotency‑6 tests passed  
+- 2/3 remediation tests passed (one remaining case to adjust)
+
+The salience map is now stable, deterministic, and aligned with Ubuntu/Debian.
+
+
+---
+
+[Back to top of Parts 2-4 RHEL case study](#rhel-patch2-rewrite-salience)
+
+---
 
 
 
 
+#### Part 4 — Lessons Learned
+
+The RHEL case study provides several important lessons for LLM contract‑rule engineering. These lessons apply broadly to any multi‑domain rule system and are essential for designing deterministic, salience‑stable LLM contracts.
+
+---
+
+##### 4.1 OS‑Gating Alone Is Not Enough
+
+Even when OS blocks are correctly guarded by `os_name` and `os_version`, they still influence the model’s salience map unless physically removed from the prompt. Logical gating prevents rule execution, but does not prevent salience interference.
+
+The distinction is very important. For the rules that the LLM is permitted to execute (in this case the RHEL_RULES domain primitives
+block), the way that the LLM evaluates the rules in terms of the model’s attention, priority, and interpretation of the rules is affected 
+by this Cross-OS saliency effect.
 
 
+**Even though none of those other rules executed, they still influenced the model’s attention, priority, and interpretation of the rules that were executed**.
 
+**Lesson:**  
+OS‑gating must be combined with per‑OS prompt assembly to eliminate cross‑OS salience pollution.
 
+---
+
+##### 4.2 Ordering Determines Salience Dominance (Intra-OS saliency)
+
+The placement of rule blocks determines which rules dominate the salience map.  
+Fallback blocks placed above rewrite blocks will overshadow rewrite semantics, even if rewrite rules are correct.
+
+**Lesson:**  
+Patch2 rewrite clusters must appear above fallback blocks to ensure rewrite dominance.
+
+---
+
+##### 4.3 Explicit Override Semantics Are Required
+
+Ambiguous pipelines must be explicitly declared non‑ambiguous.  
+Without explicit override language, malformed‑command fallback rules will dominate.
+
+**Lesson:**  
+Multi‑PM pipelines with a native system‑wide anchor must explicitly override malformed‑command fallback rules.
+
+---
+
+##### 4.4 System‑Wide Anchors Must Be Explicit
+
+System‑wide operations such as `yum update -y` or `apt-get update -y` must be explicitly declared as deterministic anchors.  
+Without explicit anchor semantics, the model may treat pipelines as ambiguous.
+
+**Lesson:**  
+System‑wide anchors must be explicitly defined and must override fallback rules.
+
+---
+
+##### 4.5 Rewrite Determinism Must Scale with Segment Count
+
+Rewrite rules must guarantee determinism for any number of segments.  
+Implicit support for two‑segment rewrites is insufficient.
+
+**Lesson:**  
+Patch2 rewrite rules must guarantee determinism for 2‑segment, 3‑segment, 4‑segment, and 5‑segment pipelines.
+
+---
+
+##### 4.6 OS Blocks Must Follow Canonical Structure
+
+Ubuntu and Debian have a highly structured Patch2 cluster:
+
+- system‑wide anchor rules  
+- multi‑PM override rules  
+- segment‑independent rewrite rules  
+- explicit fallback prohibitions  
+- correct ordering  
+- explicit dominance semantics
+
+RHEL must follow the same structure to ensure deterministic behavior.
+
+**Lesson:**  
+All OS blocks must follow the canonical Ubuntu/Debian Patch2 structure.
+
+---
+
+##### 4.7 Per‑OS Prompt Assembly Reduces Prefill Cost
+
+Per‑OS prompt assembly reduces prompt size by removing irrelevant OS blocks.  
+This reduces prefill cost significantly (from ~6¢ per test to ~1¢ per test).
+This has been empirically verified during testing. THe cost savings is massive.
+
+**Lesson:**  
+Per‑OS prompt assembly improves both correctness and cost efficiency.
+
+---
+
+##### 4.8 Multi‑Stage Fixes Are Sometimes Required
+
+The RHEL case study demonstrates that some failures require multiple independent fixes:
+
+1. Global architectural fix (per‑OS prompt assembly)  
+2. Local OS‑specific fix (full RHEL refactor)
+
+**Lesson:**  
+Salience conflicts may require multi‑stage resolution involving both global and local changes.
+
+---
+
+[Back to top of Parts 2-4 RHEL case study](#rhel-patch2-rewrite-salience)
+
+---
 
 [Back to top](#top-preface3)
 
 ---
-
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
