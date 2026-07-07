@@ -4006,8 +4006,9 @@ This section
 ### RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)
 
 This section is a continuation of the previous section which is Part 1 on the Per-OS prompt assembly case study, code design, and
-code review to eliminate Cross-OS LLM saliency issues in multi-domain LLM contract prompts/payloads. It is a precursor to this section
-that has three addtional parts that build upon the Cross-OS saliency issue discussed in Part 1.
+code review to eliminate Cross-OS LLM saliency issues in multi-domain LLM contract prompts/payloads. Part 1 is a prerequisite to this 
+section that has the following three addtional parts for the RHEL case study:
+
 
 
 ---
@@ -4124,18 +4125,20 @@ GLOBAL_RULES + Ubuntu_RULES + Debian_RULES + RHEL_RULES + Alpine_RULES + ...
 ```
 
 This eliminated cross‑OS salience interference entirely.  
+
+See Part 1 for more information on the design and the code required to implement the per-OS prompt assembly in the ai_gateway_service.py
+module.
+
+
+
 The effect was immediate:
 
 - **RHEL index 16 began passing**, even with the original RHEL block.  
 
-```
-
-
-
 
 - **RHEL index 21 continued failing** with an action plan of fallback, but the failure mode changed. The action plan before the per-OS prompt assembly was fallback and the action plan after the per-OS prompt assembly was still fallback but the nature of the failure mode was very different.
 
-There are the test results below:
+These are the test results below:
 
 
 ```
