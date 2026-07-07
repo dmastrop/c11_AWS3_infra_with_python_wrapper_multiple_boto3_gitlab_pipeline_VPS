@@ -4176,7 +4176,7 @@ This confirmed that:
 
 This distinction is important because it demonstrates that OS‑gating alone is insufficient to prevent salience interference. Even when rules are logically gated, they still influence the model’s salience map unless physically removed from the prompt.
 
-### 2.2.1 Failure Mode Change
+##### 2.3 Failure Mode Change
 
 So what exactly is meant by the failure mode of the fallback changed for index 21 test case once the per-OS prompt assembly code was introduced?
 
@@ -4211,18 +4211,18 @@ So to fix index21 both the per-OS prompt assembly AND the internal RHEL_OS rule 
 
 ---
 
-##### 2.3 Stage 2: Full RHEL Domain‑Block Refactor (Local Fix)
+##### 2.4 Stage 2: Full RHEL Domain‑Block Refactor (Local Fix)
 
 After per‑OS assembly eliminated cross‑OS interference, RHEL index 21 continued to fail. This indicated that the remaining issue was internal to the RHEL block itself. A detailed salience analysis revealed several structural problems:
 
-###### 2.3.1 Overly strong malformed‑command fallback language
+###### 2.4.1 Overly strong malformed‑command fallback language
 The original RHEL block contained fallback language that treated multi‑PM pipelines as “ambiguous intent,” causing the model to prefer fallback even when Patch2 rewrite rules should apply.
 
-###### 2.3.2 Incorrect ordering of fallback and rewrite blocks
+###### 2.4.2 Incorrect ordering of fallback and rewrite blocks
 The single‑segment fallback block appeared **above** the Patch2 rewrite cluster.  
 This caused malformed‑command rules to overshadow Patch2 rewrite rules.
 
-###### 2.3.3 Missing explicit multi‑PM override semantics
+###### 2.4.3 Missing explicit multi‑PM override semantics
 The original block lacked explicit language stating that:
 
 - multi‑PM pipelines with a native yum system‑wide anchor  
@@ -4231,7 +4231,7 @@ The original block lacked explicit language stating that:
 
 Ubuntu and Debian both contain this language; RHEL did not.
 
-###### 2.3.4 Missing explicit yum‑anchor semantics
+###### 2.4.4 Missing explicit yum‑anchor semantics
 The original block did not state that:
 
 - `yum update -y`  
@@ -4240,11 +4240,11 @@ The original block did not state that:
 
 This anchor is essential for multi‑segment rewrite determinism.
 
-###### 2.3.5 Missing guarantee of rewrite determinism for any number of segments
+###### 2.4.5 Missing guarantee of rewrite determinism for any number of segments
 The original block implicitly supported two‑segment rewrites but did not guarantee determinism for three or more segments.
 This was one of the critical parts of the RHEL Doman-Block rewrite.
 
-###### 2.3.6 Missing alignment with Ubuntu/Debian Patch2 structure
+###### 2.4.6 Missing alignment with Ubuntu/Debian Patch2 structure
 Ubuntu and Debian have a highly structured Patch2 cluster:
 
 - system‑wide anchor rules  
@@ -4257,7 +4257,7 @@ RHEL lacked several of these structural elements.
 
 ---
 
-##### 2.4 The Refactored RHEL Block
+##### 2.5 The Refactored RHEL Block
 
 The refactored RHEL block incorporates the following changes:
 
@@ -4281,7 +4281,7 @@ Added:
 
 > “These Patch2 rules OVERRIDE any earlier malformed‑command fallback guidance.”
 
-####### E. Rewrite determinism for any number of segments
+###### E. Rewrite determinism for any number of segments
 Patch2 now guarantees:
 
 - segment‑independent rewrite  
@@ -4299,7 +4299,7 @@ The refactored RHEL block now mirrors:
 
 ---
 
-##### 2.5 Results After Refactor
+##### 2.6 Results After Refactor
 
 After applying both fixes:
 
@@ -4319,7 +4319,7 @@ Index 21 passed **on the first run** after the refactor, confirming that the s
 
 
 
-##### 2.6 Final Test results for index 16 and index 21 test cases on RHEL with both per-OS prompt assembly and local RHEL_OS refactor:
+##### 2.7 Final Test results for index 16 and index 21 test cases on RHEL with both per-OS prompt assembly and local RHEL_OS refactor:
 
 For index 16: Note the single rewrite of the apt-get segment is correct now, and the -y flag has been added to both non -system wide yum commands in the rewrite. Note that the system-wide command is left verbatim.
 
@@ -4360,7 +4360,7 @@ Command: apt-get install nano && apk add bash && yum update -y
 
 ---
 
-##### 2.7 Summary of the RHEL Case Study
+##### 2.8 Summary of the RHEL Case Study
 
 The RHEL Patch2 rewrite failure was caused by **two independent salience problems**:
 
