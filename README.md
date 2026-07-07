@@ -4286,7 +4286,35 @@ Next, after the blocks have been created, the def recover() function that packag
 
 As shown below, the context needs to be explicitly extracted now, because as dynamic content it can no longer be embedded in the global rules. Python will evaluate the GLOBAL_RULES block and try to populate a context that is not defined yet. The GLOBAL_RULES block and the OS specific rules blocks above are no longer inside of the def recover() function.   The def recover() function is where the context is actually extracted as shown below. This has always been the case. 
 
-Thus, instead of the context being embedded into the GLOBAL_RULES, it needs to instead be explicitly appended as part of the prompt as shown below. 
+Thus, instead of the context being embedded into the GLOBAL_RULES, it needs to instead be explicitly appended as part of the prompt as shown below. (More on this later on; this is just a preview. This block below is within the def recover() function).
+
+```
+
+        # This is the new per-OS prompt assembly
+        # NOTE that the full CONTEXT (dynamic content from the stress_tester or the AI/MCP hook in module2f) can no longer beembedded 
+        # inside the GLOBAL_RULES block. It is moved to the prompt (see below).
+
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+
+
+
+
+        payload = {
+            "model": "gpt-5.4",
+            "temperature": 0,
+            "max_output_tokens": 256,
+            "input": prompt,
+        }
+```
+The context is directly accessibl by the def recover() function.
 
 Once the context is fetched this has an os_info field that is populated either through module2f in real life scenarios (the os_info will be built from the os_name and os_version), or in the case of the stress_tester.py tool, the os_info will be injected from the schema context that has the name and version which make up the os_info. In both cases at this point the OS information is now available. This will be used in a secondary function named def get os_rules as described further below. 
 
@@ -4343,6 +4371,8 @@ This will get the os_rules which is the relevant OS block (discussed earlier, fo
 
 
 The def get_os_rules function is below. It is simply an OS block selector function that returns the proper OS block according to the submitted os_info. 
+This is reviewed in more detail in a section further below.
+
 
 ```
 
