@@ -178,7 +178,7 @@ GLOBAL_RULES = (
                 # Keep the restriction on instance_id and ip fields in the context.
                 "- The \"instance_id\" field MUST be ignored. It is metadata only.\n"
                 "- The \"ip\" field MUST be ignored. It is metadata only.\n"
-                "- You MUST base your decision ONLY on: command, stdout, stderr, exit_status, history, and os_info.\n"
+                "- You MUST base your decision ONLY on: command, stdout, stderr, exit_status, history, os_info, and tags.\n"
 
 
 
