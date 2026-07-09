@@ -1,0 +1,263 @@
+{
+  "os_name": "Ubuntu",
+  "os_version": "22.04",
+  "kernel": "5.15.0",
+  "package_managers": ["apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-001",
+      "ip": "10.0.70.1",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install nano && apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-002",
+      "ip": "10.0.70.2",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "pacman -S htop && yum install curl && apk add bash && apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: pacman: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-003",
+      "ip": "10.0.70.3",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get install nano",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-004",
+      "ip": "10.0.70.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install curl && apt-get install nano && apt-get install python3 && apt-get update -y",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-005",
+      "ip": "10.0.70.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-006",
+      "ip": "10.0.70.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get upgrade -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-007",
+      "ip": "10.0.70.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && yum update -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-008",
+      "ip": "10.0.70.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install curl && yum update -y",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-009",
+      "ip": "10.0.70.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get install nano --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-010",
+      "ip": "10.0.70.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install curl && echo 'hello' && apk add bash && pacman -S htop",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-011",
+      "ip": "10.0.70.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && echo 'test' && apk add bash && apt-get install nano",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-012",
+      "ip": "10.0.70.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && apt-get install curl && rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-013",
+      "ip": "10.0.70.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get install nano && apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-014",
+      "ip": "10.0.70.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get update --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-015",
+      "ip": "10.0.70.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && yum update --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-016",
+      "ip": "10.0.70.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew update",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-017",
+      "ip": "10.0.70.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install curl && brew update",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-018",
+      "ip": "10.0.70.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew install wget",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-019",
+      "ip": "10.0.70.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install curl && brew install wget",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-020",
+      "ip": "10.0.70.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y",
+      "stdout": "",
+      "stderr": "bash: yum: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "ubuntu-mseg-021",
+      "ip": "10.0.70.21",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
