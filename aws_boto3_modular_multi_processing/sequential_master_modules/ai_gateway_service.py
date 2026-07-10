@@ -517,7 +517,7 @@ GLOBAL_RULES = (
                 "- Treat commands like \"apt-get install\", \"yum install\", \"dnf install\", and \"apk add\" with no package as INCOMPLETE, not unsafe.\n"
                 "- If the command is incomplete but the missing argument CANNOT be safely inferred, prefer \"fallback\" over \"abort\".\n"
                 "- Do NOT guess a package name based solely on prior examples or patterns in the input.\n"
-                "- Only use \"retry_with_modified_command\" when you can safely construct a complete, realistic command.\n"
+                # Get rid of the safely construct rule
                 "- Incomplete commands MUST NOT trigger \"abort\" unless they are also unsafe or destructive.\n\n"
 
                 # Revision 6.7 All show style commands performed in any linux variant os should return fallback. There are no 
