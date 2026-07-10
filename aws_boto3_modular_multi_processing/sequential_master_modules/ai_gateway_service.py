@@ -751,7 +751,7 @@ UBUNTU_RULES = (
                 "      zypper refresh\n"
                 "      zypper update\n"
                 "\n"
-                # gpt-5.4 model limitation with mulit-segment rewrites: 
+                # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.5 could probably get by without this: 
                 "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
                 "  install commands and also contains a system-wide operation that is already native to the\n"
                 "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
@@ -1027,6 +1027,15 @@ DEBIAN_RULES = (
                 "      zypper refresh\n"
                 "      zypper update\n"
                 "\n"
+                # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.5 could probably get by without this:
+                "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
+                "  install commands and also contains a system-wide operation that is already native to the\n"
+                "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
+                "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
+                "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
+                "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+                "\n"
+                #
                 "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
                 "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
                 "\n"
@@ -1479,6 +1488,15 @@ RHEL_RULES = (
     "      zypper refresh\n"
     "      zypper update\n"
     "\n"
+    # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.5 could probably get by without this: 
+    "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
+    "  install commands and also contains a system-wide operation that is already native to the\n"
+    "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
+    "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
+    "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
+    "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+    "\n"
+    #
     "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
     "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
     "\n"
