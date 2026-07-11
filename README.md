@@ -6131,11 +6131,8 @@ For further model level explanations from a mathematical perspective see the nex
 
 
 
-
-
-
 <a name="gpt-5.4-appendix-b-case-study"></a>
-### **Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure**
+### **Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure**  
 
 This section explains the mathematical mechanisms behind the specific inference failure observed in GPT‑5.4 during multi‑segment rewrite reasoning. It does **not** describe internal proprietary details, but instead outlines the well‑known mathematical structures used in transformer‑based language models and how they plausibly contributed to the failure.
 
@@ -6145,19 +6142,21 @@ This section explains the mathematical mechanisms behind the specific inference 
 
 Internally, GPT‑style models estimate the probability of the next token given the context:
 
-\[
-P(\text{next token} \mid \text{context})
-\]
+````markdown
+```text
+P(next_token | context)
+```
+````
 
 Actions such as `"fallback"` and `"retry_with_modified_command"` are simply different token sequences with different conditional probabilities.
 
 When the model decides between these actions, it is effectively comparing:
 
-\[
-P(\text{"fallback"} \mid \text{context})
-\quad\text{vs}\quad
-P(\text{"retry\_with\_modified\_command"} \mid \text{context})
-\]
+````markdown
+```text
+P("fallback" | context)   vs   P("retry_with_modified_command" | context)
+```
+````
 
 The failure occurred because the model’s internal probability mass shifted toward `"fallback"` whenever a native system‑wide operation appeared in a long pipeline.
 
@@ -6167,9 +6166,11 @@ The failure occurred because the model’s internal probability mass shifted tow
 
 Each token (e.g., `apt-get`, `update`, `yum`, `&&`) is mapped into a vector in a high‑dimensional space:
 
-\[
-\mathbf{v} \in \mathbb{R}^d
-\]
+````markdown
+```text
+v ∈ ℝᵈ
+```
+````
 
 The model learns geometric relationships between these vectors through gradient descent on massive training data. Certain tokens — especially system‑wide operations — tend to cluster near “high‑risk” regions of this space because they frequently co‑occur with dangerous or system‑wide actions in real-world data.
 
@@ -6187,11 +6188,13 @@ carry disproportionately high “risk salience” in the embedding space.
 
 Transformers compute attention weights over tokens. Each layer computes something like:
 
-\[
-\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d}}\right)V
-\]
+````markdown
+```text
+Attention(Q, K, V) = softmax( (QKᵀ) / √d ) · V
+```
+````
 
-where \(Q, K, V\) are learned projections of token embeddings.
+where `Q`, `K`, `V` are learned projections of token embeddings.
 
 Some attention heads specialize in detecting:
 
@@ -6202,7 +6205,7 @@ Some attention heads specialize in detecting:
 
 In this failure case, the attention heads that specialize in “system‑wide / dangerous ops” fired strongly on `apt-get update -y` when it appeared in long pipelines containing wrong‑OS PMs.
 
-This caused the model to over‑weight the “unsafe” interpretation for the system-wide op.
+This caused the model to over‑weight the “unsafe” interpretation for the system‑wide op.
 
 ---
 
@@ -6212,11 +6215,13 @@ Through training, the model effectively learns decision boundaries in representa
 
 Conceptually, the model learns a function:
 
-\[
-f(\mathbf{h}) \rightarrow \{\text{fallback}, \text{retry\_with\_modified\_command}, \text{abort}\}
-\]
+````markdown
+```text
+f(h) → { fallback, retry_with_modified_command, abort }
+```
+````
 
-where \(\mathbf{h}\) is the hidden-state representation of the entire pipeline.
+where `h` is the hidden‑state representation of the entire pipeline.
 
 In this case, the learned decision surface incorrectly classified:
 
@@ -6236,15 +6241,19 @@ Mathematically the model’s architecture was not changed by the BS rule; the in
 
 The BS rule injects strong, explicit textual evidence that shifts the conditional **probability**:
 
-\[
-P(\text{"retry\_with\_modified\_command"} \mid \text{context})
-\]
+````markdown
+```text
+P("retry_with_modified_command" | context)
+```
+````
 
 above:
 
-\[
-P(\text{"fallback"} \mid \text{context})
-\]
+````markdown
+```text
+P("fallback" | context)
+```
+````
 
 specifically in the problematic region of representation space.
 
@@ -6252,9 +6261,9 @@ Note that this is probabilistic, so every now and then the particular test scena
 
 In other words:
 
-- The BS rule **moves the context** into a part of the decision boundary where the model is confident about `"retry_with_modified_command"`.
-- It does this **without** modifying the model weights or architecture.
-- It simply alters the **input salience landscape**.
+- The BS rule **moves the context** into a part of the decision boundary where the model is confident about `"retry_with_modified_command"`.  
+- It does this **without** modifying the model weights or architecture.  
+- It simply alters the **input salience landscape**.  
 
 This is why the BS rule fixes the failure.
 
@@ -6262,10 +6271,7 @@ This is why the BS rule fixes the failure.
 
 #### **6. Summary of the Mathematical Failure**
 
-The mathemtical perspective of the model's "reasoning" and inference with this particular test case sheds a lot of insight into how this 
-could happen given that the contract rules are so rigourous and structurally correct. It is simply a combination of the multiple PM 
-rewrites that are present, along with a native system-wide op that is susceptible to this type of internal salience skew. It is a 
-probabilistic issue that can be reversed as shown with the BS rule injection.
+The mathematical perspective of the model's "reasoning" and inference with this particular test case sheds a lot of insight into how this could happen given that the contract rules are so rigorous and structurally correct. It is simply a combination of the multiple PM rewrites that are present, along with a native system‑wide op that is susceptible to this type of internal salience skew. It is a probabilistic issue that can be reversed as shown with the BS rule injection.
 
 The failure was caused by:
 
@@ -6273,7 +6279,7 @@ The failure was caused by:
 2. **Attention heads** over‑weighting system‑wide ops in long pipelines  
 3. A **decision boundary** that incorrectly maps “system‑wide present” → “unsafe”  
 4. A **probability distribution** that favored `"fallback"` over `"retry_with_modified_command"`  
-5. A **lack of generalization** in distinguishing native vs wrong‑OS system‑wide ops
+5. A **lack of generalization** in distinguishing native vs wrong‑OS system‑wide ops  
 
 The BS rule corrected the failure by shifting the model’s internal **probability distribution** and **salience weighting**.
 
@@ -6282,7 +6288,6 @@ The BS rule corrected the failure by shifting the model’s internal **probabili
 [Back to top](#top-preface3)
 
 ---
-
 
 
 
