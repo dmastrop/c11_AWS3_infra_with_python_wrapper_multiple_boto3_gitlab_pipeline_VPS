@@ -6142,21 +6142,17 @@ This section explains the mathematical mechanisms behind the specific inference 
 
 Internally, GPT‑style models estimate the probability of the next token given the context:
 
-````markdown
 ```text
 P(next_token | context)
 ```
-````
 
 Actions such as `"fallback"` and `"retry_with_modified_command"` are simply different token sequences with different conditional probabilities.
 
 When the model decides between these actions, it is effectively comparing:
 
-````markdown
 ```text
 P("fallback" | context)   vs   P("retry_with_modified_command" | context)
 ```
-````
 
 The failure occurred because the model’s internal probability mass shifted toward `"fallback"` whenever a native system‑wide operation appeared in a long pipeline.
 
@@ -6166,11 +6162,9 @@ The failure occurred because the model’s internal probability mass shifted tow
 
 Each token (e.g., `apt-get`, `update`, `yum`, `&&`) is mapped into a vector in a high‑dimensional space:
 
-````markdown
 ```text
 v ∈ ℝᵈ
 ```
-````
 
 The model learns geometric relationships between these vectors through gradient descent on massive training data. Certain tokens — especially system‑wide operations — tend to cluster near “high‑risk” regions of this space because they frequently co‑occur with dangerous or system‑wide actions in real-world data.
 
@@ -6188,11 +6182,9 @@ carry disproportionately high “risk salience” in the embedding space.
 
 Transformers compute attention weights over tokens. Each layer computes something like:
 
-````markdown
 ```text
 Attention(Q, K, V) = softmax( (QKᵀ) / √d ) · V
 ```
-````
 
 where `Q`, `K`, `V` are learned projections of token embeddings.
 
@@ -6215,11 +6207,9 @@ Through training, the model effectively learns decision boundaries in representa
 
 Conceptually, the model learns a function:
 
-````markdown
 ```text
 f(h) → { fallback, retry_with_modified_command, abort }
 ```
-````
 
 where `h` is the hidden‑state representation of the entire pipeline.
 
@@ -6241,19 +6231,15 @@ Mathematically the model’s architecture was not changed by the BS rule; the in
 
 The BS rule injects strong, explicit textual evidence that shifts the conditional **probability**:
 
-````markdown
 ```text
 P("retry_with_modified_command" | context)
 ```
-````
 
 above:
 
-````markdown
 ```text
 P("fallback" | context)
 ```
-````
 
 specifically in the problematic region of representation space.
 
