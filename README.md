@@ -1040,6 +1040,9 @@ one that leverages ML and LLM reasoning to stabilize and harden complex distribu
 - [Debian Patch2 package manager rewrite salience case study: instruction overshadowing, contextual dominance, and prompt interference in rule‑based LLM control](#debian-patch2-salience-case-study)
 - [Per‑OS Prompt Assembly: Eliminating Cross‑OS Salience Interference in LLM Contract Execution (Part 1 of 4)](#per-os-prompt-assembly)
 - [RHEL Patch2 Rewrite Salience Case Study: Multi‑Stage Resolution of Cross‑OS and Intra‑OS Conflicts (Parts 2-4 of 4)](#rhel-patch2-rewrite-salience)
+- [Case Study: GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure — Native System‑Wide Ops Misclassified for fallback](#gpt-5.4-internal-salience-case-study) 
+- [APPENDIX A — Deep‑Dive Case Study: GPT‑5.4 Multi‑Segment Rewrite Failure: GPT‑5.4 Model‑Inference Limitation in Native System‑Wide Operations](#gpt-5.4-appendix-a-case-study)
+- [Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure](#gpt-5.4-appendix-b-case-study) 
 
 
 
