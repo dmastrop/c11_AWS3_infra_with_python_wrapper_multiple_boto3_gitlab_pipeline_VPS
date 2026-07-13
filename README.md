@@ -343,7 +343,7 @@ STATUS_TAGS = {
 - [Appendix A — Deep‑Dive Case Study: GPT‑5.4 Multi‑Segment Rewrite Failure: GPT‑5.4 Model‑Inference Limitation in Native System‑Wide Operations](#gpt-5.4-appendix-a-case-study)
 - [Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure](#gpt-5.4-appendix-b-case-study) 
 - [Appendix C — Geometric & Probability‑Surface Interpretation of the GPT‑5.4 Failure](#gpt-5.4-appendix-c-case-study)
-
+- [Addendum - Additional Deep-Dive Clarifications for Appendix C](#gpt-5.4-appendix-c-addendum-case-study) 
 
 
 
@@ -1758,12 +1758,20 @@ that this was a model limitation.
 
 ---
 
-#### **ADDENDUM — Additional Deep‑Dive Clarifications for Appendix C**  
+[Back to top](#top-preface5)
+
+---
+
+
+
+
+<a name="gpt-5.4-appendix-c-addendum-case-study"></a>
+### **ADDENDUM — Additional Deep‑Dive Clarifications for Appendix C**  
 
 
 ---
 
-##### **Addendum A — ASCII Diagram of the Geometric Decision Boundary**
+#### **Addendum A — ASCII Diagram of the Geometric Decision Boundary**
 
 The following ASCII diagram provides a simplified 2‑dimensional visualization of how the hidden state **h** crosses the decision boundary between Region A (retry) and Region B (fallback).  
 This is not the real high‑dimensional geometry — it is a human‑readable metaphor.
@@ -1799,7 +1807,7 @@ After the BS rule, the hidden state **h** is shifted downward into Region A, m
 
 ---
 
-##### **Addendum B — Why 3+ Wrong‑OS PM Rewrites Matter**
+#### **Addendum B — Why 3+ Wrong‑OS PM Rewrites Matter**
 
 The GPT‑5.4 failure only appears when the pipeline contains **three or more wrong‑OS PM rewrites**.  
 This threshold is not arbitrary — it emerges from how transformer hidden states accumulate salience.
@@ -1845,7 +1853,7 @@ This is why the failure disappears.
 
 
 
-##### **Addendum C — How Attention Heads Amplify Risk Salience**
+#### **Addendum C — How Attention Heads Amplify Risk Salience**
 
 Transformers use multiple attention heads, each specializing in different patterns.  
 Several heads in GPT‑style models are known to specialize in:
