@@ -1226,7 +1226,7 @@ Through training, the model effectively learns decision boundaries in representa
 Conceptually, the model learns a function:
 
 ```text
-f(h) → { fallback, retry_with_modified_command, abort }
+f(h) → { fallback, retry_with_modified_command, cleanup_and_retry, abort }
 ```
 
 where `h` is the hidden‑state representation of the entire pipeline.
@@ -1766,7 +1766,7 @@ that this was a model limitation.
 
 
 <a name="gpt-5.4-appendix-c-addendum-case-study"></a>
-### **ADDENDUM — Additional Deep‑Dive Clarifications for Appendix C**  
+### **Addendum — Additional Deep‑Dive Clarifications for Appendix C**  
 
 
 ---
@@ -1927,9 +1927,378 @@ This reduces activation in danger heads and increases activation in rewrite head
 
 ---
 
+
+
+
+
+
+<a name="gpt-5.4-appendix-d-case-study"></a>
+### **Appendix D — Decision‑Boundary Diagram & Failure Visualization of the GPT‑5.4 Failure**  
+*(Side‑view multi‑level well interpretation, GitLab‑safe)*
+
+This appendix provides **diagram‑style visualizations** of how GPT‑5.4 internally misclassified multi‑segment pipelines containing **wrong‑OS package managers + native system‑wide operations**.  
+Unlike Appendices B and C (which focus on mathematical and geometric formalism), Appendix D focuses on **side‑view cross‑sections** of the probability surface, using a **multi‑level well** metaphor to show how the BS rule moves the hidden state and warps the local landscape.
+
+---
+
+#### **1. Hidden‑State Space (Conceptual Recap)**
+
+The hidden‑state representation of the pipeline is a point in a high‑dimensional space:
+
+```text
+h ∈ ℝᵈ
+```
+
+This point depends on:
+
+- the tokens in the pipeline  
+- their embeddings  
+- attention‑head activation  
+- salience weighting  
+- pipeline length and complexity  
+- OS‑specific semantics  
+- system‑wide operation semantics  
+
+The model partitions this space into regions:
+
+```text
+Region A: retry_with_modified_command
+Region B: fallback
+Region C: abort
+Region D: cleanup_and_retry
+```
+
+For pipelines containing:
+
+```text
+wrong‑OS PMs + native system‑wide op
+```
+
+the correct region is **Region A** (retry_with_modified_command).  
+GPT‑5.4 incorrectly placed the hidden state in **Region B** (fallback).
+
+---
+
+#### **2. Side‑View Cross‑Section: Before BS Rule (Fallback Basin Deeper)**
+
+We visualize a **1‑D slice** of the decision surface as a side‑view cross‑section, where:
+
+- horizontal axis = representation space  
+- vertical axis = energy / −log P(action | h)  
+- lower = deeper basin = higher probability  
+
+Before the BS rule, the **fallback basin** is deeper than the retry basin:
+
+```text
+Energy / -log P
+   ^
+   |
+   |                     retry basin (shallower)
+   |                    /\ 
+   |                   /  \____
+   |                  /        \__
+   |                 /            \____
+   |________________/____________________\________→ representation space
+                    \                    /
+                     \                  /
+                      \________________/      fallback basin (deeper)
+                           h (before BS rule)
+```
+
+Interpretation:
+
+- The **lower** the curve, the **higher** the probability.  
+- The fallback basin is deeper → `P(fallback | h)` is higher than `P(retry_with_modified_command | h)`.  
+- The hidden state **h** sits inside the fallback basin.
+
+---
+
+#### **3. Side‑View Cross‑Section: After BS Rule (Retry Basin Deeper)**
+
+After the BS rule, the **local landscape** around the new hidden state h′ is reshaped so that the retry basin becomes deeper:
+
+```text
+Energy / -log P
+   ^
+   |
+   |                 fallback basin (shallower)
+   |                /\ 
+   |               /  \____
+   |              /        \__
+   |             /            \____
+   |____________/____________________\________→ representation space
+                \                    /
+                 \                  /
+                  \________________/      retry basin (deeper)
+                       h' (after BS rule)
+```
+
+Interpretation:
+
+- The retry basin is now deeper → `P(retry_with_modified_command | h')` dominates.  
+- The fallback basin is shallower → `P(fallback | h')` is suppressed.  
+- The hidden state **h′** sits inside the retry basin.
+
+This matches the empirical observation that, after the BS rule, the model overwhelmingly prefers `retry_with_modified_command` for the problematic pipelines.
+
+---
+
+#### **4. Multi‑Level Well Metaphor**
+
+A useful way to visualize this is as a **multi‑level well**:
+
+- Before BS rule:  
+  - upper level = retry basin (shallower)  
+  - lower level = fallback basin (deeper)  
+  - the ball (h) settles in the lower fallback basin.
+
+- After BS rule:  
+  - upper level = fallback basin (shallower)  
+  - lower level = retry basin (deeper)  
+  - the ball (h′) drops into the lower retry basin.
+
+Side‑view sketch:
+
+```text
+Before BS rule (fallback deeper):
+
+   retry (shallower)
+        /\ 
+       /  \____
+      /        \__
+     /            \____
+    /____________________\____
+   /                      \   \
+  /                        \   \
+ /                          \   \
+/____________________________\___\   fallback (deeper)
+                               h
+
+After BS rule (retry deeper):
+
+   fallback (shallower)
+        /\ 
+       /  \____
+      /        \__
+     /            \____
+    /____________________\____
+   /                      \   \
+  /                        \   \
+ /                          \   \
+/____________________________\___\   retry (deeper)
+                               h'
+```
+
+The key idea:
+
+- The **relative depth** of the basins changes.  
+- The ball (hidden state) always falls into the **deepest** basin.  
+- The BS rule ensures that the deepest basin corresponds to `retry_with_modified_command`.
+
+---
+
+#### **5. Salience Vectors and Local Warping**
+
+The hidden state is influenced by multiple salience vectors:
+
+```text
+                 Salience Vectors Influencing Hidden State h
+
+                     Δh_syswide      (system-wide op)
+                           ↑
+                           |
+                           |
+    Δh_wrongOS  ←--------- h ---------→  Δh_length
+ (wrong-OS PMs)                      (pipeline length)
+```
+
+These combine to produce:
+
+```text
+h_combined = h_base
+           + Δh_syswide
+           + Δh_wrongOS
+           + Δh_length
+```
+
+Before the BS rule:
+
+- system‑wide ops → high‑risk salience  
+- wrong‑OS PMs → ambiguity salience  
+- long pipelines → uncertainty salience  
+
+The combined effect pushes h into the deeper fallback basin.
+
+After the BS rule:
+
+- the BS rule injects strong corrective semantics  
+- risk salience is suppressed  
+- rewrite salience is amplified  
+- the local landscape around h′ is warped so that the retry basin becomes deeper.
+
+---
+
+#### **6. Local vs Global Geometry**
+
+It is crucial to distinguish:
+
+- **Local geometry** — the shape of the probability surface around a specific hidden state h or h′.  
+- **Global geometry** — the overall decision surface learned by the model across all possible inputs.
+
+The BS rule:
+
+- **does not** change the global geometry (no model retraining).  
+- **does** change the local geometry around h′.  
+- **does** move the hidden state from h to h′.  
+- **does** warp the local probability surface so that retry becomes dominant.
+
+This is why:
+
+- all other regression tests still pass,  
+- only the problematic hidden‑state region is corrected,  
+- GPT‑5.6 is needed to fix the issue globally,  
+- the BS rule is a safe, targeted, contract‑level fix.
+
+---
+
+#### **7. Probability Comparison (Before vs After BS Rule)**
+
+Before BS rule:
+
+```text
+P(fallback | h) > P(retry_with_modified_command | h)
+```
+
+After BS rule:
+
+```text
+P(retry_with_modified_command | h') >> P(fallback | h')
+```
+
+The multi‑level well diagrams in this appendix are simply visual metaphors for this probability inversion:
+
+- fallback basin deeper → higher P(fallback)  
+- retry basin deeper → higher P(retry_with_modified_command)
+
+---
+
+#### **8. How the BS Rule Moves h and Warps the Local Probability Surface**
+
+The BS rule does not modify GPT‑5.4’s global decision surface.  
+Instead, it produces a **local geometric correction** centered around the hidden state produced by the rewritten input.
+
+**Step 1 — The BS rule changes the input → h becomes h′**
+
+Every inference recomputes the hidden state:
+
+```text
+h' = h + Δh_BS-rule
+```
+
+The BS rule injects strong textual evidence that:
+
+- native system‑wide ops are safe  
+- wrong‑OS PM rewrites are deterministic  
+- fallback is forbidden in this pattern  
+
+This shifts the hidden state **to a different location** in representation space.
+
+**Step 2 — The BS rule warps the *local* probability surface around h′**
+
+The BS rule does **not** change the model weights.  
+It does **not** reshape the global geometry.  
+It does **not** affect unrelated pipelines.
+
+Instead, it changes the **local salience landscape** around h′:
+
+- the fallback basin becomes shallower  
+- the retry basin becomes deeper  
+- the boundary between them shifts locally  
+
+This is why all other regression tests continue to pass.
+
+**Step 3 — h′ falls into the deeper retry basin**
+
+Before BS rule:
+
+```text
+P(fallback | h) > P(retry_with_modified_command | h)
+```
+
+After BS rule:
+
+```text
+P(retry_with_modified_command | h') >> P(fallback | h')
+```
+
+The hidden state h′ now sits inside the retry basin — the deepest, highest‑probability region.
+
+**Step 4 — The “multi‑level well” analogy**
+
+A useful way to visualize this is to imagine h as a ball inside a multi‑level well:
+
+- Before BS rule, the **upper basin** (fallback) is deeper → the ball settles there.  
+- After BS rule, the **lower basin** (retry) becomes deeper → the ball drops into the correct basin.  
+- The BS rule does not reshape the entire landscape — it only reshapes the **local geometry** around the ball’s new position.
+
+**Step 5 — Global geometry remains unchanged**
+
+Only a model update (e.g., GPT‑5.6) can change the **global** decision surface.
+
+The BS rule provides a **contract‑level correction** that:
+
+- moves h → h′  
+- warps the local geometry  
+- fixes the failure  
+- preserves all other behaviors  
+
+This is why the fix is safe, targeted, and contract‑accurate.
+
+---
+
+#### **9. Summary of Appendix D**
+
+Appendix D provides a **visual, side‑view interpretation** of the GPT‑5.4 failure:
+
+- The hidden state h initially falls into a deeper fallback basin.  
+- The BS rule moves h → h′ and reshapes the local landscape.  
+- The retry basin becomes deeper, and h′ falls into the correct basin.  
+- The correction is local, not global, which explains why all other tests continue to pass.  
+
+These diagrams are the visual counterpart to the mathematical explanation in Appendix B and the geometric explanation in Appendix C.
+
+
+
+
+---
+
+[Back to top](#top-preface5)
+
+---
+
+
+
+
+
+
+
+
+
+---
+
+[Back to top](#top-preface5)
+
+---
+
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ---
+
+
+
+
+
+
 
 
 
