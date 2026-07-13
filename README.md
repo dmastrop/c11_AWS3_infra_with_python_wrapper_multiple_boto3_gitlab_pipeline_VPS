@@ -344,7 +344,7 @@ STATUS_TAGS = {
 - [Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure](#gpt-5.4-appendix-b-case-study) 
 - [Appendix C — Geometric & Probability‑Surface Interpretation of the GPT‑5.4 Failure](#gpt-5.4-appendix-c-case-study)
 - [Addendum - Additional Deep-Dive Clarifications for Appendix C](#gpt-5.4-appendix-c-addendum-case-study) 
-
+- [Appendix D - Decision-Boundary Diagram & Failure Visualization of the GPT-5.4 Failure](#gpt-5.4-appendix-d-case-study)
 
 
 
@@ -2267,6 +2267,11 @@ Appendix D provides a **visual, side‑view interpretation** of the GPT‑5.4 fa
 
 These diagrams are the visual counterpart to the mathematical explanation in Appendix B and the geometric explanation in Appendix C.
 
+> **The BS rule changes the input → the model recomputes the hidden state → h becomes h′.  
+> The BS rule also warps the *local* probability surface around h′ so that retry becomes the deepest basin.  
+> The global geometry (spatial model landscape) is unchanged.  
+> Only the local region around h′ is affected.  
+> This is why the fix is safe, targeted, and regression‑stable.**
 
 
 
