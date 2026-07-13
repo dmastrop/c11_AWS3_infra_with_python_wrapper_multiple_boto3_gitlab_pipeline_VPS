@@ -1043,7 +1043,7 @@ one that leverages ML and LLM reasoning to stabilize and harden complex distribu
 - [Case Study: GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure — Native System‑Wide Ops Misclassified for fallback](#gpt-5.4-internal-salience-case-study) 
 - [Appendix A — Deep‑Dive Case Study: GPT‑5.4 Multi‑Segment Rewrite Failure: GPT‑5.4 Model‑Inference Limitation in Native System‑Wide Operations](#gpt-5.4-appendix-a-case-study)
 - [Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure](#gpt-5.4-appendix-b-case-study) 
-
+- [Appendix C — Geometric & Probability‑Surface Interpretation of the GPT‑5.4 Failure](#gpt-5.4-appendix-c-case-study)
 
 
 
@@ -6351,7 +6351,7 @@ The expression `f(h)` represents a **learned classifier** that maps the hidden�
 - Depending on where **h** lands relative to this surface, the model chooses:  
   - **fallback**  
   - **retry_with_modified_command**  
- - **cleanup_and_retry**
+  - **cleanup_and_retry**
   - **abort**
 
 This classifier is:
