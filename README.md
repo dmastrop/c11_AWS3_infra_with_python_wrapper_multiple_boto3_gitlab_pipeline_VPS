@@ -1934,7 +1934,7 @@ This reduces activation in danger heads and increases activation in rewrite head
 
 <a name="gpt-5.4-appendix-d-case-study"></a>
 ### **Appendix D — Decision‑Boundary Diagram & Failure Visualization of the GPT‑5.4 Failure**  
-*(Side‑view multi‑level well interpretation, GitLab‑safe)*
+
 
 This appendix provides **diagram‑style visualizations** of how GPT‑5.4 internally misclassified multi‑segment pipelines containing **wrong‑OS package managers + native system‑wide operations**.  
 Unlike Appendices B and C (which focus on mathematical and geometric formalism), Appendix D focuses on **side‑view cross‑sections** of the probability surface, using a **multi‑level well** metaphor to show how the BS rule moves the hidden state and warps the local landscape.
