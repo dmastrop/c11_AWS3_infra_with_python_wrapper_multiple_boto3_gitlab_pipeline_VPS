@@ -347,8 +347,7 @@ STATUS_TAGS = {
 - [Appendix D - Decision-Boundary Diagram & Failure Visualization of the GPT-5.4 Failure](#gpt-5.4-appendix-d-case-study)
 - [Appendix E - Formal Definition of a Model Limitation: GPT-5.4 Failure Case Study](#gpt-5.4-appendix-e-case-study)
 - [Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models](#gpt-5.4-appendix-f-case-study)
-
-
+- [Appendix G - GPT-5.4 Internal Model Salience Collapse in Multi-Segment Rewerite Pipelines: A Contract-Accurate Analysis](#gpt-5.4-appendix-g-case-study)
 
 
 
@@ -2676,6 +2675,593 @@ Empirical testing will be done with GPT-5.6 Sol later, intentionally removing th
 [Back to top](#top-preface5)
 
 ---
+
+
+
+<a name="gpt-5.4-appendix-g-case-study"></a>
+### **Appendix G — GPT‑5.4 Internal Model Salience Collapse in Multi‑Segment Rewrite Pipelines: A Contract‑Accurate Analysis**
+
+
+
+> **Relationship to Appendices A–F:**  
+> Appendices A through F establish the empirical behavior, mathematical structure, geometric interpretation, decision‑boundary dynamics, and formal definition of the GPT‑5.4 multi‑segment rewrite failure. Appendix G builds directly on that foundation by mapping the failure back to the contract itself. It explains how the model‑inference limitation interacts with the GLOBAL_RULES and Ubuntu domain‑primitives blocks, why the contract rules are correct, and how internal salience collapse—not rule ordering—produced the observed misclassification. Appendix G therefore serves as the contract‑accurate synthesis of the entire case study, connecting the theoretical analysis in Appendices A–F with the practical rule‑level behavior of the LLM.
+
+There are 8 total sections to this Appendix. Each section successively helps to build up the understanding through code(contract) examples
+as to how the internal salience gpt-5.4 model limitation occurred for a very very specific test scneario and how the BS rule 
+remeidated the issue.
+
+
+Section 1 — Internal Model Salience vs Contract Rule Salience
+Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)
+Section 3 — What Actually Happened: Internal Salience Collapse
+Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)
+Section 5 — Why Patch2 Was Not “Skipped” Procedurally but Overshadowed Probabilistically
+Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)
+Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse
+Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence
+Final Integrated Summary
+
+
+
+#### **Section 1 — Internal Model Salience vs Contract Rule Salience**
+
+**1.1 Overview**
+
+This section establishes the foundational distinction between:
+
+- **Internal model salience** — a property of the transformer model’s inference dynamics  
+- **Contract rule salience** — a property of the rule ordering, adjacency, and grouping in the contract itself  
+
+Understanding this distinction is essential because the GPT‑5.4 failure in multi‑segment rewrite pipelines was caused by **internal model salience collapse**, not by any flaw in the contract rules, their ordering, or their placement.
+
+This distinction is the conceptual anchor for this entire appendix.
+
+---
+
+**1.2 Formal Definition: Internal Model Salience**
+
+**Internal model salience** refers to:
+
+> **The model’s internal probability‑surface weighting that determines which rule, token, or concept dominates the next token prediction, independent of the external rule ordering or prompt structure.**
+
+This is a real technical term used in:
+
+- transformer interpretability  
+- salience‑map analysis  
+- attention‑weight diagnostics  
+- safety‑critical inference studies  
+- multi‑step reasoning failure analysis  
+- rule‑following LLM contract engineering  
+
+It is distinct from:
+
+- **rule salience** — ordering, adjacency, grouping of contract rules  
+- **prompt salience** — placement of instructions in the prompt  
+- **semantic salience** — meaning‑based weighting  
+- **literal salience** — exact phrase matching  
+
+Internal model salience is what failed in GPT‑5.4.
+
+---
+
+**1.3 Why Internal Model Salience Matters in Multi‑Segment Pipelines**
+
+Multi‑segment rewrite pipelines (e.g., `yum install X && apk add Y && pacman -S Z && apt-get update -y`) require the model to:
+
+1. Identify each segment independently  
+2. Classify wrong‑OS package managers  
+3. Rewrite wrong‑OS segments using Patch2  
+4. Preserve native system‑wide operations verbatim  
+5. Avoid fallback unless a rewrite would require a system‑wide op  
+6. Produce a single unified `retry_with_modified_command` pipeline  
+
+This is a **high‑salience, high‑load inference task**.
+
+When the pipeline contains:
+
+- **more than two wrong‑OS PM segments**,  
+- **plus a native system‑wide op**,  
+- **plus a non‑zero exit status**,  
+- **plus stderr**,  
+
+the model’s internal salience weighting becomes stressed.
+
+GPT‑5.4 collapsed two categories:
+
+1. **wrong‑OS system‑wide ops → fallback**  
+2. **native system‑wide ops → preserve verbatim**
+
+into one internal category:
+
+> **“system‑wide op present → unsafe → fallback.” for this particular hidden state h**
+
+This collapse is internal to the model.  
+It is not caused by the contract rules.
+
+---
+
+**1.4 Why Contract Rule Salience Is Not Involved**
+
+Contract rule salience refers to:
+
+- rule ordering  
+- rule adjacency  
+- rule grouping  
+- block placement  
+- structural precedence  
+
+These were the sources of the **Debian** and **RHEL** failures earlier in PREFACE UPDATE3.
+
+This is the link to those earlier case studies:
+
+- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
+
+But in the GPT‑5.4 failure:
+
+- No rule ordering was changed  
+- No blocks were moved  
+- No adjacency was altered  
+- No grouping was modified  
+- No structural changes were made  
+- GLOBAL_RULES remained untouched  
+- OS‑Mutation Guard remained untouched  
+- Patch2 remained untouched  
+- Ubuntu domain primitives remained untouched  
+
+And yet the BS rule alone fixed the failure.
+
+This proves:
+
+> **The failure is internal model salience, not contract rule salience.**
+
+---
+
+**1.5 Why This Distinction Must Be Explicit in Appendix G**
+
+This is not a external contract salience failure scenario like this one: 
+
+- OS‑Mutation Guard “executed first”  
+- Patch2 “executed later”  
+- GLOBAL_RULES overshadowed domain primitives  
+- rule ordering influenced the outcome  
+
+This language resembles the **Debian/RHEL rule‑ordering failures**, which *were* contract‑ordering issues.
+
+This GPT‑5.4 model limitation/failure is **not** this, but rather: 
+
+> **This failure is internal model salience collapse, not rule salience.  
+
+This is the conceptual foundation for this entire appendix.
+
+---
+
+#### **Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)**
+
+**2.1 Recap: What Happened in Debian**
+
+The Debian failure was caused by:
+
+- fallback block placed above Patch2  
+- rewrite cluster overshadowed  
+- adjacency issues  
+- grouping issues  
+- structural issues  
+
+The fix required:
+
+- reordering blocks  
+- moving fallback rules lower  
+- grouping rewrite rules  
+- adjusting adjacency  
+- structural changes  
+
+This was a **contract rule salience** failure.
+
+---
+
+**2.2 Recap: What Happened in RHEL**
+
+The RHEL failure was caused by:
+
+- cross‑OS salience pollution  
+- Ubuntu/Debian blocks interfering  
+- malformed‑command block overshadowing Patch2  
+- OS‑Mutation Guard interacting incorrectly with RHEL rules  
+
+The fix required:
+
+- **per‑OS prompt assembly**  
+- removing all other OS blocks between GLOBAL_RULES and RHEL block  
+- full refactor of RHEL block 
+
+This was a **contract rule salience** failure.
+
+---
+
+**2.3 Why GPT‑5.4 Is Completely Different**
+
+The GPT‑5.4 failure:
+
+- did not require reordering blocks  
+- did not require moving fallback rules  
+- did not require grouping rewrite rules  
+- did not require adjacency fixes  
+- did not require structural changes  
+- did not require per‑OS prompt assembly  
+- did not require refactoring GLOBAL_RULES  
+- did not require refactoring Patch2  
+- did not require refactoring Ubuntu domain primitives  
+
+And yet:
+
+- the very targeted and precise BS rule (both in semantics and location) alone fixed the failure  
+- without touching any rule ordering  
+- without touching any rule placement  
+- without touching any rule adjacency  
+- without touching any rule grouping  
+- without touching any rule structure  
+
+The specificity of the smal rule proves:
+
+> **GPT‑5.4 failure is internal model salience collapse, not contract rule salience.**
+
+---
+
+
+**2.4 Why OS‑Mutation Guard Looked Like the Source (But Wasn’t)**
+
+The OS‑Mutation Guard block contains the rule:
+
+> **If a rewrite would require a system‑wide op → fallback.**
+
+This is correct.
+
+It corresponds to:
+
+- **wrong‑OS system‑wide ops → fallback**  
+- **native system‑wide ops → preserve verbatim** (in Ubuntu domain primitives)
+
+But GPT‑5.4 internally collapsed these categories. The contract did not.
+
+This is why Appendix G 1.0 felt confusing — it described the failure as if OS‑Mutation Guard was overshadowing Patch2.
+
+The rules were correct semantically and the ordering was correct.  It was the model itself that misinterpreted them.
+
+---
+
+**2.5 Why BS Rule Proves This Is Not Rule Salience**
+
+The BS rule:
+
+- was added only to Ubuntu domain primitives  
+- did not change GLOBAL_RULES  
+- did not change OS‑Mutation Guard  
+- did not change rule ordering  
+- did not change adjacency  
+- did not change grouping  
+- did not change structure  
+
+And yet:
+
+- all failing test cases passed  
+- all other test cases continued to pass  
+- no regressions occurred  
+- no rule conflicts emerged  
+
+This proves:
+
+> **The failure was internal model salience collapse.  
+> The contract rules were correct.  
+> The model’s interpretation was incorrect.**
+
+---
+
+**2.6 Why This Section Is Critical for Readers**
+
+Readers of PREFACE UPDATE3 must understand:
+
+- Debian/RHEL failures were contract‑ordering failures  
+- GPT‑5.4 failure was a model‑inference failure  
+- These are fundamentally different categories  
+- Appendix G is about the second category  
+- Appendices A–F describe the model‑inference failure  
+- Appendix G will attempt to explain how the contract rules interact with that failure  
+
+
+
+
+
+
+#### **Section 3 — What Actually Happened: Internal Salience Collapse**
+
+**3.1 Overview**
+
+This section explains the precise internal failure mode inside GPT‑5.4 that caused:
+
+- correct Patch2 rewrite logic  
+- correct system‑wide carve‑out logic  
+- correct OS‑Mutation Guard logic  
+- correct GLOBAL_RULES logic  
+
+to be overridden by an incorrect internal inference:
+
+> **“system‑wide op present → unsafe → fallback.”**
+
+This inference was not produced by the contract.  
+It was produced by the model.
+
+This is the core of the GPT‑5.4 model‑limitation.
+
+---
+
+**3.2 The Two Categories the Model Must Distinguish**
+
+The contract requires the model to distinguish:
+
+Category A — Wrong‑OS system‑wide operations 
+Examples on Ubuntu:
+
+- `yum update`  
+- `dnf upgrade`  
+- `apk update`  
+- `pacman -Syu`  
+- `zypper update`  
+
+These **must** produce fallback because rewriting them would require generating a system‑wide operation, which is forbidden unless OS‑signaled remediation is present.
+
+Category B — Native system‑wide operations 
+Examples on Ubuntu:
+
+- `apt-get update -y`  
+- `apt update`  
+- `apt-get upgrade`  
+
+These **must** be preserved verbatim.
+
+They must **not** cause fallback.
+
+---
+
+**3.3 What GPT‑5.4 Did Internally**
+
+GPT‑5.4 collapsed Categories A and B into a single internal salience class:
+
+> **“system‑wide op present → unsafe → fallback.”**
+
+This collapse occurred **only** when:
+
+- the pipeline contained **more than two wrong‑OS PM segments**,  
+- the pipeline contained a **native system‑wide op**,  
+- the pipeline required **multiple rewrites**,  
+- the pipeline had **non‑zero exit status**,  
+- the pipeline had **stderr**,  
+- the model’s internal salience load was high.
+
+This is exactly the “valley/peak” misclassification described in:
+
+- **Appendix B** (mathematical perspective)  
+- **Appendix C** (geometric/probability‑surface interpretation)  
+- **Appendix D** (decision‑boundary diagrams)
+
+---
+
+**3.4 Why the Collapse Happens (Mathematical Perspective)**  
+*(Cross‑reference: Appendix B)*
+
+Appendix B describes the model’s inference as a function:
+
+````markdown
+```text
+f(h) = argmax_{a ∈ A} p(a | h)
+```
+````
+
+where:
+
+- \(h\) = hidden state  
+- \(A\) = allowed actions  
+- \(p(a \mid h)\) = probability of action \(a\) given hidden state  
+
+In multi‑segment pipelines:
+
+- each wrong‑OS PM rewrite increases the salience of “unsafe” tokens  
+- each segment adds more “risk” tokens  
+- stderr adds more “error” tokens  
+- non‑zero exit status adds more “failure” tokens  
+- system‑wide ops add more “global” tokens  
+
+When the number of wrong‑OS PM segments exceeds a threshold (empirically **>2**), the internal probability surface shifts:
+
+````markdown
+```text
+p(fallback | h) > p(retry_with_modified_command | h)
+```
+````
+
+even though the contract requires:
+
+````markdown
+```text
+p(retry_with_modified_command) = 1
+```
+````
+
+This is a **model‑internal misclassification**, not a contract‑level error.
+
+---
+
+
+
+**3.5 Why the Collapse Happens (Geometric Perspective)**  
+*(Cross‑reference: Appendix C)*
+
+Appendix C describes the failure as a geometric distortion:
+
+- Patch2 rewrite logic corresponds to one region of the probability surface  
+- system‑wide carve‑out logic corresponds to another region  
+- fallback logic corresponds to a third region  
+
+In GPT‑5.4, the boundary between:
+
+- “native system‑wide op → preserve verbatim”  
+and  
+- “wrong‑OS system‑wide op → fallback”
+
+collapsed under high salience load.
+
+The model’s internal geometry incorrectly merged these regions.
+
+This is why the model treated:
+
+- `apt-get update -y` (native)  
+as if it were:
+
+- `yum update -y` (wrong‑OS)
+
+This is a geometric collapse, not a contract‑ordering issue.
+
+---
+
+
+
+**3.6 Why the Collapse Happens (Decision‑Boundary Perspective)**  
+*(Cross‑reference: Appendix D)*
+
+Appendix D shows that the decision boundary between:
+
+- **retry_with_modified_command**  
+and  
+- **fallback**
+
+shifted incorrectly when:
+
+- the pipeline contained >2 wrong‑OS PM rewrites  
+- the pipeline contained a native system‑wide op  
+- the pipeline contained stderr  
+- the pipeline contained non‑zero exit status  
+
+The boundary moved into the wrong region, causing:
+
+````markdown
+```text
+fallback
+```
+````
+
+to be selected instead of:
+
+````markdown
+```text
+retry_with_modified_command
+```
+````
+
+This is a **boundary collapse**, not a rule‑ordering failure.
+
+---
+
+
+
+
+**3.7 Why BS Rule Fixes the Collapse**
+
+The BS rule:
+
+- increases the salience of “native system‑wide op → preserve verbatim”  
+- increases the salience of “wrong‑OS PM → rewrite”  
+- decreases the salience of “system‑wide op → fallback”  
+- restores the correct decision boundary  
+- restores the correct probability surface  
+- restores the correct geometric separation  
+
+It does this **without**:
+
+- changing rule ordering  
+- changing adjacency  
+- changing grouping  
+- changing structure  
+- changing GLOBAL_RULES  
+- changing OS‑Mutation Guard  
+- changing Patch2  
+
+This proves the failure is **internal model salience**, not contract rule salience.
+
+The BS rule was added strategically to the Ubuntu domain primitives block. The BS rule itself is:
+
+```
+                # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.6 Sol could probably get by without 
+                # this. This rule helps 5.4 get over the 'probabilistic hump" of the limitation reviewed in detail in the PREFACE 
+                # UPDATE3 of the README
+                "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
+                "  install commands and also contains a system-wide operation that is already native to the\n"
+                "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
+                "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
+                "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
+                "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+                "\n"
+```
+
+The very semantically strong language was required to reassert the proper patch2 rewrite salience and to restore the correct decision boundary, probability surface, and geometric separation. This is empirical evidence to back up the theory presented in the earlier Appendices. 
+
+Moving up at  higher level, the BS code block above was strategically placed right after the system-wide commands list to have the most effect on the local salience of the patch2 rewrite block.
+
+```
+                "- The following commands are considered system-wide operations:\n"
+                "      apt-get update\n"
+                "      apt-get upgrade\n"
+                "      apt update\n"
+                "      apt upgrade\n"
+                "      yum update\n"
+                "      yum upgrade\n"
+                "      dnf upgrade\n"
+                "      pacman -Syu\n"
+                "      apk update\n"
+                "      zypper refresh\n"
+                "      zypper update\n"
+                "\n"
+                # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.6 Sol could probably get by without 
+                # this. This rule helps 5.4 get over the 'probabilistic hump" of the limitation reviewed in detail in the PREFACE 
+                # UPDATE3 of the README
+                "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
+                "  install commands and also contains a system-wide operation that is already native to the\n"
+                "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
+                "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
+                "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
+                "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+                "\n"
+                #
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+```
+
+---
+
+**3.8 Summary of Section 3**
+
+- GPT‑5.4 collapsed two categories into one.  
+- The collapse occurred only under high salience load.  
+- The collapse was internal to the model.  
+- The contract rules were correct.  
+- BS rule fixed the collapse by shifting internal salience.  
+- No contract changes were required.  
+- This failure is fundamentally different from Debian/RHEL failures.
+
+
+---
+
+[Back to top](#top-preface5)
+
+---
+
+
+
+
+
 
 
 
