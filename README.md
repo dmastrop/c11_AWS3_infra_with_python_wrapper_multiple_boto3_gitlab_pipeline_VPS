@@ -8667,6 +8667,7 @@ WORK IN PROGRESS
 - [Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
+- [Continued Testing: Rigorous Multi-Level Pipeline Testing](#continued-testing-multi-level-pipeline-testing)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
@@ -19254,6 +19255,33 @@ The same code block above reinforcing the OS mutation guard will also ensure tha
 response from the LLM.
 
 
+
+
+
+---
+
+[Back to top](#top-update59)
+
+---
+
+
+
+
+
+
+<a name="continued-testing-multi-level-pipeline-testing"></a>
+### Continued Testing: Rigorous Multi-Level Pipeline Testing
+
+
+
+> **Note on Probabilistic Variance in GPT‑5.4:**  
+> During regression testing, GPT‑5.4 may exhibit occasional variance on multi‑segment rewrite pipelines that match the documented failure pattern (three or more wrong‑OS package‑manager segments plus a native system‑wide operation). This variance is probabilistic rather than deterministic. The BS rule significantly reduces the likelihood of misclassification, but GPT‑5.4 can still intermittently select `fallback` on a case that normally produces `retry_with_modified_command`. Once a correct multi‑segment rewrite has been executed, subsequent cases typically stabilize. This behavior reflects the underlying model‑inference limitation described in PREFACE UPDATE5 and does not indicate a contract regression.
+
+The link to PREFACE UPDATE5 is below. This is recommended technical background reading to understand the nature of the internal
+salience gpt-5.4 model limitation failure.  The issue was  addressed during this phase of testing, with the specific test cases
+noted in the test matrices for each OS. The case study is presented from all angles: high level, mathematical, geometric, etc.
+
+- [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5) 
 
 
 
