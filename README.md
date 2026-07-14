@@ -345,7 +345,7 @@ STATUS_TAGS = {
 - [Appendix C — Geometric & Probability‑Surface Interpretation of the GPT‑5.4 Failure](#gpt-5.4-appendix-c-case-study)
 - [Addendum - Additional Deep-Dive Clarifications for Appendix C](#gpt-5.4-appendix-c-addendum-case-study) 
 - [Appendix D - Decision-Boundary Diagram & Failure Visualization of the GPT-5.4 Failure](#gpt-5.4-appendix-d-case-study)
-
+- [Appendix E - Formal Definition of a Model Limitation: GPT-5.4 Failure Case Study](#gpt-5.4-appendix-e-case-study)
 
 
 ### **Executive Summary — PREFACE UPDATE5**  
@@ -2282,7 +2282,7 @@ These diagrams are the visual counterpart to the mathematical explanation in App
 ---
 
 
-
+<a name="gpt-5.4-appendix-e-case-study"></a>
 ### **Appendix E — Formal Definition of a Model Limitation: GPT-5.4 Failure Case Study**
 
 This appendix provides a rigorous definition of **model limitations** as they apply to transformer‑based language models used in contract‑driven reasoning systems. The goal is to distinguish between failures caused by incorrect rules, incorrect schemas, or incorrect contract logic, and failures caused by the model’s internal inference mechanisms.
