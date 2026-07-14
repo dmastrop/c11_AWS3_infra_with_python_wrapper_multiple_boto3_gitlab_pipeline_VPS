@@ -346,6 +346,12 @@ STATUS_TAGS = {
 - [Addendum - Additional Deep-Dive Clarifications for Appendix C](#gpt-5.4-appendix-c-addendum-case-study) 
 - [Appendix D - Decision-Boundary Diagram & Failure Visualization of the GPT-5.4 Failure](#gpt-5.4-appendix-d-case-study)
 - [Appendix E - Formal Definition of a Model Limitation: GPT-5.4 Failure Case Study](#gpt-5.4-appendix-e-case-study)
+- [Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models](#gpt-5.4-appendix-f-case-study)
+
+
+
+
+
 
 
 ### **Executive Summary — PREFACE UPDATE5**  
@@ -2466,6 +2472,210 @@ The BS rule corrected the failure by shifting the model’s internal salience we
 ---
 
 
+
+
+
+<a name="gpt-5.4-appendix-f-case-study"></a>
+### **Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models**
+
+This appendix provides a structured comparison between **GPT‑5.4** and more advanced transformer models such as **Mythos** (and GPT‑5.6‑class architectures). The comparison focuses on inference behavior relevant to contract‑driven multi‑segment rewrite logic, OS‑specific domain primitives, and system‑wide operation classification.
+
+The goal is to illustrate why GPT‑5.4 exhibited a model limitation in the Patch2 multi‑segment rewrite suite, and why newer models are expected to handle the same logic without requiring salience‑shifting overrides.
+
+---
+
+#### **1. Overview of the Comparison**
+
+The comparison is organized around four core dimensions:
+
+1. **Salience weighting and risk heuristics**  
+2. **Decision‑boundary stability**  
+3. **Generalization of rewrite semantics**  
+4. **Handling of system‑wide operations in mixed‑PM pipelines**
+
+These dimensions directly influenced the failure documented in Appendices A-D.
+
+---
+
+#### **2. Salience Weighting and Risk Heuristics**
+
+**GPT‑5.4**
+
+- Over‑weights system‑wide operations in hidden‑state space  
+- Treats tokens like `apt-get update` as high‑risk regardless of OS context  
+- Amplifies risk salience when pipelines are long  
+- Wrong‑OS PMs further increase perceived ambiguity  
+- Native system‑wide ops are sometimes misclassified as unsafe  
+- Requires explicit salience‑shifting overrides (e.g., BS rule)
+
+**Mythos / GPT‑5.6‑class**
+
+Expectations:
+
+- More precise salience weighting  
+- Distinguishes native vs wrong‑OS system‑wide ops  
+- Does not over‑weight system‑wide ops in long pipelines  
+- Maintains stable risk heuristics across segment count  
+- Does not require salience overrides for Patch2 rewrite logic
+
+---
+
+#### **3. Decision‑Boundary Stability**
+
+**GPT‑5.4**
+
+- Decision boundaries for `"fallback"` vs `"retry_with_modified_command"` are unstable in high‑complexity contexts  
+- Long pipelines push hidden states toward fallback regions  
+- Wrong‑OS PMs + native system‑wide ops cross into the wrong region  
+- Boundary misclassification is reproducible  
+- BS rule shifts the hidden state into the correct region
+
+**Mythos / GPT‑5.6‑class**
+
+Expectations: 
+
+- Decision boundaries are more robust  
+- Long pipelines do not distort classification  
+- Correctly maps mixed‑PM pipelines into the rewrite region  
+- Native system‑wide ops remain in the “preserve verbatim” region  
+- Boundary classification aligns with contract logic without overrides
+
+---
+
+#### **4. Generalization of Rewrite Semantics**
+
+**GPT‑5.4**
+
+- Correctly rewrites wrong‑OS PMs in short pipelines  
+- Correctly preserves non‑PM segments  
+- Correctly preserves native system‑wide ops in short pipelines  
+- Fails to generalize rewrite semantics in long pipelines  
+- Misinterprets native system‑wide ops as requiring fallback in long pipelines
+- Requires explicit corrective rules (BS rule) to generalize properly
+
+**Mythos / GPT‑5.6‑class**
+
+Expectations: 
+
+- Generalizes rewrite semantics across pipeline length  
+- Correctly rewrites wrong‑OS PMs regardless of segment count  
+- Correctly preserves native system‑wide ops regardless of segment count rewrites
+- Correctly identifies wrong‑OS system‑wide ops as fallback  regardless of segment count rewrites
+- Does not require corrective rules for Patch2 behavior
+
+---
+
+#### **5. Handling of System‑Wide Operations in Mixed‑PM Pipelines**
+
+**GPT‑5.4**
+
+- Collapses two categories into one:
+  - wrong‑OS system‑wide ops (fallback)  
+  - native system‑wide ops (preserve verbatim)  
+- Treats both as unsafe in long pipelines  
+- Produces fallback even when rewrite logic is deterministic in long pipelines
+- BS rule required to force correct classification
+
+**Mythos / GPT‑5.6‑class**
+
+- Correctly distinguishes:
+  - wrong‑OS system‑wide ops → fallback  
+  - native system‑wide ops → preserve verbatim  
+- Maintains correct classification regardless of pipeline length  
+- Does not require salience‑shifting overrides  
+- Aligns with Patch2 semantics out‑of‑the‑box
+
+---
+
+#### **6. Summary Table**
+
+| Dimension | GPT‑5.4 | Mythos / GPT‑5.6‑class |
+|----------|----------|-------------------------|
+| **Salience weighting** | Over‑weights system‑wide ops | Balanced, context‑aware |
+| **Decision boundary stability** | Unstable in long pipelines | Stable across complexity |
+| **Rewrite generalization** | Fails in long pipelines | Correct across all lengths |
+| **Native system‑wide ops** | Misclassified as unsafe in long pipelines | Correctly preserved |
+| **Wrong‑OS system‑wide ops** | Correctly fallback | Correctly fallback |
+| **Need for overrides** | Yes (BS rule) | No |
+| **Regression risk** | High without overrides | Low |
+| **Patch2 compliance** | Partial | Full |
+
+---
+
+#### **7. Implications for Contract Engineering**
+
+**GPT‑5.4**
+
+- Requires salience‑shifting overrides for certain structural patterns  
+- Must be supplemented with corrective rules (e.g., BS rule)  
+- Needs full regression after any rule changes  
+- Sensitive to pipeline length and mixed‑PM complexity  
+- Suitable for contract logic only with careful salience management
+
+**Mythos / GPT‑5.6‑class**
+
+- Expected to handle Patch2 rewrite logic without overrides  
+- More reliable for multi‑segment reasoning  
+- Better alignment with OS‑specific primitives  
+- Lower regression risk  
+- Better candidate for long‑term contract‑engineering stability
+
+---
+
+#### **8. Recommended GPT model for this case study**
+
+The GPT-5.6 family is now available in the API, with three models for different production needs: Sol, Terra and Luna.
+- GPT-5.6 Sol: flagship model for the hardest tasks, with leading performance across coding, knowledge work, cybersecurity, and science.
+- GPT-5.6 Terra: balanced model for everyday production workloads, with GPT-5.5-level performance at lower cost.
+- GPT-5.6 Luna: fastest and most affordable model for well-defined, high-volume work.
+
+
+
+
+
+For  this specific workload — multi segment rewrite pipelines, OS specific domain primitives, Patch2 logic, system wide carve outs, and model limitation detection — the correct choice is:
+GPT 5.6 Sol rather than the less aggressive models (GPT-5.6 Terra (has 5.5 performance level) or the lightweight GPT-5.6 Luna)
+
+Specific reasons relative to the test suite and the particular GPT-5.4 limitation that was encountered in one of the test case patterns:
+
+The multi-segment rewrite test suite stresses:
+- multi segment reasoning
+- OS specific semantic discrimination
+- rewrite consistency
+- salience layered rule interpretation
+- system wide vs non system wide classification
+- long pipeline stability
+- multi step inference
+- safety critical fallback logic
+
+These are exactly the domains where Sol is designed to outperform Terra and Luna.
+
+Summary:
+- Sol → best for detecting subtle inference failures (like the GPT 5.4 collapse detailed in this case study and these appendices).
+- Terra → good for production workloads, but not ideal for deep contract engineering tests.
+- Luna → too lightweight for multi segment rewrite inference; not suitable for this case study.
+
+
+
+#### **9. Conclusion**
+
+The failure documented in Appendices A-D is attributable to a **GPT‑5.4 model limitation**, not a contract flaw. The comparison in this appendix shows that more advanced models (Mythos, GPT‑5.6‑class) are expected to:
+
+- correctly classify native system‑wide ops  
+- correctly rewrite wrong‑OS PMs  
+- maintain stable decision boundaries  
+- generalize Patch2 semantics across pipeline length  
+- eliminate the need for salience‑shifting overrides  
+
+This comparison provides a technical basis for future model upgrades and informs the design of salience‑layered rule sets for contract‑driven LLM systems.
+
+Empirical testing will be done with GPT-5.6 Sol later, intentionally removing the BS rule from the domain primitive block and running the same tests that were susceptible to the model limitation of GPT-5.4, in addition to a complete regression of all the other test suites.  It is expected that some of the regression tests might be affected by the model change. 
+
+---
+
+[Back to top](#top-preface5)
+
+---
 
 
 
