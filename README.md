@@ -2679,6 +2679,9 @@ Empirical testing will be done with GPT-5.6 Sol later, intentionally removing th
 
 
 <a name="gpt-5.4-appendix-g-case-study"></a>
+<a name="top-appendix-g"></a>
+
+
 ### **Appendix G — GPT‑5.4 Internal Model Salience Collapse in Multi‑Segment Rewrite Pipelines: A Contract‑Accurate Analysis**
 
 
@@ -2833,7 +2836,16 @@ This GPT‑5.4 model limitation/failure is **not** this, but rather:
 
 This is the conceptual foundation for this entire appendix.
 
+
+
+
 ---
+
+[Back to top of Appendix G](#top-appendix-g)
+
+---
+
+
 
 #### **Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)**
 
@@ -2968,7 +2980,11 @@ Readers of PREFACE UPDATE3 must understand:
 - Appendix G will attempt to explain how the contract rules interact with that failure  
 
 
+---
 
+[Back to top of Appendix G](#top-appendix-g)
+
+---
 
 
 
@@ -3244,7 +3260,7 @@ Moving up at  higher level, the BS code block above was strategically placed rig
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of Appendix G](#top-appendix-g)
 
 ---
 
@@ -3420,12 +3436,14 @@ This is why all failing test cases passed after BS rule.
 - Short pipelines never fail.  
 - This is a model‑limitation, not a contract‑ordering issue.
 
+
+
+
 ---
 
-[Back to top](#top-preface5)
+[Back to top of Appendix G](#top-appendix-g)
 
 ---
-
 
 
 
