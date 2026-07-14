@@ -3050,11 +3050,9 @@ This is exactly the “valley/peak” misclassification described in:
 
 Appendix B describes the model’s inference as a function:
 
-````markdown
 ```text
 f(h) = argmax_{a ∈ A} p(a | h)
 ```
-````
 
 where:
 
@@ -3072,19 +3070,15 @@ In multi‑segment pipelines:
 
 When the number of wrong‑OS PM segments exceeds a threshold (empirically **>2**), the internal probability surface shifts:
 
-````markdown
 ```text
 p(fallback | h) > p(retry_with_modified_command | h)
 ```
-````
 
 even though the contract requires:
 
-````markdown
 ```text
 p(retry_with_modified_command) = 1
 ```
-````
 
 This is a **model‑internal misclassification**, not a contract‑level error.
 
@@ -3142,19 +3136,15 @@ shifted incorrectly when:
 
 The boundary moved into the wrong region, causing:
 
-````markdown
 ```text
 fallback
 ```
-````
 
 to be selected instead of:
 
-````markdown
 ```text
 retry_with_modified_command
 ```
-````
 
 This is a **boundary collapse**, not a rule‑ordering failure.
 
