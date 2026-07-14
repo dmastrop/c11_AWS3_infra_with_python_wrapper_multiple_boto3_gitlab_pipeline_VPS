@@ -2691,15 +2691,15 @@ as to how the internal salience gpt-5.4 model limitation occurred for a very ver
 remeidated the issue.
 
 
-Section 1 — Internal Model Salience vs Contract Rule Salience
-Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)
-Section 3 — What Actually Happened: Internal Salience Collapse
-Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)
-Section 5 — Why Patch2 Was Not “Skipped” Procedurally but Overshadowed Probabilistically
-Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)
-Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse
-Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence
-Final Integrated Summary
+- Section 1 — Internal Model Salience vs Contract Rule Salience
+- Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)
+- Section 3 — What Actually Happened: Internal Salience Collapse
+- Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)
+- Section 5 — Why Patch2 Was Not “Skipped” Procedurally but Overshadowed Probabilistically
+- Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)
+- Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse
+- Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence
+- Final Integrated Summary
 
 
 
@@ -3250,6 +3250,181 @@ Moving up at  higher level, the BS code block above was strategically placed rig
 
 
 
+
+
+
+#### **Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)**
+
+**4.1 Overview**
+
+This section explains why the failure only occurred in pipelines with:
+
+- **more than two wrong‑OS PM segments**,  
+- **plus a native system‑wide op**,  
+- **plus stderr**,  
+- **plus non‑zero exit status**.
+
+Short pipelines (≤2 rewrites) never failed.
+
+This is a critical empirical observation.
+
+---
+
+**4.2 Empirical Pattern Observed**
+
+From the 21‑case multi‑segment suite:
+
+
+
+```
+If pipeline has:
+    ≥3 wrong‑OS PM rewrites
+AND a native system‑wide op
+→ fallback (incorrect)
+```
+
+```
+If pipeline has:
+    ≥3 wrong‑OS PM rewrites
+AND no native system‑wide op
+→ retry_with_modified_command (correct)
+```
+
+```
+If pipeline has:
+    wrong‑OS system‑wide op
+→ fallback (correct)
+```
+
+```
+If pipeline has:
+    native system‑wide op
+AND ≤2 wrong‑OS PM rewrites
+→ retry_with_modified_command (correct)
+```
+
+This pattern is consistent across:
+
+- Ubuntu  
+- Debian  
+- RHEL  
+- Alpine  
+- Fedora  
+- CentOS  
+- Amazon Linux  
+
+The failure is not OS‑specific.  
+It is model‑specific.
+
+---
+
+**4.3 Why Long Pipelines Increase Internal Salience Load**
+
+Each wrong‑OS PM segment adds tokens associated with:
+
+- “wrong OS”  
+- “unsafe”  
+- “rewrite required”  
+- “risk”  
+- “error”  
+- “global”  
+- “system‑wide”  
+
+Each segment increases the internal salience of fallback.
+
+When the number of segments exceeds a threshold (empirically **>2**), the model’s internal salience weighting becomes unstable.
+
+This is exactly the “peak/valley” distortion described in Appendix C.
+
+---
+
+**4.4 Why Native System‑Wide Ops Become Misclassified in Long Pipelines**
+
+In long pipelines, the model’s internal salience weighting incorrectly treats:
+
+- `apt-get update -y` (native)
+
+as if it were:
+
+- `yum update -y` (wrong‑OS)
+
+because the internal salience of “system‑wide op → fallback” becomes dominant.
+
+This is not caused by:
+
+- OS‑Mutation Guard  
+- GLOBAL_RULES  
+- Patch2  
+- Ubuntu domain primitives  
+
+It is caused by:
+
+- internal salience overload  
+- probability‑surface distortion  
+- decision‑boundary collapse  
+
+---
+
+**4.5 Why Short Pipelines Never Failed**
+
+Short pipelines (≤2 rewrites):
+
+- do not overload internal salience  
+- do not distort the probability surface  
+- do not collapse the decision boundary  
+- do not misclassify native system‑wide ops  
+- do not trigger fallback incorrectly  
+
+This is why:
+
+```
+yum install nano && apt-get install curl && apt-get update
+```
+
+always passed.
+
+But:
+
+```
+yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y
+```
+
+failed.
+
+---
+
+**4.6 Why BS Rule Fixes Long Pipelines**
+
+BS rule:
+
+- increases salience of “native system‑wide op → preserve verbatim”  
+- increases salience of “wrong‑OS PM → rewrite”  
+- decreases salience of “non-native system‑wide op → fallback”  
+- stabilizes the probability surface  
+- restores the correct decision boundary  
+- prevents collapse in long pipelines  
+
+This is why all failing test cases passed after BS rule.
+
+---
+
+
+**4.7 Summary of Section 4**
+
+- The failure only occurs in long pipelines (>2 rewrites).  
+- Long pipelines overload internal salience.  
+- Overload causes probability‑surface distortion.  
+- Distortion causes decision‑boundary collapse.  
+- Collapse causes misclassification of native system‑wide ops.So this must be present in the failure command test command.  
+- BS rule fixes the collapse.  
+- Short pipelines never fail.  
+- This is a model‑limitation, not a contract‑ordering issue.
+
+---
+
+[Back to top](#top-preface5)
+
+---
 
 
 
