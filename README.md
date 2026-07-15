@@ -2700,15 +2700,17 @@ as to how the internal salience gpt-5.4 model limitation occurred for a very ver
 remeidated the issue.
 
 
-- Section 1 — Internal Model Salience vs Contract Rule Salience
-- Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)
-- Section 3 — What Actually Happened: Internal Salience Collapse
-- Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)
-- Section 5 — Why Patch2 Was Not “Skipped” Procedurally but Overshadowed Probabilistically
-- Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)
-- Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse
-- Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence
-- Final Integrated Summary
+- [Section 1 — Internal Model Salience vs Contract Rule Salience](#section-1-appendix-g)
+- [Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)](#section-2-appendix-g)
+- [Section 3 — What Actually Happened: Internal Salience Collapse](#section-3-appendix-g)
+- [Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)](#section-4-appendix-g)
+- [Section 5 — Why Patch2 Was Not “Skipped” Procedurally but Overshadowed Probabilistically](#section-5-appendix-g)
+- [Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)](#section-6-appendix-g)
+- [Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse](#section-7-appendix-g)
+- [Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence](#section-8-appendix-g)
+- [Final Integrated Summary]{#final-integrated-summary-appendix-g)
+
+
 
 
 <a name="section-1-appendix-g"></a>
@@ -3463,20 +3465,56 @@ This is why all failing test cases passed after BS rule.
 #### **Section 5 - Why Patch2 Was Not "Skipped" Procedurally bu Overshadowed Probabilistically**
 
 
+---
+
+[Back to top of Appendix G](#top-appendix-g)
+
+---
+
+
+
 <a name="section-6-appendix-g"></a>
 #### **Section 6 - Where the Releveant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)**
+
+
+---
+
+[Back to top of Appendix G](#top-appendix-g)
+
+---
+
 
 
 <a name="section-7-appendix-g"></a>
 #### **Section 7 — Why GPT-5.6 Sol is Expected Not to Collaspe**
 
 
+---
+
+[Back to top of Appendix G](#top-appendix-g)
+
+---
+
+
+
 <a name="section-8-appendix-g"></a>
 #### **Section 8 — Restatement of the Exact Failure Pattern + Full Empricial Evidence**
+
+---
+
+[Back to top of Appendix G](#top-appendix-g)
+
+---
+
+
 
 
 <a name="final-integrated-summary-appendix-g"></a>
 #### **Final Integrated Summary**
+
+
+
+
 
 
 
