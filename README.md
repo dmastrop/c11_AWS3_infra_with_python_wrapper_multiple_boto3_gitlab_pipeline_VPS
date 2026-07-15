@@ -339,6 +339,7 @@ STATUS_TAGS = {
 <a name="top-preface5"></a>
 ### **Table of Contents for the PREFACE UPDATE5**
 
+- [Executive Summary - PREFACE UPDATE5](#executive-summary-preface-update5)
 - [Case Study: GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure — Native System‑Wide Ops Misclassified for fallback](#gpt-5.4-internal-salience-case-study) 
 - [Appendix A — Deep‑Dive Case Study: GPT‑5.4 Multi‑Segment Rewrite Failure: GPT‑5.4 Model‑Inference Limitation in Native System‑Wide Operations](#gpt-5.4-appendix-a-case-study)
 - [Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure](#gpt-5.4-appendix-b-case-study) 
@@ -353,6 +354,7 @@ STATUS_TAGS = {
 
 
 
+<a name="executive-summary-preface-update5"></a>
 ### **Executive Summary — PREFACE UPDATE5**  
 
 *Phase 4a.1.2 LLM Contract Rule Engineering II:  
