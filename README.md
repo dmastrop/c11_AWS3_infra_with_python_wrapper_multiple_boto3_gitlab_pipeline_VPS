@@ -2708,7 +2708,7 @@ remeidated the issue.
 - [Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)](#section-6-appendix-g)
 - [Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse](#section-7-appendix-g)
 - [Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence](#section-8-appendix-g)
-- [Final Integrated Summary]{#final-integrated-summary-appendix-g)
+- [Final Integrated Summary](#final-integrated-summary-appendix-g)
 
 
 
