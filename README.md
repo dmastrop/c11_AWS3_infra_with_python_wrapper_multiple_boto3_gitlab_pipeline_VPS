@@ -446,7 +446,10 @@ After applying the BS rule:
 
 This confirms that the BS rule successfully and very precisely steered the model around its internal limitation without affecting any of the other areas of the geometric decision landscape.
 
-[Back to top](#top-preface5)
+
+---
+
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -854,7 +857,7 @@ Although the case study above provides a complete, practical explanation of the 
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -1150,7 +1153,7 @@ For further model level explanations from a mathematical perspective see the nex
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -1296,7 +1299,7 @@ The BS rule corrected the failure by shifting the model’s internal **probabili
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -1765,7 +1768,7 @@ that this was a model limitation.
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UDPATE5](#top-preface5)
 
 ---
 
@@ -1930,7 +1933,7 @@ This reduces activation in danger heads and increases activation in rewrite head
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -2284,7 +2287,7 @@ These diagrams are the visual counterpart to the mathematical explanation in App
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -2468,7 +2471,7 @@ The BS rule corrected the failure by shifting the model’s internal salience we
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -2674,7 +2677,7 @@ Empirical testing will be done with GPT-5.6 Sol later, intentionally removing th
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
@@ -2682,10 +2685,11 @@ Empirical testing will be done with GPT-5.6 Sol later, intentionally removing th
 
 <a name="gpt-5.4-appendix-g-case-study"></a>
 <a name="top-appendix-g"></a>
-
-
 ### **Appendix G — GPT‑5.4 Internal Model Salience Collapse in Multi‑Segment Rewrite Pipelines: A Contract‑Accurate Analysis**
 
+
+
+#### **Table of Contents - Appendix G**
 
 
 > **Relationship to Appendices A–F:**  
@@ -2707,7 +2711,7 @@ remeidated the issue.
 - Final Integrated Summary
 
 
-
+<a name="section-1-appendix-g"></a>
 #### **Section 1 — Internal Model Salience vs Contract Rule Salience**
 
 **1.1 Overview**
@@ -2848,7 +2852,7 @@ This is the conceptual foundation for this entire appendix.
 ---
 
 
-
+<a name="section-2-appendix-g"></a>
 #### **Section 2 — Why Rule‑Ordering Salience Is NOT Involved (Debian/RHEL vs GPT‑5.4)**
 
 **2.1 Recap: What Happened in Debian**
@@ -2989,7 +2993,7 @@ Readers of PREFACE UPDATE3 must understand:
 ---
 
 
-
+<a name="section-3-appendix-g"></a>
 #### **Section 3 — What Actually Happened: Internal Salience Collapse**
 
 **3.1 Overview**
@@ -3270,7 +3274,7 @@ Moving up at  higher level, the BS code block above was strategically placed rig
 
 
 
-
+<a name="section-4-appendix-g"></a>
 #### **Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)**
 
 **4.1 Overview**
@@ -3455,13 +3459,35 @@ This is why all failing test cases passed after BS rule.
 
 
 
+<a name="section-5-appendix-g"></a>
+#### **Section 5 - Why Patch2 Was Not "Skipped" Procedurally bu Overshadowed Probabilistically**
+
+
+<a name="section-6-appendix-g"></a>
+#### **Section 6 - Where the Releveant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)**
+
+
+<a name="section-7-appendix-g"></a>
+#### **Section 7 — Why GPT-5.6 Sol is Expected Not to Collaspe**
+
+
+<a name="section-8-appendix-g"></a>
+#### **Section 8 — Restatement of the Exact Failure Pattern + Full Empricial Evidence**
+
+
+<a name="final-integrated-summary-appendix-g"></a>
+#### **Final Integrated Summary**
 
 
 
 
 ---
 
-[Back to top](#top-preface5)
+[Back to top of Appendix G](#top-appendix-g)
+
+---
+
+[Back to top of PREFACE UPDATE5](#top-preface5)
 
 ---
 
