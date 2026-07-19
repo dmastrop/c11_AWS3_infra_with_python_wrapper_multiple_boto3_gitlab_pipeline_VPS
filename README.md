@@ -3462,7 +3462,210 @@ This is why all failing test cases passed after BS rule.
 
 
 <a name="section-5-appendix-g"></a>
-#### **Section 5 - Why Patch2 Was Not "Skipped" Procedurally bu Overshadowed Probabilistically**
+#### **Section 5 - Why Patch2 Was Not "Skipped" Procedurally but Overshadowed Probabilistically**
+
+
+
+**5.1 Overview**
+
+This section explains a very subtle and easily misunderstood aspect of the GPT‑5.4 failure:
+
+> **Patch2 was not skipped.  
+> Patch2 was overshadowed probabilistically.**
+
+The misconception is easy to understand if the failure is viewed as a rule-ordering external salience issue, rather than the internal
+salience issue that has been described in Appendices A-F and Appendix G thus far.  But that is not what is going on here.
+
+The facts are that: Patch2 was present, Patch2 was correct (it has been working very well in very similar tests), Patch2 was active,
+and Patch2 was visbile to teh module during the failed tests that required the BS rule fix. 
+
+The model simply **assigned insufficient internal salience** to Patch2 relative to fallback.
+
+This is a probability‑surface phenomenon, not a contract‑ordering phenomenon.
+
+---
+
+**5.2 What Patch2 Is Supposed to Do**
+
+Patch2 is the rewrite cluster or block that is responsible for:
+
+- identifying wrong‑OS package‑manager segments  
+- rewriting them to the correct native package manager  
+- preserving native system‑wide operations verbatim  
+- producing a unified `retry_with_modified_command` pipeline  
+- ensuring non‑interactive behavior (`-y` flag)  
+- preventing fallback unless a rewrite would require a system‑wide op  
+
+Patch2 is the core rewrite engine for multi‑segment pipelines.
+
+---
+
+**5.3 Why Patch2 Was Not Skipped**
+
+Patch2 was **not** skipped because:
+
+- the Patch2 block was present in the prompt  
+- the Patch2 block was correctly placed  
+- the Patch2 block was adjacent to the correct rules  
+- the Patch2 block was not overshadowed by GLOBAL_RULES (if it had been the segements <= 2 segements would have failed as well) 
+- the Patch2 block was not overshadowed by OS‑Mutation Guard  (same as above)
+- the Patch2 block was not overshadowed by malformed‑command rules  (same as above)
+- the Patch2 block was not overshadowed by idempotency rules  (same as above)
+- the Patch2 block was not overshadowed by fallback rules  (same as above)
+
+The rule constructs and blocks were semantically fine.
+
+Patch2 was procedurally reachable, active, correcct, visible, and executed
+
+
+The failure was not a procedural issue at all, but a probabilistic issue as explained in the next section.
+
+---
+
+
+**5.4 Why Patch2 Was Overshadowed Probabilistically**
+
+Patch2 was overshadowed because GPT‑5.4’s internal salience weighting incorrectly elevated fallback above rewrite.
+
+This is the “peak/valley” distortion described in great deteail in:
+
+- **Appendix B** (mathematical perspective)  
+- **Appendix C** (geometric interpretation)  
+- **Appendix D** (decision‑boundary diagrams)
+
+And further explained in the Appendices E and F in terms of a model limitation.
+
+
+Under high salience load (multi‑segment pipelines with >2 wrong‑OS PMs), the model’s internal probability surface shifted at h, the 
+problematic hidden state in the multi-dimensional decision surface:
+
+```text
+p(fallback | h) > p(retry_with_modified_command | h)
+```
+
+This occurred even though the contract rules structurally and semanatically reinforced the probability at h as:
+
+```text
+p(retry_with_modified_command) = 1
+```
+
+This is a **model‑internal misclassification**, not a contract‑level error.
+
+---
+
+**5.5 Why OS‑Mutation Guard Was Not the Cause**
+
+The OS-Mutation Guard is part of the GLOBAL_RULES block.
+
+The OS‑Mutation Guard rule:
+
+> **If a rewrite would require a system‑wide op → fallback.**
+
+is correct.  We never want to permit a rewrite on a system-wide operation because it is non-deterministic and it would complicate the
+already very complex system-wide ops semantics.
+
+```
+               # This causes a gpt-5.4 model limitation failure due to internal salience issue if 3 or more rewrites
+                "- If a rewrite, retry, or cleanup sequence would require ANY system‑wide\n"
+                "  operation that is NOT part of an OS‑signaled remediation flow, the LLM\n"
+                "  MUST return \"fallback\" instead.\n"
+                "\n"
+```
+
+
+This fallback related rule corresponds to and aligns to specific rules in the OS specific domain primitives blocks (for example, those
+of Ubuntu, Debian, RHEL, etc) that pertain to:
+
+- wrong‑OS system‑wide ops → fallback  
+- native system‑wide ops → preserve verbatim  
+
+
+
+In the UBUNTU_RULES domain primitves block for example:
+
+``
+                #
+                "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+                "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- If a system-wide segment is already valid for this OS and does NOT require\n"
+                "  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely\n"
+                "  because it is system-wide.\n"
+                "\n"
+
+```
+
+
+GPT‑5.4 conssequently internally collapsed these categories at the hidden state h (and only at that state, i.e. greater that or equal
+to 3 segment rewrites and native system-wide op, etc.)
+
+The contract did not collapse these two. The rules were and have always been correct, but the model misinterpreted them due to this 
+internal collapse.
+
+The key is to inject a very strong BS rule right before these 2 rules above in each domain primitves block.
+
+
+The BS rule placed directly before the two rules above:
+
+```
+                "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
+                "  install commands and also contains a system-wide operation that is already native to the\n"
+                "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
+                "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
+                "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
+                "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+                "\n"
+
+```
+
+
+
+---
+
+**5.6 Why BS Rule Fixes Probabilistic Overshadowing**
+
+BS rule:
+
+- increases salience of “native system‑wide op → preserve verbatim”  
+- increases salience of “wrong‑OS PM → rewrite”  
+- decreases salience of “system‑wide op → fallback”  
+- restores the correct decision boundary  
+- restores the correct probability surface  
+- restores the correct geometric separation  
+
+It does this **without**:
+
+- changing rule ordering  
+- changing adjacency 
+- changing grouping  
+- changing structure  
+- changing GLOBAL_RULES  
+- changing OS‑Mutation Guard  
+- changing Patch2  
+
+This proves the failure is **internal model salience**, not contract rule external salience.
+
+Note that with the other external salient falures in Debian and RHEL as detailed in PREFACE UPDATE3, the rule      
+ordering and adjacency WERE the primary issue.
+
+
+
+---
+
+
+
+**5.7 Summary of Section 5**
+
+This purpose of this section was to simply make it clear that the illusion under the internal salience model failure that Patch2 was
+somehow blocked or skipped from a rules perspective is NOT true. 
+
+- Patch2 was not skipped.  
+- Patch2 was overshadowed probabilistically.  
+- The failure was internal to the model.  
+- OS‑Mutation Guard was not the cause.  
+- BS rule fixed the collapse.  
+- No contract changes were required.  
+- This is a model‑limitation, not a contract‑ordering issue.
 
 
 ---
