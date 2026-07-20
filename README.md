@@ -3515,7 +3515,7 @@ Patch2 was **not** skipped because:
 
 The rule constructs and blocks were semantically fine.
 
-Patch2 was procedurally reachable, active, correcct, visible, and executed
+Patch2 was procedurally reachable, active, correct, visible, and executed
 
 
 The failure was not a procedural issue at all, but a probabilistic issue as explained in the next section.
@@ -3527,7 +3527,7 @@ The failure was not a procedural issue at all, but a probabilistic issue as expl
 
 Patch2 was overshadowed because GPT‑5.4’s internal salience weighting incorrectly elevated fallback above rewrite.
 
-This is the “peak/valley” distortion described in great deteail in:
+This is the “peak/valley” distortion described in great detail in:
 
 - **Appendix B** (mathematical perspective)  
 - **Appendix C** (geometric interpretation)  
@@ -3583,7 +3583,7 @@ of Ubuntu, Debian, RHEL, etc) that pertain to:
 
 In the UBUNTU_RULES domain primitves block for example:
 
-``
+```
                 #
                 "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
                 "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
