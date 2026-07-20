@@ -2705,11 +2705,10 @@ remeidated the issue.
 - [Section 3 — What Actually Happened: Internal Salience Collapse](#section-3-appendix-g)
 - [Section 4 — Why the Collapse Only Occurred in Long Pipelines (>2 wrong‑OS PM rewrites)](#section-4-appendix-g)
 - [Section 5 — Why Patch2 Was Not “Skipped” Procedurally but Overshadowed Probabilistically](#section-5-appendix-g)
-- [Section 6 — Where the Relevant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)](#section-6-appendix-g)
+- [Section 6 — Integrated Code-Based Explanation of the Failure Mechanism (Contract Mapping + Salience Collapse)](#section-6-appendix-g)
 - [Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse](#section-7-appendix-g)
 - [Section 8 — Restatement of the Exact Failure Pattern + Full Empirical Evidence](#section-8-appendix-g)
 - [Final Integrated Summary](#final-integrated-summary-appendix-g)
-
 
 
 
@@ -3656,8 +3655,9 @@ ordering and adjacency WERE the primary issue.
 
 **5.7 Summary of Section 5**
 
-This purpose of this section was to simply make it clear that the illusion under the internal salience model failure that Patch2 was
-somehow blocked or skipped from a rules perspective is NOT true. 
+This purpose of this section was to simply make it clear that the illusion that the Patch2 was somehow blocked or skipped from a rules
+persective, during the internal salience modle failure, is simply NOT true. 
+
 
 - Patch2 was not skipped.  
 - Patch2 was overshadowed probabilistically.  
@@ -3676,8 +3676,265 @@ somehow blocked or skipped from a rules perspective is NOT true.
 
 
 
+
+
 <a name="section-6-appendix-g"></a>
-#### **Section 6 - Where the Releveant Rules Actually Live (GLOBAL_RULES vs Ubuntu Domain Primitives)**
+#### **Section 6 - Integrated Code-Based Explanation of the Failure Mechanism (Contract Mapping + Salience Collapse)**
+
+
+This section maps the exact rules involved in the GPT‑5.4 failure to their actual locations in the contract.
+
+This subsection also correlates the exact rule blocks from GLOBAL_RULES and UBUNTU_RULES with the observed GPT‑5.4 failure pattern. It explains how internal model salience collapse caused a native system‑wide operation to be misclassified as non‑native, leading to an incorrect fallback decision in multi‑segment pipelines containing three or more wrong‑OS package‑manager rewrites.
+
+---
+
+##### 6.1 Relevant Rule Blocks (Verbatim)
+
+**GLOBAL_RULES → OS‑Mutation Guard (Point 1 of root cause)**
+
+```
+# This causes a gpt-5.4 model limitation failure due to internal salience issue if 3 or more rewrites
+"- If a rewrite, retry, or cleanup sequence would require ANY system‑wide
+  operation that is NOT part of an OS‑signaled remediation flow, the LLM
+  MUST return \"fallback\" instead.\n"
+```
+
+This rule is correct.  
+It applies only when a rewrite would require generating a system‑wide operation.
+
+---
+
+
+
+**UBUNTU_RULES → Domain Primitives (Point 2 of root cause)**
+
+NOTE that BS rule block was added after the failure was detected and remediates the failure.
+
+```
+"- The following commands are considered system-wide operations:\n"
+"      apt-get update\n"
+"      apt-get upgrade\n"
+"      apt update\n"
+"      apt upgrade\n"
+"      yum update\n"
+"      yum upgrade\n"
+"      dnf upgrade\n"
+"      pacman -Syu\n"
+"      apk update\n"
+"      zypper refresh\n"
+"      zypper update\n"
+"\n"
+
+
+BS RULE IS BELOW: >>>>>>>
+
+# gpt-5.4 model limitation with multi-segment rewrites (BS rule)
+"- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager
+  install commands and also contains a system-wide operation that is already native to the
+  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed
+  are to rewrite the wrong-OS package manager segments to the native package manager, you
+  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the
+  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+
+<<<<<<<< THE BS RULE IS THE BLOCK ABOVE.  THIS WAS THE BLOCK ADDED TO REMEDIATE THE FALURE
+
+
+"\n"
+"- If ANY segment in the pipeline is a system-wide operation AND that segment
+  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+"\n"
+"- If a system-wide segment is already valid for this OS and does NOT require
+  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely
+  because it is system-wide.\n"
+"\n"
+```
+
+These rules are correct.  
+They govern:
+
+- classification of system‑wide operations  
+- rewrite‑forbidden system‑wide ops  
+- passthrough (verbatim) of native system‑wide ops  
+- fallback for wrong‑OS system‑wide ops  that would require rewrite
+- BS rule salience override  
+
+For example, on Ubuntu these are considered native system-wide ops and should be preserved verbatim:
+
+- `apt-get update -y` on Ubuntu  
+- `apt update`  
+- `apt-get upgrade`  
+
+ And these are considered wrong-OS package manager install commands that are suitable for rewrite when using Ubuntu:
+
+- `yum install X` → `apt-get install -y X`  
+- `apk add Y` → `apt-get install -y Y`  
+- `pacman -S Z` → `apt-get install -y Z`  
+- `brew install W` → `apt-get install -y W`  
+
+And the injected BS rule as noted above does the following:
+
+- increases salience of “native system‑wide op → preserve verbatim”  
+- increases salience of “wrong‑OS PM → rewrite”  
+- decreases salience of “system‑wide op → fallback”  
+- restores correct decision boundary  
+- restores correct probability surface  
+- restores correct geometric separation  
+
+The BS rule fixes the model‑limitation.
+
+---
+
+##### 6.2 The Failure Mechanism (Seven‑Step Causal Chain)
+
+The GPT‑5.4 failure arises from an internal salience collapse, not from any flaw in the contract rules. The rules are correct; the model’s internal classification becomes incorrect under high salience load.
+
+The failure mechanism proceeds as follows:
+
+---
+
+**Step 1 — Internal misinterpretation of OS‑Mutation Guard**
+
+Under multi‑segment load (≥3 wrong‑OS PM rewrites), GPT‑5.4 internally generalizes:
+
+> “system‑wide op present → unsafe → fallback.”
+
+This is not what the rule states.  
+This is an internal salience collapse.
+
+---
+
+**Step 2 — Native system‑wide op becomes misclassified as non‑native**
+
+The model incorrectly treats:
+
+- `apt-get update -y` (native on Ubuntu)
+
+as if it were:
+
+- `yum update -y` (wrong‑OS) or some other non-native system-wide operation, even though it clearly is not
+
+This is the geometric collapse described in Appendix C.
+
+---
+
+**Step 3 — Domain‑primitives rule for “system‑wide op requiring rewrite → fallback” fires**
+
+The rule:
+
+```
+"- If ANY segment in the pipeline is a system-wide operation AND that segment
+  would require rewriting for this OS, the LLM MUST use 'fallback'."
+```
+
+is correct.
+
+But after misclassification of the system-wide operation, the model believes the native system‑wide op “requires rewriting,” so fallback is selected.
+
+This is the correct rule applied to an incorrect internal classification.
+
+---
+
+**Step 4 — The correct rule (a domain-primitives rule) becomes unreachable**
+
+The rule:
+
+```
+"- If a system-wide segment is already valid for this OS and does NOT require
+  rewriting, the LLM MUST preserve it verbatim and MUST NOT fallback solely
+  because it is system-wide."
+```
+
+is correct.
+
+But after misclassification, the model never reaches it or applies it.  The rule is correct but the internal salience issue that creates a misclassification makes the rule inapplicable. This is the key point of the failure mode.  This is the rule that
+SHOULD have been applied. 
+
+The decision boundary collapses.
+
+---
+
+**Step 5 — Fallback is emitted instead of retry_with_modified_command**
+
+The model emits:
+
+```
+{"action":"fallback"}
+```
+
+instead of:
+
+```
+{"action":"retry_with_modified_command"}
+```
+
+This is the incorrect action. We know this is what is going on because of the very specific failure signature of the test cases.  3 or more rewrites of incorrect PM segments + native system-wide operation causes the issue very deterministically.
+
+---
+
+**Step 6 — BS rule reasserts correct salience**
+
+The BS rule states:
+
+> “If wrong‑OS PMs + native system‑wide op → do NOT fallback.”
+
+This rule restores:
+
+- correct classification  
+- correct decision boundary  
+- correct probability surface  
+- correct geometric separation  
+
+It prevents fallback and allows Patch2 to execute normally and apply the correct rule (retry_with_modified_command and let the system-wide operation passthrough verbatim).
+
+---
+
+**Step 7 — Patch2 rewrite logic proceeds normally**
+
+After BS rule correction:
+
+- wrong‑OS PMs are rewritten  
+- native system‑wide op is preserved verbatim  
+- the unified pipeline is correct  
+- no regressions occur  
+
+This is the expected behavior.
+
+---
+
+##### 6.3 Why the Failure Only Occurs with ≥3 Wrong‑OS PM Rewrites
+
+The salience collapse only occurs when:
+
+- three or more wrong‑OS PM segments appear  
+- plus a native system‑wide op  
+- plus stderr  
+- plus non‑zero exit status  
+
+Two‑segment pipelines never fail because internal salience remains stable and classification remains correct.
+
+This threshold behavior is consistent with the mathematical and geometric analysis in Appendices B–D. It is complicated in nature, but the end result is a very highly probabilistic failure pattern, which is exactly what we see empirically.
+
+---
+
+##### 6.4 Summary of Section 6
+
+- The contract rules are correct.  
+- The failure is caused by internal salience collapse.  
+- Native system‑wide ops become misclassified as non‑native.  
+- The wrong domain‑primitives rule fires correctly based on incorrect classification.  
+- The correct rule becomes unreachable.  
+- BS rule restores correct salience and correct classification.  
+- Patch2 executes normally after salience correction.  
+- No regressions occur.  
+
+This is the precise mechanism behind the GPT‑5.4 multi‑segment rewrite failure and how it correlates to the actual contract rule code blocks in the context payload sent to the LLM.
+
+---
+
+
+
+
+
 
 
 ---
