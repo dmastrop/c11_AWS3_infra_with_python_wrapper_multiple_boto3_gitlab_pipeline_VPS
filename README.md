@@ -2486,6 +2486,11 @@ This appendix provides a structured comparison between **GPT‑5.4** and more ad
 
 The goal is to illustrate why GPT‑5.4 exhibited a model limitation in the Patch2 multi‑segment rewrite suite, and why newer models are expected to handle the same logic without requiring salience‑shifting overrides.
 
+Also see this related section in Appendix G:
+
+- [Section 7 — Why GPT‑5.6 Sol Is Expected Not to Collapse](#section-7-appendix-g)
+
+
 ---
 
 #### **1. Overview of the Comparison**
@@ -2695,7 +2700,7 @@ Empirical testing will be done with GPT-5.6 Sol later, intentionally removing th
 > **Relationship to Appendices A–F:**  
 > Appendices A through F establish the empirical behavior, mathematical structure, geometric interpretation, decision‑boundary dynamics, and formal definition of the GPT‑5.4 multi‑segment rewrite failure. Appendix G builds directly on that foundation by mapping the failure back to the contract itself. It explains how the model‑inference limitation interacts with the GLOBAL_RULES and Ubuntu domain‑primitives blocks, why the contract rules are correct, and how internal salience collapse—not rule ordering—produced the observed misclassification. Appendix G therefore serves as the contract‑accurate synthesis of the entire case study, connecting the theoretical analysis in Appendices A–F with the practical rule‑level behavior of the LLM.
 
-There are 8 total sections to this Appendix. Each section successively helps to build up the understanding through code(contract) examples
+There are 8 total sections to this Appendix G. Each section successively helps to build up the understanding through code(contract) examples
 as to how the internal salience gpt-5.4 model limitation occurred for a very very specific test scneario and how the BS rule 
 remeidated the issue.
 
@@ -3929,13 +3934,6 @@ This threshold behavior is consistent with the mathematical and geometric analys
 
 This is the precise mechanism behind the GPT‑5.4 multi‑segment rewrite failure and how it correlates to the actual contract rule code blocks in the context payload sent to the LLM.
 
----
-
-
-
-
-
-
 
 ---
 
@@ -3949,6 +3947,117 @@ This is the precise mechanism behind the GPT‑5.4 multi‑segment rewrite failu
 #### **Section 7 — Why GPT-5.6 Sol is Expected Not to Collaspe**
 
 
+**7.1 Overview**
+
+This section explains why the salience‑collapse failure observed in GPT‑5.4 is **expected** to be mitigated or eliminated in GPT‑5.6 Sol, based on architectural changes described in the GPT‑5.6 model family documentation.  
+This is an **architectural expectation**, not an empirical guarantee.  
+The multi‑segment rewrite suite has not yet been executed against GPT‑5.6 Sol.
+
+GPT‑5.6 Sol introduces improvements intended to stabilize internal salience weighting, reduce category‑collapse risk, and maintain correct decision‑boundary geometry under multi‑segment load. These improvements directly target the internal dynamics that caused GPT‑5.4 to misclassify native system‑wide operations in long pipelines.
+
+Also see this related section:
+
+- [Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models](#gpt-5.4-appendix-f-case-study)
+
+
+---
+
+
+**7.2 Architectural Improvements in GPT‑5.6 Sol Relevant to This Failure**
+
+GPT‑5.6 Sol includes several architectural changes that are **expected** to reduce or eliminate the failure mode:
+
+
+
+(1) Higher‑resolution salience separation
+
+GPT‑5.6 Sol is designed to maintain stronger internal separation between:
+
+- wrong‑OS system‑wide operations  
+- native system‑wide operations  
+- wrong‑OS package‑manager segments  
+- native package‑manager segments  
+- rewrite‑required segments  
+- rewrite‑forbidden segments  
+
+This higher‑resolution separation is intended to prevent the category collapse observed in GPT‑5.4.
+
+
+
+(2) More stable probability surfaces under multi‑segment load
+
+GPT‑5.6 Sol is architected to maintain stable probability surfaces even when pipelines contain:
+
+- three or more wrong‑OS PM rewrites  
+- native system‑wide operations  
+- stderr  
+- non‑zero exit status  
+
+This stability is intended to prevent the “peak/valley distortion” described in Appendix C.
+
+
+(3) More robust decision‑boundary geometry
+
+GPT‑5.6 Sol is designed to maintain correct decision boundaries between:
+
+- `retry_with_modified_command`  
+- `fallback`  
+- `cleanup_and_retry`  
+
+even under high salience load.
+
+This robustness is intended to prevent the boundary collapse described in Appendix D.
+
+---
+
+
+
+
+**7.3 Why GPT‑5.6 Sol Is Expected to Correctly Classify Native System‑Wide Ops**
+
+Based on architectural documentation, GPT‑5.6 Sol is expected to correctly identify:
+
+- `apt-get update -y` as native on Ubuntu  
+- `apt update` as native  
+- `apt-get upgrade` as native  
+
+even in pipelines containing:
+
+- multiple wrong‑OS PM segments  
+- stderr  
+- non‑zero exit status  
+
+This expectation directly addresses the misclassification that triggered fallback in GPT‑5.4.
+
+However, this has **not yet been empirically validated** using the multi‑segment rewrite suite.
+
+---
+
+**7.4 Why GPT‑5.6 Sol May Not Require the BS Rule**
+
+GPT‑5.6 Sol is expected to avoid the internal salience collapse that necessitated the BS rule in GPT‑5.4.  
+If internal salience remains stable:
+
+- native system‑wide ops will not be misclassified  
+- Patch2 rewrite logic will not be overshadowed  
+- fallback will not be incorrectly selected  
+- domain‑primitives rules will remain reachable  
+
+Under these conditions, GPT‑5.6 Sol would not require the BS rule.
+
+This is an architectural expectation, not a verified result.
+
+---
+
+**7.5 Summary of Section 7**
+
+- GPT‑5.6 Sol introduces architectural improvements intended to stabilize internal salience.  
+- These improvements are expected to prevent the category collapse seen in GPT‑5.4.  
+- GPT‑5.6 Sol is expected to maintain correct classification of native system‑wide operations.  
+- GPT‑5.6 Sol is expected not to require the BS rule.  
+- These expectations have **not yet been empirically tested** using the multi‑segment rewrite suite.  
+- Verification will require running the full suite against GPT‑5.6 Sol.
+
 ---
 
 [Back to top of Appendix G](#top-appendix-g)
@@ -3959,6 +4068,12 @@ This is the precise mechanism behind the GPT‑5.4 multi‑segment rewrite failu
 
 <a name="section-8-appendix-g"></a>
 #### **Section 8 — Restatement of the Exact Failure Pattern + Full Empricial Evidence**
+
+
+
+
+
+
 
 ---
 
