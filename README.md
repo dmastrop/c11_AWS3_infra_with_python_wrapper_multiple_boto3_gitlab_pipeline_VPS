@@ -4072,8 +4072,154 @@ This is an architectural expectation, not a verified result.
 
 
 
+**8.1 Overview**
+
+This section restates the exact failure pattern observed in GPT‑5.4 and provides the empirical evidence from the multi‑segment test suite.
+
+This evidence demonstrates:
+
+- the failure is real  
+- the failure is reproducible  
+- the failure is isolated  
+- the failure is model‑specific  
+- the BS rule fixes the failure  
+- no regressions occur  
+
+---
+
+**8.2 The Exact Failure Pattern**
+
+Across the 21‑case multi‑segment suite, GPT‑5.4 exhibited **one** failure pattern:
+
+> **wrong‑OS PMs + native system‑wide op + ≥3 rewrites → incorrect fallback**
+
+All other patterns behaved correctly.
+The specificity of the failure and the signature of the failure, and the fact that shorter rewrite commands were passing indicated that
+the root cause the problem was very special. 
 
 
+---
+
+
+
+**8.3 Patterns That Always Passed**
+
+- wrong‑OS PMs + non‑system‑wide ops → correct rewrite  
+- wrong‑OS PMs + ≤2 rewrites → correct rewrite  
+- wrong‑OS PMs + wrong‑OS system‑wide ops → correct fallback  
+- invalid flags → correct fallback  
+- destructive ops → correct abort  
+- all‑Ubuntu PMs + system‑wide op → correct fallback (“successful pipeline → fallback”)  
+
+These patterns were stable across all OSes.
+
+---
+
+
+**8.4 The Failing Test Case (Before BS Rule)**
+
+Example Schema:
+
+```
+{
+  "command": "yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y",
+  "stdout": "",
+  "stderr": "bash: yum: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-mseg-021",
+  "ip": "10.0.70.21",
+  "tags": [],
+  "history": []
+}
+```
+
+Given that this is Ubuntu, there are 4 segements that require rewrite and there is a native system-wide op at the very end (although
+it does not have to be at the end of the command, for the case to fail).
+
+
+
+GPT‑5.4 output:
+
+```
+{"action":"fallback"}
+```
+
+This is incorrect.
+
+The correct action is:
+
+```
+retry_with_modified_command
+```
+
+with:
+
+- 4 rewritten wrong‑OS PM segments  
+- native system‑wide op preserved verbatim  
+
+---
+
+
+
+**8.5 The Same Test Case (After BS Rule)**
+
+GPT‑5.4 output:
+
+```
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y"}
+```
+
+This is correct.
+
+The BS rule restored:
+
+- correct classification  
+- correct decision boundary  
+- correct rewrite behavior performed across all 4 segments
+- correct passthrough of native system‑wide op  
+
+No regressions occurred.
+
+---
+
+
+
+
+**8.6 The Passing 2‑Rewrite Case (Before and After BS Rule)**
+
+Example Schema:
+
+```
+{ "command": "yum install nano && apt-get install curl && apt-get update", ... }
+```
+
+GPT‑5.4 output:
+
+```
+{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y nano && apt-get install -y curl && apt-get update"}
+```
+
+This case always passed because:
+
+- ≤2 rewrites → salience stable  
+- native system‑wide op correctly classified  
+- correct rule reachable  
+
+(Note there is no -y added to the apt-get update. This would complicate the system-wide rule logic and is not worth the tradeoff. 
+This is a corner case limitation of the contract rules. It is assumed most of the time the original command will have the noninteractive
+-y flag appended to the apt-get update as apt-get update -y. In this case the -y will be passed through. The -y is added for all 
+native apt-get install commands and all segments that can be rewritten).
+
+---
+
+**8.7 Summary of Section 8**
+
+- GPT‑5.4 failure is isolated to ≥3 wrong‑OS PM rewrites + native system‑wide op  
+- failure is caused by internal salience collapse  
+- BS rule fixes the collapse  
+- no regressions occur  
+- GPT‑5.6 Sol does not exhibit this failure  
 
 ---
 
@@ -4088,6 +4234,94 @@ This is an architectural expectation, not a verified result.
 #### **Final Integrated Summary**
 
 
+**What the Contract Requires**
+
+- wrong‑OS PMs → rewrite  
+- native system‑wide ops → preserve verbatim  
+- wrong‑OS system‑wide ops → fallback  
+- rewrite‑forbidden system‑wide ops → fallback  
+- rewrite‑allowed system‑wide ops → preserve  
+- Patch2 governs multi‑segment rewrite logic  
+- domain‑primitives govern OS‑specific behavior  
+- GLOBAL_RULES govern global constraints  
+
+All rules are correct.
+
+---
+
+
+
+**What GPT‑5.4 Did Incorrectly**
+
+GPT‑5.4 internally collapsed:
+
+- native system‑wide ops  
+- wrong‑OS system‑wide ops  
+
+into one salience class:
+
+> “system‑wide op present → unsafe → fallback.”
+
+This is the internal salience collapse.
+
+---
+
+**Why the Failure Only Occurred in Long Pipelines**
+
+- ≥3 wrong‑OS PM rewrites overload internal salience  
+- overload distorts probability surfaces  
+- distortion collapses decision boundaries  
+- collapse misclassifies native system‑wide ops  
+- misclassification triggers fallback  
+- correct rule becomes unreachable  
+
+---
+
+**Why BS Rule Fixes the Failure**
+
+BS rule:
+
+- reasserts correct salience  
+- restores correct classification  
+- restores correct decision boundary  
+- restores correct rewrite behavior  
+- prevents fallback  
+- allows Patch2 to execute normally  
+
+---
+
+**Why GPT‑5.6 Sol Does Not Collapse**
+
+GPT‑5.6 Sol has:
+
+- stronger salience separation  
+- more stable probability surfaces  
+- more robust decision boundaries  
+
+It does not exhibit the GPT‑5.4 failure mode.
+
+---
+
+**Conclusion**
+
+The GPT‑5.4 failure is:
+
+- real  
+- reproducible  
+- isolated  
+- model‑specific  
+- caused by internal salience collapse  
+- fixed by BS rule  
+- not caused by contract rule ordering  
+- not caused by GLOBAL_RULES  
+- not caused by OS‑Mutation Guard  
+- not caused by Patch2  
+- not caused by domain‑primitives  
+
+The contract is correct.  
+The model’s interpretation was incorrect.
+
+Appendix G documents this precisely in terms of the specific rule blocks that cause the problematic hidden state.
 
 
 
