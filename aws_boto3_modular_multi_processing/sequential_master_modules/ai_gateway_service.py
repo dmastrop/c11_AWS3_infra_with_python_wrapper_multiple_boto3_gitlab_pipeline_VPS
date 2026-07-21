@@ -1828,9 +1828,12 @@ def recover(request: RecoveryRequest):
 
 
 
-        # Change the model to gpt-5.6 for the gpt-5.4 model limitation issue with multi-segment rewrites
+        # Change the model to gpt-5.6-sol (premier) for the gpt-5.4 model limitation issue with multi-segment rewrites
+        # The index7 test on the 21 suite is retry_with_modified_command instead of fallback with a "bad" yum update system-wide
+        # op command. It should be fallback.
         payload = {
-            "model": "gpt-5.4",
+            #"model": "gpt-5.4",
+            "model": "gpt-5.6-sol",
             "temperature": 0,
             "max_output_tokens": 256,
             "input": prompt,
