@@ -1834,7 +1834,8 @@ def recover(request: RecoveryRequest):
         payload = {
             #"model": "gpt-5.4",
             "model": "gpt-5.6-sol",
-            "temperature": 0,
+            # temperature is not supported in 5.6-sol. It is inherently "deterministic"
+            #"temperature": 0,
             "max_output_tokens": 256,
             "input": prompt,
         }
