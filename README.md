@@ -21431,6 +21431,9 @@ Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
 
 
 
+
+
+
 ---
 
 [Back to top](#top-update59)
