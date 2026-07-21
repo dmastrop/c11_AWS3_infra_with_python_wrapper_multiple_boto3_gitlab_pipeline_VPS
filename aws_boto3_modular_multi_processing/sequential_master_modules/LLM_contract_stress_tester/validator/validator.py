@@ -54,7 +54,12 @@ def validate_response(
     errors.extend(check_optional_error_field(parsed))
 
 
-
+    # ------------------------------------------------------------
+    # OS-specific semantic checks (DECOMMISSIONED)
+    # ------------------------------------------------------------
+    # The semantics validators were deprecated and are no longer used.
+    # GPT‑5.6 Sol enforces contract rules internally, and maintaining
+    # 15+ OS semantics files is unnecessary and brittle.
     # OS-specific semantic checks disabled
     # The LLM contract rules now enforce all semantics internally.
     # We only return OS name, version, and original command.
