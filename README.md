@@ -21373,7 +21373,7 @@ Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
 
 ---
 
-[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
 
 ---
 
@@ -21387,7 +21387,7 @@ Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
 
 ---
 
-[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
 
 ---
 
@@ -21403,7 +21403,7 @@ Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
 
 ---
 
-[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
 
 ---
 
@@ -21418,7 +21418,7 @@ Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
 
 ---
 
-[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
 
 ---
 
