@@ -10687,8 +10687,8 @@ The tags are an indispensible part of the design and faciliate the ML part of th
 
 WORK IN PROGRESS
 
-### **Table of Contents — LLM Contract Stress-Tesing Framework and Multi-OS Remediation Validation (Phase 4a.1.2)**  
 <a name="top-update59"></a>
+### **Table of Contents — LLM Contract Stress-Tesing Framework and Multi-OS Remediation Validation (Phase 4a.1.2)**  
 
 - [Introduction to LLM Contract Stress-Testing Framework](#introduction-to-llm-contract-stress-testing-framework)
 - [How the LLM Contract Stress Tester Works](#how-the-llm-contract-stress-tester-works)
@@ -10710,7 +10710,7 @@ WORK IN PROGRESS
 - [Deep‑Dive2 Patch2‑Rev4: Transformer Attention, Salience, and Rule Interaction](#deepdive2-patch2-rev4-transformer-attention-salience-and-rule-interaction)
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
-- [Continued Testing: Rigorous Multi-Level Pipeline Testing](#continued-testing-multi-level-pipeline-testing)
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 - [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
@@ -18548,8 +18548,8 @@ This is the frontier of LLM contract engineering.
 
 
 
-#### Table of Contents — Continued Testing: Idempotency Regression Testing
 <a name="top-continued-testing-idempotency-regression-testing"></a>
+#### Table of Contents — Continued Testing: Idempotency Regression Testing
 
 - [Introduction to idempotency regression testing](#introduction-to-idempotency-regression-testing)
 - [Global contract rule for idempotency: Revision5](#global-contract-rule-for-idempotency-revision5)
@@ -21312,19 +21312,118 @@ response from the LLM.
 
 
 
-<a name="continued-testing-multi-level-pipeline-testing"></a>
-### Continued Testing: Rigorous Multi-Level Pipeline Testing
+<a name="continued-testing-multi-segment-pipeline-testing"></a>
+### Continued Testing: Rigorous Multi-Segment Pipeline Testing
 
 
+
+<a name="top-continued-testing-multi-segment-pipeline-testing"></a>
+#### Table of Contents — Continued Testing: Rigorous Multi-Segment Pipeline Testing
+
+- [Introduction to multi-segment pipeline testing](#introduction-to-multi-segment-pipeline-testing)
+- [1.LLM Contract Stress Tester – Multi-segment pipeline Ubuntu testing and test matrices](#llm-contract-stress-tester-multi-segment-ubuntu-testing-and-test-matrices)
+- [2.LLM Contract Stress Tester – Multi-segment Debian testing and test matrices](#llm-contract-stress-tester-multi-segment-debian-testing-and-test-matrices)
+- [3.LLM Contract Stress Tester – Multi-segment RHEL testing and test matrices](#llm-contract-stress-tester-multi-segment-rhel-testing-and-test-matrices)
+- [4.LLM Contract Stress Tester – Multi-segment Amazon Linux 2 testing and test matrices](#llm-contract-stress-tester-multi-segment-amazon-linux-2-testing-and-test-matrices)
+- [5.LLM Contract Stress Tester – Multi-segment Amazon Linux 2023 testing and test matrices](#llm-contract-stress-tester-multi-segment-amazon-linux-2023-testing-and-test-matrices)
+- [6.LLM Contract Stress Tester – Multi-segment CentOS 7 testing and test matrices](#llm-contract-stress-tester-multi-segment-centos-7-testing-and-test-matrices)
+- [7.LLM Contract Stress Tester – Multi-segment CentOS 8 testing and test matrices](#llm-contract-stress-tester-multi-segment-centos-8-testing-and-test-matrices)
+- [8.LLM Contract Stress Tester – Multi-segment Fedora testing and test matrices](#llm-contract-stress-tester-multi-segment-fedora-testing-and-test-matrices)
+- [9.LLM Contract Stress Tester – Multi-segment Windows PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-windows-powershell-testing-and-test-matrices)
+- [10.LLM Contract Stress Tester – Multi-segment Linux PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-linux-powershell-testing-and-test-matrices)
+- [11.LLM Contract Stress Tester – Multi-segment Alpine testing and test matrices](#llm-contract-stress-tester-multi-segment-alpine-testing-and-test-matrices)
+- [12.LLM Contract Stress Tester – Multi-segment macOS Homebrew testing and test matrices](#llm-contract-stress-tester-multi-segment-macos-homebrew-testing-and-test-matrices)
+
+
+<a name="introduction-to-multi-segment-pipeline-testing"></a>
+#### Introduction to multi-segment testing
+
+The main focus of this testing is using the multi-segment 21 test case suite.  This is where the gpt-5.4 model limitation failure 
+surfaced with several of the test cases. The test case signature was narrowed down to 1 very specific hidden state failure, h, as
+noted in the PREFACE UPDATE5 link below. With the BS rule fix in place, there is still a very small probabilisitc variance on these
+test cases.
 
 > **Note on Probabilistic Variance in GPT‑5.4:**  
-> During regression testing, GPT‑5.4 may exhibit occasional variance on multi‑segment rewrite pipelines that match the documented failure pattern (three or more wrong‑OS package‑manager segments plus a native system‑wide operation). This variance is probabilistic rather than deterministic. The BS rule significantly reduces the likelihood of misclassification, but GPT‑5.4 can still intermittently select `fallback` on a case that normally produces `retry_with_modified_command`. Once a correct multi‑segment rewrite has been executed, subsequent cases typically stabilize. This behavior reflects the underlying model‑inference limitation described in PREFACE UPDATE5 and does not indicate a contract regression.
+> During regression testing, GPT‑5.4 may exhibit occasional variance on multi‑segment rewrite pipelines that match the documented failure pattern (three or more wrong‑OS package‑manager segments plus a native system‑wide operation). This variance is probabilistic rather than deterministic. The BS rule significantly reduces the likelihood of misclassification, but GPT‑5.4 can still intermittently select `fallback` on a case that normally produces `retry_with_modified_command`. Once a correct multi‑segment rewrite has been executed, subsequent cases typically stabilize. This behavior reflects the underlying model‑internal-inference limitation described in PREFACE UPDATE5 and does not indicate a contract regression.
 
 The link to PREFACE UPDATE5 is below. This is recommended technical background reading to understand the nature of the internal
 salience gpt-5.4 model limitation failure.  The issue was  addressed during this phase of testing, with the specific test cases
 noted in the test matrices for each OS. The case study is presented from all angles: high level, mathematical, geometric, etc.
 
 - [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5) 
+
+
+The testing in this area involves the following: 
+
+- Testing using the multi-segment advanced 21 test case suite to ensure that the model limitation issue is completely resolved. 
+The test cases that were affected by the model limitation will be noted in the notes of each matrix for each OS.
+
+- Regression testing the test suites that were tested in this section for Ubuntu, Debian and RHEL (the other OSes are fresh 
+testing execution runs of the tests in the link below once the Patch2 has been refactored to those other OSes)
+- [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
+The regression tests in this area will include the base20 test suite (test indices 0,1,4,10,16), the 24 patch2 rewrite initial tests 
+(4,10,16,21,22,23,14,18) and the 6 idempotency tests and the 3 os-signaled remediation tests
+The idempotency regression testing link above was a full run of each suite for those who want to see the test matrices for the 
+entire test case run.
+
+
+Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
+
+
+
+---
+
+[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+
+
+<a name="llm-contract-stress-tester-multi-segment-ubuntu-testing-and-test-matrices"></a>
+#### 1.LLM Contract Stress Tester – Multi-segment pipeline Ubuntu testing and test matrices
+
+
+
+---
+
+[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+
+
+<a name="llm-contract-stress-tester-multi-segment-debian-testing-and-test-matrices"></a>
+#### 2.LLM Contract Stress Tester – Multi-segment pipeline Debian testing and test matrices
+
+
+
+
+
+---
+
+[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+
+
+<a name="llm-contract-stress-tester-multi-segment-rhel-testing-and-test-matrices"></a>
+#### 3.LLM Contract Stress Tester – Multi-segment pipeline RHEL testing and test matrices
+
+
+
+
+---
+
+[Back to top of Multi-segment testing](top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+
 
 
 
