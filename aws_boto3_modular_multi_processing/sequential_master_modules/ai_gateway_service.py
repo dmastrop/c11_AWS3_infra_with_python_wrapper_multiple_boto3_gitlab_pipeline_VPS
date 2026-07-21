@@ -1828,7 +1828,7 @@ def recover(request: RecoveryRequest):
 
 
 
-
+        # Change the model to gpt-5.6 for the gpt-5.4 model limitation issue with multi-segment rewrites
         payload = {
             "model": "gpt-5.4",
             "temperature": 0,
