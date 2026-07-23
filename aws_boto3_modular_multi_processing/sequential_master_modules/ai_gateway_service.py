@@ -5507,7 +5507,7 @@ def recover(request: RecoveryRequest):
         print("===============================================================\n")
 
 
-        ####### ORIGINAL VALIDATOR CODE #######
+        ####### ORIGINAL OUTBOUND VALIDATOR CODE #######
         ###### This is the plan validator. The AI Gateway Service has to validate the plan from the LLM before sending back to the 
         ###### MCP Client (module2f)
         ## If HTTP status is not 2xx, raise exception and print the error using except block below.
@@ -5550,7 +5550,7 @@ def recover(request: RecoveryRequest):
 
 
 
-        #### UPDATED plan validator. `response.json()` is the **entire Responses API envelope**, not the plan
+        #### UPDATED plan outbound validator. `response.json()` is the **entire Responses API envelope**, not the plan
         #### The code below has been refactored so that the validator: 
         #- extracts the inner JSON plan  
         #- parses it  
@@ -5572,11 +5572,52 @@ def recover(request: RecoveryRequest):
         response.raise_for_status()
         raw = response.json()
 
+        ## --------------------------------------------------------
+        ## Extract inner JSON plan from Responses API envelope. 
+        ## This only works with gpt-5.4 API response format. Comment this out and replace with the gpt-5.6-sol 
+        ## extraction. There is a legacy fallback if gpt-5.4 is used
+        ## --------------------------------------------------------
+        #text = raw["output"][0]["content"][0]["text"]
+        #plan = json.loads(text)
+
+
         # --------------------------------------------------------
         # Extract inner JSON plan from Responses API envelope
+        # This code is modified to work with gpt-5.6-sol which has a very different LLM response payload format than gpt-5.4
+        # The upgrade in the model is required for some failed multi-segment rewrite test cases in the 21 suite.
+        # Without this fix the outbound validator is returning the following error in the RAW LLM response EVEN though the actual
+        # gpt-5.6-sol response as seen in the gitlab console debugs is the correct retry_with_modified_command rewrite 
+        # The error is: {"error":"list index out of range","action":"fallback"}
+        # The rest of the outbound validator code can stay the same. 
         # --------------------------------------------------------
-        text = raw["output"][0]["content"][0]["text"]
-        plan = json.loads(text)
+        model = payload.get("model", "")
+
+        if model == "gpt-5.6-sol":
+            # GPT‑5.6 Sol: find the message block
+            plan_text = None
+            for item in raw.get("output", []):
+                if item.get("type") == "message":
+                    content = item.get("content", [])
+                    if content and isinstance(content[0], dict) and "text" in content[0]:
+                        plan_text = content[0]["text"]
+                        break
+
+            if plan_text is None:
+                return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
+
+            try:
+                plan = json.loads(plan_text)
+            except json.JSONDecodeError:
+                return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+
+        else:
+            # GPT‑5.4 legacy path
+            text = raw["output"][0]["content"][0]["text"]
+            try:
+                plan = json.loads(text)
+            except json.JSONDecodeError:
+                return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+
 
 
         # ============================================================
