@@ -21396,6 +21396,39 @@ issueis also detailed in the PREFACE UPDSTE5 as well in the link below.
 #### 1.LLM Contract Stress Tester – Multi-segment pipeline Ubuntu testing and test matrices
 
 
+This section presents the canonical testing on Ubuntu with the 21 multi-segment rewrite test suite. This test suite was a challenge to 
+get to work. Keep in mind that this test suite was introduced after the already rigorous testing for indempotency, os-signaled remediation,
+and a 24 test case suite for basic rewrites. These test cases are detailed in this Update59 in an earlier section presented here:
+
+- [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
+
+
+There were basically three final stages to getting the 21 test suite working on Ubuntu
+
+These are presented in the 3 matrices below:
+
+- The gpt-5.4 test matrix before the BS rule fix for the internal salience gpt-5.4 model failure issue.
+
+- The gpt-5.4 test matrix after the BS rule fix to address teh internal salience gpt-5.4 model falure issue. Another test case,
+index7, started to fail at this point.
+
+- The gpt-5.6-sol matrix after removing BS rule (it is no longer needed) and testing the index7 inverse model failure test case
+(All issues were fixed with gpt-5.6-sol)
+
+
+##### gpt-5.4 test matrix for 21 mulit-segment test suite prior to BS rule
+
+
+
+
+##### gpt-5.4 test matrix for 21 multi-segment test suite after the BS rule added to the ubuntu domain block
+
+
+
+##### gpt-5.6-sol test matrix for 21 multi-segment test suite after removing BS rule and also testing for the index7 failure
+
+
+
 
 ---
 
