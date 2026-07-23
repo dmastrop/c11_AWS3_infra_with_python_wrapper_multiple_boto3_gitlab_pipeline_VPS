@@ -21341,7 +21341,9 @@ response from the LLM.
 The main focus of this testing is using the multi-segment 21 test case suite.  This is where the gpt-5.4 model limitation failure 
 surfaced with several of the test cases. The test case signature was narrowed down to 1 very specific hidden state failure, h, as
 noted in the PREFACE UPDATE5 link below. With the BS rule fix in place, there is still a very small probabilisitc variance on these
-test cases.
+test cases. The hidden state h, was where there are 3 or more required incorrect PM rewrite segments AND a native (correct) system wide
+segment in the command. Very very specific and since the rules themselves are correct, the only logical conclusion is that this is a 
+real model falure with gpt-5.4. That is why the case study was presented in such detail in the PREFACE UDPATE5 link below.
 
 > **Note on Probabilistic Variance in GPT‑5.4:**  
 > During regression testing, GPT‑5.4 may exhibit occasional variance on multi‑segment rewrite pipelines that match the documented failure pattern (three or more wrong‑OS package‑manager segments plus a native system‑wide operation). This variance is probabilistic rather than deterministic. The BS rule significantly reduces the likelihood of misclassification, but GPT‑5.4 can still intermittently select `fallback` on a case that normally produces `retry_with_modified_command`. Once a correct multi‑segment rewrite has been executed, subsequent cases typically stabilize. This behavior reflects the underlying model‑internal-inference limitation described in PREFACE UPDATE5 and does not indicate a contract regression.
@@ -21369,6 +21371,16 @@ entire test case run.
 
 Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
 
+Finally, an additional issue surfaced during the execution of this multi-segment test suite of 21 test cases.
+The index7 of the test suit started to fail and it is an inverese of what the BS rule addresses. This test case involves an incorrect
+system-wide op in the segment of the command rather than a native system-wide op in the segment of the command. It incorrectly passes 
+it through and does the rewrite on the other segments (this part is correct). The action plan from the LLM should be fallback and
+not rewriting with retry_with_modified_command.  The only way to address this particular issue was to upgrade the model from gpt-5.4 to
+gpt-5.6-sol and completely deterministic model (no temperature setting). That test matrix is also presented below. The root cause of this
+issueis also detailed in the PREFACE UPDSTE5 as well in the link below.
+
+
+- [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
 
 
 ---
