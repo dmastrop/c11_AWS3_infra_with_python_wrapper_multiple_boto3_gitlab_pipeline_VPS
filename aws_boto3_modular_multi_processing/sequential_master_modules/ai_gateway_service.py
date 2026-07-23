@@ -611,14 +611,8 @@ UBUNTU_RULES = (
                 # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
                 # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
                 # fallback scenarios that do NOT involve OS-signalled remediation.
-                # COMMENT OUT THIS AND USE THE VERSION FURTHER BELOW
-                #"- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
-                #"  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
-                #"  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
-                #"  the LLM MUST retry with:\n"
-                #"      * apt-get update\n"
-                #"      * apt-get install -y <pkg>\n"
-                #"\n"
+                # COMMENT OUT THIS AND USE THE VERSION FURTHER BELOW for Unable to locate package
+                #
                 "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
                 "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
                 "\n"
@@ -752,16 +746,7 @@ UBUNTU_RULES = (
                 "      zypper refresh\n"
                 "      zypper update\n"
                 "\n"
-                # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.6 Sol could probably get by without 
-                # this. This rule helps 5.4 get over the 'probabilistic hump" of the limitation reviewed in detail in the PREFACE 
-                # UPDATE3 of the README
-                "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
-                "  install commands and also contains a system-wide operation that is already native to the\n"
-                "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
-                "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
-                "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
-                "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
-                "\n"
+                # remove the BS rule and test with gpt-5.6-sol
                 #
                 "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
                 "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
@@ -897,14 +882,9 @@ DEBIAN_RULES = (
                 # IF and only if after  passing os-signalled remedation in the GLOBAL idempotency rule block....
                 # Revised this for more specificity. Originally far too general and it has the potential to override legitimate
                 # fallback scenarios that do NOT involve OS-signalled remediation.
-                # COMMENT THIS OUT AND USE THE VERSION FURTHER BELOW
-                #"- If a package cannot be located (E: Unable to locate package <pkg>) AND\n"
-                #"  the stderr ALSO contains repository, index, integrity, or dpkg context\n"
-                #"  (e.g., 'Hash Sum mismatch', 'dpkg --configure -a', 'fix-broken', 'index is corrupted'),\n"
-                #"  the LLM MUST retry with:\n"
-                #"      * apt-get update\n"
-                #"      * apt-get install -y <pkg>\n"
-                #"\n"
+                # COMMENT THIS OUT AND USE THE VERSION FURTHER BELOW for Unable to locate package.
+                #
+                #
                 "- If the stderr contains ONLY 'E: Unable to locate package <pkg>' with no additional\n"
                 "  OS-signaled remediation context, the LLM MUST return 'fallback'.\n"
                 "\n"
