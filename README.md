@@ -21360,16 +21360,18 @@ The testing in this area involves the following:
 - Testing using the multi-segment advanced 21 test case suite to ensure that the model limitation issue is completely resolved. 
 The test cases that were affected by the model limitation will be noted in the notes of each matrix for each OS.
 
-- Regression testing the test suites that were tested in this section for Ubuntu, Debian and RHEL (the other OSes are fresh 
-testing execution runs of the tests in the link below once the Patch2 has been refactored to those other OSes)
-- [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
+- Regression testing the test suites that for Ubuntu, Debian and RHEL (the other OSes are fresh testing execution runs of the tests in the link below once the Patch2 has been refactored to those other OSes)
+
+[Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
+
 The regression tests in this area will include the base20 test suite (test indices 0,1,4,10,16), the 24 patch2 rewrite initial tests 
 (4,10,16,21,22,23,14,18) and the 6 idempotency tests and the 3 os-signaled remediation tests
 The idempotency regression testing link above was a full run of each suite for those who want to see the test matrices for the 
 entire test case run.
 
-
 Currently, the refactored Patch2 OSes are Ubuntu, Debian and RHEL.
+
+---
 
 Finally, an additional issue surfaced during the execution of this multi-segment test suite of 21 test cases.
 The index7 of the test suit started to fail and it is an inverese of what the BS rule addresses. This test case involves an incorrect
@@ -21418,6 +21420,46 @@ index7, started to fail at this point.
 
 ##### gpt-5.4 test matrix for 21 mulit-segment test suite prior to BS rule
 
+
+The first matrix documents a **model‑inference limitation in GPT‑5.4** that manifests as an **internal salience‑collapse** when evaluating multi‑segment package‑manager pipelines on Ubuntu 22.04. In this failure mode, the model incorrectly elevates the salience of a *native system‑wide operation* (e.g., `apt-get update -y`) whenever it appears after **three or more wrong‑OS package‑manager segments** (`yum`, `apk`, `pacman`, `brew`). Instead of performing the required multi‑segment rewrite, GPT‑5.4 misclassifies the pipeline as unsafe and emits a `fallback` action. This collapse is deterministic and reproducible across nine distinct test cases in the 21‑case suite. These failures represent the “forward‑collapse” direction of the limitation: **wrong‑OS PM segments + native system‑wide op → unsafe → fallback**, even though the correct contract action is `retry_with_modified_command`. Matrix 1 captures these nine failures exactly as observed, along with the correct behaviors for the remaining cases (valid fallbacks, correct rewrites, and destructive‑op aborts). This matrix establishes the baseline behavior of GPT‑5.4 *without* the BS Rule mitigation, and serves as the foundation for understanding the inverse‑collapse behavior that emerges when the BS Rule is applied in Matrix 2.
+
+As noted in the introduction, for more detail on the nature of this failure see the PREFACE UPDATE5 links below:
+
+
+- [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
+
+
+
+The Test Matrix 1 GPT‑5.4 (NO BS Rule) — Ubuntu Multi‑Segment Rewrite 21‑Case Suite is below:
+
+<details>
+<summary><strong>Ubuntu Patch2 21‑case rewrite matrix — GPT‑5.4 (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | u‑ms‑001 | `yum install curl && apk add bash && pacman -S htop && apt-get update -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 1 — salience collapse**. 3 wrong‑OS PMs + native system‑wide op → GPT‑5.4 collapses to unsafe → fallback. |
+| 2 | u‑ms‑002 | `apk add bash && pacman -S htop && yum install nano && apt-get update -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 2 — salience collapse**. Same pattern: 3 wrong‑OS PMs + native system‑wide op → fallback. |
+| 3 | u‑ms‑003 | `pacman -S htop && yum install curl && apk add bash && apt-get update -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 3 — salience collapse**. Same collapse signature. |
+| 4 | u‑ms‑004 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano` | retry_with_modified_command | `{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano"}` | **Correct rewrite**. No system‑wide op → GPT‑5.4 rewrites all wrong‑OS PMs. |
+| 5 | u‑ms‑005 | `apt-get install curl && apt-get install nano && apt-get install python3 && apt-get update -y` | fallback | `{"action":"fallback"}` | **Correct fallback**. All segments valid; system‑wide op present; Patch2 rule → fallback. |
+| 6 | u‑ms‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 4 — salience collapse**. 4 wrong‑OS PMs + native system‑wide op → fallback. |
+| 7 | u‑ms‑007 | `yum install curl && apk add bash && pacman -S htop && apt-get upgrade -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 5 — salience collapse**. Same collapse signature. |
+| 8 | u‑ms‑008 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | fallback | `{"action":"fallback"}` | **Index 7 — correct behavior**. Wrong‑OS system‑wide op → fallback. (Inverse collapse appears later *with BS Rule*, not here.) |
+| 9 | u‑ms‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | fallback | `{"action":"fallback"}` | **Correct fallback**. Wrong‑OS system‑wide op → fallback. |
+| 10 | u‑ms‑010 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano --badflag` | fallback | `{"action":"fallback"}` | **Correct fallback**. Invalid flag → invalid‑flag rule → fallback. |
+| 11 | u‑ms‑011 | `apt-get install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y curl && echo 'hello' && apt-get install -y bash && apt-get install -y htop"}` | **Correct rewrite**. Wrong‑OS PMs rewritten; echo preserved. |
+| 12 | u‑ms‑012 | `yum install curl && echo 'test' && apk add bash && apt-get install nano` | retry_with_modified_command | `{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y curl && echo 'test' && apt-get install -y bash && apt-get install -y nano"}` | **Correct rewrite**. Wrong‑OS PMs rewritten; echo preserved. |
+| 13 | u‑ms‑013 | `apk add bash && pacman -S htop && apt-get install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | **Correct abort**. Destructive op overrides rewrite/fallback. |
+| 14 | u‑ms‑014 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano && apt-get update -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 6 — salience collapse**. 3 wrong‑OS PMs + native system‑wide op → fallback. |
+| 15 | u‑ms‑015 | `yum install curl && apk add bash && pacman -S htop && apt-get update --badflag` | fallback | `{"action":"fallback"}` | **Correct fallback**. Invalid flag → fallback. |
+| 16 | u‑ms‑016 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | **Correct fallback**. Wrong‑OS system‑wide op + invalid flag → fallback. |
+| 17 | u‑ms‑017 | `yum install curl && apk add bash && pacman -S htop && brew update` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 7 — salience collapse**. Wrong‑OS system‑wide op requiring rewrite → GPT‑5.4 collapses → fallback. |
+| 18 | u‑ms‑018 | `apk add bash && pacman -S htop && yum install curl && brew update` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 8 — salience collapse**. Same collapse signature. |
+| 19 | u‑ms‑019 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget"}` | **Correct rewrite**. Wrong‑OS PMs rewritten. |
+| 20 | u‑ms‑020 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `{"action":"retry_with_modified_command","cleanup":[],"retry":"apt-get install -y bash && apt-get install -y htop && apt-get install -y curl && apt-get install -y wget"}` | **Correct rewrite**. Wrong‑OS PMs rewritten. |
+| 21 | u‑ms‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `{"action":"fallback"}` | **WRONG CASE 9 — salience collapse**. 4 wrong‑OS PMs + native system‑wide op → fallback. |
+
+</details>
 
 
 
