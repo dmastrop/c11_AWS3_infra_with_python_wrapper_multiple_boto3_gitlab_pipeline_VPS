@@ -340,6 +340,7 @@ STATUS_TAGS = {
 ### **Table of Contents for the PREFACE UPDATE5**
 
 - [Executive Summary - PREFACE UPDATE5](#executive-summary-preface-update5)
+- [Test Case matrices and cross reference links](#test-case-cross-reference-links)
 - [Case Study: GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure — Native System‑Wide Ops Misclassified for fallback](#gpt-5.4-internal-salience-case-study) 
 - [Appendix A — Deep‑Dive Case Study: GPT‑5.4 Multi‑Segment Rewrite Failure: GPT‑5.4 Model‑Inference Limitation in Native System‑Wide Operations](#gpt-5.4-appendix-a-case-study)
 - [Appendix B — Mathematical Perspective on the GPT‑5.4 Inference Failure](#gpt-5.4-appendix-b-case-study) 
@@ -348,7 +349,8 @@ STATUS_TAGS = {
 - [Appendix D - Decision-Boundary Diagram & Failure Visualization of the GPT-5.4 Failure](#gpt-5.4-appendix-d-case-study)
 - [Appendix E - Formal Definition of a Model Limitation: GPT-5.4 Failure Case Study](#gpt-5.4-appendix-e-case-study)
 - [Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models](#gpt-5.4-appendix-f-case-study)
-- [Appendix G - GPT-5.4 Internal Model Salience Collapse in Multi-Segment Rewerite Pipelines: A Contract-Accurate Analysis](#gpt-5.4-appendix-g-case-study)
+- [Appendix G - GPT-5.4 Internal Model Salience Collapse in Multi-Segment Rewrite Pipelines: A Contract-Accurate Analysis](#gpt-5.4-appendix-g-case-study)
+
 
 
 
@@ -455,6 +457,25 @@ This confirms that the BS rule successfully and very precisely steered the model
 
 
 
+<a name="test-case-cross-reference-links"></a>
+### **Test Case matrices and cross reference links**
+
+The test cases and testing methodlogies to support all of the theoretical documentation in this PREFACE UPDATE5 are found in 
+this section below:
+
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+This section has all of the schema based test cases that were used to discover, isolate, and test the gpt-5.4 model falure, as well as the 
+subsequent testing that was done on gpt-5.6-sol to completely resolve all the issues with multi-segment rewriting.
+
+The matrices have a lot of detail in the notes.
+
+
+---
+
+[Back to top of PREFACE UPDATE5](#top-preface5)
+
+---
 
 
 
@@ -21430,7 +21451,7 @@ As noted in the introduction, for more detail on the nature of this failure see 
 
 
 
-The Test Matrix 1 GPT‑5.4 (NO BS Rule) — Ubuntu Multi‑Segment Rewrite 21‑Case Suite is below:
+The Test Matrix 1 GPT‑5.4 (NO BS Rule) — Ubuntu Multi‑Segment Rewrite 21‑Case Suite is below (click to expand the link below):
 
 <details>
 <summary><strong>Ubuntu Patch2 21‑case rewrite matrix — GPT‑5.4 (NO BS Rule)</strong></summary>
