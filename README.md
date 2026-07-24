@@ -468,7 +468,7 @@ this section below:
 This section has all of the schema based test cases that were used to discover, isolate, and test the gpt-5.4 model falure, as well as the 
 subsequent testing that was done on gpt-5.6-sol to completely resolve all the issues with multi-segment rewriting.
 
-The matrices have a lot of detail in the notes.
+The matrices have a lot of detail in the notes and emprically back up all of the theory in this  PREFACE UPDATE5.
 
 
 ---
