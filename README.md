@@ -21551,6 +21551,99 @@ The test matrix Matrix 2 — GPT‑5.4 (WITH BS Rule) — Ubuntu Multi‑Segme
 
 ##### gpt-5.6-sol test matrix for 21 multi-segment test suite after removing BS rule and also testing for the index7 failure
 
+Matrix 3 documents the behavior of **GPT‑5.6‑Sol**, the upgraded model used to resolve the multi‑segment rewrite failures observed in GPT‑5.4. Unlike GPT‑5.4, GPT‑5.6‑Sol does not exhibit the internal salience‑collapse failure mode in either direction: it correctly rewrites pipelines containing multiple wrong‑OS package‑manager segments, and it correctly falls back when encountering wrong‑OS system‑wide operations such as `yum update -y`. Crucially, GPT‑5.6‑Sol achieves this **without** the BS Rule mitigation. The BS Rule was originally introduced to correct the forward‑collapse failure in GPT‑5.4, but it later revealed an inverse‑collapse failure at index 7. GPT‑5.6‑Sol resolves both issues natively, producing a fully passing 21‑case suite with deterministic behavior across all test runs.
+
+This matrix also reflects an important engineering change required to support GPT‑5.6‑Sol: the **output‑validator refactor** in `ai_gateway_service.py`. GPT‑5.6‑Sol emits a different JSON envelope format than GPT‑5.4, causing the legacy validator to misinterpret correct rewrites as malformed responses (e.g., `"list index out of range"`). The updated validator introduces a dedicated extraction path for GPT‑5.6‑Sol, ensuring that the inner JSON plan is parsed correctly before applying the Patch2 contract rules. Once this validator was updated, GPT‑5.6‑Sol produced stable, correct results for all 21 test cases, including the historically problematic index 7. This matrix therefore represents the first fully correct multi‑segment rewrite suite across all cases, without auxiliary mitigation rules, and serves as the baseline for future OS‑specific rewrite matrices (RHEL and Debian) and for the PREFACE UPDATE5 analysis of the inverse salience‑collapse phenomenon.
+
+The updated output validator code is below (this is in the ai_gateway_service.py module):
+
+```
+
+        ## --------------------------------------------------------
+        ## Extract inner JSON plan from Responses API envelope. 
+        ## This only works with gpt-5.4 API response format. Comment this out and replace with the gpt-5.6-sol 
+        ## extraction. There is a legacy fallback if gpt-5.4 is used
+        ## --------------------------------------------------------
+        #text = raw["output"][0]["content"][0]["text"]
+        #plan = json.loads(text)
+
+
+        # --------------------------------------------------------
+        # Extract inner JSON plan from Responses API envelope
+        # This code is modified to work with gpt-5.6-sol which has a very different LLM response payload format than gpt-5.4
+        # The upgrade in the model is required for some failed multi-segment rewrite test cases in the 21 suite.
+        # Without this fix the outbound validator is returning the following error in the RAW LLM response EVEN though the actual
+        # gpt-5.6-sol response as seen in the gitlab console debugs is the correct retry_with_modified_command rewrite 
+        # The error is: {"error":"list index out of range","action":"fallback"}
+        # The rest of the outbound validator code can stay the same. 
+        # --------------------------------------------------------
+        model = payload.get("model", "")
+
+        if model == "gpt-5.6-sol":
+            # GPT‑5.6 Sol: find the message block
+            plan_text = None
+            for item in raw.get("output", []):
+                if item.get("type") == "message":
+                    content = item.get("content", [])
+                    if content and isinstance(content[0], dict) and "text" in content[0]:
+                        plan_text = content[0]["text"]
+                        break
+
+            if plan_text is None:
+                return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
+
+            try:
+                plan = json.loads(plan_text)
+            except json.JSONDecodeError:
+                return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+               return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+
+        else:
+            # GPT‑5.4 legacy path
+            text = raw["output"][0]["content"][0]["text"]
+            try:
+                plan = json.loads(text)
+            except json.JSONDecodeError:
+                return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+
+```
+
+The inverse collapse issue is discussed at length in the PREFACE UPDATE5:
+
+ [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
+
+
+
+The test matrix Matrix 3 — GPT‑5.6‑Sol (NO BS Rule) — Ubuntu Multi‑Segment Rewrite 21‑Case Suite is below (click to expand):
+
+<details>
+<summary><strong>Ubuntu Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | u‑ms‑001 | `yum install curl && apk add bash && pacman -S htop && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get update -y` | Correct rewrite; no BS Rule needed. |
+| 2 | u‑ms‑002 | `apk add bash && pacman -S htop && yum install nano && apt-get update -y` | retry_with_modified_command | `apt-get install -y bash && apt-get install -y htop && apt-get install -y nano && apt-get update -y` | Correct rewrite. |
+| 3 | u‑ms‑003 | `pacman -S htop && yum install curl && apk add bash && apt-get update -y` | retry_with_modified_command | `apt-get install -y htop && apt-get install -y curl && apt-get install -y bash && apt-get update -y` | Correct rewrite. |
+| 4 | u‑ms‑004 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano` | Correct rewrite. |
+| 5 | u‑ms‑005 | `apt-get install curl && apt-get install nano && apt-get install python3 && apt-get update -y` | fallback | `{"action":"fallback"}` | Correct fallback (valid Ubuntu pipeline + system‑wide op). |
+| 6 | u‑ms‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y` | Correct rewrite. |
+| 7 | u‑ms‑007 | `yum install curl && apk add bash && pacman -S htop && apt-get upgrade -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get upgrade -y` | Correct rewrite. |
+| 8 | u‑ms‑008 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | fallback | `{"action":"fallback"}` | **Index 7 — correct fallback; inverse‑collapse eliminated.** |
+| 9 | u‑ms‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 10 | u‑ms‑010 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 11 | u‑ms‑011 | `apt-get install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `apt-get install -y curl && echo 'hello' && apt-get install -y bash && apt-get install -y htop` | Correct rewrite. |
+| 12 | u‑ms‑012 | `yum install curl && echo 'test' && apk add bash && apt-get install nano` | retry_with_modified_command | `apt-get install -y curl && echo 'test' && apt-get install -y bash && apt-get install -y nano` | Correct rewrite. |
+| 13 | u‑ms‑013 | `apk add bash && pacman -S htop && apt-get install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct abort. |
+| 14 | u‑ms‑014 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano && apt-get update -y` | Correct rewrite. |
+| 15 | u‑ms‑015 | `yum install curl && apk add bash && pacman -S htop && apt-get update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 16 | u‑ms‑016 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op + invalid flag). |
+| 17 | u‑ms‑017 | `yum install curl && apk add bash && pacman -S htop && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 18 | u‑ms‑018 | `apk add bash && pacman -S htop && yum install curl && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 19 | u‑ms‑019 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget` | Correct rewrite. |
+| 20 | u‑ms‑020 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `apt-get install -y bash && apt-get install -y htop && apt-get install -y curl && apt-get install -y wget` | Correct rewrite. |
+| 21 | u‑ms‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y` | Correct rewrite. |
+
+</details>
 
 
 
