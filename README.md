@@ -468,7 +468,7 @@ this section below:
 This section has all of the schema based test cases that were used to discover, isolate, and test the gpt-5.4 model falure, as well as the 
 subsequent testing that was done on gpt-5.6-sol to completely resolve all the issues with multi-segment rewriting.
 
-The matrices have a lot of detail in the notes and emprically back up all of the theory in this  PREFACE UPDATE5.
+ghe matrices have a lot of detail in the notes and emprically back up all of the theory in this  PREFACE UPDATE5.
 
 
 ---
@@ -21485,6 +21485,49 @@ The Test Matrix 1 GPT‑5.4 (NO BS Rule) — Ubuntu Multi‑Segment Rewrite 21
 
 
 ##### gpt-5.4 test matrix for 21 multi-segment test suite after the BS rule added to the ubuntu domain block
+
+Matrix 2 captures GPT‑5.4’s behavior **with the BS Rule mitigation enabled**, showing how the rule successfully corrects the nine deterministic forward‑collapse failures documented in Matrix 1. Under the BS Rule, pipelines containing three or more wrong‑OS package‑manager segments followed by a native system‑wide operation are no longer misclassified as unsafe; instead, GPT‑5.4 performs the correct multi‑segment rewrite and emits `retry_with_modified_command` as required by the contract. This produces a fully passing 21‑case suite in the initial test run, including the case that later becomes the focal point of the inverse‑collapse analysis: **index 7**. In the first evaluation, index 7 behaves correctly — the model emits `fallback` because the pipeline contains a wrong‑OS system‑wide operation (`yum update -y`), which must never be rewritten. However, subsequent testing performed several days later revealed a **probabilistic variance failure**: GPT‑5.4 began consistently misclassifying the wrong‑OS system‑wide operation as *native*, performing a rewrite and passing the invalid `yum update -y` through verbatim. This represents the **inverse direction** of the same internal salience‑collapse mechanism described in PREFACE UPDATE5: instead of “wrong‑OS PM segments + native system‑wide op → unsafe → fallback,” the model collapses to “wrong‑OS PM segments + wrong‑OS system‑wide op → treated as native → rewrite.” Matrix 2 therefore documents both the initial passing behavior and the later deterministic inverse‑collapse failure, with a pointer to PREFACE UPDATE5 for the geometric and mathematical treatment of this phenomenon.
+
+> **Index 7 — initially correct fallback; later inverse‑collapse failure.**  
+> In the first test run (attached), GPT‑5.4 correctly emitted `fallback` because the pipeline contains a wrong‑OS system‑wide operation (`yum update -y`). However, several days later this case began failing deterministically: GPT‑5.4 emitted `retry_with_modified_command` and passed the invalid `yum update -y` through verbatim, treating it as a native Ubuntu system‑wide operation. This is the **inverse salience‑collapse** described in PREFACE UPDATE5.
+
+
+ [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
+
+
+The test matrix Matrix 2 — GPT‑5.4 (WITH BS Rule) — Ubuntu Multi‑Segment Rewrite 21‑Case Suite is below (click to expand):
+
+<details>
+<summary><strong>Ubuntu Patch2 21‑case rewrite matrix — GPT‑5.4 (WITH BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | u‑ms‑001 | `yum install curl && apk add bash && pacman -S htop && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get update -y` | BS Rule fixes forward‑collapse; full rewrite correct. |
+| 2 | u‑ms‑002 | `apk add bash && pacman -S htop && yum install nano && apt-get update -y` | retry_with_modified_command | `apt-get install -y bash && apt-get install -y htop && apt-get install -y nano && apt-get update -y` | Correct rewrite; BS Rule applied. |
+| 3 | u‑ms‑003 | `pacman -S htop && yum install curl && apk add bash && apt-get update -y` | retry_with_modified_command | `apt-get install -y htop && apt-get install -y curl && apt-get install -y bash && apt-get update -y` | Correct rewrite. |
+| 4 | u‑ms‑004 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano` | Correct rewrite. |
+| 5 | u‑ms‑005 | `apt-get install curl && apt-get install nano && apt-get install python3 && apt-get update -y` | fallback | `{"action":"fallback"}` | Correct fallback (valid Ubuntu pipeline + system‑wide op). |
+| 6 | u‑ms‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y` | Correct rewrite; BS Rule applied. |
+| 7 | u‑ms‑007 | `yum install curl && apk add bash && pacman -S htop && apt-get upgrade -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get upgrade -y` | Correct rewrite. |
+| 8 | u‑ms‑008 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | fallback | `{"action":"fallback"}` | **Index 7 — initially correct fallback; later inverse‑collapse failure observed.** |
+| 9 | u‑ms‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 10 | u‑ms‑010 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 11 | u‑ms‑011 | `apt-get install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `apt-get install -y curl && echo 'hello' && apt-get install -y bash && apt-get install -y htop` | Correct rewrite. |
+| 12 | u‑ms‑012 | `yum install curl && echo 'test' && apk add bash && apt-get install nano` | retry_with_modified_command | `apt-get install -y curl && echo 'test' && apt-get install -y bash && apt-get install -y nano` | Correct rewrite. |
+| 13 | u‑ms‑013 | `apk add bash && pacman -S htop && apt-get install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct abort. |
+| 14 | u‑ms‑014 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano && apt-get update -y` | Correct rewrite; BS Rule applied. |
+| 15 | u‑ms‑015 | `yum install curl && apk add bash && pacman -S htop && apt-get update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 16 | u‑ms‑016 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op + invalid flag). |
+| 17 | u‑ms‑017 | `yum install curl && apk add bash && pacman -S htop && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 18 | u‑ms‑018 | `apk add bash && pacman -S htop && yum install curl && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 19 | u‑ms‑019 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget` | Correct rewrite. |
+| 20 | u‑ms‑020 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `apt-get install -y bash && apt-get install -y htop && apt-get install -y curl && apt-get install -y wget` | Correct rewrite. |
+| 21 | u‑ms‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y` | Correct rewrite; BS Rule applied. |
+
+</details>
+
+
+
 
 
 
