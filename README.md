@@ -21491,6 +21491,24 @@ Matrix 2 captures GPT‑5.4’s behavior **with the BS Rule mitigation enabled
 > **Index 7 — initially correct fallback; later inverse‑collapse failure.**  
 > In the first test run (attached), GPT‑5.4 correctly emitted `fallback` because the pipeline contains a wrong‑OS system‑wide operation (`yum update -y`). However, several days later this case began failing deterministically: GPT‑5.4 emitted `retry_with_modified_command` and passed the invalid `yum update -y` through verbatim, treating it as a native Ubuntu system‑wide operation. This is the **inverse salience‑collapse** described in PREFACE UPDATE5.
 
+As reference the BS rule consisted of the following rule added to the ubuntu domain primitives block in the contract payload in
+ai_gateway_service.py. This rule has since been removed (after upgrading the model to gpt-5.6-sol as indicated in the matrix3 section
+further below).
+
+```
+               # gpt-5.4 model limitation with mulit-segment rewrites (BS rule). Mythos or gpt-5.6 Sol could probably get by without 
+                # this. This rule helps 5.4 get over the 'probabilistic hump" of the limitation reviewed in detail in the PREFACE 
+                # UPDATE3 of the README
+                "- If a command pipeline on a Linux-family OS contains one or more wrong-OS package manager\n"
+                "  install commands and also contains a system-wide operation that is already native to the\n"
+                "  current OS (for example, 'apt-get update -y' on Ubuntu), and the only modifications needed\n"
+                "  are to rewrite the wrong-OS package manager segments to the native package manager, you\n"
+                "  MUST use \"retry_with_modified_command\" and MUST NOT use \"fallback\". The presence of the\n"
+                "  native system-wide operation MUST NOT be treated as unsafe in this case.\n"
+                "\n"
+```
+This rule and its affect on the model geometric landscape is described in the PREFACE UPDATE5 link below. 
+
 
  [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
 
