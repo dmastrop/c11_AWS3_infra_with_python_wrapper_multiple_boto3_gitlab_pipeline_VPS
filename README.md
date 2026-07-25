@@ -352,9 +352,7 @@ STATUS_TAGS = {
 - [Appendix E - Formal Definition of a Model Limitation: GPT-5.4 Failure Case Study](#gpt-5.4-appendix-e-case-study)
 - [Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models](#gpt-5.4-appendix-f-case-study)
 - [Appendix G - GPT-5.4 Internal Model Salience Collapse in Multi-Segment Rewrite Pipelines: A Contract-Accurate Analysis](#gpt-5.4-appendix-g-case-study)
-
-
-
+- [Appendix H - Inverse Internal Salience Collapse (5.4 Model Failure) and the GPT-5.6-Sol Correction](#gpt-5.6-appendix-h-internal)
 
 
 
@@ -4363,8 +4361,7 @@ Appendix G documents this precisely in terms of the specific rule blocks that ca
 
 
 <a name="gpt-5.6-appendix-h-inverse"></a>
-<a name="top-appendix-h"></a>
-### **Appendix H — Inverse Internal Salience Collapse (5.4 Model Failure)  and the GPT‑5.6‑Sol Correction**
+### **Appendix H — Inverse Internal Salience Collapse (5.4 Model Failure) and the GPT‑5.6‑Sol Correction**
 
 ---
 
