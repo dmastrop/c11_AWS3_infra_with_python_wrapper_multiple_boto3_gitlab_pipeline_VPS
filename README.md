@@ -169,6 +169,8 @@ artifact logs per pipeline)
 - Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
 - LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
 - Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
+- Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
+
 
 ---
 
@@ -2968,8 +2970,6 @@ It corresponds to:
 
 But GPT‑5.4 internally collapsed these categories. The contract did not.
 
-This is why Appendix G 1.0 felt confusing — it described the failure as if OS‑Mutation Guard was overshadowing Patch2.
-
 The rules were correct semantically and the ordering was correct.  It was the model itself that misinterpreted them.
 
 ---
@@ -4352,6 +4352,289 @@ Appendix G documents this precisely in terms of the specific rule blocks that ca
 ---
 
 [Back to top of Appendix G](#top-appendix-g)
+
+---
+
+[Back to top of PREFACE UPDATE5](#top-preface5)
+
+---
+
+
+
+
+<a name="gpt-5.6-appendix-h-inverse"></a>
+<a name="top-appendix-h"></a>
+### **Appendix H — Inverse Internal Salience Collapse (5.4 Model Failure)  and the GPT‑5.6‑Sol Correction**
+
+---
+
+#### **1. Introduction: From Forward Collapse to Inverse Collapse**
+
+Appendices A–G documented a **forward internal salience collapse** in GPT‑5.4: long multi‑segment pipelines with multiple wrong‑OS package managers and a native system‑wide operation (`apt-get update -y` on Ubuntu) were incorrectly classified as unsafe, causing the model to return **fallback** instead of the contract‑correct **retry_with_modified_command**. The BS rule was introduced as a **model‑limitation override**, steering GPT‑5.4 back into the correct geometric region of its decision surface.
+
+This appendix extends that analysis to a second, more subtle failure mode: an **inverse internal salience collapse** observed on **index 7** of the 21‑case Ubuntu multi‑segment suite. Unlike the original forward collapse (native system‑wide op incorrectly treated as unsafe), the inverse collapse manifested as the **wrong‑OS system‑wide op being treated as safe**, allowing a “bad” system‑wide command to pass through under **retry_with_modified_command** instead of **fallback**. Crucially, this was **not** a new defect; it was the same underlying GPT‑5.4 limitation expressing itself on the opposite side of the decision boundary.
+
+The resolution was **not** to further extend the BS rule. Doing so would have required “writing the test case into the contract,” contaminating the domain primitives with case‑specific logic. Instead, the correct fix was a **model upgrade** to **GPT‑5.6‑Sol**, combined with a small but critical refactor of the output‑validator path in `ai_gateway_service.py`. With GPT‑5.6‑Sol, all 21 multi‑segment tests pass **without** the BS rule, and both forward and inverse collapse modes are eliminated at the model level.
+
+---
+
+#### **2. The Index 7 Anomaly: From Passing to Deterministic Failure**
+
+In the GPT‑5.4 + BS rule configuration, the 21‑case Ubuntu multi‑segment suite initially showed **all 21 tests passing**, including **index 7**, which involved a wrong‑OS system‑wide operation:
+
+```bash
+Command: yum install curl && apk add bash && pacman -S htop && yum update -y
+```
+
+Under the contract:
+
+- `yum install curl` → wrong‑OS PM on Ubuntu → must be rewritten to `apt-get install -y curl`
+- `apk add bash` → wrong‑OS PM → must be rewritten to `apt-get install -y bash`
+- `pacman -S htop` → wrong‑OS PM → must be rewritten to `apt-get install -y htop`
+- `yum update -y` → wrong‑OS **system‑wide** op on Ubuntu → must trigger **fallback**, never rewrite
+
+The correct action for this pipeline is therefore **fallback**, because the presence of a wrong‑OS system‑wide operation (`yum update -y`) makes the entire pipeline non‑rewriteable under Patch2’s system‑wide rules.
+
+However, during early testing with GPT‑5.4 + BS rule, index 7 occasionally behaved “correctly” by returning **fallback**, and the suite appeared fully passing. When the test suite was re‑run later, index 7 began to **fail deterministically**, returning **retry_with_modified_command** and allowing the `yum update -y` system‑wide op to be treated as if it were a native, rewriteable segment. In other words:
+
+- Forward collapse: native system‑wide op incorrectly treated as unsafe → fallback when retry was required.
+- Inverse collapse (index 7): wrong‑OS system‑wide op incorrectly treated as safe → retry when fallback was required.
+
+This shift from intermittent correctness to deterministic failure is exactly what we expect from a **probabilistic salience override** (the BS rule) interacting with a fragile decision boundary. The BS rule successfully corrected the forward collapse, but it did **not** fully stabilize the boundary; under certain configurations, the model’s internal geometry tipped the other way, producing the inverse collapse on index 7.
+
+---
+
+#### **3. Why Extending the BS Rule Was Not Acceptable**
+
+At the point where index 7 began failing deterministically, one tempting option would have been to further extend the BS rule to explicitly cover the inverse case:
+
+- “If a pipeline contains `yum update -y` on Ubuntu, always fallback,”  
+or even more specifically,  
+- “If the pipeline matches the exact pattern of index 7, force fallback.”
+
+However, this would have crossed a critical line in contract engineering:
+
+- The BS rule was originally designed as a **general salience‑steering rule**, grounded in domain semantics: “native system‑wide op + wrong‑OS PMs → retry_with_modified_command, not fallback.”
+- Extending it to explicitly encode index‑specific behavior would have turned it into a **test‑case‑encoded rule**, effectively writing the test case into the contract.
+
+This is unacceptable for several reasons:
+
+1. **Contract purity:** Domain primitives must express OS‑level semantics, not test‑case patterns.
+2. **Generalization:** The contract must remain valid for unseen pipelines, not just the 21‑case suite.
+3. **Maintainability:** Encoding specific test cases into rules makes future extensions brittle and opaque.
+4. **Model responsibility:** The inverse collapse is a model‑level failure; fixing it at the contract level would hide the real problem rather than resolve it.
+
+By the time index 7 began failing deterministically, it was clear that:
+
+- The BS rule had done all it reasonably could for GPT‑5.4.
+- Any further extension would be contract pollution.
+- The remaining failure was fundamentally **model‑geometric**, not rule‑semantic.
+
+This is what motivated the **model upgrade** to GPT‑5.6‑Sol.
+
+---
+
+#### **4. The GPT‑5.6‑Sol Upgrade: Determinism and Structural Alignment**
+
+To address both the forward and inverse collapse modes, the model was upgraded in `ai_gateway_service.py` from GPT‑5.4 to **GPT‑5.6‑Sol**:
+
+```python
+# Change the model to gpt-5.6-sol (premier) for the gpt-5.4 model limitation issue with multi-segment rewrites
+# The index7 test on the 21 suite is retry_with_modified_command instead of fallback with a "bad" yum update system-wide
+# op command. It should be fallback.
+payload = {
+    #"model": "gpt-5.4",
+    "model": "gpt-5.6-sol",
+    # temperature is not supported in 5.6-sol. It is inherently "deterministic"
+    #"temperature": 0,
+    "max_output_tokens": 256,
+    "input": prompt,
+}
+```
+
+Several properties of GPT‑5.6‑Sol make it particularly suitable for this contract:
+
+1. **Inherent determinism:**  
+   GPT‑5.6‑Sol does not expose a `temperature` parameter; it is effectively **locked into a deterministic regime**. This is exactly what a multi‑segment rewrite contract needs: stable, repeatable behavior across runs, with no stochastic drift in action selection.
+
+2. **Stronger structural reasoning:**  
+   GPT‑5.6‑Sol exhibits improved handling of long pipelines, mixed PMs, and system‑wide operations. It more reliably distinguishes:
+   - native vs wrong‑OS system‑wide ops,
+   - rewriteable vs non‑rewriteable segments,
+   - safety‑critical vs non‑critical segments.
+
+3. **Better salience geometry:**  
+   The internal probability surface in GPT‑5.6‑Sol is more stable around the decision boundary that separates:
+   - Region A: “rewrite + preserve native system‑wide ops” → **retry_with_modified_command**
+   - Region B: “wrong‑OS system‑wide op present” → **fallback**
+
+   Where GPT‑5.4’s boundary was fragile and required the BS rule to push the hidden state into Region A, GPT‑5.6‑Sol naturally places the hidden state in the correct region without additional overrides.
+
+4. **Contract alignment:**  
+   GPT‑5.6‑Sol’s behavior aligns more closely with the Patch2 semantics:
+   - wrong‑OS PMs → rewrite to native PM with `-y`,
+   - native system‑wide ops → preserve verbatim, no fallback,
+   - wrong‑OS system‑wide ops → fallback,
+   - destructive ops → abort,
+   - invalid flags → fallback,
+   - successful all‑native pipelines → fallback under “good pipeline → fallback” rule.
+
+In practice, this means that GPT‑5.6‑Sol can implement the multi‑segment rewrite contract **without** the BS rule, and without exhibiting either forward or inverse collapse.
+
+---
+
+#### **5. Output Validator Refactor: Making GPT‑5.6‑Sol Usable**
+
+Upgrading the model alone was not sufficient; GPT‑5.6‑Sol’s **response envelope format** differs significantly from GPT‑5.4’s. The original output‑validator logic in `ai_gateway_service.py` assumed the GPT‑5.4 format:
+
+```python
+## --------------------------------------------------------
+## Extract inner JSON plan from Responses API envelope. 
+## This only works with gpt-5.4 API response format. Comment this out and replace with the gpt-5.6-sol 
+## extraction. There is a legacy fallback if gpt-5.4 is used
+## --------------------------------------------------------
+#text = raw["output"][0]["content"][0]["text"]
+#plan = json.loads(text)
+```
+
+With GPT‑5.6‑Sol, this extraction path began failing, producing errors like:
+
+```json
+{"error":"list index out of range","action":"fallback"}
+```
+
+even when the underlying GPT‑5.6‑Sol response was a **correct** `retry_with_modified_command` plan. To fix this, the validator was refactored to branch on the `model` field and correctly extract the plan from GPT‑5.6‑Sol’s message‑based envelope:
+
+```python
+# --------------------------------------------------------
+# Extract inner JSON plan from Responses API envelope
+# This code is modified to work with gpt-5.6-sol which has a very different LLM response payload format than gpt-5.4
+# The upgrade in the model is required for some failed multi-segment rewrite test cases in the 21 suite.
+# Without this fix the outbound validator is returning the following error in the RAW LLM response EVEN though the actual
+# gpt-5.6-sol response as seen in the gitlab console debugs is the correct retry_with_modified_command rewrite 
+# The error is: {"error":"list index out of range","action":"fallback"}
+# The rest of the outbound validator code can stay the same. 
+# --------------------------------------------------------
+model = payload.get("model", "")
+
+if model == "gpt-5.6-sol":
+    # GPT‑5.6 Sol: find the message block
+    plan_text = None
+    for item in raw.get("output", []):
+        if item.get("type") == "message":
+            content = item.get("content", [])
+            if content and isinstance(content[0], dict) and "text" in content[0]:
+                plan_text = content[0]["text"]
+                break
+
+    if plan_text is None:
+        return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
+
+    try:
+        plan = json.loads(plan_text)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+
+else:
+    # GPT‑5.4 legacy path
+    text = raw["output"][0]["content"][0]["text"]
+    try:
+        plan = json.loads(text)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+```
+
+With this refactor:
+
+- GPT‑5.6‑Sol’s JSON action plans are correctly extracted and validated.
+- The legacy GPT‑5.4 path remains intact for backward compatibility.
+- The rest of the outbound validator logic (action classification, safety checks, etc.) can remain unchanged.
+
+This refactor is what makes GPT‑5.6‑Sol **operationally usable** for the 21‑case suite and beyond.
+
+---
+
+#### **6. Empirical Result: All 21 Cases Passing Without BS Rule**
+
+After upgrading to GPT‑5.6‑Sol and refactoring the output validator:
+
+- All **21 Ubuntu multi‑segment tests** pass **without** the BS rule.
+- The original 9 forward‑collapse cases now correctly return **retry_with_modified_command** with:
+  - all wrong‑OS PMs rewritten to `apt-get install -y <pkg>`,
+  - native system‑wide ops preserved verbatim.
+- **Index 7** now correctly returns **fallback**, treating `yum update -y` as a wrong‑OS system‑wide op that cannot be rewritten.
+- The inverse collapse is eliminated; wrong‑OS system‑wide ops are no longer misclassified as safe.
+- The BS rule can be safely removed from:
+  - Ubuntu domain primitives,
+  - Debian domain primitives,
+  - RHEL domain primitives.
+
+The test results are all posted in the update59 chapter of this README at the following link:
+
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+These have per-OS testing matrices as well as background information on the testing methodology, approach, and issues that were 
+encountered during the iterative pipeline testing.
+
+
+At this stage, full regression on Ubuntu (20 base tests, 24 rewrite tests, 6 idempotency tests, 3 OS‑signaled remediation tests) is still required to formally certify GPT‑5.6‑Sol for production use. However, the multi‑segment evidence strongly indicates that GPT‑5.6‑Sol has **corrected the underlying geometric limitation** that made GPT‑5.4 dependent on the BS rule.
+
+The regression testing will also be documented in the same link above if and when required.
+
+
+
+---
+
+#### **7. Implications for Phase 4a.1.3 and Real‑Life Pipelines**
+
+Phase 4a.1.3 will finally move from synthetic schema‑based testing to **real‑life pipeline execution**:
+
+- registry entries and module2 → module2f resurrection,
+- AI/MCP hook code in module2f,
+- per‑thread OS discovery on each node,
+- OS and history injected into the MCP hook payload,
+- LLM‑driven action plan generation,
+- multi‑segment rewrite execution under real workloads.
+
+The entire purpose of PREFACE UPDATE5—and the BS rule, and now the GPT‑5.6‑Sol upgrade—is to ensure that when Phase 4a.1.3 runs:
+
+- native system‑wide ops are preserved correctly,
+- wrong‑OS system‑wide ops are rejected via fallback,
+- wrong‑OS PMs are rewritten deterministically,
+- destructive ops are aborted,
+- malformed commands are handled correctly,
+- multi‑segment pipelines behave predictably under stress.
+
+GPT‑5.6‑Sol’s determinism, structural reasoning, and improved salience geometry make it significantly better suited for this phase than GPT‑5.4. The removal of the BS rule simplifies the contract and reduces the risk of hidden interactions between test‑case‑specific overrides and real‑life pipelines.
+
+In practical terms, once Ubuntu regression is complete and Debian/RHEL 21‑case suites are validated under GPT‑5.6‑Sol, the system will be ready to:
+
+- port the remaining 7 OS domains (with RHEL as canonical for yum‑based systems),
+- run mutation stress testing on Ubuntu with the stress tester,
+- and finally execute Phase 4a.1.3 with confidence that both forward and inverse internal salience collapse modes have been resolved at the **model level**, not merely patched at the contract level.
+
+---
+
+#### **8. Conclusion**
+
+The inverse internal salience collapse observed on index 7 is **not** a new failure mode; it is the mirror image of the original GPT‑5.4 limitation documented in Appendices A–G. The BS rule successfully patched the forward collapse but could not fully stabilize the decision boundary, leading to an inverse collapse when the model’s internal geometry tipped the other way.
+
+Rather than extending the BS rule and polluting the contract with test‑case‑specific logic, the correct solution was to:
+
+1. **Upgrade the model** to GPT‑5.6‑Sol, a more deterministic and structurally aligned model.
+2. **Refactor the output validator** to correctly parse GPT‑5.6‑Sol’s response envelope.
+3. **Remove the BS rule** from the domain primitives once GPT‑5.6‑Sol demonstrated stable, contract‑aligned behavior across all 21 multi‑segment tests.
+
+This completes the arc of PREFACE UPDATE5:
+
+- from forward internal salience collapse in GPT‑5.4,
+- through BS rule salience steering,
+- to inverse collapse on index 7,
+- and finally to a model‑level correction in GPT‑5.6‑Sol that restores the integrity of the contract without relying on test‑case‑encoded overrides.
+
+The system is now positioned to carry this stability forward into Phase 4a.1.3 and real‑life multi‑segment pipelines, where the true value of this entire case study will be realized.
+
+
 
 ---
 
