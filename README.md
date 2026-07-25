@@ -21939,6 +21939,41 @@ The test matrix Matrix 3 — GPT‑5.6‑Sol (NO BS Rule) — Ubuntu Multi‑S
 <a name="llm-contract-stress-tester-multi-segment-debian-testing-and-test-matrices"></a>
 #### 2.LLM Contract Stress Tester – Multi-segment pipeline Debian testing and test matrices
 
+Now that the gpt-5.6-sol upgrade is stable on Ubuntu, we see that similar test cases that are executed on the refactored Debian
+domain primtiives block is also very stable. All the test cases passed including 9 that had caused an internal salience collapse 
+with 5.4 Ubuntu, and the index7 internal inverse salience collapse with 5.4 Ubuntu. These are now all passing on Debian with the 
+gpt-5.6-sol. 
+
+The matrix is in the expandable link below:
+
+<details>
+<summary><strong>Debian Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | d‑ms‑001 | `yum install curl && apk add bash && pacman -S htop && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get update -y` | Correct rewrite; Debian native system‑wide op preserved. |
+| 2 | d‑ms‑002 | `apk add bash && pacman -S htop && yum install nano && apt-get update -y` | retry_with_modified_command | `apt-get install -y bash && apt-get install -y htop && apt-get install -y nano && apt-get update -y` | Correct rewrite. |
+| 3 | d‑ms‑003 | `pacman -S htop && yum install curl && apk add bash && apt-get update -y` | retry_with_modified_command | `apt-get install -y htop && apt-get install -y curl && apt-get install -y bash && apt-get update -y` | Correct rewrite. |
+| 4 | d‑ms‑004 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano` | Correct rewrite. |
+| 5 | d‑ms‑005 | `apt-get install curl && apt-get install nano && apt-get install python3 && apt-get update -y` | fallback | `{"action":"fallback"}` | Correct fallback (valid Debian pipeline + native system‑wide op). |
+| 6 | d‑ms‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y` | Correct rewrite. |
+| 7 | d‑ms‑007 | `yum install curl && apk add bash && pacman -S htop && apt-get upgrade -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get upgrade -y` | Correct rewrite. |
+| 8 | d‑ms‑008 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 9 | d‑ms‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 10 | d‑ms‑010 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 11 | d‑ms‑011 | `apt-get install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `apt-get install -y curl && echo 'hello' && apt-get install -y bash && apt-get install -y htop` | Correct rewrite; echo preserved. |
+| 12 | d‑ms‑012 | `yum install curl && echo 'test' && apk add bash && apt-get install nano` | retry_with_modified_command | `apt-get install -y curl && echo 'test' && apt-get install -y bash && apt-get install -y nano` | Correct rewrite. |
+| 13 | d‑ms‑013 | `apk add bash && pacman -S htop && apt-get install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct abort. |
+| 14 | d‑ms‑014 | `yum install curl && apk add bash && pacman -S htop && apt-get install nano && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y nano && apt-get update -y` | Correct rewrite. |
+| 15 | d‑ms‑015 | `yum install curl && apk add bash && pacman -S htop && apt-get update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 16 | d‑ms‑016 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op + invalid flag). |
+| 17 | d‑ms‑017 | `yum install curl && apk add bash && pacman -S htop && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 18 | d‑ms‑018 | `apk add bash && pacman -S htop && yum install curl && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 19 | d‑ms‑019 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget` | Correct rewrite. |
+| 20 | d‑ms‑020 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `apt-get install -y bash && apt-get install -y htop && apt-get install -y curl && apt-get install -y wget` | Correct rewrite. |
+| 21 | d‑ms‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apt-get update -y` | retry_with_modified_command | `apt-get install -y curl && apt-get install -y bash && apt-get install -y htop && apt-get install -y wget && apt-get update -y` | Correct rewrite. |
+
+</details>
 
 
 
