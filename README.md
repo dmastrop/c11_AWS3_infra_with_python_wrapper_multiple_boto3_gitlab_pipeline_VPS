@@ -21942,7 +21942,7 @@ The test matrix Matrix 3 — GPT‑5.6‑Sol (NO BS Rule) — Ubuntu Multi‑S
 Now that the gpt-5.6-sol upgrade is stable on Ubuntu, we see that similar test cases that are executed on the refactored Debian
 domain primtiives block is also very stable. All the test cases passed including 9 that had caused an internal salience collapse 
 with 5.4 Ubuntu, and the index7 internal inverse salience collapse with 5.4 Ubuntu. These are now all passing on Debian with the 
-gpt-5.6-sol. 
+gpt-5.6-sol and no BS rule.
 
 The matrix is in the expandable link below:
 
@@ -21990,6 +21990,42 @@ The matrix is in the expandable link below:
 <a name="llm-contract-stress-tester-multi-segment-rhel-testing-and-test-matrices"></a>
 #### 3.LLM Contract Stress Tester – Multi-segment pipeline RHEL testing and test matrices
 
+
+Now that the gpt-5.6-sol upgrade is stable on Ubuntu and Debian, we see that similar test cases that are executed on the refactored RHEL
+domain primtiives block is also very stable. All the test cases passed including 9 that had caused an internal salience collapse
+with 5.4 Ubuntu, and the index7 internal inverse salience collapse with 5.4 Ubuntu. These are now all passing on RHEL with the
+gpt-5.6-sol and no BS rule.
+
+The matrix is in the expandable link below:
+
+<details>
+<summary><strong>RHEL Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | r‑ms‑001 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum update -y` | Correct rewrite; native RHEL system‑wide op preserved. |
+| 2 | r‑ms‑002 | `apk add bash && pacman -S htop && yum install nano && yum update -y` | retry_with_modified_command | `yum install -y bash && yum install -y htop && yum install -y nano && yum update -y` | Correct rewrite. |
+| 3 | r‑ms‑003 | `pacman -S htop && yum install curl && apk add bash && yum update -y` | retry_with_modified_command | `yum install -y htop && yum install -y curl && yum install -y bash && yum update -y` | Correct rewrite. |
+| 4 | r‑ms‑004 | `yum install curl && apk add bash && pacman -S htop && yum install nano` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y nano` | Correct rewrite. |
+| 5 | r‑ms‑005 | `yum install curl && yum install nano && yum install python3 && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (valid RHEL pipeline + native system‑wide op). |
+| 6 | r‑ms‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y` | Correct rewrite. |
+| 7 | r‑ms‑007 | `yum install curl && apk add bash && pacman -S htop && yum upgrade -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum upgrade -y` | Correct rewrite. |
+| 8 | r‑ms‑008 | `yum install curl && apk add bash && pacman -S htop && apt-get update -y` | fallback | `{"action":"fallback"}` | **Correct inverse‑collapse test; wrong‑OS system‑wide op → fallback.** |
+| 9 | r‑ms‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | retry_with_modified_command | `yum install -y bash && yum install -y htop && yum install -y curl && yum update -y` | Correct rewrite. |
+| 10 | r‑ms‑010 | `yum install curl && apk add bash && pacman -S htop && yum install nano --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 11 | r‑ms‑011 | `yum install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `yum install -y curl && echo 'hello' && yum install -y bash && yum install -y htop` | Correct rewrite; echo preserved. |
+| 12 | r‑ms‑012 | `yum install curl && echo 'test' && apk add bash && yum install nano` | retry_with_modified_command | `yum install -y curl && echo 'test' && yum install -y bash && yum install -y nano` | Correct rewrite. |
+| 13 | r‑ms‑013 | `apk add bash && pacman -S htop && yum install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct abort. |
+| 14 | r‑ms‑014 | `yum install curl && apk add bash && pacman -S htop && yum install nano && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y nano && yum update -y` | Correct rewrite. |
+| 15 | r‑ms‑015 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 16 | r‑ms‑016 | `yum install curl && apk add bash && pacman -S htop && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 17 | r‑ms‑017 | `apk add bash && pacman -S htop && yum install curl && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 18 | r‑ms‑018 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget` | Correct rewrite. |
+| 19 | r‑ms‑019 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `yum install -y bash && yum install -y htop && yum install -y curl && yum install -y wget` | Correct rewrite. |
+| 20 | r‑ms‑020 | `yum install curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y` | Correct rewrite. |
+| 21 | r‑ms‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y` | Correct rewrite. |
+
+</details>
 
 
 
