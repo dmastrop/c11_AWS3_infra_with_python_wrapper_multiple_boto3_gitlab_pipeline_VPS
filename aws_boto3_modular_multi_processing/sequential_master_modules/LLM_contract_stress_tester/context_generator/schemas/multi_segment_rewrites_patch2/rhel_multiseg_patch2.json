@@ -78,6 +78,7 @@
       "history": []
     },
 
+     
     {
       "command": "yum install curl && apk add bash && pacman -S htop && yum upgrade -y",
       "stdout": "",
@@ -89,9 +90,10 @@
       "tags": [],
       "history": []
     },
-
+    
+    
     {
-      "command": "yum install curl && apk add bash && pacman -S htop && yum update -y",
+      "command": "yum install curl && apk add bash && pacman -S htop && apt-get update -y",
       "stdout": "",
       "stderr": "bash: apk: command not found",
       "exit_status": 127,
@@ -101,6 +103,8 @@
       "tags": [],
       "history": []
     },
+    
+    
 
     {
       "command": "apk add bash && pacman -S htop && yum install curl && yum update -y",
