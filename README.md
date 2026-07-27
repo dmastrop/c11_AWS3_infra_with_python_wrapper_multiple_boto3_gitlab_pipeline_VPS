@@ -4639,6 +4639,373 @@ The system is now positioned to carry this stability forward into Phase 4a.1.3 a
 
 ---
 
+
+
+
+<a name="gpt-5.6-appendix-i-global"></a>
+### **Appendix I — Global vs Local Geometric Correction: GPT‑5.4 + BS Rule vs GPT‑5.6‑Sol**
+
+---
+
+#### **1. Introduction**
+
+Appendices B–E documented the mathematical, geometric, and decision‑boundary mechanisms behind the GPT‑5.4 inference failure: a **forward internal salience collapse** in which long pipelines containing:
+
+```
+wrong‑OS PMs + native system‑wide op
+```
+
+were incorrectly mapped to **fallback** instead of **retry_with_modified_command**.
+
+Appendix H then documented the **inverse internal salience collapse**: the mirror failure in which wrong‑OS system‑wide ops were incorrectly treated as safe, producing **retry_with_modified_command** instead of **fallback**.
+
+This appendix explains the deeper geometric distinction between:
+
+- **GPT‑5.4 + BS rule**  
+  → *local*, *artificial*, *probabilistic* correction  
+  → hidden‑state displacement **h → h′**  
+  → local re‑warping of the probability surface  
+  → global geometry unchanged  
+  → boundary still fragile  
+  → inverse collapse still possible  
+
+and
+
+- **GPT‑5.6‑Sol**  
+  → *global*, *natural*, *deterministic* correction  
+  → hidden‑state **h** lands in the correct region organically  
+  → global decision‑boundary reshaping  
+  → system‑wide salience spike removed  
+  → no BS rule required  
+  → no collapse modes  
+
+This appendix completes the PREFACE UPDATE5 case study by showing why GPT‑5.6‑Sol eliminates both collapse modes and why the rewrite engine is now ready for Phase 4a.1.3 real‑life pipelines.
+
+---
+
+#### **2. The GPT‑5.4 Geometry: A Fragile Decision Boundary**
+
+Appendices B–D established that GPT‑5.4’s hidden‑state geometry contained a **fragile decision boundary** between:
+
+- **Region A** — retry_with_modified_command  
+- **Region B** — fallback  
+
+The problematic hidden state **h** occurred only under a very specific structural pattern:
+
+- ≥3 wrong‑OS PMs  
+- a native system‑wide op  
+- long pipeline  
+- elevated risk salience  
+- ambiguity amplification  
+- system‑wide danger bias  
+
+Mathematically:
+
+```
+h ∈ ℝᵈ
+f(h) → fallback
+```
+
+Geometrically:
+
+- the **fallback basin** was deeper  
+- the **retry basin** was shallower  
+- the **system‑wide salience spike** pushed h into Region B  
+- the boundary between A and B was thin and unstable  
+
+This produced the forward collapse.
+
+Later, after the BS rule re‑warped the local geometry, the boundary became **asymmetric**, producing the inverse collapse on index 7.
+
+---
+
+#### **3. GPT‑5.4 + BS Rule: Local, Artificial, Probabilistic Correction**
+
+The BS rule did not change GPT‑5.4’s global geometry.  
+It changed the **input salience landscape**, producing:
+
+**3.1 Hidden‑state displacement**
+
+```
+h' = h + Δh_BS-rule
+```
+
+The BS rule injected strong textual evidence that:
+
+- native system‑wide ops are safe  
+- wrong‑OS PM rewrites are deterministic  
+- fallback is forbidden  
+
+This pushed the hidden state **h → h′** into the retry region.
+
+**3.2 Local probability‑surface re‑warping**
+
+Appendix D’s multi‑well diagrams showed:
+
+- retry basin artificially deepened  
+- fallback basin artificially suppressed  
+- local curvature changed  
+- global curvature unchanged  
+
+This produced:
+
+```
+P(retry | h′) >> P(fallback | h′)
+```
+
+**3.3 Artificial determinism**
+
+GPT‑5.4 + BS rule was **deterministic only locally**, only for the problematic hidden‑state region, and only because the BS rule artificially reshaped the probability surface.
+
+**3.4 Fragile boundary**
+
+Because the global geometry was unchanged:
+
+- the boundary remained brittle  
+- the retry basin remained shallow globally  
+- the fallback basin remained deep globally  
+- the system‑wide salience spike remained  
+- inverse collapse remained possible  
+
+This is why index 7 eventually failed deterministically.
+
+**3.5 Summary**
+
+GPT‑5.4 + BS rule:
+
+- **local fix**  
+- **artificial deepening** of retry basin  
+- **artificial suppression** of fallback basin  
+- **h → h′ displacement**  
+- **global geometry unchanged**  
+- **inverse collapse still possible**  
+
+This was a correct contract‑level fix, but not a model‑level fix.
+
+---
+
+#### **4. GPT‑5.6‑Sol: Global, Natural, Deterministic Correction**
+
+GPT‑5.6‑Sol does not require the BS rule because its **global geometry is corrected**.
+
+**4.1 Global decision‑boundary reshaping**
+
+GPT‑5.6‑Sol’s training produced:
+
+- deeper retry basin  
+- correctly gated fallback basin  
+- removal of system‑wide salience spike  
+- smoother boundary curvature  
+- stable multi‑segment rewrite region  
+- correct classification of native vs wrong‑OS system‑wide ops  
+
+Mathematically:
+
+```
+f(h) → retry_with_modified_command
+```
+
+for:
+
+```
+wrong‑OS PMs + native system‑wide op
+```
+
+and:
+
+```
+f(h) → fallback
+```
+
+for:
+
+```
+wrong‑OS system‑wide op
+```
+
+**4.2 Natural determinism**
+
+GPT‑5.6‑Sol is inherently deterministic:
+
+- no temperature  
+- stable logits  
+- stable salience weighting  
+- stable attention‑head activation  
+- stable hidden‑state geometry  
+
+This means:
+
+- h lands in the correct region naturally  
+- no h → h′ displacement required  
+- no local re‑warping required  
+- no BS rule required  
+
+**4.3 Collapse modes eliminated**
+
+Because the global geometry is corrected:
+
+- forward collapse eliminated  
+- inverse collapse eliminated  
+- boundary no longer fragile  
+- retry basin naturally deep  
+- fallback basin naturally gated  
+
+**4.4 Summary**
+
+GPT‑5.6‑Sol:
+
+- **global fix**  
+- **natural deepening** of retry basin  
+- **natural gating** of fallback basin  
+- **system‑wide salience spike removed**  
+- **h lands correctly without BS rule**  
+- **no collapse modes**  
+
+This is a true model‑level correction.
+
+---
+
+#### **5. Diagrammatic Comparison: Local vs Global Geometry**
+
+**GPT‑5.4 + BS Rule (local, artificial)**
+
+```
+Before BS rule:
+   fallback basin deeper
+   retry basin shallower
+   h falls into fallback
+
+After BS rule:
+   retry basin artificially deepened
+   fallback basin artificially suppressed
+   h → h′ falls into retry
+   global geometry unchanged
+```
+
+**GPT‑5.6‑Sol (global, natural)**
+
+```
+Global geometry reshaped:
+   retry basin naturally deep
+   fallback basin naturally gated
+   system‑wide salience spike removed
+   h falls into retry naturally
+   no h → h′ displacement
+   no local re‑warping
+```
+
+This is the core difference:
+
+- GPT‑5.4 + BS rule = **local artificial correction**  
+- GPT‑5.6‑Sol = **global natural correction**
+
+---
+
+#### **6. Why GPT‑5.6‑Sol Handles Inverse Collapse**
+
+The inverse collapse occurred when GPT‑5.4 misclassified:
+
+```
+wrong‑OS system‑wide op
+```
+
+as safe.
+
+GPT‑5.6‑Sol fixes this because:
+
+- its fallback basin is correctly gated  
+- its system‑wide salience weighting is globally corrected  
+- its rewrite basin is deeper only for native system‑wide ops  
+- its fallback basin is deeper only for wrong‑OS system‑wide ops  
+- its boundary curvature is stable  
+- its hidden‑state geometry is smoother  
+
+Thus:
+
+```
+yum update -y on Ubuntu → fallback
+apt-get update -y on RHEL → fallback
+```
+
+without any BS rule.
+
+This is why index 7 passes on all OSes under GPT‑5.6‑Sol.
+
+---
+
+#### **7. Why This Matters for Phase 4a.1.3 and Real‑Life Pipelines**
+
+Phase 4a.1.3 will run:
+
+- real pipelines  
+- across multiple nodes  
+- with OS discovery  
+- with registry‑entry driven command assembly  
+- with module2→module2f resurrection  
+- with MCP hook injection  
+- with multi‑segment rewrite logic  
+- under real workloads  
+- with long, high‑entropy command strings  
+- with unpredictable real‑life contexts  
+
+This is exactly the environment where rare geometric failures matter.
+
+GPT‑5.6‑Sol’s global geometric correction ensures:
+
+- deterministic rewrite behavior  
+- correct fallback gating  
+- correct system‑wide semantics  
+- correct multi‑segment reasoning  
+- correct OS‑Mutation Guard behavior  
+- correct destructive‑op detection  
+- correct malformed‑flag handling  
+
+The contract is now:
+
+- stable  
+- deterministic  
+- multi‑OS aligned  
+- collapse‑free  
+- ready for mutation stress testing  
+- ready for Phase 4a.1.3  
+
+
+---
+
+#### **8. Conclusion**
+
+GPT‑5.4 + BS rule provided a **local**, **artificial**, **probabilistic** correction:
+
+- h → h′ displacement  
+- local re‑warping of probability surface  
+- retry basin artificially deepened  
+- fallback basin artificially suppressed  
+- global geometry unchanged  
+- inverse collapse still possible  
+
+GPT‑5.6‑Sol provides a **global**, **natural**, **deterministic** correction:
+
+- retry basin naturally deep  
+- fallback basin naturally gated  
+- system‑wide salience spike removed  
+- stable boundary curvature  
+- h lands in correct region without BS rule  
+- no collapse modes  
+
+This is why the BS rule can be removed, why the rewrite engine is now stable across Ubuntu, Debian, and RHEL, and why the system is ready for real‑life multi‑node pipeline execution in Phase 4a.1.3.
+
+Appendix I completes the PREFACE UPDATE5 case study by showing that the GPT‑5.6‑Sol upgrade is not merely a performance improvement — it is a **geometric correction** that fundamentally stabilizes the rewrite engine and, in general, provides a far more deterministic evaluation of the contract rules under extremely complex real-world scenarios.
+
+
+
+---
+
+[Back to top of PREFACE UPDATE5](#top-preface5)
+
+---
+
+---
+
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ---
