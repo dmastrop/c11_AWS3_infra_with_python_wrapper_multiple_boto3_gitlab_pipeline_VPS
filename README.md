@@ -22294,6 +22294,138 @@ The test matrix Matrix 3 — GPT‑5.6‑Sol (NO BS Rule) — Ubuntu Multi‑S
 
 
 
+
+
+##### Regression of base20 test cases with GPT-5.6-Sol
+
+
+All the test cases are passing with GPT-5.6-Sol with no BS rule.   The model is behaving highly deterministic relative to the contract rules.
+
+The following is the regression test matrix for Ubuntu Base‑20 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule)  (click to expand to view the matrix):
+
+<details>
+<summary><b>Click to expand Ubuntu Base‑20 Test Case Matrix (20 test cases - GPT-5.6-Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | i‑test‑001 | `apt-get install -y nginx` | fallback | fallback | **“Unable to locate package nginx.”** History shows a prior successful `apt-get update -y`, so OS‑Mutation Guard forbids another update. No OS‑signaled remediation. Correct fallback. |
+| 2 | i‑test‑002 | `apt install nginx` | fallback | fallback | **Invalid command.** stderr: `E: Command 'apt' not found`. This is malformed syntax, not a package error. Global malformed‑command rules → fallback. Correct. |
+| 3 | i‑test‑003 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong package manager.** stderr: `bash: yum: command not found`. History irrelevant. Global rewrite rules → rewrite to apt‑get. Correct. |
+| 4 | i‑test‑004 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong package manager.** stderr: `bash: dnf: command not found`. Rewrite to apt‑get. Correct. |
+| 5 | i‑test‑005 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl`) | **Wrong package manager.** stderr: `bash: apk: command not found`. Rewrite to apt‑get. Correct. |
+| 6 | i‑test‑006 | `apt-get install` | fallback | fallback | **Invalid operation.** stderr: `E: Invalid operation install`. No OS‑signaled remediation. Global invalid‑syntax rule → fallback. Correct. |
+| 7 | i‑test‑007 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard triggers immediate abort. Correct. |
+| 8 | i‑test‑008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `command not found`. No rewrite possible. Fallback. Correct. |
+| 9 | i‑test‑009 | `show route everything` | fallback | fallback | **Unknown command.** stderr: `bash: show: command not found`. Fallback. Correct. |
+| 10 | i‑test‑010 | `apt-get update -y` | fallback | fallback | **Network failure.** stderr: `Temporary failure resolving 'archive.ubuntu.com'`. Not OS‑signaled remediation. No cleanup allowed. Must fallback. Correct. |
+| 11 | i‑test‑011 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a` → install) | **dpkg interrupt.** stderr: `dpkg was interrupted, you must run 'dpkg --configure -a'`. Explicit OS‑signaled remediation. `dpkg --configure -a` allowed under OS‑Mutation Guard. Correct. |
+| 12 | i‑test‑012 | `apt-get update -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** stderr: `Failed to fetch ... Hash Sum mismatch`. Classic soft OS‑signaled remediation. Cleanup + update required. Correct. |
+| 13 | i‑test‑013 | `apt-get install -y nginx` | fallback | fallback | **Held broken packages.** stderr: `Unable to correct problems, you have held broken packages.` No OS‑signaled remediation. Must fallback. Correct. |
+| 14 | i‑test‑014 | `apt-get install -y nginx` | fallback | fallback | **Permission denied on dpkg lock.** stderr: `Could not open lock file ... Permission denied`. Not OS‑signaled remediation. LLM cannot mutate OS. Must fallback. Correct. |
+| 15 | i‑test‑015 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt --fix-broken install -y` → install) | **OS‑signaled remediation.** stderr: `You might want to run 'apt --fix-broken install'`. Explicit remediation allowed under OS‑Mutation Guard. Correct. |
+| 16 | i‑test‑016 | `apt-get install -y mysql-server` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** stderr indicates corrupted index. OS‑signaled remediation. Correct. |
+| 17 | i‑test‑017 | `apt-get upgrade -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+| 18 | i‑test‑018 | `apt-get dist-upgrade -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+| 19 | i‑test‑019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+| 20 | i‑test‑020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** OS‑signaled remediation. Correct. |
+
+</details>
+
+
+
+##### Regression of the 24 patch2 basic rewrite test cases on GPT-5.6-Sol
+
+All the regression test cases here are passing on GPT-5.6-Sol
+
+The test matrix Ubuntu Patch‑24 Rewrite Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (click to expand):
+
+
+<details>
+<summary><b>Click to expand Ubuntu Patch‑24 Rewrite Test Case Matrix (24 test cases) - GPT-5.6-Sol</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | u‑patch‑001 | `apt-get install nginx --badflag` | fallback | fallback | **Invalid flag.** Global invalid‑flag rule → fallback. No rewrite allowed when the native PM invocation itself is malformed. Correct. |
+| 2 | u‑patch‑002 | `apt-get install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano`) | **Wrong‑OS PM (`yum`).** Rewrite required. Multi‑segment rewrite allowed because all rewritten segments are package‑manager operations. Correct. |
+| 3 | u‑patch‑003 | `apt-get install curl && apt-get update` | fallback | fallback | **Native system‑wide op in multi‑segment pipeline.** Patch2 forbids rewriting system‑wide ops and forbids multi‑segment pipelines containing native system‑wide ops → fallback. Correct. |
+| 4 | u‑patch‑004 | `apt-get install curl && apt-get update --badflag` | fallback | fallback | **Invalid flag on system‑wide op.** Global invalid‑flag rule → fallback. Correct. |
+| 5 | u‑patch‑005 | `apt-get install curl && pacman -Syu` | fallback | fallback | **Wrong‑OS system‑wide op (`pacman -Syu`).** System‑wide ops cannot be rewritten → fallback. Correct. |
+| 6 | u‑patch‑006 | `apt-get install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y bash`) | **Wrong‑OS PM (`apk`).** Rewrite required. Correct. |
+| 7 | u‑patch‑007 | `apt-get install curl && rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard → abort. Correct. |
+| 8 | u‑patch‑008 | `yum install nano && apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y curl`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 9 | u‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y git && apt-get install -y nano`) | **Wrong‑OS PMs (`dnf`, `yum`).** Rewrite required. Correct. |
+| 10 | u‑patch‑010 | `apt-get install curl && apt-get install python3 --badflag` | fallback | fallback | **Invalid flag.** Global invalid‑flag rule → fallback. Correct. |
+| 11 | u‑patch‑011 | `apt-get install curl && apt-get install python3` | fallback | fallback | **Multi‑segment native PM pipeline with no wrong‑OS PMs.** Patch2 forbids rewriting and forbids multi‑segment native PM pipelines → fallback. Correct. |
+| 12 | u‑patch‑012 | `apt-get install curl && apt-get install python3 && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y python3 && apt-get install -y nano`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 13 | u‑patch‑013 | `yum install nano && apt-get install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y curl && apt-get install -y bash`) | **Wrong‑OS PMs (`yum`, `apk`).** Rewrite required. Correct. |
+| 14 | u‑patch‑014 | `apt-get install curl && dnf install git && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y git && apt-get install -y nano`) | **Wrong‑OS PM (`dnf`).** Rewrite required. Correct. |
+| 15 | u‑patch‑015 | `yum install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y bash && apt-get install -y htop`) | **Three wrong‑OS PMs (`yum`, `apk`, `pacman`).** Rewrite required. Correct. |
+| 16 | u‑patch‑016 | `apt-get install curl && apt-get install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano && apt-get install -y bash`) | **Wrong‑OS PM (`apk`).** Rewrite required. Correct. |
+| 17 | u‑patch‑017 | `yum install nano && apt-get install curl && apt-get update` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y curl && apt-get update`) | **Wrong‑OS PM (`yum`).** Rewrite required. Native system‑wide op allowed after rewrite. Correct. |
+| 18 | u‑patch‑018 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y bash && echo 'hello' && apt-get install -y nano`) | **Wrong‑OS PMs (`apk`, `yum`).** Rewrite required. Echo preserved. Correct. |
+| 19 | u‑patch‑019 | `apt-get install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && echo 'test' && apt-get install -y htop`) | **Wrong‑OS PM (`pacman`).** Rewrite required. Echo preserved. Correct. |
+| 20 | u‑patch‑020 | `yum install nano --badflag && apt-get install curl` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Invalid‑flag rule dominates → fallback. Correct. |
+| 21 | u‑patch‑021 | `apt-get install curl && apk add bash --badflag && apt-get install nano` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Invalid‑flag rule dominates → fallback. Correct. |
+| 22 | u‑patch‑022 | `yum install nano && apk add bash && apt-get update` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nano && apt-get install -y bash && apt-get update`) | **Wrong‑OS PMs (`yum`, `apk`).** Rewrite required. Native system‑wide op allowed after rewrite. Correct. |
+| 23 | u‑patch‑023 | `apk add bash && apt-get install curl && rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard → abort. Correct. |
+| 24 | u‑patch‑024 | `apt-get install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl && apt-get install -y nano && echo hi && apt-get install -y bash`) | **Wrong‑OS PMs (`yum`, `apk`).** Rewrite required. Echo preserved. Correct. |
+
+</details>
+
+
+##### Regression of the 6 idempotency test cases on GPT-5.6-Sol
+
+All of the regression test cases here are passing on GPT-5.6-Sol
+
+The matrix for Ubuntu Idempotency‑6 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below. (Click to expand):
+
+
+<details>
+<summary><b>Click to expand Ubuntu Idempotency‑6 Test Case Matrix (6 test cases) - GPT-5.6-Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | ubuntu‑idem‑001 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get install -y nginx`) | **Package already installed.** stdout: “nginx is already the newest version.” This is a classic idempotency signal → no cleanup required, safe retry of the same command. Correct. |
+| 2 | ubuntu‑idem‑002 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (`apt-get install -y curl`) | **Idempotency with history.** History shows prior successful install of curl. Global idempotency rules require retry of the same command. No cleanup needed. Correct. |
+| 3 | ubuntu‑idem‑003 | `systemctl start nginx` | cleanup_and_retry | cleanup_and_retry (`systemctl stop nginx` → `systemctl start nginx`) | **Service already running.** stderr: “Job for nginx.service is already running.” Idempotency rules require cleanup (stop service) then retry (start service). Correct. |
+| 4 | ubuntu‑idem‑004 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Directory exists.** stderr: “File exists.” Global idempotency rules require safe retry using `mkdir -p`. Correct. |
+| 5 | ubuntu‑idem‑005 | `touch /etc/motd` | cleanup_and_retry | cleanup_and_retry (`test -e /etc/motd`) | **File exists.** stderr: “File exists.” History shows prior successful creation. Global idempotency rules require cleanup (test existence) then retry. Correct. |
+| 6 | ubuntu‑osmut‑001 | `apt-get install -y some-nonexistent-package` | fallback | fallback | **Not idempotency.** stderr: “Unable to locate package.” No OS‑signaled remediation. Under OS‑Mutation Guard, LLM is forbidden from issuing update. Must fallback. Correct. |
+
+</details>
+
+
+##### Regression of the 3 OS-signaled remediation test cases on GPT-5.6-Sol:
+
+All of the regression test cases here are passing as well.
+
+The test matrix for the Ubuntu OS‑Signaled Remediation‑3 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand): 
+
+
+<details>
+<summary><b>Click to expand Ubuntu OS‑Signaled Remediation‑3 Test Case Matrix (3 test cases) - GPT-5.6-Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | ubuntu‑osmut‑002 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get update -y` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (404 Not Found).** stderr contains `404 Not Found`, `Failed to fetch`, and repository path failures. These are classic Ubuntu/Debian signals that the package index is stale. Under OS‑Mutation Guard, system‑wide ops are allowed **only** when the OS explicitly signals remediation. Here it does, so the LLM MUST run `apt-get update` before retrying. Correct. |
+| 2 | ubuntu‑osmut‑003 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/lib/apt/lists/partial/*`, `rm -rf /var/cache/apt/archives/partial/*` → `apt-get update -y` → `apt-get install -y nginx`) | **Soft OS‑signaled remediation (Hash Sum mismatch).** stderr includes `Hash Sum mismatch` and `Some index files failed to download`. These are well‑known Ubuntu index corruption signals. The OS is explicitly telling the user to refresh metadata. Cleanup of partial lists + update is required. This is the canonical soft‑remediation path. Correct. |
+| 3 | ubuntu‑osmut‑004 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a` → `apt-get install -y nginx`) | **Hard OS‑signaled remediation (dpkg interrupt).** stderr contains: `dpkg was interrupted, you must run 'dpkg --configure -a'`. This is the strongest possible OS‑signaled remediation on Debian/Ubuntu. The OS explicitly instructs the corrective command. Under OS‑Mutation Guard, this MUST be honored. Running `dpkg --configure -a` before retrying is the correct deterministic remediation. Correct. |
+
+</details>
+
+
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
