@@ -353,7 +353,7 @@ STATUS_TAGS = {
 - [Appendix F — Comparative Analysis: GPT‑5.4 Failure Case vs GPT-5.6 and Mythos‑Class Models](#gpt-5.4-appendix-f-case-study)
 - [Appendix G - GPT-5.4 Internal Model Salience Collapse in Multi-Segment Rewrite Pipelines: A Contract-Accurate Analysis](#gpt-5.4-appendix-g-case-study)
 - [Appendix H - Inverse Internal Salience Collapse (5.4 Model Failure) and the GPT-5.6-Sol Correction](#gpt-5.6-appendix-h-inverse)
-
+- [Appendix I - Global vs Local Geometric Correction: GPT-5.4 + BS Rule vs GPT-5.6-Sol](#gpt-5.6-appendix-i-global)
 
 
 <a name="executive-summary-preface-update5"></a>
