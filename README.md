@@ -21992,10 +21992,10 @@ response from the LLM.
 - [1.LLM Contract Stress Tester – Multi-segment pipeline Ubuntu testing and test matrices](#llm-contract-stress-tester-multi-segment-ubuntu-testing-and-test-matrices)
 - [2.LLM Contract Stress Tester – Multi-segment Debian testing and test matrices](#llm-contract-stress-tester-multi-segment-debian-testing-and-test-matrices)
 - [3.LLM Contract Stress Tester – Multi-segment RHEL testing and test matrices](#llm-contract-stress-tester-multi-segment-rhel-testing-and-test-matrices)
-- [4.LLM Contract Stress Tester – Multi-segment Amazon Linux 2 testing and test matrices](#llm-contract-stress-tester-multi-segment-amazon-linux-2-testing-and-test-matrices)
-- [5.LLM Contract Stress Tester – Multi-segment Amazon Linux 2023 testing and test matrices](#llm-contract-stress-tester-multi-segment-amazon-linux-2023-testing-and-test-matrices)
-- [6.LLM Contract Stress Tester – Multi-segment CentOS 7 testing and test matrices](#llm-contract-stress-tester-multi-segment-centos-7-testing-and-test-matrices)
-- [7.LLM Contract Stress Tester – Multi-segment CentOS 8 testing and test matrices](#llm-contract-stress-tester-multi-segment-centos-8-testing-and-test-matrices)
+- [4.LLM Contract Stress Tester – Multi-segment CentOS 7 testing and test matrices](#llm-contract-stress-tester-multi-segment-centos7-testing-and-test-matrices)
+- [5.LLM Contract Stress Tester – Multi-segment CentOS 8 testing and test matrices](#llm-contract-stress-tester-multi-segment-centos8-testing-and-test-matrices)
+- [6.LLM Contract Stress Tester – Multi-segment Amazon Linux 2 testing and test matrices](#llm-contract-stress-tester-multi-segment-amazon-linux-2-testing-and-test-matrices)
+- [7.LLM Contract Stress Tester – Multi-segment Amazon Linux 2023 testing and test matrices](#llm-contract-stress-tester-multi-segment-amazon-linux-2023-testing-and-test-matrices)
 - [8.LLM Contract Stress Tester – Multi-segment Fedora testing and test matrices](#llm-contract-stress-tester-multi-segment-fedora-testing-and-test-matrices)
 - [9.LLM Contract Stress Tester – Multi-segment Windows PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-windows-powershell-testing-and-test-matrices)
 - [10.LLM Contract Stress Tester – Multi-segment Linux PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-linux-powershell-testing-and-test-matrices)
@@ -22537,6 +22537,42 @@ The matrix is in the expandable link below:
 
 
 
+<a name="llm-contract-stress-tester-multi-segment-centos7-testing-and-test-matrices"></a>
+#### 4.LLM Contract Stress Tester – Multi-segment pipeline CENTOS7 testing and test matrices
+
+
+
+The test matrix for the multi-segment rewrite test suite of 21 cases is passing on gpt-5.6-Sol for the CentOS. The expandable
+link is below.
+
+<details>
+<summary><strong>CentOS 7 Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | c7‑ms‑001 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum update -y` | Correct rewrite; native CentOS 7 system‑wide op preserved. |
+| 2 | c7‑ms‑002 | `apk add bash && pacman -S htop && yum install nano && yum update -y` | retry_with_modified_command | `yum install -y bash && yum install -y htop && yum install -y nano && yum update -y` | Correct rewrite. |
+| 3 | c7‑ms‑003 | `pacman -S htop && yum install curl && apk add bash && yum update -y` | retry_with_modified_command | `yum install -y htop && yum install -y curl && yum install -y bash && yum update -y` | Correct rewrite. |
+| 4 | c7‑ms‑004 | `yum install curl && apk add bash && pacman -S htop && yum install nano` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y nano` | Correct rewrite. |
+| 5 | c7‑ms‑005 | `yum install curl && yum install nano && yum install python3 && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (valid CentOS 7 pipeline + native system‑wide op). |
+| 6 | c7‑ms‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y` | Correct rewrite. |
+| 7 | c7‑ms‑007 | `yum install curl && apk add bash && pacman -S htop && yum upgrade -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum upgrade -y` | Correct rewrite. |
+| 8 | c7‑ms‑008 | `yum install curl && apk add bash && pacman -S htop && apt-get update -y` | fallback | `{"action":"fallback"}` | **Correct inverse‑collapse test; wrong‑OS system‑wide op → fallback.** |
+| 9 | c7‑ms‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | retry_with_modified_command | `yum install -y bash && yum install -y htop && yum install -y curl && yum update -y` | Correct rewrite. |
+| 10 | c7‑ms‑010 | `yum install curl && apk add bash && pacman -S htop && yum install nano --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 11 | c7‑ms‑011 | `yum install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `yum install -y curl && echo 'hello' && yum install -y bash && yum install -y htop` | Correct rewrite; echo preserved. |
+| 12 | c7‑ms‑012 | `yum install curl && echo 'test' && apk add bash && yum install nano` | retry_with_modified_command | `yum install -y curl && echo 'test' && yum install -y bash && yum install -y nano` | Correct rewrite. |
+| 13 | c7‑ms‑013 | `apk add bash && pacman -S htop && yum install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct abort. |
+| 14 | c7‑ms‑014 | `yum install curl && apk add bash && pacman -S htop && yum install nano && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y nano && yum update -y` | Correct rewrite. |
+| 15 | c7‑ms‑015 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 16 | c7‑ms‑016 | `yum install curl && apk add bash && pacman -S htop && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 17 | c7‑ms‑017 | `apk add bash && pacman -S htop && yum install curl && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 18 | c7‑ms‑018 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget` | Correct rewrite. |
+| 19 | c7‑ms‑019 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `yum install -y bash && yum install -y htop && yum install -y curl && yum install -y wget` | Correct rewrite. |
+| 20 | c7‑ms‑020 | `yum install curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y` | Correct rewrite. |
+| 21 | c7‑ms‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | `yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y` | Correct rewrite. |
+
+</details>
 
 
 
