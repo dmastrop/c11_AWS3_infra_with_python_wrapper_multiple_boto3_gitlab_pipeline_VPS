@@ -1841,10 +1841,10 @@ def get_os_rules(os_info):
         return RHEL_RULES
 
     if os_name == "CentOS" and os_version == "7":
-        return CENTOS_7_RULES
+        return CENTOS7_RULES
 
     if os_name == "CentOS" and os_version == "8":
-        return CENTOS_8_RULES
+        return CENTOS8_RULES
 
     if os_name == "Fedora":
         return FEDORA_RULES
@@ -1860,9 +1860,6 @@ def get_os_rules(os_info):
 
     if os_name == "Linux" and os_version == "busybox":
         return BUSYBOX_RULES
-
-    if os_name == "Linux" and os_version == "generic":
-        return LINUX_POWERSHELL_CORE_6_and_7_RULES
 
     if os_name == "Linux" and os_version == "powershell-core":
         return LINUX_POWERSHELL_CORE_6_and_7_RULES
