@@ -21253,6 +21253,10 @@ The patch2 changes can now be ported to the other OSes.
 
 
 
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+
 
 ---
 
@@ -21457,7 +21461,8 @@ The full 24 test case test matrix for Debian is presented below along with the n
 
 
 
-
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 
 
 ---
@@ -21692,6 +21697,12 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 </details>
 
 
+
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+
+
 ---
 
 
@@ -21701,6 +21712,10 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 
 #### 4. LLM Contract Stress Tester – Idempotency Amazon Linux 2 testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-amazon-linux-2-testing-and-test-matrices"></a>
+
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
 
 ---
 
@@ -21712,6 +21727,10 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 #### 5. LLM Contract Stress Tester – Idempotency Amazon Linux 2023 testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-amazon-linux-2023-testing-and-test-matrices"></a>
 
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+
 ---
 
 
@@ -21721,6 +21740,9 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 
 #### 6. LLM Contract Stress Tester – Idempotency CentOS 7 testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-centos-7-testing-and-test-matrices"></a>
+
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 
 
 ---
@@ -21733,6 +21755,8 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 #### 7. LLM Contract Stress Tester – Idempotency CentOS 8 testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-centos-8-testing-and-test-matrices"></a>
 
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 
 ---
 
@@ -21744,6 +21768,9 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 #### 8. LLM Contract Stress Tester – Idempotency Fedora testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-fedora-testing-and-test-matrices"></a>
 
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
 
 ---
 
@@ -21753,6 +21780,9 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 
 #### 9. LLM Contract Stress Tester – Idempotency Windows PowerShell testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-windows-powershell-testing-and-test-matrices"></a>
+
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 
 
 ---
@@ -21767,6 +21797,9 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 #### 10. LLM Contract Stress Tester – Idempotency Linux PowerShell testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-linux-powershell-testing-and-test-matrices"></a>
 
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
 
 ---
 
@@ -21777,6 +21810,9 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 #### 11. LLM Contract Stress Tester – Idempotency Alpine testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-alpine-testing-and-test-matrices"></a>
 
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
 
 ---
 
@@ -21785,6 +21821,9 @@ The RHEL 24 rewrite test case matrix for RHEL is below:
 
 #### 12. LLM Contract Stress Tester – Idempotency macOS Homebrew testing and test matrices
 <a name="llm-contract-stress-tester-idempotency-macos-homebrew-testing-and-test-matrices"></a>
+
+The model has been upgraded to gpt-5.6-Sol. For latest test results and matrices see this section:
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 
 
 ---
