@@ -22613,6 +22613,9 @@ link is below.
 
 </details>
 
+
+##### Regression testing CentOS7 with the gpt-5.6-sol upgrade
+
 Regarding CentOS7 regression testing, the CENTOS7_RULES domain primitives block in ai_gateway_service.py has been completely 
 refactored using the RHEL (also yum based) as the canonical. Given tthat this is the first yum based refactoring from 
 RHEL it is worthwhile to do a complete regression on the CentOS7 (Base 20 tests, 24 basic patch2 rewrite tests, 6 idempotency, and
@@ -22622,10 +22625,206 @@ This is the first time that CentOS7 is fully tested on the gpt-5.6-sol model.
 
 
 
+##### Base 20 tests with CentOS7 using gpt-5.6-sol
+
+All the tests here passed. The CentOS 7 Base20 Test Matrix — GPT‑5.6‑Sol (Canonical CentOS 7 Block) test matrix is in the 
+expandable link below:
 
 
+
+<details>
+<summary><strong>CentOS 7 Base20 Matrix -GPT-5.6-Sol</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | i‑test‑701 | `yum install -y nginx` | fallback (prior update in history → remediation already attempted) | `{"action":"fallback"}` | Correct: history contains prior `yum update -y`, so remediation already attempted → fallback. |
+| 2 | i‑test‑702 | `yum install -y nginx` | cleanup_and_retry | `cleanup: ["yum update -y"]` → `retry: ["yum install -y nginx"]` | Correct: no prior update → deterministic remediation. |
+| 3 | i‑test‑703 | `apt-get install -y nginx` | retry_with_modified_command | `yum install -y nginx` | Correct rewrite of wrong‑OS PM. |
+| 4 | i‑test‑704 | `apk add curl` | retry_with_modified_command | `yum install -y curl` | Correct rewrite of wrong‑OS PM. |
+| 5 | i‑test‑705 | `yum install` | fallback | `{"action":"fallback"}` | Correct: missing package name → malformed → fallback. |
+| 6 | i‑test‑706 | `dnf install` | fallback | `{"action":"fallback"}` | Correct: wrong‑OS PM with no package name → fallback. |
+| 7 | i‑test‑707 | `rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct destructive‑op abort. |
+| 8 | i‑test‑708 | `asdfasdfasdf` | fallback | `{"action":"fallback"}` | Correct: unrecognized command → fallback. |
+| 9 | i‑test‑709 | `show route everything` | fallback | `{"action":"fallback"}` | Correct: Cisco‑style command → fallback. |
+| 10 | i‑test‑710 | `yum update -y` | fallback | `{"action":"fallback"}` | Correct: DNS resolution failure → fallback (no deterministic remediation for update). |
+| 11 | i‑test‑711 | `yum install -y nginx` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y nginx` | Correct: metadata checksum corruption → deterministic remediation. |
+| 12 | i‑test‑712 | `yum install -y nginx` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y nginx` | Correct: mirror URL corruption → deterministic remediation. |
+| 13 | i‑test‑713 | `yum install -y nginx` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y nginx` | Correct: baseurl invalid → deterministic remediation. |
+| 14 | i‑test‑714 | `yum install -y nginx` | cleanup_and_retry (idempotency) | `retry: ["yum install -y nginx"]` | Correct: package already installed → idempotency → cleanup_and_retry. |
+| 15 | i‑test‑715 | `yum update -y` | cleanup_and_retry (idempotency) | `retry: ["yum update -y"]` | Correct: “No packages marked for update” → idempotency. |
+| 16 | i‑test‑716 | `yum upgrade -y` | cleanup_and_retry (idempotency) | `retry: ["yum upgrade -y"]` | Correct: idempotency for upgrade. |
+| 17 | i‑test‑717 | `apt install nginx` | retry_with_modified_command | `yum install -y nginx` | Correct rewrite of wrong‑OS PM. |
+| 18 | i‑test‑718 | `yum install -y mysql-server` | cleanup_and_retry | `yum update -y` → `yum install -y mysql-server` | Correct: “No package available” with no prior update → deterministic remediation. |
+| 19 | i‑test‑719 | `yum install -y httpd` | cleanup_and_retry | `rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y httpd` | Correct rpmdb corruption remediation. |
+| 20 | i‑test‑720 | `yum install -y curl` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y curl` | Correct: metadata/mirrorlist corruption → deterministic remediation. |
+
+</details>
+
+
+##### 24 basic patch2 rewrite regression testing with CentOS7 and gpt-5.6-sol upgrade
+
+
+All the test cases here passed as well. 
+
+The test matrix for CentOS 7 Patch24 Rewrite Matrix — GPT‑5.6‑Sol (NO BS Rule) iS in the expandable link below:
+
+<details>
+<summary><strong>CentOS 7 Patch24 Matrix- GPT-5.6-Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | c7‑patch‑001 | `yum install nginx --badflag` | fallback | `{"action":"fallback"}` | Correct: invalid flag → fallback. |
+| 2 | c7‑patch‑002 | `yum install curl && apt-get install nano` | retry_with_modified_command | `yum install -y curl && yum install -y nano` | Correct rewrite of wrong‑OS PM. |
+| 3 | c7‑patch‑003 | `yum install curl && yum update -y` | fallback | `{"action":"fallback"}` | Correct: native PM + native system‑wide op → fallback. |
+| 4 | c7‑patch‑004 | `yum install curl && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct: invalid flag on system‑wide op. |
+| 5 | c7‑patch‑005 | `yum install curl && pacman -Syu` | fallback | `{"action":"fallback"}` | Correct: wrong‑OS PM with no package name → fallback. |
+| 6 | c7‑patch‑006 | `yum install curl && apk add bash` | retry_with_modified_command | `yum install -y curl && yum install -y bash` | Correct rewrite. |
+| 7 | c7‑patch‑007 | `yum install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct destructive‑op abort. |
+| 8 | c7‑patch‑008 | `apt-get install nano && yum install curl` | retry_with_modified_command | `yum install -y nano && yum install -y curl` | Correct rewrite. |
+| 9 | c7‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | `yum install -y git && yum install -y nano` | Correct rewrite. |
+| 10 | c7‑patch‑010 | `yum install curl && yum install python3 --badflag` | fallback | `{"action":"fallback"}` | Correct: invalid flag. |
+| 11 | c7‑patch‑011 | `yum install curl && yum install python3` | fallback | `{"action":"fallback"}` | Correct: native PM + native PM → fallback. |
+| 12 | c7‑patch‑012 | `yum install curl && yum install python3 && apt-get install nano` | retry_with_modified_command | `yum install -y curl && yum install -y python3 && yum install -y nano` | Correct rewrite. |
+| 13 | c7‑patch‑013 | `apt-get install nano && yum install curl && apk add bash` | retry_with_modified_command | `yum install -y nano && yum install -y curl && yum install -y bash` | Correct rewrite. |
+| 14 | c7‑patch‑014 | `yum install curl && dnf install git && yum install nano` | retry_with_modified_command | `yum install -y curl && yum install -y git && yum install -y nano` | Correct rewrite. |
+| 15 | c7‑patch‑015 | `apt-get install nano && apk add bash && pacman -S htop` | retry_with_modified_command | `yum install -y nano && yum install -y bash && yum install -y htop` | Correct rewrite. |
+| 16 | c7‑patch‑016 | `yum install curl && yum install nano && apk add bash` | retry_with_modified_command | `yum install -y curl && yum install -y nano && yum install -y bash` | Correct rewrite. |
+| 17 | c7‑patch‑017 | `apt-get install nano && yum install curl && yum update -y` | retry_with_modified_command | `yum install -y nano && yum install -y curl && yum update -y` | Correct rewrite; system‑wide op preserved. |
+| 18 | c7‑patch‑018 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | `yum install -y bash && echo 'hello' && yum install -y nano` | Correct rewrite; echo preserved. |
+| 19 | c7‑patch‑019 | `yum install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | `yum install -y curl && echo 'test' && yum install -y htop` | Correct rewrite. |
+| 20 | c7‑patch‑020 | `apt-get install nano --badflag && yum install curl` | fallback | `{"action":"fallback"}` | Correct: invalid flag on wrong‑OS PM. |
+| 21 | c7‑patch‑021 | `yum install curl && apk add bash --badflag && yum install nano` | fallback | `{"action":"fallback"}` | Correct: invalid flag on wrong‑OS PM. |
+| 22 | c7‑patch‑022 | `apt-get install nano && apk add bash && yum update -y` | retry_with_modified_command | `yum install -y nano && yum install -y bash && yum update -y` | Correct rewrite; system‑wide op preserved. |
+| 23 | c7‑patch‑023 | `apk add bash && yum install curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct destructive‑op abort. |
+| 24 | c7‑patch‑024 | `yum install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | `yum install -y curl && yum install -y nano && echo hi && yum install -y bash` | Correct rewrite; echo preserved. |
+
+</details>
 
  
+##### CentOS7 regression with the 6 idempotency test cases, on gpt-5.6-sol
+
+The testing in this area was interesting. The index5 test case here failed as a regression, even though Ubuntu, Debian and RHEL
+continue to pass. So it is not the model upgrade to gpt-5.6-sol causing this problem. It has to be that something was lost when
+RHEL was used as canonical to refactor the CentOS7 CENTOS7_RULES block (the patch2 rewrite code refactoring). It cannot be the 
+GLOBAL_RULES that is causing this problem.
+
+The index5 tset case when testing with CentOS7 resulted in:
+
+```
+root@12d452b8b34d:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/centos7_idempotency_NO_TAGS --index 5
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["yum update -y"],"retry":["yum install -y some-nonexistent-package"]}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: CentOS 7
+Command: yum install -y some-nonexistent-package
+[DEBUG] schema os_name=CentOS, schema os_version=7
+========================
+```
+This is obviously incorrect for several reasons. There is illegal cleanup command using a system-wide op command even though this is 
+NOT OS-signaled remediation.   There is also a nonsensical retry command for a nonexistent package as a direct result of this 
+miscategorization.
+
+
+
+The correct response should have been what we see in Ubuntu, Debian and RHEL:
+
+```
+root@13e069704334:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os idempotency_regression_NO_TAGS/ubuntu_idempotency_NO_TAGS --index 5
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: apt-get install -y some-nonexistent-package
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+```
+The schema for this test case is the following:
+
+```
+    {
+      "command": "yum install -y some-nonexistent-package",
+      "stdout": "",
+      "stderr": "No package some-nonexistent-package available.\nError: Nothing to do",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "centos7-osmut-001",
+      "ip": "10.0.7.201",
+      "tags": [],
+      "history": []
+    }
+    
+```
+
+Note the stderr. 
+
+The reasoning for fallback is clear. The test case is intentionally Not idempotency. stderr: “Unable to locate package.” 
+No OS‑signaled remediation is present in the stderr. 
+Under OS‑Mutation Guard (GLOBAL_RULES), LLM is forbidden from issuing update. Must fallback.
+The "No package avaiable" indicates that the package is not existent on the repo. 
+
+
+When looking at the CENTOS7_RULES domaim primtives block vs. the working RHEL_RULES block it was clear that CentOS7 had some 
+extra rules in there that caused the above. So those rules had to be removed and the following block was subsititued in 
+for them:
+
+```
+##### Nonexistent package on CentOS 7 (ambiguous, NOT remediation) #####
+"- If 'yum install -y <pkg>' fails with wording similar to:\n"
+"    * 'No package <pkg> available.'\n"
+"    * 'No package <pkg> available. Error: Nothing to do.'\n"
+"  and stderr does NOT contain any YUM metadata, mirrorlist, repo corruption,\n"
+"  or rpmdb errors, the LLM MUST treat this as an ambiguous condition.\n"
+"  The LLM MUST return 'fallback' and MUST NOT propose 'yum update -y' or any\n"
+"  other system-wide operation in cleanup or retry.\n"
+
+```
+
+RHEL_RULES does not need this block as it relies solely upon the GLOBAL_RULES block to correctly resolve index5, but CentOS7 will 
+need this crutch. 
+
+In the RHEL_RULES there is no rule for this
+
+```
+No package <pkg> available.
+Error: Nothing to do.
+Unable to find a match: <pkg>
+
+```
+
+Because there is no explicit rule in the RHEL_RULES block for the above, it relies solely on the GLOBAL_RULES which are adequate to 
+correctly categorize the problem and go directly to fallback (NOT OS-signaled remediation)
+
+GLOBAL_RULES say:
+- “Unable to locate package” / “No package available” alone is NOT OS‑signaled remediation.
+
+- Cleanup MUST NOT attempt the high‑level goal.
+
+- OS‑Mutation Guard forbids generating yum update -y.
+
+- Therefore → fallback.
+
+
+
+
+
+
+##### CentOS7 regression with the OS-signaled remediation test cases (3), on gpt-5.6-sol
+
+These test cases all passed. 
+
+
+
+
+
+
 
 ---
 

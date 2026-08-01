@@ -1717,22 +1717,20 @@ CENTOS7_RULES = (
     "      yum install -y <pkg>\n"
     "\n"
 
-    ##### Hard OS‑signaled remediation (CentOS 7) #####
+
+    # remove some old stale rules regarding “Unable to locate package” / “No package available” . GLOBAL_RULES can handle this
+    # scenario. Also add this as well:
+    #### Nonexistent package on CentOS 7 (ambiguous, NOT remediation) #####
     "- If 'yum install -y <pkg>' fails with wording similar to:\n"
     "    * 'No package <pkg> available.'\n"
-    "  and there is NO prior 'yum update -y' in history,\n"
-    "  the LLM MUST use 'cleanup_and_retry' with:\n"
-    "    cleanup:\n"
-    "      - yum update -y\n"
-    "    retry:\n"
-    "      - yum install -y <pkg>\n"
-    "\n"
-    "- If 'yum install -y <pkg>' fails with:\n"
-    "    * 'No package <pkg> available.'\n"
     "    * 'No package <pkg> available. Error: Nothing to do.'\n"
-    "  and a prior 'yum update -y' exists in history,\n"
-    "  remediation has already been attempted. The LLM MAY use 'fallback'.\n"
+    "  and stderr does NOT contain any YUM metadata, mirrorlist, repo corruption,\n"
+    "  or rpmdb errors, the LLM MUST treat this as an ambiguous condition.\n"
+    "  The LLM MUST return 'fallback' and MUST NOT propose 'yum update -y' or any\n"
+    "  other system-wide operation in cleanup or retry.\n"
     "\n"
+    
+    ##### Hard OS‑signaled remediation (CentOS 7) #####
     "- If stderr contains YUM metadata or repo corruption errors such as:\n"
     "    * 'Metadata file does not match checksum for repomd.xml'\n"
     "    * 'YumRepo Error: All mirror URLs are not using ftp, http[s] or file.'\n"
