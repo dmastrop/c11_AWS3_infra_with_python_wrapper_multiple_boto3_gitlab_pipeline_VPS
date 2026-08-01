@@ -22666,7 +22666,7 @@ expandable link below:
 
 All the test cases here passed as well. 
 
-The test matrix for CentOS 7 Patch24 Rewrite Matrix — GPT‑5.6‑Sol (NO BS Rule) iS in the expandable link below:
+The test matrix for CentOS 7 Patch24 Rewrite Matrix — GPT‑5.6‑Sol (NO BS Rule) is in the expandable link below:
 
 <details>
 <summary><strong>CentOS 7 Patch24 Matrix- GPT-5.6-Sol (NO BS Rule)</strong></summary>
@@ -22811,8 +22811,26 @@ GLOBAL_RULES say:
 
 - Therefore → fallback.
 
+Once this was patched this started working fine. 
 
+The test matrix for CentOS 7 Idempotency Test Case Matrix (6 test cases) - GPT-5.6-Sol is in the expandable link below
+(GPT‑5.6‑Sol; after removal of incorrect OS‑signaled remediation rule)
 
+<details>
+<summary><b>Click to expand CentOS 7 Idempotency Test Case Matrix - GPT-5.6-Sol</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | centos7-idem-001 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | **Idempotency signal:** stdout shows *“already installed and latest version / Nothing to do”*. Under GLOBAL IDEMPOTENCY RULES, repeated installs → cleanup_and_retry. Cleanup is empty because no residue needs removal. Retry re‑attempts the same high‑level goal. Correct. |
+| 2 | centos7-idem-002 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | **Idempotent system‑wide op:** stderr: *“No packages marked for update”*. GLOBAL_RULES Revision 5: idempotent update/upgrade MUST use cleanup_and_retry. No cleanup needed. Correct. |
+| 3 | centos7-idem-003 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | **Idempotency with history:** history shows prior successful upgrade with identical stderr. Repeated upgrade → idempotency → cleanup_and_retry. Correct. |
+| 4 | centos7-idem-004 | `systemctl start httpd` | cleanup_and_retry | cleanup_and_retry (`systemctl stop httpd` → `systemctl start httpd`) | **Service already running:** stderr: *“Job for httpd.service is already running.”* GLOBAL IDEMPOTENCY RULES: service idempotency requires stop→start sequence. Correct. |
+| 5 | centos7-idem-005 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Directory exists:** stderr: *“File exists”*. Idempotent mkdir → rewrite to safe idempotent form (`mkdir -p`). Correct. |
+| 6 | centos7-osmut-001 | `yum install -y some-nonexistent-package` | fallback | fallback | **Critical case.** stderr: *“No package some-nonexistent-package available / Error: Nothing to do.”* Under GLOBAL_RULES: this is **NOT OS‑signaled remediation**. OS‑Mutation Guard forbids generating `yum update -y`. Cleanup cannot attempt the high‑level goal. Retry cannot succeed. Therefore → **fallback**. This now matches Ubuntu, Debian, and RHEL. Correct. |
+
+</details>
 
 
 
