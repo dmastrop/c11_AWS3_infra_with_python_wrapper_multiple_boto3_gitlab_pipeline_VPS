@@ -22787,8 +22787,8 @@ for them:
 
 ```
 
-RHEL_RULES does not need this block as it relies solely upon the GLOBAL_RULES block to correctly resolve index5, but CentOS7 will 
-need this crutch. 
+RHEL_RULES does not need this block as it relies solely upon the GLOBAL_RULES block to correctly resolve index5. CentOS7 does not 
+absolutely need this patch but we are adding for testing. It can be removed at any time.  
 
 In the RHEL_RULES there is no rule for this
 
@@ -22811,7 +22811,7 @@ GLOBAL_RULES say:
 
 - Therefore → fallback.
 
-Once this was patched this started working fine. 
+Once this was patched in CENTOS7_RULES, this started working fine. 
 
 The test matrix for CentOS 7 Idempotency Test Case Matrix (6 test cases) - GPT-5.6-Sol is in the expandable link below
 (GPT‑5.6‑Sol; after removal of incorrect OS‑signaled remediation rule)
