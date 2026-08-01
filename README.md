@@ -22836,7 +22836,22 @@ The test matrix for CentOS 7 Idempotency Test Case Matrix (6 test cases) - GPT
 
 ##### CentOS7 regression with the OS-signaled remediation test cases (3), on gpt-5.6-sol
 
-These test cases all passed. 
+These test cases all passed regression testing on CentOS7 with the gpt-5.6-sol model.
+The CentOS 7 OS‑Signaled Remediation Test Case Matrix (3 test cases) - GPT-5.6-Sol matrix is below (click to expand):
+
+<details>
+<summary><b>Click to expand CentOS 7 OS‑Signaled Remediation Matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | centos7-osmut-001 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Hard YUM metadata corruption.** stderr contains: <br>• `Error: failed to download metadata for repo 'appstream'` <br>• `repomd.xml signature could not be verified` <br>• `Metadata file does not match checksum` <br>These are canonical CentOS7/RHEL7 YUM corruption signals. Under GLOBAL_RULES + CentOS7 domain primitives, this triggers **hard OS‑signaled remediation**: <br>1. `yum clean all` (clear corrupted metadata) <br>2. `yum makecache` (rebuild metadata) <br>3. `yum install -y nginx` (reattempt high‑level goal) <br>System‑wide ops are allowed because this is OS‑signaled remediation. Correct. |
+| 2 | centos7-osmut-002 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y nginx`) | **rpmdb corruption (Berkeley DB fatal errors).** stderr contains: <br>• `Error: rpmdb open failed` <br>• `BDB0113 Thread died` <br>• `BDB1507 Thread died` <br>• `DB_RUNRECOVERY: Fatal error, run database recovery` <br>This is the strongest rpmdb corruption signal. GLOBAL_RULES require **cleanup_and_retry** with rpmdb recovery: <br>1. Remove stale rpmdb lock <br>2. Rebuild rpmdb <br>3. Retry install <brThis is the canonical CentOS7/RHEL7 rpmdb remediation path. Correct. |
+| 3 | centos7-osmut-003 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Soft YUM metadata/mirrorlist failure.** stderr contains: <br>• `Error: Failed to download metadata for repo 'baseos'` <br>• `Cannot prepare internal mirrorlist: No URLs in mirrorlist` <br>• `Some index files failed to download. They have been ignored, or old ones used instead.` <brThese are canonical soft YUM metadata/mirrorlist corruption signals. Under GLOBAL_RULES, this is OS‑signaled remediation: <br>1. `yum clean all` (clear stale metadata) <br>2. `yum makecache` (rebuild metadata) <br>3. `yum install -y nginx` (reattempt install) <brCorrect and fully aligned with RHEL9 behavior. |
+
+</details>
+ 
 
 
 
