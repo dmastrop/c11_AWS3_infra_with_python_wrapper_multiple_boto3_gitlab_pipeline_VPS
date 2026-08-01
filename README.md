@@ -22613,7 +22613,19 @@ link is below.
 
 </details>
 
+Regarding CentOS7 regression testing, the CENTOS7_RULES domain primitives block in ai_gateway_service.py has been completely 
+refactored using the RHEL (also yum based) as the canonical. Given tthat this is the first yum based refactoring from 
+RHEL it is worthwhile to do a complete regression on the CentOS7 (Base 20 tests, 24 basic patch2 rewrite tests, 6 idempotency, and
+3 os-signalled remediation tests).
 
+This is the first time that CentOS7 is fully tested on the gpt-5.6-sol model.
+
+
+
+
+
+
+ 
 
 ---
 
