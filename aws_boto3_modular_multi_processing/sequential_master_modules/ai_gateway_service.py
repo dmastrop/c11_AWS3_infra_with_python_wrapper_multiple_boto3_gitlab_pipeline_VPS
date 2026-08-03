@@ -1719,9 +1719,14 @@ CENTOS7_RULES = (
 
 
     # remove some old stale rules regarding “Unable to locate package” / “No package available” . GLOBAL_RULES can handle this
-    # scenario. Also add this as well:
-    #### Nonexistent package on CentOS 7 (ambiguous, NOT remediation) #####
-    # Test without the patch here. GLOBAL_RULES should be able to cover index5 idempotency test case.  
+    # scenario. Also add this as well for index5 idempotency test case
+    #### USE THIS:
+    ##### Generic YUM error handling (non‑remediation) — CentOS 7 #####
+    "- If stderr begins with 'Error:' AND none of the OS‑signaled remediation patterns\n"
+    "  (metadata corruption, mirrorlist failure, rpmdb corruption) are present,\n"
+    "  the LLM MUST treat the condition as ambiguous and return 'fallback'.\n"
+    "  The LLM MUST NOT propose 'yum clean all', 'yum update -y', or any other\n"
+    "  system-wide operation in cleanup or retry.\n"
 
 
     ##### Hard OS‑signaled remediation (CentOS 7) #####
@@ -1729,7 +1734,7 @@ CENTOS7_RULES = (
     "    * 'Metadata file does not match checksum for repomd.xml'\n"
     "    * 'YumRepo Error: All mirror URLs are not using ftp, http[s] or file.'\n"
     "    * 'Cannot find a valid baseurl for repo'\n"
-    #
+    "    * 'Error: failed to download metadata for repo'\n"
     "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
     "    cleanup:\n"
     "      - yum clean all\n"
