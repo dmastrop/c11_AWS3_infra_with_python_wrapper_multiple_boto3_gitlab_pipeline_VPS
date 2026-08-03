@@ -1721,15 +1721,9 @@ CENTOS7_RULES = (
     # remove some old stale rules regarding “Unable to locate package” / “No package available” . GLOBAL_RULES can handle this
     # scenario. Also add this as well:
     #### Nonexistent package on CentOS 7 (ambiguous, NOT remediation) #####
-    "- If 'yum install -y <pkg>' fails with wording similar to:\n"
-    "    * 'No package <pkg> available.'\n"
-    "    * 'No package <pkg> available. Error: Nothing to do.'\n"
-    "  and stderr does NOT contain any YUM metadata, mirrorlist, repo corruption,\n"
-    "  or rpmdb errors, the LLM MUST treat this as an ambiguous condition.\n"
-    "  The LLM MUST return 'fallback' and MUST NOT propose 'yum update -y' or any\n"
-    "  other system-wide operation in cleanup or retry.\n"
-    "\n"
-    
+    # Test without the patch here. GLOBAL_RULES should be able to cover index5 idempotency test case.  
+
+
     ##### Hard OS‑signaled remediation (CentOS 7) #####
     "- If stderr contains YUM metadata or repo corruption errors such as:\n"
     "    * 'Metadata file does not match checksum for repomd.xml'\n"
