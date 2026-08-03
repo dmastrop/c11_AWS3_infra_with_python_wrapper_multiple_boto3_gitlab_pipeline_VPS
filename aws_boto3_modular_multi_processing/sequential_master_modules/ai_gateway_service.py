@@ -1729,7 +1729,7 @@ CENTOS7_RULES = (
     "    * 'Metadata file does not match checksum for repomd.xml'\n"
     "    * 'YumRepo Error: All mirror URLs are not using ftp, http[s] or file.'\n"
     "    * 'Cannot find a valid baseurl for repo'\n"
-    "    * 'Error: failed to download metadata for repo'\n"
+    #
     "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
     "    cleanup:\n"
     "      - yum clean all\n"
