@@ -22813,6 +22813,12 @@ GLOBAL_RULES say:
 
 Once this was patched in CENTOS7_RULES, this started working fine. 
 
+After removing the patch rule above it started to fail again.
+This patch above is required since CentOS7 has much less rigid OS-signaled remediation rules than RHEL which does not need this patch.
+CentOS needs the patch to prevent OS-signaled remediation rules from being applied to the index5 idempotency test case (test case
+6 in the matrix below). 
+
+
 The test matrix for CentOS 7 Idempotency Test Case Matrix (6 test cases) - GPT-5.6-Sol is in the expandable link below
 (GPT‑5.6‑Sol; after removal of incorrect OS‑signaled remediation rule)
 
