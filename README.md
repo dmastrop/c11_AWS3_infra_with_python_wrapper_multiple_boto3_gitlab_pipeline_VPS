@@ -22706,7 +22706,7 @@ The test matrix for CentOS 7 Patch24 Rewrite Matrix — GPT‑5.6‑Sol (NO BS
 The testing in this area was interesting. The index5 test case here failed as a regression, even though Ubuntu, Debian and RHEL
 continue to pass. So it is not the model upgrade to gpt-5.6-sol causing this problem. It has to be that something was lost when
 RHEL was used as canonical to refactor the CentOS7 CENTOS7_RULES block (the patch2 rewrite code refactoring). It cannot be the 
-GLOBAL_RULES that is causing this problem.
+GLOBAL_RULES that is causing this problem because all OS domains share these rules.
 
 The index5 tset case when testing with CentOS7 resulted in:
 
@@ -22765,15 +22765,19 @@ The schema for this test case is the following:
 
 Note the stderr. 
 
-The reasoning for fallback is clear. The test case is intentionally Not idempotency. stderr: “Unable to locate package.” 
-No OS‑signaled remediation is present in the stderr. 
-Under OS‑Mutation Guard (GLOBAL_RULES), LLM is forbidden from issuing update. Must fallback.
-The "No package avaiable" indicates that the package is not existent on the repo. 
+The reasoning for fallback is clear. 
+
+- The test case is intentionally Not idempotency. stderr: “Unable to locate package.” 
+- No OS‑signaled remediation is present in the stderr. 
+- Under OS‑Mutation Guard (GLOBAL_RULES), LLM is forbidden from issuing (system wide) update. 
+- Must fallback.
+- In addition, the "No package avaiable" indicates that the package is not existent on the repo. 
 
 
 When looking at the CENTOS7_RULES domaim primtives block vs. the working RHEL_RULES block it was clear that CentOS7 had some 
-extra rules in there that caused the above. So those rules had to be removed and the following block was subsititued in 
-for them:
+extra rules in there that caused the above. So those rules had to be removed. The GLOBAL_RULES were sufficient to pick up the slack.
+
+In addtion, for CENTOS7_RULES only, the following block was added in the same general location (salience cluster): 
 
 ```
 ##### Nonexistent package on CentOS 7 (ambiguous, NOT remediation) #####
@@ -22787,8 +22791,10 @@ for them:
 
 ```
 
-RHEL_RULES does not need this block as it relies solely upon the GLOBAL_RULES block to correctly resolve index5. CentOS7 does not 
-absolutely need this patch but we are adding for testing. It can be removed at any time.  
+At this point, why does RHEL_RULES not require the addtional patch rule above, whereas CENTOS7_RULES does require the patch?? 
+
+The reason is in the details of each respective domain primitive block.
+
 
 In the RHEL_RULES there is no rule for this
 
@@ -22802,6 +22808,9 @@ Unable to find a match: <pkg>
 Because there is no explicit rule in the RHEL_RULES block for the above, it relies solely on the GLOBAL_RULES which are adequate to 
 correctly categorize the problem and go directly to fallback (NOT OS-signaled remediation)
 
+But the GLOBAL_RULES also apply to the CENTOS7_RULES block for a Centos7 node. So why the difference between the two?
+
+
 GLOBAL_RULES say:
 - “Unable to locate package” / “No package available” alone is NOT OS‑signaled remediation.
 
@@ -22811,16 +22820,33 @@ GLOBAL_RULES say:
 
 - Therefore → fallback.
 
+This should be sufficient for the CentOS7 to avoid applying OS-signaled remediation to index5 but through extensive testing, it is not.
+
+It was found that the  patch above is required because CentOS7 has much less rigid OS-signaled remediation rules than RHEL 
+To override the less-rigid OS-signaled remediation rules in the CentOS7 block requires a patch rule for this very specific index5 test
+case that:
+- Binds to yum install
+- Binds to the "No package available" prhase so that the LLM model does not classify this particular failure as a YUM metadata issue
+- Is not overly general. The patch should not apply to any command with a stderr of Error.
+- It has to apply only to YUM install failures
+- It has to be placed correctly in the set of rules at the proper salience cluster.
+- It must override the metadata rule in the next section of rules (Thus the salience cluster placement should be right before the OS-signaled remediation block that has the metadata specific rule set) 
+
+Some other patches were experimented with but they did not work because they did not meet all of the conditions above.
+
+LLM contract engineering often invovles trial and error in some corner cases. The CentOS7 block OS-signaled remediation has to be 
+designed as is (less rigid) because the semantics do differ from RHEL.
+
+In summary, CentOS REQUIRES the patch to prevent OS-signaled remediation rules from being applied to the index5 idempotency test case (test case 6 in the matrix below). 
+In addtion, some extra rules had to be removed in the same salience cluster location. But this alone was not sufficient. The patch had
+to be added.
+
 Once this was patched in CENTOS7_RULES, this started working fine. 
 
-After removing the patch rule above it started to fail again.
-This patch above is required since CentOS7 has much less rigid OS-signaled remediation rules than RHEL which does not need this patch.
-CentOS needs the patch to prevent OS-signaled remediation rules from being applied to the index5 idempotency test case (test case
-6 in the matrix below). 
+After removing the patch rule above it started to fail again, and experimenting with other patches failed as well.
 
 
 The test matrix for CentOS 7 Idempotency Test Case Matrix (6 test cases) - GPT-5.6-Sol is in the expandable link below
-(GPT‑5.6‑Sol; after removal of incorrect OS‑signaled remediation rule)
 
 <details>
 <summary><b>Click to expand CentOS 7 Idempotency Test Case Matrix - GPT-5.6-Sol</b></summary>
@@ -22843,6 +22869,11 @@ The test matrix for CentOS 7 Idempotency Test Case Matrix (6 test cases) - GPT
 ##### CentOS7 regression with the OS-signaled remediation test cases (3), on gpt-5.6-sol
 
 These test cases all passed regression testing on CentOS7 with the gpt-5.6-sol model.
+
+It was important to re-iterate over these test cases several times during the patch testing detailed in the section above for the 
+index5 idempotency test case failure.
+
+
 The CentOS 7 OS‑Signaled Remediation Test Case Matrix (3 test cases) - GPT-5.6-Sol matrix is below (click to expand):
 
 <details>
