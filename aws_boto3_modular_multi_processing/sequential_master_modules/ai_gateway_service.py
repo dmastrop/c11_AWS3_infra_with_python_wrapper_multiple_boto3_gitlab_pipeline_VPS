@@ -1983,6 +1983,7 @@ CENTOS8_RULES = (
     "- If the failing command does NOT include a package name (e.g., 'dnf upgrade -y'), the LLM MUST NOT invent\n"
     "  or guess a package name, and MUST omit any install step.\n"
     "\n"
+
 )
 
 
