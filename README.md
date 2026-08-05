@@ -22565,6 +22565,44 @@ The matrix is in the expandable link below:
 
 </details>
 
+##### Regression testing on RHEL for base20 test suite with gpt-5.6-sol and with GLOBAL_RULES prohibiting blank action plans
+
+The test matrix for RHEL Base‑20 Test Case Matrix (GPT‑5.6‑Sol with Global Invariant) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand RHEL Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol with Global Invariant)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | i‑test‑001 | `yum install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “No match for argument: nginx.” No metadata/mirrorlist/rpmdb errors → ambiguous → fallback. Correct. |
+| **2** | i‑test‑002 | `dnf install -y nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager.** stderr: “No match for argument: nginx.” Rewrite to native PM. Correct. |
+| **3** | i‑test‑003 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager.** stderr: `bash: apt-get: command not found`. Correct rewrite. |
+| **4** | i‑test‑004 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl`) | **Wrong package manager.** stderr: `bash: apk: command not found`. Correct rewrite. |
+| **5** | i‑test‑005 | `yum install` | fallback | fallback | **Malformed command.** Missing package name. Must fallback. Correct. |
+| **6** | i‑test‑006 | `dnf install` | fallback | fallback | **Malformed command.** Missing package name. Must fallback. Correct. |
+| **7** | i‑test‑007 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard. Correct. |
+| **8** | i‑test‑008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `command not found`. Correct fallback. |
+| **9** | i‑test‑009 | `show route everything` | fallback | fallback | **Unknown command.** stderr: `bash: show: command not found`. Correct. |
+| **10** | i‑test‑010 | `yum update -y` | fallback | fallback | **Network failure.** stderr: “Could not resolve host: mirrorlist.centos.org.” No deterministic remediation → fallback. Correct. |
+| **11** | i‑test‑011 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **OS‑signaled remediation.** Metadata checksum mismatch. Correct. |
+| **12** | i‑test‑012 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **OS‑signaled remediation.** repomd.xml signature failure. Correct. |
+| **13** | i‑test‑013 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **OS‑signaled remediation.** Mirrorlist failure. Correct. |
+| **14** | i‑test‑014 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | **Idempotency success.** stderr: “Package … already installed. Nothing to do.” Correct. |
+| **15** | i‑test‑015 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | **Idempotency success.** stderr: “Nothing to do.” Correct. |
+| **16** | i‑test‑016 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | **Idempotency success.** stderr: “No packages marked for update.” Correct. |
+| **17** | i‑test‑017 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager.** stderr: `bash: apt: command not found`. This is *supposed* to be rewritten. Correct. |
+| **18** | i‑test‑018 | `yum install -y mysql-server` | fallback | fallback | **Nonexistent package.** No metadata/mirrorlist/rpmdb errors. Correct fallback. |
+| **19** | i‑test‑019 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y httpd`) | **rpmdb corruption.** Correct recovery sequence. |
+| **20** | i‑test‑020 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y curl`) | **OS‑signaled remediation.** Mirrorlist failure. Correct. |
+
+</details>
+
+
+
+
+
 
 
 ---
@@ -22905,6 +22943,91 @@ The CentOS 7 OS‑Signaled Remediation Test Case Matrix (3 test cases) - GPT-5
 
 <a name="llm-contract-stress-tester-multi-segment-centos8-testing-and-test-matrices"></a>
 #### 5.LLM Contract Stress Tester – Multi-segment CentOS 8 testing and test matrices
+
+
+
+
+
+
+
+##### Regression testing base20 on CentOS8 with gpt-5.6-sol
+
+
+
+
+The testing in this area was interesting. Initially when the tests were run, index12 test case (test case 13)failed with a blank
+action plan being returned from the LLM. The output validator in ai_gateway_service.py caught this and flagged it as an error (and
+went to fallback). This issue only occurred in the CentOS8 base20 test suite, not in RHEL base20 for example with equivalent 
+idempotency "Nothing to do" test cases. The correct response is a cleanup_and_retry per the global and local idempotency rules.
+
+The fix is to prohibit the use of blank action plans returned from the LLM. The entire construct in GLOBAL_RULES is below:
+
+```
+
+                # ============================================================
+                # CONTRACT — STATIC SPECIFICATION
+                # Revision 1: Added the messages requirement for abort and notes as well to the LLM
+                # ============================================================
+                "CONTRACT:\n"
+                "##### Global action‑plan invariants (GPT‑5.6‑Sol) #####\n"
+                "- You MUST ALWAYS return a JSON object with a valid \"action\" field.\n"
+                "- You MUST NOT return an empty response, omit the plan, or return only an \"error\" wrapper.\n"
+                "- The JSON object MUST conform to the CONTRACT schema and MUST include:\n"
+                "    * \"action\": one of the allowed action types,\n"
+                "    * \"cleanup\": an array (possibly empty) of literal shell commands,\n"
+                "    * \"retry\": a literal shell command or an empty string,\n"
+                "    * \"message\": required only when action = \"abort\".\n"
+                "- Returning no JSON object, an empty body, or a non‑conforming structure is STRICTLY FORBIDDEN.\n\n"
+
+                "You must return ONLY a JSON object with this schema:\n\n"
+                "{\n"
+                "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
+                "  \"cleanup\": [string],\n"
+                "  \"retry\": string\n"
+                "  \"message\": string\n"
+                "}\n\n"
+                "Notes:\n"
+                "- \"message\" is REQUIRED when action = \"abort\".\n"
+                "- \"message\" is OPTIONAL for all other actions.\n"
+                "- \"cleanup\" MUST be an array of literal shell commands.\n"
+                "- \"retry\" MUST be a literal shell command or an empty string.\n\n"
+```
+This fixed the problem in the index12 (test case 13) in the matrix below.
+
+
+The test matrix for CentOS 8 Base‑20 Test Case Matrix (GPT‑5.6‑Sol, Global Invariant Applied) is below (click to expand):
+
+<details>
+<summary><b>Click to expand CentOS 8 Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol with Global Invariant)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | i‑test‑801 | `dnf install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “No match for argument: nginx.” No metadata/mirrorlist/rpmdb errors → ambiguous → fallback. Correct. |
+| **2** | i‑test‑802 | `dnf install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “Unable to find a match: nginx.” Ambiguous, no remediation. Correct. |
+| **3** | i‑test‑803 | `yum install -y nginx` | fallback | fallback | **Nonexistent package (YUM).** No metadata/mirrorlist/rpmdb errors. Correct fallback. |
+| **4** | i‑test‑804 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** stderr: `bash: apt-get: command not found`. Rewritten to native PM. Correct. |
+| **5** | i‑test‑805 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl`) | **Wrong package manager.** stderr: `bash: apk: command not found`. Correct rewrite. |
+| **6** | i‑test‑806 | `dnf install` | fallback | fallback | **Malformed command.** Missing package name. Must fallback. Correct. |
+| **7** | i‑test‑807 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard. Correct. |
+| **8** | i‑test‑808 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `command not found`. Correct fallback. |
+| **9** | i‑test‑809 | `show route everything` | fallback | fallback | **Unknown command.** stderr: `bash: show: command not found`. Correct. |
+| **10** | i‑test‑810 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf update -y`) | **OS‑signaled remediation.** Mirrorlist failure. Correct cleanup sequence. |
+| **11** | i‑test‑811 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **OS‑signaled remediation.** Metadata failure. Correct. |
+| **12** | i‑test‑812 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **OS‑signaled remediation.** AppStream mirrorlist failure. Correct. |
+| **13** | i‑test‑813 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf install -y nginx`) | **Idempotency success.** stderr: “Package … already installed. Nothing to do.” Previously blank plan — now fixed by global invariant. Correct. |
+| **14** | i‑test‑814 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf update -y`) | **Idempotency success.** stderr: “Nothing to do.” Correct. |
+| **15** | i‑test‑815 | `dnf upgrade -y` | cleanup_and_retry | cleanup_and_retry (`dnf upgrade -y`) | **Idempotency success.** stderr: “No packages marked for upgrade.” Correct. |
+| **16** | i‑test‑816 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** Correct rewrite. |
+| **17** | i‑test‑817 | `dnf install -y mysql-server` | fallback | fallback | **Nonexistent package.** No remediation signals. Correct fallback. |
+| **18** | i‑test‑818 | `dnf install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y httpd`) | **rpmdb corruption.** Correct recovery sequence. |
+| **19** | i‑test‑819 | `dnf install -y curl` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y curl`) | **OS‑signaled remediation.** Extras mirrorlist failure. Correct. |
+| **20** | i‑test‑820 | `dnf install -y git` | fallback | fallback | **Nonexistent package.** No remediation signals. Correct fallback. |
+
+</details>
+
+
 
 ---
 
