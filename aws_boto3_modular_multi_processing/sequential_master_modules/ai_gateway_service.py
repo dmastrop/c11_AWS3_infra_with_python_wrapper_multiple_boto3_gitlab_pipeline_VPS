@@ -148,6 +148,16 @@ GLOBAL_RULES = (
                 # Revision 1: Added the messages requirement for abort and notes as well to the LLM
                 # ============================================================
                 "CONTRACT:\n"
+                "##### Global action‑plan invariants (GPT‑5.6‑Sol) #####\n"
+                "- You MUST ALWAYS return a JSON object with a valid \"action\" field.\n"
+                "- You MUST NOT return an empty response, omit the plan, or return only an \"error\" wrapper.\n"
+                "- The JSON object MUST conform to the CONTRACT schema and MUST include:\n"
+                "    * \"action\": one of the allowed action types,\n"
+                "    * \"cleanup\": an array (possibly empty) of literal shell commands,\n"
+                "    * \"retry\": a literal shell command or an empty string,\n"
+                "    * \"message\": required only when action = \"abort\".\n"
+                "- Returning no JSON object, an empty body, or a non‑conforming structure is STRICTLY FORBIDDEN.\n\n"
+
                 "You must return ONLY a JSON object with this schema:\n\n"
                 "{\n"
                 "  \"action\": \"cleanup_and_retry\" | \"retry_with_modified_command\" | \"abort\" | \"fallback\",\n"
@@ -1528,16 +1538,35 @@ RHEL_RULES = (
     "  'No route to host'), the LLM MUST treat this as a network failure and use 'fallback'.\n"
     "\n"
 
+
     ##### Idempotency and <pkg> binding (RHEL) #####
-    "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
-    "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
-    "  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
+    "- If stderr indicates idempotency (e.g., \"Nothing to do.\", \"Package <pkg> is already installed.\",\n"
+    "  \"No packages marked for update.\"), the LLM MUST treat this as an idempotency condition and\n"
+    "  MUST use \"cleanup_and_retry\" in accordance with the global Idempotency rules.\n"
+    "  \"retry_with_modified_command\" MUST NOT be used for idempotency conditions.\n"
+    "  \"fallback\" MUST NOT be used for idempotency conditions.\n"
     "\n"
-    "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the\n"
+    "- For successful idempotent installs (exit_status = 0 with \"Package <pkg> is already installed\"\n"
+    "  and/or \"Nothing to do.\"), a minimal valid plan is:\n"
+    "    cleanup: []\n"
+    "    retry: \"yum install -y <pkg>\"\n"
+    "  The LLM MAY omit cleanup entirely (empty list) but MUST still return a \"cleanup_and_retry\" action.\n"
+    "\n"
+    "- For successful idempotent system‑wide operations such as \"yum update -y\" or \"yum upgrade -y\"\n"
+    "  with stderr:\n"
+    "    * \"Nothing to do.\"\n"
+    "    * \"No packages marked for update.\"\n"
+    "  the LLM MUST also use \"cleanup_and_retry\" with a minimal plan such as:\n"
+    "    cleanup: []\n"
+    "    retry: the same system‑wide command\n"
+    "  The LLM MUST NOT return \"fallback\" or \"retry_with_modified_command\" for these conditions.\n"
+    "\n"
+    "- For any rule that references \"<pkg>\", the LLM MUST replace \"<pkg>\" with the package name used in the\n"
     "  failing command (e.g., nginx, mysql-server, etc.).\n"
-    "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM MUST NOT invent\n"
+    "- If the failing command does NOT include a package name (e.g., \"yum update -y\"), the LLM MUST NOT invent\n"
     "  or guess a package name, and MUST omit any install step.\n"
     "\n"
+
 )
 
 
