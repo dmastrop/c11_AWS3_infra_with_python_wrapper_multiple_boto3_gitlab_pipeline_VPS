@@ -22665,38 +22665,46 @@ This is the first time that CentOS7 is fully tested on the gpt-5.6-sol model.
 
 ##### Base 20 tests with CentOS7 using gpt-5.6-sol
 
-All the tests here passed. The CentOS 7 Base20 Test Matrix — GPT‑5.6‑Sol (Canonical CentOS 7 Block) test matrix is in the 
-expandable link below:
+The tests are now passing. The test case index1 (test case number 2) and test case index17 (test case number 18 in the matrix)
+correctly go to fallback now that an addtional rule was added for a failure in the idempotency test suite (see further below; 
+index5 failure and fix). This prevents OS-signaled remediation from being applied to these types of test cases where the package
+is not existent or avaiable.
 
 
+The matrix for the CentOS 7 Base‑20 Test Case Matrix (GPT‑5.6‑Sol, Updated After Nonexistent‑Package Rule Fix) is below. Click to
+expand. Note test case numbers 2 and 18 are fallback and are NOT OS-signaled remediation. 
 
 <details>
-<summary><strong>CentOS 7 Base20 Matrix -GPT-5.6-Sol</strong></summary>
+<summary><b>Click to expand CentOS 7 Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol, Updated)</b></summary>
 
-| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
-|---|----------|------------------|-----------------|----------------------|-------|
-| 1 | i‑test‑701 | `yum install -y nginx` | fallback (prior update in history → remediation already attempted) | `{"action":"fallback"}` | Correct: history contains prior `yum update -y`, so remediation already attempted → fallback. |
-| 2 | i‑test‑702 | `yum install -y nginx` | cleanup_and_retry | `cleanup: ["yum update -y"]` → `retry: ["yum install -y nginx"]` | Correct: no prior update → deterministic remediation. |
-| 3 | i‑test‑703 | `apt-get install -y nginx` | retry_with_modified_command | `yum install -y nginx` | Correct rewrite of wrong‑OS PM. |
-| 4 | i‑test‑704 | `apk add curl` | retry_with_modified_command | `yum install -y curl` | Correct rewrite of wrong‑OS PM. |
-| 5 | i‑test‑705 | `yum install` | fallback | `{"action":"fallback"}` | Correct: missing package name → malformed → fallback. |
-| 6 | i‑test‑706 | `dnf install` | fallback | `{"action":"fallback"}` | Correct: wrong‑OS PM with no package name → fallback. |
-| 7 | i‑test‑707 | `rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct destructive‑op abort. |
-| 8 | i‑test‑708 | `asdfasdfasdf` | fallback | `{"action":"fallback"}` | Correct: unrecognized command → fallback. |
-| 9 | i‑test‑709 | `show route everything` | fallback | `{"action":"fallback"}` | Correct: Cisco‑style command → fallback. |
-| 10 | i‑test‑710 | `yum update -y` | fallback | `{"action":"fallback"}` | Correct: DNS resolution failure → fallback (no deterministic remediation for update). |
-| 11 | i‑test‑711 | `yum install -y nginx` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y nginx` | Correct: metadata checksum corruption → deterministic remediation. |
-| 12 | i‑test‑712 | `yum install -y nginx` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y nginx` | Correct: mirror URL corruption → deterministic remediation. |
-| 13 | i‑test‑713 | `yum install -y nginx` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y nginx` | Correct: baseurl invalid → deterministic remediation. |
-| 14 | i‑test‑714 | `yum install -y nginx` | cleanup_and_retry (idempotency) | `retry: ["yum install -y nginx"]` | Correct: package already installed → idempotency → cleanup_and_retry. |
-| 15 | i‑test‑715 | `yum update -y` | cleanup_and_retry (idempotency) | `retry: ["yum update -y"]` | Correct: “No packages marked for update” → idempotency. |
-| 16 | i‑test‑716 | `yum upgrade -y` | cleanup_and_retry (idempotency) | `retry: ["yum upgrade -y"]` | Correct: idempotency for upgrade. |
-| 17 | i‑test‑717 | `apt install nginx` | retry_with_modified_command | `yum install -y nginx` | Correct rewrite of wrong‑OS PM. |
-| 18 | i‑test‑718 | `yum install -y mysql-server` | cleanup_and_retry | `yum update -y` → `yum install -y mysql-server` | Correct: “No package available” with no prior update → deterministic remediation. |
-| 19 | i‑test‑719 | `yum install -y httpd` | cleanup_and_retry | `rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y httpd` | Correct rpmdb corruption remediation. |
-| 20 | i‑test‑720 | `yum install -y curl` | cleanup_and_retry | `yum clean all` → `yum makecache` → `yum install -y curl` | Correct: metadata/mirrorlist corruption → deterministic remediation. |
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | i‑test‑701 | `yum install -y nginx` | fallback | fallback | **Nonexistent package.** History contains prior `yum update -y`, so remediation already attempted → fallback. |
+| **2** | i‑test‑702 | `yum install -y nginx` | fallback | fallback | **Nonexistent package.** No history and no OS‑signaled remediation. Correct fallback under updated CentOS 7 rules. |
+| **3** | i‑test‑703 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong‑OS PM.** Correct rewrite to native YUM. |
+| **4** | i‑test‑704 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl`) | **Wrong‑OS PM.** Correct rewrite. |
+| **5** | i‑test‑705 | `yum install` | fallback | fallback | **Malformed command.** Missing package name. Correct fallback. |
+| **6** | i‑test‑706 | `dnf install` | fallback | fallback | **Malformed + wrong‑OS PM.** No package name. Correct fallback. |
+| **7** | i‑test‑707 | `rm -rf /` | abort | abort | **Destructive command.** Immediate abort. Correct. |
+| **8** | i‑test‑708 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** Correct fallback. |
+| **9** | i‑test‑709 | `show route everything` | fallback | fallback | **Unknown/Cisco‑style command.** Correct fallback. |
+| **10** | i‑test‑710 | `yum update -y` | fallback | fallback | **DNS failure.** No deterministic remediation for update. Correct fallback. |
+| **11** | i‑test‑711 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **OS‑signaled remediation.** Metadata checksum corruption. Correct cleanup sequence. |
+| **12** | i‑test‑712 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **OS‑signaled remediation.** Mirror URL corruption. Correct. |
+| **13** | i‑test‑713 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **OS‑signaled remediation.** Invalid baseurl. Correct. |
+| **14** | i‑test‑714 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | **Idempotency success.** Package already installed → “Nothing to do.” Correct. |
+| **15** | i‑test‑715 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | **Idempotency success.** “No packages marked for update.” Correct. |
+| **16** | i‑test‑716 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | **Idempotency success.** Correct. |
+| **17** | i‑test‑717 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong‑OS PM.** Correct rewrite. |
+| **18** | i‑test‑718 | `yum install -y mysql-server` | fallback | fallback | **Nonexistent package.** No OS‑signaled remediation. Correct fallback under updated CentOS 7 rules. |
+| **19** | i‑test‑719 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y httpd`) | **rpmdb corruption.** Correct recovery sequence. |
+| **20** | i‑test‑720 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y curl`) | **OS‑signaled remediation.** Extras repo metadata failure. Correct. |
 
 </details>
+
+
 
 
 ##### 24 basic patch2 rewrite regression testing with CentOS7 and gpt-5.6-sol upgrade
