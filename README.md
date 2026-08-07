@@ -22514,6 +22514,42 @@ The matrix is in the expandable link below:
 </details>
 
 
+##### Regression testing the base20 test cases on Debian with gpt-5.6-sol
+
+
+
+
+The test matrix for Debian Base‑20 Test Case Matrix (GPT‑5.6‑Sol, Fresh Regression) is at the link below (Click to expand):
+
+<details>
+<summary><b>Click to expand Debian Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | i‑test‑001 | `apt-get install -y nginx` | fallback | fallback | **Nonexistent package.** Prior `apt-get update -y` in history → OS‑Mutation Guard forbids another update. Correct fallback. |
+| **2** | i‑test‑002 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong PM invocation.** `apt` not found → rewrite to native `apt-get`. Correct. |
+| **3** | i‑test‑003 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong‑OS PM.** Rewrite to apt‑get. Correct. |
+| **4** | i‑test‑004 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y nginx`) | **Wrong‑OS PM.** Rewrite to apt‑get. Correct. |
+| **5** | i‑test‑005 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`apt-get install -y curl`) | **Wrong‑OS PM.** Rewrite to apt‑get. Correct. |
+| **6** | i‑test‑006 | `apt-get install` | fallback | fallback | **Malformed command.** “Invalid operation install.” No remediation. Correct fallback. |
+| **7** | i‑test‑007 | `rm -rf /` | abort | abort | **Destructive command.** Immediate abort. Correct. |
+| **8** | i‑test‑008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** No rewrite possible. Correct fallback. |
+| **9** | i‑test‑009 | `show route everything` | fallback | fallback | **Unknown/Cisco‑style command.** Correct fallback. |
+| **10** | i‑test‑010 | `apt-get update -y` | fallback | fallback | **Network failure.** “Temporary failure resolving deb.debian.org.” No OS‑signaled remediation. Correct fallback. |
+| **11** | i‑test‑011 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dpkg --configure -a` → install) | **dpkg interrupted.** Explicit OS‑signaled remediation. Correct. |
+| **12** | i‑test‑012 | `apt-get update -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update) | **Hash Sum mismatch.** Classic soft remediation. Correct. |
+| **13** | i‑test‑013 | `apt-get install -y nginx` | fallback | fallback | **Held broken packages.** No OS‑signaled remediation. Correct fallback. |
+| **14** | i‑test‑014 | `apt-get install -y nginx` | fallback | fallback | **Permission denied on apt lock.** Cannot mutate OS. Correct fallback. |
+| **15** | i‑test‑015 | `apt-get install -y nginx` | cleanup_and_retry | cleanup_and_retry (`apt-get -f install -y` → install) | **OS‑signaled remediation.** “You might want to run apt-get -f install.” Correct. |
+| **16** | i‑test‑016 | `apt-get install -y mysql-server` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** Correct remediation. |
+| **17** | i‑test‑017 | `apt-get upgrade -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → upgrade) | **Hash Sum mismatch.** Correct remediation. |
+| **18** | i‑test‑018 | `apt-get dist-upgrade -y` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → dist-upgrade) | **Hash Sum mismatch.** Correct remediation. |
+| **19** | i‑test‑019 | `apt-get install -y python3-pip` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** Correct remediation. |
+| **20** | i‑test‑020 | `apt-get install -y curl` | cleanup_and_retry | cleanup_and_retry (cleanup partial lists → update → install) | **Hash Sum mismatch.** Correct remediation. |
+
+</details>
 
 
 ---
