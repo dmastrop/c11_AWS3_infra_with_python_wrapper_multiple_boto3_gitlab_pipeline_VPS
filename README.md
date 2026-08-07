@@ -23103,11 +23103,70 @@ The test matrix for CentOS 8 Base‑20 Test Case Matrix (GPT‑5.6‑Sol, Glob
 
 ##### Regression testing with the 24 patch2 rewrite tests on CentOS8 with gpt-5.6-sol
 
+The testing in this area passed. 
+The porting and refactoring of the rewrite cluster is working very well. 
+
+The matrix CentOS 8 Patch2‑24 Test Case Matrix (GPT‑5.6‑Sol) is in the link below (Click to expand):
+
+
+<details>
+<summary><b>Click to expand CentOS 8 Patch2‑24 Matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | c8‑patch‑001 | `dnf install nginx --badflag` | fallback | fallback | Invalid flag (`--badflag`). Rewrite forbidden. Correct fallback. |
+| **2** | c8‑patch‑002 | `dnf install curl && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y nano`) | Wrong‑OS PM (`apt-get`). Correct rewrite to native `dnf`. |
+| **3** | c8‑patch‑003 | `dnf install curl && dnf update -y` | fallback | fallback | All segments native; exit_status=0; no remediation. Correct fallback. |
+| **4** | c8‑patch‑004 | `dnf install curl && dnf update --badflag` | fallback | fallback | Invalid flag in native PM. Rewrite forbidden. Correct fallback. |
+| **5** | c8‑patch‑005 | `dnf install curl && pacman -Syu` | fallback | fallback | Wrong‑OS PM (`pacman`) appears after native PM → rewrite forbidden. Correct fallback. |
+| **6** | c8‑patch‑006 | `dnf install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash`) | Wrong‑OS PM (`apk`). Correct rewrite. |
+| **7** | c8‑patch‑007 | `dnf install curl && rm -rf /` | abort | abort | Destructive command detected. Correct abort. |
+| **8** | c8‑patch‑008 | `apt-get install nano && dnf install curl` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y curl`) | Wrong‑OS PM (`apt-get`). Correct rewrite. |
+| **9** | c8‑patch‑009 | `dnf install git && dnf install nano` | fallback | fallback | All segments native; exit_status=0. Correct fallback. |
+| **10** | c8‑patch‑010 | `dnf install curl && dnf install python3 --badflag` | fallback | fallback | Invalid flag. Rewrite forbidden. Correct fallback. |
+| **11** | c8‑patch‑011 | `dnf install curl && dnf install python3` | fallback | fallback | All segments native; exit_status=0. Correct fallback. |
+| **12** | c8‑patch‑012 | `dnf install curl && dnf install python3 && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y python3 && dnf install -y nano`) | Wrong‑OS PM (`apt-get`). Correct rewrite. |
+| **13** | c8‑patch‑013 | `apt-get install nano && dnf install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y curl && dnf install -y bash`) | Wrong‑OS PMs (`apt-get`, `apk`). Correct rewrite. |
+| **14** | c8‑patch‑014 | `dnf install curl && dnf install git && dnf install nano` | fallback | fallback | All segments native; exit_status=0. Correct fallback. |
+| **15** | c8‑patch‑015 | `apt-get install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y bash && dnf install -y htop`) | All segments wrong‑OS PMs. Correct rewrite to native `dnf`. |
+| **16** | c8‑patch‑016 | `dnf install curl && dnf install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y nano && dnf install -y bash`) | Wrong‑OS PM (`apk`). Correct rewrite. |
+| **17** | c8‑patch‑017 | `apt-get install nano && dnf install curl && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y curl && dnf update -y`) | Wrong‑OS PM (`apt-get`). Correct rewrite. |
+| **18** | c8‑patch‑018 | `apk add bash && echo 'hello' && dnf install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && echo 'hello' && dnf install -y nano`) | Wrong‑OS PM (`apk`). Echo preserved. Correct rewrite. |
+| **19** | c8‑patch‑019 | `dnf install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && echo 'test' && dnf install -y htop`) | Wrong‑OS PM (`pacman`). Echo preserved. Correct rewrite. |
+| **20** | c8‑patch‑020 | `apt-get install nano --badflag && dnf install curl` | fallback | fallback | Invalid flag in wrong‑OS PM. Rewrite forbidden. Correct fallback. |
+| **21** | c8‑patch‑021 | `dnf install curl && apk add bash --badflag && dnf install nano` | fallback | fallback | Invalid flag in wrong‑OS PM. Rewrite forbidden. Correct fallback. |
+| **22** | c8‑patch‑022 | `apt-get install nano && apk add bash && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y bash && dnf update -y`) | Wrong‑OS PMs (`apt-get`, `apk`). Correct rewrite. |
+| **23** | c8‑patch‑023 | `apk add bash && dnf install curl && rm -rf /` | abort | abort | Destructive command detected. Correct abort. |
+| **24** | c8‑patch‑024 | `dnf install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y nano && echo hi && dnf install -y bash`) | Wrong‑OS PMs (`apt-get`, `apk`). Echo preserved. Correct rewrite. |
+
+</details>
+
 
 
 
 ##### Regression testing with the 6 idempotency test suite on CentOS8 with gpt-5.6-sol
 
+The testing in this area passed.
+
+The test matrix for CentOS 8 Idempotency‑6 Test Case Matrix (GPT‑5.6‑Sol) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand CentOS 8 Idempotency‑6 Matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | centos8‑idem‑001 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf install -y nginx`) | Idempotency success. stderr/stdout indicate package already installed. Correct retry of same command. |
+| **2** | centos8‑idem‑002 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf update -y`) | Idempotency success. “Nothing to do.” Correct retry. |
+| **3** | centos8‑idem‑003 | `dnf upgrade -y` | cleanup_and_retry | cleanup_and_retry (`dnf upgrade -y`) | Idempotency success. History shows prior identical upgrade. Correct retry. |
+| **4** | centos8‑idem‑004 | `systemctl start httpd` | cleanup_and_retry | cleanup_and_retry (`systemctl stop httpd` → `systemctl start httpd`) | OS‑signaled remediation: “already running.” Correct cleanup (stop) then retry (start). |
+| **5** | centos8‑idem‑005 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | Idempotency failure due to “File exists.” Correct remediation using `mkdir -p`. |
+| **6** | rpm‑osmut‑001 | `dnf install -y some-nonexistent-package` | fallback | fallback | Nonexistent package. No OS‑signaled remediation. Correct fallback. |
+
+</details>
 
 
 
@@ -23115,6 +23174,22 @@ The test matrix for CentOS 8 Base‑20 Test Case Matrix (GPT‑5.6‑Sol, Glob
 
 ##### Regression testing with the 3 OS-signaled remediation test suite on CentOS8 with gpt-5.6-sol
 
+The testing in this area passed.
+
+The matrix for CentOS 8 OS‑Signaled Remediation‑3 Test Case Matrix (GPT‑5.6‑Sol) is in the link belo (Click to expand):
+
+<details>
+<summary><b>Click to expand CentOS 8 OS‑Signaled Remediation Matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | centos8‑osmut‑001 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Metadata corruption.** stderr shows repomd.xml signature failure + checksum mismatch. Correct deterministic remediation sequence. |
+| **2** | centos8‑osmut‑002 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y nginx`) | **rpmdb corruption.** stderr shows DB_RUNRECOVERY fatal error. Correct rpmdb recovery sequence. |
+| **3** | centos8‑osmut‑003 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Mirrorlist failure.** “No URLs in mirrorlist.” Classic OS‑signaled remediation. Correct cleanup. |
+
+</details>
 
 
 
