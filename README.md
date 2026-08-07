@@ -22988,6 +22988,40 @@ The CentOS 7 OS‑Signaled Remediation Test Case Matrix (3 test cases) - GPT-5
 <a name="llm-contract-stress-tester-multi-segment-centos8-testing-and-test-matrices"></a>
 #### 5.LLM Contract Stress Tester – Multi-segment CentOS 8 testing and test matrices
 
+The 21 multi-segment test suite on CentOS8 with gpt-5.6-sol passed with the refactored code without any issues. 
+The matrix for CentOS 8 Multi‑Segment Rewrite Test Matrix (21 test cases — GPT‑5.6‑Sol) is at the link below (Click to expand):
+
+<details>
+<summary><b>Click to expand CentOS 8 Multi‑Segment Rewrite Matrix</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+
+| **1** | centos8‑mseg‑001 | `dnf install -y curl && apk add bash && pacman -S htop && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf update -y`) | Correct rewrite of all wrong‑OS PM segments (`apk`, `pacman`). Ordering preserved. |
+| **2** | centos8‑mseg‑002 | `apk add bash && pacman -S htop && dnf install -y nano && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && dnf install -y htop && dnf install -y nano && dnf update -y`) | Correct rewrite of wrong‑OS PM segments. Ordering preserved. |
+| **3** | centos8‑mseg‑003 | `pacman -S htop && dnf install -y curl && apk add bash && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y htop && dnf install -y curl && dnf install -y bash && dnf update -y`) | Correct rewrite of wrong‑OS PM segments. Ordering preserved. |
+| **4** | centos8‑mseg‑004 | `dnf install -y curl && apk add bash && pacman -S htop && dnf install -y nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y nano`) | Correct rewrite. Ordering preserved. |
+| **5** | centos8‑mseg‑005 | `dnf install -y curl && dnf install -y nano && dnf install -y python3 && dnf update -y` | fallback | fallback | All segments native; exit_status=0; no remediation needed. Correct fallback. |
+| **6** | centos8‑mseg‑006 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget && dnf update -y`) | Correct rewrite of all wrong‑OS PM segments (`apk`, `pacman`, `brew`). |
+| **7** | centos8‑mseg‑007 | `dnf install -y curl && apk add bash && pacman -S htop && dnf upgrade -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf upgrade -y`) | Correct rewrite. |
+| **8** | centos8‑mseg‑008 | `dnf install -y curl && apk add bash && pacman -S htop && apt-get update -y` | fallback | fallback | Wrong‑OS PM (`apt-get`) appears **after** native PM → rewrite forbidden → fallback. Correct. |
+| **9** | centos8‑mseg‑009 | `apk add bash && pacman -S htop && dnf install -y curl && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && dnf install -y htop && dnf install -y curl && dnf update -y`) | Correct rewrite. |
+| **10** | centos8‑mseg‑010 | `dnf install -y curl && apk add bash && pacman -S htop && dnf install -y nano --badflag` | fallback | fallback | Invalid flag (`--badflag`) in multi‑segment pipeline → rewrite forbidden → fallback. Correct. |
+| **11** | centos8‑mseg‑011 | `dnf install -y curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && echo 'hello' && dnf install -y bash && dnf install -y htop`) | Correct rewrite. Echo preserved. |
+| **12** | centos8‑mseg‑012 | `dnf install -y curl && echo 'test' && apk add bash && dnf install -y nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && echo 'test' && dnf install -y bash && dnf install -y nano`) | Correct rewrite. |
+| **13** | centos8‑mseg‑013 | `apk add bash && pacman -S htop && dnf install -y curl && rm -rf /` | abort | abort | Destructive command detected. Correct. |
+| **14** | centos8‑mseg‑014 | `dnf install -y curl && apk add bash && pacman -S htop && dnf install -y nano && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y nano && dnf update -y`) | Correct rewrite. |
+| **15** | centos8‑mseg‑015 | `dnf install -y curl && apk add bash && pacman -S htop && dnf update --badflag` | fallback | fallback | Invalid flag → rewrite forbidden → fallback. Correct. |
+| **16** | centos8‑mseg‑016 | `dnf install -y curl && apk add bash && pacman -S htop && brew update` | fallback | fallback | Wrong‑OS PM (`brew`) appears after native PM → rewrite forbidden → fallback. Correct. |
+| **17** | centos8‑mseg‑017 | `apk add bash && pacman -S htop && dnf install -y curl && brew update` | fallback | fallback | Wrong‑OS PM (`brew`) appears after native PM → rewrite forbidden → fallback. Correct. |
+| **18** | centos8‑mseg‑018 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget`) | Correct rewrite. |
+| **19** | centos8‑mseg‑019 | `apk add bash && pacman -S htop && dnf install -y curl && brew install wget` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && dnf install -y htop && dnf install -y curl && dnf install -y wget`) | Correct rewrite. |
+| **20** | centos8‑mseg‑020 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget && dnf update -y`) | Correct rewrite. |\
+| **21** | centos8‑mseg‑021 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget && dnf update -y`) | Same as #20. Correct rewrite. |
+
+</details>
 
 
 
@@ -22995,8 +23029,6 @@ The CentOS 7 OS‑Signaled Remediation Test Case Matrix (3 test cases) - GPT-5
 
 
 ##### Regression testing base20 on CentOS8 with gpt-5.6-sol
-
-
 
 
 The testing in this area was interesting. Initially when the tests were run, index12 test case (test case 13)failed with a blank
@@ -23071,7 +23103,25 @@ The test matrix for CentOS 8 Base‑20 Test Case Matrix (GPT‑5.6‑Sol, Glob
 
 </details>
 
+##### Regression testing with the 24 patch2 rewrite tests on CentOS8 with gpt-5.6-sol
 
+
+
+
+##### Regression testing with the 6 idempotency test suite on CentOS8 with gpt-5.6-sol
+
+
+
+
+
+
+##### Regression testing with the 3 OS-signaled remediation test suite on CentOS8 with gpt-5.6-sol
+
+
+
+
+
+ 
 
 ---
 
