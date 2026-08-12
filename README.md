@@ -23225,6 +23225,72 @@ The matrix for CentOS 8 OS‑Signaled Remediation‑3 Test Case Matrix (GPT‑
 <a name="llm-contract-stress-tester-multi-segment-fedora-testing-and-test-matrices"></a>
 #### 8.LLM Contract Stress Tester – Multi-segment Fedora testing and test matrices
 
+The 21 multi-segment rewrite testing is below.
+
+
+
+
+
+
+
+
+
+
+##### Regression testing on base20 test cases on Fedora with gpt-5.6-sol
+
+
+The testing in this area was surprisingly solid right after the refactoring. The only test case that had a minor issue was index12
+as noted in the matrix below, and that was fixed with a simple patch in the contract rules.   The test matrix for Fedora Base‑20 Test 
+Case Matrix (20 test cases — GPT‑5.6‑Sol, canonical Fedora refactor) is below (Click to expand): 
+
+<details>
+<summary><b>Click to expand Fedora Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol canonical Fedora refactor)</b></summary>
+
+<br>
+
+| # (index+1) | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|-----------|------------------|----------------|--------|
+| **1** | i‑test‑1201 | `dnf install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “No match for argument: nginx.” No metadata/mirrorlist/rpmdb errors → ambiguous → fallback. Correct. |
+| **2** | i‑test‑1202 | `dnf install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “Unable to find a match: nginx.” Ambiguous. Correct. |
+| **3** | i‑test‑1203 | `yum install -y nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** stderr: `bash: yum: command not found` → rewrite to native PM. Correct. |
+| **4** | i‑test‑1204 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** Correct rewrite. |
+| **5** | i‑test‑1205 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl`) | **Wrong package manager.** Correct rewrite. |
+| **6** | i‑test‑1206 | `dnf install` | fallback | fallback | **Malformed command.** Missing package name → fallback. Correct. |
+| **7** | i‑test‑1207 | `rm -rf /` | abort | abort | **Destructive command.** Correct. |
+| **8** | i‑test‑1208 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** exit_status 127 → fallback. Correct. |
+| **9** | i‑test‑1209 | `show route everything` | fallback | fallback | **Unknown command.** Correct. |
+| **10** | i‑test‑1210 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf update -y`) | **OS‑signaled remediation.** Mirrorlist failure. Correct. |
+| **11** | i‑test‑1211 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **OS‑signaled remediation.** Correct. |
+| **12** | i‑test‑1212 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **OS‑signaled remediation.** Correct. |
+| **13** | i‑test‑1213 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf install -y nginx`) | **Idempotency (install).** stderr: “Package … already installed. Nothing to do.” **This is the test we patched.** Previously returned `rpm -q nginx`; now correctly returns minimal plan. |
+| **14** | i‑test‑1214 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf update -y`) | **Idempotency (system‑wide).** stderr: “Nothing to do.” Correct minimal plan. |
+| **15** | i‑test‑1215 | `dnf upgrade -y` | cleanup_and_retry | cleanup_and_retry (`dnf upgrade -y`) | **Idempotency (system‑wide).** stderr: “No packages marked for upgrade.” Correct. |
+| **16** | i‑test‑1216 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** Correct rewrite. |
+| **17** | i‑test‑1217 | `dnf install -y mysql-server` | fallback | fallback | **Nonexistent package.** No remediation signals → ambiguous → fallback. Correct. |
+| **18** | i‑test‑1218 | `dnf install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y httpd`) | **rpmdb corruption.** Correct recovery sequence. |
+| **19** | i‑test‑1219 | `dnf install -y curl` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y curl`) | **OS‑signaled remediation.** Correct. |
+| **20** | i‑test‑1220 | `dnf install -y git` | fallback | fallback | **Nonexistent package.** Correct fallback. |
+
+
+</details>
+
+
+
+
+##### Regression on the 24 patch2 rewrite tests on Fedora with gpt-5.6-sol
+
+
+
+##### Regresion on the 6 idempotency tests on Fedora with gpt-5.6-sol
+
+
+
+##### Regression on the 3 OS-signaled remediation tests on Fedora with gpt-5.6-sol
+
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
