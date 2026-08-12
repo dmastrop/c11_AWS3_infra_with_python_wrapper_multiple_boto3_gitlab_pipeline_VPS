@@ -2122,7 +2122,6 @@ FEDORA_RULES = (
 
     ##### Idempotency and <pkg> binding (Fedora) #####
     "- If stderr indicates the package is already installed (e.g., 'Package <pkg> is already installed.', 'Nothing to do.'), the LLM MUST treat this as idempotency and use 'cleanup_and_retry'.\n"
-    "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with 'Nothing to do.' or 'No packages marked for upgrade.', the LLM MUST use 'cleanup_and_retry'.\n"
     # Insert patch for the base20 index12 test case here. This was missing
     "- For successful idempotent installs (exit_status = 0 with\n"
     "  \"Package <pkg> is already installed.\" and/or \"Nothing to do.\"),\n"
@@ -2135,6 +2134,7 @@ FEDORA_RULES = (
     "  command for idempotent install conditions.\n"
     "\n"
     #
+    "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with 'Nothing to do.' or 'No packages marked for upgrade.', the LLM MUST use 'cleanup_and_retry'.\n"
     "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the failing command.\n"
     "- If the failing command does NOT include a package name (e.g., 'dnf upgrade -y'), the LLM MUST NOT invent a package name.\n"
     "\n"
