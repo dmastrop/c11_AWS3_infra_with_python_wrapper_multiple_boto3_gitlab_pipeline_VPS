@@ -148,7 +148,7 @@ GLOBAL_RULES = (
                 # Revision 1: Added the messages requirement for abort and notes as well to the LLM
                 # ============================================================
                 "CONTRACT:\n"
-                "##### Global action‑plan invariants (GPT‑5.6‑Sol) #####\n"
+                ##### Global action‑plan invariants (GPT‑5.6‑Sol) #####
                 "- You MUST ALWAYS return a JSON object with a valid \"action\" field.\n"
                 "- You MUST NOT return an empty response, omit the plan, or return only an \"error\" wrapper.\n"
                 "- The JSON object MUST conform to the CONTRACT schema and MUST include:\n"
@@ -4213,97 +4213,97 @@ def recover(request: RecoveryRequest):
 
 
 
-                # ============================================================
-                # FEDORA (DNF) DOMAIN RULES — Applies ONLY when os_name = "Fedora"
-                # This entire block is Revision 12
-                # ============================================================
+                ## ============================================================
+                ## FEDORA (DNF) DOMAIN RULES — Applies ONLY when os_name = "Fedora"
+                ## This entire block is Revision 12
+                ## ============================================================
+                ##
+                ## IMPORTANT:
+                ## Fedora is a DNF-based distribution. YUM is either absent or a thin
+                ## compatibility shim, but DNF is the canonical package manager.
+
+                #"These rules apply ONLY when os_name == 'Fedora'. They MUST NOT apply to RHEL, CentOS, Amazon Linux, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+                #"IMPORTANT:\n"
+                ##"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                ##"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                ##"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+
+                ###### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
+                #"- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+                #"- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+                #"  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+                #"  inventing or hallucinating a corrected command.\n"
+                #"\n"
+                #"- If a command is syntactically malformed (for example, missing arguments, truncated\n"
+                #"  flags, partial pipelines, or incomplete constructs) but NOT destructive, the LLM\n"
+                #"  SHOULD use 'fallback' unless a safe, deterministic correction is directly implied\n"
+                #"  by the original command.\n"
+                #"\n"
+                #"- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                #"    * syntactically valid,\n"
+                #"    * semantically safe,\n"
+                #"    * and directly implied by the original command.\n"
+                #"  The LLM MUST NOT guess or invent corrected commands.\n"
+                #"\n"
+                #"- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+                #"  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
+                #"  the LLM MUST use 'fallback'. This OS block MUST NOT guess which package manager is\n"
+                #"  correct.\n"
+                #"\n"
+                #"- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
+                #"  correction. If a command fails due to permission issues and no deterministic\n"
+                #"  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
+                #"\n"
                 #
-                # IMPORTANT:
-                # Fedora is a DNF-based distribution. YUM is either absent or a thin
-                # compatibility shim, but DNF is the canonical package manager.
-
-                "These rules apply ONLY when os_name == 'Fedora'. They MUST NOT apply to RHEL, CentOS, Amazon Linux, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\n"
-                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
-                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
-
-                ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####\n
-                "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
-                "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
-                "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
-                "  inventing or hallucinating a corrected command.\n"
-                "\n"
-                "- If a command is syntactically malformed (for example, missing arguments, truncated\n"
-                "  flags, partial pipelines, or incomplete constructs) but NOT destructive, the LLM\n"
-                "  SHOULD use 'fallback' unless a safe, deterministic correction is directly implied\n"
-                "  by the original command.\n"
-                "\n"
-                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
-                "    * syntactically valid,\n"
-                "    * semantically safe,\n"
-                "    * and directly implied by the original command.\n"
-                "  The LLM MUST NOT guess or invent corrected commands.\n"
-                "\n"
-                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
-                "  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
-                "  the LLM MUST use 'fallback'. This OS block MUST NOT guess which package manager is\n"
-                "  correct.\n"
-                "\n"
-                "- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
-                "  correction. If a command fails due to permission issues and no deterministic\n"
-                "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
-                "\n"
-                
-                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
-                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
-                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
-                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
+                #"- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                #"- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
+                #"- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
+                #"- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is destructive, in which case 'abort' applies.\n"
 
 
-                ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
-                "- If a 'dnf', 'yum', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
-                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
-                "- The LLM MUST NOT infer user intent for unknown flags.\n"
-                "\n"
+                ###### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                #"- If a 'dnf', 'yum', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                #"  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                #"- The LLM MUST NOT infer user intent for unknown flags.\n"
+                #"\n"
 
 
 
 
-                # Busybox addendum to Revision 6.8:
-                "These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
-                
-                "Fedora DNF domain primitives (Revision 12):\n"
-                "- Fedora uses 'dnf' as its primary package manager.\n"
-                "- The command 'dnf install -y <pkg>' installs packages.\n"
-                "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
-                "- The command 'dnf clean all' clears cached metadata and packages.\n"
-                "- The command 'dnf makecache' rebuilds the DNF metadata cache.\n"
-                "\n"
+                ## Busybox addendum to Revision 6.8:
+                #"These rules also apply when BusyBox applets are invoked on Linux-family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+                #
+                #"Fedora DNF domain primitives (Revision 12):\n"
+                #"- Fedora uses 'dnf' as its primary package manager.\n"
+                #"- The command 'dnf install -y <pkg>' installs packages.\n"
+                #"- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
+                #"- The command 'dnf clean all' clears cached metadata and packages.\n"
+                #"- The command 'dnf makecache' rebuilds the DNF metadata cache.\n"
+                #"\n"
 
-                # Fedora does not support deterministic remedidation like Amazon linux2 and CentOS7. Thus the following must
-                # result in fallback.
-                "- If 'dnf install -y <pkg>' fails with wording similar to:\n"
-                "    * 'No match for argument: <pkg>'\n"
-                "    * 'Unable to find a match: <pkg>'\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
+                ## Fedora does not support deterministic remedidation like Amazon linux2 and CentOS7. Thus the following must
+                ## result in fallback.
+                #"- If 'dnf install -y <pkg>' fails with wording similar to:\n"
+                #"    * 'No match for argument: <pkg>'\n"
+                #"    * 'Unable to find a match: <pkg>'\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"\n"
 
-                "- If 'yum install -y <pkg>' is used on Fedora, the LLM MUST normalize it to:\n"
-                "      dnf install -y <pkg>\n"
-                "  and retry.\n"
-                "\n"
+                #"- If 'yum install -y <pkg>' is used on Fedora, the LLM MUST normalize it to:\n"
+                #"      dnf install -y <pkg>\n"
+                #"  and retry.\n"
+                #"\n"
 
-                "- If the command uses a package manager that does NOT match Fedora (apt, apt-get, apk),\n"
-                "  the LLM MUST rewrite the command using 'dnf' and retry:\n"
-                "      dnf install -y <pkg>   (for install commands)\n"
-                "      dnf upgrade -y         (for upgrade commands)\n"
-                "      dnf update -y          (for update commands)\n"
-                "\n"
+                #"- If the command uses a package manager that does NOT match Fedora (apt, apt-get, apk),\n"
+                #"  the LLM MUST rewrite the command using 'dnf' and retry:\n"
+                #"      dnf install -y <pkg>   (for install commands)\n"
+                #"      dnf upgrade -y         (for upgrade commands)\n"
+                #"      dnf update -y          (for update commands)\n"
+                #"\n"
 
 
 
