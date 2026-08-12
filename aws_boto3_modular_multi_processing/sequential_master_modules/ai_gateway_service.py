@@ -2017,14 +2017,118 @@ CENTOS8_RULES = (
 
 
 
-
-
-
-
-
-
 FEDORA_RULES = (
+
+    # ============================================================
+    # Fedora (DNF) DOMAIN RULES — Applies ONLY when os_name = "Fedora"
+    # Canonical, RHEL/CentOS‑aligned refactor (GPT‑5.6‑Sol)
+    # ============================================================
+    "These rules apply ONLY when os_name == 'Fedora'. They MUST NOT apply to RHEL, CentOS 7, CentOS 8, Amazon Linux, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN‑OS, or Cisco IOS.\n"
+    "IMPORTANT:\n"
+    "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decision.\n"
+    "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+    "\n"
+
+    ##### Revision 6.8 — Bash malformed‑command hardening (Linux‑family OSes) #####
+    "- These rules harden bash‑style malformed‑command handling for this Linux‑family OS.\n"
+    "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback' over inventing or hallucinating a corrected command.\n"
+    "- If a command is syntactically malformed (missing arguments, truncated flags, partial pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback' unless a safe, deterministic correction is directly implied.\n"
+    "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is syntactically valid, semantically safe, and directly implied by the original command.\n"
+    "- If a malformed command references ANY package manager (apt, apt‑get, yum, dnf, apk, brew) and this OS block does NOT define a deterministic rewrite for that manager, the LLM MUST use 'fallback'.\n"
+    "- This OS MUST NOT introduce 'sudo' as part of malformed‑command correction.\n"
+    "- For malformed pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct or infer missing pipeline stages. Any malformed pipeline or subshell MUST result in 'fallback' unless destructive.\n"
+    "\n"
+
+    ##### Invalid package‑manager flags (Linux‑family OSes) #####
+    "- If a 'dnf', 'yum', 'apt', 'apt‑get', 'apk', or 'pacman' command contains any unknown or unsupported flags, the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+    "\n"
+
+    # BusyBox addendum
+    "These rules also apply when BusyBox applets are invoked on Linux‑family OSes. BusyBox installed on a Linux distribution does NOT activate the BusyBox domain primitives block.\n"
+    "\n"
+
+    ##### Fedora DNF domain primitives (canonical) #####
+    "Fedora DNF domain primitives:\n"
+    "- Fedora uses 'dnf' as its primary package manager.\n"
+    "- The command 'dnf install -y <pkg>' installs packages.\n"
+    "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
+    "- The command 'dnf clean all' clears cached metadata and packages.\n"
+    "- The command 'dnf makecache' rebuilds the DNF metadata cache.\n"
+    "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+    "- If the command is unrecognized (exit_status 127) and not obviously a shell primitive, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Package‑manager classification (Fedora) #####
+    "- The LLM MUST treat the following commands as package‑manager install commands when a concrete package name <pkg> is present:\n"
+    "      * apt‑get install <pkg>\n"
+    "      * apt install <pkg>\n"
+    "      * yum install <pkg>\n"
+    "      * dnf install <pkg>\n"
+    "      * apk add <pkg>\n"
+    "      * pacman -S <pkg>\n"
+    "      * zypper install <pkg>\n"
+    "      * brew install <pkg>\n"
+    "- For Fedora, the ONLY native package manager is:\n"
+    "      * dnf\n"
+    "- ALL other package managers MUST be treated as wrong‑OS package managers.\n"
+    "- When a wrong‑OS package‑manager install command appears and a concrete package name is present, the LLM MUST rewrite that segment to:\n"
+    "      dnf install -y <pkg>\n"
+    "\n"
+
+    ##### Wrong package manager in pipelines (&&) — Patch2 canonical #####
+    "- If ALL segments in the pipeline are valid for Fedora and NO segment uses a wrong‑OS package manager, and the command succeeded (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+    "- Valid system‑wide operations (e.g., 'dnf upgrade -y') MUST NOT trigger fallback when already valid for Fedora.\n"
+    "- If ANY segment uses a wrong‑OS package manager, the LLM MUST rewrite ONLY those segments to 'dnf install -y <pkg>' and preserve all other segments verbatim.\n"
+    "- The rewritten pipeline MUST NOT drop, duplicate, reorder, or invent segments.\n"
+    "- If ANY segment contains an invalid or unsupported flag, the LLM MUST use 'fallback'.\n"
+    "- If ANY segment performs a system‑wide operation that would require rewriting, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Single‑segment rewrite and fallback (Fedora) #####
+    "- If 'dnf install' or 'yum install' is called without a package name and stderr contains 'Error: Need to pass a list of packages', the command is malformed and the LLM MUST use 'fallback'.\n"
+    "- If a SINGLE‑SEGMENT command uses a wrong‑OS package manager (apt, apt‑get, apk, pacman, brew), the LLM MUST rewrite it to:\n"
+    "      dnf install -y <pkg>\n"
+    "- If 'yum install -y <pkg>' is used on Fedora, the LLM MUST normalize it to:\n"
+    "      dnf install -y <pkg>\n"
+    "\n"
+
+    ##### OS‑signaled remediation (Fedora) #####
+    "- If stderr contains metadata or mirrorlist failures such as:\n"
+    "      * 'Failed to download metadata for repo'\n"
+    "      * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+    "      * 'Error: failed to download metadata for repo'\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "        - dnf clean all\n"
+    "      retry:\n"
+    "        - dnf makecache\n"
+    "        - dnf install -y <pkg>\n"
+    "\n"
+    "- If stderr contains 'Error: rpmdb open failed', the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "        - rm -f /var/lib/rpm/.rpm.lock\n"
+    "      retry:\n"
+    "        - rpm --rebuilddb\n"
+    "        - dnf install -y <pkg>\n"
+    "\n"
+
+    ##### Nonexistent package (ambiguous, NOT remediation) #####
+    "- If 'dnf install -y <pkg>' fails with wording similar to:\n"
+    "      * 'No match for argument: <pkg>'\n"
+    "      * 'Unable to find a match: <pkg>'\n"
+    "  and stderr does NOT contain metadata, mirrorlist, repo corruption, or rpmdb errors, the LLM MUST return 'fallback'.\n"
+    "\n"
+
+    ##### Idempotency and <pkg> binding (Fedora) #####
+    "- If stderr indicates the package is already installed (e.g., 'Package <pkg> is already installed.', 'Nothing to do.'), the LLM MUST treat this as idempotency and use 'cleanup_and_retry'.\n"
+    "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with 'Nothing to do.' or 'No packages marked for upgrade.', the LLM MUST use 'cleanup_and_retry'.\n"
+    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the failing command.\n"
+    "- If the failing command does NOT include a package name (e.g., 'dnf upgrade -y'), the LLM MUST NOT invent a package name.\n"
+    "\n"
 )
+
+
 
 AMAZON_LINUX_2_RULES = (
 )
