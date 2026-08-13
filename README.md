@@ -23266,6 +23266,7 @@ below (Click to expand):
 <summary><b>Click to expand Fedora Multi-Segement Rewrite Test Case Matrix (21 test cases — GPT‑5.6‑Sol canonical Fedora refactor)</b></summary>
 
 <br>
+
 | # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |---|-------------|---------|------------------|----------------|--------|
 | **1** | fedora‑mseg‑001 | `dnf install -y curl && apk add bash && pacman -S htop && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf update -y`) | Correct rewrite of wrong‑OS PM segments (`apk`, `pacman`). Ordering preserved. |
