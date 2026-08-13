@@ -23226,7 +23226,36 @@ The matrix for CentOS 8 OS‑Signaled Remediation‑3 Test Case Matrix (GPT‑
 #### 8.LLM Contract Stress Tester – Multi-segment Fedora testing and test matrices
 
 The 21 multi-segment rewrite testing is below.
+Just as a high level review the test cases are always consistent throughout the testing for the OSes, in this area. 
+The patterns that are used to test the global geometry that has been defined with this refactor is the following segment
+types:
 
+
+Segment Types (in canonical order)  
+
+1. Wrong‑OS PM + valid Fedora PM + system‑wide  
+2. Wrong‑OS PM + valid Fedora PM + system‑wide  
+3. Wrong‑OS PM + valid Fedora PM + system‑wide  
+4. Wrong‑OS PM + valid Fedora PM + valid Fedora PM  
+5. All‑valid Fedora PM pipeline  
+6. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM + system‑wide  
+7. Wrong‑OS PM + valid Fedora PM + system‑wide (upgrade)  
+8. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM + wrong‑OS system‑wide  
+9. Wrong‑OS PM + valid Fedora PM + system‑wide  
+10. Invalid flag  
+11. Wrong‑OS PM + echo + wrong‑OS PM  
+12. Wrong‑OS PM + echo + valid Fedora PM  
+13. Wrong‑OS PM + valid Fedora PM + destructive command  
+14. Wrong‑OS PM + valid Fedora PM + valid Fedora PM + system‑wide  
+15. Invalid flag on system‑wide  
+16. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM (brew update)  
+17. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM (brew update)  
+18. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM (brew install)  
+19. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM (brew install)  
+20. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM + system‑wide  
+21. Same as #20 (duplicate for consistency)
+
+This really stress tests the LLM geomtetry in this area for each domain primitives OS block.
 
 
 
@@ -23263,33 +23292,12 @@ The schema for this particilar index12 test case (test13 in the matrix below) is
     },
 ```
 
-Idempotency rules stipulate that the LLM must return an action plan of cleanup_and_retry and the retry has to be the original
-command (in this case dnf install -y nginx)
-
-So where does the LLM get the retry command as rpm -q nginx?
-
-The schema for this particilar index12 test case (test13 in the matrix below) is the following:
-
-```
-    {
-      "command": "dnf install -y nginx",
-      "stdout": "",
-      "stderr": "Package nginx-1.24.0-1.fc39.x86_64 is already installed.\nDependencies resolved.\nNothing to do.",
-      "exit_status": 0,
-      "attempt": 1,
-      "instance_id": "i-test-1213",
-      "ip": "10.0.12.22",
-      "tags": [],
-      "history": []
-    },
-```
+Note the "Nothing to do" in the stderr.
 
 Idempotency rules stipulate that the LLM must return an action plan of cleanup_and_retry and the retry has to be the original
 command (in this case dnf install -y nginx)
 
 So where does the LLM get the retry command as rpm -q nginx?
-
-
 
 
 - The Fedora block does NOT contain any rule that mentions `rpm -q`.
