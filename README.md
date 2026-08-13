@@ -23240,8 +23240,124 @@ The 21 multi-segment rewrite testing is below.
 
 
 The testing in this area was surprisingly solid right after the refactoring. The only test case that had a minor issue was index12
-as noted in the matrix below, and that was fixed with a simple patch in the contract rules.   The test matrix for Fedora Base‑20 Test 
-Case Matrix (20 test cases — GPT‑5.6‑Sol, canonical Fedora refactor) is below (Click to expand): 
+as noted in the matrix below, and that was fixed with a simple patch in the contract rules.  
+In this idempotency test case, the LLM was correctly returning cleanup_and_retry but the retry was with an rpm -q ngnix rather than
+the required original command: dnf install -y nginx. 
+
+This primarily occurred because the FEDORA_RULES refactored block was missing an ancillary rule that the other OS domain primitives 
+blocks had to properly handle this test case. 
+
+The schema for this particilar index12 test case (test13 in the matrix below) is the following:
+
+```
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.24.0-1.fc39.x86_64 is already installed.\nDependencies resolved.\nNothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1213",
+      "ip": "10.0.12.22",
+      "tags": [],
+      "history": []
+    },
+```
+
+Idempotency rules stipulate that the LLM must return an action plan of cleanup_and_retry and the retry has to be the original
+command (in this case dnf install -y nginx)
+
+So where does the LLM get the retry command as rpm -q nginx?
+
+The schema for this particilar index12 test case (test13 in the matrix below) is the following:
+
+```
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.24.0-1.fc39.x86_64 is already installed.\nDependencies resolved.\nNothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-test-1213",
+      "ip": "10.0.12.22",
+      "tags": [],
+      "history": []
+    },
+```
+
+Idempotency rules stipulate that the LLM must return an action plan of cleanup_and_retry and the retry has to be the original
+command (in this case dnf install -y nginx)
+
+So where does the LLM get the retry command as rpm -q nginx?
+
+
+
+
+- The Fedora block does NOT contain any rule that mentions `rpm -q`.
+
+- But the GLOBAL_RULES *do* contain a generic rpmdb‑related recovery rule:
+
+> “If rpmdb corruption is detected, retry may include `rpm --rebuilddb` or `rpm -q <pkg>`.”
+
+- This rule is correct only when rpmdb corruption evidence in the stderr is actually present.
+
+- Index 12 stderr clearly has no rpmdb corruption.
+
+- The model should NOT have used any rpm command.
+
+This means the model fell back to this generic GLOBAL rpmdb recovery heuristic, because the Fedora block did not explicitly 
+override it for idempotent installs.
+
+The other OSes do have the override rule. For example RHEL, CentOS 7, and CentOS 8 all explicitly override this by stating something
+like this:
+
+> “Minimal valid plan: cleanup: [], retry: ‘yum install -y <pkg>’”
+
+For example, RHEL has this explicit override rule:
+
+```
+    "- For successful idempotent installs (exit_status = 0 with \"Package <pkg> is already installed\"\n"
+    "  and/or \"Nothing to do.\"), a minimal valid plan is:\n"
+    "    cleanup: []\n"
+    "    retry: \"yum install -y <pkg>\"\n"
+    "  The LLM MAY omit cleanup entirely (empty list) but MUST still return a \"cleanup_and_retry\" action.\n"
+    "\n"
+    "- For successful idempotent system‑wide operations such as \"yum update -y\" or \"yum upgrade -y\"\n"
+    "  with stderr:\n"
+    "    * \"Nothing to do.\"\n"
+    "    * \"No packages marked for update.\"\n"
+    "  the LLM MUST also use \"cleanup_and_retry\" with a minimal plan such as:\n"
+    "    cleanup: []\n"
+    "    retry: the same system‑wide command\n"
+```
+
+The first part, with the yum  install -y <pkg> is the primary guard.
+
+
+Fedora’s block did not include this type of explicit override or guard, so the model used the global fallback rpmdb recovery pattern.
+
+The fix was simply to put a similar rule in the idempotency block of the FEDDORA_RULES domain primitives block as shown below:
+
+
+```
+    # Insert patch for the base20 index12 test case here. This was missing
+    "- For successful idempotent installs (exit_status = 0 with\n"
+    "  \"Package <pkg> is already installed.\" and/or \"Nothing to do.\"),\n"
+    "  the LLM MUST return a \"cleanup_and_retry\" action with:\n"
+    "\n"
+    "      cleanup: []\n"
+    "      retry: \"dnf install -y <pkg>\"\n"
+    "\n"
+    "  The LLM MUST NOT use \"rpm -q <pkg>\" or any rpmdb diagnostic\n"
+    "  command for idempotent install conditions.\n"
+    "\n"
+    #
+```
+That last part about the rpm is not absolutely necessary but was added just to reinforce that the LLM must not attempt to 
+use any rpm semantics in the GLOBAL_RULES to remediate this type of issue.
+
+
+
+ The test matrix for Fedora Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol, canonical Fedora refactor) is below (Click to expand): 
 
 <details>
 <summary><b>Click to expand Fedora Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol canonical Fedora refactor)</b></summary>
