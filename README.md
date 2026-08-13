@@ -23257,8 +23257,40 @@ Segment Types (in canonical order)
 
 This really stress tests the LLM geomtetry in this area for each domain primitives OS block.
 
+The test cases all passed without any issues. The test matrix for Fedora Multi‑Segment Rewrite Matrix (21 test cases — GPT‑5.6‑Sol) is
+below (Click to expand):
 
 
+
+<details>
+<summary><b>Click to expand Fedora Multi-Segement Rewrite Test Case Matrix (21 test cases — GPT‑5.6‑Sol canonical Fedora refactor)</b></summary>
+
+<br>
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | fedora‑mseg‑001 | `dnf install -y curl && apk add bash && pacman -S htop && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf update -y`) | Correct rewrite of wrong‑OS PM segments (`apk`, `pacman`). Ordering preserved. |
+| **2** | fedora‑mseg‑002 | `apk add bash && pacman -S htop && dnf install -y nano && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && dnf install -y htop && dnf install -y nano && dnf update -y`) | Correct rewrite of wrong‑OS PM segments. |
+| **3** | fedora‑mseg‑003 | `pacman -S htop && dnf install -y curl && apk add bash && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y htop && dnf install -y curl && dnf install -y bash && dnf update -y`) | Correct rewrite. |
+| **4** | fedora‑mseg‑004 | `dnf install -y curl && apk add bash && pacman -S htop && dnf install -y nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y nano`) | Correct rewrite. |
+| **5** | fedora‑mseg‑005 | `dnf install -y curl && dnf install -y nano && dnf install -y python3 && dnf update -y` | fallback | fallback | All segments native; exit_status=0; no remediation needed. Correct fallback until Phase4a.1.4. |
+| **6** | fedora‑mseg‑006 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget && dnf update -y`) | Correct rewrite of wrong‑OS PM segments (`apk`, `pacman`, `brew`). |
+| **7** | fedora‑mseg‑007 | `dnf install -y curl && apk add bash && pacman -S htop && dnf upgrade -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf upgrade -y`) | Correct rewrite. |
+| **8** | fedora‑mseg‑008 | `dnf install -y curl && apk add bash && pacman -S htop && apt-get update -y` | fallback | fallback | Wrong‑OS PM (`apt-get`) appears **after** native PM → rewrite forbidden. Correct fallback. |
+| **9** | fedora‑mseg‑009 | `apk add bash && pacman -S htop && dnf install -y curl && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && dnf install -y htop && dnf install -y curl && dnf update -y`) | Correct rewrite. |
+| **10** | fedora‑mseg‑010 | `dnf install -y curl && apk add bash && pacman -S htop && dnf install -y nano --badflag` | fallback | fallback | Invalid flag (`--badflag`) → rewrite forbidden. Correct fallback. |
+| **11** | fedora‑mseg‑011 | `dnf install -y curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && echo 'hello' && dnf install -y bash && dnf install -y htop`) | Correct rewrite; echo preserved. |
+| **12** | fedora‑mseg‑012 | `dnf install -y curl && echo 'test' && apk add bash && dnf install -y nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && echo 'test' && dnf install -y bash && dnf install -y nano`) | Correct rewrite. |
+| **13** | fedora‑mseg‑013 | `apk add bash && pacman -S htop && dnf install -y curl && rm -rf /` | abort | abort | Destructive command detected. Correct. |
+| **14** | fedora‑mseg‑014 | `dnf install -y curl && apk add bash && pacman -S htop && dnf install -y nano && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y nano && dnf update -y`) | Correct rewrite. |
+| **15** | fedora‑mseg‑015 | `dnf install -y curl && apk add bash && pacman -S htop && dnf update --badflag` | fallback | fallback | Invalid flag → rewrite forbidden. Correct fallback. |
+| **16** | fedora‑mseg‑016 | `dnf install -y curl && apk add bash && pacman -S htop && brew update` | fallback | fallback | Wrong‑OS PM (`brew`) appears after native PM → rewrite forbidden. Correct fallback. |
+| **17** | fedora‑mseg‑017 | `apk add bash && pacman -S htop && dnf install -y curl && brew update` | fallback | fallback | Wrong‑OS PM (`brew`) appears after native PM → rewrite forbidden. Correct fallback. |
+| **18** | fedora‑mseg‑018 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget`) | Correct rewrite. |
+| **19** | fedora‑mseg‑019 | `apk add bash && pacman -S htop && dnf install -y curl && brew install wget` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && dnf install -y htop && dnf install -y curl && dnf install -y wget`) | Correct rewrite. |
+| **20** | fedora‑mseg‑020 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget && dnf update -y`) | Correct rewrite. |
+| **21** | fedora‑mseg‑021 | `dnf install -y curl && apk add bash && pacman -S htop && brew install wget && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl && dnf install -y bash && dnf install -y htop && dnf install -y wget && dnf update -y`) | Same as #20. Correct rewrite. |
+
+</details>
 
 
 
