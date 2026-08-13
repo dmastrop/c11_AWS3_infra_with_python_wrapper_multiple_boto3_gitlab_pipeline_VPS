@@ -23263,7 +23263,7 @@ below (Click to expand):
 
 
 <details>
-<summary><b>Click to expand Fedora Multi-Segement Rewrite Test Matrix (21 test cases — GPT‑5.6‑Sol canonical Fedora refactor)</b></summary>
+<summary><b>Click to expand Fedora Multi-Segement Rewrite Matrix (21 test cases — GPT‑5.6‑Sol canonical Fedora refactor)</b></summary>
 
 <br>
 
