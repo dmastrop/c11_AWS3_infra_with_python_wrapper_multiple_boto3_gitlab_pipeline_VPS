@@ -23437,6 +23437,50 @@ use any rpm semantics in the GLOBAL_RULES to remediate this type of issue.
 
 ##### Regression on the 24 patch2 rewrite tests on Fedora with gpt-5.6-sol
 
+All of these rewrite tests passed. This is not surprising given that the 21 multi-segment test suite has already passed (see above).
+The fedora refactor looks very good. 
+
+
+The matrix for the LLM Contract Stress Tester — Fedora Patch‑2 Pipeline Rewrite Tests (24 Cases - GPT‑5.6‑Sol canonical Fedora refactor) is below (Click to expand link):
+
+Note: *With corrected rewritten commands shown in parentheses*
+
+<details>
+<summary><b>Click to expand Fedora Patch‑2 test matri - GPT‑5.6‑Sol canonical Fedora refactorx</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | f-patch-001 | `dnf install nginx --badflag` | fallback | fallback | invalid flag → correct fallback |
+| 2 | f-patch-002 | `dnf install curl && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install -y nano`) | wrong‑PM rewritten |
+| 3 | f-patch-003 | `dnf install curl && dnf update -y` | fallback | fallback | system‑wide op → correct fallback |
+| 4 | f-patch-004 | `dnf install curl && dnf update --badflag` | fallback | fallback | invalid flag → correct fallback |
+| 5 | f-patch-005 | `dnf install curl && pacman -Syu` | fallback | fallback | pacman‑Syu = system‑wide → correct fallback |
+| 6 | f-patch-006 | `dnf install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install -y bash`) | wrong‑PM rewritten |
+| 7 | f-patch-007 | `dnf install curl && rm -rf /` | abort | abort | destructive command → correct abort |
+| 8 | f-patch-008 | `apt-get install nano && dnf install curl` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install curl`) | wrong‑PM rewritten |
+| 9 | f-patch-009 | `dnf install git && dnf install nano` | fallback | fallback | **LLM correct — validator false‑positive** (successful command entering hook) |
+| 10 | f-patch-010 | `dnf install curl && dnf install python3 --badflag` | fallback | fallback | invalid flag → correct fallback |
+| 11 | f-patch-011 | `dnf install curl && dnf install python3` | fallback | fallback | **LLM correct — validator false‑positive** |
+| 12 | f-patch-012 | `dnf install curl && dnf install python3 && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install python3 && dnf install -y nano`) | wrong‑PM rewritten |
+| 13 | f-patch-013 | `apt-get install nano && dnf install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install curl && dnf install -y bash`) | wrong‑PM rewritten |
+| 14 | f-patch-014 | `dnf install curl && dnf install git && dnf install nano` | fallback | fallback | **LLM correct — validator false‑positive** |
+| 15 | f-patch-015 | `apt-get install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y bash && dnf install -y htop`) | all wrong‑PM segments rewritten |
+| 16 | f-patch-016 | `dnf install curl && dnf install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install nano && dnf install -y bash`) | wrong‑PM rewritten |
+| 17 | f-patch-017 | `apt-get install nano && dnf install curl && dnf update -y` | fallback | fallback | system‑wide op → correct fallback |
+| 18 | f-patch-018 | `apk add bash && echo 'hello' && dnf install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && echo 'hello' && dnf install -y nano`) | wrong‑PM rewritten |
+| 19 | f-patch-019 | `dnf install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && echo 'test' && dnf install -y htop`) | wrong‑PM rewritten |
+| 20 | f-patch-020 | `apt-get install nano --badflag && dnf install curl` | fallback | fallback | invalid flag → correct fallback |
+| 21 | f-patch-021 | `dnf install curl && apk add bash --badflag && dnf install nano` | fallback | fallback | invalid flag → correct fallback |
+| 22 | f-patch-022 | `apt-get install nano && apk add bash && dnf update -y` | fallback | fallback | system‑wide op → correct fallback |
+| 23 | f-patch-023 | `apk add bash && dnf install curl && rm -rf /` | abort | abort | destructive command → correct abort |
+| 24 | f-patch-024 | `dnf install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install -y nano && echo hi && dnf install -y bash`) | wrong‑PM rewritten |
+
+</details>
+
+
+
 
 
 ##### Regresion on the 6 idempotency tests on Fedora with gpt-5.6-sol
