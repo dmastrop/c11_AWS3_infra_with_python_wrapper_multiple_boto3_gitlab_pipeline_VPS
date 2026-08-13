@@ -23255,7 +23255,8 @@ Segment Types (in canonical order)
 20. Wrong‑OS PM + valid Fedora PM + wrong‑OS PM + system‑wide  
 21. Same as #20 (duplicate for consistency)
 
-This really stress tests the LLM geomtetry in this area for each domain primitives OS block.
+This really stress tests the LLM geomtetry in this area for each domain primitives OS block. This was the main reason for the 
+refactoring of this domain primitive block.
 
 The test cases all passed without any issues. The test matrix for Fedora Multi‑Segment Rewrite Matrix (21 test cases — GPT‑5.6‑Sol) is
 below (Click to expand):
