@@ -2159,10 +2159,191 @@ FEDORA_RULES = (
     "\n"
 )
 
-
-
 AMAZON_LINUX_2_RULES = (
+
+    # ============================================================
+    # Amazon Linux 2 (YUM) DOMAIN RULES — Applies ONLY when os_name = "Amazon Linux"
+    # Canonical, GLOBAL_RULES‑aligned refactor (GPT‑5.6‑Sol)
+    # ============================================================
+    "These rules apply ONLY when os_name == 'Amazon Linux'. "
+    "They MUST NOT apply to RHEL, CentOS 7, CentOS 8, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+    "IMPORTANT:\n"
+    "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decision.\n"
+    "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+    "\n"
+
+    ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
+    "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+    "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+    "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+    "  inventing or hallucinating a corrected command.\n"
+    "\n"
+    "- If a command is syntactically malformed (missing arguments, truncated flags, partial\n"
+    "  pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
+    "  unless a safe, deterministic correction is directly implied.\n"
+    "\n"
+    "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * and directly implied by the original command.\n"
+    "  The LLM MUST NOT guess or invent corrected commands.\n"
+    "\n"
+    "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+    "  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
+    "  the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- This OS MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
+    "- For malformed pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt\n"
+    "  to repair or infer missing pipeline stages. These MUST result in 'fallback' unless\n"
+    "  destructive, in which case 'abort' applies.\n"
+    "\n"
+
+    ##### Invalid package‑manager flags (Linux-family OSes) #####
+    "- If a 'yum', 'dnf', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown\n"
+    "  or unsupported flags ('invalid option', 'unknown option'), the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT attempt to correct or guess the intended flag.\n"
+    "\n"
+
+    # BusyBox addendum
+    "These rules also apply when BusyBox applets are invoked. BusyBox installed on Amazon Linux does NOT activate BusyBox domain primitives.\n"
+    "\n"
+
+    ##### Amazon Linux 2 YUM domain primitives (canonical) #####
+    "Amazon Linux 2 YUM domain primitives:\n"
+    "- Amazon Linux 2 uses 'yum' as its primary package manager.\n"
+    "- The command 'yum install -y <pkg>' installs packages.\n"
+    "- The command 'yum update -y' refreshes metadata and updates packages.\n"
+    "- The command 'yum clean all' clears cached metadata.\n"
+    "- The command 'yum makecache' rebuilds the metadata cache.\n"
+    "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+    "- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Package Manager Classification (Amazon Linux 2) #####
+    "- The LLM MUST treat the following commands as package-manager install commands when a\n"
+    "  concrete package name <pkg> is present:\n"
+    "      * apt-get install <pkg>\n"
+    "      * apt install <pkg>\n"
+    "      * yum install <pkg>\n"
+    "      * dnf install <pkg>\n"
+    "      * apk add <pkg>\n"
+    "      * pacman -S <pkg>\n"
+    "      * zypper install <pkg>\n"
+    "      * brew install <pkg>\n"
+    "\n"
+    "- For Amazon Linux 2, the ONLY native package manager is:\n"
+    "      * yum\n"
+    "\n"
+    "- ALL other package managers MUST be treated as wrong-OS package managers.\n"
+    "- When a wrong-OS package-manager install command appears and a concrete package name\n"
+    "  is present, the LLM MUST rewrite that segment to:\n"
+    "      yum install -y <pkg>\n"
+    "\n"
+
+    ##### Wrong package manager in pipelines (&&) — Patch2 cluster #####
+    "- If ALL segments in the pipeline are valid for this OS and the command succeeded\n"
+    "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+    "\n"
+    "- Valid system-wide operations (e.g., 'yum update -y') MUST NOT trigger OS-Mutation Guard\n"
+    "  when they appear in the original pipeline. They MUST be preserved verbatim.\n"
+    "\n"
+    "- If ANY segment uses a wrong-OS package manager, the LLM MUST treat each segment\n"
+    "  independently.\n"
+    "\n"
+    "- If ALL segments are either:\n"
+    "      • simple package-install commands,\n"
+    "      • non-mutating safe commands,\n"
+    "      • or valid system-wide operations for Amazon Linux 2,\n"
+    "  AND at least one segment uses a wrong-OS package manager,\n"
+    "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline:\n"
+    "      • ONLY wrong-OS PM segments rewritten to 'yum install -y <pkg>'\n"
+    "      • ALL other segments preserved verbatim\n"
+    "      • MUST NOT drop, duplicate, reorder, or invent segments\n"
+    "\n"
+    "- If ANY segment contains an invalid flag, the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- The following commands are considered system-wide operations:\n"
+    "      apt-get update\n"
+    "      apt-get upgrade\n"
+    "      apt update\n"
+    "      apt upgrade\n"
+    "      yum update\n"
+    "      yum upgrade\n"
+    "      dnf upgrade\n"
+    "      dnf update\n"
+    "      pacman -Syu\n"
+    "      apk update\n"
+    "      zypper refresh\n"
+    "      zypper update\n"
+    "\n"
+
+
+    ##### Single-segment rewrite and fallback (Amazon Linux 2) #####
+    "- If the command is missing arguments (e.g., 'yum install'), treat as malformed and use\n"
+    "  'fallback' unless a safe correction exists WITHOUT guessing a package name.\n"
+    "- If a SINGLE-SEGMENT command uses a wrong-OS package manager and a concrete package name\n"
+    "  is present, rewrite to:\n"
+    "      yum install -y <pkg>\n"
+    "\n"
+
+    ##### Nonexistent package (ambiguous, NOT remediation) #####
+    "- If 'yum install -y <pkg>' fails with wording such as:\n"
+    "      'No match for argument: <pkg>'\n"
+    "      'Unable to find a match: <pkg>'\n"
+    "  and stderr does NOT contain metadata corruption, mirrorlist errors, or rpmdb errors,\n"
+    "  the LLM MUST return 'fallback'.\n"
+    "- The LLM MUST NOT propose 'yum update -y' or any system-wide operation.\n"
+    "\n"
+
+    ##### Hard OS‑signaled remediation (Amazon Linux 2) #####
+    "- If stderr contains YUM metadata or repo corruption errors such as:\n"
+    "      'Error: failed to download metadata'\n"
+    "      'repomd.xml signature could not be verified'\n"
+    "      'Metadata file does not match checksum'\n"
+    "      'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "          - yum clean all\n"
+    "      retry:\n"
+    "          - yum makecache\n"
+    "          - yum install -y <pkg>\n"
+    "\n"
+    "- If stderr contains rpmdb corruption errors such as:\n"
+    "      'Error: rpmdb open failed'\n"
+    "      'BDB0113 Thread/process died'\n"
+    "      'db5 error(-30973)'\n"
+    "      'BDB1507 Thread died'\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "          - rm -f /var/lib/rpm/.rpm.lock\n"
+    "      retry:\n"
+    "          - rpm --rebuilddb\n"
+    "          - yum install -y <pkg>\n"
+    "\n"
+
+    ##### Amazon Linux Extras subsystem #####
+    "- If stderr indicates a package is available ONLY through amazon-linux-extras (e.g.,\n"
+    "      '<pkg> is available in amazon-linux-extras'),\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      retry:\n"
+    "          - amazon-linux-extras install <pkg> -y\n"
+    "          - yum install -y <pkg>\n"
+    "\n"
+
+    ##### Idempotency and <pkg> binding (Amazon Linux 2) #####
+    "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed'),\n"
+    "  the LLM MUST use 'cleanup_and_retry' in accordance with global Idempotency rules.\n"
+    "\n"
+    "- If 'yum update -y' or 'yum upgrade -y' completes successfully with idempotent stderr,\n"
+    "  the LLM MUST use 'cleanup_and_retry'.\n"
+    "\n"
+    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name\n"
+    "  used in the failing command.\n"
+    "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM\n"
+    "  MUST NOT invent a package name and MUST omit any install step.\n"
+    "\n"
 )
+
 
 AMAZON_LINUX_2023_RULES = (
 )
