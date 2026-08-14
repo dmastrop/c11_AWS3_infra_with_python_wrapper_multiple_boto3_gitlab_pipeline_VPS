@@ -23528,6 +23528,24 @@ The test matrix for Fedora 39 — Idempotency Regression (NO_TAGS) — 6‑Case 
 
 ##### Regression on the 3 OS-signaled remediation tests on Fedora with gpt-5.6-sol
 
+The 3 OS-signaled remediation test cases passed on Fedora. 
+
+The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case Matrix with gpt-5.6-sol is below (Click to expand):
+
+
+<details>
+<summary><b>Fedora 39 — OS‑Signaled Remediation — 3‑Case Matrix - GPT-5.6-Sol</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual LLM Action | Notes |
+|---|-------------|---------|------------------|-------------------|--------|
+| 1 | **fedora-osmut-001** | `dnf install -y nginx` | **cleanup_and_retry** | **cleanup_and_retry** (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | Correct. Metadata signature failure → proper remediation sequence. |
+| 2 | **fedora-osmut-002** | `dnf install -y nginx` | **cleanup_and_retry** | **cleanup_and_retry** (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y nginx`) | Correct. RPMDB corruption → correct lock removal + rebuilddb. |
+| 3 | **fedora-osmut-003** | `dnf install -y nginx` | **cleanup_and_retry** | **cleanup_and_retry** (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | Correct. Mirrorlist failure → correct metadata rebuild. |
+
+</details>
+
 
 
 
