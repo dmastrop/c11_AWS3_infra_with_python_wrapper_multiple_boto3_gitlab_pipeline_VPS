@@ -123,7 +123,7 @@ This project introduces a multi‑plane remediation architecture for stabilizing
 ---
 
 
-## An important noteo AI based remediation applicability
+## An important note on AI-based defensive remediation applicability
 
 AI has the potential to be used for increasingly offensive coordinated attacks against highly distributed and non-distributed nodal 
 systems especially in the context of AI agents.  
