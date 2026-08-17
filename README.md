@@ -122,27 +122,78 @@ This project introduces a multi‑plane remediation architecture for stabilizing
 
 ---
 
+
+## A note on AI remediation applicability
+
 AI has the potential to be used for increasingly offensive coordinated attacks against highly distributed and non-distributed nodal 
 systems especially in the context of AI agents.  
 
 The archtecture presented in this project can be used to combat these types of aggressive and highly scaled attacks across similar AI
-agents, using the same AI intelligence, but in the form of command based remediation. Any
-distributed system that can has a registry_entry per node can utlize the overlay architecture in this project including the
-deterministic substrates mentioned above. 
+agents, using the same AI intelligence, but in the form of command based remediation. 
 
 Some obvious examples:
 
+- The most obvious application is highly parallel system admin deployment of nodes from scratch
+
 - Highly scaled defensive agent deployment providing immediate concurrent remeidation across 1000s of nodes.
+
 - Incident response systems (for example, highly scaled honey token deployment).
+
+But the most interesting example is based upon the registry_entry per node (thread) architecture that empowers the AI intelligence
+remediation on a per node basis... effectively a system admin per node to remediate whatever is wrong on that specific node.
+
+The context presented to the LLM in the AI/MCP HOOK consists of the following fields, some of which are directly extracted from the 
+node's current registry_entry state (information rich tags), and other information that can easily be gathered from 
+the current state of the thread that node is being managed by (command, stdout, stderr, exit_status, os_info, and history)
+
+```
+
+        context = {
+            "command": original_command,
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "exit_status": exit_status,
+            "attempt": attempt + 1,
+            "instance_id": instance_id,
+            "ip": ip,
+            "tags": extra_tags,
+            "os_info": globals().get("os_info", None),
+            "history": globals().get("command_history", None),
+        }
+
+```
+
+So this is leveraging AI on each specific node's specific state to most effectively remediate whatever offensive node state on that 
+specific node. It's not just a blanket deployment of a patch or software upgrade/reboot to a fleet of nodes.
+
+And this is a pytest simulation example of a cleanup_and_retry by AI/LLM to remediate a node that has failed earlier commands:
+
+```
+
+status: install_success
+attempt: 0
+timestamp: 2026-03-23 23:35:53.203112
+pid: 2922147
+thread_id: 137348817169472
+thread_uuid: b91edeee
+public_ip: 1.2.3.4
+private_ip: 10.0.0.1
+
+tags: ['resurrection_attempt', 'module2f', 'from_module2e', 'installation_completed', 'resurrection_attempt', 'module2f', 'from_module2e', 'fatal_exit_nonzero', 'echo test', 'command_retry_3', 'exit_status_1', 'stderr_present', 'nonwhitelisted_material: synthetic errorsynthetic error', 'synthetic errorsynthetic error', 'ai_invoked_true', 'ai_plan_action:cleanup_and_retry', 'ai_assisted:*rm -f /var/lib/dpkg/lock*', 'ai_assisted:*rm -f /var/lib/dpkg/lock-frontend*', 'ai_assisted:*echo AI_RETRY_1*', 'ai_assisted:*echo AI_RETRY_2*']
+
+ai_metadata: {'ai_invoked': True, 'ai_fallback': False, 'ai_plan_action': 'cleanup_and_retry', 'ai_commands': ['rm -f /var/lib/dpkg/lock', 'rm -f /var/lib/dpkg/lock-frontend', 'echo AI_RETRY_1', 'echo AI_RETRY_2'], 'ai_failed_command': None}
+```
 
 This is effectively super-charging the efficiency of the system adminstrator. The command execution remediation on corrupted 
 or compromised nodes can be quickly and relentlessly performed until resolution is acheived on each node. This is a dynamic 
 deterministic remediation customized to each node, and is only possible through the intelligence of LLM based AI.
 
+
+
 ---
 
 
-Some features: 
+## Some features: 
 
 - Thread level registry tagging of ghost threads, failures, stubs, successes 
 - Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
