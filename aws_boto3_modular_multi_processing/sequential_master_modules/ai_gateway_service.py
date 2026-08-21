@@ -2281,10 +2281,16 @@ AMAZON_LINUX_2_RULES = (
     ##### Single-segment rewrite and fallback (Amazon Linux 2) #####
     "- If the command is missing arguments (e.g., 'yum install'), treat as malformed and use\n"
     "  'fallback' unless a safe correction exists WITHOUT guessing a package name.\n"
-    "- If a SINGLE-SEGMENT command uses a wrong-OS package manager and a concrete package name\n"
-    "  is present, rewrite to:\n"
+    # This part needs to be aligned with similar syntax found in FEDORA_RULES
+    "- If a SINGLE-SEGMENT command uses ANY wrong-OS package manager install pattern:\n"
+    "      apt-get install <pkg>\n"
+    "      apt install <pkg>\n"
+    "      apk add <pkg>\n"
+    "      pacman -S <pkg>\n"
+    "      zypper install <pkg>\n"
+    "      brew install <pkg>\n"
+    "  the LLM MUST rewrite it to:\n"
     "      yum install -y <pkg>\n"
-    "\n"
 
     ##### Nonexistent package (ambiguous, NOT remediation) #####
     "- If 'yum install -y <pkg>' fails with wording such as:\n"
@@ -2330,6 +2336,7 @@ AMAZON_LINUX_2_RULES = (
     "          - yum install -y <pkg>\n"
     "\n"
 
+
     ##### Idempotency and <pkg> binding (Amazon Linux 2) #####
     "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed'),\n"
     "  the LLM MUST use 'cleanup_and_retry' in accordance with global Idempotency rules.\n"
@@ -2342,6 +2349,18 @@ AMAZON_LINUX_2_RULES = (
     "- If the failing command does NOT include a package name (e.g., 'yum update -y'), the LLM\n"
     "  MUST NOT invent a package name and MUST omit any install step.\n"
     "\n"
+    # patch this. Do not use rpm from os-signaled remediation. Strengthen this block against that. index13 test case from base36
+    "- For successful idempotent installs (exit_status = 0 with\n"
+    "  \"Package <pkg> is already installed.\" and/or \"Nothing to do.\"),\n"
+    "  the LLM MUST return a \"cleanup_and_retry\" action with:\n"
+    "\n"
+    "      cleanup: []\n"
+    "      retry: \"yum install -y <pkg>\"\n"
+    "\n"
+    "  The LLM MUST NOT use \"rpm -q <pkg>\" or any rpmdb diagnostic\n"
+    "  command for idempotent install conditions.\n"
+
+
 )
 
 
