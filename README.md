@@ -23462,18 +23462,96 @@ The matrix for CentOS 8 OS‑Signaled Remediation‑3 Test Case Matrix (GPT‑
 </details>
 
 
-
-
- 
-
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
 
 ---
 
+
+
+
+
+
+
 <a name="llm-contract-stress-tester-multi-segment-amazon-linux-2-testing-and-test-matrices"></a>
 #### 6.LLM Contract Stress Tester – Multi-segment Amazon Linux 2 testing and test matrices
+
+Multi-segment 21 test cases for Amazon Linux 2 OS:
+
+
+
+
+##### Regression on Base 36 test cases for Amazon Linux 2 with gpt-5.6-sol
+
+Amazon Linux 2 is very very challenging from a remediation contract rules engineering perspective. This is because it is, by design, one of the most difficult operating systems to remediate programmatically. Unlike Debian‑family or Fedora‑family distributions, AL2 combines **hard OS‑signaled remediation**, **strict no‑mutation constraints**, and **deep coupling between rpmdb health, metadata availability, and idempotency behavior**. Many common packages are intentionally absent, extras repositories cannot be enabled, and any attempt to mutate the OS is forbidden — which means the LLM must correctly classify “nonexistent package” conditions without falling back to add‑on repos. At the same time, AL2 exposes multiple overlapping failure modes: rpmdb corruption, metadata corruption, mirrorlist collapse, wrong‑OS package manager invocation, malformed commands, and idempotent operations that superficially resemble corruption. These signals often overlap, and the remediation engine must distinguish them with absolute precision. The result is an OS where **every rule interacts with several others**, and even small mistakes cascade into incorrect rewrites or unsafe remediation paths. This test suite exists to validate that the LLM can reliably navigate all of these conditions and produce safe, deterministic, OS‑correct remediation across an entire fleet.
+
+
+The test case matrix for mazon Linux 2 — Base-36‑case Test Matrix (GPT‑5.6‑Sol) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand Amazon Linux 2 — Base-36‑case Test Matrix (GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|-----------------|---------------|-------|
+| **1** | i-test-001 | `yum install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “No match for argument: nginx.” No metadata/mirrorlist/rpmdb errors → ambiguous → fallback. |
+| **2** | i-test-002 | `yum install -y nginx` | fallback | fallback | **Nonexistent package.** Same pattern as #1; correct fallback. |
+| **3** | i-test-003 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager.** `apt-get` not present on AL2; rewrite to native `yum`. |
+| **4** | i-test-004 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl`) | **Wrong package manager.** `apk` not present; now correctly rewritten to `yum install -y curl`. (Previously FAIL, now PASS.) |
+| **5** | i-test-005 | `yum install` | fallback | fallback | **Malformed command.** Missing package name; must fallback. |
+| **6** | i-test-006 | `dnf install` | fallback | fallback | **Malformed + wrong PM.** Missing `<pkg>` and `dnf` not native; fallback is correct. |
+| **7** | i-test-007 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard triggered; correct abort. |
+| **8** | i-test-008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `command not found`; correct fallback. |
+| **9** | i-test-009 | `show route everything` | fallback | fallback | **Unknown command.** `show` not a valid AL2 command; correct fallback. |
+| **10** | i-test-010 | `yum update -y` | fallback | fallback | **Network failure.** DNS/mirrorlist resolution failure; no deterministic remediation → fallback. |
+| **11** | i-test-011 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Metadata corruption.** Checksum/signature mismatch; OS‑signaled remediation via cache rebuild. |
+| **12** | i-test-012 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Metadata corruption.** repomd.xml signature failure; same remediation as #11. |
+| **13** | i-test-013 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | **Metadata corruption.** Mirrorlist failure; correct cache cleanup and retry. |
+| **14** | i-test-014 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | **Idempotency success.** Package already installed; no rpmdb diagnostics leaked. (Previously FAIL, now PASS.) |
+| **15** | i-test-015 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | **Idempotency success.** Nothing to update; safe to re‑issue same command. |
+| **16** | i-test-016 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | **Idempotency success.** No packages marked for upgrade; correct behavior. |
+| **17** | i-test-017 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`yum install -y nginx`) | **Wrong package manager.** `apt` not present; rewrite to native `yum`. |
+| **18** | i-test-018 | `yum install -y mysql-server` | fallback | fallback | **Nonexistent package.** No metadata/mirrorlist/rpmdb errors; correct fallback. |
+| **19** | i-test-019 | `yum install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y httpd`) | **rpmdb corruption.** Lock file + db corruption; correct rebuild sequence. |
+| **20** | i-test-020 | `yum install -y curl` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y curl`) | **Metadata corruption.** Mirrorlist failure; cache cleanup and retry. |
+| **21** | i-test-021 | `yum install -y git` | fallback | fallback | **Nonexistent package.** Unable to find match; correct fallback. |
+| **22** | i-test-022 | `yum reinstall -y bash` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y bash`) | **rpmdb corruption.** Reinstall path correctly uses rebuilddb remediation. |
+| **23** | i-test-023 | `yum install -y python3` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y python3`) | **Metadata corruption.** Mirrorlist/metadata failure; correct remediation. |
+| **24** | i-test-024 | `yum install -y docker` | fallback | fallback | **Nonexistent package.** Extras/add‑ons forbidden; correct fallback. |
+| **25** | i-test-025 | `yum install -y vim` | fallback | fallback | **Nonexistent package.** Same pattern; correct fallback. |
+| **26** | i-test-026 | `yum install -y tree` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y tree`) | **Metadata corruption.** Mirrorlist failure; cache cleanup and retry. |
+| **27** | i-test-027 | `yum install -y java-17-amazon-corretto` | fallback | fallback | **Nonexistent package.** No metadata/rpmdb errors; correct fallback. |
+| **28** | i-test-028 | `yum install -y perl` | fallback | fallback | **Nonexistent package.** “Unable to find a match: perl”; correct fallback. |
+| **29** | i-test-029 | `yum install -y wget` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y wget`) | **Metadata corruption.** `amzn2extra-epel` mirrorlist failure; correct remediation. |
+| **30** | i-test-030 | `yum install -y nodejs` | fallback | fallback | **Nonexistent package.** No deterministic remediation; correct fallback. |
+| **31** | i-test-031 | `yum install -y unzip` | fallback | fallback | **Nonexistent package.** “Unable to find a match: unzip”; correct fallback. |
+| **32** | i-test-032 | `yum install -y jq` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y jq`) | **Metadata corruption.** `amzn2extra-epel` mirrorlist failure; correct remediation. |
+| **33** | i-test-033 | `yum install -y redis` | fallback | fallback | **Nonexistent package.** “No match for argument: redis”; correct fallback. |
+| **34** | i-test-034 | `yum install -y php` | fallback | fallback | **Nonexistent package.** “Unable to find a match: php”; correct fallback. |
+| **35** | i-test-035 | `yum install -y gcc` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y gcc`) | **Metadata corruption.** `amzn2-core` mirrorlist failure; correct remediation. |
+| **36** | i-test-036 | `yum install -y ruby` | fallback | fallback | **Nonexistent package.** “No match for argument: ruby”; correct fallback. |
+
+</details>
+
+
+
+
+##### Regression on 24 patch2 rewrite tests for Amazon Linux 2 with gpt-5.6-sol
+
+
+
+##### Regression on 6 idempotency tests for Amazon Linux 2 with gpt-5.6-sol
+
+
+##### Regression on 3 OS-signaled remedition tests for Amazon Linux2 with gpt-5.6-sol
+
+
+
+
+
+
 
 ---
 
