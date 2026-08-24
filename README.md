@@ -23532,7 +23532,38 @@ block this rule was left off by mistake:
 
 Once the rule was added back the 5.6-sol model was able to evaluate index7 correctly.
 
+The test matrix for Amazon Linux 2 for the 21 multi-segment test suite on gpt-5.6-sol is below (Click to expand):
 
+<details>
+<summary><b>Click to expand Amazon Linux 2 Multi‑Segment Rewrite Matrix (GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | al2‑mseg‑001 | `yum install -y curl && apk add bash && pacman -S htop && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum update -y`) | Correct rewrite of wrong‑OS PM segments (`apk`, `pacman`). |
+| **2** | al2‑mseg‑002 | `apk add bash && pacman -S htop && yum install -y nano && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y bash && yum install -y htop && yum install -y nano && yum update -y`) | Correct rewrite. |
+| **3** | al2‑mseg‑003 | `pacman -S htop && yum install -y curl && apk add bash && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y htop && yum install -y curl && yum install -y bash && yum update -y`) | Correct rewrite. |
+| **4** | al2‑mseg‑004 | `yum install -y curl && apk add bash && pacman -S htop && yum install -y nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum install -y nano`) | Correct rewrite. |
+| **5** | al2‑mseg‑005 | `yum install -y curl && yum install -y nano && yum install -y python3 && yum update -y` | fallback | fallback | All segments native; correct fallback. |
+| **6** | al2‑mseg‑006 | `yum install -y curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y`) | Correct rewrite of wrong‑OS PM segments. |
+| **7** | al2‑mseg‑007 | `yum install -y curl && apk add bash && pacman -S htop && yum upgrade -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum upgrade -y`) | Correct rewrite. |
+| **8** | al2‑mseg‑008 | `yum install -y curl && apk add bash && pacman -S htop && apt-get update -y` | fallback | fallback | Wrong‑OS system‑wide op → rewrite forbidden → OS‑Mutation Guard → fallback. |
+| **9** | al2‑mseg‑009 | `apk add bash && pacman -S htop && yum install -y curl && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y bash && yum install -y htop && yum install -y curl && yum update -y`) | Correct rewrite. |
+| **10** | al2‑mseg‑010 | `yum install -y curl && apk add bash && pacman -S htop && yum install -y nano --badflag` | fallback | fallback | Invalid flag → fallback. |
+| **11** | al2‑mseg‑011 | `yum install -y curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && echo 'hello' && yum install -y bash && yum install -y htop`) | Correct rewrite; echo preserved. |
+| **12** | al2‑mseg‑012 | `yum install -y curl && echo 'test' && apk add bash && yum install -y nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && echo 'test' && yum install -y bash && yum install -y nano`) | Correct rewrite. |
+| **13** | al2‑mseg‑013 | `apk add bash && pacman -S htop && yum install -y curl && rm -rf /` | abort | abort | Destructive command detected. |
+| **14** | al2‑mseg‑014 | `yum install -y curl && apk add bash && pacman -S htop && yum install -y nano && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum install -y nano && yum update -y`) | Correct rewrite. |
+| **15** | al2‑mseg‑015 | `yum install -y curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | fallback | Invalid flag → fallback. |
+| **16** | al2‑mseg‑016 | `yum install -y curl && apk add bash && pacman -S htop && brew update` | fallback | fallback | Wrong‑OS PM non‑install → rewrite forbidden → fallback. |
+| **17** | al2‑mseg‑017 | `apk add bash && pacman -S htop && yum install -y curl && brew update` | fallback | fallback | Wrong‑OS PM after native PM → fallback. |
+| **18** | al2‑mseg‑018 | `yum install -y curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget`) | Correct rewrite. |
+| **19** | al2‑mseg‑019 | `apk add bash && pacman -S htop && yum install -y curl && brew install wget` | retry_with_modified_command | retry_with_modified_command (`yum install -y bash && yum install -y htop && yum install -y curl && yum install -y wget`) | Correct rewrite. |
+| **20** | al2‑mseg‑020 | `yum install -y curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y`) | Correct rewrite. |
+| **21** | al2‑mseg‑021 | `yum install -y curl && apk add bash && pacman -S htop && brew install wget && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y curl && yum install -y bash && yum install -y htop && yum install -y wget && yum update -y`) | Same as #20. Correct rewrite. |
+
+</details>
 
 
 
