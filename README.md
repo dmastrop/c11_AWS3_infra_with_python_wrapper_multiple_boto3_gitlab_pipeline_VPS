@@ -123,7 +123,224 @@ This project introduces a multi‑plane remediation architecture for stabilizing
 ---
 
 
-## An important note on AI-based defensive remediation applicability
+## Some features: 
+
+- Thread level registry tagging of ghost threads, failures, stubs, successes 
+- Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
+- Aggregate and process level orchestration logging for host VPS CPU, swap, and thread level installation status, per process runtime
+- Aggregate and process level execution logging for: registries, successful, failure, missing, total, resurrection candidates (Gitlab
+artifact logs per pipeline)
+- Aggregate gold ip list (AWS orchestration level) logging
+- Resurrection monitor logic that differentiates between install failures, stubs, crashes, and ghost threads (ghost detection logic)
+- Registry snapshots with thread_uuid lineage and tagging for forensics
+- Synthetic edge case injection testing for wrapper brittleness (bash and bash-like commands strace wrapper and injection into STDERR)
+- Extensible whitelist command agnostic package installation capability (apt, yum, dnf) with raw output data orchestrator (STDOUT/STDERR)
+- Intelligent strace wrapper  override logic for shell PID vs subprocess ambiguity  
+- Deterministic artifact lineage across chaotic shell flows
+- Forensic triage via non-whitelisted stderr detection 
+- Resurrection monitor logic with phase-tagged recovery attempts  
+- Cross-platform shell wrapper (strace) resilience with synthetic test injection 
+- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
+- Synthetic futures crash injection for testing ip artifact re-hydration code (as well as hyper-scaling testing to reproduce the same)
+- Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gatekeeper intelligent decision making)
+- Synthetic ghost ip injection to test gitlab console log scanning
+- Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) 
+- Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
+- Process level synthetic ghost ip injection to test process level ghost detection code
+- Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
+- Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
+- Requeing and resurrection of thread futures crashes 
+- Requeing and resurrection of ghost threads
+- Spawn multiprocessing mode option (default is forking)
+- Stateful security group rules implementation design
+- Stateful security group drift detection and auto-remediation
+- Adaptive orchestration logic with ML/LLM feedback hooks 
+- AI/MCP integration for command set replay
+- MCPClient/MCPService based architecture
+- AI Gateway Service for LLM integration (OpenAI gpt-5.x)
+- AI/MCP HOOK integration into python modules (using control flow and persistent state variables architecture)
+- Pytest test stage integration into Gitlab pipeline (whitebox testing)
+- Iterative pytest context testing for AI/MCP HOOK integration testing (control flow)
+- Pytest integration testing for registry_entry ai_metadata and tags (whitebox testing)
+- AI Gateway Service start integration during Gitlab pipeline deployment stage
+- Iterative curl context testing with LLM for AI Gateway Service payload contract action rule development and refinement 
+(whitebox testing)
+- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) (LLM Contract Engineering whitebox testing)
+- Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
+- LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
+- Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
+- Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
+
+
+---
+
+
+
+## Latest milestone updates in this README:
+
+NOTE: Many  of these Updates are hyperlinked to the content. All the updates are in this README and the hyperlinks to their content is a work in progress.
+
+NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
+UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
+
+The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
+
+
+
+- [Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level](#updates-part-21-phase-2g-write-to-disk-aggregator-in-main-working)
+
+- [Update part 22: implementation of adaptive WATCHDOG_TIMEOUT](#updates-part-22-watchdog_timeout-adaptive-mechanisms-in-hyper-scaling-process-benchmark-testing)
+
+- [Update part 23: implementation of the control plane Public IP orchestrator](#updates-part-23-implementation-of-the-control-plane-public-ip-orchestrator)
+
+- [Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection](#updates-part-24-phase-2h-resurrection_monitor_patch7d1-fix-for-the-ghost-json-logging-fix-using-instance_info-chunk-for-process-level-gold-ip-list-for-ghost-detection)
+
+- [Update part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function](#updates-part-25-phase-2i-refactoring-the-benchmark_ips-and-benchmark_ips_artifactlog-creation-in-resurrection_monitor_patch7d-with-a-modular-function)
+
+- [Update part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard](#updates-part-26-phase-2j-refactoring-the-aggregation-level-ghost-detection-code-with-the-chunks-in-main-as-gold-standard)
+
+- [Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing](#updates-part-27-phase-2k-stub-registry-creation-for-pseudo-ghosts-so-that-they-can-be-tagged-as-failed-and-resurrected-also-unification-of-code-with-thread_uuid-for-registry-indexing)
+
+- [Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes](#updates-part-28-phase-2l-refactoring-of-the-install_tomcat-and-the-read_output_with_watchdog-making-the-code-stream-agnostic-and-a-general-purpose-resilient-command-orchestrator-that-can-install-any-set-of-commands-on-the-ec2-nodes)
+
+- [Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator](#updates-part-29-phase-2m-refactoring-of-the-read_output_with_watchdog-and-install_tomcat-continued-whitelist-support-for-apt-and-bash-and-bash-like-commands-continue-making-the-code-stream-agnostic-and-a-general-purpose-resilient-command-orchestrator)
+
+- [Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff](#updates-part-30-phase-2n-refactoring-the-adaptive-watchdog-timeout-and-the-api-congestion-function-retry_with_backoff)
+
+- [Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper](#updates-part-31-phase-2o-fixing-the-empty-security_group_ids-list-with-hyper-scaling-tests-and-ensuring-that-the-security-group-list-is-chunked-as-sg_chunk-prior-to-engaging-multi-processingpool-and-calling-tomcat_worker_wrapper)
+
+- [Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing)](#updates-part-32-phase-2p-resurrection-code-overhaul-moving-code-out-of-install_tomat-and-into-resurrection_monitor_patch8-refactoring-resurrection-monitor-add-batch-ip-re-hydration-code-for-thread-futures-crashes-tomcat_worker-synthetic-thread-futures-crash-injection-testing)
+
+- [Update part 33 Phase 2q: The resurrection_monitor restructuring: Continue cleanup of the function and modularize the ghost detection code block into helper function detect_ghosts() at the PROCESS level](#updates-part-33-phase-2q-the-resurrection_monitor-restructuring-continue-cleanup-of-the-function-and-modularize-the-ghost-detection-code-block-into-helper-function-detect_ghosts-at-the-process-level)
+
+- [Update part 34 Phase 2r: Implementation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing](#updates-part-34-phase-2r-implementation-of-module2b-for-post-ghost-analysis-using-a-scan-analysis-of-module2-gitlab-console-logs-later-will-be-used-for-ml-lifecycle-and-pattern-discernment-and-synthetic-ghost-injection-testing)
+
+- [Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing](#updates-part-35-phase-2s-implementation-of-module2c-for-post-aggregate-registry-analysis-using-scan-analysis-of-module2-gitlab-console-logs-later-will-be-used-for-ml-lifecycle-and-synthetic-post-install-futures-crash-testing)
+
+- [Update part 36 Phase 2t: Implementation of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads](#updates-part-36-phase-2t-implementation-of-the-module2d-resurrection_gatekeeper-the-final-decision-maker-for-phase3-requeing-and-resurrection-of-problematic-threads)
+
+- [Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips](#updates-part-37-phase-2u-implementation-of-process-level-synthetic-ghost-ip-injection-for-testing-detect_ghosts-and-aggregate-and-process-level-logging-with-ghosts-ips)
+
+- [Update part 38 Phase 2v: PROCESS level, aggregate level, and gatekeeper stats reporting using the resurrection_monitor_patch8 process level information, module2 main(), and module2d](#updates-part-38-phase-2v-process-level-aggregate-level-and-gatekeeper-stats-reporting-using-the-resurrection_monitor_patch8-process-level-information-module2-main-and-module2d)
+
+- [Update part 39 Phase3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning](#updates-part-39-phase-3a-introduction-to-phase3-requeing-and-resurrection-and-phase4-machine-learning)
+
+- [Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach](#updates-part-40-phase-3b-resurrecting-the-aws-status-health-check-12-nodes-using-an-ip-rehydration-approach)
+
+- [Update part 41 Phase3c: Prototype: Requeing and resurrecting the IDX1 futures crashed threads](#updates-part-41-phase-3c-protyping-requeing-and-resurrecting-the-idx1-futures-crashed-threads)
+
+- [Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and bucketization testing](#updates-part-42-phase-3d-requeing-and-resurrecting-the-hybrid-futures-crashed-threads-install_success-and-bucketization-testing)
+
+- [Update part 43 Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization.](#updates-part-43-phase-3e-parts-1-and-2-requeing-and-resurrecting-ghost-threads-and-verifying-bucketization)
+
+- [Update part 44 Phase 3f: Parts 3,4a: Requeing and resurrecting ghost threads](#updates-part-44-phase-3f-parts-34a-requeing-and-resurrecting-ghost-threads)
+
+- [Update part 45 Phase 3g: Machine Learning (Phase4 ML) Preview](#updates-part-45-phase-3g-machine-learning-phase4-ml-preview)
+
+- [Update part 46 Phase 3h: Parts 4b: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging](#updates-part-46-phase-3h-part-4b-requeing-and-resurrecting-ghost-threads-multi-threaded-reboot-and-reboot_context-tagging)
+
+- [Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing](#updates-part-47-phase-3i-parts-4c-and-5-requeing-and-resurrecting-ghost-threads-multi-threaded-reboot-specialized-validation-testing)
+
+- [Update part 48 Phase 3j: 512 node regression test (no synthetic injections)](#updates-part-48-phase-3j-512-node-regression-test-no-synthetic-injections)
+
+- [Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population](#updates-part-49-phase-3k-part-6-requeing-and-resurrecting-ghost-threads-private-ip-population)
+
+- [Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent](#updates-part-50-phase-3l-nuances-of-security-group-rule-application-and-propagation-in-multi-processing-environments-using-aws-api-and-routing-fabric-design-for-sg-rule-intent)
+
+- [Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)](#updates-part-51-phase-3m-case-study-real-world-resurrection-event-with-empirical-validation-generic-resurrection-handler-bucket-type)
+
+- [Update part 52 Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)](#updates-part-52-phase-3n-implementation-of-spawn-multiprocessing-start_-method-in-the-python-package-default-is-forked)
+
+- [Update part 53 Phase 3o: Part 7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)](#updates-part-53-phase-3o-part-7-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-using-s3-sg_state)
+
+- [Update part 54 Phase 3p: Part 8: Requeing and resurrecting ghost threads: Security group rules stateful design VALIDATION testing](#updates-part-54-phase3p-part-8-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-validation-testing)
+
+- [Update part 55 Phase 4a.1: AI/MCP Hook Integration into module2f, the resurrection engine](#updates-part-55-phase4a1-aimcp-hook-integration-into-module2f-the-resurrection-engine)
+
+- [Update part 56 Phase 4a.1: AI/MCP Hook Integration Pytest Validation Suite and Code](#updates-part-56-phase4a1-aimcp-hook-integration-pytest-validation-suite-and-code)
+
+- [Update part 57 Phase4a.1: Developing the AI Gateway Service LLM Integration: Contract Enforcement, Validator Architecture, and Curl‑Driven Evolution](#updates-part-57-phase4a1-developing-the-ai-gateway-service-llm-integration-contract-enforcement-validator-architecture-and-curl-driven-evolution)
+
+- [Update part 58 Phase4a.1: Real‑Life Context Testing & Emergence of a Universal Remediation Engine](#updates-part-58-phase4a1--reallife-context-testing--emergence-of-a-universal-remediation-engine)
+
+- [Update part 59 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation](#updates-part-59--phase-4a12-python-llm-contract-stresstesting-framework--multios-remediation-validation)
+
+- [Preface Update1: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)](#preface-update1-extensibility--topological-mapping-architecture-and-resurrection-architecture-v45)
+
+- [Preface Update2: Phase4a AI/MCP incorporation and Phase4b ML for prediction/anomaly detection High Level Overview](#preface-update2-phase4a-aimcp-incorporation-and-phase4b-ml-for-predictionanomaly-detection-high-level-overview)
+
+- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
+
+- [Preface Update4: Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture](#preface-update4)
+
+- [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
+
+
+- [Preface Update6: An important note on using this AI-based defensive remediation against coordinated AI agent offensive attacks](#preface-update6)
+
+---
+
+
+## A note on application extensibility
+
+The main thread installer function is named install_tomcat but the tomcat is a misnomer. The code is completely agnostic and extensible to any type of 
+installation application and supports a wide variety of package installers and bash-like command executors as well. The name of the function is just
+a legacy carryover from the original prototype code.
+
+
+---
+
+
+
+
+## A note on the STATUS_TAGS:
+
+
+I added a STATUS_TAGS at the top of the module to track the taxonomy of the various status tags that can be used in 
+the registry_entry. All of the status tags below have been used except for the no_tags.
+
+The name "status tag" is a misnomer and part of the legacy naming. The "status tags" below refer to the  status field of the thread registry_entry.
+Several examples of this can be seen throughout this README in the UPDATES below.
+
+The tags field of the registry_entry has offloaded much of the descriptive and forensic burden on the status field. The status field values will very 
+rarely need to be added upon.  The tags field will incorporate the bulk of the descriptive and historical forensic information in the regitry_entry of
+each thread.  Many examples can be seen throughout this README in the UPDATES below. The tags will provide the ML state machine with a rich and dense
+informational history of each thread... data which it will be able to work on to make the system truly adaptive and self correcting.
+
+Outside of the ML use, teh tags can be used in forensics and troubleshooting mysterious threads taht are not behaving properly. The tags are also used by
+the resurrection gatekeeper filter logic heuristics when deciding upon whether or not a thread (candidate) is viable for actual resurrection.   The tags
+are used in many other areas as well for codified decision making and branching and bucketization of thread resurrection "types".  Code application for a 
+robust tagging system is endless.  Therefore,  much of the development has been devoted to enriching the tagging information in as much of a detailed manner 
+as possible.
+
+
+```
+## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
+## failure and stub code is added
+
+STATUS_TAGS = {
+    "install_success",
+    "install_failed",
+    "stub",
+    "no_tags",
+    "ghost" 
+}
+```
+---
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+---
+---
+
+
+
+
+<a name="preface-update6"></a>
+## PREFACE UPDATE6: **An important note on using this AI-based defensive remediation against coordinated AI agent offensive attacks**
+
+
+### Introduction
 
 AI has the potential to be used for increasingly offensive coordinated attacks against highly distributed and non-distributed nodal 
 systems especially in the context of AI agents.  
@@ -389,218 +606,10 @@ This architecture prevents OS mutation by:
 
 The result is a defensive AI system that can remediate nodes at scale without ever mutating the underlying OS in unsafe or unauthorized ways.
 
----
-
-
-
-## Some features: 
-
-- Thread level registry tagging of ghost threads, failures, stubs, successes 
-- Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
-- Aggregate and process level orchestration logging for host VPS CPU, swap, and thread level installation status, per process runtime
-- Aggregate and process level execution logging for: registries, successful, failure, missing, total, resurrection candidates (Gitlab
-artifact logs per pipeline)
-- Aggregate gold ip list (AWS orchestration level) logging
-- Resurrection monitor logic that differentiates between install failures, stubs, crashes, and ghost threads (ghost detection logic)
-- Registry snapshots with thread_uuid lineage and tagging for forensics
-- Synthetic edge case injection testing for wrapper brittleness (bash and bash-like commands strace wrapper and injection into STDERR)
-- Extensible whitelist command agnostic package installation capability (apt, yum, dnf) with raw output data orchestrator (STDOUT/STDERR)
-- Intelligent strace wrapper  override logic for shell PID vs subprocess ambiguity  
-- Deterministic artifact lineage across chaotic shell flows
-- Forensic triage via non-whitelisted stderr detection 
-- Resurrection monitor logic with phase-tagged recovery attempts  
-- Cross-platform shell wrapper (strace) resilience with synthetic test injection 
-- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
-- Synthetic futures crash injection for testing ip artifact re-hydration code (as well as hyper-scaling testing to reproduce the same)
-- Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gatekeeper intelligent decision making)
-- Synthetic ghost ip injection to test gitlab console log scanning
-- Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) 
-- Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
-- Process level synthetic ghost ip injection to test process level ghost detection code
-- Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
-- Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
-- Requeing and resurrection of thread futures crashes 
-- Requeing and resurrection of ghost threads
-- Spawn multiprocessing mode option (default is forking)
-- Stateful security group rules implementation design
-- Stateful security group drift detection and auto-remediation
-- Adaptive orchestration logic with ML/LLM feedback hooks 
-- AI/MCP integration for command set replay
-- MCPClient/MCPService based architecture
-- AI Gateway Service for LLM integration (OpenAI gpt-5.x)
-- AI/MCP HOOK integration into python modules (using control flow and persistent state variables architecture)
-- Pytest test stage integration into Gitlab pipeline (whitebox testing)
-- Iterative pytest context testing for AI/MCP HOOK integration testing (control flow)
-- Pytest integration testing for registry_entry ai_metadata and tags (whitebox testing)
-- AI Gateway Service start integration during Gitlab pipeline deployment stage
-- Iterative curl context testing with LLM for AI Gateway Service payload contract action rule development and refinement 
-(whitebox testing)
-- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) (LLM Contract Engineering whitebox testing)
-- Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
-- LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
-- Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
-- Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
-
 
 ---
 
 
-
-## Latest milestone updates in this README:
-
-NOTE: Many  of these Updates are hyperlinked to the content. All the updates are in this README and the hyperlinks to their content is a work in progress.
-
-NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
-UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
-
-The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
-
-
-
-- [Update part 21: Phase 2g: write-to-disk aggregator reviews the architecture of phase2 at a high level](#updates-part-21-phase-2g-write-to-disk-aggregator-in-main-working)
-
-- [Update part 22: implementation of adaptive WATCHDOG_TIMEOUT](#updates-part-22-watchdog_timeout-adaptive-mechanisms-in-hyper-scaling-process-benchmark-testing)
-
-- [Update part 23: implementation of the control plane Public IP orchestrator](#updates-part-23-implementation-of-the-control-plane-public-ip-orchestrator)
-
-- [Update part 24: Phase 2h: resurrection_monitor_patch7d1 fix for the ghost json logging fix using instance_info (chunk) for process level GOLD ip list for ghost detection](#updates-part-24-phase-2h-resurrection_monitor_patch7d1-fix-for-the-ghost-json-logging-fix-using-instance_info-chunk-for-process-level-gold-ip-list-for-ghost-detection)
-
-- [Update part 25: Phase 2i: Refactoring the benchmark_ips and benchmark_ips_artifact.log creation in resurrection_monitor_patch7d with a modular function](#updates-part-25-phase-2i-refactoring-the-benchmark_ips-and-benchmark_ips_artifactlog-creation-in-resurrection_monitor_patch7d-with-a-modular-function)
-
-- [Update part 26: Phase 2j: Refactoring the aggregation ghost detection code with the chunks in main() as GOLD standard](#updates-part-26-phase-2j-refactoring-the-aggregation-level-ghost-detection-code-with-the-chunks-in-main-as-gold-standard)
-
-- [Update part 27: Phase 2k: STUB registry creation for pseudo-ghosts so that they can be tagged as failed and resurrected; also unification of code with thread_uuid for registry indexing](#updates-part-27-phase-2k-stub-registry-creation-for-pseudo-ghosts-so-that-they-can-be-tagged-as-failed-and-resurrected-also-unification-of-code-with-thread_uuid-for-registry-indexing)
-
-- [Update part 28: Phase 2L: Refactoring of the install_tomcat and the read_output_with_watchdog making the code stream agnostic and a general-purpose, resilient command orchestrator that can install any set of commands on the EC2 nodes](#updates-part-28-phase-2l-refactoring-of-the-install_tomcat-and-the-read_output_with_watchdog-making-the-code-stream-agnostic-and-a-general-purpose-resilient-command-orchestrator-that-can-install-any-set-of-commands-on-the-ec2-nodes)
-
-- [Update part 29: Phase 2m: Refactoring of the read_output_with_watchdog and install_tomcat continued: Whitelist support for apt and bash and bash-like commands, continue making the code stream agnostic and a general-purpose, resilient command orchestrator](#updates-part-29-phase-2m-refactoring-of-the-read_output_with_watchdog-and-install_tomcat-continued-whitelist-support-for-apt-and-bash-and-bash-like-commands-continue-making-the-code-stream-agnostic-and-a-general-purpose-resilient-command-orchestrator)
-
-- [Update part 30: Phase 2n: Refactoring the adaptive watchdog timeout and the API congestion function retry_with_backoff](#updates-part-30-phase-2n-refactoring-the-adaptive-watchdog-timeout-and-the-api-congestion-function-retry_with_backoff)
-
-- [Update part 31: Phase 2o: Fixing the empty security_group_ids list with hyper-scaling tests and ensuring that the security group list is chunked as sg_chunk prior to engaging multi-processing.Pool and calling tomcat_worker_wrapper](#updates-part-31-phase-2o-fixing-the-empty-security_group_ids-list-with-hyper-scaling-tests-and-ensuring-that-the-security-group-list-is-chunked-as-sg_chunk-prior-to-engaging-multi-processingpool-and-calling-tomcat_worker_wrapper)
-
-- [Update part 32: Phase 2p: Resurrection code overhaul moving code out of install_tomat() and into resurrection_monitor_patch8, refactoring resurrection monitor, add batch ip re-hydration code for thread futures crashes (tomcat_worker), synthetic thread futures crash injection (testing)](#updates-part-32-phase-2p-resurrection-code-overhaul-moving-code-out-of-install_tomat-and-into-resurrection_monitor_patch8-refactoring-resurrection-monitor-add-batch-ip-re-hydration-code-for-thread-futures-crashes-tomcat_worker-synthetic-thread-futures-crash-injection-testing)
-
-- [Update part 33 Phase 2q: The resurrection_monitor restructuring: Continue cleanup of the function and modularize the ghost detection code block into helper function detect_ghosts() at the PROCESS level](#updates-part-33-phase-2q-the-resurrection_monitor-restructuring-continue-cleanup-of-the-function-and-modularize-the-ghost-detection-code-block-into-helper-function-detect_ghosts-at-the-process-level)
-
-- [Update part 34 Phase 2r: Implementation of module2b for post ghost analysis using a scan analysis of module2 gitlab console logs (later will be used for ML lifecycle and pattern discernment) and synthetic ghost injection testing](#updates-part-34-phase-2r-implementation-of-module2b-for-post-ghost-analysis-using-a-scan-analysis-of-module2-gitlab-console-logs-later-will-be-used-for-ml-lifecycle-and-pattern-discernment-and-synthetic-ghost-injection-testing)
-
-- [Update part 35 Phase 2s: Implementation of module2c for post aggregate registry analysis using scan analysis of module2 gitlab console logs (later will be used for ML lifecycle) and synthetic post install futures crash testing](#updates-part-35-phase-2s-implementation-of-module2c-for-post-aggregate-registry-analysis-using-scan-analysis-of-module2-gitlab-console-logs-later-will-be-used-for-ml-lifecycle-and-synthetic-post-install-futures-crash-testing)
-
-- [Update part 36 Phase 2t: Implementation of the module2d resurrection_gatekeeper, the final decision maker for Phase3 requeing and resurrection of problematic threads](#updates-part-36-phase-2t-implementation-of-the-module2d-resurrection_gatekeeper-the-final-decision-maker-for-phase3-requeing-and-resurrection-of-problematic-threads)
-
-- [Update part 37 Phase 2u: Implementation of PROCESS level synthetic ghost ip injection for testing detect_ghosts() and aggregate and process level logging with ghosts ips](#updates-part-37-phase-2u-implementation-of-process-level-synthetic-ghost-ip-injection-for-testing-detect_ghosts-and-aggregate-and-process-level-logging-with-ghosts-ips)
-
-- [Update part 38 Phase 2v: PROCESS level, aggregate level, and gatekeeper stats reporting using the resurrection_monitor_patch8 process level information, module2 main(), and module2d](#updates-part-38-phase-2v-process-level-aggregate-level-and-gatekeeper-stats-reporting-using-the-resurrection_monitor_patch8-process-level-information-module2-main-and-module2d)
-
-- [Update part 39 Phase3a: Introduction to Phase3 Requeing and Resurrection, and Phase4 Machine Learning](#updates-part-39-phase-3a-introduction-to-phase3-requeing-and-resurrection-and-phase4-machine-learning)
-
-- [Update part 40 Phase3b: Resurrecting the AWS Status health check 1/2 nodes using an ip rehydration approach](#updates-part-40-phase-3b-resurrecting-the-aws-status-health-check-12-nodes-using-an-ip-rehydration-approach)
-
-- [Update part 41 Phase3c: Prototype: Requeing and resurrecting the IDX1 futures crashed threads](#updates-part-41-phase-3c-protyping-requeing-and-resurrecting-the-idx1-futures-crashed-threads)
-
-- [Update part 42 Phase 3d: Requeing and resurrecting the HYBRID futures crashed threads, install_success, and bucketization testing](#updates-part-42-phase-3d-requeing-and-resurrecting-the-hybrid-futures-crashed-threads-install_success-and-bucketization-testing)
-
-- [Update part 43 Phase 3e: Parts 1 and 2: Requeing and resurrecting ghost threads and verifying bucketization.](#updates-part-43-phase-3e-parts-1-and-2-requeing-and-resurrecting-ghost-threads-and-verifying-bucketization)
-
-- [Update part 44 Phase 3f: Parts 3,4a: Requeing and resurrecting ghost threads](#updates-part-44-phase-3f-parts-34a-requeing-and-resurrecting-ghost-threads)
-
-- [Update part 45 Phase 3g: Machine Learning (Phase4 ML) Preview](#updates-part-45-phase-3g-machine-learning-phase4-ml-preview)
-
-- [Update part 46 Phase 3h: Parts 4b: Requeing and resurrecting ghost threads (multi-threaded reboot) and reboot_context tagging](#updates-part-46-phase-3h-part-4b-requeing-and-resurrecting-ghost-threads-multi-threaded-reboot-and-reboot_context-tagging)
-
-- [Update part 47 Phase 3i: Parts 4c, and 5: Requeing and resurrecting ghost threads (multi-threaded reboot) Specialized Validation testing](#updates-part-47-phase-3i-parts-4c-and-5-requeing-and-resurrecting-ghost-threads-multi-threaded-reboot-specialized-validation-testing)
-
-- [Update part 48 Phase 3j: 512 node regression test (no synthetic injections)](#updates-part-48-phase-3j-512-node-regression-test-no-synthetic-injections)
-
-- [Update part 49 Phase 3k: Part 6: Requeing and resurrecting ghost threads: Private ip population](#updates-part-49-phase-3k-part-6-requeing-and-resurrecting-ghost-threads-private-ip-population)
-
-- [Update part 50 Phase 3L: Nuances of Security Group rule application and propagation in multi-processing environments using AWS API, and routing fabric design for SG rule intent](#updates-part-50-phase-3l-nuances-of-security-group-rule-application-and-propagation-in-multi-processing-environments-using-aws-api-and-routing-fabric-design-for-sg-rule-intent)
-
-- [Update part 51 Phase 3m: CASE STUDY: Real-World Resurrection Event with Empirical Validation (generic resurrection handler bucket type)](#updates-part-51-phase-3m-case-study-real-world-resurrection-event-with-empirical-validation-generic-resurrection-handler-bucket-type)
-
-- [Update part 52 Phase 3n: Implementation of spawn multiprocessing start_ method in the python package (default is forked)](#updates-part-52-phase-3n-implementation-of-spawn-multiprocessing-start_-method-in-the-python-package-default-is-forked)
-
-- [Update part 53 Phase 3o: Part 7: Requeing and resurrecting ghost threads: Security group rules stateful design using S3 (SG_STATE)](#updates-part-53-phase-3o-part-7-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-using-s3-sg_state)
-
-- [Update part 54 Phase 3p: Part 8: Requeing and resurrecting ghost threads: Security group rules stateful design VALIDATION testing](#updates-part-54-phase3p-part-8-requeing-and-resurrecting-ghost-threads-security-group-rules-stateful-design-validation-testing)
-
-- [Update part 55 Phase 4a.1: AI/MCP Hook Integration into module2f, the resurrection engine](#updates-part-55-phase4a1-aimcp-hook-integration-into-module2f-the-resurrection-engine)
-
-- [Update part 56 Phase 4a.1: AI/MCP Hook Integration Pytest Validation Suite and Code](#updates-part-56-phase4a1-aimcp-hook-integration-pytest-validation-suite-and-code)
-
-- [Update part 57 Phase4a.1: Developing the AI Gateway Service LLM Integration: Contract Enforcement, Validator Architecture, and Curl‑Driven Evolution](#updates-part-57-phase4a1-developing-the-ai-gateway-service-llm-integration-contract-enforcement-validator-architecture-and-curl-driven-evolution)
-
-- [Update part 58 Phase4a.1: Real‑Life Context Testing & Emergence of a Universal Remediation Engine](#updates-part-58-phase4a1--reallife-context-testing--emergence-of-a-universal-remediation-engine)
-
-- [Update part 59 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation](#updates-part-59--phase-4a12-python-llm-contract-stresstesting-framework--multios-remediation-validation)
-
-- [Preface Update1: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)](#preface-update1-extensibility--topological-mapping-architecture-and-resurrection-architecture-v45)
-
-- [Preface Update2: Phase4a AI/MCP incorporation and Phase4b ML for prediction/anomaly detection High Level Overview](#preface-update2-phase4a-aimcp-incorporation-and-phase4b-ml-for-predictionanomaly-detection-high-level-overview)
-
-- [Preface Update3: Phase4a.1.2 LLM Contract Rule Engineering Guidelines: How to Avoid Writing Test Cases Into the Contract](#preface-update3-phase-4a12-llm-contract-rule-engineering-guidelines-how-to-avoid-writing-test-cases-into-the-contract)
-
-- [Preface Update4: Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture](#preface-update4)
-
-- [Preface Update5: Phase 4a.1.2 LLM Contract Rule Engineering II: Case Study of GPT‑5.4 Model Limitation in Multi‑Segment Rewrite Pipelines with Rewrite Failure](#preface-update5)
-
-
-
----
-
-
-## A note on application extensibility
-
-The main thread installer function is named install_tomcat but the tomcat is a misnomer. The code is completely agnostic and extensible to any type of 
-installation application and supports a wide variety of package installers and bash-like command executors as well. The name of the function is just
-a legacy carryover from the original prototype code.
-
-
----
-
-
-
-
-## A note on the STATUS_TAGS:
-
-
-I added a STATUS_TAGS at the top of the module to track the taxonomy of the various status tags that can be used in 
-the registry_entry. All of the status tags below have been used except for the no_tags.
-
-The name "status tag" is a misnomer and part of the legacy naming. The "status tags" below refer to the  status field of the thread registry_entry.
-Several examples of this can be seen throughout this README in the UPDATES below.
-
-The tags field of the registry_entry has offloaded much of the descriptive and forensic burden on the status field. The status field values will very 
-rarely need to be added upon.  The tags field will incorporate the bulk of the descriptive and historical forensic information in the regitry_entry of
-each thread.  Many examples can be seen throughout this README in the UPDATES below. The tags will provide the ML state machine with a rich and dense
-informational history of each thread... data which it will be able to work on to make the system truly adaptive and self correcting.
-
-Outside of the ML use, teh tags can be used in forensics and troubleshooting mysterious threads taht are not behaving properly. The tags are also used by
-the resurrection gatekeeper filter logic heuristics when deciding upon whether or not a thread (candidate) is viable for actual resurrection.   The tags
-are used in many other areas as well for codified decision making and branching and bucketization of thread resurrection "types".  Code application for a 
-robust tagging system is endless.  Therefore,  much of the development has been devoted to enriching the tagging information in as much of a detailed manner 
-as possible.
-
-
-```
-## These are the status tags that can be used with the registry_entry. This list is dynamic and will be modified as 
-## failure and stub code is added
-
-STATUS_TAGS = {
-    "install_success",
-    "install_failed",
-    "stub",
-    "no_tags",
-    "ghost" 
-}
-```
----
-
-**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
-
----
----
 
 
 <a name="preface-update5"></a>
@@ -23478,6 +23487,43 @@ The matrix for CentOS 8 OS‑Signaled Remediation‑3 Test Case Matrix (GPT‑
 #### 6.LLM Contract Stress Tester – Multi-segment Amazon Linux 2 testing and test matrices
 
 Multi-segment 21 test cases for Amazon Linux 2 OS:
+
+The testing in this area almost passed right off execpt for one failure case, index7. This hit the inverse internal saliency collapse
+issue again, that was fixed by the upgrade from gpt-5.6-sol (this fixed the issue in all the other OSes). 
+This case study was presented in detail in the following links in PREFACE UPDATE5:
+
+- [Appendix H - Inverse Internal Salience Collapse (5.4 Model Failure) and the GPT-5.6-Sol Correction](#gpt-5.6-appendix-h-inverse)
+- [Appendix I - Global vs Local Geometric Correction: GPT-5.4 + BS Rule vs GPT-5.6-Sol](#gpt-5.6-appendix-i-global)
+
+So why did it start failing again in Amazon Linux2 testing? This was because during the refactoring of Amazon Linux2 domain prmitives
+block this rule was left off by mistake: 
+
+
+```
+    "- The following commands are considered system-wide operations:\n"
+    "      apt-get update\n"
+    "      apt-get upgrade\n"
+    "      apt update\n"
+    "      apt upgrade\n"
+    "      yum update\n"
+    "      yum upgrade\n"
+    "      dnf upgrade\n"
+    "      dnf update\n"
+    "      pacman -Syu\n"
+    "      apk update\n"
+    "      zypper refresh\n"
+    "      zypper update\n"
+    "\n"
+
+#### This rule below was inadvertently left off ####
+    "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+    "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+    "\n"
+```
+
+Once the rule was added back the 5.6-sol model was able to evaluate index7 correctly.
+
+
 
 
 
