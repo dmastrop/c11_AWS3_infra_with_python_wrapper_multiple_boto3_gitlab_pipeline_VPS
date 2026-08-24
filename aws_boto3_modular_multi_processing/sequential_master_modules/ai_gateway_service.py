@@ -2282,7 +2282,10 @@ AMAZON_LINUX_2_RULES = (
     "      zypper refresh\n"
     "      zypper update\n"
     "\n"
-
+    # Patch this rule below. This is for index7 of the 21 multi-segment test suite. This was missing in the refactor.  
+    "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+    "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+    "\n"
 
     ##### Single-segment rewrite and fallback (Amazon Linux 2) #####
     "- If the command is missing arguments (e.g., 'yum install'), treat as malformed and use\n"
