@@ -23690,6 +23690,21 @@ The test matrix for Amazon Linux2 6 idemptoency test suite (gpt-5.6-so) is below
 
 ##### Regression on 3 OS-signaled remedition tests for Amazon Linux2 with gpt-5.6-sol
 
+The test cases here all passed
+
+The test matrix for the 3 OS-signaled remediation test cases on Amazon Linux2 (gpt-5.6-sol) are below (Click to expand):
+
+<details>
+<summary><b>Click to expand Amazon Linux 2 OS‑Signaled Remediation Matrix (GPT‑5.6‑Sol)</b></summary>
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | amzn2‑osmut‑001 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | Correct OS‑signaled remediation: repomd.xml signature failure + checksum mismatch → metadata corruption → Patch2 requires `yum clean all` + `yum makecache`. |
+| **2** | amzn2‑osmut‑002 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `yum install -y nginx`) | Correct OS‑signaled remediation: rpmdb corruption (BDB0113, BDB1507, DB_RUNRECOVERY) → Patch2 requires rpmdb recovery sequence. |
+| **3** | amzn2‑osmut‑003 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum clean all` → `yum makecache` → `yum install -y nginx`) | Correct OS‑signaled remediation: mirrorlist failure (“No URLs in mirrorlist”, index files failed) → Patch2 requires metadata refresh. |
+
+</details>
 
 
 
