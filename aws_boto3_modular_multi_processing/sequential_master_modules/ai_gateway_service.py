@@ -2373,8 +2373,234 @@ AMAZON_LINUX_2_RULES = (
 )
 
 
+
+
+
 AMAZON_LINUX_2023_RULES = (
+
+    # ============================================================
+    # Amazon Linux 2023 (DNF) DOMAIN RULES — Applies ONLY when os_name = "Amazon Linux 2023"
+    # Canonical, GLOBAL_RULES‑aligned refactor (GPT‑5.6‑Sol)
+    # ============================================================
+    "These rules apply ONLY when os_name == 'Amazon Linux 2023'. "
+    "They MUST NOT apply to Amazon Linux 1/2, RHEL, CentOS 7, CentOS 8, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+    "IMPORTANT:\n"
+    "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decision.\n"
+    "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+    "\n"
+
+    ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
+    "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+    "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+    "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+    "  inventing or hallucinating a corrected command.\n"
+    "\n"
+    "- If a command is syntactically malformed (missing arguments, truncated flags, partial\n"
+    "  pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
+    "  unless a safe, deterministic correction is directly implied by the original command.\n"
+    "\n"
+    "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * and directly implied by the original command.\n"
+    "  The LLM MUST NOT guess or invent corrected commands.\n"
+    "\n"
+    "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+    "  brew, pacman, zypper) and this OS block does NOT define a deterministic rewrite for\n"
+    "  that manager, the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- This OS MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
+    "- For malformed pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt\n"
+    "  to repair or infer missing pipeline stages. These MUST result in 'fallback' unless\n"
+    "  destructive, in which case 'abort' applies.\n"
+    "\n"
+
+    ##### Invalid package‑manager flags (Linux-family OSes) #####
+    "- If a 'dnf', 'yum', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown\n"
+    "  or unsupported flags ('invalid option', 'unknown option', or flags not documented for\n"
+    "  that package manager), the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+    "- The LLM MUST NOT infer user intent for unknown flags.\n"
+    "\n"
+
+    # BusyBox addendum
+    "These rules also apply when BusyBox applets are invoked. BusyBox installed on Amazon Linux 2023 does NOT activate BusyBox domain primitives.\n"
+    "\n"
+
+    ##### Amazon Linux 2023 DNF domain primitives (canonical) #####
+    "Amazon Linux 2023 DNF domain primitives:\n"
+    "- Amazon Linux 2023 uses 'dnf' as its primary package manager.\n"
+    "- The command 'dnf install -y <pkg>' installs packages.\n"
+    "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata and updates packages.\n"
+    "- The command 'dnf clean all' clears cached metadata.\n"
+    "- The command 'dnf makecache' rebuilds the metadata cache.\n"
+    "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+    "- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Package Manager Classification (Amazon Linux 2023) #####
+    "- The LLM MUST treat the following commands as package-manager install commands when a\n"
+    "  concrete package name <pkg> is present:\n"
+    "      * apt-get install <pkg>\n"
+    "      * apt install <pkg>\n"
+    "      * yum install <pkg>\n"
+    "      * dnf install <pkg>\n"
+    "      * apk add <pkg>\n"
+    "      * pacman -S <pkg>\n"
+    "      * zypper install <pkg>\n"
+    "      * brew install <pkg>\n"
+    "\n"
+    "- For Amazon Linux 2023, the ONLY native package manager is:\n"
+    "      * dnf\n"
+    "\n"
+    "- ALL other package managers MUST be treated as wrong-OS package managers.\n"
+    "- When a wrong-OS package-manager install command appears and a concrete package name\n"
+    "  is present, the LLM MUST rewrite that segment to:\n"
+    "      dnf install -y <pkg>\n"
+    "\n"
+
+    ##### Wrong package manager in pipelines (&&) — Patch2 cluster #####
+    "- If ALL segments in the pipeline are valid for this OS and the command succeeded\n"
+    "  (exit_status = 0) with no stderr, the LLM MUST return 'fallback'.\n"
+    "\n"
+    "- Valid system-wide operations (e.g., 'dnf update -y', 'dnf upgrade -y') MUST NOT trigger\n"
+    "  OS-Mutation Guard when they appear in the original pipeline. They MUST be preserved\n"
+    "  verbatim.\n"
+    "\n"
+    "- If ANY segment uses a wrong-OS package manager, the LLM MUST treat each segment\n"
+    "  independently.\n"
+    "\n"
+    "- If ALL segments are either:\n"
+    "      • simple package-install commands,\n"
+    "      • non-mutating safe commands,\n"
+    "      • or valid system-wide operations for Amazon Linux 2023,\n"
+    "  AND at least one segment uses a wrong-OS package manager,\n"
+    "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline:\n"
+    "      • ONLY wrong-OS PM segments rewritten to 'dnf install -y <pkg>'\n"
+    "      • ALL other segments preserved verbatim\n"
+    "      • MUST NOT drop, duplicate, reorder, or invent segments\n"
+    "\n"
+    "- If ANY segment contains an invalid flag, the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- The following commands are considered system-wide operations:\n"
+    "      apt-get update\n"
+    "      apt-get upgrade\n"
+    "      apt update\n"
+    "      apt upgrade\n"
+    "      yum update\n"
+    "      yum upgrade\n"
+    "      dnf upgrade\n"
+    "      dnf update\n"
+    "      pacman -Syu\n"
+    "      apk update\n"
+    "      zypper refresh\n"
+    "      zypper update\n"
+    "\n"
+    # Patch: system-wide op rewrite guard (aligned with AL2 Patch2)
+    "- If ANY segment in the pipeline is a system-wide operation AND that segment\n"
+    "  would require rewriting for this OS, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Single-segment rewrite and fallback (Amazon Linux 2023) #####
+    "- If the command is missing arguments (e.g., 'dnf install', 'yum install') and stderr\n"
+    "  contains 'Error: Need to pass a list of packages' or equivalent, the LLM MUST use\n"
+    "  'fallback' unless a safe correction exists WITHOUT guessing a package name.\n"
+    "\n"
+    "- If a SINGLE-SEGMENT command uses ANY wrong-OS package manager install pattern:\n"
+    "      apt-get install <pkg>\n"
+    "      apt install <pkg>\n"
+    "      yum install <pkg>\n"
+    "      apk add <pkg>\n"
+    "      pacman -S <pkg>\n"
+    "      zypper install <pkg>\n"
+    "      brew install <pkg>\n"
+    "  the LLM MUST rewrite it to:\n"
+    "      dnf install -y <pkg>\n"
+    "\n"
+
+    ##### Nonexistent package (ambiguous, NOT remediation) #####
+    "- If 'dnf install -y <pkg>' fails with wording such as:\n"
+    "      'No match for argument: <pkg>'\n"
+    "      'Unable to find a match: <pkg>'\n"
+    "  and stderr does NOT contain metadata corruption, mirrorlist errors, or rpmdb errors,\n"
+    "  the LLM MUST return 'fallback'.\n"
+    "- The LLM MUST NOT propose 'dnf update -y', 'dnf upgrade -y', or any other system-wide\n"
+    "  operation.\n"
+    "\n"
+
+    ##### Hard OS‑signaled remediation (Amazon Linux 2023) #####
+    "- If stderr contains DNF metadata or repo corruption errors such as:\n"
+    "      'Failed to download metadata for repo'\n"
+    "      'Error: failed to download metadata for repo'\n"
+    "      'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+    "      'Error: No matching repo' (ONLY when accompanied by metadata/mirrorlist failures)\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "          - dnf clean all\n"
+    "      retry:\n"
+    "          - dnf makecache\n"
+    "          - dnf install -y <pkg>   (only when a package name is present)\n"
+    "\n"
+    "- If stderr contains 'Error: No matching repo' AND the repo does not exist,\n"
+    "  is disabled, or is not part of Amazon Linux 2023 (e.g., invalid or custom repo names),\n"
+    "  the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- If stderr contains rpmdb corruption errors such as:\n"
+    "      'Error: rpmdb open failed'\n"
+    "      'BDB0113 Thread/process died'\n"
+    "      'db5 error(-30973)'\n"
+    "      'BDB1507 Thread died'\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "          - rm -f /var/lib/rpm/.rpm.lock\n"
+    "      retry:\n"
+    "          - rpm --rebuilddb\n"
+    "          - dnf install -y <pkg>\n"
+    "\n"
+    "- If stderr indicates repository errors that are NOT corruption and NOT network\n"
+    "  failures (e.g., disabled repo, missing repo configuration, non-deterministic repo\n"
+    "  layout issues), the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Network failures (Amazon Linux 2023, aligned with GLOBAL_RULES) #####
+    "- If stderr indicates DNS or connectivity failures ('Could not resolve host',\n"
+    "  'Connection timed out', 'No route to host', 'Temporary failure resolving',\n"
+    "  'Network unreachable', 'Host unreachable'), the LLM MUST use 'fallback'.\n"
+    "- These conditions indicate connectivity problems, NOT package corruption.\n"
+    "\n"
+
+    ##### Idempotency and <pkg> binding (Amazon Linux 2023) #####
+    "- If stderr indicates idempotency (e.g., 'Nothing to do', 'Package <pkg> is already installed',\n"
+    "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance\n"
+    "  with global Idempotency rules. 'fallback' MUST NOT be used for idempotency conditions.\n"
+    "\n"
+    "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with idempotent stderr,\n"
+    "  the LLM MUST use 'cleanup_and_retry'.\n"
+    "\n"
+    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name\n"
+    "  used in the failing command.\n"
+    "- If the failing command does NOT include a package name (e.g., 'dnf update -y',\n"
+    "  'dnf upgrade -y'), the LLM MUST NOT invent a package name and MUST omit any install\n"
+    "  step.\n"
+    "\n"
+    # Patch: idempotent installs MUST NOT use rpm -q (aligned with AL2)
+    "- For successful idempotent installs (exit_status = 0 with\n"
+    "  \"Package <pkg> is already installed.\" and/or \"Nothing to do.\"),\n"
+    "  the LLM MUST return a \"cleanup_and_retry\" action with:\n"
+    "\n"
+    "      cleanup: []\n"
+    "      retry: \"dnf install -y <pkg>\"\n"
+    "\n"
+    "  The LLM MUST NOT use \"rpm -q <pkg>\" or any rpmdb diagnostic\n"
+    "  command for idempotent install conditions.\n"
+
 )
+
+
+
+
+
+
 
 ALPINE_RULES = (
 )
@@ -4039,176 +4265,176 @@ def recover(request: RecoveryRequest):
 
 
 
-                # ============================================================
-                # AMAZON LINUX 2023 (DNF) DOMAIN RULES — Applies ONLY when
-                # os_name = "Amazon Linux 2023"
+                ## ============================================================
+                ## AMAZON LINUX 2023 (DNF) DOMAIN RULES — Applies ONLY when
+                ## os_name = "Amazon Linux 2023"
+                ##
+                ## This entire block is Revision 20
+                ## ============================================================
+
+                #"These rules apply ONLY when os_name == 'Amazon Linux 2023'. They MUST NOT apply to Amazon Linux 1/2, RHEL, CentOS, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
+                #"IMPORTANT:\n"
+                ##"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                ##"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                ##"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+
+                ###### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
+                #"- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+                #"- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+                #"  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+                #"  inventing or hallucinating a corrected command.\n"
+                #"\n"
+                #"- If a command is syntactically malformed (missing arguments, truncated flags, partial\n"
+                #"  pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
+                #"  unless a safe, deterministic correction is directly implied by the original command.\n"
+                #"\n"
+                #"- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                #"    * syntactically valid,\n"
+                #"    * semantically safe,\n"
+                #"    * and directly implied by the original command.\n"
+                #"  The LLM MUST NOT guess or invent corrected commands.\n"
+                #"\n"
+                #"- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+                #"  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"\n"
+                #"- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
+                #"  correction. If a command fails due to permission issues and no deterministic\n"
+                #"  recovery rule applies, the LLM MUST use 'fallback'.\n"
+                #"\n"
+                #"- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'),\n"
+                #"  the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell.\n"
+                #"- If stderr indicates a syntax error involving a pipeline or subshell, the LLM MUST\n"
+                #"  return 'fallback'.\n"
+                #"- Any malformed pipeline or subshell MUST result in 'fallback' unless destructive.\n"
+                #"\n"
+
+
+                ###### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
+                #"- If a 'dnf', 'yum', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
+                #"  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                #"- The LLM MUST NOT infer user intent for unknown flags.\n"
+                #"\n"
+
+
+
+                ## BusyBox addendum
+                #"These rules also apply when BusyBox applets are invoked on Linux-family OSes.\n"
+
+                ## Amazon Linux 2023 DNF domain primitives
+                #"Amazon Linux 2023 DNF domain primitives:\n"
+                #"- Amazon Linux 2023 uses 'dnf' as its primary package manager.\n"
+                #"- The command 'dnf install -y <pkg>' installs packages.\n"
+                #"- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata.\n"
+                #"- The command 'dnf clean all' clears cached metadata.\n"
+                #"- The command 'dnf makecache' rebuilds the metadata cache.\n"
+                #"\n"
+
+                ## Wrong package manager → rewrite
+                #"- If the command uses a package manager that does NOT match Amazon Linux 2023\n"
+                #"  (apt, apt-get, yum, apk, brew), the LLM MUST rewrite the command using 'dnf'\n"
+                #"  when a safe, concrete package name is present:\n"
+                #"      dnf install -y <pkg>\n"
+                #"\n"
+
+
+                ###### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                #"- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
+                #"  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
+                #"  the LLM MUST treat each segment independently.\n"
+                #"\n"
+                #"- If ALL segments in the pipeline are either:\n"
+                #"      • simple package-install commands, or\n"
+                #"      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
+                #"  AND at least one segment uses a wrong-OS package manager,\n"
+                #"  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
+                #"      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
+                #"        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
+                #"      • ALL other segments are preserved verbatim,\n"
+                #"      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
+                #"\n"
+                #"- If ANY segment in the pipeline performs a system-wide operation, such as:\n"
+                #"      apt-get update\n"
+                #"      apt-get upgrade\n"
+                #"      yum update\n"
+                #"      dnf upgrade\n"
+                #"      pacman -Syu\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
+                #"\n"
+                ## Idempotency regression patch — OS-Mutation Guard Rule
+                ## Remove this local copy. The OS mutation guard is now GLOBAL
+
+                ## Malformed install
+                #"- If 'dnf install' or 'yum install' is called without a package name and stderr\n"
+                #"  contains 'Error: Need to pass a list of packages', the LLM MUST use 'fallback'.\n"
+                #"\n"
+
+                ## Destructive commands
+                #"- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+                #"\n"
+
+                ## Unknown commands
+                #"- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
+                #"\n"
+
+                ## Metadata / repo corruption (Amazon Linux 2023 wording)
+                #"- If stderr contains metadata or mirrorlist failures such as:\n"
+                #"    * 'Failed to download metadata for repo'\n"
+                #"    * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+                #"    * 'Error: failed to download metadata for repo'\n"
+                #"    * 'Error: No matching repo' (ONLY when accompanied by metadata/mirrorlist failures)\n"
                 #
-                # This entire block is Revision 20
-                # ============================================================
+                #"  the LLM MUST return a 'cleanup_and_retry' action with:\n"
+                #"    cleanup:\n"
+                #"      - dnf clean all\n"
+                #"    retry:\n"
+                #"      - dnf makecache\n"
+                #"      - dnf install -y <pkg>   (only when a package name is present)\n"
+                #"\n"
 
-                "These rules apply ONLY when os_name == 'Amazon Linux 2023'. They MUST NOT apply to Amazon Linux 1/2, RHEL, CentOS, Fedora, Ubuntu, Debian, Alpine, BusyBox, macOS, Windows, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\n"
-                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
-                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
-
-                ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
-                "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
-                "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
-                "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
-                "  inventing or hallucinating a corrected command.\n"
-                "\n"
-                "- If a command is syntactically malformed (missing arguments, truncated flags, partial\n"
-                "  pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
-                "  unless a safe, deterministic correction is directly implied by the original command.\n"
-                "\n"
-                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
-                "    * syntactically valid,\n"
-                "    * semantically safe,\n"
-                "    * and directly implied by the original command.\n"
-                "  The LLM MUST NOT guess or invent corrected commands.\n"
-                "\n"
-                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
-                "  brew) and this OS block does NOT define a deterministic rewrite for that manager,\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
-                "- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
-                "  correction. If a command fails due to permission issues and no deterministic\n"
-                "  recovery rule applies, the LLM MUST use 'fallback'.\n"
-                "\n"
-                "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'),\n"
-                "  the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell.\n"
-                "- If stderr indicates a syntax error involving a pipeline or subshell, the LLM MUST\n"
-                "  return 'fallback'.\n"
-                "- Any malformed pipeline or subshell MUST result in 'fallback' unless destructive.\n"
-                "\n"
+                ## Missing or invalid repo (non-deterministic repo errors)
+                #"- If stderr contains 'Error: No matching repo' AND the repo does not exist,\n"
+                #"  is disabled, or is not part of Amazon Linux 2023 (e.g., 'amzn2023-php'),\n"
+                #"  the LLM MUST use 'fallback'.\n"
 
 
-                ##### Invalid package‑manager flags (Linux-family OSes) #####   #### PATCH stress_tester1 ####
-                "- If a 'dnf', 'yum', 'apt', 'apt-get', 'apk', or 'pacman' command contains any unknown or unsupported flags\n"
-                "  (for example: 'invalid option', 'unknown option', or flags not documented for that package manager),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
-                "- The LLM MUST NOT infer user intent for unknown flags.\n"
-                "\n"
+                ## rpmdb corruption
+                #"- If stderr contains 'rpmdb open failed' or Berkeley DB errors (BDB0113, BDB1507,\n"
+                #"  db5 error), the LLM MUST return 'cleanup_and_retry' with:\n"
+                #"    cleanup:\n"
+                #"      - rm -f /var/lib/rpm/.rpm.lock\n"
+                #"    retry:\n"
+                #"      - rpm --rebuilddb\n"
+                #"      - dnf install -y <pkg>\n"
+                #"\n"
 
+                ## Repo errors without deterministic fix
+                #"- If stderr indicates repository errors that are NOT corruption and NOT network\n"
+                #"  failures (e.g., disabled repo, missing repo configuration), the LLM MUST use\n"
+                #"  'fallback'.\n"
+                #"\n"
 
+                ## Network failures
+                #"- If stderr indicates DNS or connectivity failures ('Could not resolve host',\n"
+                #"  'Connection timed out', 'No route to host'), the LLM MUST use 'fallback'.\n"
+                #"\n"
 
-                # BusyBox addendum
-                "These rules also apply when BusyBox applets are invoked on Linux-family OSes.\n"
+                ## Idempotency
+                #"- If stderr indicates idempotency ('Nothing to do', 'already installed',\n"
+                #"  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
+                #"  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
+                #"\n"
 
-                # Amazon Linux 2023 DNF domain primitives
-                "Amazon Linux 2023 DNF domain primitives:\n"
-                "- Amazon Linux 2023 uses 'dnf' as its primary package manager.\n"
-                "- The command 'dnf install -y <pkg>' installs packages.\n"
-                "- The command 'dnf update -y' or 'dnf upgrade -y' refreshes metadata.\n"
-                "- The command 'dnf clean all' clears cached metadata.\n"
-                "- The command 'dnf makecache' rebuilds the metadata cache.\n"
-                "\n"
-
-                # Wrong package manager → rewrite
-                "- If the command uses a package manager that does NOT match Amazon Linux 2023\n"
-                "  (apt, apt-get, yum, apk, brew), the LLM MUST rewrite the command using 'dnf'\n"
-                "  when a safe, concrete package name is present:\n"
-                "      dnf install -y <pkg>\n"
-                "\n"
-
-
-                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
-                "- If the command is a pipeline using '&&' and includes a package manager that does NOT belong to this OS\n"
-                "  (for example: yum, dnf, apk, pacman on Ubuntu/Debian; apt/apt-get on RHEL/CentOS/Fedora/Alpine; etc.),\n"
-                "  the LLM MUST treat each segment independently.\n"
-                "\n"
-                "- If ALL segments in the pipeline are either:\n"
-                "      • simple package-install commands, or\n"
-                "      • non-mutating, non–package-manager commands that are safe to preserve verbatim,\n"
-                "  AND at least one segment uses a wrong-OS package manager,\n"
-                "  the LLM MUST use 'retry_with_modified_command' and return a FULL rewritten pipeline where:\n"
-                "      • ONLY the wrong-OS package-manager install segments are rewritten using the correct package manager\n"
-                "        for this OS (e.g., 'apk add <pkg>' on Alpine, 'apt-get install -y <pkg>' on Ubuntu, 'dnf install -y <pkg>' on Fedora),\n"
-                "      • ALL other segments are preserved verbatim,\n"
-                "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
-                "\n"
-                "- If ANY segment in the pipeline performs a system-wide operation, such as:\n"
-                "      apt-get update\n"
-                "      apt-get upgrade\n"
-                "      yum update\n"
-                "      dnf upgrade\n"
-                "      pacman -Syu\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to translate system-wide operations into equivalents for this OS.\n"
-                "\n"
-                # Idempotency regression patch — OS-Mutation Guard Rule
-                # Remove this local copy. The OS mutation guard is now GLOBAL
-
-                # Malformed install
-                "- If 'dnf install' or 'yum install' is called without a package name and stderr\n"
-                "  contains 'Error: Need to pass a list of packages', the LLM MUST use 'fallback'.\n"
-                "\n"
-
-                # Destructive commands
-                "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
-                "\n"
-
-                # Unknown commands
-                "- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
-                "\n"
-
-                # Metadata / repo corruption (Amazon Linux 2023 wording)
-                "- If stderr contains metadata or mirrorlist failures such as:\n"
-                "    * 'Failed to download metadata for repo'\n"
-                "    * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
-                "    * 'Error: failed to download metadata for repo'\n"
-                "    * 'Error: No matching repo' (ONLY when accompanied by metadata/mirrorlist failures)\n"
-                
-                "  the LLM MUST return a 'cleanup_and_retry' action with:\n"
-                "    cleanup:\n"
-                "      - dnf clean all\n"
-                "    retry:\n"
-                "      - dnf makecache\n"
-                "      - dnf install -y <pkg>   (only when a package name is present)\n"
-                "\n"
-
-                # Missing or invalid repo (non-deterministic repo errors)
-                "- If stderr contains 'Error: No matching repo' AND the repo does not exist,\n"
-                "  is disabled, or is not part of Amazon Linux 2023 (e.g., 'amzn2023-php'),\n"
-                "  the LLM MUST use 'fallback'.\n"
-
-
-                # rpmdb corruption
-                "- If stderr contains 'rpmdb open failed' or Berkeley DB errors (BDB0113, BDB1507,\n"
-                "  db5 error), the LLM MUST return 'cleanup_and_retry' with:\n"
-                "    cleanup:\n"
-                "      - rm -f /var/lib/rpm/.rpm.lock\n"
-                "    retry:\n"
-                "      - rpm --rebuilddb\n"
-                "      - dnf install -y <pkg>\n"
-                "\n"
-
-                # Repo errors without deterministic fix
-                "- If stderr indicates repository errors that are NOT corruption and NOT network\n"
-                "  failures (e.g., disabled repo, missing repo configuration), the LLM MUST use\n"
-                "  'fallback'.\n"
-                "\n"
-
-                # Network failures
-                "- If stderr indicates DNS or connectivity failures ('Could not resolve host',\n"
-                "  'Connection timed out', 'No route to host'), the LLM MUST use 'fallback'.\n"
-                "\n"
-
-                # Idempotency
-                "- If stderr indicates idempotency ('Nothing to do', 'already installed',\n"
-                "  'No packages marked for update'), the LLM MUST use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for idempotency conditions.\n"
-                "\n"
-
-                # <pkg> binding semantics
-                "- For any rule referencing '<pkg>', the LLM MUST use the package name from the\n"
-                "  failing command.\n"
-                "- If the failing command does NOT include a package name, the LLM MUST NOT invent\n"
-                "  one and MUST omit the install step.\n"
+                ## <pkg> binding semantics
+                #"- For any rule referencing '<pkg>', the LLM MUST use the package name from the\n"
+                #"  failing command.\n"
+                #"- If the failing command does NOT include a package name, the LLM MUST NOT invent\n"
+                #"  one and MUST omit the install step.\n"
 
 
 
