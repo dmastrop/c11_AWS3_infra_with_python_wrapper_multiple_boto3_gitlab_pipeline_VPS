@@ -23626,9 +23626,66 @@ The test case matrix for mazon Linux 2 — Base-36‑case Test Matrix (GPT‑5.6
 
 ##### Regression on 24 patch2 rewrite tests for Amazon Linux 2 with gpt-5.6-sol
 
+These test cases all passed during regression testing with the Amazon Linux2. 
+
+The test matrix for the 24 patch2 rewrite tests (gpt-5.6-sol) is below (Click to expand):
+
+
+<details>
+<summary><b>Click to expand Amazon Linux 2 Patch2‑24 Rewrite Matrix (GPT‑5.6‑Sol)</b></summary>
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | al2‑patch‑001 | `yum install nginx --badflag` | fallback | fallback | Invalid flag → fallback. |
+| **2** | al2‑patch‑002 | `yum install curl && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`yum install curl && yum install -y nano`) | Correct rewrite of wrong‑OS PM install. |
+| **3** | al2‑patch‑003 | `yum install curl && yum update -y` | fallback | fallback | Native pipeline, exit_status=0 → fallback. |
+| **4** | al2‑patch‑004 | `yum install curl && yum update --badflag` | fallback | fallback | Invalid flag → fallback. |
+| **5** | al2‑patch‑005 | `yum install curl && pacman -Syu` | fallback | fallback | Wrong‑OS system‑wide op → fallback. |
+| **6** | al2‑patch‑006 | `yum install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install curl && yum install -y bash`) | Correct rewrite. |
+| **7** | al2‑patch‑007 | `yum install curl && rm -rf /` | abort | abort | Destructive command detected. |
+| **8** | al2‑patch‑008 | `apt-get install nano && yum install curl` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install curl`) | Correct rewrite. |
+| **9** | al2‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y git && yum install nano`) | Correct rewrite. |
+| **10** | al2‑patch‑010 | `yum install curl && yum install python3 --badflag` | fallback | fallback | Invalid flag → fallback. |
+| **11** | al2‑patch‑011 | `yum install curl && yum install python3` | fallback | fallback | Native multi‑segment install, exit_status=0 → fallback. |
+| **12** | al2‑patch‑012 | `yum install curl && yum install python3 && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`yum install curl && yum install python3 && yum install -y nano`) | Correct rewrite. |
+| **13** | al2‑patch‑013 | `apt-get install nano && yum install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install curl && yum install -y bash`) | Correct rewrite. |
+| **14** | al2‑patch‑014 | `yum install curl && dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`yum install curl && yum install -y git && yum install nano`) | Correct rewrite. |
+| **15** | al2‑patch‑015 | `apt-get install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y bash && yum install -y htop`) | Correct rewrite. |
+| **16** | al2‑patch‑016 | `yum install curl && yum install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install curl && yum install nano && yum install -y bash`) | Correct rewrite. |
+| **17** | al2‑patch‑017 | `apt-get install nano && yum install curl && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install curl && yum update -y`) | Correct rewrite; native system‑wide op preserved. |
+| **18** | al2‑patch‑018 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`yum install -y bash && echo 'hello' && yum install nano`) | Correct rewrite; echo preserved. |
+| **19** | al2‑patch‑019 | `yum install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`yum install curl && echo 'test' && yum install -y htop`) | Correct rewrite. |
+| **20** | al2‑patch‑020 | `apt-get install nano --badflag && yum install curl` | fallback | fallback | Invalid flag → fallback. |
+| **21** | al2‑patch‑021 | `yum install curl && apk add bash --badflag && yum install nano` | fallback | fallback | Wrong‑OS PM + invalid flag → fallback. |
+| **22** | al2‑patch‑022 | `apt-get install nano && apk add bash && yum update -y` | retry_with_modified_command | retry_with_modified_command (`yum install -y nano && yum install -y bash && yum update -y`) | Correct rewrite; native system‑wide op preserved. |
+| **23** | al2‑patch‑023 | `apk add bash && yum install curl && rm -rf /` | abort | abort | Destructive command detected. |
+| **24** | al2‑patch‑024 | `yum install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`yum install curl && yum install -y nano && echo hi && yum install -y bash`) | Correct rewrite; echo preserved. |
+
+</details>
 
 
 ##### Regression on 6 idempotency tests for Amazon Linux 2 with gpt-5.6-sol
+
+The test cases here all passed during regression testing. 
+
+The test matrix for Amazon Linux2 6 idemptoency test suite (gpt-5.6-so) is below (Click to expand):
+
+
+<details>
+<summary><b>Click to expand Amazon Linux 2 Idempotency Matrix (GPT‑5.6‑Sol)</b></summary>
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | amzn2‑idem‑001 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`yum install -y nginx`) | Idempotent install: “Package … already installed. Nothing to do.” → global idempotency rule. |
+| **2** | amzn2‑idem‑002 | `yum update -y` | cleanup_and_retry | cleanup_and_retry (`yum update -y`) | Idempotent system‑wide op: “Nothing to do.” → must return cleanup_and_retry with same command. |
+| **3** | amzn2‑idem‑003 | `yum upgrade -y` | cleanup_and_retry | cleanup_and_retry (`yum upgrade -y`) | Idempotent upgrade: “No packages marked for update.” + history shows prior identical success → cleanup_and_retry. |
+| **4** | amzn2‑idem‑004 | `systemctl start httpd` | cleanup_and_retry | cleanup_and_retry (`systemctl stop httpd` → `systemctl start httpd`) | Service already running → idempotency → minimal cleanup (stop) then retry (start). |
+| **5** | amzn2‑idem‑005 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | Directory exists → idempotency → safe retry using `mkdir -p`. |
+| **6** | amzn2‑osmut‑001 | `yum install -y redis` | fallback | fallback | Package does not exist → nondeterministic failure → fallback (not idempotency; not OS‑Mutation Guard). |
+
+</details>
 
 
 ##### Regression on 3 OS-signaled remedition tests for Amazon Linux2 with gpt-5.6-sol
