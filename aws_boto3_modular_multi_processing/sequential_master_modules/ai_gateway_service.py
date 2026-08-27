@@ -650,8 +650,15 @@ UBUNTU_RULES = (
                 # patch2 below)
                 "- When rewriting a wrong-OS package-manager install command into 'apt-get install <pkg>', the LLM MUST include the '-y' flag to ensure non-interactive behavior.\n"
                 "- If the command is destructive (rm -rf /), the LLM MUST return 'abort'.\n"
-                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
-               
+                #
+                "- If the command is unrecognized (exit_status 127) AND\n"
+                "  the command is not obviously a Ubuntu/Unix primitive,\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+                "- Wrong-OS package-manager install commands with a concrete package name <pkg>\n"
+                "  are NOT considered Ubuntu/Unix primitives. For these commands, the\n"
+                "  package-manager rewrite rules take precedence over the 127 fallback rule.\n"
+
 
                 ##### Package Manager Classification (Linux-family OSes) #####
                 "\n"
@@ -2222,8 +2229,20 @@ AMAZON_LINUX_2_RULES = (
     "- The command 'yum clean all' clears cached metadata.\n"
     "- The command 'yum makecache' rebuilds the metadata cache.\n"
     "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
-    "- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
+    #
+    "- If the command is unrecognized (exit_status 127) AND\n"
+    "  the command does NOT match any known package-manager install pattern\n"
+    "      (apt-get install <pkg>, apt install <pkg>, yum install <pkg>,\n"
+    "       dnf install <pkg>, apk add <pkg>, pacman -S <pkg>,\n"
+    "       zypper install <pkg>, brew install <pkg>),\n"
+    "  the LLM MUST use 'fallback'.\n"
     "\n"
+    "- For commands that DO match a known wrong-OS package-manager install pattern\n"
+    "  with a concrete package name <pkg>, the package-manager rewrite rules\n"
+    "  take precedence over the 127 fallback rule.\n"
+
+
+
 
     ##### Package Manager Classification (Amazon Linux 2) #####
     "- The LLM MUST treat the following commands as package-manager install commands when a\n"
@@ -2435,8 +2454,20 @@ AMAZON_LINUX_2023_RULES = (
     "- The command 'dnf clean all' clears cached metadata.\n"
     "- The command 'dnf makecache' rebuilds the metadata cache.\n"
     "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
-    "- If the command is unrecognized (exit_status 127), the LLM MUST use 'fallback'.\n"
+    #
+    "- If the command is unrecognized (exit_status 127) AND\n"
+    "  the command does NOT match any known package-manager install pattern\n"
+    "      (apt-get install <pkg>, apt install <pkg>, yum install <pkg>,\n"
+    "       dnf install <pkg>, apk add <pkg>, pacman -S <pkg>,\n"
+    "       zypper install <pkg>, brew install <pkg>),\n"
+    "  the LLM MUST use 'fallback'.\n"
     "\n"
+    "- For commands that DO match a known wrong-OS package-manager install pattern\n"
+    "  with a concrete package name <pkg>, the package-manager rewrite rules\n"
+    "  take precedence over the 127 fallback rule.\n"
+
+
+
 
     ##### Package Manager Classification (Amazon Linux 2023) #####
     "- The LLM MUST treat the following commands as package-manager install commands when a\n"
