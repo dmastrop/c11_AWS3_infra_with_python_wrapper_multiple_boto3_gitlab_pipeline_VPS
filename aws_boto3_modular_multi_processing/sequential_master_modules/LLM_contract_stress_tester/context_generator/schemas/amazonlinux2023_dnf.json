@@ -7,13 +7,63 @@
   "contexts": [
 
     {
-      "command": "apt-get install nginx",
+      "command": "dnf install -y nginx",
       "stdout": "",
-      "stderr": "apt-get: command not found",
+      "stderr": "No match for argument: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-001",
+      "ip": "10.0.4.101",
+      "tags": [],
+      "history": [
+        {
+          "command": "dnf update -y",
+          "stdout": "Metadata cache created.",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: nginx",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-002",
+      "ip": "10.0.4.102",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nginx",
+      "stdout": "",
+      "stderr": "bash: apt-get: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-001",
-      "ip": "10.0.4.10",
+      "instance_id": "i-amzn2023-003",
+      "ip": "10.0.4.103",
+      "tags": [],
+      "history": [
+        {
+          "command": "dnf update -y",
+          "stdout": "Metadata cache created.",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-004",
+      "ip": "10.0.4.104",
       "tags": [],
       "history": []
     },
@@ -24,92 +74,68 @@
       "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-002",
-      "ip": "10.0.4.11",
+      "instance_id": "i-amzn2023-005",
+      "ip": "10.0.4.105",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "dnf install -y nginx",
+      "command": "yum install",
       "stdout": "",
-      "stderr": "Failed to download metadata for repo 'amzn2023-core'",
+      "stderr": "Error: Need to pass a list of packages",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-003",
-      "ip": "10.0.4.12",
+      "instance_id": "i-amzn2023-006",
+      "ip": "10.0.4.106",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "dnf install -y nginx",
+      "command": "rm -rf /",
       "stdout": "",
-      "stderr": "Cannot prepare internal mirrorlist: No URLs in mirrorlist",
-      "exit_status": 1,
+      "stderr": "",
+      "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-004",
-      "ip": "10.0.4.13",
+      "instance_id": "i-amzn2023-007",
+      "ip": "10.0.4.107",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "dnf install -y nginx",
+      "command": "asdfasdfasdf",
       "stdout": "",
-      "stderr": "Error: failed to download metadata for repo 'amzn2023-extras'",
-      "exit_status": 1,
+      "stderr": "bash: asdfasdfasdf: command not found",
+      "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-005",
-      "ip": "10.0.4.14",
+      "instance_id": "i-amzn2023-008",
+      "ip": "10.0.4.108",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "dnf install -y nginx",
+      "command": "show route everything",
       "stdout": "",
-      "stderr": "Error: No matching repo: amzn2023-php",
-      "exit_status": 1,
+      "stderr": "bash: show: command not found",
+      "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-006",
-      "ip": "10.0.4.15",
+      "instance_id": "i-amzn2023-009",
+      "ip": "10.0.4.109",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "dnf install -y nginx",
-      "stdout": "",
-      "stderr": "rpmdb open failed",
-      "exit_status": 1,
-      "attempt": 1,
-      "instance_id": "i-test-007",
-      "ip": "10.0.4.16",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf install -y nginx",
-      "stdout": "",
-      "stderr": "BDB0113 Thread/process died",
-      "exit_status": 1,
-      "attempt": 1,
-      "instance_id": "i-test-008",
-      "ip": "10.0.4.17",
-      "tags": [],
-      "history": []
-    },
-
-    {
-      "command": "dnf install -y nginx",
+      "command": "dnf update -y",
       "stdout": "",
       "stderr": "Could not resolve host: mirror.amazonlinux.com",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-009",
-      "ip": "10.0.4.18",
+      "instance_id": "i-amzn2023-010",
+      "ip": "10.0.4.110",
       "tags": [],
       "history": []
     },
@@ -117,11 +143,11 @@
     {
       "command": "dnf install -y nginx",
       "stdout": "",
-      "stderr": "Connection timed out",
+      "stderr": "Metadata file does not match checksum for repomd.xml from amzn2023-core",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-010",
-      "ip": "10.0.4.19",
+      "instance_id": "i-amzn2023-011",
+      "ip": "10.0.4.111",
       "tags": [],
       "history": []
     },
@@ -129,11 +155,35 @@
     {
       "command": "dnf install -y nginx",
       "stdout": "",
-      "stderr": "Package nginx is already installed.\nNothing to do.",
+      "stderr": "repomd.xml signature could not be verified for repo 'amzn2023-core'",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-012",
+      "ip": "10.0.4.112",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-013",
+      "ip": "10.0.4.113",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx-1.24.0-1.amzn2023.x86_64 is already installed. Nothing to do.",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-011",
-      "ip": "10.0.4.20",
+      "instance_id": "i-amzn2023-014",
+      "ip": "10.0.4.114",
       "tags": [],
       "history": []
     },
@@ -144,8 +194,8 @@
       "stderr": "Nothing to do.",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-012",
-      "ip": "10.0.4.21",
+      "instance_id": "i-amzn2023-015",
+      "ip": "10.0.4.115",
       "tags": [],
       "history": []
     },
@@ -156,48 +206,237 @@
       "stderr": "No packages marked for update.",
       "exit_status": 0,
       "attempt": 1,
-      "instance_id": "i-test-013",
-      "ip": "10.0.4.22",
+      "instance_id": "i-amzn2023-016",
+      "ip": "10.0.4.116",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "show ip interface brief",
+      "command": "apt install nginx",
       "stdout": "",
-      "stderr": "show: command not found",
+      "stderr": "bash: apt: command not found",
       "exit_status": 127,
       "attempt": 1,
-      "instance_id": "i-test-014",
-      "ip": "10.0.4.23",
+      "instance_id": "i-amzn2023-017",
+      "ip": "10.0.4.117",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "rm -rf /",
+      "command": "dnf install -y mysql-server",
       "stdout": "",
-      "stderr": "rm: cannot remove '/': Permission denied",
+      "stderr": "No match for argument: mysql-server",
       "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-015",
-      "ip": "10.0.4.24",
+      "instance_id": "i-amzn2023-018",
+      "ip": "10.0.4.118",
       "tags": [],
       "history": []
     },
 
     {
-      "command": "dnf install -y htop",
-      "stdout": "Installed: htop",
-      "stderr": "",
-      "exit_status": 0,
+      "command": "dnf install -y httpd",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed",
+      "exit_status": 1,
       "attempt": 1,
-      "instance_id": "i-test-016",
-      "ip": "10.0.4.25",
+      "instance_id": "i-amzn2023-019",
+      "ip": "10.0.4.119",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y curl",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-extras-docker': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-020",
+      "ip": "10.0.4.120",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y git",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: git",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-021",
+      "ip": "10.0.4.121",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf reinstall -y bash",
+      "stdout": "",
+      "stderr": "Error: rpmdb open failed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-022",
+      "ip": "10.0.4.122",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y python3",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-023",
+      "ip": "10.0.4.123",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y docker",
+      "stdout": "",
+      "stderr": "No match for argument: docker",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-024",
+      "ip": "10.0.4.124",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y vim",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: vim",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-025",
+      "ip": "10.0.4.125",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y tree",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-026",
+      "ip": "10.0.4.126",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y java-17-amazon-corretto",
+      "stdout": "",
+      "stderr": "No match for argument: java-17-amazon-corretto",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-027",
+      "ip": "10.0.4.127",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y perl",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: perl",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-028",
+      "ip": "10.0.4.128",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y wget",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-extras-epel': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-029",
+      "ip": "10.0.4.129",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y nodejs",
+      "stdout": "",
+      "stderr": "No match for argument: nodejs",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-030",
+      "ip": "10.0.4.130",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y unzip",
+      "stdout": "",
+      "stderr": "Error: Unable to find a match: unzip",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-031",
+      "ip": "10.0.4.131",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y jq",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-extras-epel': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-032",
+      "ip": "10.0.4.132",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y redis",
+      "stdout": "",
+      "stderr": "No match for argument: redis",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-033",
+      "ip": "10.0.4.133",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y gcc",
+      "stdout": "",
+      "stderr": "Error: failed to download metadata for repo 'amzn2023-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-035",
+      "ip": "10.0.4.135",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install -y ruby",
+      "stdout": "",
+      "stderr": "No match for argument: ruby",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-036",
+      "ip": "10.0.4.136",
       "tags": [],
       "history": []
     }
-
-  ]
-}
 
