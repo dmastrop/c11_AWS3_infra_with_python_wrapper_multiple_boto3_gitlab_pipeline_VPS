@@ -417,6 +417,19 @@
     },
 
     {
+      "command": "yum install -y nginx",
+      "stdout": "",
+      "stderr": "Package nginx is already installed.\nNothing to do.",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-034",
+      "ip": "10.0.4.134",
+      "tags": [],
+      "history": []
+    },
+
+
+    {
       "command": "dnf install -y gcc",
       "stdout": "",
       "stderr": "Error: failed to download metadata for repo 'amzn2023-core': Cannot prepare internal mirrorlist: No URLs in mirrorlist",
@@ -440,3 +453,6 @@
       "history": []
     }
 
+  
+  ]
+}
