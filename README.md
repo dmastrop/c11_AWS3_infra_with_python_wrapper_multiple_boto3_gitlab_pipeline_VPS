@@ -23721,6 +23721,164 @@ The test matrix for the 3 OS-signaled remediation test cases on Amazon Linux2 (g
 <a name="llm-contract-stress-tester-multi-segment-amazon-linux-2023-testing-and-test-matrices"></a>
 #### 7.LLM Contract Stress Tester – Multi-segment Amazon Linux 2023 testing and test matrices
 
+
+Multi-segment 21 test cases for Amazon Linux 2023 with gpt-5.6-sol:
+
+
+
+
+
+
+
+
+
+##### Regression testing for Base 36 test cases for Amaozon Linux 2023 with gpt-5.6-sol
+
+The testing in this area was interesting. 
+
+The index3 (test case4) test case was going to fallback instead of retry_with_modified_command rewrite. The issue was a small
+semantic over-generalization in the rule regarding a stderr 127 as shown in the schema below:
+
+
+```
+
+    {
+      "command": "apk add curl",
+      "stdout": "",
+      "stderr": "bash: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-amzn2023-004",
+      "ip": "10.0.4.104",
+      "tags": [],
+      "history": []
+    },
+
+```
+
+The correct response is a rewrite as shown below:
+
+```
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"dnf install -y curl"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Amazon Linux 2023 2023
+Command: apk add curl
+[DEBUG] schema os_name=Amazon Linux 2023, schema os_version=2023
+```
+
+The fallback was occuring due to the overgeneralized rule that stated:
+
+```
+                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+```
+
+The command specificity needs to be refined as:
+
+```
+                "- If the command is unrecognized (exit_status 127) and not obviously a Debian/Unix\n"
+                "  primitive, the LLM MUST use 'fallback'.\n"
+```
+for Debian for example. 
+
+Or this as used in the other OSes:
+
+```
+                "- If the command is unrecognized (exit_status 127) and not obviously a shell primitive, the LLM MUST use 'fallback'.\n"
+```
+Note the referecne to Unix primitive or shell primitive. This excludes PMs from being considered so that a test case similar to 
+the above will not incur a fallback but will rather be rewritten as shown above, with the retry_with_modified_command action plan 
+from the LLM. 
+
+The rules for Aamzon Linux2 and 2023 were further refined as shown below to make sure that the divergence never happens again:
+
+```
+"- If the command is unrecognized (exit_status 127) AND\n"
+"  the command does NOT match any known package-manager install pattern\n"
+"      (apt-get install <pkg>, apt install <pkg>, yum install <pkg>,\n"
+"       dnf install <pkg>, apk add <pkg>, pacman -S <pkg>,\n"
+"       zypper install <pkg>, brew install <pkg>),\n"
+"  the LLM MUST use 'fallback'.\n"
+"\n"
+"- For commands that DO match a known wrong-OS package-manager install pattern\n"
+"  with a concrete package name <pkg>, the package-manager rewrite rules\n"
+"  take precedence over the 127 fallback rule.\n"
+```
+Once this was patched the test case above was no longer incorrectly getting a fallback response from the LLM.
+
+The test case matrix for Amazon Linux 2023 base 36 test cases for gpt-5.6-sol is below (Click to expand):
+
+
+<details>
+<summary><b>Click to expand Amazon Linux 2023 — Base‑36‑case Test Matrix (GPT‑5.6‑Sol)</b></summary>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|-----------------|---------------|-------|
+| **1** | i-amzn2023-001 | `dnf install -y nginx` | fallback | fallback | **Nonexistent package.** stderr: “No match for argument: nginx.” No metadata/mirrorlist/rpmdb errors → ambiguous → fallback. |
+| **2** | i-amzn2023-002 | `dnf install -y nginx` | fallback | fallback | **Nonexistent package.** Same pattern as #1; correct fallback. |
+| **3** | i-amzn2023-003 | `apt-get install -y nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** `apt-get` not present; rewrite to native `dnf`. |
+| **4** | i-amzn2023-004 | `apk add curl` | retry_with_modified_command | retry_with_modified_command (`dnf install -y curl`) | **Wrong package manager.** `apk` not present; rewrite to native `dnf`. (Fix validated.) |
+| **5** | i-amzn2023-005 | `dnf install` | fallback | fallback | **Malformed command.** Missing package name; must fallback. |
+| **6** | i-amzn2023-006 | `yum install` | fallback | fallback | **Malformed + wrong PM.** Missing `<pkg>` and wrong PM; fallback is correct. |
+| **7** | i-amzn2023-007 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard triggered; correct abort. |
+| **8** | i-amzn2023-008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** stderr: `command not found`; correct fallback. |
+| **9** | i-amzn2023-009 | `show route everything` | fallback | fallback | **Unknown command.** Not a valid AL2023 command; correct fallback. |
+| **10** | i-amzn2023-010 | `dnf update -y` | fallback | fallback | **Network failure.** DNS resolution failure; no deterministic remediation → fallback. |
+| **11** | i-amzn2023-011 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Metadata corruption.** Checksum mismatch; correct cache rebuild remediation. |
+| **12** | i-amzn2023-012 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Metadata corruption.** Signature verification failure; correct remediation. |
+| **13** | i-amzn2023-013 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **14** | i-amzn2023-014 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf install -y nginx`) | **Idempotency success.** Package already installed; correct idempotent retry. |
+| **15** | i-amzn2023-015 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf update -y`) | **Idempotency success.** Nothing to do; safe to re‑issue same command. |
+| **16** | i-amzn2023-016 | `dnf upgrade -y` | cleanup_and_retry | cleanup_and_retry (`dnf upgrade -y`) | **Idempotency success.** No packages marked for update; correct behavior. |
+| **17** | i-amzn2023-017 | `apt install nginx` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nginx`) | **Wrong package manager.** `apt` not present; rewrite to native `dnf`. |
+| **18** | i-amzn2023-018 | `dnf install -y mysql-server` | fallback | fallback | **Nonexistent package.** No metadata/mirrorlist/rpmdb errors; correct fallback. |
+| **19** | i-amzn2023-019 | `dnf install -y httpd` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y httpd`) | **rpmdb corruption.** Lock file + db corruption; correct rebuild sequence. |
+| **20** | i-amzn2023-020 | `dnf install -y curl` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y curl`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **21** | i-amzn2023-021 | `dnf install -y git` | fallback | fallback | **Nonexistent package.** Unable to find match; correct fallback. |
+| **22** | i-amzn2023-022 | `dnf reinstall -y bash` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y bash`) | **rpmdb corruption.** Reinstall path correctly uses rebuilddb remediation. |
+| **23** | i-amzn2023-023 | `dnf install -y python3` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y python3`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **24** | i-amzn2023-024 | `dnf install -y docker` | fallback | fallback | **Nonexistent package.** No deterministic remediation; correct fallback. |
+| **25** | i-amzn2023-025 | `dnf install -y vim` | fallback | fallback | **Nonexistent package.** “Unable to find a match: vim”; correct fallback. |
+| **26** | i-amzn2023-026 | `dnf install -y tree` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y tree`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **27** | i-amzn2023-027 | `dnf install -y java-17-amazon-corretto` | fallback | fallback | **Nonexistent package.** No metadata/rpmdb errors; correct fallback. |
+| **28** | i-amzn2023-028 | `dnf install -y perl` | fallback | fallback | **Nonexistent package.** “Unable to find a match: perl”; correct fallback. |
+| **29** | i-amzn2023-029 | `dnf install -y wget` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y wget`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **30** | i-amzn2023-030 | `dnf install -y nodejs` | fallback | fallback | **Nonexistent package.** No deterministic remediation; correct fallback. |
+| **31** | i-amzn2023-031 | `dnf install -y unzip` | fallback | fallback | **Nonexistent package.** “Unable to find a match: unzip”; correct fallback. |
+| **32** | i-amzn2023-032 | `dnf install -y jq` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y jq`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **33** | i-amzn2023-033 | `dnf install -y redis` | fallback | fallback | **Nonexistent package.** “No match for argument: redis”; correct fallback. |
+| **34** | i-amzn2023-034 | `yum install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf install -y nginx`) | **Wrong package manager + idempotency.** Package already installed; rewrite to native `dnf`. |
+| **35** | i-amzn2023-035 | `dnf install -y gcc` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y gcc`) | **Metadata corruption.** Mirrorlist failure; correct remediation. |
+| **36** | i-amzn2023-036 | `dnf install -y ruby` | fallback | fallback | **Nonexistent package.** “No match for argument: ruby”; correct fallback. |
+
+</details>
+
+
+
+
+##### Regression testing for the 24 patch2 rewrite tests for Amazon Linux 2023 with gpt-5.6-sol
+
+
+
+
+##### Regresion testing for the 6 idempotency test cases for Amazon Linux 2023 with gpt-5.6-sol
+
+
+
+##### Regression testing for the 3 OS-signaled remediation test cases for Amazon Linux 2023 with gpt-5.6-sol
+
+
+
+
+
+
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
