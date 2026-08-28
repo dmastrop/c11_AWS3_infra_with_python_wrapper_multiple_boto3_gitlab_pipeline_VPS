@@ -23954,6 +23954,23 @@ The test matrix for the Amazon Linux 2023 6 idempotency test cases on gpt-5.6-so
 
 ##### Regression testing for the 3 OS-signaled remediation test cases for Amazon Linux 2023 with gpt-5.6-sol
 
+All of the test cases here are passing as well.
+
+The test case matrix for the Amazon Linux 2023 OS-signaled remedation 3 test cases is below (Click to expand):
+
+This completes the testing on Amazon Linux 2023. 
+
+
+<details>
+<summary><b>Click to expand Amazon Linux 2023 — OS‑Signaled Remediation Matrix</b></summary>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|-----------------|---------------|-------|
+| **1** | amzn2023-osmut-001 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Metadata corruption.** repomd.xml signature failure + checksum mismatch → OS‑signaled remediation via cache rebuild. |
+| **2** | amzn2023-osmut-002 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`rm -f /var/lib/rpm/.rpm.lock` → `rpm --rebuilddb` → `dnf install -y nginx`) | **rpmdb corruption.** BDB0113 / DB_RUNRECOVERY errors → rpmdb rebuild required. |
+| **3** | amzn2023-osmut-003 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf clean all` → `dnf makecache` → `dnf install -y nginx`) | **Mirrorlist failure.** “No URLs in mirrorlist” + index download failures → cache cleanup + makecache remediation. |
+
+</details>
 
 
 
