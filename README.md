@@ -23933,6 +23933,23 @@ The test case matrix for Amazon Linux2023 24 patch2 rewrite test cases on gpt-5.
 
 ##### Regresion testing for the 6 idempotency test cases for Amazon Linux 2023 with gpt-5.6-sol
 
+The test cases here are all passing.
+
+The test matrix for the Amazon Linux 2023 6 idempotency test cases on gpt-5.6-sol is below (Click to expand):
+
+details>
+<summary><b>Click to expand Amazon Linux 2023 — Idempotency Regression 6‑Case Matrix</b></summary>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|-----------------|---------------|-------|
+| **1** | amzn2023-idem-001 | `dnf install -y nginx` | cleanup_and_retry | cleanup_and_retry (`dnf install -y nginx`) | **Idempotency success.** Package already installed; Patch2 rule requires re‑issuing the same install command. |
+| **2** | amzn2023-idem-002 | `dnf update -y` | cleanup_and_retry | cleanup_and_retry (`dnf update -y`) | **Idempotency success.** “Nothing to do.” → re‑issue same update command. |
+| **3** | amzn2023-idem-003 | `dnf upgrade -y` | cleanup_and_retry | cleanup_and_retry (`dnf upgrade -y`) | **Idempotency success.** “No packages marked for update.” → re‑issue same upgrade command. |
+| **4** | amzn2023-idem-004 | `systemctl start nginx` | cleanup_and_retry | cleanup_and_retry (`systemctl start nginx`) | **Idempotency success.** Service already running; re‑issue same systemctl command. |
+| **5** | amzn2023-idem-005 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Idempotency remediation.** Directory exists → rewrite to `mkdir -p` per Patch2 rule. |
+| **6** | amzn2023-osmut-001 | `dnf install -y docker` | fallback | fallback | **Nonexistent package.** No match for argument; no metadata/mirrorlist/rpmdb errors → fallback required. |
+
+</details>
 
 
 ##### Regression testing for the 3 OS-signaled remediation test cases for Amazon Linux 2023 with gpt-5.6-sol
