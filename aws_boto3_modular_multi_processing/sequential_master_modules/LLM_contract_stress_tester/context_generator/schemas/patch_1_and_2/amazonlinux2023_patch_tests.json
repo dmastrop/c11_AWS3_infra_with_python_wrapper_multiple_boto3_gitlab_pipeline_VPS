@@ -1,0 +1,59 @@
+{
+  "os_name": "Amazon Linux 2023",
+  "os_version": "2023",
+  "kernel": "6.x",
+  "package_managers": ["dnf"],
+  "shell": "bash",
+  "contexts": [
+
+    { "command": "dnf install nginx --badflag", "stdout": "", "stderr": "Error: unknown option --badflag", "exit_status": 1, "attempt": 1, "instance_id": "al2023-patch-001", "ip": "10.0.61.1", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && apt-get install nano", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-002", "ip": "10.0.61.2", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf update -y", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-003", "ip": "10.0.61.3", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf update --badflag", "stdout": "", "stderr": "Error: unknown option --badflag", "exit_status": 1, "attempt": 1, "instance_id": "al2023-patch-004", "ip": "10.0.61.4", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && pacman -Syu", "stdout": "", "stderr": "bash: pacman: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-005", "ip": "10.0.61.5", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && apk add bash", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-006", "ip": "10.0.61.6", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-007", "ip": "10.0.61.7", "tags": [], "history": [] },
+
+    { "command": "apt-get install nano && dnf install curl", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-008", "ip": "10.0.61.8", "tags": [], "history": [] },
+
+    { "command": "yum install git && dnf install nano", "stdout": "", "stderr": "bash: yum: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-009", "ip": "10.0.61.9", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf install python3 --badflag", "stdout": "", "stderr": "Error: unknown option --badflag", "exit_status": 1, "attempt": 1, "instance_id": "al2023-patch-010", "ip": "10.0.61.10", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf install python3", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-011", "ip": "10.0.61.11", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf install python3 && apt-get install nano", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-012", "ip": "10.0.61.12", "tags": [], "history": [] },
+
+    { "command": "apt-get install nano && dnf install curl && apk add bash", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-013", "ip": "10.0.61.13", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf install git && dnf install nano", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-014", "ip": "10.0.61.14", "tags": [], "history": [] },
+
+    { "command": "apt-get install nano && apk add bash && pacman -S htop", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-015", "ip": "10.0.61.15", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && dnf install nano && apk add bash", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-016", "ip": "10.0.61.16", "tags": [], "history": [] },
+
+    { "command": "apt-get install nano && dnf install curl && dnf update -y", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-017", "ip": "10.0.61.17", "tags": [], "history": [] },
+
+    { "command": "apk add bash && echo 'hello' && dnf install nano", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-018", "ip": "10.0.61.18", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && echo 'test' && pacman -S htop", "stdout": "", "stderr": "bash: pacman: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-019", "ip": "10.0.61.19", "tags": [], "history": [] },
+
+    { "command": "apt-get install nano --badflag && dnf install curl", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-020", "ip": "10.0.61.20", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && apk add bash --badflag && dnf install nano", "stdout": "", "stderr": "bash: apk: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-021", "ip": "10.0.61.21", "tags": [], "history": [] },
+
+    { "command": "apt-get install nano && apk add bash && dnf update -y", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-022", "ip": "10.0.61.22", "tags": [], "history": [] },
+
+    { "command": "apk add bash && dnf install curl && rm -rf /", "stdout": "", "stderr": "", "exit_status": 0, "attempt": 1, "instance_id": "al2023-patch-023", "ip": "10.0.61.23", "tags": [], "history": [] },
+
+    { "command": "dnf install curl && apt-get install nano && echo hi && apk add bash", "stdout": "", "stderr": "bash: apt-get: command not found", "exit_status": 127, "attempt": 1, "instance_id": "al2023-patch-024", "ip": "10.0.61.24", "tags": [], "history": [] }
+
+  ]
+}
+
