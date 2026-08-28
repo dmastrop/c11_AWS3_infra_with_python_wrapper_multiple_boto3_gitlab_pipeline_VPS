@@ -23892,6 +23892,42 @@ The test case matrix for Amazon Linux 2023 base 36 test cases for gpt-5.6-sol is
 
 ##### Regression testing for the 24 patch2 rewrite tests for Amazon Linux 2023 with gpt-5.6-sol
 
+The test cases here all passed without any issues.
+
+The test case matrix for Amazon Linux2023 24 patch2 rewrite test cases on gpt-5.6-sol is below (Click to expand):
+
+
+<details>
+<summary><b>Click to expand Amazon Linux 2023 — Patch2 Rewrite 24‑Case Matrix</b></summary>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|-----------------|---------------|-------|
+| **1** | al2023-patch-001 | `dnf install nginx --badflag` | fallback | fallback | **Invalid flag.** Any segment with an invalid flag forces entire pipeline to fallback. |
+| **2** | al2023-patch-002 | `dnf install curl && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install -y nano`) | **Wrong‑OS PM install.** `apt-get install nano` rewritten to native `dnf install -y nano`. |
+| **3** | al2023-patch-003 | `dnf install curl && dnf update -y` | fallback | fallback | **All native segments + exit_status=0.** Patch2 rule: must fallback. |
+| **4** | al2023-patch-004 | `dnf install curl && dnf update --badflag` | fallback | fallback | **Invalid flag on system‑wide op.** Entire pipeline must fallback. |
+| **5** | al2023-patch-005 | `dnf install curl && pacman -Syu` | fallback | fallback | **System‑wide wrong‑OS PM.** `pacman -Syu` cannot be rewritten → fallback required. |
+| **6** | al2023-patch-006 | `dnf install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install -y bash`) | **Wrong‑OS PM install.** `apk add bash` rewritten to `dnf install -y bash`. |
+| **7** | al2023-patch-007 | `dnf install curl && rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard triggered. |
+| **8** | al2023-patch-008 | `apt-get install nano && dnf install curl` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install curl`) | **Wrong‑OS PM install.** `apt-get install nano` rewritten. |
+| **9** | al2023-patch-009 | `yum install git && dnf install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y git && dnf install nano`) | **Wrong‑OS PM install.** `yum install git` rewritten. |
+| **10** | al2023-patch-010 | `dnf install curl && dnf install python3 --badflag` | fallback | fallback | **Invalid flag.** Entire pipeline must fallback. |
+| **11** | al2023-patch-011 | `dnf install curl && dnf install python3` | fallback | fallback | **All native segments + exit_status=0.** Must fallback. |
+| **12** | al2023-patch-012 | `dnf install curl && dnf install python3 && apt-get install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install python3 && dnf install -y nano`) | **Wrong‑OS PM install.** `apt-get install nano` rewritten. |
+| **13** | al2023-patch-013 | `apt-get install nano && dnf install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install curl && dnf install -y bash`) | **Multiple wrong‑OS PM installs.** Both rewritten. |
+| **14** | al2023-patch-014 | `dnf install curl && dnf install git && dnf install nano` | fallback | fallback | **All native segments + exit_status=0.** Must fallback. |
+| **15** | al2023-patch-015 | `apt-get install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y bash && dnf install -y htop`) | **All wrong‑OS PM installs.** All rewritten to native `dnf install -y <pkg>`. |
+| **16** | al2023-patch-016 | `dnf install curl && dnf install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install nano && dnf install -y bash`) | **Wrong‑OS PM install.** `apk add bash` rewritten. |
+| **17** | al2023-patch-017 | `apt-get install nano && dnf install curl && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install curl && dnf update -y`) | **Wrong‑OS PM install + native system‑wide op.** Rewrite allowed; system‑wide op preserved. |
+| **18** | al2023-patch-018 | `apk add bash && echo 'hello' && dnf install nano` | retry_with_modified_command | retry_with_modified_command (`dnf install -y bash && echo 'hello' && dnf install nano`) | **Wrong‑OS PM install + safe echo.** Echo preserved verbatim; wrong‑OS PM rewritten. |
+| **19** | al2023-patch-019 | `dnf install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && echo 'test' && dnf install -y htop`) | **Wrong‑OS PM install + safe echo.** Correct rewrite. |
+| **20** | al2023-patch-020 | `apt-get install nano --badflag && dnf install curl` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Entire pipeline must fallback. |
+| **21** | al2023-patch-021 | `dnf install curl && apk add bash --badflag && dnf install nano` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Entire pipeline must fallback. |
+| **22** | al2023-patch-022 | `apt-get install nano && apk add bash && dnf update -y` | retry_with_modified_command | retry_with_modified_command (`dnf install -y nano && dnf install -y bash && dnf update -y`) | **Wrong‑OS PM installs + native system‑wide op.** Rewrite allowed; system‑wide op preserved. |
+| **23** | al2023-patch-023 | `apk add bash && dnf install curl && rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard triggered. |
+| **24** | al2023-patch-024 | `dnf install curl && apt-get install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`dnf install curl && dnf install -y nano && echo hi && dnf install -y bash`) | **Mixed pipeline.** Wrong‑OS PM installs rewritten; echo preserved; native segments preserved. |
+
+</details>
 
 
 
