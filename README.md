@@ -23937,7 +23937,7 @@ The test cases here are all passing.
 
 The test matrix for the Amazon Linux 2023 6 idempotency test cases on gpt-5.6-sol is below (Click to expand):
 
-details>
+<details>
 <summary><b>Click to expand Amazon Linux 2023 — Idempotency Regression 6‑Case Matrix</b></summary>
 
 | # | Instance ID | Command | Expected Action | Actual Action | Notes |
