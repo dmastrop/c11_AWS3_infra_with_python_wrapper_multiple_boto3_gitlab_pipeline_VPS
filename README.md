@@ -170,7 +170,7 @@ artifact logs per pipeline)
 - LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
 - Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
 - Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
-
+- LangFuse integration for expanded regression testing capability, to assist in Contract Engineering refinement (especially with very high node scaling during real-life testing)
 
 ---
 
@@ -2285,8 +2285,10 @@ This architecture completes the LangFuse integration and prepares the system for
 
 ---
 
+# <a name="prefaceupdate7-appendix7"></a>  
+## **APPENDIX 7: LangFuse Integration Adapter Architecture**
 
-
+This is WIP. Almost done with the architectural design for the full integration. Will update shortly.
 
 
 
