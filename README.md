@@ -1728,6 +1728,9 @@ This dual‑model architecture ensures:
 - both use the same contract rules  (This is required to control both remedation and evaluation results from the contexts)
 
 See the earlier Section 4 for how the MODE decision logic is actually implemented in the code.
+
+
+
 ---
 
 #### **8.3 Gateway Validates LLM Output**
@@ -2160,7 +2163,7 @@ This enables LangFuse to evaluate real remediation traces using the gateway’s 
 
 
 <a name="prefaceupdate8-section13"></a>
-### **SECTION 13 - Full Adapter Service Skeleton (Expanded with both /schema and /trace endpoints)
+### **SECTION 13 - Full Adapter Service Skeleton (Expanded with both /schema and /trace endpoints)**
 
 Section 10 provided a minimal adapter example.
   
@@ -2713,7 +2716,7 @@ to all use the same evaluation pipeline.
 
 ---
 
-#### *Closing Remarks**
+#### **Closing Remarks**
 
 The LangFuse Integration Adapter completes the dual‑model architecture and enables:
 
