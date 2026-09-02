@@ -342,7 +342,7 @@ STATUS_TAGS = {
 
 *(High‑Level Overview — See Preface Update 8 for Implementation Details)*
 
-
+<a name="top-preface7"></a>
 ### Table of Contents — Preface Update 7
 
 - [Introduction](#prefaceupdate7-introduction)
@@ -378,6 +378,8 @@ please refer to **Preface Update 8**.
 
 Preface Update 7 focuses on the conceptual role of LangFuse as the **evaluation orchestrator** that automates the correctness‑evaluation loop previously performed manually using schema tests, stress_tester results, and LLM reasoning.
 
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
 ---
 
 
@@ -408,6 +410,9 @@ Its job is to automate the evaluation loop that previously required:
 - manual cost and latency tracking  
 
 LangFuse replaces this manual evaluation loop with a **structured, scalable, automated evaluation pipeline**.
+
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
 
 ---
 
@@ -448,6 +453,9 @@ LangFuse solves this by providing:
 
 LangFuse does **not** replace contract rules.  
 It **evaluates** them.
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
 
 ---
 
@@ -493,6 +501,9 @@ It does so by:
 LangFuse does **not** perform contract logic.  
 It orchestrates evaluation.
 
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
 ---
 
 <a name="prefaceupdate7-adapter-role"></a>
@@ -518,6 +529,9 @@ All contract logic remains inside the gateway.
 All orchestration remains inside LangFuse.
 
 Preface Update 8 contains the full implementation details of the adapter.
+
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
 
 ---
 
@@ -611,7 +625,7 @@ with:
 
 This provides historical insight into contract evolution.
 
-####**6. Production Monitoring Across Thousands of Nodes**
+#### **6. Production Monitoring Across Thousands of Nodes**
 
 During Phase 4a.1.3, LangFuse can ingest traces from:
 
@@ -631,6 +645,10 @@ It can detect:
 - rule‑block drift  
 
 This is essential for large‑scale orchestration.
+
+
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
 
 ---
 
@@ -691,6 +709,9 @@ LangFuse does not understand:
 
 Only the gateway understands contract rules.
 
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
 ---
 
 <a name="prefaceupdate7-architecture-fit"></a>
@@ -724,6 +745,9 @@ Instead, it complements them.
 
 LangFuse provides the observability and analytics needed to refine contract rules using the principles described in earlier Preface Updates.
 
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
 ---
 
 <a name="prefaceupdate7-conclusion"></a>
@@ -750,6 +774,9 @@ Preface Update 7 defines LangFuse conceptually.
 Preface Update 8 defines the full implementation architecture.
 
 Together, they form the foundation for Phase 4a.1.3 and Phase 5, where large‑scale real‑life integration and future autonomous contract evolution will be explored.
+
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
 
 ---
 
