@@ -1639,6 +1639,14 @@ The adapter’s job is simply:
 4. Return the evaluator output to LangFuse  
 
 Everything else happens inside the gateway.
+All the existing code in ai_gateway_service.py can be resused as it is. Thie ensures that there it statistical control between
+the remediation mode tests and the evaluation mode test.  Both are done under precisely the same environment other than 
+a difference in the LLM model that is employed for the inference.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
 
 ---
 
