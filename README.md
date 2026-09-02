@@ -398,12 +398,22 @@ The adapter is a small Python service that:
 This ensures that evaluation uses the same contract rules, OS‑rules, domain primitives, GLOBAL_RULES, prompt assembly, and payload assembly as real‑life remediation.
 
 The adapter does not run remediation, does not run module2f, does not run the GitLab pipeline, does not call the LLM directly, and does not assemble prompts or payloads.
-The original ai_gateway_service.py code calls the LLM and assembles prompts and payloads as it always has.  
-The adapter's sole responsibility is to reconstruct `context`, set MODE (to evaluate), and invoke the gateway.
-Some addtional branching code will be added to the ai_gateawy_service.py to branch on the mode depending on the MODE setting (evaluate or remedation mode
-are the only 2 MODES allowed)
 
-High level sections in this Preface Update8:
+The original ai_gateway_service.py code calls the LLM and assembles prompts and payloads as it always has.  
+This ensures statistical control between the remediation tests and the evaluation tests with precisely the same environment between
+the two, except for the difference in the LLM model used for the inference on the tests.
+
+
+The adapter's sole responsibility is to reconstruct `context`, set MODE (to evaluate), and invoke the gateway.
+
+Some addtional branching code will be added to the ai_gateawy_service.py to branch on the mode depending on the MODE setting (evaluate or remedation mode are the only 2 MODES allowed)
+With the adapter in use the mode is evaluation and with the module2f OR  stress_tester.py in use the mode is remediate.
+
+In addtion, as will be described later below, the evaluation model will need to be added into the condtional logic of the output-validator that is used at the end of ai_gateway_service.py. This is because different models have different LLM response JSON formats and
+the parsing has to be modified accordingly.
+
+
+High level sections in this Preface Update8 include the following for a comprehensive LangFuse integration implementation design into this project:
 
 Section 0 — LangFuse orchestration
 
@@ -436,6 +446,12 @@ Section 13 — Full adapter skeleton
 Section 14 — Schema‑based evaluation (Option B)
 
 Section 15 — Conclusion
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
 
 ---
 
@@ -1640,11 +1656,8 @@ The adapter’s job is simply:
 
 Everything else happens inside the gateway.
 All the existing code in ai_gateway_service.py can be resused as it is. Thie ensures that there it statistical control between
-the remediation mode tests and the evaluation mode test.  Both are done under precisely the same environment other than 
+the remediation mode tests and the evaluation mode tests.  Both are done under precisely the same environment other than 
 a difference in the LLM model that is employed for the inference.
-
-
-[Back to top of PREFACE UPDATE8](#top-preface8)
 
 
 
