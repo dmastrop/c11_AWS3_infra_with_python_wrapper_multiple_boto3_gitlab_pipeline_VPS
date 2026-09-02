@@ -1334,13 +1334,10 @@ def send_payload(payload: dict) -> str:
     # Return raw stdout (LLM response)
     return result.stdout
 
-
-
-[Back to top of PREFACE UPDATE8](#top-preface8)
  
 ```
 
-
+[Back to top of PREFACE UPDATE8](#top-preface8)
 
 
 
