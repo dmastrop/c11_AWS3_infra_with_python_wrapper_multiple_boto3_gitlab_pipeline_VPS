@@ -1215,6 +1215,269 @@ payload = {
 
 
 
+
+
+
+
+<a name="prefaceupdate8-section4"></a>  
+### **SECTION 4 — MODE Is Checked Inside `recover()` (Full Gateway Implementation)**
+
+This section shows the **entire `recover()` function**, because this is where the dual‑model architecture is implemented.  
+The FastAPI endpoint **does not change**, but the internal logic that selects the LLM model, endpoint, and API key **changes significantly**.
+
+This section presents:
+
+1. **The full original gateway code (before changes)**  
+2. **The full corrected gateway code (after changes)**  
+3. **Bold markers showing EXACTLY what changes and what does not**  
+4. **Explanation of the three endpoints involved in the architecture**  
+5. **Explanation of how MCP Client and Adapter both call `/recover`**  
+6. **Explanation of how MODE controls remediation vs evaluation**  
+
+
+---
+
+#### **4.1 — The Three Endpoints in the Architecture**
+
+To avoid confusion later (especially when reading the Adapter implemenation and design section), it is essential to understand that the system uses **three distinct endpoints**:
+
+##### **1. The FastAPI Gateway Endpoint (unchanged)**  
+This is the endpoint that both MCP Client and Adapter call:
+
+```
+POST http://localhost:8000/recover
+```
+
+This maps directly to:
+
+```python
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+```
+
+This endpoint **does not change**.
+
+---
+
+##### **2. The Adapter Endpoints (separate, unrelated)**  
+The adapter has its own endpoints:
+
+- `/adapter/schema`  
+- `/adapter/trace`  
+
+These are **NOT** the same as `/recover`.  
+They exist in a different module and serve a different purpose.
+
+---
+
+##### **3. The LLM Provider Endpoints (MODE‑dependent)**  
+These are the URLs used inside `recover()` when calling the actual LLM:
+
+Examples:
+
+```
+LLM_API_REMEDIATE = "https://api.openai.com/v1/responses"
+LLM_API_EVALUATE  = "https://api.anthropic.com/v1/messages"
+```
+
+These **do change** depending on MODE.
+
+---
+
+#### **4.2 — MCP Client and Adapter Both Call `/recover`**
+
+##### **Real remediation (module2f)**  
+```
+module2f → ask_ai_for_recovery → MCPClient → POST /recover
+```
+
+##### **LangFuse evaluation (adapter)**  
+```
+LangFuse → Adapter → POST /recover
+```
+
+Both workflows call the **same** FastAPI endpoint.  
+Only MODE changes.
+
+This is why the FastAPI header **must not change**.
+
+---
+
+#### **4.3 — FULL ORIGINAL `recover()` FUNCTION (BEFORE CHANGES)**  
+*(exactly as it exists today)*
+
+COMMENTS indicate what changes and what does not change
+
+```python
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from AI Request Sender (MCP Client)
+# ------------------------------------------------------------
+@app.post("/recover")   # **THIS DOES NOT CHANGE**
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient,
+    forward it to the LLM,
+    return the LLM's plan.
+    """
+
+    # Extract context
+    context = request.context
+
+    # Per-OS prompt assembly
+    os_info = context.get("os_info", {})
+    os_rules = get_os_rules(os_info)
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+        # Per-OS prompt assembly (**THIS DOES NOT CHANGE**)
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+
+        # Hard-coded remediation model (**THIS CHANGES**)
+        payload = {
+            "model": "gpt-5.6-sol",
+            "max_output_tokens": 256,
+            "input": prompt,
+        }
+
+        print("\n==================== PAYLOAD SENT TO OPENAI ====================")
+        print(json.dumps(payload, indent=2))
+        print("===============================================================\n")
+
+        # Hard-coded endpoint + API key (**THIS CHANGES**)
+        response = requests.post(
+            LLM_API,
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+
+        print("\n==================== RAW RESPONSE FROM OPENAI ==================")
+        print(response.text)
+        print("===============================================================\n")
+
+        ####### ORIGINAL OUTBOUND VALIDATOR CODE #######
+```
+
+---
+
+#### **4.4 — FULL NEW `recover()` FUNCTION (AFTER CHANGES)**  
+
+This is the correct dual‑model gateway implementation  
+
+COMMENTS indicate what chanages and what does not change
+
+```python
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from MCP Client or Adapter
+# ------------------------------------------------------------
+@app.post("/recover")   # **THIS DOES NOT CHANGE**
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient or Adapter,
+    forward it to the correct LLM based on MODE,
+    return the LLM's plan.
+    """
+
+    # Extract context
+    context = request.context
+
+    # Per-OS prompt assembly
+    os_info = context.get("os_info", {})
+    os_rules = get_os_rules(os_info)
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+        # Per-OS prompt assembly (**THIS DOES NOT CHANGE**)
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+
+        # --------------------------------------------------------
+        # Select model + endpoint + API key based on MODE (**THIS CHANGES**)
+        # --------------------------------------------------------
+        MODE = os.getenv("MODE", "remediate").lower()
+
+        if MODE == "evaluate":
+            # Independent evaluation model
+            payload = {
+                "model": EVALUATION_MODEL,      # e.g. "claude-3.7-sonnet" or "gpt-5.7-terra"
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_EVALUATE        # Anthropic or OpenAI
+            api_key  = API_KEY_EVALUATE        # separate API key
+        else:
+            # Deterministic remediation model
+            payload = {
+                "model": "gpt-5.6-sol",
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_REMEDIATE       # OpenAI
+            api_key  = API_KEY_REMEDIATE       # OpenAI key
+
+        # --------------------------------------------------------
+        # Debug: print payload (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== PAYLOAD SENT TO LLM ====================")
+        print(json.dumps(payload, indent=2))
+        print("===============================================================\n")
+
+        # --------------------------------------------------------
+        # Make the request to the correct LLM provider (**THIS CHANGES**)
+        # --------------------------------------------------------
+        response = requests.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+
+        # --------------------------------------------------------
+        # Debug: print raw response (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== RAW RESPONSE FROM LLM ====================")
+        print(response.text)
+        print("===============================================================\n")
+
+        ####### OUTBOUND VALIDATOR CODE (unchanged) #######
+```
+
+---
+
+
+#### **4.5 - MODE Injection Points**
+
 As noted in Section 3, three areas have to set the MODE properly now so that it can flip the logic above in ai_gateway_service.py properly.
 
 #### Adapter (MODE=evaluate)
@@ -3212,241 +3475,6 @@ Together, they form the foundation for Phase 4a.1.3 and Phase 5, where large‑s
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ---
-
-
-
-<a name="prefaceupdate7-appendix4"></a>
-## **APPENDIX 4: Choosing the Evaluation Model for LangFuse Correctness Determination**
-
-### Introduction
-
-The evaluation model is one of the most critical components of the LangFuse integration.  
-It determines whether the contract‑rule action produced by the remediation model is correct, and therefore must be:
-
-- **independent** from the remediation model  
-- **reasoning‑optimized**  
-- **stable across versions**  
-- **capable of disagreeing** with the remediation model  
-- **capable of interpreting complex multi‑OS domain primitives**  
-- **capable of applying GLOBAL_RULES**  
-- **capable of evaluating multi‑segment rewrite pipelines**  
-- **capable of interpreting stderr signatures**  
-- **capable of detecting subtle contract‑rule violations**  
-
-This appendix describes how to choose the evaluation model, why independence is required, and how the evaluation model fits into the dual‑model architecture established in **Appendix0**.
-
----
-
-### 1. The Role of the Evaluation Model
-
-The evaluation model is responsible for determining the **expected** contract‑rule action for a given schema.  
-It receives:
-
-- the **GLOBAL_RULES**  
-- the **domain‑primitive block** for the OS  
-- the **schema** (command, stdout, stderr, exit_status, history)  
-- the **OS metadata**  
-
-It must then:
-
-- interpret stderr  
-- interpret stdout  
-- interpret exit_status  
-- apply rewrite precedence  
-- apply OS‑signaled remediation logic  
-- apply malformed‑command logic  
-- apply destructive‑command guard logic  
-- apply idempotency logic  
-- apply multi‑segment rewrite logic  
-- determine the correct JSON action  
-- return the expected result to LangFuse  
-
-This is the same reasoning loop used in manual evaluation, but automated.
-
----
-
-### 2. Why the Evaluation Model Must Be Different from the Remediation Model
-
-As described in **Appendix0**, using the same model for remediation and evaluation destroys the value of evaluation.
-
-If the same model evaluates itself:
-
-- regressions become invisible  
-- rewrite failures become invisible  
-- hallucinations become invisible  
-- OS‑signaled remediation failures become invisible  
-- multi‑segment rewrite failures become invisible  
-- malformed‑command misclassifications become invisible  
-- destructive‑command guard failures become invisible  
-- idempotency failures become invisible  
-
-Evaluation requires **independence**.
-
-Remediation requires **determinism**.
-
-These are fundamentally different roles.
-
----
-
-### 3. Characteristics of a Good Evaluation Model
-
-A good evaluation model must be:
-
-#### **1. Independent**
-It must not share the same failure modes as the remediation model.
-
-#### **2. Reasoning‑optimized**
-Evaluation requires deep reasoning, not speed.
-
-#### **3. Stable**
-Evaluation results must be consistent across runs.
-
-#### **4. Strict**
-It must detect subtle contract‑rule violations.
-
-#### **5. Capable of disagreeing**
-It must be able to identify when the remediation model is wrong.
-
-#### **6. Capable of interpreting complex rules**
-It must understand:
-
-- multi‑segment rewrite pipelines  
-- OS‑signaled remediation logic  
-- malformed‑command logic  
-- destructive‑command guard logic  
-- idempotency logic  
-- domain‑primitive blocks  
-- GLOBAL_RULES  
-
-#### **7. Capable of interpreting stderr signatures**
-Evaluation often hinges on subtle stderr patterns.
-
----
-
-### 4. Candidate Evaluation Models
-
-Several models are suitable for evaluation:
-
-#### **Option A — GPT‑5.7‑Terra (future frontier model)**
-- reasoning‑optimized  
-- independent from GPT‑5.6‑Sol  
-- ideal for evaluation workloads  
-
-#### **Option B — Claude Frontier (Anthropic)**
-- excellent reasoning  
-- different architecture  
-- strong independence  
-- ideal for correctness evaluation  
-
-#### **Option C — GPT‑5.6‑Sol‑Reasoning (if released)**
-- same family, different tuning  
-- reasoning‑optimized variant  
-
-#### **Option D — A slower, more expensive model**
-- evaluation does not require speed  
-- accuracy is more important  
-
-#### **Option E — A local reasoning model**
-- independence from cloud models  
-- useful for offline evaluation  
-
-Any of these models can serve as the evaluation model.
-
----
-
-### 5. How the Evaluation Model Fits into the Dual‑Model Architecture
-
-The dual‑model architecture established in **Appendix0** works as follows:
-
-| Workflow | Model | Gateway Endpoint | Purpose |
-|---------|--------|------------------|---------|
-| Real‑life remediation | GPT‑5.6‑Sol | `/gateway/remediate` | Contract execution |
-| LangFuse evaluation | GPT‑X evaluator | `/gateway/evaluate` | Correctness determination |
-
-Both workflows:
-
-- use the same prompt assembly  
-- use the same GLOBAL_RULES  
-- use the same domain primitives  
-- use the same schema  
-- use the same OS metadata  
-
-But they use **different models**.
-
-This ensures:
-
-- remediation is deterministic  
-- evaluation is independent  
-- regressions are detectable  
-- drift is detectable  
-- rewrite failures are detectable  
-- remediation failures are detectable  
-
-This is the correct architecture.
-
----
-
-### 6. How LangFuse Uses the Evaluation Model
-
-LangFuse calls the evaluation endpoint:
-
-```
-MODE=evaluate
-```
-
-The gateway uses:
-
-- `payload_eval`  
-- `LLM_API_EVALUATE`  
-- GPT‑X evaluator model  
-
-LangFuse then:
-
-- logs the trace  
-- calls the evaluator  
-- receives the expected result  
-- compares actual vs expected  
-- scores correctness  
-- detects regressions  
-- detects drift  
-- clusters failures  
-- tracks cost  
-- tracks latency  
-- correlates results with git diffs  
-
-This is the foundation of automated evaluation.
-
----
-
-### 7. Relationship to Phase5 Autonomous Evolution
-
-As described in **Preface Update4: Autonomous LLM‑Based Contract Evolution**:
-
-- Phase5 requires independent evaluation  
-- Phase5 requires drift detection  
-- Phase5 requires regression detection  
-- Phase5 requires rewrite‑failure detection  
-- Phase5 requires OS‑primitive anomaly detection  
-- Phase5 requires cost and latency analysis  
-- Phase5 requires historical version tracking  
-
-The evaluation model is essential for Phase5.
-
-LangFuse provides the evaluation infrastructure.  
-The evaluation model provides the reasoning.
-
----
-
-### Conclusion
-
-Choosing the evaluation model is a foundational architectural decision.  
-The evaluation model must be independent, reasoning‑optimized, and capable of disagreeing with the remediation model.  
-It must interpret complex contract rules, multi‑segment pipelines, OS‑signaled remediation logic, and stderr signatures.
-
-This appendix establishes the criteria for selecting the evaluation model and prepares the architecture for the dual‑endpoint design described in **Appendix5**.
-
----
-
 
 
 
