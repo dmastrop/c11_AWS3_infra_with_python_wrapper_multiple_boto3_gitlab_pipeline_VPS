@@ -2161,39 +2161,79 @@ Only the gateway validates LLM output.
 
 #### **8.4 Note: Output‑Validator Branching for Additional Models**
 
-If additional evaluator models are introduced (e.g., Claude, Gemini, or future OpenAI models), the gateway’s output‑validator must be extended to support each model’s JSON shape.
+The gateway’s output‑validator is model‑aware. It already branches on the `model` field in the payload to handle different JSON envelope shapes:
 
-For example:
+```python
+model = payload.get("model", "")
 
-- GPT‑5.4 returned `{"action": "...", "retry": "..."}`
-- GPT‑5.6‑Sol returns `{"action": "...", "retry": "...", "cleanup": [...]}`
+if model == "gpt-5.6-sol":
+    # GPT‑5.6‑Sol: extract inner JSON plan from Responses API envelope
+    plan_text = None
+    for item in raw.get("output", []):
+        if item.get("type") == "message":
+            content = item.get("content", [])
+            if content and isinstance(content[0], dict) and "text" in content[0]:
+                plan_text = content[0]["text"]
+                break
 
-Branching logic in `ai_gateway_service.py` was already added to support GPT‑5.6‑Sol, after LLM responses were flagged as error and fallback action plan was
-assigned to all LLM responses. Once the output-validator had the added gpt-5.6-sol format support things started working again. The same applies
-to the evaluator model.
+    if plan_text is None:
+        return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
 
-If a new evaluator model returns:
+    try:
+        plan = json.loads(plan_text)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+
+else:
+    # GPT‑5.4 legacy path
+    text = raw["output"][0]["content"][0]["text"]
+    try:
+        plan = json.loads(text)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+```
+
+Below this extraction block, the **contract‑schema validator** runs:
+
+- checks `action` against allowed actions  
+- enforces cleanup shape  
+- enforces retry semantics for `retry_with_modified_command` vs `cleanup_and_retry`  
+- enforces abort message requirements  
+- rejects message on non‑abort actions  
+
+This validator is shared by **both** remediation and evaluation.
+
+When a new evaluator model is introduced (e.g., Claude, Gemini, or a future OpenAI evaluator), it will almost certainly return a **different envelope**:
 
 ```json
 {"action": "...", "steps": [...], "notes": "..."}
 ```
 
-then the gateway must add a new branch to validate this shape.
+In that case, the gateway must add **another branch**:
 
-If the validator is not updated:
+```python
+elif model == EVALUATION_MODEL:
+    # Extract plan_text from evaluator model’s envelope
+    ...
+    plan = json.loads(plan_text)
+```
 
-- the gateway will reject the output  
-- fallback logic will trigger  
-- LangFuse will see incorrect evaluator outputs  
-- evaluation correctness will be distorted and simply put, incorrect (all action plans returned will be fallback)
+If this branch is not added:
+
+- the gateway will reject the evaluator output  
+- fallback will trigger  
+- LangFuse will see only fallback actions  
+- evaluation correctness will be completely distorted
 
 Therefore:
 
-> **Every new evaluator model requires a corresponding validator branch in the gateway.**
+> **Every new evaluator model requires a corresponding extraction branch in the gateway, followed by the same contract‑schema validator.**
 
-This keeps evaluation consistent and prevents false failures.
+This keeps remediation and evaluation consistent and prevents false failures across large fleets.
 
 ---
+
+
 
 #### **8.5 Summary**
 
