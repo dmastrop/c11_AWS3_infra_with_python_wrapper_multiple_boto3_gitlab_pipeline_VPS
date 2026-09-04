@@ -2138,7 +2138,7 @@ This dual‑model gateway behavior is one of the three critical pillars of the L
 
 #### **8.3 Gateway Validates LLM Output**
 
-The gateway (a-i_gateway_service.py)contains the output‑validator, which ensures that:
+The gateway (`ai_gateway_service.py`) contains the output‑validator, which ensures that:
 
 - the LLM returns valid JSON  
 - the JSON contains required fields  
@@ -2147,17 +2147,17 @@ The gateway (a-i_gateway_service.py)contains the output‑validator, which ensur
 - missing fields trigger fallback logic  
 - invalid actions trigger fallback logic  
 
-This validator is used for **both** remediation and evaluation.
-The response format must be validated prior to the LLM response being sent back to the MCP Client (in the case of module2f) or the adapter or the 
-stress_tester.py
+This validator is used for **both** remediation and evaluation.  
+The response format must be validated prior to the LLM response being sent back to the MCP Client (module2f), the adapter, or the stress_tester.
 
-LangFuse does **not** validate LLM output.
-  
-The adapter does **not** validate LLM output.
-
+LangFuse does **not** validate LLM output.  
+The adapter does **not** validate LLM output.  
 Only the gateway validates LLM output.
 
+**Model‑specific extraction logic (e.g., GPT‑5.6‑Sol vs legacy GPT‑5.4 vs evaluator models) is handled in the branching described in Section 8.4, before the shared contract‑schema validator runs.**
+
 ---
+
 
 #### **8.4 Note: Output‑Validator Branching for Additional Models**
 
