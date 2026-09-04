@@ -1243,6 +1243,14 @@ Only MODE changes.
 
 This is why the FastAPI header **must not change**.
 
+
+
+In addtion, the stress_tester.py calls the recover() function through the harness.py module
+The endpoint does not change for all three of these.
+
+
+
+
 ---
 
 #### **4.3 — FULL ORIGINAL `recover()` FUNCTION (BEFORE CHANGES)**  
@@ -1904,58 +1912,227 @@ Only the gateway performs contract logic.
 
 ---
 
-#### **8.2 MODE Controls Which Model the Gateway Uses**
-
-Section 4 reviews how the MODE will be integrated into the existing code.
-
-The gateway checks:
-
-```
-MODE = os.getenv("MODE", "remediate").lower()
-
-if MODE == "evaluate":
-    payload  = payload_eval
-    endpoint = LLM_API_EVALUATE
-else:
-    payload  = payload_remediate
-    endpoint = LLM_API_REMEDIATE
-```
 
 
 
-If the adapter sets:
+#### **8.2 MODE Controls Which Model the Gateway Uses (Full Gateway View)**
+
+The adapter, module2f, and stress_tester all converge on the **same** FastAPI endpoint:
 
 ```python
-os.environ["MODE"] = "evaluate"
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+    ...
 ```
 
-then the gateway switches to:
+This endpoint **does not change**.  
+What changes is the **internal logic inside `recover()`** that selects:
 
-- **evaluation payload**  
-- **evaluation prompt assembly**  
-- **evaluation model**  
+- **which model** to call  
+- **which LLM API URL** to use  
+- **which API key** to send  
+- **which payload** to construct  
 
-If module2f or stress_tester sets:
+MODE is the switch that controls this behavior.
+
+---
+
+##### **8.2.1 FastAPI endpoint — unchanged**
 
 ```python
-os.environ["MODE"] = "remediate"
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from MCP Client or Adapter
+# ------------------------------------------------------------
+@app.post("/recover")   # **THIS DOES NOT CHANGE**
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient or Adapter,
+    forward it to the correct LLM based on MODE,
+    return the LLM's plan.
+    """
+
+    # Extract context
+    context = request.context
+
+    # Per-OS prompt assembly
+    os_info = context.get("os_info", {})
+    os_rules = get_os_rules(os_info)
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
 ```
 
-then the gateway switches to:
+This header and the initial context extraction are **identical** for:
 
-- **remediation payload**  
-- **remediation prompt assembly**  
-- **GPT‑5.6‑Sol** (At the time of this writing)
+- module2f (via MCP Client)  
+- stress_tester (via harness)  
+- adapter (direct call)  
 
-This dual‑model architecture ensures:
+Nothing here changes for LangFuse.
 
-- remediation uses GPT‑5.6‑Sol  
-- evaluation uses an independent evaluator model that is ideally suited to advanced reasoning
-- both use the same contract rules  (This is required to control both remedation and evaluation results from the contexts)
+---
 
-See the earlier Section 4 for how the MODE decision logic is actually implemented in the code.
+##### **8.2.2 Prompt assembly — unchanged**
 
+```python
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+        # Per-OS prompt assembly (**THIS DOES NOT CHANGE**)
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+```
 
+This is the **shared contract‑rule prompt** for:
+
+- remediation  
+- evaluation  
+
+GLOBAL_RULES, OS‑rules, and domain primitives are identical in both modes.  
+This is what “normalized environment” means.
+
+---
+
+##### **8.2.3 MODE‑based model + endpoint + API key selection — changed**
+
+This is the **new logic** that replaces the old hard‑coded `payload` + `LLM_API` + `API_KEY` block:
+
+```python
+        # --------------------------------------------------------
+        # Select model + endpoint + API key based on MODE (**THIS CHANGES**)
+        # --------------------------------------------------------
+        MODE = os.getenv("MODE", "remediate").lower()
+
+        if MODE == "evaluate":
+            # Independent evaluation model
+            payload = {
+                "model": EVALUATION_MODEL,      # e.g. "claude-3.7-sonnet" or "gpt-5.7-terra"
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_EVALUATE        # e.g. "https://api.anthropic.com/v1/messages"
+            api_key  = API_KEY_EVALUATE        # evaluator API key
+        else:
+            # Deterministic remediation model
+            payload = {
+                "model": "gpt-5.6-sol",
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_REMEDIATE       # e.g. "https://api.openai.com/v1/responses"
+            api_key  = API_KEY_REMEDIATE       # remediation API key
+```
+
+This is the **heart** of the dual‑model architecture:
+
+- **MODE=remediate** → GPT‑5.6‑Sol via `LLM_API_REMEDIATE`  
+- **MODE=evaluate** → independent evaluator via `LLM_API_EVALUATE`  
+
+Both use the same prompt, same rules, same context.  
+Only the model, endpoint, and API key differ.
+
+---
+
+##### **8.2.4 LLM call — endpoint changes, structure stays the same**
+
+```python
+        # --------------------------------------------------------
+        # Debug: print payload (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== PAYLOAD SENT TO LLM ====================")
+        print(json.dumps(payload, indent=2))
+        print("===============================================================\n")
+
+        # --------------------------------------------------------
+        # Make the request to the correct LLM provider (**THIS CHANGES**)
+        # --------------------------------------------------------
+        response = requests.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+
+        # --------------------------------------------------------
+        # Debug: print raw response (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== RAW RESPONSE FROM LLM ====================")
+        print(response.text)
+        print("===============================================================\n")
+```
+
+Previously, this used:
+
+- `LLM_API`  
+- `API_KEY`  
+
+Now it uses:
+
+- `endpoint` (MODE‑dependent)  
+- `api_key` (MODE‑dependent)  
+
+The structure of the call is identical; only the target changes.
+
+---
+
+##### **8.2.5 How MODE is set in each workflow**
+
+This ties back to the rest of Section 4 and is consistent with the existing text:
+
+- **Adapter**  
+  - sets `MODE=evaluate`  
+  - calls `/recover` directly  
+  - gateway routes to evaluator model  
+
+- **module2f (real remediation)**  
+  - sets `MODE=remediate` inside `_invoke_ai_hook`  
+  - MCP Client calls `/recover`  
+  - gateway routes to GPT‑5.6‑Sol  
+
+- **stress_tester.py**  
+  - sets `MODE=remediate` in `main()` or `send_payload()`  
+  - harness calls `/recover` via curl  
+  - gateway routes to GPT‑5.6‑Sol  
+
+All three workflows share:
+
+- the same `/recover` endpoint  
+- the same prompt assembly  
+- the same contract rules  
+
+Only MODE changes.
+
+---
+
+##### **8.2.6 Why this matters for LangFuse**
+
+This dual‑model gateway behavior is one of the three critical pillars of the LangFuse integration:
+
+1. **MODE‑controlled dual‑model gateway**  
+   - normalized environment  
+   - independent evaluation  
+   - fleet‑scale statistical comparison  
+
+2. **Output‑validator branching (Section 8.3, 8.4)**  
+   - per‑model JSON shape support  
+   - prevention of false fallback  
+   - consistent evaluation semantics  
+
+3. **Adapter + GitLab trace parsing (Section 10)**  
+   - schema vs trace ingestion  
+   - context reconstruction  
+   - MODE=evaluate routing  
 
 ---
 
