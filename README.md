@@ -1146,7 +1146,7 @@ Evaluation mode (`MODE=evaluate`) is set inside the adapter.
 
 - So the adapter will set MODE to evaluate so that def recover(context) uses the eval model
 - The module2f and stress_tester.py will hardcode MODE to remediate so that they run using the remedation model (gpt-5.6-sol)
-- The branching code for the MODE will be added to ai_gateway_servcie.py so that the two different models can be supported by the gateway
+- The branching code for the MODE will be added to ai_gateway_servcie.py so that the two different models can be supported by the gateway (see Section 4 below)
 - The output validator in ai_gateway_service.py will need to add another branch for whatever model is used for eval mode. There are two branches currently
 in use in the output validator for gpt-5.4 and the upgrade to gpt-5.6-sol. Both are used in the pipeline or stress_tester for remediation mode.
 The third branch will be added for the eval model's LLM response format.
@@ -1154,64 +1154,6 @@ The third branch will be added for the eval model's LLM response format.
 [Back to top of PREFACE UPDATE8](#top-preface8)
 
 ---
-
-
-
-
-
-
-<a name="prefaceupdate8-section4"></a>
-### **SECTION 4 — MODE Is Checked Inside `recover()`**  
-
-
-
-#### MODE decision logic in ai_gateway_service.py def recover():
-
-
-Inside the gateway (ai_gateway_service.py) def recover() function:
-
-```python
-MODE = os.getenv("MODE", "remediate").lower()
-
-if MODE == "evaluate":
-    payload  = payload_eval
-    endpoint = LLM_API_EVALUATE
-else:
-    payload  = payload_remediate
-    endpoint = LLM_API_REMEDIATE
-```
-
-This ensures:
-
-- remediation uses GPT‑5.6‑Sol  
-- evaluation uses an independent evaluator model highly suited to advanced determinisic reasoning and logic                                                                                 
-- both workflows use the same gateway logic  
-
-Note the prompt remains exactly the same for both modes. (The prompt integrates GLOBAL_RULES and the OS-specific domain primitive rules block into the 
-payload).
-
-This is the dual‑model architecture: one model for remediation, one model for evaluation, both driven by the same contract rules (the same prompt).
-
-Example payloads are:
-
-Remediation:
-```
-payload = {
-    "model": "gpt-5.6-sol",
-    "max_output_tokens": 256,
-    "input": prompt,
-}
-```
-
-Evaluation:
-
-```
-payload = {
-    "model": EVALUATION_MODEL_NAME,
-    "max_output_tokens": 256,
-    "input": prompt,
-}
-```
 
 
 
