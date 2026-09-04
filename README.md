@@ -2088,7 +2088,7 @@ The structure of the call is identical; only the target changes.
 
 ##### **8.2.5 How MODE is set in each workflow**
 
-This ties back to the rest of Section 4 and is consistent with the existing text:
+Section 4 has the complete implementation details on where MODE has to be set for each of the three scenarios below:
 
 - **Adapter**  
   - sets `MODE=evaluate`  
