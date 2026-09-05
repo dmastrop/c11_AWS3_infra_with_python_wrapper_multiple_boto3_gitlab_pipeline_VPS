@@ -3663,6 +3663,8 @@ These models operate in **different execution workflows**, but both use:
 
 This appendix explains *why* dual models are required and *how* they preserve correctness, independence, and regression detection across the entire system.
 
+For code design and implementation details see Preface Update 8.
+
 ---
 
 #### **1. Why Dual Models Are Required**
@@ -3853,14 +3855,408 @@ This appendix establishes the conceptual foundation for the LangFuse integration
 ---
 
 
+<a name="prefaceupdate7-appendix1"></a>  
+### **APPENDIX 1 — Conceptual Workflow: LangFuse + Gateway Integration**
+
+#### **Overview**
+
+Appendix 1 provides a **conceptual overview** of how LangFuse integrates with the contract‑rule gateway to automate correctness evaluation across schema‑based tests and real remediation traces.
+
+LangFuse does not replace the gateway, contract rules, domain‑primitive blocks, or OS‑rules.  
+Instead, LangFuse acts as a **stateful evaluation orchestrator**, while the gateway remains the authoritative contract‑rule engine.
+
+The adapter serves as the bridge between LangFuse and the gateway, ensuring that evaluation uses the same contract rules, prompt assembly, and OS‑specific logic as real‑life remediation.
+
+For code design and implementation details see Preface Update 8.
+
+
+
+---
+
+#### **1. Architectural Context**
+
+The gateway already performs all contract‑rule logic:
+
+- GLOBAL_RULES  
+- domain primitives  
+- OS‑rules  
+- rewrite logic  
+- fallback logic  
+- cleanup logic  
+- idempotency logic  
+- destructive‑command guards  
+- malformed‑command logic  
+- prompt assembly  
+- payload assembly  
+- LLM output validation  
+
+LangFuse does **not** perform any of these tasks.
+
+LangFuse integrates **around** the gateway by:
+
+- orchestrating evaluation  
+- sending dataset items to the adapter  
+- receiving evaluator outputs  
+- comparing remediation vs evaluator  
+- computing correctness  
+- clustering failures  
+- detecting drift  
+- tracking cost and latency  
+
+The gateway remains unchanged and continues to execute contract rules exactly as it does during real‑life remediation.
+
+---
+
+#### **2. Conceptual Workflow**
+
+The LangFuse + gateway workflow consists of the following conceptual stages:
+
+##### **Stage 1 — Dataset Preparation (LangFuse)**
+
+LangFuse ingests:
+
+- schema JSON + remediation outputs  
+- segmented GitLab remediation traces  
+
+LangFuse assembles dataset items containing:
+
+- schema  
+- remediation outputs  
+- index  
+or  
+- raw GitLab log segment  
+
+LangFuse does **not** parse logs or extract context.
+
+---
+
+##### **Stage 2 — Adapter Invocation (LangFuse → Adapter)**
+
+LangFuse sends **one dataset item at a time** to the adapter:
+
+- `/schema` for synthetic schema traces  
+- `/trace` for real GitLab traces  
+
+LangFuse is stateful.  
+The adapter is stateless.
+
+---
+
+##### **Stage 3 — Context Reconstruction (Adapter)**
+
+The adapter:
+
+- extracts schema context  
+- or parses GitLab logs to reconstruct context  
+
+The adapter sets:
+
+```
+MODE = evaluate
+```
+
+and calls the gateway’s:
+
+```
+recover(context)
+```
+
+The adapter does **not** apply rules, assemble prompts, or validate output.
+
+---
+
+##### **Stage 4 — Contract‑Rule Execution (Gateway)**
+
+The gateway:
+
+- assembles the prompt  
+- applies GLOBAL_RULES  
+- applies domain primitives  
+- applies OS‑rules  
+- validates LLM output  
+- calls the evaluation model  
+- returns a JSON action plan  
+
+This is identical to real‑life remediation, except the model is different.
+
+---
+
+##### **Stage 5 — Correctness Evaluation (LangFuse)**
+
+LangFuse receives:
+
+- remediation output  
+- evaluator output  
+
+LangFuse compares them:
+
+```
+correctness = (remediation_output == evaluator_output)
+```
+
+LangFuse stores:
+
+- correctness  
+- cost  
+- latency  
+- OS  
+- domain primitive  
+- model version  
+- rule‑block version  
+- drift metrics  
+- cluster IDs  
+
+This replaces the manual evaluation loop previously performed after each stress_tester run.
+
+---
+
+#### **3. Large‑Scale Multi‑Node Evaluation**
+
+During Phase 4a.1.3, remediation will run across hundreds or thousands of nodes.  
+LangFuse enables large‑scale evaluation by:
+
+- ingesting traces from all nodes  
+- clustering failures  
+- stratifying results by OS  
+- detecting rewrite anomalies  
+- detecting remediation failures  
+- detecting drift across rule blocks  
+- detecting drift across models  
+- detecting cost/latency spikes  
+
+This allows contract‑engineering analysis to scale far beyond manual inspection.
+
+---
+
+#### **4. Alignment with Contract‑Engineering Principles**
+
+LangFuse supports the principles described in:
+
+- **Preface Update 3** — Contract Rule Engineering Guidelines  
+- **Preface Update 4** — Autonomous Contract Evolution  
+
+LangFuse provides:
+
+- regression detection  
+- drift detection  
+- rewrite‑precedence insights  
+- OS‑specific anomaly detection  
+- cost/latency tracking  
+- historical version correlation  
+
+LangFuse does **not** evolve contract rules, but it provides the data required for manual and future automated evolution.
+
+---
+
+#### **5. Limitations**
+
+LangFuse:
+
+- cannot mutate schemas  
+- cannot evolve contract rules  
+- cannot apply domain primitives  
+- cannot apply GLOBAL_RULES  
+- cannot assemble prompts  
+- cannot validate LLM output  
+- cannot reconstruct context  
+- cannot call the gateway directly  
+
+These responsibilities belong to the gateway and the adapter.
+
+---
+
+#### **Conclusion**
+
+Appendix 1 describes the conceptual workflow connecting LangFuse, the adapter, and the gateway.  
+LangFuse orchestrates evaluation, the adapter reconstructs context and routes requests, and the gateway applies contract rules.
+
+This integration enables:
+
+- large‑scale multi‑OS regression testing  
+- correctness scoring  
+- drift detection  
+- failure clustering  
+- cost/latency analysis  
+- contract‑rule refinement  
+
+while preserving the integrity of the existing remediation architecture.
 
 
 
 [Back to top of PREFACE UPDATE7](#top-preface7)
 
 ---
+
+
+<a name="prefaceupdate7-appendix2"></a>  
+### **APPENDIX 2 — Conceptual Design of the LLM‑Based Correctness Evaluator**
+
+#### **Introduction**
+
+Appendix 2 describes the conceptual design of the **LLM‑based correctness evaluator** used by LangFuse.  
+LangFuse does not possess reasoning capabilities; it must rely on an LLM to analyze context and determine whether the remediation model’s output is correct.
+
+The evaluator model provides the independent reasoning required for correctness scoring, regression detection, drift detection, and large‑scale multi‑OS analysis.
+
 ---
 
+#### **1. Architectural Role of the Evaluator**
+
+The evaluator model is responsible for:
+
+- analyzing the **context** (command, stdout, stderr, exit_status, history, OS metadata)  
+- interpreting the gateway‑assembled prompt  
+- producing an **evaluator output**  
+- enabling LangFuse to compare remediation vs evaluator  
+
+The evaluator does **not** apply contract rules directly.  
+The gateway applies all rules.  
+The evaluator simply produces an output based on the gateway’s prompt.
+
+This mirrors the manual evaluation loop previously performed during schema‑based testing.
+
+---
+
+#### **2. Why the Evaluator Must Be LLM‑Based**
+
+A deterministic Python validator was attempted early in the project but was deprecated because:
+
+- rewrite precedence became too complex  
+- OS‑signaled remediation logic expanded  
+- multi‑segment pipelines became intricate  
+- malformed‑command logic required semantic understanding  
+- idempotency rules required contextual reasoning  
+- destructive‑command guards required nuanced interpretation  
+
+Maintaining a deterministic validator became more complex than maintaining the contract rules themselves.
+
+An LLM‑based evaluator solves this by:
+
+- interpreting stderr signatures  
+- understanding rewrite precedence  
+- analyzing multi‑segment pipelines  
+- evaluating idempotency  
+- detecting malformed commands  
+- applying destructive‑command guards  
+- distinguishing fallback vs retry vs cleanup_and_retry vs abort  
+
+This is identical to the reasoning used during manual evaluation.
+
+---
+
+#### **3. Evaluator Workflow (Conceptual)**
+
+The evaluator model receives:
+
+- the **prompt assembled by the gateway**  
+- the **context** extracted by the adapter  
+
+The workflow is:
+
+1. LangFuse sends a dataset item to the adapter  
+2. The adapter reconstructs context  
+3. The adapter sets `MODE=evaluate`  
+4. The adapter calls `recover(context)`  
+5. The gateway assembles the evaluation prompt  
+6. The gateway applies contract rules  
+7. The gateway calls the evaluator model  
+8. The evaluator model returns an evaluator output  
+9. LangFuse compares remediation vs evaluator  
+
+LangFuse determines correctness.
+
+The evaluator model does **not** assemble prompts, apply rules, or validate output.
+
+---
+
+#### **4. Integration with the Gateway (Conceptual)**
+
+The evaluator uses the **same gateway logic** as remediation:
+
+- same prompt assembly  
+- same GLOBAL_RULES  
+- same domain primitives  
+- same OS‑rules  
+- same rewrite logic  
+- same fallback logic  
+- same cleanup logic  
+- same idempotency logic  
+- same destructive‑command guards  
+- same malformed‑command logic  
+
+The only difference is the **model**:
+
+- remediation → deterministic model  
+- evaluation → independent reasoning model  
+
+This ensures architectural consistency and independent evaluation.
+
+---
+
+#### **5. Requirements for the Evaluator Model**
+
+The evaluator model must be:
+
+- independent  
+- reasoning‑optimized  
+- deterministic under identical inputs  
+- capable of disagreeing with the remediation model  
+- capable of analyzing complex stderr/stdout patterns  
+- capable of interpreting multi‑segment pipelines  
+- capable of producing structured JSON  
+
+The evaluator model does **not** need to understand contract rules directly.  
+The gateway handles all rule logic.
+
+---
+
+#### **6. Relationship to Phase 5 Autonomous Evolution**
+
+LangFuse does not evolve contract rules, but it provides:
+
+- correctness scoring  
+- regression history  
+- drift metrics  
+- failure clusters  
+- cost analysis  
+- version correlation  
+
+These are essential for future autonomous evolution described in Preface Update 4.
+
+The evaluator model is the foundation for Phase 5.
+
+---
+
+#### **Conclusion**
+
+The LLM‑based correctness evaluator enables LangFuse to automate the evaluation loop while preserving the intelligence of the contract‑rule engine.  
+By using the same gateway logic as real‑life remediation, the evaluator ensures consistent, independent, and scalable correctness analysis across schema‑based tests and real remediation traces.
+
+This appendix establishes the conceptual foundation for LangFuse’s evaluation pipeline and complements the implementation details described in Preface Update 8.
+
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
+---
+
+
+
+
+
+
+
+
+
+
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
+---
+
+
+
+---
+
+---
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ---
