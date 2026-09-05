@@ -1,0 +1,2838 @@
+<a name="prefaceupdate8"></a>
+## PREFACE UPDATE8: **LangFuse Architectural Implementation: LangFuse Integration Aadapter, and the Schema-Based and Remedation-Trace Evaluation Flows**
+
+<a name="top-preface8"></a>
+### Table of Contents - Preface Update 8
+
+- [Introduction to Preface Update8](#prefaceupdate8-introduction)
+- [SECTION 0 — LangFuse Dataset Orchestration & Configuration](#prefaceupdate8-section0)
+- [SECTION 1 — Why the Adapter Is Required](#prefaceupdate8-section1)
+- [SECTION 2 — Responsibilities of the Adapter](#prefaceupdate8-section2)
+- [SECTION 3 — MODE Is Set by the Adapter (Not in `.gitlab-ci.yml`)](#prefaceupdate8-section3)
+- [SECTION 4 — MODE Is Checked Inside `recover()`](#prefaceupdate8-section4)
+- [SECTION 5 — Schema-Based Evaluation Flow (High-Level)](#prefaceupdate8-section5)
+- [SECTION 6 — Remediation‑Trace Evaluation Flow (Real GitLab Logs)](#prefaceupdate8-section6)
+- [SECTION 7 — Reconstructing `context` from GitLab Logs](#prefaceupdate8-section7)
+- [SECTION 8 — Reusing Gateway Logic (Updated)](#prefaceupdate8-section8)
+- [SECTION 9 — How LangFuse Calls the Adapter](#prefaceupdate8-section9)
+- [SECTION 10 — Adapter Implementation Template (Updated)](#prefaceupdate8-section10)
+- [SECTION 11 — The Contract-Engineering Loop](#prefaceupdate8-section11)
+- [SECTION 12 — GitLab Log Parser Review (Adapter‑Side Reconstruction)](#prefaceupdate8-section12)
+- [SECTION 13 — Full Adapter Service Skeleton (Expanded with both /schema and /trace endpoints)](#prefaceupdate8-section13)
+- [SECTION 14 — Schema‑Based Evaluation Using Synthetic Remediation Traces (Option B)](#prefaceupdate8-section14)
+- [SECTION 15 — Conclusion to Preface Update8](#prefaceupdate8-section15)
+
+
+
+
+---
+
+
+
+<a name="prefaceupdate8-introduction"></a>
+### Introduction to Preface Update8
+
+Preface Update 8 defines the **LangFuse Integration Adapter**, the architectural layer that connects:
+
+- **LangFuse** (evaluation system)  
+- **The AI/MCP gateway** (contract‑rule engine)  
+- **Real remediation traces** (GitLab logs)  
+- **Schema‑based synthetic traces** (stress tester JSON + remediation outputs)  
+
+The adapter is a small Python service that:
+
+1. Parses schema‑based synthetic traces or GitLab logs  
+2. Reconstructs the `context` object exactly as module2f does  
+3. Sets `MODE=evaluate`  
+4. Calls the gateway’s `recover(context)` function directly (This is the original and current recover(context) function)
+5. Returns the evaluator model’s plan to LangFuse  
+
+This ensures that evaluation uses the same contract rules, OS‑rules, domain primitives, GLOBAL_RULES, prompt assembly, and payload assembly as real‑life remediation.
+
+The adapter does not run remediation, does not run module2f, does not run the GitLab pipeline, does not call the LLM directly, and does not assemble prompts or payloads.
+
+The original ai_gateway_service.py code calls the LLM and assembles prompts and payloads as it always has.  
+This ensures statistical control between the remediation tests and the evaluation tests with precisely the same environment between
+the two, except for the difference in the LLM model used for the inference on the tests.
+
+
+The adapter's sole responsibility is to reconstruct `context`, set MODE (to evaluate), and invoke the gateway.
+
+Some addtional branching code will be added to the ai_gateawy_service.py to branch on the mode depending on the MODE setting (evaluate or remedation mode are the only 2 MODES allowed)
+With the adapter in use the mode is evaluation and with the module2f OR  stress_tester.py in use the mode is remediate.
+
+In addtion, as will be described later below, the evaluation model will need to be added into the condtional logic of the output-validator that is used at the end of ai_gateway_service.py. This is because different models have different LLM response JSON formats and
+the parsing has to be modified accordingly.
+
+
+High level sections in this Preface Update8 include the following for a comprehensive LangFuse integration implementation design into this project:
+
+Section 0 — LangFuse orchestration
+
+Section 1 — Why the adapter is required
+
+Section 2 — Adapter responsibilities
+
+Section 3 — MODE architecture
+
+Section 4 — MODE branching inside recover()
+
+Section 5 — Schema‑based evaluation
+
+Section 6 — Remediation‑trace evaluation
+
+Section 7 — GitLab parser
+
+Section 8 — Reusing gateway logic
+
+Section 9 — Adapter endpoints
+
+Section 10 — Adapter implementation template
+
+Section 11 — Contract‑engineering loop
+
+Section 12 — GitLab parser review
+
+Section 13 — Full adapter skeleton
+
+Section 14 — Schema‑based evaluation (Option B)
+
+Section 15 — Conclusion
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
+
+---
+
+<a name="prefaceupdate8-section0"></a>
+### **SECTION 0 — LangFuse Dataset Orchestration & Configuration**  
+
+This section explains how LangFuse actually works, why the adapter is stateless, and how GitLab logs and schema tests become datasets.
+Without this preamble section the rest of the sections describing the adapter design would have been very difficult to understand. 
+At the most general level, the LangFuse gets the raw data and "pre-formats" it for consumption by the LangFuse adapter (custom python code)
+As such, LangFuse maintains iterative state through the various contexts that need to be presented to the AI Gateway Service in evaluation MODE.
+The adapter is completely stateless. This is at the heart of the design and how it integrates with this project so efficiently. In addtion, all
+the the AI Gateway Service (ai_gateway_service.py) is bascially untouched and this is necessary to provide a consistent control environment between
+evaluation MODE and remedation MODE. 
+Evaluation MODE uses the eval model and Remediation mode uses the remedation model that has been used for all of the testing throughout Phase4 of this
+project. Remedation mode is the default "real-life" mode that can take schemas from the homemade stress_tester.py tool OR real life context information
+from module2f and the AI/MCP HOOK that runs in module2f during GitLab pipeline operation with real-life nodes.
+
+
+---
+
+#### **0. LangFuse Dataset Orchestration & Configuration**
+
+LangFuse is the orchestration layer that drives evaluation.  
+It is responsible for **dataset assembly, iteration, segmentation, state management, and correctness scoring**.  
+The adapter is intentionally **stateless** and processes **one context trace per request**.
+
+This section explains how LangFuse prepares and delivers evaluation data to the adapter.
+
+---
+
+##### **0.1 LangFuse Ingests Raw Data (Schema or GitLab Logs)**
+
+LangFuse accepts two types of raw input:
+
+1. **Schema-based synthetic traces**  
+   - The schema JSON  
+   - The remediation outputs produced by `stress_tester.py`  
+   - The index list (or inferred ordering)
+
+Example:
+
+This is a sample single context from a schema JSON for AmazonLinux 2023:
+The first part is the metadata for the schema JSON file that has OS information. The bottom part is the actual context that needs to be sent to the LLM
+for analysis.
+
+
+```
+{
+  "os_name": "Amazon Linux 2023",
+  "os_version": "2023",
+  "kernel": "6.x",
+  "package_managers": ["dnf"],
+  "shell": "bash",
+  "contexts": [
+
+    { "command": "dnf install nginx --badflag", "stdout": "", "stderr": "Error: unknown option --badflag", "exit_status": 1, "attempt": 1, "instance_id": "al2023-patch-001", "ip": "10.0.61.1", "tags": [], "history": [] },
+```
+
+This is a manual validation test of the first context from the schema above when run by the stress_tester.py (using the remedation LLM model):
+Note the index here is 0
+
+```
+root@ff045fe68a3d:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/amazonlinux2023_patch_tests --index 0
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+```
+LangFuse has to keep track of this data. The context here is already in the same format so the LangFuse just has to send the context to the adapter.
+The adapter then sends the context to the evaluation LLM model for eval analysis. 
+
+LangFuse has to keep state or keep track of each context so that it can iterate through them sequentially and so that it can correlate
+the results (eval) from the adapter to the RAW LLM RESPONSE (remedation) result above to determine if the inital remedation response was correct. 
+It can then score the test. The index is used to stitch the context to its LLM response. The format is given in a secton below.
+All of the contexts in JSON format are listed, then below that all of the corresponding validaton results for each context in the list, and then below
+that the index of the context(test case) that it wants the adapter to forward to the AI Gateway Service for evaluation. 
+
+
+
+2. **Real GitLab remediation logs**  
+   - The full GitLab console log from a pipeline run  
+   - Containing many LLM payload/response pairs  
+   - Containing many CONTEXT blocks  
+   - Containing many remediation outputs
+
+LangFuse stores these raw inputs as dataset items.
+
+An example of the raw GitLab console logs would be too large to present here, but the LangFuse will have to find the following headers in the GitLab
+logs (LLM payload/response pairs) and then forward them to the adatper so that a gitlab parser can be called to assemble the data into a properly 
+formed context that the AI Gateway Service can consume.The LangFuse does not parse or reconstruct the data, it merly segments it and keeps track of
+each pair of data so that it can be correlated to each adapter eval LLM response. It can then score the test. 
+
+This is a small abbreviated snippet of the raw logs that LangFuse has to work with:
+
+```
+
+==================== PAYLOAD SENT TO OPENAI ====================
+{
+  "model": "gpt-5.6-sol",
+  "max_output_tokens": 256,
+  "input": "You are a recovery engine. <<REMOVED A LOT OF CONTENT for BREVITY>>
+<<AFTER the contract rules are presented, at the very end of the payload is the CONTEXT>>
+\n\n\nCONTEXT:\n{\n  \"command\": \"dnf install -y nginx\",\n  \"stdout\": \"\",\n  \"stderr\": \"Error: failed to download metadata for repo 'amzn2023-core': Cannot download repomd.xml: repomd.xml signature could not be verified\\nMetadata file does not match checksum\\nError: Unable to find a match: nginx\",\n  \"exit_status\": 1,\n  \"attempt\": 1,\n  \"instance_id\": \"amzn2023-osmut-001\",\n  \"ip\": \"10.0.4.301\",\n  \"tags\": [],\n  \"history\": [],\n  \"os_name\": \"Amazon Linux 2023\",\n  \"os_version\": \"2023\",\n  \"os_info\": {\n    \"name\": \"Amazon Linux 2023\",\n    \"version\": \"2023\"\n  }\n}"
+}
+===============================================================
+```
+
+This is the LLM response pair to teh above payload in the GitLab console logs:
+
+```
+
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "id": "resp_0a3f363bd04dd723006a90dfd8ee4887d0b046056e83e21fd5",
+  "object": "response",
+  "created_at": 1787879384,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+<<LOT of content removed here>>
+<THIS part below has the actual LLM response with the action plan to the context that was in the payload above>>
+   {
+      "id": "msg_0a3f363bd04dd723006a90dfda49c887d0904daebda8faf33a",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "{\"action\":\"cleanup_and_retry\",\"cleanup\":[\"dnf clean all\"],\"retry\":[\"dnf makecache\",\"dnf install -y nginx\"]}"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+```
+
+It is important to note that LangFuse just segments the data and keeps track of each payload/validation pair. It does not parse and reconstruct the 
+data into a JSON context format. The adapter calls a gitlab parser to do that, and to present the conext to the AI Gateway Service.
+
+LangFuse needs to maintain state of each context/remediation validation pair so that when the adapter returns the evaluaton LLM response
+for the same context, it can correlate the two and determine if the remedation validaton LLM response (above)is consistent with the evaluation LLM response 
+forthat context (the adapter will return this to LangFuse). LangFuse also has to sequentially iterate through all such pairs in the GitLab console logs.
+
+
+More on these concepts below.
+
+---
+
+##### **0.2 LangFuse Segments GitLab Logs Automatically**
+
+GitLab logs are massive.  
+A single pipeline run may contain **dozens or hundreds** of LLM calls.
+
+LangFuse automatically segments the log into **individual remediation traces** by detecting the following markers:
+
+- **`PAYLOAD SENT TO OPENAI`**  
+- **`RAW RESPONSE FROM OPENAI`**
+
+Each pair of markers defines **one remediation trace**.
+
+Example segmentation:
+
+```
+[Trace 1]
+PAYLOAD SENT TO OPENAI
+...
+RAW RESPONSE FROM OPENAI
+
+[Trace 2]
+PAYLOAD SENT TO OPENAI
+...
+RAW RESPONSE FROM OPENAI
+
+[Trace 3]
+...
+```
+
+Each segmented trace becomes **one dataset item**.
+
+LangFuse does **not** parse the trace.  
+It only segments it.
+
+Parsing is done by the adapter.(A specialzed python function will parse and assemble the trace into a context in the proper format that the AI Gateway
+Service can consume)
+
+---
+
+##### **0.3 LangFuse Assembles Schema-Based Synthetic Traces**
+
+For schema tests, LangFuse assembles dataset items in the following structure (from the raw data):
+
+```json
+{
+  "schema": { ... },
+  "remediation_results": [ ... ],
+  "index": 0
+}
+```
+
+NOTE that the index is from the remediaton validation phase (a sample was shown earlier), and the index provides the adapter with the context that 
+needs to be processed by the evaluation LLM. So if there are 20 contexts in the schema list above, there will be 20 remedation_results in the list
+above, and the index 0 will point to the first pair that needs to be forwarded to the eval LLM by the adapter.  The indices in this case will go from
+0 to 19.   LangFuse will maintain state and keep track of the iteration thorugh all of the contexts in the schema. The adapter code can use simple
+python code to index each pair that needs to be evaluated. The adapter really does not need the remedation_results. LangFuse needs the remedation_results
+to compare with the evaluation results that it gets back from the adatper for each context test case.Then LangFuse can score the test accordingly.
+
+
+In the above snippt:
+
+- `schema` is the full schema JSON  (the entire list of contexts)
+- `remediation_results` is the list of LLM remediation outputs from `stress_tester.py`  (for all of the contexts that were executed in the test suite)
+- `index` identifies which test case to evaluate  (by the AI Gateway Service. The adapter will forward the proper context to the gateway service)
+- `schema["contexts"][index]` is the context for that test case  (This is how to reference each context inside the schema. The adapter uses this)
+
+LangFuse builds this structure automatically from the uploaded dataset.
+
+The adapter does **not** assemble this structure.  
+The adapter simply receives it. (one by one from LangFuse; remember LangFuse maintains state, the adapter is stateless and per test)
+
+---
+
+##### **0.4 LangFuse Iterates Through Dataset Items**
+
+LangFuse automatically loops through each dataset item:
+
+```
+for each dataset_item:
+    POST /schema or POST /trace  (More on these endpoints in a section below. One if for schema based flows and the other for the GitLab based flows)
+```
+
+LangFuse:
+
+- maintains state  
+- tracks progress  
+- retries failed evaluations  
+- batches requests  
+- parallelizes requests  
+- stores evaluator outputs (KEY)
+- stores remediation outputs  (KEY)
+- computes correctness  (KEY)
+- computes cost  
+- computes latency  
+- clusters failures  
+- detects drift  
+- links results to git commits (VERY useful in retroactive contract engineering which LangFuse cannot do. Contract Engineering is still manual at this point)
+
+The adapter does **none** of this.
+
+The adapter is **stateless**.
+
+---
+
+##### **0.5 Adapter Is Stateless (Critical Design Principle)**
+
+The adapter:
+
+- does **not** maintain state  
+- does **not** track index  
+- does **not** track progress  
+- does **not** loop  
+- does **not** store results  
+- does **not** segment logs  
+- does **not** assemble datasets  
+- does **not** compare remediation vs evaluator  
+- does **not** store correctness  
+
+The adapter only:
+
+1. Receives **one** dataset item  (from LangFuse)
+2. Extracts **one** context  
+3. Sets `MODE=evaluate`  
+4. Calls `recover(context)`  (the ai_gateway_service.py code; some code will be added to support different MODE settings of evaluate vs. remedation)
+5. Returns evaluator output (to LangFuse)
+
+Everything else is done by LangFuse.
+
+---
+
+##### **0.6 Why LangFuse Does NOT Need GLOBAL_RULES or Domain Primitives**
+
+GLOBAL_RULES and domain primitives are embedded inside the gateway (`ai_gateway_service.py`).  
+They are automatically included in:
+
+- prompt assembly  
+- payload assembly  
+- rewrite logic  
+- fallback logic  
+- cleanup logic  
+- OS-rule selection  
+- destructive-command guards  
+- malformed-command logic  
+
+Therefore:
+
+- LangFuse does **not** need GLOBAL_RULES  
+- LangFuse does **not** need domain primitives  
+- The adapter does **not** need them  
+- Only the gateway uses them  
+
+This keeps LangFuse clean and focused on orchestration.
+This is the beauty of this design. The complexity of the LLM Contract Rules remains solely inside ai_gateway_service.py. All of that code is reused
+for evaluation purposes based upon the MODE setting (this is set in the adatper; module2f which runs during GitLab pipeline exection will have a 
+hardcoded MODE of remedation)
+
+---
+
+##### **0.7 Why LangFuse Does NOT Parse Logs or Schema JSON**
+
+LangFuse does **not** parse:
+
+- GitLab logs  
+- schema JSON  
+- CONTEXT blocks  
+- remediation outputs  
+- stdout/stderr  
+- exit_status  
+- OS metadata  
+- history blocks  
+
+Parsing is the adapter’s job.
+
+LangFuse only:
+
+- segments logs  (GitLab console logs)
+- assembles datasets  
+- loops  
+- stores results  
+- compares remediation vs evaluator  
+- computes correctness  
+- clusters failures  
+- detects drift  
+
+This separation keeps the architecture clean.
+
+Also LangFuse does not edit the LLM contract rules in an attempt to fix cases where the evaluation flags a remedation result as incorrect. Currenly 
+that is still a manual process (see Preface Update 7 for more on this).
+
+---
+
+##### **0.8 Why the Adapter MUST Parse Logs and Extract Context**
+
+The adapter must:
+
+- parse GitLab logs  (using a specialized GitLab parser function customized for this purpose)
+- extract CONTEXT  
+- extract remediation output  
+- reconstruct module2f-compatible context  
+- extract schema context via `contexts[index]`  
+- send ONLY context to the gateway  (def recover(context) is the relevant function)
+- return evaluator output  (to LangFuse)
+
+The adapter is the only component that understands:
+
+- module2f’s CONTEXT shape  
+- gateway’s expected input  
+- how to reconstruct context  
+- how to extract remediation output  
+- how to prepare evaluation input  
+
+LangFuse does not do any of this.
+
+---
+
+##### **0.9 Why LangFuse Compares Remediation vs Evaluator**
+
+LangFuse receives:
+
+- remediation output (from schema or GitLab logs; the remedation output is in the raw data presented to LangFuse)  
+- evaluator output (from adapter → gateway → evaluation model; the adapter has to return this to LangFuse)
+
+LangFuse compares them:
+
+```
+if remediation_output == evaluator_output:
+    correctness = True
+else:
+    correctness = False
+```
+
+LangFuse stores:
+
+- correctness  
+- cost  
+- latency  
+- OS  
+- domain primitive  
+- git commit  
+- cluster ID  
+- drift metrics  
+
+This is the core of contract engineering.
+In massively scaled real-life pipelines this will offer many benefits and help improve the contract rule integrity a lot.
+
+---
+
+##### **0.10 Summary of Responsibilities**
+
+###### **LangFuse (stateful orchestrator)**
+
+- segments GitLab logs  
+- assembles schema datasets  
+- loops through dataset items  
+- sends one trace per request  
+- stores remediation outputs  
+- stores evaluator outputs  
+- compares remediation vs evaluator  
+- computes correctness  
+- clusters failures  
+- detects drift  
+- links results to git commits  
+
+###### **Adapter (stateless processor)**
+
+- receives one dataset item  
+- parses GitLab logs  
+- extracts context  
+- extracts remediation output  
+- extracts schema context  
+- sets `MODE=evaluate`  
+- calls `recover(context)`  
+- returns evaluator output  
+
+###### **Gateway (contract-rule engine)**
+
+- uses GLOBAL_RULES  
+- uses domain primitives  
+- uses OS-rules  
+- assembles prompts  
+- assembles payloads  
+- validates LLM output  
+- calls remediation or evaluation model (Based upon the MODE setting; In real-life pipeines or in stress_tester.py testing the MODE is remedation, whereas
+when LangFuse is calling the adapter, MODE is evaluation)
+- returns JSON action plans  
+
+---
+
+##### **0.11 Why this section must precede the other sections**
+
+Section 0 explains:
+
+- how LangFuse works  
+- how datasets are assembled  
+- how logs are segmented  
+- how schema tests are structured  
+- how iteration works  
+- why the adapter is stateless  
+- why the gateway handles contract logic  
+
+Without Section 0, Sections 1–14 (see below) are very confusing.  Section 0 puts sections 1-14 in the proper context.
+
+Section 0 provides the mental model needed to understand the rest of Preface Update8.
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
+---
+
+<a name="prefaceupdate8-section1"></a>
+### **SECTION 1 — Why the Adapter Is Required**  
+
+#### **1. Why the Adapter Is Required**
+
+LangFuse is an evaluation orchestrator.  
+It assembles datasets, segments GitLab logs, iterates through test cases, and compares remediation vs evaluator outputs.  
+However, LangFuse **does not understand** the internal structure of module2f, the gateway, or the remediation/evaluation contract rules.
+
+LangFuse does **not**:
+
+- parse GitLab logs  
+- extract CONTEXT blocks  
+- extract remediation outputs  
+- parse schema JSON  
+- extract schema contexts  
+- reconstruct module2f-compatible context objects  
+- assemble prompts  
+- assemble payloads  
+- apply contract rules  
+- apply OS‑rules  
+- apply domain primitives  
+- apply GLOBAL_RULES  
+- validate LLM plans  
+- extract LLM JSON responses  
+- understand rewrite logic  
+- understand fallback logic  
+- understand cleanup logic  
+- understand destructive-command guards  
+- understand malformed-command logic  
+
+All of these responsibilities already exist inside the **AI/MCP gateway**.
+
+LangFuse’s job is:
+
+- dataset ingestion  (raw data: either schema/validation results or GitLab console logs)
+- dataset segmentation  
+- dataset iteration  
+- sending one trace per request  
+- storing remediation outputs  
+- storing evaluator outputs  
+- comparing remediation vs evaluator  
+- computing correctness  
+- clustering failures  
+- detecting drift  
+- linking results to git commits  
+
+LangFuse is **stateful**.  
+The adapter is **stateless**.
+
+Because LangFuse cannot parse logs or reconstruct context, it must rely on the adapter.
+
+---
+
+Why the Adapter Exists:
+
+The adapter is required because:
+
+1. **GitLab logs are massive and unstructured.**  
+   LangFuse can segment them into items, but cannot parse them.  
+   The adapter must extract:
+   - CONTEXT  
+   - remediation output  
+   - OS metadata  
+   - history  
+   - exit status  
+   - stdout/stderr  
+
+2. **Schema JSON contains multiple contexts.**  
+   LangFuse assembles dataset items, but cannot extract the correct context.  
+   The adapter must do:
+   ```python
+   schema_context = schema["contexts"][index]
+   ```
+
+3. **Only the adapter knows module2f’s context shape.**  
+   LangFuse does not know how module2f constructs context.  
+   The adapter must reconstruct it exactly. This is required so that the ai_gateway_service.py code can be re-used (def recover() is the relevant function)
+
+4. **Only the adapter knows how to call the gateway.**  
+   LangFuse cannot call `recover(context)` directly.  
+   The adapter must set:
+   ```python
+   os.environ["MODE"] = "evaluate"
+   ```
+   and call:
+   ```python
+   recover(context)
+   ```
+The MODE branching will be added to the ai_gateway_service to facilitate the 2 model support (eval. vs. remediation). That is the only code change required.
+
+5. **Only the gateway knows contract rules.**  
+   LangFuse does not apply:
+   - GLOBAL_RULES  
+   - domain primitives  
+   - OS‑rules  
+   - rewrite logic  
+   - fallback logic  
+   - cleanup logic  
+   - idempotency logic  
+
+The adapter does not apply the above either. 
+
+6. **LangFuse needs evaluator output in a consistent JSON shape.**  
+   The adapter ensures the gateway returns:
+   ```json
+   {"action": "...", ...}
+   ```
+This is from the output validator of the ai_gateway_service.py
+
+
+7. **LangFuse compares remediation vs evaluator outside the gateway.**  
+   The adapter must return evaluator output cleanly.
+
+---
+
+#### **Summary**
+
+LangFuse orchestrates evaluation.  
+The gateway performs contract logic.  
+The adapter connects them.
+
+The adapter is required because:
+
+- LangFuse cannot parse logs  
+- LangFuse cannot extract context  
+- LangFuse cannot call the gateway  
+- LangFuse cannot apply contract rules  
+- LangFuse cannot validate LLM output  
+- LangFuse cannot reconstruct module2f context  
+- LangFuse cannot assemble prompts or payloads  
+
+The adapter is the **bridge** between LangFuse and the gateway.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+<a name="prefaceupdate8-section2"></a>
+### **SECTION 2 — Responsibilities of the Adapter**  
+
+
+The adapter performs three core tasks:
+
+#### **A. Parse input**
+- Schema JSON + remediation outputs (synthetic traces)  
+- GitLab LLM debug logs (real remediation traces)  
+
+#### **B. Reconstruct `context`**
+Matching module2f’s `_invoke_ai_hook`:
+
+```python
+context = {
+    "command": ...,
+    "stdout": ...,
+    "stderr": ...,
+    "exit_status": ...,
+    "attempt": ...,
+    "instance_id": ...,
+    "ip": ...,
+    "tags": ...,
+    "os_info": ...,
+    "history": ...
+}
+```
+
+#### **C. Call the gateway in evaluation mode**
+
+The adapter sets:
+
+```python
+os.environ["MODE"] = "evaluate"
+```
+
+Then calls:
+
+```python
+result = recover({
+    "schema_version": "1.0",
+    "context": context
+})
+```
+
+def recover() is a function that is imported from the original code in ai_gateway_service.py. Nothing needs to change here other than adding some
+MODE conditional logic to ai_gateway_service.py (More about that later)
+
+
+The gateway handles prompt assembly, payload assembly, OS‑rule selection, domain primitives, GLOBAL_RULES, and plan validation.  
+The adapter returns the evaluator model’s output to LangFuse.
+
+LangFuse then compares:
+
+- **remediation output** (from GPT‑5.6‑Sol, MODE=remediate)  
+- **evaluator output** (from the evaluation model, MODE=evaluate)  
+
+outside the gateway.
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+
+<a name="prefaceupdate8-section3"></a>
+### **SECTION 3 — MODE Is Set by the Adapter (Not in `.gitlab-ci.yml`)**  
+
+
+The adapter controls gateway behavior by setting:
+
+```python
+os.environ["MODE"] = "evaluate"
+```
+
+Evaluation is never driven by `.gitlab-ci.yml`.  
+The pipeline is not involved in evaluation. The pipeline only runs using module2f which runs in remediate MODE.
+
+Remediation mode (`MODE=remediate`) is set inside:
+
+- `module2f` (for real remediation runs)  
+- `stress_tester.py` (for schema‑based remediation runs)
+
+Evaluation mode (`MODE=evaluate`) is set inside the adapter.
+
+- So the adapter will set MODE to evaluate so that def recover(context) uses the eval model
+- The module2f and stress_tester.py will hardcode MODE to remediate so that they run using the remedation model (gpt-5.6-sol)
+- The branching code for the MODE will be added to ai_gateway_servcie.py so that the two different models can be supported by the gateway (see Section 4 below)
+- The output validator in ai_gateway_service.py will need to add another branch for whatever model is used for eval mode. There are two branches currently
+in use in the output validator for gpt-5.4 and the upgrade to gpt-5.6-sol. Both are used in the pipeline or stress_tester for remediation mode.
+The third branch will be added for the eval model's LLM response format.
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+
+
+
+<a name="prefaceupdate8-section4"></a>  
+### **SECTION 4 — MODE Is Checked Inside `recover()` (Full Gateway Implementation)**
+
+This section shows the **entire `recover()` function**, because this is where the dual‑model architecture is implemented.  
+The FastAPI endpoint **does not change**, but the internal logic that selects the LLM model, endpoint, and API key **changes significantly**.
+
+This section presents:
+
+1. **The full original gateway code (before changes)**  
+2. **The full corrected gateway code (after changes)**  
+3. **Bold markers showing EXACTLY what changes and what does not**  
+4. **Explanation of the three endpoints involved in the architecture**  
+5. **Explanation of how MCP Client and Adapter both call `/recover`**  
+6. **Explanation of how MODE controls remediation vs evaluation**  
+
+
+---
+
+#### **4.1 — The Three Endpoints in the Architecture**
+
+To avoid confusion later (especially when reading the Adapter implemenation and design section), it is essential to understand that the system uses **three distinct endpoints**:
+
+##### **1. The FastAPI Gateway Endpoint (unchanged)**  
+This is the endpoint that both MCP Client and Adapter call:
+
+```
+POST http://localhost:8000/recover
+```
+
+This maps directly to:
+
+```python
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+```
+
+This endpoint **does not change**.
+
+---
+
+##### **2. The Adapter Endpoints (separate, unrelated)**  
+The adapter has its own endpoints:
+
+- `/adapter/schema`  
+- `/adapter/trace`  
+
+These are **NOT** the same as `/recover`.  
+They exist in a different module and serve a different purpose.
+
+---
+
+##### **3. The LLM Provider Endpoints (MODE‑dependent)**  
+These are the URLs used inside `recover()` when calling the actual LLM:
+
+Examples:
+
+```
+LLM_API_REMEDIATE = "https://api.openai.com/v1/responses"
+LLM_API_EVALUATE  = "https://api.anthropic.com/v1/messages"
+```
+
+These **do change** depending on MODE.
+
+---
+
+#### **4.2 — MCP Client and Adapter Both Call `/recover`**
+
+##### **Real remediation (module2f)**  
+```
+module2f → ask_ai_for_recovery → MCPClient → POST /recover
+```
+
+##### **LangFuse evaluation (adapter)**  
+```
+LangFuse → Adapter → POST /recover
+```
+
+Both workflows call the **same** FastAPI endpoint.  
+Only MODE changes.
+
+This is why the FastAPI header **must not change**.
+
+
+
+In addtion, the stress_tester.py calls the recover() function through the harness.py module
+The endpoint does not change for all three of these.
+
+
+
+
+---
+
+#### **4.3 — FULL ORIGINAL `recover()` FUNCTION (BEFORE CHANGES)**  
+*(exactly as it exists today)*
+
+COMMENTS indicate what changes and what does not change
+
+```python
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from AI Request Sender (MCP Client)
+# ------------------------------------------------------------
+@app.post("/recover")   # **THIS DOES NOT CHANGE**
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient,
+    forward it to the LLM,
+    return the LLM's plan.
+    """
+
+    # Extract context
+    context = request.context
+
+    # Per-OS prompt assembly
+    os_info = context.get("os_info", {})
+    os_rules = get_os_rules(os_info)
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+        # Per-OS prompt assembly (**THIS DOES NOT CHANGE**)
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+
+        # Hard-coded remediation model (**THIS CHANGES**)
+        payload = {
+            "model": "gpt-5.6-sol",
+            "max_output_tokens": 256,
+            "input": prompt,
+        }
+
+        print("\n==================== PAYLOAD SENT TO OPENAI ====================")
+        print(json.dumps(payload, indent=2))
+        print("===============================================================\n")
+
+        # Hard-coded endpoint + API key (**THIS CHANGES**)
+        response = requests.post(
+            LLM_API,
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+
+        print("\n==================== RAW RESPONSE FROM OPENAI ==================")
+        print(response.text)
+        print("===============================================================\n")
+
+        ####### ORIGINAL OUTBOUND VALIDATOR CODE #######
+```
+
+---
+
+#### **4.4 — FULL NEW `recover()` FUNCTION (AFTER CHANGES)**  
+
+This is the correct dual‑model gateway implementation  
+
+COMMENTS indicate what chanages and what does not change
+
+```python
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from MCP Client or Adapter
+# ------------------------------------------------------------
+@app.post("/recover")   # **THIS DOES NOT CHANGE**
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient or Adapter,
+    forward it to the correct LLM based on MODE,
+    return the LLM's plan.
+    """
+
+    # Extract context
+    context = request.context
+
+    # Per-OS prompt assembly
+    os_info = context.get("os_info", {})
+    os_rules = get_os_rules(os_info)
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+        # Per-OS prompt assembly (**THIS DOES NOT CHANGE**)
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+
+        # --------------------------------------------------------
+        # Select model + endpoint + API key based on MODE (**THIS CHANGES**)
+        # --------------------------------------------------------
+        MODE = os.getenv("MODE", "remediate").lower()
+
+        if MODE == "evaluate":
+            # Independent evaluation model
+            payload = {
+                "model": EVALUATION_MODEL,      # e.g. "claude-3.7-sonnet" or "gpt-5.7-terra"
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_EVALUATE        # Anthropic or OpenAI
+            api_key  = API_KEY_EVALUATE        # separate API key
+        else:
+            # Deterministic remediation model
+            payload = {
+                "model": "gpt-5.6-sol",
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_REMEDIATE       # OpenAI
+            api_key  = API_KEY_REMEDIATE       # OpenAI key
+
+        # --------------------------------------------------------
+        # Debug: print payload (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== PAYLOAD SENT TO LLM ====================")
+        print(json.dumps(payload, indent=2))
+        print("===============================================================\n")
+
+        # --------------------------------------------------------
+        # Make the request to the correct LLM provider (**THIS CHANGES**)
+        # --------------------------------------------------------
+        response = requests.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+
+        # --------------------------------------------------------
+        # Debug: print raw response (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== RAW RESPONSE FROM LLM ====================")
+        print(response.text)
+        print("===============================================================\n")
+
+        ####### OUTBOUND VALIDATOR CODE (unchanged) #######
+```
+
+---
+
+
+#### **4.5 - MODE Injection Points**
+
+As noted in Section 3, three areas have to set the MODE properly now so that it can flip the logic above in ai_gateway_service.py properly.
+
+#### Adapter (MODE=evaluate)
+
+The adapter needs to set MODE=evaluate before it calls def recover()
+This is very straightforward. Def recover() is imported from ai_gateway_service.py
+
+#### GitLab pipeline run (MODE=remediate)
+
+The pipeline must set MODE=remediate. This is is NOT done in .gitlab-ci.yml, but instead it is done inside module2f and inside the def _invoke_ai_hook()
+function that calls the AI/MCP hook to the gateway.
+
+The edit is done right here, before the ask_ai_for_recovery(context) function call:
+
+```
+
+        context = {
+            "command": original_command,
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "exit_status": exit_status,
+            "attempt": attempt + 1,
+            "instance_id": instance_id,
+            "ip": ip,
+            "tags": extra_tags,
+            "os_info": globals().get("os_info", None),
+            "history": globals().get("command_history", None),
+        }
+
+        print(f"AI_MCP_HOOK[{ip}] 🔍 Invoking AI/MCP recovery engine...")
+        
+        # Set MODE for real remediation
+        os.environ["MODE"] = "remediate"   <<<<<<<<<<<<<<<<<<<<<<<
+        
+        plan = ask_ai_for_recovery(context)
+```
+The MODE can alternatively be set in ask_ai_for_recovery() inserted as follows, but this is not architecturally clean:
+```
+os.environ["MODE"] = "remediate"
+return mcp.send(context)
+```
+This gets caught up in the MCP Client code that module2f uses to invoke the AI Gateway Service and is not as clean as the earlier approach.
+
+
+
+
+#### stress_tester.py schema-based testing tool (MODE=remediate)
+
+There are two options here as well. 
+The stress tester uses a harness.py to actually send the context directly to the gateway endpoint. So the MCP Client code is not involved. 
+This is similar to the adapter as well. (no MCP Client involved).
+The adapter bypasses MCPClient because it calls recover() directly inside the same Python process.
+
+The ideal place to set the MODE is in the stress_tester.py function itself.
+
+The insertion would be as follows:
+In def main() of stress_tester.py
+
+
+```
+def main():
+ ...
+    context = contexts[args.index]
+
+    # Build the final payload dict
+    payload = build_payload(schema, context)
+
+    os.environ["MODE"] = "remediate"   <<<<< SET IT RIGHT HERE
+
+    # Send payload to gateway via harness
+    response = send_payload(payload)
+
+```
+
+This works fine because the send_payload function in the curl harness, harness.py, calls the def recover() function directly (it bypasses all the 
+MCP client code as well): send_payload() in harness.py calls the /recover endpoint directly.
+
+The GATEWAY_URL in the code below is:
+
+```
+GATEWAY_URL = "http://localhost:8000/recover"
+```
+which maps directly to the def recover() function in the ai_gateway_service.py:
+
+```
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from AI Request Sender (MCP Client)
+# ------------------------------------------------------------
+@app.post("/recover")   <<<<<<< /recover is the enpoint for this recover() function
+def recover(request: RecoveryRequest):
+```
+
+So this is very similar to the adapter MODE injection case above, except in this case MODE=remediate, not evaluate.
+
+
+
+Alternatively, it can be set in the send_payload() function itself which is in the curl harness module harness.py. 
+MODE must be set before subprocess.run(cmd) because recover() reads MODE at invocation time.
+
+From harness.py:
+
+```
+
+def send_payload(payload: dict) -> str:
+    """
+    Send a JSON payload to the AI Gateway /recover endpoint using curl.
+    Returns the raw stdout from curl (the LLM response).
+    """
+
+    # Convert dict → JSON string
+    json_data = json.dumps(payload, indent=2)
+
+    # Write JSON to a temporary file
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
+        tmp.write(json_data)
+        tmp_path = tmp.name
+
+    # Build curl command
+    cmd = [
+        "curl",
+        "-s",  # silent (no progress bar)
+        "-X", "POST",
+        GATEWAY_URL,
+        "-H", "Content-Type: application/json",
+        "-d", f"@{tmp_path}"
+    ]
+
+    MODE = os.getenv("MODE", "remediate").lower()    <<<<<< SET the MODE right here
+
+    # Execute curl and capture stdout
+    result = subprocess.run(cmd, capture_output=True, text=True)  <<<<< cmd which goes to the GATEWAY_URL will call the /recover def recover() endpoint
+
+    # Return raw stdout (LLM response)
+    return result.stdout
+
+ 
+```
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
+
+<a name="prefaceupdate8-section5"></a>
+### **SECTION 5 - Schema-Based Evaluation Flow (High-Level)**  
+
+
+Schema JSON already matches the gateway’s expected `context` shape:
+
+```json
+{
+  "os_name": "Fedora",
+  "os_version": "39",
+  "kernel": "6.7.0",
+  "package_managers": ["dnf"],
+  "shell": "bash",
+  "contexts": [
+    { "command": "dnf install nginx --badflag", ... },
+    { "command": "dnf install curl && apt-get install nano", ... },
+    ...
+  ]
+}
+```
+
+Each entry in `contexts` is a synthetic failure scenario.
+
+The schema‑based evaluation flow is:
+
+1. `stress_tester.py` runs each schema test case in **remediation mode** (`MODE=remediate`) using GPT‑5.6‑Sol.  
+2. For each index `x`, `stress_tester.py` captures the **remediation output** (LLM plan).  
+3. LangFuse ingests:
+   - the schema JSON  
+   - the list of remediation outputs  
+   - the index of the test case under evaluation (from the remediation output) 
+4. LangFuse sends a synthetic trace → adapter via `POST /schema`.  (More on this endpoint /schema in Section 9 below)
+5. The adapter:
+   - extracts the schema context at `contexts[index]`  
+   - sets `MODE=evaluate`  
+   - calls `recover()` with that context (as described in the previous section)
+6. The gateway calls the evaluator model and returns the evaluator output.  
+7. LangFuse compares:
+   - remediation output (GPT‑5.6‑Sol)  (which it has; see step 3)
+   - evaluator output (evaluation model)  
+8. LangFuse scores correctness and stores metrics.
+
+No pipeline or module2f is involved in evaluation.  
+Schema tests are treated as synthetic remediation traces.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+<a name="prefaceupdate8-section6"></a>
+### **SECTION 6 - Remediation‑Trace Evaluation Flow (Real GitLab Logs)**  
+
+Real‑life remediation produces GitLab logs containing:
+
+- full CONTEXT  
+- full stderr/stdout  
+- full exit_status  
+- full OS metadata  
+- full domain primitives  
+- full GLOBAL_RULES  
+- full LLM JSON response (remediation output)  
+- full retry/cleanup/fallback pipeline  
+
+Example (simplified):
+
+```text
+==================== PAYLOAD SENT TO OPENAI ====================
+{
+  "model": "gpt-5.6-sol",
+  "max_output_tokens": 256,
+  "input": "You are a recovery engine.
+
+context is here: 
+CONTEXT:
+{
+  "command": "dnf install -y nginx",
+  "stdout": "",
+  "stderr": "Error: failed to download metadata for repo 'amzn2023-core'...",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "amzn2023-osmut-001",
+  "ip": "10.0.4.301",
+  "tags": [],
+  "history": [],
+  "os_name": "Amazon Linux 2023",
+  "os_version": "2023",
+  "os_info": {
+    "name": "Amazon Linux 2023",
+    "version": "2023"
+  }
+}
+}
+===============================================================
+
+==================== RAW RESPONSE FROM OPENAI ==================
+{
+  "content": [
+    {
+      "type": "output_text",
+      "text": "{\"action\":\"cleanup_and_retry\",\"cleanup\":[\"dnf clean all\"],\"retry\":[\"dnf makecache\",\"dnf install -y nginx\"]}"
+    }
+  ]
+}
+```
+
+Flow:
+
+1. Pipeline runs remediation (module2f sets `MODE=remediate`).  
+2. GitLab logs are generated with CONTEXT + remediation output.  
+3. LangFuse ingests logs.  
+4. LangFuse segments (chunks) the raw GitLab logs into individual remediation traces. 
+Each trace contains exactly one CONTEXT block and one remediation LLM output. 
+LangFuse sends these segmented traces one‑at‑a‑time to the adapter via POST /trace.(LangFuse maintains the state; the adapter is stateless)
+(More on this endpoint /trace in Section 9 below)
+5. Adapter receives a single segmented trace, parses it (using the GitLab parser), reconstructs context, and extracts the remediation output.
+6. Adapter sets `MODE=evaluate`.  
+7. Adapter calls `recover(context)` (evaluation model will be used because the MODE has been set to evaluate).  
+8. Gateway returns evaluator output.  
+9. Adapter returns evaluator output to LangFuse.  
+10. LangFuse compares:
+    - remediation output (from GitLab logs)  
+    - evaluator output (from evaluation model)  
+11. LangFuse scores correctness and tracks regressions.
+
+No pipeline or module2f is involved in evaluation.  
+The pipeline only produces remediation traces.
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+
+<a name="prefaceupdate8-section7"></a>
+### **SECTION 7 - Reconstructing `context` from GitLab Logs**  
+
+The GitLab console logs are massive for given pipeline and scale linearly in size with the number of nodes in the fleet. There are many different
+kinds of debugs and log messages in the console logs.
+
+The adapter must extract:
+
+- `"command"`  
+- `"stdout"`  
+- `"stderr"`  
+- `"exit_status"`  
+- `"attempt"`  
+- `"instance_id"`  
+- `"ip"`  
+- `"tags"`  
+- `"os_info"`  
+- `"history"`  
+
+GitLab logs contain all of this, but the adapter must parse:
+
+- the raw LLM debug payload  
+- the CONTEXT block  
+- stderr/stdout  
+- OS metadata  
+- retry/cleanup/fallback pipeline  
+- instance ID  
+- IP  
+- history block  
+
+The adapter then constructs:
+
+```python
+context = {
+    "command": cmd,
+    "stdout": stdout,
+    "stderr": stderr,
+    "exit_status": exit_status,
+    "attempt": attempt,
+    "instance_id": instance_id,
+    "ip": ip,
+    "tags": tags,
+    "os_info": os_info,
+    "history": history,
+}
+```
+
+This must match module2f's context format that is passes to the recover() function, exactly.
+
+This is a very rough parser outline: (NOT the final version)
+
+```python
+import json
+import re
+
+def parse_gitlab_log(raw_log: str) -> dict:
+    """
+    Extracts the CONTEXT block and reconstructs a module2f-compatible context dict.
+    """
+
+    # 1. Extract the JSON CONTEXT block printed by module2f
+    context_match = re.search(r"CONTEXT:\s*(\{.*?\})", raw_log, re.DOTALL)
+    if not context_match:
+        raise ValueError("No CONTEXT block found in GitLab log")
+
+    context_json = context_match.group(1)
+    context = json.loads(context_json)
+
+    # 2. Extract OS metadata (os_info)
+    os_name = context.get("os_info", {}).get("os_name")
+    os_version = context.get("os_info", {}).get("os_version")
+
+    if not os_name or not os_version:
+        os_match = re.search(r"os_name=(\S+), os_version=(\S+)", raw_log)
+        if os_match:
+            os_name, os_version = os_match.groups()
+
+    context["os_info"] = {
+        "os_name": os_name,
+        "os_version": os_version
+    }
+
+    # 3. Extract history block
+    history_match = re.search(r"history:\s*(\[[^\]]*\])", raw_log, re.DOTALL)
+    if history_match:
+        try:
+            context["history"] = json.loads(history_match.group(1))
+        except Exception:
+            context["history"] = []
+
+    # 4. Extract instance_id and ip if missing
+    if "instance_id" not in context:
+        iid_match = re.search(r"instance_id=(\S+)", raw_log)
+        if iid_match:
+            context["instance_id"] = iid_match.group(1)
+
+    if "ip" not in context:
+        ip_match = re.search(r"ip=(\S+)", raw_log)
+        if ip_match:
+            context["ip"] = ip_match.group(1)
+
+    # 5. Extract attempt number if missing
+    if "attempt" not in context:
+        attempt_match = re.search(r"attempt=(\d+)", raw_log)
+        if attempt_match:
+            context["attempt"] = int(attempt_match.group(1))
+
+    # 6. Extract stdout/stderr/exit_status if missing
+    if "stdout" not in context:
+        out_match = re.search(r"STDOUT:\s*(.*?)(?=STDERR:)", raw_log, re.DOTALL)
+        if out_match:
+            context["stdout"] = out_match.group(1).strip()
+
+    if "stderr" not in context:
+        err_match = re.search(r"STDERR:\s*(.*?)(?=exit_status=)", raw_log, re.DOTALL)
+        if err_match:
+            context["stderr"] = err_match.group(1).strip()
+
+    if "exit_status" not in context:
+        exit_match = re.search(r"exit_status=(\d+)", raw_log)
+        if exit_match:
+            context["exit_status"] = int(exit_match.group(1))
+
+    return context
+```
+
+This parser reconstructs a module2f‑compatible `context` object from GitLab logs, enabling LangFuse to evaluate real remediation traces using the 
+gateway’s evaluation model.
+LangFuse uses the adapter to do this. The parser function above is called from the adapter and not from LangFuse. LangFuse does not do any type of
+parsing on the logs.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+
+<a name="prefaceupdate8-section8"></a>
+### **SECTION 8 — Reusing Gateway Logic (Updated)**
+
+---
+
+#### **8. Introduction: Reusing Gateway Logic**
+
+The LangFuse Integration Adapter does **not** assemble prompts, payloads, contract rules, OS‑rules, domain primitives, GLOBAL_RULES, or LLM response extraction.  
+
+All of these responsibilities remain inside the **AI/MCP gateway**, which already implements the full contract‑rule engine. There are no changes required
+in the ai_gateway_service.py other than adding some MODE conditional logs as described earlier in Section 4.
+
+The adapter’s job is simply:
+
+1. Reconstruct a valid `context` object  
+2. Set `MODE=evaluate`  
+3. Call `recover(context)`  
+4. Return the evaluator output to LangFuse  
+
+Everything else happens inside the gateway.
+All the existing code in ai_gateway_service.py can be resused as it is. Thie ensures that there it statistical control between
+the remediation mode tests and the evaluation mode tests.  Both are done under precisely the same environment other than 
+a difference in the LLM model that is employed for the inference.
+
+
+
+---
+
+#### **8.1 Gateway Handles All Contract Logic**
+
+When the adapter calls:
+
+```python
+recover({
+    "schema_version": "1.0",
+    "context": context
+})
+```
+
+the gateway automatically:
+
+- assembles the correct prompt  
+- selects the correct payload  
+- applies GLOBAL_RULES  
+- applies domain primitives  
+- applies OS‑rules  
+- applies rewrite logic  
+- applies fallback logic  
+- applies cleanup logic  
+- applies idempotency logic  
+- applies destructive‑command guards  
+- applies malformed‑command logic  
+- validates LLM output  
+- calls the correct model (remediate or evaluate MODE)  
+- returns a validated JSON action plan  
+
+The adapter does **none** of this.
+
+LangFuse does **none** of this.
+
+Only the gateway performs contract logic.
+
+---
+
+
+
+
+#### **8.2 MODE Controls Which Model the Gateway Uses (Full Gateway View)**
+
+The adapter, module2f, and stress_tester all converge on the **same** FastAPI endpoint:
+
+```python
+@app.post("/recover")
+def recover(request: RecoveryRequest):
+    ...
+```
+
+This endpoint **does not change**.  
+What changes is the **internal logic inside `recover()`** that selects:
+
+- **which model** to call  
+- **which LLM API URL** to use  
+- **which API key** to send  
+- **which payload** to construct  
+
+MODE is the switch that controls this behavior.
+
+---
+
+##### **8.2.1 FastAPI endpoint — unchanged**
+
+```python
+# ------------------------------------------------------------
+# POST http://localhost:8000/recover from MCP Client or Adapter
+# ------------------------------------------------------------
+@app.post("/recover")   # **THIS DOES NOT CHANGE**
+def recover(request: RecoveryRequest):
+    """
+    Receive context from MCPClient or Adapter,
+    forward it to the correct LLM based on MODE,
+    return the LLM's plan.
+    """
+
+    # Extract context
+    context = request.context
+
+    # Per-OS prompt assembly
+    os_info = context.get("os_info", {})
+    os_rules = get_os_rules(os_info)
+
+    if request.schema_version != "1.0":
+        return {"error": "Unsupported schema version", "action": "fallback"}
+```
+
+This header and the initial context extraction are **identical** for:
+
+- module2f (via MCP Client)  
+- stress_tester (via harness)  
+- adapter (direct call)  
+
+Nothing here changes for LangFuse.
+
+---
+
+##### **8.2.2 Prompt assembly — unchanged**
+
+```python
+    # --------------------------------------------------------
+    # Forward the context to the LLM
+    # --------------------------------------------------------
+    try:
+        # Per-OS prompt assembly (**THIS DOES NOT CHANGE**)
+        prompt = (
+            "You are a recovery engine. "
+            "Follow the contract and rules provided inside the input JSON. "
+            "Return ONLY a JSON object.\n\n"
+            + GLOBAL_RULES
+            + os_rules
+            + "\n\nCONTEXT:\n"
+            + json.dumps(context, indent=2)
+        )
+```
+
+This is the **shared contract‑rule prompt** for:
+
+- remediation  
+- evaluation  
+
+GLOBAL_RULES, OS‑rules, and domain primitives are identical in both modes.  
+This is what “normalized environment” means.
+
+---
+
+##### **8.2.3 MODE‑based model + endpoint + API key selection — changed**
+
+This is the **new logic** that replaces the old hard‑coded `payload` + `LLM_API` + `API_KEY` block:
+
+```python
+        # --------------------------------------------------------
+        # Select model + endpoint + API key based on MODE (**THIS CHANGES**)
+        # --------------------------------------------------------
+        MODE = os.getenv("MODE", "remediate").lower()
+
+        if MODE == "evaluate":
+            # Independent evaluation model
+            payload = {
+                "model": EVALUATION_MODEL,      # e.g. "claude-3.7-sonnet" or "gpt-5.7-terra"
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_EVALUATE        # e.g. "https://api.anthropic.com/v1/messages"
+            api_key  = API_KEY_EVALUATE        # evaluator API key
+        else:
+            # Deterministic remediation model
+            payload = {
+                "model": "gpt-5.6-sol",
+                "max_output_tokens": 256,
+                "input": prompt,
+            }
+            endpoint = LLM_API_REMEDIATE       # e.g. "https://api.openai.com/v1/responses"
+            api_key  = API_KEY_REMEDIATE       # remediation API key
+```
+
+This is the **heart** of the dual‑model architecture:
+
+- **MODE=remediate** → GPT‑5.6‑Sol via `LLM_API_REMEDIATE`  
+- **MODE=evaluate** → independent evaluator via `LLM_API_EVALUATE`  
+
+Both use the same prompt, same rules, same context.  
+Only the model, endpoint, and API key differ.
+
+---
+
+##### **8.2.4 LLM call — endpoint changes, structure stays the same**
+
+```python
+        # --------------------------------------------------------
+        # Debug: print payload (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== PAYLOAD SENT TO LLM ====================")
+        print(json.dumps(payload, indent=2))
+        print("===============================================================\n")
+
+        # --------------------------------------------------------
+        # Make the request to the correct LLM provider (**THIS CHANGES**)
+        # --------------------------------------------------------
+        response = requests.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=15
+        )
+
+        # --------------------------------------------------------
+        # Debug: print raw response (**THIS DOES NOT CHANGE**)
+        # --------------------------------------------------------
+        print("\n==================== RAW RESPONSE FROM LLM ====================")
+        print(response.text)
+        print("===============================================================\n")
+```
+
+Previously, this used:
+
+- `LLM_API`  
+- `API_KEY`  
+
+Now it uses:
+
+- `endpoint` (MODE‑dependent)  
+- `api_key` (MODE‑dependent)  
+
+The structure of the call is identical; only the target changes.
+
+---
+
+##### **8.2.5 How MODE is set in each workflow**
+
+Section 4 has the complete implementation details on where MODE has to be set for each of the three scenarios below:
+
+- **Adapter**  
+  - sets `MODE=evaluate`  
+  - calls `/recover` directly  
+  - gateway routes to evaluator model  
+
+- **module2f (real remediation)**  
+  - sets `MODE=remediate` inside `_invoke_ai_hook`  
+  - MCP Client calls `/recover`  
+  - gateway routes to GPT‑5.6‑Sol  
+
+- **stress_tester.py**  
+  - sets `MODE=remediate` in `main()` or `send_payload()`  
+  - harness calls `/recover` via curl  
+  - gateway routes to GPT‑5.6‑Sol  
+
+All three workflows share:
+
+- the same `/recover` endpoint  
+- the same prompt assembly  
+- the same contract rules  
+
+Only MODE changes.
+
+---
+
+##### **8.2.6 Why this matters for LangFuse**
+
+This dual‑model gateway behavior is one of the three critical pillars of the LangFuse integration:
+
+1. **MODE‑controlled dual‑model gateway**  
+   - normalized environment  
+   - independent evaluation  
+   - fleet‑scale statistical comparison  
+
+2. **Output‑validator branching (Section 8.3, 8.4)**  
+   - per‑model JSON shape support  
+   - prevention of false fallback  
+   - consistent evaluation semantics  
+
+3. **Adapter + GitLab trace parsing (Section 10)**  
+   - schema vs trace ingestion  
+   - context reconstruction  
+   - MODE=evaluate routing  
+
+---
+
+#### **8.3 Gateway Validates LLM Output**
+
+The gateway (`ai_gateway_service.py`) contains the output‑validator, which ensures that:
+
+- the LLM returns valid JSON  
+- the JSON contains required fields  
+- the JSON matches the contract schema  
+- malformed output triggers fallback logic  
+- missing fields trigger fallback logic  
+- invalid actions trigger fallback logic  
+
+This validator is used for **both** remediation and evaluation.  
+The response format must be validated prior to the LLM response being sent back to the MCP Client (module2f), the adapter, or the stress_tester.
+
+LangFuse does **not** validate LLM output.  
+The adapter does **not** validate LLM output.  
+Only the gateway validates LLM output.
+
+**Model‑specific extraction logic (e.g., GPT‑5.6‑Sol vs legacy GPT‑5.4 vs evaluator models) is handled in the branching described in Section 8.4, before the shared contract‑schema validator runs.**
+
+---
+
+
+#### **8.4 Note: Output‑Validator Branching for Additional Models**
+
+The gateway’s output‑validator is model‑aware. It already branches on the `model` field in the payload to handle different JSON envelope shapes:
+
+```python
+model = payload.get("model", "")
+
+if model == "gpt-5.6-sol":
+    # GPT‑5.6‑Sol: extract inner JSON plan from Responses API envelope
+    plan_text = None
+    for item in raw.get("output", []):
+        if item.get("type") == "message":
+            content = item.get("content", [])
+            if content and isinstance(content[0], dict) and "text" in content[0]:
+                plan_text = content[0]["text"]
+                break
+
+    if plan_text is None:
+        return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
+
+    try:
+        plan = json.loads(plan_text)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+
+else:
+    # GPT‑5.4 legacy path
+    text = raw["output"][0]["content"][0]["text"]
+    try:
+        plan = json.loads(text)
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+```
+
+Below this extraction block, the **contract‑schema validator** runs:
+
+- checks `action` against allowed actions  
+- enforces cleanup shape  
+- enforces retry semantics for `retry_with_modified_command` vs `cleanup_and_retry`  
+- enforces abort message requirements  
+- rejects message on non‑abort actions  
+
+This validator is shared by **both** remediation and evaluation.
+
+When a new evaluator model is introduced (e.g., Claude, Gemini, or a future OpenAI evaluator), it will almost certainly return a **different envelope**:
+
+```json
+{"action": "...", "steps": [...], "notes": "..."}
+```
+
+In that case, the gateway must add **another branch**:
+
+```python
+elif model == EVALUATION_MODEL:
+    # Extract plan_text from evaluator model’s envelope
+    ...
+    plan = json.loads(plan_text)
+```
+
+If this branch is not added:
+
+- the gateway will reject the evaluator output  
+- fallback will trigger  
+- LangFuse will see only fallback actions  
+- evaluation correctness will be completely distorted
+
+Therefore:
+
+> **Every new evaluator model requires a corresponding extraction branch in the gateway, followed by the same contract‑schema validator.**
+
+This keeps remediation and evaluation consistent and prevents false failures across large fleets.
+
+---
+
+
+
+#### **8.5 Summary**
+
+##### **Gateway (contract-rule engine)**  
+- assembles prompts  
+- assembles payloads  
+- applies GLOBAL_RULES  
+- applies domain primitives  
+- applies OS‑rules  
+- applies rewrite logic  
+- applies fallback logic  
+- applies cleanup logic  
+- applies idempotency logic  
+- validates LLM output  
+- calls remediation or evaluation model  
+- returns JSON action plans  
+
+##### **Adapter (stateless)**  
+- reconstructs context  
+- sets MODE  
+- calls gateway  
+- returns evaluator output  
+
+##### **LangFuse (stateful orchestrator)**  
+- assembles datasets  
+- segments GitLab logs  
+- loops through dataset items  
+- stores remediation outputs  
+- stores evaluator outputs  
+- compares remediation vs evaluator  
+- computes correctness  
+- clusters failures  
+- detects drift  
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+<a name="prefaceupdate8-section9"></a>
+### **SECTION 9 - How LangFuse Calls the Adapter**
+
+LangFuse does not call the gateway directly.  
+LangFuse calls the adapter through two adapter‑defined HTTP endpoints:
+
+- **`POST /schema`** — for schema‑based synthetic remediation traces  
+- **`POST /trace`** — for real remediation‑trace evaluation  
+
+Example:
+
+```json
+POST /schema
+{
+  "schema": { ... },
+  "remediation_results": [ ... ],
+  "index": 0
+}
+
+POST /trace
+{
+  "raw_gitlab_log": "...."
+}
+```
+
+Note the primary contexts are the pre-processed raw data that is fed into LangFuse, so that it can pass the data to the adapter for further processing
+and parsing as described in the earlier sections.
+
+As noted earlier the raw_gitlab_log is a parcel or chunk of the entire GitLab console log as descxribed in an earlier section. LangFuse can break up
+the GitLab console logs but does not actually parse the logs. The adatper will call that specialized gitlab parser function to do this.
+
+LangFuse is configured (in its UI or API) with the adapter’s URL:
+
+```text
+https://adapter-service/schema
+https://adapter-service/trace
+```
+
+LangFuse sends schema synthetic traces to `/schema` and remediation traces to `/trace`. 
+ 
+The adapter decides which path to use based on which endpoint LangFuse calls.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+<a name="prefaceupdate8-section10"></a>
+### **SECTION 10 — Adapter Implementation Template (Updated)**
+
+---
+
+#### **10. Adapter Implementation Template (Schema-Based and Real GitLab Traces)**
+
+The adapter is intentionally **stateless**. 
+ 
+It processes **one dataset item per HTTP request** and does **not** maintain any iteration, batching, or state.
+  
+LangFuse performs all orchestration, segmentation, and looping through the contexts.
+
+
+
+The adapter exposes two endpoints (Section 9):
+
+- **`POST /schema`** — for schema‑based synthetic remediation traces  
+- **`POST /trace`** — for real GitLab remediation traces  
+
+Both endpoints:
+
+- set `MODE=evaluate`  
+- reconstruct a valid `context` that is compatible with what def recover(context) expects in the ai_gateway_service.py 
+- call the gateway’s `recover(context)`  
+- return evaluator output to LangFuse  
+
+LangFuse compares evaluator output vs remediation output outside the gateway, and collates and performs analyses on these comparisons.
+
+---
+
+#### **10.1 `/schema` Endpoint — Synthetic Schema Traces (Option B)**
+
+LangFuse sends dataset items in the following structure:
+
+```json
+{
+  "schema": { ... },
+  "remediation_results": [ ... ],
+  "index": x
+}
+```
+
+The adapter extracts the correct context using Python list indexing:
+
+```python
+schema_context = schema["contexts"][index]
+```
+
+This is the exact same context module2f uses during remediation MODE when an actual GitLab pipeline is run.
+
+The adapter then sets `MODE=evaluate` and calls the gateway.
+
+##### **The `/schema` endpoint in the adapter:**
+
+```python
+@app.post("/schema")
+def run_schema_eval(request: dict):
+    """
+    LangFuse sends:
+      - schema JSON
+      - remediation_results (list of LLM plans from GPT-5.6-Sol)
+      - index (which test case to evaluate)
+
+    The adapter extracts the schema context and calls the gateway
+    in evaluation mode. LangFuse compares evaluator output to
+    remediation output outside the gateway.
+    """
+    os.environ["MODE"] = "evaluate"
+
+    index = request["index"]
+    schema = request["schema"]
+
+    # Extract the schema context for this test case
+    schema_context = schema["contexts"][index]
+
+    # Call the gateway with ONLY the schema context
+    evaluator_output = recover({
+        "schema_version": "1.0",
+        "context": schema_context
+    })
+
+    return evaluator_output
+```
+
+##### **Key points:**
+
+- The adapter does **not** assemble synthetic traces  
+- The adapter does **not** merge remediation results  
+- The adapter does **not** compare remediation vs evaluator  
+- LangFuse does all dataset assembly and comparison  
+- The adapter only extracts context and calls the gateway  
+
+---
+
+#### **10.2 `/trace` Endpoint — Real GitLab Remediation Traces**
+
+LangFuse segments GitLab logs into individual remediation traces using:
+
+- `"PAYLOAD SENT TO OPENAI"`  
+- `"RAW RESPONSE FROM OPENAI"`  
+
+Each segmented trace is sent to the adapter as a raw_gitlab_log:
+
+```json
+{
+  "raw_gitlab_log": ".... one LLM call ...."
+}
+```
+
+The adapter must parse the raw log using `parse_gitlab_log()` (See Section 7 for the rough code):
+
+- extract CONTEXT  
+- extract remediation output  
+- reconstruct module2f-compatible context  
+
+Then the adapter sets `MODE=evaluate` and calls the gateway.
+
+##### **The `/trace` endpoint in the adapter:**
+
+```python
+@app.post("/trace")
+def run_trace_eval(request: dict):
+    """
+    LangFuse sends raw GitLab logs here.
+    The adapter parses logs, reconstructs context, and calls the gateway.
+    LangFuse compares evaluator output to remediation output extracted
+    from the logs.
+    """
+    os.environ["MODE"] = "evaluate"
+
+    raw_log = request["raw_gitlab_log"]
+    context = parse_gitlab_log(raw_log)   <<<<< NOTE the adapter calls parse_gitlab_log inside this run_trace_eval function
+
+    evaluator_output = recover({
+        "schema_version": "1.0",
+        "context": context
+    })
+
+    return evaluator_output
+```
+
+##### **Key points:**
+
+- LangFuse segments logs (It does not parse) 
+- The adapter parses logs  (using parse_gitlab_log)
+- The adapter extracts context  
+- The adapter extracts remediation output  
+- The adapter sends ONLY context to the gateway  (to the recover() function)
+- LangFuse compares remediation vs evaluator  
+
+---
+
+#### **10.3 Adapter Is Stateless**
+
+The adapter:
+
+- does **not** loop  
+- does **not** track index  
+- does **not** track progress  
+- does **not** store results  
+- does **not** segment logs  
+- does **not** assemble datasets  
+- does **not** compare remediation vs evaluator  
+
+The adapter only:
+
+1. Receives one dataset item  
+2. Extracts context  
+3. Sets `MODE=evaluate`  
+4. Calls `recover(context)`  
+5. Returns evaluator output  
+
+LangFuse handles everything else including maintaining state through the contexts.
+
+---
+
+#### **10.4 Summary**
+
+##### **LangFuse (stateful orchestrator)**  
+- segments GitLab logs  
+- assembles schema datasets  
+- loops through dataset items  
+- sends one trace per request  
+- stores remediation outputs  
+- stores evaluator outputs  
+- compares remediation vs evaluator  
+- computes correctness  
+- clusters failures  
+- detects drift  
+
+##### **Adapter (stateless processor)**  
+- receives one dataset item  
+- extracts context  
+- parses GitLab logs  
+- sets `MODE=evaluate`  
+- calls gateway  
+- returns evaluator output  
+
+##### **Gateway (contract-rule engine)**  
+- uses GLOBAL_RULES  
+- uses domain primitives  
+- uses OS-rules  
+- assembles prompts  
+- assembles payloads  
+- validates LLM output  
+- calls remediation or evaluation model  
+- returns JSON action plans  
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
+---
+
+
+
+<a name="prefaceupdate8-section11"></a>
+### **SECTION 11 — The Contract-Engineering Loop**
+
+
+This architecture supports the full contract‑engineering loop:
+
+1. Schema tests are run in remediation mode (`MODE=remediate`) using GPT‑5.6‑Sol.  
+2. Remediation outputs are captured.  
+3. LangFuse evaluates schema‑based synthetic traces via the adapter.  
+4. Real remediation runs on EC2 fleets.  
+5. GitLab logs are generated.  
+6. LangFuse evaluates real remediation traces via the adapter.  
+7. Contract rules are refined based on LangFuse analytics.  
+8. The process repeats until stable.
+
+This is the foundation for Phase 4a.1.3 and Phase 5.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+
+
+
+<a name="prefaceupdate8-section12"></a>
+### **SECTION 12 - GitLab Log Parser Review (Adapter‑Side Reconstruction)**
+
+
+Real remediation logs produced by module2f contain:
+
+- the raw LLM debug payload  
+- the full CONTEXT block  
+- stdout/stderr  
+- exit status  
+- OS metadata  
+- retry/cleanup/fallback pipeline  
+- instance ID  
+- IP  
+- command history  
+
+The adapter must extract these fields and reconstruct a `context` object identical to the one produced by `_invoke_ai_hook`, using the parser outlined 
+earlier in Section 7.
+
+This enables LangFuse to evaluate real remediation traces using the gateway’s evaluation model.
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
+---
+
+
+
+
+
+
+<a name="prefaceupdate8-section13"></a>
+### **SECTION 13 - Full Adapter Service Skeleton (Expanded with both /schema and /trace endpoints)**
+
+Section 10 provided a minimal adapter example.
+  
+Section 13 expands this into a complete adapter service outline, including:
+
+- FastAPI endpoints  
+- MODE setting  
+- schema ingestion  
+- GitLab log ingestion  
+- context reconstruction  
+- gateway invocation  
+- evaluator model routing  
+
+```python
+import os
+import json
+from fastapi import FastAPI
+from ai_gateway_service import recover   <<<<< This is the key. We are reusing the ai_gateway_service.py code
+from parser import parse_gitlab_log   # Section 7 parser (parser.py will the standalone module)
+
+app = FastAPI()
+
+# /schema — schema-based synthetic remediation evaluation
+@app.post("/schema")
+def run_schema_eval(request: dict):
+   """
+    LangFuse sends:
+      - schema JSON
+      - remediation_results (list of LLM plans from GPT-5.6-Sol)
+      - index (which test case to evaluate)
+
+    The adapter extracts the schema context and calls the gateway
+    in evaluation mode. LangFuse compares evaluator output to
+    remediation output outside the gateway.
+    """
+    os.environ["MODE"] = "evaluate"
+
+    index = request["index"]
+    schema = request["schema"]
+
+    schema_context = schema["contexts"][index]
+
+    evaluator_output = recover({
+        "schema_version": "1.0",
+        "context": schema_context
+    })
+
+    return evaluator_output
+
+
+# /trace — real remediation-trace evaluation
+@app.post("/trace")
+def run_trace_eval(request: dict):
+    """
+    LangFuse sends raw GitLab logs here.
+    The adapter parses logs, reconstructs context, and calls the gateway.
+    LangFuse compares evaluator output to remediation output extracted
+    from the logs.
+    """
+    os.environ["MODE"] = "evaluate"
+
+    raw_log = request["raw_gitlab_log"]
+    context = parse_gitlab_log(raw_log) <<<< Note that raw_log is a single segment that LangFuse has provided from the massive GitLab console logs
+
+    evaluator_output = recover({
+        "schema_version": "1.0",
+        "context": context
+    })
+
+    return evaluator_output
+```
+
+LangFuse is configured with:
+
+```text
+POST https://adapter-service/schema
+POST https://adapter-service/trace
+```
+
+LangFuse sends schema synthetic traces to `/schema` and remediation traces to `/trace`.  
+
+The adapter reconstructs context, sets MODE, and calls the gateway.  
+
+The gateway invokes the evaluation model and returns a plan.  
+
+LangFuse compares evaluator vs remediation and scores correctness.
+
+- The advantage here is that in very highly scaled tests LangFuse can correlate and present all of the results in a very organized fashion.
+- NOTE: LangFuse cannot mutate schemas. This is highly specialized testing that is manually done in the stress_tester.py
+- NOTE: LangFuse cannot auto edit/remediate the contract rules if remediaton mode validaton results do not align with evaluation validaton results
+- Contract Engineering currently has to be done manually but in Phase5 of this project it might get automated. (see Section 11 below)...
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+
+<a name="prefaceupdate8-section14"></a>
+### **SECTION 14 — Schema‑Based Evaluation Using Synthetic Remediation Traces (Option B)**  
+
+---
+
+#### **14. Schema‑Based Evaluation Using Synthetic Remediation Traces (Option B)**
+
+Schema files used in the contract‑engineering workflow do not contain an `expected_action` field and cannot be evaluated directly.  
+They are designed for **remediation**, not evaluation.
+
+Therefore, schema test cases must be treated as **synthetic remediation traces**, following the same evaluation pattern used for real GitLab remediation logs.
+
+This preserves the existing contract‑engineering workflow and allows LangFuse to replace the manual evaluation loop without modifying the schema format.
+
+Option A is introducing the remedation expected result into the schema as detailed in Section 14.2 below; this corrupts the data and the remediation mode
+results.
+
+Option B is the correct and final architecture.
+
+---
+
+#### **14.1 Workflow Overview**
+
+The workflow consists of seven steps
+
+LangFuse orchestrates the data for both the remediation phase and evaluation phase 
+ 
+The adapter is stateless and processes one test case per request.
+
+---
+
+##### **Step 1 — Remediation (MODE=remediate)**
+
+Each schema test case is executed using the remediation model (`GPT‑5.6‑Sol`) via `stress_tester.py`.
+
+`stress_tester.py` sets:
+
+```python
+os.environ["MODE"] = "remediate"
+```
+
+Here is a sample test context from a schema context run from the pipeline docker container:
+
+
+```
+root@ff045fe68a3d:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/amazonlinux2023_patch_tests --index 0
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+```
+
+
+For each index `x`, `stress_tester.py` produces:
+
+- `schema_context = schema["contexts"][x]`  (in the example above this is the fle amazonlinux2023_patch_tests.json)
+- `remediation_output = <LLM plan from GPT‑5.6‑Sol>`  (in the example above this is the RAW LLM RESPONSE)
+
+Example remediation outputs:
+
+```json
+{"action": "fallback"}
+{"action": "retry_with_modified_command", "retry": "dnf install curl && dnf install -y nano"}
+{"action": "fallback"}
+```
+
+These remediation outputs are uploaded to LangFuse.
+
+---
+
+##### **Step 2 — LangFuse Dataset Assembly**
+
+The index used by `stress_tester.py` (`--index x`) corresponds to schema test case number `x + 1`.  
+
+The LangFuse pre‑parser uses this mapping to pair:
+   ```text
+   index x  →  schema["contexts"][x]
+   ```
+
+
+LangFuse assembles dataset items in the following structure:
+
+```json
+{
+  "schema": { ... },
+  "remediation_results": [ ... ],
+  "index": x
+}
+```
+
+Where:
+
+- `schema` is the full schema JSON  
+- `remediation_results` is the list of remediation outputs  
+- `index` identifies which test case to evaluate  
+- `schema["contexts"][index]` is the context for that test case  
+
+LangFuse builds this structure automatically.
+
+The adapter does **not** assemble this structure.
+
+---
+
+##### **Step 3 — LangFuse Sends One Synthetic Trace at a Time**
+
+LangFuse loops through the dataset:
+
+```
+for each index x:
+    POST /schema
+```
+
+LangFuse sends **one synthetic trace per request** to the adapter:
+
+```json
+POST /schema
+{
+  "schema": { ... },
+  "remediation_results": [ ... ],
+  "index": x
+}
+```
+
+LangFuse is **stateful**.  
+The adapter is **stateless**.
+
+---
+
+##### **Step 4 — Adapter Extracts Schema Context**
+
+The adapter receives the dataset item and extracts the correct context:
+
+```python
+schema_context = schema["contexts"][index]
+```
+
+This is the exact same context module2f used during remediation.
+
+The adapter does **not** extract remediation output.  
+LangFuse already has it.
+
+---
+
+##### **Step 5 — Adapter Sets MODE=evaluate**
+
+The adapter sets:
+
+```python
+os.environ["MODE"] = "evaluate"
+```
+
+This switches the gateway to:
+
+- evaluator model  
+- evaluation payload  
+- evaluation prompt assembly  (this is the same for both evaluation and remediation)
+
+The remediation model is **not** used during evaluation.
+
+---
+
+##### **Step 6 — Adapter Calls Gateway → Evaluator Model**
+
+The adapter calls:
+
+```python
+evaluator_output = recover({
+    "schema_version": "1.0",
+    "context": schema_context
+})
+```
+
+The gateway:
+
+- assembles the evaluation prompt  
+- applies GLOBAL_RULES  
+- applies domain primitives  
+- applies OS‑rules  
+- validates evaluator output  
+- calls the evaluator model  
+- returns a JSON action plan  
+
+Example evaluator output:
+
+```json
+{"action": "fallback"}
+```
+
+---
+
+##### **Step 7 — LangFuse Compares Remediation vs Evaluator**
+
+LangFuse receives:
+
+- remediation_output (from GPT‑5.6‑Sol)  
+- evaluator_output (from evaluation model)
+
+LangFuse compares them:
+
+```
+if remediation_output == evaluator_output:
+    correctness = True
+else:
+    correctness = False
+```
+
+LangFuse stores:
+
+- correctness  
+- cost  
+- latency  
+- OS  
+- domain primitive  
+- git commit  
+- cluster ID  
+- drift metrics  
+
+This is at the core of providing the necessary data for concise contract engineering.
+
+---
+
+#### **14.2 Why Option B Is Required**
+
+Option B is required because:
+
+- Schema files do **not** contain expected actions from the LLM 
+- Adding expected actions would corrupt remediation behavior (Option A is not viable)
+- Adding hints or tags would distort LLM saliency  
+- Schema tests have always been executed in remediation mode (manually with the stress_tester.py or in an automation loop; but it has to be run manually) 
+- The remediation output is the “candidate answer”  
+- The evaluator model is the “judge”  
+- LangFuse replaces the manual evaluation loop, not the remediation model loop  
+- The gateway must remain unchanged  
+- The adapter must remain stateless  
+- LangFuse must remain the orchestrator  
+
+Option B preserves the entire contract‑engineering workflow.
+
+---
+
+#### **14.3 Symmetry with Real Remediation Traces**
+
+Real remediation traces:
+
+- contain CONTEXT + remediation output inside GitLab logs  
+- are segmented by LangFuse  
+- are parsed by the adapter  
+- are evaluated by the gateway  
+- are compared by LangFuse  
+
+Schema synthetic traces:
+
+- contain CONTEXT in schema JSON  
+- contain remediation output in stress_tester results  
+- are assembled by LangFuse  
+- are evaluated by the gateway  
+- are compared by LangFuse  
+
+In both cases:
+
+- the adapter sends ONLY context to `recover()`  
+- the gateway returns evaluator output  
+- LangFuse compares evaluator vs remediation outside the gateway  
+
+This symmetry is the core of the adapter architectural design.
+
+---
+
+#### **14.4 Summary**
+
+##### **LangFuse (stateful orchestrator)**  
+- assembles schema datasets  
+- loops through test cases  
+- sends one synthetic trace per request  
+- stores remediation outputs  
+- stores evaluator outputs  
+- compares remediation vs evaluator  
+- computes correctness  
+- clusters failures  
+- detects drift  
+
+##### **Adapter (stateless processor)**  
+- receives one dataset item  
+- extracts schema context  
+- sets `MODE=evaluate`  
+- calls gateway  
+- returns evaluator output  
+
+##### **Gateway (contract-rule engine)**  
+- uses GLOBAL_RULES  
+- uses domain primitives  
+- uses OS-rules  
+- assembles prompts  
+- assembles payloads  
+- validates LLM output  
+- calls evaluator model  
+- returns JSON action plans  
+
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+---
+
+
+
+<a name="prefaceupdate8-section15"></a>
+### **SECTION 15- Conclusion to Preface Update8**
+
+Preface Update8 defines the **LangFuse Integration Adapter**, the architectural layer that enables independent evaluation using the same gateway logic
+that powers real‑life remediation.
+
+The architecture is intentionally divided into three components:
+
+---
+
+#### **1.LangFuse — Stateful Orchestrator**
+
+LangFuse is responsible for:
+
+- ingesting schema JSON and remediation outputs  
+- ingesting GitLab logs  
+- segmenting GitLab logs into individual remediation traces  
+- assembling dataset items  
+- iterating through test cases  
+- sending one trace per request to the adapter  
+- storing remediation outputs  
+- storing evaluator outputs  
+- comparing remediation vs evaluator  
+- computing correctness  
+- clustering failures  
+- detecting drift  
+- linking results to git commits  
+
+LangFuse maintains state.  
+LangFuse performs orchestration.  
+LangFuse drives evaluation.
+
+LangFuse does **not** parse logs, extract context, apply contract rules, or call the gateway directly.
+
+---
+
+#### **2.Adapter — Stateless Processor**
+
+The adapter is intentionally stateless.  
+It processes **one dataset item per request** and performs no iteration or state management.
+
+The adapter:
+
+- receives one synthetic schema trace or one GitLab trace  
+- extracts context (schema or GitLab)  
+- reconstructs module2f‑compatible context  
+- sets `MODE=evaluate`  
+- calls the gateway’s `recover(context)`  
+- returns evaluator output to LangFuse  
+
+The adapter does **not**:
+
+- loop  
+- track index  
+- track progress  
+- store results  
+- segment logs  
+- assemble datasets  
+- compare remediation vs evaluator  
+- apply contract rules  
+- validate LLM output  
+
+The adapter is a pure formatting and routing layer.
+
+---
+
+#### **3.Gateway — Contract‑Rule Engine**
+
+The gateway contains the full contract‑rule engine and performs all remediation and evaluation logic.
+
+The gateway:
+
+- assembles prompts  
+- assembles payloads  
+- applies GLOBAL_RULES  
+- applies domain primitives  
+- applies OS‑rules  
+- applies rewrite logic  
+- applies fallback logic  
+- applies cleanup logic  
+- applies idempotency logic  
+- applies destructive‑command guards  
+- applies malformed‑command logic  
+- validates LLM output  
+- calls remediation or evaluation model  
+- returns JSON action plans  
+
+The gateway is the only component that understands contract rules.
+
+LangFuse and the adapter do not.
+
+---
+
+#### **Dual‑Model Architecture**
+
+The adapter controls which model the gateway uses by setting:
+
+```python
+os.environ["MODE"] = "evaluate"
+```
+
+or (during remediation):
+
+```python
+os.environ["MODE"] = "remediate"
+```
+
+This ensures:
+
+- remediation uses GPT‑5.6‑Sol  
+- evaluation uses an independent evaluator model  
+- both use the same contract rules  
+- both use the same gateway logic  
+
+This dual‑model architecture is the foundation of the requirements for effective contract engineering.
+
+---
+
+#### **Symmetry Between Schema and GitLab Traces**
+
+Schema synthetic traces and real GitLab remediation traces follow the same evaluation pattern:
+
+- LangFuse assembles dataset items  
+- LangFuse sends one trace per request  
+- Adapter extracts context  
+- Adapter calls gateway  
+- Gateway returns evaluator output  
+- LangFuse compares evaluator vs remediation  
+
+This symmetry allows:
+
+- schema tests  
+- real remediation traces  
+- multi‑OS fleets  
+- multi‑node pipelines  
+- large‑scale regression testing  
+- drift detection  
+- correctness scoring  
+- contract evolution  
+
+to all use the same evaluation pipeline.
+
+---
+
+#### **Closing Remarks**
+
+The LangFuse Integration Adapter completes the dual‑model architecture and enables:
+
+- large‑scale multi‑OS regression testing  
+- automated correctness scoring  
+- continuous contract‑rule refinement  
+- drift detection  
+- failure clustering  
+- and set the stage for autonomous contract evolution (in Phase5)  
+
+Preface Updaet8 defines the adapter as the bridge between LangFuse and the gateway, ensuring that evaluation is consistent, reliable, and 
+fully aligned with real‑life remediation behavior.
+
+
+
+[Back to top of PREFACE UPDATE8](#top-preface8)
+
+
+---
+
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+---
