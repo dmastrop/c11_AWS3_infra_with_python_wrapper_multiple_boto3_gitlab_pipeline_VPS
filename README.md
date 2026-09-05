@@ -4684,6 +4684,212 @@ be non-deterministic).
 
 
 
+[Back to top of PREFACE UPDATE7](#top-preface7)
+
+---
+
+
+
+
+
+<a name="prefaceupdate7-appendix5"></a>  
+### **APPENDIX 5 — Dual‑Model Gateway Architecture for Remediation and Evaluation (Conceptual Overview)**
+
+#### Introduction
+
+This appendix provides a **conceptual overview** of the dual‑model gateway architecture that separates:
+
+- **Real‑life remediation**  
+  (module2f → MCP Client → `/recover` → GPT‑5.6‑Sol)
+
+- **Evaluation**  
+  (LangFuse → Adapter → `/recover` → independent evaluator model)
+
+This separation is essential for correctness scoring, regression detection, drift analysis, and contract‑rule validation.  
+It ensures that the evaluation model can **disagree** with the remediation model — something that is impossible if both roles use the same LLM.
+
+All implementation details for this architecture are fully documented in **Preface Update 8**, specifically:
+
+- **Section 4** — MODE‑controlled dual‑model gateway implementation  
+- **Section 8.2** — full gateway routing logic and endpoint selection  
+
+Appendix 5 focuses on the **conceptual architecture**, not the code.
+
+For code design and implementation details see Preface Update 8.
+
+---
+
+#### **1. Why Dual‑Model Architecture Is Required**
+
+Using the same model for remediation and evaluation destroys the value of evaluation:
+
+- regressions become invisible  
+- rewrite failures become invisible  
+- hallucinations become invisible  
+- OS‑primitive misinterpretations become invisible  
+- malformed‑command misclassifications become invisible  
+- destructive‑command guard failures become invisible  
+- idempotency failures become invisible  
+
+Evaluation must be **independent**.  
+Remediation must be **deterministic**.
+
+These roles cannot be fulfilled by the same model.
+
+The dual‑model gateway architecture enforces this separation.
+
+---
+
+#### **2. Option A vs Option B (Conceptual)**
+
+There are two conceptual ways to implement dual‑model evaluation:
+
+##### **Option A — Same endpoint, different model**  
+Both remediation and evaluation use the same LLM provider endpoint.
+
+This provides **weak independence**, because:
+
+- both models share similar architectural biases  
+- both models may share similar failure modes  
+- regression detection is less robust  
+
+##### **Option B — Different endpoints + different frontier models (preferred)**  
+Remediation and evaluation use **different providers** or **different endpoints**.
+
+This provides:
+
+- maximum independence  
+- different architectural reasoning styles  
+- different failure modes  
+- stronger regression detection  
+- stronger drift detection  
+- stronger rewrite‑failure detection  
+- stronger OS‑primitive anomaly detection  
+
+This is the architecture used by:
+
+- OpenAI eval pipelines  
+- Anthropic eval pipelines  
+- DeepMind eval pipelines  
+- Microsoft internal eval systems  
+- LangFuse evaluation workflows  
+
+Option B is the correct conceptual choice.
+
+Implementation details for Option B are in **Preface Update 8 Section 4 and Section 8.2**.
+
+---
+
+#### **3. Shared Prompt Assembly (Conceptual)**
+
+Both remediation and evaluation use **the same prompt**, which includes:
+
+- GLOBAL_RULES  
+- domain‑primitive blocks  
+- OS‑rules  
+- schema fields  
+- context (command, stdout, stderr, exit_status, history, OS metadata)
+
+This ensures:
+
+- identical rule environment  
+- identical rewrite logic  
+- identical multi‑segment pipeline interpretation  
+- identical OS‑primitive interpretation  
+- identical contract‑rule semantics  
+
+The only difference is **which model** receives the prompt.
+
+Implementation details are in **Preface Update 8 Section 4**.
+
+---
+
+#### **4. MODE Controls Remediation vs Evaluation (Conceptual)**
+
+MODE determines which model the gateway calls:
+
+- **MODE=remediate** → GPT‑5.6‑Sol  
+- **MODE=evaluate** → independent evaluator model  
+
+MODE is set by:
+
+- module2f (real remediation)  
+- stress_tester.py (schema‑based testing)  
+- adapter (LangFuse evaluation)
+
+All workflows converge at the same FastAPI endpoint:
+
+```
+POST /recover
+```
+
+Implementation details are in **Preface Update 8 Section 4 and Section 8.2**.
+
+---
+
+#### **5. Workflow Separation (Conceptual)**
+
+##### **Real‑life remediation workflow**
+- module2f  
+- MCP Client  
+- `/recover`  
+- GPT‑5.6‑Sol  
+- deterministic contract execution  
+
+##### **Evaluation workflow**
+- LangFuse  
+- adapter  
+- `/recover`  
+- independent evaluator model  
+- correctness determination  
+
+Both workflows:
+
+- use the same gateway  
+- use the same prompt  
+- use the same rules  
+- use the same OS‑rules  
+- use the same domain primitives  
+- use the same schema  
+
+But they use **different models** and **different LLM endpoints**.
+
+Implementation details are in **Preface Update 8 Section 8.2**.
+
+---
+
+#### **6. Why This Architecture Matters**
+
+The dual‑model gateway architecture enables:
+
+- regression detection  
+- drift detection  
+- rewrite‑failure detection  
+- remediation‑failure detection  
+- OS‑primitive anomaly detection  
+- cost and latency analysis  
+- large‑scale multi‑OS evaluation  
+- autonomous contract evolution (Phase 5)
+
+This architecture is required for:
+
+- Appendix 2 (LLM‑based correctness evaluator)  
+- Appendix 3 (Phase 4a.1.3 LangFuse instrumentation)  
+- Appendix 6 (LangFuse multi‑model evaluation)  
+- Preface Update 4 (Phase 5 autonomous evolution)  
+
+---
+
+#### **Conclusion**
+
+Appendix 5 provides the **conceptual overview** of the dual‑model gateway architecture.  
+All implementation details — including MODE routing, payload selection, endpoint selection, and full gateway code — are documented in:
+
+- **Preface Update 8 Section 4**  
+- **Preface Update 8 Section 8.2**
+
+This architecture is the foundation for LangFuse integration, large‑scale multi‑OS regression testing, and future autonomous contract evolution.
+
 
 
 [Back to top of PREFACE UPDATE7](#top-preface7)
@@ -4696,13 +4902,9 @@ be non-deterministic).
 
 
 
-
-
 [Back to top of PREFACE UPDATE7](#top-preface7)
 
 ---
----
-
 ---
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
