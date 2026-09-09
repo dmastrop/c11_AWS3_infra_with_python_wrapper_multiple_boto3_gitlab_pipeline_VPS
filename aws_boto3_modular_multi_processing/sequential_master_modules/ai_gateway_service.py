@@ -2773,6 +2773,11 @@ ALPINE_RULES = (
     "      • ALL other segments are preserved verbatim,\n"
     "      • The LLM MUST NOT drop, duplicate, reorder, or invent segments.\n"
     "\n"
+    # add the -y flag rules in here as well
+    "- ALL 'apk add <pkg>' commands in rewritten pipelines MUST include the '-y' flag to ensure non-interactive behavior, even if the original segment did not include '-y'.\n"
+    "- Native 'apk add <pkg>' segments MUST also be normalized to 'apk add -y <pkg>' unless they already contain '-y'.\n"
+    "- System-wide operations (such as 'apk update') MUST NOT be modified to include '-y'. These commands MUST be preserved verbatim to avoid violating OS-Mutation Guard.\n"
+    "\n"
     "- The following commands are considered system-wide operations:\n"
     "      apt-get update\n"
     "      apt-get upgrade\n"
