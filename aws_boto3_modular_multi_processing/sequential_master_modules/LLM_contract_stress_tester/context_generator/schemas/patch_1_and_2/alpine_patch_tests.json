@@ -1,0 +1,303 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+    {
+      "command": "apk add nginx --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "a-patch-001",
+      "ip": "10.0.60.1",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && yum install nano",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-002",
+      "ip": "10.0.60.2",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk update",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "a-patch-003",
+      "ip": "10.0.60.3",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk update --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "a-patch-004",
+      "ip": "10.0.60.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && pacman -Syu",
+      "stdout": "",
+      "stderr": "sh: pacman: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-005",
+      "ip": "10.0.60.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk add bash",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-006",
+      "ip": "10.0.60.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "a-patch-007",
+      "ip": "10.0.60.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nano && apk add curl",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-008",
+      "ip": "10.0.60.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install git && yum install nano",
+      "stdout": "",
+      "stderr": "sh: dnf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-009",
+      "ip": "10.0.60.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk add python3 --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "a-patch-010",
+      "ip": "10.0.60.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk add python3",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "a-patch-011",
+      "ip": "10.0.60.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk add python3 && yum install nano",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-012",
+      "ip": "10.0.60.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nano && apk add curl && apk add bash",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-013",
+      "ip": "10.0.60.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && dnf install git && apk add nano",
+      "stdout": "",
+      "stderr": "sh: dnf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-014",
+      "ip": "10.0.60.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nano && apk add bash && pacman -S htop",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-015",
+      "ip": "10.0.60.15",
+      "tags": [],
+      "history": []
+    },
+
+
+    {
+      "command": "apk add curl && apk add nano && apt-get install bash",
+      "stdout": "",
+      "stderr": "sh: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-016",
+      "ip": "10.0.60.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nano && apk add curl && apk update",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "a-patch-017",
+      "ip": "10.0.60.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && echo 'hello' && yum install nano",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-018",
+      "ip": "10.0.60.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && echo 'test' && pacman -S htop",
+      "stdout": "",
+      "stderr": "sh: pacman: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-019",
+      "ip": "10.0.60.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nano --badflag && apk add curl",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-020",
+      "ip": "10.0.60.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apt-get install bash --badflag && apk add nano",
+      "stdout": "",
+      "stderr": "sh: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-021",
+      "ip": "10.0.60.21",
+      "tags": [],
+      "history": []
+    },
+
+
+    {
+      "command": "yum install nano && apk add bash && apk update",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "a-patch-022",
+      "ip": "10.0.60.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && apk add curl && rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "a-patch-023",
+      "ip": "10.0.60.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && yum install nano && echo hi && apk add bash",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "a-patch-024",
+      "ip": "10.0.60.24",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+    
+
+
