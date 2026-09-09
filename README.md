@@ -29315,6 +29315,33 @@ The test matrix for Alpine Patch‑24 Rewrite Test Case Matrix — GPT‑5.6‑S
 
 ##### Regresion on the 6 idempotency tests on Fedora with gpt-5.6-sol
 
+The testing in this area went fine.
+
+The test matrix for the Alpine Idempotency‑6 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand Alpine Idempotency‑6 Test Case Matrix (6 test cases) - GPT‑5.6‑Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | alpine‑idem‑001 | `apk add nginx` | cleanup_and_retry | cleanup_and_retry (`apk add nginx`) | **Package already installed.** exit=0, no stderr, stdout indicates no new installation. Global Idempotency rules → safe retry of the same command. Correct. |
+| 2 | alpine‑idem‑002 | `apk add curl` | cleanup_and_retry | cleanup_and_retry (`apk add curl`) | **Idempotency with history.** History shows prior successful install of `curl`. Global Idempotency rules require retry of the same command. Correct. |
+| 3 | alpine‑idem‑003 | `rc-service nginx start` | cleanup_and_retry | cleanup_and_retry (`rc-service nginx stop` → `rc-service nginx start`) | **Service already running.** stderr: “WARNING: nginx is already running.” Alpine service idempotency requires cleanup (stop) then retry (start). Correct. |
+| 4 | alpine‑idem‑004 | `mkdir /var/www/html` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /var/www/html`) | **Directory exists.** stderr: “File exists.” Global Idempotency rules require safe retry using `mkdir -p`. Correct. |
+| 5 | alpine‑idem‑005 | `touch /etc/motd` | cleanup_and_retry | cleanup_and_retry (`touch /etc/motd`) | **File exists + history shows prior creation.** stderr: “File exists.” History indicates prior successful creation. Global Idempotency rules → cleanup_and_retry. Correct. |
+| 6 | alpine‑osmut‑001 | `apk add some-nonexistent-package` | fallback | fallback | **Unsatisfiable constraints.** stderr: “no such package.” No OS‑signaled remediation. OS‑Mutation Guard forbids issuing `apk update`. Must fallback. Correct. |
+
+</details>
+
+
+
+
+
+
+
+
 ##### Regression on the 3 OS-signaled remediation tests on Fedora with gpt-5.6-sol
 
 
