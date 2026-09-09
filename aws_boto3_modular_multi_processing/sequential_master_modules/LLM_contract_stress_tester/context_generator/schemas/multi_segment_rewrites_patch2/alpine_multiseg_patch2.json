@@ -1,0 +1,263 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apk update",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-001",
+      "ip": "10.0.80.1",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install nano && apk update",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-002",
+      "ip": "10.0.80.2",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "pacman -S htop && yum install curl && apk add bash && apk update",
+      "stdout": "",
+      "stderr": "sh: pacman: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-003",
+      "ip": "10.0.80.3",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apk add nano",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-004",
+      "ip": "10.0.80.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && apk add nano && apk add python3 && apk update",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-005",
+      "ip": "10.0.80.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew install wget && apk update",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-006",
+      "ip": "10.0.80.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apk update",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-007",
+      "ip": "10.0.80.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && yum update -y",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-008",
+      "ip": "10.0.80.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install curl && yum update -y",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-009",
+      "ip": "10.0.80.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apk add nano --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-010",
+      "ip": "10.0.80.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add curl && echo 'hello' && apk add bash && pacman -S htop",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-011",
+      "ip": "10.0.80.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && echo 'test' && apk add bash && apk add nano",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-012",
+      "ip": "10.0.80.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && apk add curl && rm -rf /",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-013",
+      "ip": "10.0.80.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apk add nano && apk update",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-014",
+      "ip": "10.0.80.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && apk update --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-015",
+      "ip": "10.0.80.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && yum update --badflag",
+      "stdout": "",
+      "stderr": "Error: unknown option --badflag",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-016",
+      "ip": "10.0.80.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew update",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-017",
+      "ip": "10.0.80.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install curl && brew update",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-018",
+      "ip": "10.0.80.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew install wget",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-019",
+      "ip": "10.0.80.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash && pacman -S htop && yum install curl && brew install wget",
+      "stdout": "",
+      "stderr": "sh: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-020",
+      "ip": "10.0.80.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install curl && apk add bash && pacman -S htop && brew install wget && apk update",
+      "stdout": "",
+      "stderr": "sh: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "alpine-mseg-021",
+      "ip": "10.0.80.21",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
