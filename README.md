@@ -29269,6 +29269,50 @@ The test matrix for Alpine Base‑20 Test Case Matrix (20 test cases — GPT‑5
 
 ##### Regression on the 24 patch2 rewrite tests on Fedora with gpt-5.6-sol
 
+The testing in this area went well.
+
+
+
+The test matrix for Alpine Patch‑24 Rewrite Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand Alpine Patch‑24 Rewrite Test Case Matrix (24 test cases) - GPT‑5.6‑Sol</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | a‑patch‑001 | `apk add nginx --badflag` | fallback | fallback | **Invalid flag.** Global invalid‑flag rule → fallback. Correct. |
+| 2 | a‑patch‑002 | `apk add curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apk add -y curl && apk add -y nano`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 3 | a‑patch‑003 | `apk add curl && apk update` | fallback | fallback | **Native system‑wide op in multi‑segment pipeline.** Patch2 forbids rewriting system‑wide ops → fallback. Correct. |
+| 4 | a‑patch‑004 | `apk add curl && apk update --badflag` | fallback | fallback | **Invalid flag on system‑wide op.** Global invalid‑flag rule → fallback. Correct. |
+| 5 | a‑patch‑005 | `apk add curl && pacman -Syu` | fallback | fallback | **Wrong‑OS system‑wide op (`pacman -Syu`).** Cannot rewrite → fallback. Correct. |
+| 6 | a‑patch‑006 | `apk add curl && apk add bash` | fallback | fallback | **Native multi‑segment install pipeline with no wrong‑OS PMs.** Patch2 forbids rewriting → fallback. Correct. |
+| 7 | a‑patch‑007 | `apk add curl && rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard → abort. Correct. |
+| 8 | a‑patch‑008 | `yum install nano && apk add curl` | retry_with_modified_command | retry_with_modified_command (`apk add -y nano && apk add -y curl`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 9 | a‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apk add -y git && apk add -y nano`) | **Wrong‑OS PMs (`dnf`, `yum`).** Rewrite required. Correct. |
+| 10 | a‑patch‑010 | `apk add curl && apk add python3 --badflag` | fallback | fallback | **Invalid flag.** Global invalid‑flag rule → fallback. Correct. |
+| 11 | a‑patch‑011 | `apk add curl && apk add python3` | fallback | fallback | **Native multi‑segment PM pipeline.** Patch2 forbids rewriting → fallback. Correct. |
+| 12 | a‑patch‑012 | `apk add curl && apk add python3 && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apk add -y curl && apk add -y python3 && apk add -y nano`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 13 | a‑patch‑013 | `yum install nano && apk add curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apk add -y nano && apk add -y curl && apk add -y bash`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 14 | a‑patch‑014 | `apk add curl && dnf install git && apk add nano` | retry_with_modified_command | retry_with_modified_command (`apk add -y curl && apk add -y git && apk add -y nano`) | **Wrong‑OS PM (`dnf`).** Rewrite required. Correct. |
+| 15 | a‑patch‑015 | `yum install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apk add -y nano && apk add -y bash && apk add -y htop`) | **Wrong‑OS PMs (`yum`, `pacman`).** Rewrite required. Correct. |
+| 16 | a‑patch‑016 | `apk add curl && apk add nano && apt-get install bash` | retry_with_modified_command | retry_with_modified_command (`apk add -y curl && apk add -y nano && apk add -y bash`) | **Wrong‑OS PM (`apt-get`).** Rewrite required. Correct. |
+| 17 | a‑patch‑017 | `yum install nano && apk add curl && apk update` | fallback | fallback | **Successful pipeline + native system‑wide op.** Patch2 forbids rewriting → fallback. Correct. |
+| 18 | a‑patch‑018 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`apk add -y bash && echo 'hello' && apk add -y nano`) | **Wrong‑OS PM (`yum`).** Rewrite required. Echo preserved. Correct. |
+| 19 | a‑patch‑019 | `apk add curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`apk add -y curl && echo 'test' && apk add -y htop`) | **Wrong‑OS PM (`pacman`).** Rewrite required. Echo preserved. Correct. |
+| 20 | a‑patch‑020 | `yum install nano --badflag && apk add curl` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Invalid‑flag rule dominates → fallback. Correct. |
+| 21 | a‑patch‑021 | `apk add curl && apt-get install bash --badflag && apk add nano` | fallback | fallback | **Invalid flag on wrong‑OS PM.** Invalid‑flag rule dominates → fallback. Correct. |
+| 22 | a‑patch‑022 | `yum install nano && apk add bash && apk update` | fallback | fallback | **Successful pipeline + native system‑wide op.** Patch2 forbids rewriting → fallback. Correct. |
+| 23 | a‑patch‑023 | `apk add bash && apk add curl && rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard → abort. Correct. |
+| 24 | a‑patch‑024 | `apk add curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`apk add -y curl && apk add -y nano && echo hi && apk add -y bash`) | **Wrong‑OS PM (`yum`).** Rewrite required. Echo preserved. Correct. |
+
+</details>
+
+
+
+
+
 ##### Regresion on the 6 idempotency tests on Fedora with gpt-5.6-sol
 
 ##### Regression on the 3 OS-signaled remediation tests on Fedora with gpt-5.6-sol
