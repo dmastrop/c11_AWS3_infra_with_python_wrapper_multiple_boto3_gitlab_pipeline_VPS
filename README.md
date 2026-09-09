@@ -29158,6 +29158,58 @@ The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case
 <a name="llm-contract-stress-tester-multi-segment-alpine-testing-and-test-matrices"></a>
 #### 11.LLM Contract Stress Tester – Multi-segment Alpine testing and test matrices
 
+The 21 multi-segment test suite testing went fairly well. There was an issue with the native system wide comamnd apt update -y being 
+recognized as native due to the -y flag. The apt udpate command was being recognized fine. The other OS domain primitives blocks are 
+constructed such that the LLM recognizes this variant implicitly. Apline is constructed a bit dfferently so an explicit exception 
+below had to be added to the Alpine prmitives sub-block as shown below:
+
+```
+
+    ##### Alpine APK domain primitives (canonical) #####
+    "Alpine APK domain primitives:\n"
+    "- Alpine uses 'apk' as its package manager.\n"
+    "- The command 'apk update' refreshes package indexes.\n"
+    "- The command 'apk add <pkg>' installs packages.\n"
+    # The -y flag + native system is causing issues with Alpine domain primitives block so add explicit exception so that the 
+    # case does not fallback. 
+    "- Alpine MUST treat 'apk update -y' as a system-wide operation equivalent to 'apk update'.\n"
+    "- Any 'apk update' command, with or without flags, MUST be classified as a system-wide operation.\n"
+    "- The presence of flags (including '-y') MUST NOT cause the LLM to treat 'apk update -y' as a non-system-wide command.\n"
+    "- System-wide operations MUST be preserved verbatim and MUST NOT be rewritten, even when flags are present.\n"
+    "\n"
+
+```
+
+The test matrix for Alpine Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand):
+
+<details>
+<summary><strong>Alpine Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | alpine‑mseg‑001 | `yum install curl && apk add bash && pacman -S htop && apk update -y` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk update -y` | Correct rewrite; new domain‑primitive rule correctly treats `apk update -y` as system‑wide. |
+| 2 | alpine‑mseg‑002 | `apk add bash && pacman -S htop && yum install nano && apk update` | retry_with_modified_command | `apk add -y bash && apk add -y htop && apk add -y nano && apk update` | Correct rewrite. |
+| 3 | alpine‑mseg‑003 | `pacman -S htop && yum install curl && apk add bash && apk update` | retry_with_modified_command | `apk add -y htop && apk add -y curl && apk add -y bash && apk update` | Correct rewrite. |
+| 4 | alpine‑mseg‑004 | `yum install curl && apk add bash && pacman -S htop && apk add nano` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk add -y nano` | Correct rewrite. |
+| 5 | alpine‑mseg‑005 | `apk add curl && apk add nano && apk add python3 && apk update` | fallback | `{"action":"fallback"}` | Correct fallback (valid Alpine pipeline + system‑wide op + exit_status=0). |
+| 6 | alpine‑mseg‑006 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apk update` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk add -y wget && apk update` | Correct rewrite. |
+| 7 | alpine‑mseg‑007 | `yum install curl && apk add bash && pacman -S htop && apk update` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk update` | Correct rewrite. |
+| 8 | alpine‑mseg‑008 | `yum install curl && apk add bash && pacman -S htop && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 9 | alpine‑mseg‑009 | `apk add bash && pacman -S htop && yum install curl && yum update -y` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 10 | alpine‑mseg‑010 | `yum install curl && apk add bash && pacman -S htop && apk add nano --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 11 | alpine‑mseg‑011 | `apk add curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | `apk add -y curl && echo 'hello' && apk add -y bash && apk add -y htop` | Correct rewrite. |
+| 12 | alpine‑mseg‑012 | `yum install curl && echo 'test' && apk add bash && apk add nano` | retry_with_modified_command | `apk add -y curl && echo 'test' && apk add -y bash && apk add -y nano` | Correct rewrite. |
+| 13 | alpine‑mseg‑013 | `apk add bash && pacman -S htop && apk add curl && rm -rf /` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /"}` | Correct abort. |
+| 14 | alpine‑mseg‑014 | `yum install curl && apk add bash && pacman -S htop && apk add nano && apk update` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk add -y nano && apk update` | Correct rewrite. |
+| 15 | alpine‑mseg‑015 | `yum install curl && apk add bash && pacman -S htop && apk update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (invalid flag). |
+| 16 | alpine‑mseg‑016 | `yum install curl && apk add bash && pacman -S htop && yum update --badflag` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op + invalid flag). |
+| 17 | alpine‑mseg‑017 | `yum install curl && apk add bash && pacman -S htop && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 18 | alpine‑mseg‑018 | `apk add bash && pacman -S htop && yum install curl && brew update` | fallback | `{"action":"fallback"}` | Correct fallback (wrong‑OS system‑wide op). |
+| 19 | alpine‑mseg‑019 | `yum install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk add -y wget` | Correct rewrite. |
+| 20 | alpine‑mseg‑020 | `apk add bash && pacman -S htop && yum install curl && brew install wget` | retry_with_modified_command | `apk add -y bash && apk add -y htop && apk add -y curl && apk add -y wget` | Correct rewrite. |
+| 21 | alpine‑mseg‑021 | `yum install curl && apk add bash && pacman -S htop && brew install wget && apk update` | retry_with_modified_command | `apk add -y curl && apk add -y bash && apk add -y htop && apk add -y wget && apk update` | Correct rewrite. |
+
+</details>
 
 
 
