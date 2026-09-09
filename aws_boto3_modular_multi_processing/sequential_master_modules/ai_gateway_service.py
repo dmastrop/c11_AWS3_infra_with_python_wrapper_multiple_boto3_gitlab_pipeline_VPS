@@ -2702,6 +2702,14 @@ ALPINE_RULES = (
     "- Alpine uses 'apk' as its package manager.\n"
     "- The command 'apk update' refreshes package indexes.\n"
     "- The command 'apk add <pkg>' installs packages.\n"
+    # The -y flag + native system is causing issues with Alpine domain primitives block so add explicit exception so that the 
+    # case does not fallback. 
+    "- Alpine MUST treat 'apk update -y' as a system-wide operation equivalent to 'apk update'.\n"
+    "- Any 'apk update' command, with or without flags, MUST be classified as a system-wide operation.\n"
+    "- The presence of flags (including '-y') MUST NOT cause the LLM to treat 'apk update -y' as a non-system-wide command.\n"
+    "- System-wide operations MUST be preserved verbatim and MUST NOT be rewritten, even when flags are present.\n"
+    "\n"
+
     "- The flag '--no-cache' may be used in some environments, but this contract assumes\n"
     "  standard 'apk update' + 'apk add <pkg>' flows for recovery.\n"
     "\n"
