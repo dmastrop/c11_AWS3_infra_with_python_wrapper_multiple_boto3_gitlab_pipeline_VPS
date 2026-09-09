@@ -2838,7 +2838,7 @@ ALPINE_RULES = (
     "        - rm -rf /var/cache/apk/*\n"
     "\n"
     "    * 'retry' containing a list of commands that MUST include, in this order:\n"
-    "        - apk update\n"
+    "        - apk update -y\n"
     "\n"
     "- For any rule that references '<pkg>', the LLM MUST replace '<pkg>' with the package\n"
     "  name used in the failing command (for example, curl, nginx, etc.).\n"
@@ -2857,7 +2857,7 @@ ALPINE_RULES = (
     "  The cleanup list MUST contain:\n"
     "      - rm -rf /var/cache/apk/*\n"
     "  The retry list MUST contain, in this order:\n"
-    "      - apk update\n"
+    "      - apk update -y\n"
     "      - apk add <pkg>\n"
     "\n"
 
