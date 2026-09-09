@@ -29158,6 +29158,61 @@ The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case
 <a name="llm-contract-stress-tester-multi-segment-alpine-testing-and-test-matrices"></a>
 #### 11.LLM Contract Stress Tester – Multi-segment Alpine testing and test matrices
 
+
+
+
+
+
+
+
+##### Regression testing on base20 test cases on Fedora with gpt-5.6-sol
+
+The test cases here all passed after the refactoring. 
+
+The test matrix for Alpine Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol, canonical Alpine refactor) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand Alpine Base‑20 Test Case Matrix (20 test cases — GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | i‑test‑401 | `apk add nginx` | cleanup_and_retry | cleanup_and_retry | **History‑aware remediation.** `unable to select packages:` + prior `apk update` → deterministic stale‑metadata recovery. |
+| 2 | i‑test‑402 | `apk add curl` | fallback | fallback | **Unsatisfiable constraints.** No history, no corruption, no deterministic remediation. |
+| 3 | i‑test‑403 | `apk add htop` | cleanup_and_retry | cleanup_and_retry | Same as #1: `unable to select packages:` + prior `apk update` → cleanup_and_retry. |
+| 4 | i‑test‑404 | `apt-get install nginx` | retry_with_modified_command | retry_with_modified_command | **Wrong‑OS PM.** Rewrite to `apk add nginx`. |
+| 5 | i‑test‑405 | `yum install nginx` | retry_with_modified_command | retry_with_modified_command | Wrong‑OS PM → rewrite to `apk add nginx`. |
+| 6 | i‑test‑406 | `dnf install nginx` | retry_with_modified_command | retry_with_modified_command | Wrong‑OS PM → rewrite to `apk add nginx`. |
+| 7 | i‑test‑407 | `brew install nginx` | retry_with_modified_command | retry_with_modified_command | Wrong‑OS PM → rewrite to `apk add nginx`. |
+| 8 | i‑test‑408 | `apk add` | fallback | fallback | **Malformed command.** Missing operand; cannot infer package name. |
+| 9 | i‑test‑409 | `rm -rf /` | abort | abort | **Destructive command.** Global destructive‑command guard. |
+| 10 | i‑test‑410 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** Not a PM pattern; exit 127 → fallback. |
+| 11 | i‑test‑411 | `show route everything` | fallback | fallback | **Cisco‑style “show”.** Linux malformed‑command rule → fallback. |
+| 12 | i‑test‑412 | `apk update` | fallback | fallback | **Network failure.** “temporary error (try again later)” → fallback. |
+| 13 | i‑test‑413 | `apk add curl` | fallback | fallback | **Network failure.** “no route to host” → fallback. |
+| 14 | i‑test‑414 | `apk update` | cleanup_and_retry | cleanup_and_retry | **APK cache corruption.** “failed to update apk cache” → cleanup_and_retry. |
+| 15 | i‑test‑415 | `apk add nginx` | fallback | fallback | **Repository misconfiguration.** “repository 'community' not found” → fallback. |
+| 16 | i‑test‑416 | `apk add curl` | cleanup_and_retry | cleanup_and_retry | **Database corruption.** “database is corrupt” → cleanup_and_retry. |
+| 17 | i‑test‑417 | `apk add htop` | fallback | fallback | **Permission denied.** No deterministic remediation; sudo forbidden. |
+| 18 | i‑test‑418 | `apk update` | cleanup_and_retry | cleanup_and_retry | **Stale index.** “index is too old” → cleanup_and_retry. |
+| 19 | i‑test‑419 | `apk add curl` | fallback | fallback | **Successful command.** No remediation needed → fallback. |
+| 20 | i‑test‑420 | `apk add nginx` | fallback | fallback | **Unable to select packages (no history).** Ambiguous; no prior `apk update`. |
+
+</details>
+
+
+
+
+##### Regression on the 24 patch2 rewrite tests on Fedora with gpt-5.6-sol
+
+##### Regresion on the 6 idempotency tests on Fedora with gpt-5.6-sol
+
+##### Regression on the 3 OS-signaled remediation tests on Fedora with gpt-5.6-sol
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
