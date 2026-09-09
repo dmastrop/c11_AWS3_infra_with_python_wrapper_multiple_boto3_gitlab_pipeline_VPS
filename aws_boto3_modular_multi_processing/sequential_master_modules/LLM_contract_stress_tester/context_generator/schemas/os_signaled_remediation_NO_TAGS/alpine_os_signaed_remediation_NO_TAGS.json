@@ -1,0 +1,47 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "ERROR: unable to select packages:\n  nginx (no such package)\n  nginx-1.18.0-r0: package not found",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-osmut-002",
+      "ip": "10.0.9.202",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "WARNING: Ignoring APKINDEX.70f61090.tar.gz: Hash mismatch\nERROR: Failed to update apk index files",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-osmut-003",
+      "ip": "10.0.9.203",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add nginx",
+      "stdout": "",
+      "stderr": "ERROR: Failed to open apk database: Resource temporarily unavailable\nERROR: run 'apk fix' to repair the database",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "alpine-osmut-004",
+      "ip": "10.0.9.204",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
