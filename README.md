@@ -293,7 +293,7 @@ The Preface updates always sit at the top of all the other updates because they 
 ---
 
 
-## A note on application extensibility
+## A note on application extensibility:
 
 The main thread installer function is named install_tomcat but the tomcat is a misnomer. The code is completely agnostic and extensible to any type of 
 installation application and supports a wide variety of package installers and bash-like command executors as well. The name of the function is just
@@ -338,7 +338,18 @@ STATUS_TAGS = {
     "ghost" 
 }
 ```
+
 ---
+
+
+## A note on the test case matrices:
+
+The test matrices are presented throughout this document.  They are mostly Click to expand type matrices. If the matrix does not
+full render horizontally in the browser window, use the scroller on the bottom,  or drag the mouse to the right to see the last column. 
+The last column is typically the Notes column and can be very informative as to the nature of the particular test case.
+
+
+
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
