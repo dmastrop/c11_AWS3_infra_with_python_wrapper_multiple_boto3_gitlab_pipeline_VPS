@@ -3113,9 +3113,219 @@ ARCH_RULES = (
 
 
 
+
 SUSE_RULES = (
+
+    # ============================================================
+    # SUSE (Zypper) DOMAIN RULES — Applies ONLY when os_name = "SUSE"
+    # Canonical, GLOBAL_RULES‑aligned first‑draft (Revision 1)
+    # ============================================================
+    "These rules apply ONLY when os_name = \"SUSE\".\n"
+    "IMPORTANT:\n"
+    "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decision.\n"
+    "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+    "\n"
+
+    ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
+    "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+    "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+    "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+    "  inventing or hallucinating a corrected command.\n"
+    "\n"
+    "- If a command is syntactically malformed (missing arguments, truncated flags, partial\n"
+    "  pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
+    "  unless a safe, deterministic correction is directly implied by the original command.\n"
+    "\n"
+    "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * and directly implied by the original command.\n"
+    "  The LLM MUST NOT guess or invent corrected commands.\n"
+    "\n"
+    "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+    "  brew, pacman, zypper) and this OS block does NOT define a deterministic rewrite for\n"
+    "  that manager, the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- SUSE MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
+    "- Permission errors MUST NOT be corrected with 'sudo'. Use 'fallback' instead.\n"
+    "\n"
+    "- For malformed pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to\n"
+    "  correct, rewrite, or repair the pipeline or subshell structure.\n"
+    "- If stderr indicates a syntax error involving a pipeline or subshell, the LLM MUST\n"
+    "  return 'fallback'.\n"
+    "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and\n"
+    "  MUST NOT infer user intent for pipeline stages.\n"
+    "- Any malformed pipeline or subshell MUST result in 'fallback' unless destructive.\n"
+    "\n"
+
+    ##### Invalid package‑manager flags (Linux-family OSes) #####
+    "- If a 'zypper', 'apt', 'apt-get', 'yum', 'dnf', 'apk', or 'pacman' command contains ANY\n"
+    "  unknown or unsupported flags ('invalid option', 'unknown option'), the LLM MUST use\n"
+    "  'fallback'.\n"
+    "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+    "\n"
+
+    # BusyBox addendum
+    "These rules also apply when BusyBox applets are invoked. BusyBox installed on a Linux\n"
+    "distribution does NOT activate the BusyBox domain primitives block.\n"
+    "\n"
+
+    ##### SUSE zypper domain primitives #####
+    "SUSE zypper domain primitives:\n"
+    "- SUSE uses 'zypper' as its package manager.\n"
+    "- The command 'zypper refresh' refreshes package metadata.\n"
+    "- The command 'zypper install <pkg>' installs packages.\n"
+    "- The flag '-y' auto-confirms installation.\n"
+    "\n"
+    "- System-wide operations MUST be preserved verbatim and MUST NOT be rewritten.\n"
+    "- System-wide operations include:\n"
+    "      zypper refresh\n"
+    "      zypper update\n"
+    "      pacman -Syu\n"
+    "      apt-get update\n"
+    "      yum update\n"
+    "      dnf update\n"
+    "      apk update\n"
+    "\n"
+    "- Under OS-Mutation Guard, 'zypper refresh' or 'zypper update' MUST NOT be generated\n"
+    "  unless:\n"
+    "      * it appears in the original command, OR\n"
+    "      * stderr indicates OS-signaled remediation.\n"
+    "\n"
+
+    ##### Package Manager Classification #####
+    "- The LLM MUST treat the following commands as package-manager install commands when a\n"
+    "  concrete package name <pkg> is present:\n"
+    "      * apt-get install <pkg>\n"
+    "      * apt install <pkg>\n"
+    "      * yum install <pkg>\n"
+    "      * dnf install <pkg>\n"
+    "      * apk add <pkg>\n"
+    "      * pacman -S <pkg>\n"
+    "      * zypper install <pkg>\n"
+    "      * brew install <pkg>\n"
+    "\n"
+    "- For SUSE, the ONLY native package manager is:\n"
+    "      * zypper\n"
+    "\n"
+    "- ALL other package managers MUST be treated as wrong-OS package managers.\n"
+    "\n"
+    "- Wrong-OS package-manager install commands MUST be rewritten to:\n"
+    "      zypper install -y <pkg>\n"
+    "\n"
+
+    ##### Wrong package manager in pipelines (Patch2 canonical) #####
+    "- If ALL segments in the pipeline are valid for SUSE and NO segment uses a wrong-OS\n"
+    "  package manager, and the command succeeded (exit_status = 0) with no stderr, the LLM\n"
+    "  MUST return 'fallback'.\n"
+    "\n"
+    "- Valid system-wide operations MUST NOT trigger OS-Mutation Guard when already valid.\n"
+    "- System-wide segments MUST be preserved verbatim.\n"
+    "\n"
+    "- If ANY segment uses a wrong-OS package manager (apt, apt-get, yum, dnf, apk, pacman,\n"
+    "  brew), the LLM MUST treat each segment independently.\n"
+    "\n"
+    "- If ALL segments are either:\n"
+    "      • simple package-install commands, OR\n"
+    "      • non-mutating commands safe to preserve verbatim, OR\n"
+    "      • system-wide operations valid for SUSE,\n"
+    "  AND at least one segment uses a wrong-OS package manager,\n"
+    "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+    "\n"
+    "- The rewritten pipeline MUST:\n"
+    "      • rewrite ONLY wrong-OS PM segments → zypper install -y <pkg>\n"
+    "      • preserve all other segments verbatim\n"
+    "      • NOT drop, duplicate, reorder, or invent segments\n"
+    "\n"
+    "- If ANY segment is a system-wide operation AND would require rewriting, the LLM MUST\n"
+    "  use 'fallback'.\n"
+    "\n"
+    "- If ANY segment contains an invalid or unsupported flag, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Single-segment rewrite and fallback #####
+    "- If the command is missing arguments (e.g., 'zypper install'), treat it as malformed\n"
+    "  and use 'fallback' unless a safe correction exists WITHOUT guessing a package name.\n"
+    "\n"
+    "- If a SINGLE-SEGMENT command uses ANY wrong-OS package manager install pattern:\n"
+    "      apt-get install <pkg>\n"
+    "      apt install <pkg>\n"
+    "      yum install <pkg>\n"
+    "      dnf install <pkg>\n"
+    "      apk add <pkg>\n"
+    "      pacman -S <pkg>\n"
+    "      brew install <pkg>\n"
+    "  the LLM MUST rewrite it to:\n"
+    "      zypper install -y <pkg>\n"
+    "\n"
+
+    ##### Nonexistent / unsatisfiable package #####
+    "- If 'zypper install <pkg>' fails with wording such as:\n"
+    "      'Package <pkg> not found'\n"
+    "      'Nothing provides <pkg>'\n"
+    "      'No provider of <pkg>'\n"
+    "  and stderr does NOT contain deterministic remediation hints, the LLM MUST return\n"
+    "  'fallback'.\n"
+    "\n"
+
+    ##### SUSE OS‑signaled remediation (repo/index/keyring corruption) #####
+    "- If stderr indicates zypper metadata corruption, signature mismatch, or repository\n"
+    "  index issues (e.g., 'Signature verification failed', 'Repository is invalid',\n"
+    "  'File has unexpected size', 'Metadata checksum mismatch', 'Failed to cache repo'),\n"
+    "  the LLM MUST use 'cleanup_and_retry' with:\n"
+    "\n"
+    "    cleanup:\n"
+    "        - rm -rf /var/cache/zypp/*\n"
+    "\n"
+    "    retry:\n"
+    "        - zypper refresh\n"
+    "        - zypper install -y <pkg>   (only when a package name is present)\n"
+    "\n"
+    "- If the failing command does NOT include a package name (e.g., 'zypper refresh'), the\n"
+    "  LLM MUST NOT invent a package name and MUST omit the install step.\n"
+    "\n"
+
+    ##### Network failures (SUSE, aligned with GLOBAL_RULES) #####
+    "- If stderr indicates DNS or connectivity failures ('Could not resolve host',\n"
+    "  'Connection timed out', 'No route to host', 'Temporary failure resolving',\n"
+    "  'Network unreachable', 'Host unreachable'), the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Idempotency and <pkg> binding #####
+    "- If stderr indicates idempotency ('Nothing to do', 'Package <pkg> is already\n"
+    "  installed', 'No packages marked for installation'), the LLM MUST use\n"
+    "  'cleanup_and_retry'.\n"
+    "\n"
+    "- For idempotent installs:\n"
+    "      cleanup: []\n"
+    "      retry: zypper install -y <pkg>\n"
+    "\n"
+    "- For idempotent system-wide operations ('zypper refresh' or 'zypper update' with\n"
+    "  'Nothing to do'), the LLM MUST use 'cleanup_and_retry' with:\n"
+    "      cleanup: []\n"
+    "      retry: zypper refresh\n"
+    "\n"
+    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name\n"
+    "  used in the failing command.\n"
+    "\n"
+
+    ##### Destructive and unrecognized commands #####
+    "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+    "- If the command is unrecognized (exit_status 127) and not obviously a SUSE/Unix\n"
+    "  primitive, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### sudo prohibition (SUSE) #####
+    "- SUSE environments in this contract do NOT use 'sudo'. The LLM MUST NOT generate\n"
+    "  'sudo' under any circumstances.\n"
+    "\n"
+
 )
 
+
+
+
+# These blocks below still need to be refactored for multi-segment rewrite, etc.....
 
 MACOS_BREW_RULES = (
 )
