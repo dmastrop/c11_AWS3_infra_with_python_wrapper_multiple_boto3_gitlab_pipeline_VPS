@@ -2902,11 +2902,218 @@ ALPINE_RULES = (
 )
 
 
-SUSE_RULES = (
-)
 
 
 ARCH_RULES = (
+
+    # ============================================================
+    # ARCH (PACMAN) DOMAIN RULES — Applies ONLY when os_name = "Arch"
+    # Canonical, GLOBAL_RULES‑aligned first‑draft (Revision 1)
+    # ============================================================
+    "These rules apply ONLY when os_name = \"Arch\".\n"
+    "IMPORTANT:\n"
+    "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decision.\n"
+    "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+    "\n"
+
+    ##### Revision 6.8 — Bash malformed-command hardening (Linux-family OSes) #####
+    "- These rules harden bash-style malformed-command handling for this Linux-family OS.\n"
+    "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+    "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+    "  inventing or hallucinating a corrected command.\n"
+    "\n"
+    "- If a command is syntactically malformed (missing arguments, truncated flags, partial\n"
+    "  pipelines, incomplete constructs) but NOT destructive, the LLM SHOULD use 'fallback'\n"
+    "  unless a safe, deterministic correction is directly implied by the original command.\n"
+    "\n"
+    "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * and directly implied by the original command.\n"
+    "  The LLM MUST NOT guess or invent corrected commands.\n"
+    "\n"
+    "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+    "  brew, pacman, zypper) and this OS block does NOT define a deterministic rewrite for\n"
+    "  that manager, the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- Arch MUST NOT introduce 'sudo' as part of malformed-command correction.\n"
+    "- Permission errors MUST NOT be corrected with 'sudo'. Use 'fallback' instead.\n"
+    "\n"
+    "- For malformed pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to\n"
+    "  correct, rewrite, or repair the pipeline or subshell structure.\n"
+    "- If stderr indicates a syntax error involving a pipeline or subshell, the LLM MUST\n"
+    "  return 'fallback'.\n"
+    "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and\n"
+    "  MUST NOT infer user intent for pipeline stages.\n"
+    "- Any malformed pipeline or subshell MUST result in 'fallback' unless destructive.\n"
+    "\n"
+
+    ##### Invalid package‑manager flags (Linux-family OSes) #####
+    "- If a 'pacman', 'apt', 'apt-get', 'yum', 'dnf', or 'apk' command contains ANY unknown\n"
+    "  or unsupported flags ('invalid option', 'unknown option'), the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+    "\n"
+
+    # BusyBox addendum
+    "These rules also apply when BusyBox applets are invoked. BusyBox installed on a Linux\n"
+    "distribution does NOT activate the BusyBox domain primitives block.\n"
+    "\n"
+
+    ##### Arch pacman domain primitives #####
+    "Arch pacman domain primitives:\n"
+    "- Arch uses 'pacman' as its package manager.\n"
+    "- The command 'pacman -Syu' performs a full system-wide update.\n"
+    "- The command 'pacman -S <pkg>' installs packages.\n"
+    "- The flag '--noconfirm' auto-confirms installation.\n"
+    "\n"
+    "- System-wide operations MUST be preserved verbatim and MUST NOT be rewritten.\n"
+    "- System-wide operations include:\n"
+    "      pacman -Syu\n"
+    "      apt-get update\n"
+    "      yum update\n"
+    "      dnf update\n"
+    "      apk update\n"
+    "      zypper refresh\n"
+    "      zypper update\n"
+    "\n"
+    "- Under OS-Mutation Guard, 'pacman -Syu' MUST NOT be generated unless:\n"
+    "      * it appears in the original command, OR\n"
+    "      * stderr indicates OS-signaled remediation.\n"
+    "\n"
+
+    ##### Package Manager Classification #####
+    "- The LLM MUST treat the following commands as package-manager install commands when a\n"
+    "  concrete package name <pkg> is present:\n"
+    "      * apt-get install <pkg>\n"
+    "      * apt install <pkg>\n"
+    "      * yum install <pkg>\n"
+    "      * dnf install <pkg>\n"
+    "      * apk add <pkg>\n"
+    "      * pacman -S <pkg>\n"
+    "      * zypper install <pkg>\n"
+    "      * brew install <pkg>\n"
+    "\n"
+    "- For Arch, the ONLY native package manager is:\n"
+    "      * pacman\n"
+    "\n"
+    "- ALL other package managers MUST be treated as wrong-OS package managers.\n"
+    "\n"
+    "- Wrong-OS package-manager install commands MUST be rewritten to:\n"
+    "      pacman -S --noconfirm <pkg>\n"
+    "\n"
+
+    ##### Wrong package manager in pipelines (Patch2 canonical) #####
+    "- If ALL segments in the pipeline are valid for Arch and NO segment uses a wrong-OS\n"
+    "  package manager, and the command succeeded (exit_status = 0) with no stderr, the LLM\n"
+    "  MUST return 'fallback'.\n"
+    "\n"
+    "- Valid system-wide operations MUST NOT trigger OS-Mutation Guard when already valid.\n"
+    "- System-wide segments MUST be preserved verbatim.\n"
+    "\n"
+    "- If ANY segment uses a wrong-OS package manager (apt, apt-get, yum, dnf, apk, zypper,\n"
+    "  brew), the LLM MUST treat each segment independently.\n"
+    "\n"
+    "- If ALL segments are either:\n"
+    "      • simple package-install commands, OR\n"
+    "      • non-mutating commands safe to preserve verbatim, OR\n"
+    "      • system-wide operations valid for Arch,\n"
+    "  AND at least one segment uses a wrong-OS package manager,\n"
+    "  the LLM MUST use 'retry_with_modified_command' and MUST NOT use 'fallback'.\n"
+    "\n"
+    "- The rewritten pipeline MUST:\n"
+    "      • rewrite ONLY wrong-OS PM segments → pacman -S --noconfirm <pkg>\n"
+    "      • preserve all other segments verbatim\n"
+    "      • NOT drop, duplicate, reorder, or invent segments\n"
+    "\n"
+    "- If ANY segment is a system-wide operation AND would require rewriting, the LLM MUST\n"
+    "  use 'fallback'.\n"
+    "\n"
+    "- If ANY segment contains an invalid or unsupported flag, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Single-segment rewrite and fallback #####
+    "- If the command is missing arguments (e.g., 'pacman -S'), treat it as malformed and\n"
+    "  use 'fallback' unless a safe correction exists WITHOUT guessing a package name.\n"
+    "\n"
+    "- If a SINGLE-SEGMENT command uses ANY wrong-OS package manager install pattern:\n"
+    "      apt-get install <pkg>\n"
+    "      apt install <pkg>\n"
+    "      yum install <pkg>\n"
+    "      dnf install <pkg>\n"
+    "      apk add <pkg>\n"
+    "      zypper install <pkg>\n"
+    "      brew install <pkg>\n"
+    "  the LLM MUST rewrite it to:\n"
+    "      pacman -S --noconfirm <pkg>\n"
+    "\n"
+
+    ##### Nonexistent / unsatisfiable package #####
+    "- If 'pacman -S <pkg>' fails with wording such as:\n"
+    "      'error: target not found: <pkg>'\n"
+    "      'error: package not found'\n"
+    "  and stderr does NOT contain deterministic remediation hints, the LLM MUST return\n"
+    "  'fallback'.\n"
+    "\n"
+
+    ##### Arch OS‑signaled remediation (cache/index/keyring corruption) #####
+    "- If stderr indicates pacman database corruption, signature mismatch, or keyring\n"
+    "  issues (e.g., 'invalid or corrupted package', 'failed to commit transaction',\n"
+    "  'signature from ... is marginal trust', 'keyring is not writable', 'failed to\n"
+    "  synchronize all databases'), the LLM MUST use 'cleanup_and_retry' with:\n"
+    "\n"
+    "    cleanup:\n"
+    "        - rm -f /var/lib/pacman/db.lck\n"
+    "        - pacman-key --init\n"
+    "        - pacman-key --populate archlinux\n"
+    "\n"
+    "    retry:\n"
+    "        - pacman -Syu\n"
+    "        - pacman -S --noconfirm <pkg>   (only when a package name is present)\n"
+    "\n"
+    "- If the failing command does NOT include a package name (e.g., 'pacman -Syu'), the\n"
+    "  LLM MUST NOT invent a package name and MUST omit the install step.\n"
+    "\n"
+
+    ##### Network failures (Arch, aligned with GLOBAL_RULES) #####
+    "- If stderr indicates DNS or connectivity failures ('Could not resolve host',\n"
+    "  'Connection timed out', 'No route to host', 'Temporary failure resolving',\n"
+    "  'Network unreachable', 'Host unreachable'), the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### Idempotency and <pkg> binding #####
+    "- If stderr indicates idempotency ('warning: <pkg> is already up to date',\n"
+    "  'there is nothing to do'), the LLM MUST use 'cleanup_and_retry'.\n"
+    "\n"
+    "- For idempotent installs:\n"
+    "      cleanup: []\n"
+    "      retry: pacman -S --noconfirm <pkg>\n"
+    "\n"
+    "- For idempotent system-wide operations ('pacman -Syu' with 'there is nothing to do'),\n"
+    "  the LLM MUST use 'cleanup_and_retry' with:\n"
+    "      cleanup: []\n"
+    "      retry: pacman -Syu\n"
+    "\n"
+    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name\n"
+    "  used in the failing command.\n"
+    "\n"
+
+    ##### Destructive and unrecognized commands #####
+    "- If the command is destructive (e.g., 'rm -rf /'), the LLM MUST return 'abort'.\n"
+    "- If the command is unrecognized (exit_status 127) and not obviously an Arch/Unix\n"
+    "  primitive, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    ##### sudo prohibition (Arch) #####
+    "- Arch environments in this contract do NOT use 'sudo'. The LLM MUST NOT generate\n"
+    "  'sudo' under any circumstances.\n"
+    "\n"
+
+)
+
+
+
+
+SUSE_RULES = (
 )
 
 
