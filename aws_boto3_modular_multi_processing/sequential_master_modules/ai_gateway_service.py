@@ -2902,12 +2902,19 @@ ALPINE_RULES = (
 )
 
 
+SUSE_RULES = (
+)
+
+
+ARCH_RULES = (
+)
+
+
+MACOS_BREW_RULES = (
+)
 
 
 BUSYBOX_RULES = (
-)
-
-MACOS_BREW_RULES = (
 )
 
 MACOS_ZSH_RULES = (
@@ -3000,6 +3007,16 @@ def get_os_rules(os_info):
 
     if os_name == "PAN-OS":
         return PANOS_RULES
+
+    # ---------------- Add Ons  ----------------
+
+    if os_name == "SUSE":
+        return SUSE_RULES
+
+
+    if os_name == "Arch":
+        return ARCH_RULES
+
 
     # Default: no OS-specific rules
     return ""
