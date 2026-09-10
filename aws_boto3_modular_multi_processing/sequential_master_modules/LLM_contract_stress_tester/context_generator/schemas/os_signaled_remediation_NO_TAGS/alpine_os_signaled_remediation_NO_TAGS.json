@@ -7,16 +7,17 @@
   "contexts": [
 
     {
-      "command": "apk add nginx",
-      "stdout": "",
-      "stderr": "ERROR: unable to select packages:\n  nginx (no such package)\n  nginx-1.18.0-r0: package not found",
-      "exit_status": 1,
-      "attempt": 1,
-      "instance_id": "alpine-osmut-002",
-      "ip": "10.0.9.202",
-      "tags": [],
-      "history": []
+        "command": "apk add nginx",
+        "stdout": "",
+        "stderr": "ERROR: Failed to fetch http://dl-cdn.alpinelinux.org/alpine/v3.18/main/x86_64/APKINDEX.tar.gz\nERROR: Failed to update apk index files",
+        "exit_status": 1,
+        "attempt": 1,
+        "instance_id": "alpine-osmut-002",
+        "ip": "10.0.9.202",
+        "tags": [],
+        "history": []
     },
+
 
     {
       "command": "apk add nginx",
