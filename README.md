@@ -29228,7 +29228,7 @@ The test matrix for Alpine Patch2 21‑case rewrite matrix — GPT‑5.6‑Sol (
 
 
 
-##### Regression testing on base20 test cases on Fedora with gpt-5.6-sol
+##### Regression testing on base20 test cases on Alpine with gpt-5.6-sol
 
 The test cases here all passed after the refactoring. 
 
@@ -29267,7 +29267,7 @@ The test matrix for Alpine Base‑20 Test Case Matrix (20 test cases — GPT‑5
 
 
 
-##### Regression on the 24 patch2 rewrite tests on Fedora with gpt-5.6-sol
+##### Regression on the 24 patch2 rewrite tests on Alpine with gpt-5.6-sol
 
 The testing in this area went well.
 
@@ -29313,7 +29313,7 @@ The test matrix for Alpine Patch‑24 Rewrite Test Case Matrix — GPT‑5.6‑S
 
 
 
-##### Regresion on the 6 idempotency tests on Fedora with gpt-5.6-sol
+##### Regresion on the 6 idempotency tests on Alpine with gpt-5.6-sol
 
 The testing in this area went fine.
 
@@ -29342,8 +29342,25 @@ The test matrix for the Alpine Idempotency‑6 Test Case Matrix — GPT‑5.6‑
 
 
 
-##### Regression on the 3 OS-signaled remediation tests on Fedora with gpt-5.6-sol
+##### Regression on the 3 OS-signaled remediation tests on Alpine with gpt-5.6-sol
 
+Regression on this went fine. 
+
+
+The test matrix for Alpine OS‑Signaled Remediation‑3 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand Alpine OS‑Signaled Remediation‑3 Test Case Matrix (3 test cases) - GPT‑5.6‑Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | alpine‑osmut‑002 | `apk add nginx` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/cache/apk/*` → `apk update -y` → `apk add nginx`) | **Soft OS‑signaled remediation (Failed to fetch APKINDEX).** stderr contains `Failed to fetch` and `Failed to update apk index files`. These are canonical Alpine signals that the APK index is stale or corrupted. Under OS‑Mutation Guard, system‑wide ops are allowed **only** when the OS explicitly signals remediation. Alpine does, so the LLM MUST run `apk update` before retrying. Correct. |
+| 2 | alpine‑osmut‑003 | `apk add nginx` | cleanup_and_retry | cleanup_and_retry (`rm -rf /var/cache/apk/*` → `apk update -y` → `apk add nginx`) | **Soft OS‑signaled remediation (Hash mismatch).** stderr includes `Ignoring APKINDEX... Hash mismatch` and `Failed to update apk index files`. These are well‑known Alpine index corruption signals. Cleanup of the APK cache + update is required. This is the canonical Alpine soft‑remediation path. Correct. |
+| 3 | alpine‑osmut‑004 | `apk add nginx` | cleanup_and_retry | cleanup_and_retry (`apk fix` → `apk add nginx`) | **Hard OS‑signaled remediation (apk database interrupted).** stderr contains: `Failed to open apk database` and `run 'apk fix' to repair the database`. This is the strongest Alpine remediation signal. The OS explicitly instructs the corrective command. Under OS‑Mutation Guard, this MUST be honored. Running `apk fix` before retrying is the correct deterministic remediation. Correct. |
+
+</details>
 
 
 
