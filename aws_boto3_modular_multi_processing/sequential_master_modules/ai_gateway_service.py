@@ -512,8 +512,7 @@ GLOBAL_RULES = (
                 # NOTE these primitives apply to all Linux OSes: Ubuntu Debian CentOS RHEL Fedora Alpine BusyBox
                 # There are domain primitives for each one of these OSes further below
 
-                "These rules apply ONLY to Linux-family OSes: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine, BusyBox.\n"
-
+                "These rules apply ONLY to Linux-family OSes: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine, BusyBox, Amazon Linux 2, Amazon Linux 2023, Arch Linux, SUSE.\n"
                 "Malformed command rules (Linux):\n"
                 "- Treat commands like \"apt-get install\", \"yum install\", \"dnf install\", and \"apk add\" with no package as INCOMPLETE, not unsafe.\n"
                 "- If the command is incomplete but the missing argument CANNOT be safely inferred, prefer \"fallback\" over \"abort\".\n"
@@ -524,7 +523,7 @@ GLOBAL_RULES = (
                 # Revision 6.7 All show style commands performed in any linux variant os should return fallback. There are no 
                 # show commands in any linux variant.
                 "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
-                "- Linux-family OSes (Ubuntu, Debian, RHEL, CentOS, Amazon Linux) do NOT use Cisco-style 'show' commands. If a command begins with 'show ' and is not a valid Linux command, the LLM MUST NOT attempt to correct it using Cisco IOS rules. It MUST return a 'fallback' action.\n"
+                "- Linux-family OSes (Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine, BusyBox, Amazon Linux 2, Amazon Linux 2023, Arch Linux, SUSE) do NOT use Cisco-style 'show' commands. If a command begins with 'show ' and is not a valid Linux command, the LLM MUST NOT attempt to correct it using Cisco IOS rules. It MUST return a 'fallback' action.\n"
 
 
                 ##### Revision 6.8 — Linux malformed-command hardening (applies to bash and BusyBox shells) #####
