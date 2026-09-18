@@ -27171,6 +27171,12 @@ response from the LLM.
 - [10.LLM Contract Stress Tester – Multi-segment Linux PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-linux-powershell-testing-and-test-matrices)
 - [11.LLM Contract Stress Tester – Multi-segment Alpine testing and test matrices](#llm-contract-stress-tester-multi-segment-alpine-testing-and-test-matrices)
 - [12.LLM Contract Stress Tester – Multi-segment macOS Homebrew testing and test matrices](#llm-contract-stress-tester-multi-segment-macos-homebrew-testing-and-test-matrices)
+- [13.LLM Contract Stress Tester – Multi-segment macOS ArchLinux testing and test matrices](#llm-contract-stress-tester-multi-segment-macos-arch-testing-and-test-matrices)
+- [14.LLM Contract Stress Tester – Multi-segment macOS SUSE testing and test matrices](#llm-contract-stress-tester-multi-segment-suse-testing-and-test-matrices)
+
+
+
+
 
 
 <a name="introduction-to-multi-segment-pipeline-testing"></a>
@@ -29371,14 +29377,76 @@ The test matrix for Alpine OS‑Signaled Remediation‑3 Test Case Matrix — GP
 ---
 
 
+
+
+
+
+
 <a name="llm-contract-stress-tester-multi-segment-macos-homebrew-testing-and-test-matrices"></a>
 #### 12.LLM Contract Stress Tester – Multi-segment macOS Homebrew testing and test matrices
+
+
+
+
+
+
+
+
+##### Regression testing on base36 test cases on macos Homebrew with gpt-5.6-sol
+
+
+
+
+##### Regression on the 24 patch2 rewrite tests on macos Homebrew with gpt-5.6-sol
+
+
+
+##### Regresion on the 6 idempotency tests on macos Homebrew with gpt-5.6-sol
+
+
+
+##### Regression on the 3 OS-signaled remediation tests on macos Homebrew with gpt-5.6-sol
+
+
+
+
+
 
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
 
 ---
+
+
+
+
+
+
+
+<a name="llm-contract-stress-tester-multi-segment-arch-testing-and-test-matrices"></a>
+#### 13.LLM Contract Stress Tester – Multi-segment ArchLinux testing and test matrices
+
+---
+
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+
+
+
+
+<a name="llm-contract-stress-tester-multi-segment-suse-testing-and-test-matrices"></a>
+#### 14.LLM Contract Stress Tester – Multi-segment SUSE testing and test matrices
+
+---
+
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
 
 
 
