@@ -27171,7 +27171,7 @@ response from the LLM.
 - [10.LLM Contract Stress Tester – Multi-segment Linux PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-linux-powershell-testing-and-test-matrices)
 - [11.LLM Contract Stress Tester – Multi-segment Alpine testing and test matrices](#llm-contract-stress-tester-multi-segment-alpine-testing-and-test-matrices)
 - [12.LLM Contract Stress Tester – Multi-segment macOS Homebrew testing and test matrices](#llm-contract-stress-tester-multi-segment-macos-homebrew-testing-and-test-matrices)
-- [13.LLM Contract Stress Tester – Multi-segment macOS ArchLinux testing and test matrices](#llm-contract-stress-tester-multi-segment-macos-arch-testing-and-test-matrices)
+- [13.LLM Contract Stress Tester – Multi-segment macOS ArchLinux testing and test matrices](#llm-contract-stress-tester-multi-segment-arch-testing-and-test-matrices)
 - [14.LLM Contract Stress Tester – Multi-segment macOS SUSE testing and test matrices](#llm-contract-stress-tester-multi-segment-suse-testing-and-test-matrices)
 
 
