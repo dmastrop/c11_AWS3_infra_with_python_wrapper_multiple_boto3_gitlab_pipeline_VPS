@@ -509,7 +509,7 @@ GLOBAL_RULES = (
                 # Revision 2: Added explicit handling for incomplete but fixable Linux commands. This ENTIRE block is newly added
                 # with revision 2. 
                 # ============================================================
-                # NOTE these primitives apply to all Linux OSes: Ubuntu Debian CentOS RHEL Fedora Alpine BusyBox
+                # NOTE these primitives apply to all Linux OSes: Ubuntu Debian CentOS RHEL Fedora Alpine BusyBox (the full list below)
                 # There are domain primitives for each one of these OSes further below
 
                 "These rules apply ONLY to Linux-family OSes: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine, BusyBox, Amazon Linux 2, Amazon Linux 2023, Arch Linux, SUSE.\n"
