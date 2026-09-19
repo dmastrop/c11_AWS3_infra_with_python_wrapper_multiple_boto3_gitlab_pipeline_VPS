@@ -29394,6 +29394,55 @@ The test matrix for Alpine OS‑Signaled Remediation‑3 Test Case Matrix — GP
 
 ##### Regression testing on base36 test cases on macos Homebrew with gpt-5.6-sol
 
+The regression testing for the base36 test cases on macos brew went very well. 
+
+The matrix for macOS‑brew Base‑36 Test Case Matrix (GPT‑5.6‑Sol) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand macOS‑brew Base‑36 Test Case Matrix (36 test cases – GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | i‑brew‑001 | `rm -rf /usr/local/Homebrew` | abort | abort | **Destructive command.** Full stderr: `""`. macOS‑brew destructive‑command rule → MUST abort. Correct. |
+| 2 | i‑brew‑002 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`brew install curl`) | **Wrong package manager.** Full stderr: `"zsh: apt-get: command not found"`. Foreign PM simple install → rewrite to Homebrew. Correct. |
+| 3 | i‑brew‑003 | `brew install` | fallback | fallback | **Malformed brew install.** Full stderr: `"Error: No formula specified"`. Missing package name → fallback. Correct. |
+| 4 | i‑brew‑004 | `brew install nonexistentpkg123` | fallback | fallback | **Formula not found.** Full stderr: `"Error: No available formula with the name \"nonexistentpkg123\""`. MUST fallback. Correct. |
+| 5 | i‑brew‑005 | `brew update` | cleanup_and_retry | cleanup_and_retry (`brew update`) | **Idempotency.** Full stderr: `"Already up-to-date."`. MUST use cleanup_and_retry. Correct. |
+| 6 | i‑brew‑006 | `brew install openssl` | cleanup_and_retry | cleanup_and_retry (`brew cleanup`, `rm -rf ~/Library/Caches/Homebrew/*` → `brew update`, `brew install openssl`) | **OS‑signaled remediation.** Full stderr: `"Error: SHA256 mismatch"`. MUST cleanup_and_retry. Correct. |
+| 7 | i‑brew‑007 | `brew doctor` | fallback | fallback | **Environment warnings.** Full stderr: `"Warning: Unbrewed header files were found in /usr/local/include."`. MUST fallback. Correct. |
+| 8 | i‑brew‑008 | `brew install python | | grep version` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: syntax error near unexpected token '|'"`. MUST fallback. Correct. |
+| 9 | i‑brew‑009 | `brew install openssl | grep version | | wc -l` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: parse error near '|'"`. MUST fallback. Correct. |
+| 10 | i‑brew‑010 | `brew install $(unknowncmd)` | fallback | fallback | **Subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 11 | i‑brew‑011 | `brew install python --force` | fallback | fallback | **Invalid brew flag.** Full stderr: `"Error: invalid option: --force"`. MUST fallback. Correct. |
+| 12 | i‑brew‑012 | `brew uninstall` | fallback | fallback | **Malformed brew uninstall.** Full stderr: `"Error: This command requires a formula argument"`. MUST fallback. Correct. |
+| 13 | i‑brew‑013 | `brew install nodejs | grep version` | fallback | fallback | **Valid pipeline but pipelines are not repaired.** Full stderr: `""`. macOS‑brew malformed‑pipeline hardening → fallback. Correct. |
+| 14 | i‑brew‑014 | `brew install $(echo $(unknowncmd))` | fallback | fallback | **Nested subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 15 | i‑brew‑015 | `brew install python | | | grep x` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: parse error near '|'"`. MUST fallback. Correct. |
+| 16 | i‑brew‑016 | `brew install openssl --with-random-flag` | fallback | fallback | **Invalid brew flag.** Full stderr: `"Error: invalid option: --with-random-flag"`. MUST fallback. Correct. |
+| 17 | i‑brew‑017 | `brew install wget && apt-get update` | fallback | fallback | **Foreign system‑wide op.** Full stderr: `"zsh: apt-get: command not found"`. `apt-get update` → MUST fallback. Correct. |
+| 18 | i‑brew‑018 | `brew install openssl | grep` | fallback | fallback | **grep error.** Full stderr: `"grep: empty pattern"`. MUST fallback. Correct. |
+| 19 | i‑brew‑019 | `brew install $(echo $(echo $(unknowncmd)))` | fallback | fallback | **Nested subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 20 | i‑brew‑020 | `brew install python --with-nonexistent-flag` | fallback | fallback | **Invalid brew flag.** Full stderr: `"Error: invalid option: --with-nonexistent-flag"`. MUST fallback. Correct. |
+| 21 | i‑brew‑021 | `brew install curl && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install nano`) | **Foreign PM simple install.** Full stderr: `"zsh: yum: command not found"`. MUST rewrite only the yum segment. Correct. |
+| 22 | i‑brew‑022 | `brew install` | fallback | fallback | **Malformed brew install.** Full stderr: `"Error: No formula specified"`. MUST fallback. Correct. |
+| 23 | i‑brew‑023 | `brew install openssl | | grep version` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: parse error near '|'"`. MUST fallback. Correct. |
+| 24 | i‑brew‑024 | `brew install $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | **Deep nested subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 25 | i‑brew‑025 | `brew install openssl && dnf install git` | retry_with_modified_command | retry_with_modified_command (`brew install openssl && brew install git`) | **Foreign PM simple install.** Full stderr: `"zsh: dnf: command not found"`. MUST rewrite only the dnf segment. Correct. |
+| 26 | i‑brew‑026 | `brew install $(echo $(echo $(echo $(echo $(unknowncmd)))))` | fallback | fallback | **Nested subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 27 | i‑brew‑027 | `brew install python | grep version | | grep python` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: parse error near '|'"`. MUST fallback. Correct. |
+| 28 | i‑brew‑028 | `brew install openssl --with-invalid-feature` | fallback | fallback | **Invalid brew flag.** Full stderr: `"Error: invalid option: --with-invalid-feature"`. MUST fallback. Correct. |
+| 29 | i‑brew‑029 | `brew install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash`) | **Foreign PM simple install.** Full stderr: `"zsh: apk: command not found"`. MUST rewrite only the apk segment. Correct. |
+| 30 | i‑brew‑030 | `brew install $(echo $(echo $(echo $(echo $(echo $(unknowncmd))))))` | fallback | fallback | **Deep nested subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 31 | i‑brew‑031 | `brew install python | grep version | grep python | | wc -l` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: parse error near '|'"`. MUST fallback. Correct. |
+| 32 | i‑brew‑032 | `brew install openssl --with-unsupported-feature` | fallback | fallback | **Invalid brew flag.** Full stderr: `"Error: invalid option: --with-unsupported-feature"`. MUST fallback. Correct. |
+| 33 | i‑brew‑033 | `brew install curl && pacman -Syu` | fallback | fallback | **Foreign system‑wide op.** Full stderr: `"zsh: pacman: command not found"`. MUST fallback. Correct. |
+| 34 | i‑brew‑034 | `brew install $(echo $(echo $(echo $(echo $(echo $(echo $(unknowncmd)))))))` | fallback | fallback | **Deep nested subshell + unknown command.** Full stderr: `"zsh: unknowncmd: command not found"`. MUST fallback. Correct. |
+| 35 | i‑brew‑035 | `brew install python | grep version | grep python | grep brew | | wc -l` | fallback | fallback | **Malformed pipeline.** Full stderr: `"zsh: parse error near '|'"`. MUST fallback. Correct. |
+| 36 | i‑brew‑036 | `brew install openssl --with-imaginary-flag` | fallback | fallback | **Invalid brew flag.** Full stderr: `"Error: invalid option: --with-imaginary-flag"`. MUST fallback. Correct. |
+
+</details>
 
 
 
