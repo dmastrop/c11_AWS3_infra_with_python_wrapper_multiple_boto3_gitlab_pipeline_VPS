@@ -6,7 +6,7 @@
   "shell": "zsh",
   "contexts": [
     {
-      "command": "brew install curl && apk add bash && pacman -S htop && brew update",
+      "command": "brew install curl && apk add bash -y && pacman -S htop && brew update",
       "stdout": "",
       "stderr": "zsh: apk: command not found",
       "exit_status": 127,
@@ -255,7 +255,32 @@
       "ip": "10.0.14.21",
       "tags": [],
       "history": []
+    },
+
+    {
+      "command": "apk add bash -y && pacman -S htop -y && brew install curl && brew update",
+      "stdout": "",
+      "stderr": "zsh: apk: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "macbrew-mseg-022",
+      "ip": "10.0.14.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install curl && apt-get update -y && brew update",
+      "stdout": "",
+      "stderr": "zsh: apt-get: command not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "macbrew-mseg-023",
+      "ip": "10.0.14.23",
+      "tags": [],
+      "history": []
     }
+
 
   ]
 }
