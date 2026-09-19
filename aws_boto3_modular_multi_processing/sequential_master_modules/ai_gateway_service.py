@@ -3401,6 +3401,17 @@ MACOS_BREW_RULES = (
     "- If no package name is present, the LLM MUST use 'fallback'.\n"
     "\n"
 
+    "##### Foreign PM auto-confirmation flags (-y) #####\n"
+    "- Foreign package managers (apt, apt-get, yum, dnf, apk, pacman, zypper) commonly use '-y' as an auto-confirmation flag.\n"
+    "- Homebrew does NOT support '-y'.\n"
+    "- When rewriting foreign PM install segments, the LLM MUST ignore and remove '-y'.\n"
+    "- The presence of '-y' in a foreign PM segment MUST NOT trigger fallback.\n"
+    "- The rewritten segment MUST be:\n"
+    "      brew install <pkg>\n"
+    "- The LLM MUST NOT preserve '-y', MUST NOT invent a brew equivalent, and MUST NOT treat '-y' as an invalid flag.\n"
+    "\n"
+
+
     ###########################################################################
     ##### Corrected Patch2 — multi-segment pipelines for macOS Homebrew #####
     ###########################################################################
