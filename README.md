@@ -29386,7 +29386,65 @@ The test matrix for Alpine OS‑Signaled Remediation‑3 Test Case Matrix — GP
 #### 12.LLM Contract Stress Tester – Multi-segment macOS Homebrew testing and test matrices
 
 
+The multi-segment testing went well but there was some logic missing for the -y flag in linux OSes. These segments with -y can be
+rewritten, but the -y flag must be ignored in macos brew. 
 
+The code was added to the macos brew domain primitives block in ai_gateway_service.py:
+
+```
+
+    ##### Foreign PM auto-confirmation flags (-y) #####
+    "- Foreign package managers (apt, apt-get, yum, dnf, apk, pacman, zypper) commonly use '-y' as an auto-confirmation flag.\n"
+    "- Homebrew does NOT support '-y'.\n"
+    "- When rewriting foreign PM install segments, the LLM MUST ignore and remove '-y'.\n"
+    "- The presence of '-y' in a foreign PM segment MUST NOT trigger fallback.\n"
+    "- The rewritten segment MUST be:\n"
+    "      brew install <pkg>\n"
+    "- The LLM MUST NOT preserve '-y', MUST NOT invent a brew equivalent, and MUST NOT treat '-y' as an invalid flag.\n"
+    "\n"
+```
+
+Once this code was added the test cases 1 and 22 passed. Note that test case 23 has the -y flag in a non-native system-wide command, so
+that will fallback regardless of whtether or not the -y flag is present on the system-wide command. 
+
+The complete test matrix for all 23 test cases macOS‑brew Multi‑Segment Rewrite Matrix (23 test cases — GPT‑5.6‑Sol) is below (Click to
+expand);
+
+
+
+<details>
+<summary><b>Click to expand macOS‑brew Multi‑Segment Rewrite Matrix (23 test cases — GPT‑5.6‑Sol canonical macOS‑brew refactor)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | macbrew‑mseg‑001 | `brew install curl && apk add bash -y && pacman -S htop && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew update`) | Correct rewrite. Foreign PM `-y` ignored. Ordering preserved. |
+| **2** | macbrew‑mseg‑002 | `apk add bash && pacman -S htop && brew install nano && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install bash && brew install htop && brew install nano && brew update`) | Correct rewrite of foreign PM segments. |
+| **3** | macbrew‑mseg‑003 | `pacman -S htop && brew install curl && apk add bash && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install htop && brew install curl && brew install bash && brew update`) | Correct rewrite. Ordering preserved. |
+| **4** | macbrew‑mseg‑004 | `brew install curl && apk add bash && pacman -S htop && brew install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew install nano`) | Correct rewrite. |
+| **5** | macbrew‑mseg‑005 | `brew install curl && brew install nano && brew install python3 && brew update` | fallback | fallback | All segments native brew; exit_status=0; correct fallback. |
+| **6** | macbrew‑mseg‑006 | `brew install curl && apk add bash && pacman -S htop && brew install wget && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew install wget && brew update`) | Correct rewrite. |
+| **7** | macbrew‑mseg‑007 | `brew install curl && apk add bash && pacman -S htop && brew upgrade` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew upgrade`) | Correct rewrite; native brew upgrade preserved. |
+| **8** | macbrew‑mseg‑008 | `brew install curl && apk add bash && pacman -S htop && apt-get update -y` | fallback | fallback | Foreign system‑wide op (`apt-get update`) → correct fallback. |
+| **9** | macbrew‑mseg‑009 | `apk add bash && pacman -S htop && brew install curl && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install bash && brew install htop && brew install curl && brew update`) | Correct rewrite. |
+| **10** | macbrew‑mseg‑010 | `brew install curl && apk add bash && pacman -S htop && brew install nano --badflag` | fallback | fallback | Invalid brew flag (`--badflag`) → correct fallback. |
+| **11** | macbrew‑mseg‑011 | `brew install curl && echo 'hello' && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`brew install curl && echo 'hello' && brew install bash && brew install htop`) | Correct rewrite; echo preserved. |
+| **12** | macbrew‑mseg‑012 | `brew install curl && echo 'test' && apk add bash && brew install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && echo 'test' && brew install bash && brew install nano`) | Correct rewrite. |
+| **13** | macbrew‑mseg‑013 | `apk add bash && pacman -S htop && brew install curl && rm -rf /` | abort | abort | Destructive command detected. Correct. |
+| **14** | macbrew‑mseg‑014 | `brew install curl && apk add bash && pacman -S htop && brew install nano && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew install nano && brew update`) | Correct rewrite. |
+| **15** | macbrew‑mseg‑015 | `brew install curl && apk add bash && pacman -S htop && brew update --badflag` | fallback | fallback | Invalid brew flag → correct fallback. |
+| **16** | macbrew‑mseg‑016 | `brew install curl && apk add bash && pacman -S htop && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew update`) | Correct rewrite. |
+| **17** | macbrew‑mseg‑017 | `apk add bash && pacman -S htop && brew install curl && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install bash && brew install htop && brew install curl && brew update`) | Correct rewrite. |
+| **18** | macbrew‑mseg‑018 | `brew install curl && apk add bash && pacman -S htop && brew install wget` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew install wget`) | Correct rewrite. |
+| **19** | macbrew‑mseg‑019 | `apk add bash && pacman -S htop && brew install curl && brew install wget` | retry_with_modified_command | retry_with_modified_command (`brew install bash && brew install htop && brew install curl && brew install wget`) | Correct rewrite. |
+| **20** | macbrew‑mseg‑020 | `brew install curl && apk add bash && pacman -S htop && brew install wget && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew install wget && brew update`) | Correct rewrite. |
+| **21** | macbrew‑mseg‑021 | `brew install curl && apk add bash && pacman -S htop && brew install wget && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash && brew install htop && brew install wget && brew update`) | Same as #20. Correct rewrite. |
+| **22** | macbrew‑mseg‑022 | `apk add bash -y && pacman -S htop -y && brew install curl && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install bash && brew install htop && brew install curl && brew update`) | Correct rewrite. Foreign PM `-y` ignored. |
+| **23** | macbrew‑mseg‑023 | `brew install curl && apt-get update -y && brew update` | fallback | fallback | Foreign system‑wide op (`apt-get update`) → correct fallback. |
+
+</details>
+ 
 
 
 
