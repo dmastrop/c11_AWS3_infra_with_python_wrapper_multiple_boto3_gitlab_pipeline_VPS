@@ -1,0 +1,43 @@
+{
+  "os_name": "macOS",
+  "os_version": "14.0-brew",
+  "kernel": "Darwin",
+  "package_managers": ["brew"],
+  "shell": "zsh",
+  "contexts": [
+    {
+      "command": "brew install wget",
+      "stdout": "",
+      "stderr": "Error: SHA256 mismatch\nExpected: 123abc...\nActual:   789xyz...\nError: failed to download bottle for wget",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "macbrew-osmut-001",
+      "ip": "10.0.14.201",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "brew install curl",
+      "stdout": "",
+      "stderr": "Error: No available formula with the name \"curl\"\nError: Corrupt cache: /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core\nError: failed to download metadata",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "macbrew-osmut-002",
+      "ip": "10.0.14.202",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "brew install python3",
+      "stdout": "",
+      "stderr": "Error: Another active Homebrew process is running\nError: Lock file exists: /usr/local/Homebrew/Library/Locks/python3.lock\nError: Could not open /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "macbrew-osmut-003",
+      "ip": "10.0.14.203",
+      "tags": [],
+      "history": []
+    }
+  ]
+}
+
