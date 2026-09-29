@@ -3476,13 +3476,15 @@ MACOS_BREW_RULES = (
     "  the LLM MUST use 'fallback'.\n"
     "\n"
 
+
     ##### Brew metadata / cache corruption (OS-signaled remediation) #####
+    # This required some patching to remove 'Error: No available formula' from the list and add 'Error: failed to download metadata'
     "- If stderr indicates brew metadata corruption, such as:\n"
     "    'Error: failed to download'\n"
     "    'Error: Fetching /usr/local/Homebrew/...'\n"
     "    'Error: SHA256 mismatch'\n"
-    "    'Error: No available formula'\n"
     "    'Error: Corrupt cache'\n"
+    "    'Error: failed to download metadata'\n"
     "  the LLM MUST return a 'cleanup_and_retry' action.\n"
     "  This is a SOFT OS-signaled deterministic remediation sequence and is allowed to use\n"
     "  'brew update' in the retry phase despite the general prohibition on auto-inserting updates.\n"
@@ -3496,13 +3498,26 @@ MACOS_BREW_RULES = (
     "      - brew install <pkg>   (ONLY if a package name is present)\n"
     "\n"
 
+
     ##### Formula not found #####
-    "- If stderr contains:\n"
-    "    'Error: No available formula with the name \"<pkg>\"'\n"
-    "    'Error: No formulae found in taps'\n"
+    # This required a patch to disambiguate the No available formula (standalone) vs. when it is used in the context of the cache 
+    # corruption list above.  The former is a fallback but the later is cleanup_and_retry os-signaled remediation.
+    "- If stderr contains ONLY:\n"
+    "      'Error: No available formula with the name \"<pkg>\"'\n"
+    "      or 'Error: No formulae found in taps'\n"
+    "  and NO additional brew metadata corruption signals\n"
+    "      (no 'Corrupt cache', no 'failed to download', no 'failed to download metadata'),\n"
     "  the LLM MUST use 'fallback'.\n"
-    "- The LLM MUST NOT guess alternative package names.\n"
     "\n"
+    "- If 'Error: No available formula with the name \"<pkg>\"' appears TOGETHER WITH\n"
+    "      brew metadata corruption signals such as:\n"
+    "          'Error: Corrupt cache'\n"
+    "          'Error: failed to download'\n"
+    "          'Error: failed to download metadata'\n"
+    "  the LLM MUST treat this as brew metadata/cache corruption and apply the\n"
+    "  OS-signaled remediation 'cleanup_and_retry' plan.\n"
+    "\n"
+
 
     ##### Brew doctor warnings #####
     "- If stderr contains brew doctor warnings or environment warnings,\n"
