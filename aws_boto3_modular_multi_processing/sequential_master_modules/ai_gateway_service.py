@@ -3499,6 +3499,23 @@ MACOS_BREW_RULES = (
     "\n"
 
 
+    ##### Brew OS-signaled remediation — active process / lock / tap access #####
+    "- If stderr contains:\n"
+    "    'Another active Homebrew process is running'\n"
+    "    or 'Lock file exists:'\n"
+    "    or 'Could not open /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core'\n"
+    "  the LLM MUST treat this as a soft OS-signaled remediation condition and use 'cleanup_and_retry'\n"
+    "  in accordance with the global Idempotency and OS-signaled remediation rules.\n"
+    "\n"
+    "- A minimal valid plan is:\n"
+    "    cleanup: []\n"
+    "    retry: \"brew install <pkg>\"\n"
+    "\n"
+    "- The LLM MUST NOT use 'fallback' for these conditions.\n"
+    "- The LLM MUST bind '<pkg>' to the package name from the failing command.\n"
+    "\n"
+
+
     ##### Formula not found #####
     # This required a patch to disambiguate the No available formula (standalone) vs. when it is used in the context of the cache 
     # corruption list above.  The former is a fallback but the later is cleanup_and_retry os-signaled remediation.
