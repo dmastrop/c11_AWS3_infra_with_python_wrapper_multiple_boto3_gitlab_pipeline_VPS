@@ -29509,15 +29509,216 @@ The matrix for macOS‑brew Base‑36 Test Case Matrix (GPT‑5.6‑Sol) is belo
 
 ##### Regression on the 24 patch2 rewrite tests on macos Homebrew with gpt-5.6-sol
 
+The testing in this area went well. 
+
+The test matrix for the macos-brew patch2 24 rewrite test cases is below (Click to expand):
+
+<details>
+<summary><b>Click to expand macOS‑brew Patch‑2 Rewrite Test Case Matrix (24 test cases) — GPT‑5.6‑Sol</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | brew‑patch‑001 | `apt-get install curl` | retry_with_modified_command | retry_with_modified_command (`brew install curl`) | **Foreign PM (`apt-get`).** Rewrite required. Correct. |
+| 2 | brew‑patch‑002 | `brew install wget && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install wget && brew install nano`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 3 | brew‑patch‑003 | `brew install curl && apt-get update` | fallback | fallback | **Foreign system‑wide op (`apt-get update`).** Patch2 forbids rewriting → fallback. Correct. |
+| 4 | brew‑patch‑004 | `brew install curl && apt-get install python3 --badflag` | fallback | fallback | **Invalid flag.** MUST fallback. Correct. |
+| 5 | brew‑patch‑005 | `brew install curl && pacman -Syu` | fallback | fallback | **Foreign system‑wide op (`pacman -Syu`).** MUST fallback. Correct. |
+| 6 | brew‑patch‑006 | `brew install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install bash`) | **Wrong‑OS PM (`apk`).** Rewrite required. Correct. |
+| 7 | brew‑patch‑007 | `brew install curl && rm -rf /usr/local/Homebrew` | abort | abort | **Destructive command.** MUST abort. Correct. |
+| 8 | brew‑patch‑008 | `yum install nano && brew install curl` | retry_with_modified_command | retry_with_modified_command (`brew install nano && brew install curl`) | **Wrong‑OS PM (`yum`).** Rewrite required. Correct. |
+| 9 | brew‑patch‑009 | `dnf install git && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install git && brew install nano`) | **Wrong‑OS PMs (`dnf`, `yum`).** Rewrite required. Correct. |
+| 10 | brew‑patch‑010 | `brew install curl && brew install python3 --force` | fallback | fallback | **Invalid brew flag (`--force`).** MUST fallback. Correct. |
+| 11 | brew‑patch‑011 | `brew install curl && brew install python3` | fallback | fallback | **Multi‑segment native brew pipeline.** Patch2 forbids rewriting native‑brew multi‑segment pipelines → fallback. Correct. |
+| 12 | brew‑patch‑012 | `brew install curl && apt-get install python3 && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install python3 && brew install nano`) | **Wrong‑OS PMs (`apt-get`, `yum`).** Rewrite required. Correct. |
+| 13 | brew‑patch‑013 | `yum install nano && brew install curl && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install nano && brew install curl && brew install bash`) | **Wrong‑OS PMs (`yum`, `apk`).** Rewrite required. Correct. |
+| 14 | brew‑patch‑014 | `brew install curl && dnf install git && brew install nano` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install git && brew install nano`) | **Wrong‑OS PM (`dnf`).** Rewrite required. Correct. |
+| 15 | brew‑patch‑015 | `yum install nano && apk add bash && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`brew install nano && brew install bash && brew install htop`) | **Three wrong‑OS PMs (`yum`, `apk`, `pacman`).** Rewrite required. Correct. |
+| 16 | brew‑patch‑016 | `brew install curl && brew install nano && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install nano && brew install bash`) | **Wrong‑OS PM (`apk`).** Rewrite required. Correct. |
+| 17 | brew‑patch‑017 | `yum install nano && brew install curl && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install nano && brew install curl && brew update`) | **Wrong‑OS PM (`yum`).** Rewrite required. Native brew update preserved. Correct. |
+| 18 | brew‑patch‑018 | `apk add bash && echo 'hello' && yum install nano` | retry_with_modified_command | retry_with_modified_command (`brew install bash && echo 'hello' && brew install nano`) | **Wrong‑OS PMs (`apk`, `yum`).** Rewrite required. Echo preserved. Correct. |
+| 19 | brew‑patch‑019 | `brew install curl && echo 'test' && pacman -S htop` | retry_with_modified_command | retry_with_modified_command (`brew install curl && echo 'test' && brew install htop`) | **Wrong‑OS PM (`pacman`).** Rewrite required. Echo preserved. Correct. |
+| 20 | brew‑patch‑020 | `yum install nano --badflag && brew install curl` | fallback | fallback | **Invalid flag on wrong‑OS PM.** MUST fallback. Correct. |
+| 21 | brew‑patch‑021 | `brew install curl && apk add bash --badflag && brew install nano` | fallback | fallback | **Invalid flag on wrong‑OS PM.** MUST fallback. Correct. |
+| 22 | brew‑patch‑022 | `yum install nano && apk add bash && brew update` | retry_with_modified_command | retry_with_modified_command (`brew install nano && brew install bash && brew update`) | **Wrong‑OS PMs (`yum`, `apk`).** Rewrite required. Native brew update preserved. Correct. |
+| 23 | brew‑patch‑023 | `apk add bash && brew install curl && rm -rf /usr/local/Homebrew` | abort | abort | **Destructive command.** MUST abort. Correct. |
+| 24 | brew‑patch‑024 | `brew install curl && yum install nano && echo hi && apk add bash` | retry_with_modified_command | retry_with_modified_command (`brew install curl && brew install nano && echo hi && brew install bash`) | **Wrong‑OS PMs (`yum`, `apk`).** Rewrite required. Echo preserved. Correct. |
+
+</details>
 
 
-##### Regresion on the 6 idempotency tests on macos Homebrew with gpt-5.6-sol
+
+
+
+##### Regression on the 6 idempotency tests on macos Homebrew with gpt-5.6-sol
+
+
+The testing in this area went well.
+
+
+The matrix for macOS‑brew Idempotency‑6 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand).
+
+<details>
+<summary><b>Click to expand macOS‑brew Idempotency‑6 Test Case Matrix (6 test cases) — GPT‑5.6‑Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | brew‑idem‑001 | `brew update` | cleanup_and_retry | cleanup_and_retry (`brew update`) | **Idempotency: Already up‑to‑date.** stderr contains `Already up-to-date.` This is one of the three canonical brew idempotency signals explicitly listed in the domain block. Global Idempotency rules require a minimal retry of the same command. Correct. |
+| 2 | brew‑idem‑002 | `brew install wget` | cleanup_and_retry | cleanup_and_retry (`brew install wget`) | **Idempotency: Package already installed.** stdout contains `Warning: wget ... is already installed and up-to-date.` This is a canonical brew idempotency signal. Domain block maps this to cleanup_and_retry with minimal retry. Correct. |
+| 3 | brew‑idem‑003 | `brew install curl` | cleanup_and_retry | cleanup_and_retry (`brew install curl`) | **Idempotency with history.** History shows prior successful install of curl. stdout again shows `Warning: curl ... is already installed and up-to-date.` Domain block requires cleanup_and_retry with minimal retry. Correct. |
+| 4 | brew‑idem‑004 | `mkdir /usr/local/var/www` | cleanup_and_retry | cleanup_and_retry (`mkdir -p /usr/local/var/www`) | **Idempotency: Directory exists.** stderr: `File exists`. This matches global idempotency (`directory not empty`). Brew domain block does not override this, so global rules apply. The LLM correctly rewrites to the deterministic idempotent form `mkdir -p`. Correct. |
+| 5 | brew‑idem‑005 | `touch /usr/local/etc/motd` | cleanup_and_retry | cleanup_and_retry (`test -e /usr/local/etc/motd`) | **Idempotency: File exists + history shows prior creation.** stderr: `File exists`. Global idempotency rules allow safe retry using a non‑mutating existence check (`test -e`). This is consistent with the global idempotency pattern for file‑existence cases. Correct. |
+| 6 | brew‑osmut‑001 | `brew install some-nonexistent-package` | fallback | fallback | **Not idempotency — unsatisfiable formula.** stderr: `Error: No available formula with the name "some-nonexistent-package"`. Domain block explicitly states that formula‑not‑found (with no corruption context) MUST → fallback. No idempotency or remediation applies. Correct. |
+
+</details>
+
+
+
+
+
 
 
 
 ##### Regression on the 3 OS-signaled remediation tests on macos Homebrew with gpt-5.6-sol
 
+The testing in this area had a few issues. 
 
+The first issue required a disambiguation of the No available formula stderr message. This was a failure in the test case2 below:
+
+
+```
+    {
+      "command": "brew install curl",
+      "stdout": "",
+      "stderr": "Error: No available formula with the name \"curl\"\nError: Corrupt cache: /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core\nError: failed to download metadata",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "macbrew-osmut-002",
+      "ip": "10.0.14.202",
+      "tags": [],
+      "history": []
+    },
+```
+
+
+The first refactored block is here:
+
+```
+
+    ##### Brew metadata / cache corruption (OS-signaled remediation) #####
+    # This required some patching to remove 'Error: No available formula' from the list and add 'Error: failed to download metadata'
+    "- If stderr indicates brew metadata corruption, such as:\n"
+    "    'Error: failed to download'\n"
+    "    'Error: Fetching /usr/local/Homebrew/...'\n"
+    "    'Error: SHA256 mismatch'\n"
+    "    'Error: Corrupt cache'\n"
+    "    'Error: failed to download metadata'\n"
+    "  the LLM MUST return a 'cleanup_and_retry' action.\n"
+    "  This is a SOFT OS-signaled deterministic remediation sequence and is allowed to use\n"
+    "  'brew update' in the retry phase despite the general prohibition on auto-inserting updates.\n"
+    "\n"
+    "  cleanup:\n"
+    "      - brew cleanup\n"
+    "      - rm -rf ~/Library/Caches/Homebrew/*\n"
+    "\n"
+    "  retry:\n"
+    "      - brew update\n"
+    "      - brew install <pkg>   (ONLY if a package name is present)\n"
+    "\n"
+```
+
+This couples with the second refactored block here:
+
+```
+
+    ##### Formula not found #####
+    # This required a patch to disambiguate the No available formula (standalone) vs. when it is used in the context of the cache 
+    # corruption list above.  The former is a fallback but the later is cleanup_and_retry os-signaled remediation.
+    "- If stderr contains ONLY:\n"
+    "      'Error: No available formula with the name \"<pkg>\"'\n"
+    "      or 'Error: No formulae found in taps'\n"
+    "  and NO additional brew metadata corruption signals\n"
+    "      (no 'Corrupt cache', no 'failed to download', no 'failed to download metadata'),\n"
+    "  the LLM MUST use 'fallback'.\n"
+    "\n"
+    "- If 'Error: No available formula with the name \"<pkg>\"' appears TOGETHER WITH\n"
+    "      brew metadata corruption signals such as:\n"
+    "          'Error: Corrupt cache'\n"
+    "          'Error: failed to download'\n"
+    "          'Error: failed to download metadata'\n"
+    "  the LLM MUST treat this as brew metadata/cache corruption and apply the\n"
+    "  OS-signaled remediation 'cleanup_and_retry' plan.\n"
+    "\n"
+
+```
+
+Once the refactored blocks were committed the second os-signaled remedation test case began to pass.
+
+
+The third os-signaled remedation test case was unable to be evaluated by the LLM due to a completely missing rule in the 
+macos-brew domain primitives block. 
+
+The test case is:
+
+```
+    {
+      "command": "brew install python3",
+      "stdout": "",
+      "stderr": "Error: Another active Homebrew process is running\nError: Lock file exists: /usr/local/Homebrew/Library/Locks/python3.lock\nError: Could not open /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "macbrew-osmut-003",
+      "ip": "10.0.14.203",
+      "tags": [],
+      "history": []
+    }
+```
+
+
+
+Once the block below was added this test case also started to pass:
+
+```
+
+    ##### Brew OS-signaled remediation — active process / lock / tap access #####
+    "- If stderr contains:\n"
+    "    'Another active Homebrew process is running'\n"
+    "    or 'Lock file exists:'\n"
+    "    or 'Could not open /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core'\n"
+    "  the LLM MUST treat this as a soft OS-signaled remediation condition and use 'cleanup_and_retry'\n"
+    "  in accordance with the global Idempotency and OS-signaled remediation rules.\n"
+    "\n"
+    "- A minimal valid plan is:\n"
+    "    cleanup: []\n"
+    "    retry: \"brew install <pkg>\"\n"
+    "\n"
+    "- The LLM MUST NOT use 'fallback' for these conditions.\n"
+    "- The LLM MUST bind '<pkg>' to the package name from the failing command.\n"
+    "\n"
+```
+
+At first glance the test case appears to be idempotency, but it is os-signaled remedation with no cleanup command required (just
+the retry with action plan cleanup_and_retry).
+
+
+
+The test matrix for macOS‑brew OS‑Signaled Remediation‑3 Test Case Matrix — GPT‑5.6‑Sol (NO BS Rule) is below (Click to expand):
+
+<details>
+<summary><b>Click to expand macOS‑brew OS‑Signaled Remediation‑3 Test Case Matrix (3 test cases) — GPT‑5.6‑Sol (NO BS Rule)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 1 | macbrew‑osmut‑001 | `brew install wget` | cleanup_and_retry | cleanup_and_retry (`brew cleanup` → `rm -rf ~/Library/Caches/Homebrew/*` → `brew update` → `brew install wget`) | **Soft OS‑signaled remediation (metadata corruption).** stderr contains `SHA256 mismatch` and `failed to download bottle`, both canonical Homebrew metadata corruption signals. The patched brew metadata‑corruption block explicitly lists these phrases. Under OS‑Mutation Guard, `brew update` is allowed only when the OS signals remediation. Correct. |
+| 2 | macbrew‑osmut‑002 | `brew install curl` | cleanup_and_retry | cleanup_and_retry (`brew cleanup` → `rm -rf ~/Library/Caches/Homebrew/*` → `brew update` → `brew install curl`) | **Soft OS‑signaled remediation (formula lookup failure + cache corruption).** stderr contains: `No available formula with the name "curl"` **AND** `Corrupt cache` **AND** `failed to download metadata`. Prior to patching, this test incorrectly returned fallback because `No available formula` appeared in both the fallback block and the remediation block. The patch disambiguates these cases: formula‑not‑found *alone* → fallback; formula‑not‑found + corruption → cleanup_and_retry. Correct. |
+| 3 | macbrew‑osmut‑003 | `brew install python3` | cleanup_and_retry | cleanup_and_retry (`brew install python3`) | **Soft OS‑signaled remediation (brew ecosystem lock / tap access failure).** stderr contains: `Another active Homebrew process is running`, `Lock file exists`, and `Could not open homebrew-core`. These are Homebrew’s equivalents of dpkg/rpmdb/pacman lock‑state failures in Linux. Prior to patching, the model produced **no plan** because the brew domain block lacked explicit lock/tap‑corruption remediation rules. The new “Brew OS‑signaled remediation — active process / lock / tap access” block resolves this by mapping these signals to cleanup_and_retry with minimal retry. Correct. |
+
+</details>
 
 
 
