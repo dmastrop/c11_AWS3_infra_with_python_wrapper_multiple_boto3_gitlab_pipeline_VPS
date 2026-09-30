@@ -29738,6 +29738,12 @@ The test matrix for macOS‑brew OS‑Signaled Remediation‑3 Test Case Matrix 
 <a name="llm-contract-stress-tester-multi-segment-arch-testing-and-test-matrices"></a>
 #### 13.LLM Contract Stress Tester – Multi-segment ArchLinux testing and test matrices
 
+
+The domain primitives block for Archlinux is complete and has been committed to the ai_gateway_service.py module.
+Do to time constraints the testing for this will be postponed. Need to get to Phase4a.1.3 real life testing with module2f.
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
@@ -29751,6 +29757,10 @@ The test matrix for macOS‑brew OS‑Signaled Remediation‑3 Test Case Matrix 
 
 <a name="llm-contract-stress-tester-multi-segment-suse-testing-and-test-matrices"></a>
 #### 14.LLM Contract Stress Tester – Multi-segment SUSE testing and test matrices
+
+The domain primitives block for SUSE is complete and has been committed to the ai_gateway_service.py module.
+Do to time constraints the testing for this will be postponed. Need to get to Phase4a.1.3 real life testing with module2f.
+
 
 ---
 
