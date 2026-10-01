@@ -3866,7 +3866,213 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
 
 
 WINDOWS_POWERSHELL_2022_RULES = (
+    # ============================================================
+    # WINDOWS POWERSHELL DOMAIN RULES — Applies ONLY when os_name = "Windows"
+    # AND os_version = "2022". This entire block is Revision 17 + Patch2-Rev5.
+    # This is Windows PowerShell 5.1 (not PowerShell 7).
+    # ============================================================
+    # Note: Windows PowerShell does NOT use the OS-Mutation Guard and does NOT
+    # support CentOS7/AmazonLinux2-style OS-mutation remediation. cleanup_and_retry
+    # here is limited to deterministic, Windows-native scenarios.
+
+    "These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
+    "They MUST NOT apply to Linux-family OSes, BusyBox, macOS, PAN-OS, or Cisco IOS.\n"
+    "IMPORTANT:\n"
+    "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decision.\n"
+    "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+    "\n"
+
+    # ============================================================
+    # Revision 6.12 — PowerShell malformed-command hardening
+    # ============================================================
+
+    "- Windows 2022 in this contract uses Windows PowerShell 5.1 as the primary shell.\n"
+    "- PowerShell 7+ semantics (including '&&' and '||') MUST NOT be assumed.\n"
+    "- The LLM MUST remain deterministic and MUST NOT guess user intent.\n"
+    "- When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
+    "\n"
+    "- Windows PowerShell uses cmdlets (Verb-Noun), pipelines ('|'), script blocks ('{ }'),\n"
+    "  subexpressions ('$()'), and parameter binding rules.\n"
+    "- The LLM MUST NOT invent cmdlets, MUST NOT invent modules, and MUST NOT invent parameters.\n"
+    "- The LLM MUST NOT assume the presence of optional modules unless explicitly referenced.\n"
+    "\n"
+    "- If a command is syntactically malformed (missing parameters, truncated flags, malformed pipelines,\n"
+    "  malformed script blocks, unmatched quotes, or incomplete constructs) but NOT destructive,\n"
+    "  the LLM MUST use 'fallback' unless a safe, deterministic correction is directly implied.\n"
+    "\n"
+    "- If stderr indicates a pipeline or parsing error (e.g., 'Unexpected token',\n"
+    "  'The string is missing the terminator', 'Missing argument', 'Unexpected end of input'),\n"
+    "  the LLM MUST return 'fallback' unless the command is destructive.\n"
+    "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands,\n"
+    "  and MUST NOT infer user intent for pipeline stages.\n"
+    "\n"
+
+    # ============================================================
+    # Invalid flags / parameters (Windows PowerShell)
+    # ============================================================
+
+    "- If a PowerShell cmdlet, parameter, or flag is invalid or unrecognized\n"
+    "  (for example: 'A parameter cannot be found that matches', 'Unexpected parameter',\n"
+    "  or any error indicating an unsupported flag or parameter), the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag or parameter\n"
+    "  when it is not an obvious single-token typo.\n"
+    "- The LLM MUST NOT infer user intent for unknown parameters or flags.\n"
+    "\n"
+
+    # ============================================================
+    # Unknown cmdlets / tools / cross-OS usage
+    # ============================================================
+
+    "- If stderr contains the EXACT PowerShell message:\n"
+    "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
+    "  the LLM MUST return 'fallback'.\n"
+    "\n"
+    "- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
+    "- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
+    "- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
+    "  unless explicitly referenced.\n"
+    "\n"
+    "- If a command references POSIX-style paths (e.g., '/usr/bin', '/etc', '/var/log') as primary targets,\n"
+    "  and no Windows mapping is explicitly provided, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    # ============================================================
+    # Windows PowerShell core domain primitives (Revision 17)
+    # ============================================================
+
+    "- Canonical PowerShell concepts include:\n"
+    "    * cmdlets (Get-Service, Get-Process, Get-Item, Remove-Item, etc.)\n"
+    "    * pipelines using '|'\n"
+    "    * parameters prefixed with '-'\n"
+    "    * script blocks using '{ }'\n"
+    "    * subexpressions using '$()'\n"
+    "    * error records with categories and messages.\n"
+    "\n"
+    "- 'winget' MAY be available as the package manager, but the LLM MUST NOT assume optional features\n"
+    "  or module availability unless explicitly referenced.\n"
+    "- The LLM MUST NOT invent winget subcommands, MUST NOT invent flags, and MUST NOT guess package IDs.\n"
+    "- If 'winget' is used without a concrete package identifier (e.g., 'winget install'),\n"
+    "  the LLM MUST treat the command as malformed and use 'fallback'.\n"
+    "\n"
+
+    # ============================================================
+    # Destructive commands (Windows PowerShell)
+    # ============================================================
+
+    "- If the command is destructive to core system paths or critical registry hives,\n"
+    "  the LLM MUST return 'abort' with a clear message.\n"
+    "- Examples include (but are not limited to):\n"
+    "    * Remove-Item -Recurse -Force C:\\Windows\n"
+    "    * Remove-Item -Recurse -Force C:\\Windows\\System32\n"
+    "    * Remove-Item -Recurse -Force C:\\Program Files\n"
+    "    * Remove-Item -Recurse -Force C:\\Users\n"
+    "    * Remove-Item -Recurse -Force HKLM:\\SYSTEM\n"
+    "    * Remove-Item -Recurse -Force HKLM:\\SOFTWARE\n"
+    "    * Stop-Process -Force -Name wininit\n"
+    "    * Stop-Process -Force -Name lsass\n"
+    "- ANY attempt to recursively delete or irreversibly modify these locations MUST trigger 'abort'.\n"
+    "\n"
+
+    # ============================================================
+    # Idempotency and already-present state (Windows PowerShell)
+    # ============================================================
+
+    "- If stderr indicates the requested state is already achieved, such as:\n"
+    "    * 'The process is already running.'\n"
+    "    * 'The service is already running.'\n"
+    "    * 'Cannot create a file when that file already exists.'\n"
+    "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
+    "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
+    "\n"
+    "- For idempotency cleanup in Windows PowerShell, the LLM MAY use a deterministic, Windows-native\n"
+    "  cleanup command followed by a retry of the original command, for example:\n"
+    "    * Stop-Service followed by Start-Service when a service is already running.\n"
+    "    * Remove-Item followed by New-Item when a file or directory already exists.\n"
+    "- The LLM MUST NOT invent complex, multi-step cleanup workflows beyond these simple, deterministic patterns.\n"
+    "\n"
+
+    # ============================================================
+    # Network failures (Windows PowerShell)
+    # ============================================================
+
+    "- Network failures follow global Network Failure Semantics (Revision 6.5).\n"
+    "- If stderr contains:\n"
+    "    * 'The remote name could not be resolved'\n"
+    "    * 'Unable to connect to the remote server'\n"
+    "    * 'No such host is known'\n"
+    "  the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    # ============================================================
+    # cleanup_and_retry usage (Windows PowerShell)
+    # ============================================================
+
+    "- cleanup_and_retry MUST be used sparingly and ONLY when:\n"
+    "    * stderr indicates an idempotent condition (state already achieved), OR\n"
+    "    * stderr contains a literal, deterministic remediation suggestion.\n"
+    "- For idempotent conditions, cleanup_and_retry MUST follow the global Idempotency rules:\n"
+    "    * 'cleanup' contains a minimal, safe Windows-native command (or is empty when no cleanup is needed), and\n"
+    "    * 'retry' contains the original command.\n"
+    "- For stderr-suggested remediation, the LLM MAY use cleanup_and_retry with:\n"
+    "    * 'cleanup' as an empty list or minimal safe commands, and\n"
+    "    * 'retry' containing the suggested command.\n"
+    "- The LLM MUST NOT invent multi-step cleanup sequences beyond simple, deterministic patterns.\n"
+    "- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    # ============================================================
+    # retry_with_modified_command usage (Windows PowerShell) — Patch2-Rev5
+    # ============================================================
+
+    "- retry_with_modified_command MAY be used when the original command is a clear near-miss\n"
+    "  of a valid cmdlet, parameter, or structural PowerShell construct, and the correction is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * and directly implied by the original command.\n"
+    "\n"
+    "- Examples of allowed cmdlet/parameter typo corrections include:\n"
+    "    * 'Get-Servce' → 'Get-Service'\n"
+    "    * 'Get-Proces' → 'Get-Process'\n"
+    "    * 'Get-Service -Nam spooler' → 'Get-Service -Name spooler'\n"
+    "\n"
+    "- Examples of allowed structural corrections include:\n"
+    "    * Missing hyphen for a known parameter when intent is unambiguous and non-destructive,\n"
+    "      e.g., 'Get-Service Name spooler' → 'Get-Service -Name spooler'.\n"
+    "    * Missing braces in a simple script block when the body is already present and non-destructive,\n"
+    "      e.g., 'Get-Process | ForEach-Object $_.Name' → 'Get-Process | ForEach-Object { $_.Name }'.\n"
+    "    * Missing '$()' in a simple subexpression when the intent is clearly to evaluate a command inline,\n"
+    "      e.g., 'Write-Output \"Size: (Get-Item file.txt).Length\"' →\n"
+    "           'Write-Output \"Size: $(Get-Item file.txt).Length\"'.\n"
+    "\n"
+    "- The LLM MUST NOT use retry_with_modified_command to:\n"
+    "    * guess module names,\n"
+    "    * guess package IDs,\n"
+    "    * introduce new tools or package managers,\n"
+    "    * change the high-level intent of the command,\n"
+    "    * invent new cmdlets, parameters, or flags,\n"
+    "    * or perform cross-OS translations (e.g., Linux PM → winget).\n"
+    "\n"
+    "- If the correction is not clearly implied, or multiple plausible corrections exist,\n"
+    "  the LLM MUST use 'fallback' instead of retry_with_modified_command.\n"
+    "\n"
+
+    # ============================================================
+    # Fallback rules (Windows PowerShell)
+    # ============================================================
+
+    "- Use 'fallback' when the command is incomplete, ambiguous, malformed, or references\n"
+    "  unsupported features, cmdlets, modules, or paths.\n"
+    "- Use 'fallback' when correcting the command would require guessing user intent,\n"
+    "  inventing capabilities, or inferring cross-OS behavior.\n"
+    "- Use 'fallback' when the OS, shell, or package manager context is unclear.\n"
+    "- Use 'fallback' whenever invalid flags/parameters are present, or when rewrite would\n"
+    "  require more than an obvious, single-step, non-destructive correction.\n"
+    "\n"
 )
+
+
+
 
 
 
@@ -6880,200 +7086,200 @@ def recover(request: RecoveryRequest):
 
 
 
-                # ============================================================
-                # WINDOWS POWERSHELL DOMAIN RULES — Applies ONLY when os_name = "Windows"
-                # AND os_version = "2022". This entire block is Revision 17 + Patch2-Rev5
-                # This is windows powershell 5.1 and not 7
-                # ============================================================
-                # Note: Windows PowerShell does NOT use the OS-Mutation Guard and does NOT support
-                # CentOS7/AmazonLinux2-style deterministic remediation. cleanup_and_retry here is
-                # limited to single-step, stderr-suggested commands.
+                ## ============================================================
+                ## WINDOWS POWERSHELL DOMAIN RULES — Applies ONLY when os_name = "Windows"
+                ## AND os_version = "2022". This entire block is Revision 17 + Patch2-Rev5
+                ## This is windows powershell 5.1 and not 7
+                ## ============================================================
+                ## Note: Windows PowerShell does NOT use the OS-Mutation Guard and does NOT support
+                ## CentOS7/AmazonLinux2-style deterministic remediation. cleanup_and_retry here is
+                ## limited to single-step, stderr-suggested commands.
 
-                "These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
-                "They MUST NOT apply to Linux-family OSes, BusyBox, macOS, PAN-OS, or Cisco IOS.\n"
-                "IMPORTANT:\n"
-                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
-                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+                #"These rules apply ONLY when os_name = \"Windows\" AND os_version = \"2022\".\n"
+                #"They MUST NOT apply to Linux-family OSes, BusyBox, macOS, PAN-OS, or Cisco IOS.\n"
+                #"IMPORTANT:\n"
+                ##"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                ##"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                ##"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
 
-                # ============================================================
-                # Revision 6.12 — PowerShell malformed-command hardening
-                # ============================================================
+                ## ============================================================
+                ## Revision 6.12 — PowerShell malformed-command hardening
+                ## ============================================================
 
-                "- Windows 2022 in this contract uses Windows PowerShell 5.1 as the primary shell.\n"
-                "- PowerShell 7+ semantics (including '&&' and '||') MUST NOT be assumed.\n"
-                "- The LLM MUST remain deterministic and MUST NOT guess user intent.\n"
-                "- When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
-                "\n"
-                "- Windows PowerShell uses cmdlets (Verb-Noun), pipelines ('|'), script blocks ('{ }'),\n"
-                "  subexpressions ('$()'), and parameter binding rules.\n"
-                "- The LLM MUST NOT invent cmdlets, MUST NOT invent modules, and MUST NOT invent parameters.\n"
-                "- The LLM MUST NOT assume the presence of optional modules unless explicitly referenced.\n"
-                "\n"
-                "- If a command is syntactically malformed (missing parameters, truncated flags, malformed pipelines,\n"
-                "  malformed script blocks, unmatched quotes, or incomplete constructs) but NOT destructive,\n"
-                "  the LLM MUST use 'fallback' unless a safe, deterministic correction is directly implied.\n"
-                "\n"
-                "- If stderr indicates a pipeline or parsing error (e.g., 'Unexpected token',\n"
-                "  'The string is missing the terminator', 'Missing argument', 'Unexpected end of input'),\n"
-                "  the LLM MUST return 'fallback' unless the command is destructive.\n"
-                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands,\n"
-                "  and MUST NOT infer user intent for pipeline stages.\n"
-                "\n"
+                #"- Windows 2022 in this contract uses Windows PowerShell 5.1 as the primary shell.\n"
+                #"- PowerShell 7+ semantics (including '&&' and '||') MUST NOT be assumed.\n"
+                #"- The LLM MUST remain deterministic and MUST NOT guess user intent.\n"
+                #"- When a malformed command has multiple possible interpretations, the LLM MUST prefer 'fallback'.\n"
+                #"\n"
+                #"- Windows PowerShell uses cmdlets (Verb-Noun), pipelines ('|'), script blocks ('{ }'),\n"
+                #"  subexpressions ('$()'), and parameter binding rules.\n"
+                #"- The LLM MUST NOT invent cmdlets, MUST NOT invent modules, and MUST NOT invent parameters.\n"
+                #"- The LLM MUST NOT assume the presence of optional modules unless explicitly referenced.\n"
+                #"\n"
+                #"- If a command is syntactically malformed (missing parameters, truncated flags, malformed pipelines,\n"
+                #"  malformed script blocks, unmatched quotes, or incomplete constructs) but NOT destructive,\n"
+                #"  the LLM MUST use 'fallback' unless a safe, deterministic correction is directly implied.\n"
+                #"\n"
+                #"- If stderr indicates a pipeline or parsing error (e.g., 'Unexpected token',\n"
+                #"  'The string is missing the terminator', 'Missing argument', 'Unexpected end of input'),\n"
+                #"  the LLM MUST return 'fallback' unless the command is destructive.\n"
+                #"- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands,\n"
+                #"  and MUST NOT infer user intent for pipeline stages.\n"
+                #"\n"
 
-                # ============================================================
-                # Invalid flags / parameters (Windows PowerShell) — PATCH stress_tester1
-                # ============================================================
+                ## ============================================================
+                ## Invalid flags / parameters (Windows PowerShell) — PATCH stress_tester1
+                ## ============================================================
 
-                "- If a PowerShell cmdlet, parameter, or flag is invalid or unrecognized\n"
-                "  (for example: 'A parameter cannot be found that matches', 'Unexpected parameter',\n"
-                "  or any error indicating an unsupported flag or parameter), the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag or parameter\n"
-                "  when it is not an obvious single-token typo.\n"
-                "- The LLM MUST NOT infer user intent for unknown parameters or flags.\n"
-                "\n"
+                #"- If a PowerShell cmdlet, parameter, or flag is invalid or unrecognized\n"
+                #"  (for example: 'A parameter cannot be found that matches', 'Unexpected parameter',\n"
+                #"  or any error indicating an unsupported flag or parameter), the LLM MUST use 'fallback'.\n"
+                #"- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag or parameter\n"
+                #"  when it is not an obvious single-token typo.\n"
+                #"- The LLM MUST NOT infer user intent for unknown parameters or flags.\n"
+                #"\n"
 
-                # ============================================================
-                # Unknown cmdlets / tools / cross-OS usage
-                # ============================================================
-                "- If stderr contains the EXACT PowerShell message:\n"
-                "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
-                "  the LLM MUST return 'fallback'.\n"
-                "\n"
-                "- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
-                "- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
-                "- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
-                "  unless explicitly referenced.\n"
-                "\n"
-                "- If a command references POSIX-style paths (e.g., '/usr/bin', '/etc', '/var/log') as primary targets,\n"
-                "  and no Windows mapping is explicitly provided, the LLM MUST use 'fallback'.\n"
-                "\n"
+                ## ============================================================
+                ## Unknown cmdlets / tools / cross-OS usage
+                ## ============================================================
+                #"- If stderr contains the EXACT PowerShell message:\n"
+                #"    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
+                #"  the LLM MUST return 'fallback'.\n"
+                #"\n"
+                #"- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
+                #"- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
+                #"- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
+                #"- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
+                #"  unless explicitly referenced.\n"
+                #"\n"
+                #"- If a command references POSIX-style paths (e.g., '/usr/bin', '/etc', '/var/log') as primary targets,\n"
+                #"  and no Windows mapping is explicitly provided, the LLM MUST use 'fallback'.\n"
+                #"\n"
 
-                # ============================================================
-                # Windows PowerShell core domain primitives (Revision 17)
-                # ============================================================
+                ## ============================================================
+                ## Windows PowerShell core domain primitives (Revision 17)
+                ## ============================================================
 
-                "- Canonical PowerShell concepts include:\n"
-                "    * cmdlets (Get-Service, Get-Process, Get-Item, Remove-Item, etc.)\n"
-                "    * pipelines using '|'\n"
-                "    * parameters prefixed with '-'\n"
-                "    * script blocks using '{ }'\n"
-                "    * subexpressions using '$()'\n"
-                "    * error records with categories and messages.\n"
-                "\n"
-                "- 'winget' MAY be available as the package manager, but the LLM MUST NOT assume optional features\n"
-                "  or module availability unless explicitly referenced.\n"
-                "- The LLM MUST NOT invent winget subcommands, MUST NOT invent flags, and MUST NOT guess package IDs.\n"
-                "- If 'winget' is used without a concrete package identifier (e.g., 'winget install'),\n"
-                "  the LLM MUST treat the command as malformed and use 'fallback'.\n"
-                "\n"
+                #"- Canonical PowerShell concepts include:\n"
+                #"    * cmdlets (Get-Service, Get-Process, Get-Item, Remove-Item, etc.)\n"
+                #"    * pipelines using '|'\n"
+                #"    * parameters prefixed with '-'\n"
+                #"    * script blocks using '{ }'\n"
+                #"    * subexpressions using '$()'\n"
+                #"    * error records with categories and messages.\n"
+                #"\n"
+                #"- 'winget' MAY be available as the package manager, but the LLM MUST NOT assume optional features\n"
+                #"  or module availability unless explicitly referenced.\n"
+                #"- The LLM MUST NOT invent winget subcommands, MUST NOT invent flags, and MUST NOT guess package IDs.\n"
+                #"- If 'winget' is used without a concrete package identifier (e.g., 'winget install'),\n"
+                #"  the LLM MUST treat the command as malformed and use 'fallback'.\n"
+                #"\n"
 
-                # ============================================================
-                # Destructive commands (Windows PowerShell)
-                # ============================================================
+                ## ============================================================
+                ## Destructive commands (Windows PowerShell)
+                ## ============================================================
 
-                "- If the command is destructive to core system paths or critical registry hives,\n"
-                "  the LLM MUST return 'abort' with a clear message.\n"
-                "- Examples include (but are not limited to):\n"
-                "    * Remove-Item -Recurse -Force C:\\Windows\n"
-                "    * Remove-Item -Recurse -Force C:\\Windows\\System32\n"
-                "    * Remove-Item -Recurse -Force C:\\Program Files\n"
-                "    * Remove-Item -Recurse -Force C:\\Users\n"
-                "    * Remove-Item -Recurse -Force HKLM:\\SYSTEM\n"
-                "    * Remove-Item -Recurse -Force HKLM:\\SOFTWARE\n"
-                "    * Stop-Process -Force -Name wininit\n"
-                "    * Stop-Process -Force -Name lsass\n"
-                "- ANY attempt to recursively delete or irreversibly modify these locations MUST trigger 'abort'.\n"
-                "\n"
+                #"- If the command is destructive to core system paths or critical registry hives,\n"
+                #"  the LLM MUST return 'abort' with a clear message.\n"
+                #"- Examples include (but are not limited to):\n"
+                #"    * Remove-Item -Recurse -Force C:\\Windows\n"
+                #"    * Remove-Item -Recurse -Force C:\\Windows\\System32\n"
+                #"    * Remove-Item -Recurse -Force C:\\Program Files\n"
+                #"    * Remove-Item -Recurse -Force C:\\Users\n"
+                #"    * Remove-Item -Recurse -Force HKLM:\\SYSTEM\n"
+                #"    * Remove-Item -Recurse -Force HKLM:\\SOFTWARE\n"
+                #"    * Stop-Process -Force -Name wininit\n"
+                #"    * Stop-Process -Force -Name lsass\n"
+                #"- ANY attempt to recursively delete or irreversibly modify these locations MUST trigger 'abort'.\n"
+                #"\n"
 
-                # ============================================================
-                # Idempotency and already-present state
-                # ============================================================
+                ## ============================================================
+                ## Idempotency and already-present state
+                ## ============================================================
 
-                "- If stderr indicates the requested state is already achieved, such as:\n"
-                "    * 'The process is already running.'\n"
-                "    * 'The service is already running.'\n"
-                "    * 'Cannot create a file when that file already exists.'\n"
-                "  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
-                "  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
-                "\n"
+                #"- If stderr indicates the requested state is already achieved, such as:\n"
+                #"    * 'The process is already running.'\n"
+                #"    * 'The service is already running.'\n"
+                #"    * 'Cannot create a file when that file already exists.'\n"
+                #"  the LLM MUST treat this as idempotency and use 'cleanup_and_retry' in accordance with the global\n"
+                #"  Idempotency rules. Fallback MUST NOT be used for these conditions.\n"
+                #"\n"
 
-                # ============================================================
-                # Network failures (Windows PowerShell)
-                # ============================================================
+                ## ============================================================
+                ## Network failures (Windows PowerShell)
+                ## ============================================================
 
-                "- Network failures follow global Network Failure Semantics (Revision 6.5).\n"
-                "- If stderr contains:\n"
-                "    * 'The remote name could not be resolved'\n"
-                "    * 'Unable to connect to the remote server'\n"
-                "    * 'No such host is known'\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "\n"
+                #"- Network failures follow global Network Failure Semantics (Revision 6.5).\n"
+                #"- If stderr contains:\n"
+                #"    * 'The remote name could not be resolved'\n"
+                #"    * 'Unable to connect to the remote server'\n"
+                #"    * 'No such host is known'\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"\n"
 
-                # ============================================================
-                # cleanup_and_retry usage (Windows PowerShell)
-                # ============================================================
+                ## ============================================================
+                ## cleanup_and_retry usage (Windows PowerShell)
+                ## ============================================================
 
-                "- cleanup_and_retry MUST be used sparingly and ONLY when stderr contains a literal,\n"
-                "  deterministic remediation suggestion.\n"
-                "- If stderr explicitly suggests a safe, single-step remediation, the LLM MAY use\n"
-                "  cleanup_and_retry with:\n"
-                "    * 'cleanup' as an empty list or minimal safe commands, and\n"
-                "    * 'retry' containing the suggested command.\n"
-                "- The LLM MUST NOT invent multi-step cleanup sequences.\n"
-                "- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
-                "\n"
+                #"- cleanup_and_retry MUST be used sparingly and ONLY when stderr contains a literal,\n"
+                #"  deterministic remediation suggestion.\n"
+                #"- If stderr explicitly suggests a safe, single-step remediation, the LLM MAY use\n"
+                #"  cleanup_and_retry with:\n"
+                #"    * 'cleanup' as an empty list or minimal safe commands, and\n"
+                #"    * 'retry' containing the suggested command.\n"
+                #"- The LLM MUST NOT invent multi-step cleanup sequences.\n"
+                #"- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
+                #"\n"
 
-                # ============================================================
-                # retry_with_modified_command usage (Windows PowerShell) — ####patch stress_tester1: Patch2-Rev5
-                # ============================================================
+                ## ============================================================
+                ## retry_with_modified_command usage (Windows PowerShell) — ####patch stress_tester1: Patch2-Rev5
+                ## ============================================================
 
-                "- retry_with_modified_command MAY be used when the original command is a clear near-miss\n"
-                "  of a valid cmdlet, parameter, or structural PowerShell construct, and the correction is:\n"
-                "    * syntactically valid,\n"
-                "    * semantically safe,\n"
-                "    * and directly implied by the original command.\n"
-                "\n"
-                "- Examples of allowed cmdlet/parameter typo corrections include:\n"
-                "    * 'Get-Servce' → 'Get-Service'\n"
-                "    * 'Get-Proces' → 'Get-Process'\n"
-                "    * 'Get-Service -Nam spooler' → 'Get-Service -Name spooler'\n"
-                "\n"
-                "- Examples of allowed structural corrections include:\n"
-                "    * Missing hyphen for a known parameter when intent is unambiguous and non-destructive,\n"
-                "      e.g., 'Get-Service Name spooler' → 'Get-Service -Name spooler'.\n"
-                "    * Missing braces in a simple script block when the body is already present and non-destructive,\n"
-                "      e.g., 'Get-Process | ForEach-Object $_.Name' → 'Get-Process | ForEach-Object { $_.Name }'.\n"
-                "    * Missing '$()' in a simple subexpression when the intent is clearly to evaluate a command inline,\n"
-                "      e.g., 'Write-Output \"Size: (Get-Item file.txt).Length\"' →\n"
-                "           'Write-Output \"Size: $(Get-Item file.txt).Length\"'.\n"
-                "\n"
-                "- The LLM MUST NOT use retry_with_modified_command to:\n"
-                "    * guess module names,\n"
-                "    * guess package IDs,\n"
-                "    * introduce new tools or package managers,\n"
-                "    * change the high-level intent of the command,\n"
-                "    * invent new cmdlets, parameters, or flags,\n"
-                "    * or perform cross-OS translations (e.g., Linux PM → winget).\n"
-                "\n"
-                "- If the correction is not clearly implied, or multiple plausible corrections exist,\n"
-                "  the LLM MUST use 'fallback' instead of retry_with_modified_command.\n"
-                "\n"
+                #"- retry_with_modified_command MAY be used when the original command is a clear near-miss\n"
+                #"  of a valid cmdlet, parameter, or structural PowerShell construct, and the correction is:\n"
+                #"    * syntactically valid,\n"
+                #"    * semantically safe,\n"
+                #"    * and directly implied by the original command.\n"
+                #"\n"
+                #"- Examples of allowed cmdlet/parameter typo corrections include:\n"
+                #"    * 'Get-Servce' → 'Get-Service'\n"
+                #"    * 'Get-Proces' → 'Get-Process'\n"
+                #"    * 'Get-Service -Nam spooler' → 'Get-Service -Name spooler'\n"
+                #"\n"
+                #"- Examples of allowed structural corrections include:\n"
+                #"    * Missing hyphen for a known parameter when intent is unambiguous and non-destructive,\n"
+                #"      e.g., 'Get-Service Name spooler' → 'Get-Service -Name spooler'.\n"
+                #"    * Missing braces in a simple script block when the body is already present and non-destructive,\n"
+                #"      e.g., 'Get-Process | ForEach-Object $_.Name' → 'Get-Process | ForEach-Object { $_.Name }'.\n"
+                #"    * Missing '$()' in a simple subexpression when the intent is clearly to evaluate a command inline,\n"
+                #"      e.g., 'Write-Output \"Size: (Get-Item file.txt).Length\"' →\n"
+                #"           'Write-Output \"Size: $(Get-Item file.txt).Length\"'.\n"
+                #"\n"
+                #"- The LLM MUST NOT use retry_with_modified_command to:\n"
+                #"    * guess module names,\n"
+                #"    * guess package IDs,\n"
+                #"    * introduce new tools or package managers,\n"
+                #"    * change the high-level intent of the command,\n"
+                #"    * invent new cmdlets, parameters, or flags,\n"
+                #"    * or perform cross-OS translations (e.g., Linux PM → winget).\n"
+                #"\n"
+                #"- If the correction is not clearly implied, or multiple plausible corrections exist,\n"
+                #"  the LLM MUST use 'fallback' instead of retry_with_modified_command.\n"
+                #"\n"
 
-                # ============================================================
-                # Fallback rules (Windows PowerShell)
-                # ============================================================
+                ## ============================================================
+                ## Fallback rules (Windows PowerShell)
+                ## ============================================================
 
-                "- Use 'fallback' when the command is incomplete, ambiguous, malformed, or references\n"
-                "  unsupported features, cmdlets, modules, or paths.\n"
-                "- Use 'fallback' when correcting the command would require guessing user intent,\n"
-                "  inventing capabilities, or inferring cross-OS behavior.\n"
-                "- Use 'fallback' when the OS, shell, or package manager context is unclear.\n"
-                "- Use 'fallback' whenever invalid flags/parameters are present, or when rewrite would\n"
-                "  require more than an obvious, single-step, non-destructive correction.\n"
+                #"- Use 'fallback' when the command is incomplete, ambiguous, malformed, or references\n"
+                #"  unsupported features, cmdlets, modules, or paths.\n"
+                #"- Use 'fallback' when correcting the command would require guessing user intent,\n"
+                #"  inventing capabilities, or inferring cross-OS behavior.\n"
+                #"- Use 'fallback' when the OS, shell, or package manager context is unclear.\n"
+                #"- Use 'fallback' whenever invalid flags/parameters are present, or when rewrite would\n"
+                #"  require more than an obvious, single-step, non-destructive correction.\n"
 
 
 
