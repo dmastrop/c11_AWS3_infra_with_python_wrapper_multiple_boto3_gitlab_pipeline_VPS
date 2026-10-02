@@ -29158,6 +29158,18 @@ The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case
 The Windows Powershell OS does not require 21 multi-segment regression test suite or the 3 os-signaled remedation test suite.
 The only test suites for this OS are: base, patch2 rewrite tests, and the 6 idempotency test suite.
 
+---
+
+For more in depth analysis on the Windows Powershell contract rules design behavior see this earlier link from testing that was done
+prior:
+
+- [8.Extended Schema-based tests for Windows PowerShell 5.1 (with test matrices)](#8extended-schema-based-tests-for-windows-powershell-51-with-test-matrices)
+
+The idempotency design is detailed in a section below.
+
+---
+
+
 
 
 ##### Regression with base 36 test cases on Windows Powershell with gpt-5.6-sol
@@ -29372,9 +29384,23 @@ LinuxOS (Patch2‑Rev2)
 
 macOS Homebrew (Patch2‑Rev4)
 
-Thisi s becasue Linux PowerShell 7 has no PM rewrite, has no multi‑segment PM rewrite, only rewrites pure PowerShell cmdlet typos inside && pipelines
+This is becasue Linux PowerShell 7 has no PM rewrite, has no multi‑segment PM rewrite, only rewrites pure PowerShell cmdlet typos inside && pipelines
 
-So it only needs the 36 Patch2‑Rev6 cases you already have
+
+---
+
+For more detail on the contract rules design for the complexities of Linus Powershell, see this earlier testing design link:
+
+
+- [10.Extended Schema-based tests for Linux PowerShell 7 (with test matrices)](#10extended-schema-based-tests-for-linux-powershell-7-with-test-matrices)
+
+
+For the Linux Powershell idempotency design see the section further down below. Linus PS is the most complex OS to codify in 
+contract rules by far. 
+
+---
+
+
 
 
 ##### Regression on Linux Powershell with base36 test suite on gpt-5.6-sol
@@ -29430,7 +29456,34 @@ The test cases here all passed after the refactoring. The test case matrix is be
 
 
 
-##### Regression on Linux Powershell with 36 patch2 rewrite tests on gpt-5.6-sol
+##### Regression on Linux Powershell with 24 patch2 rewrite tests on gpt-5.6-sol
+
+A patch had to be added to the refactored linux powershell domain primitives block. For example test case 2 (index1) started failing
+again (regression issue). The patch consisted of this:
+
+```
+
+    #- Patch2‑Rev6 correction rule for PowerShell Core on Linux.
+    "- When ALL segments in a '&&' pipeline are non-destructive PowerShell Core cmdlets or simple expressions,\n"
+    "  and at least one segment contains a clear near-miss typo of a valid PowerShell cmdlet (e.g.,\n"
+    "  'Get-Servce' → 'Get-Service', 'Get-Proces' → 'Get-Process'), the LLM MUST use\n"
+    "  'retry_with_modified_command' and MUST return a corrected '&&' pipeline.\n"
+    "- ONLY the typo segments may be corrected; all other segments MUST be preserved verbatim.\n"
+    "- This correction rule applies ONLY inside '&&' pipelines and MUST NOT be used for single-segment commands.\n"
+    "- Patch2‑Rev6 MUST NOT apply when ANY segment invokes a package manager, contains POSIX paths/binaries,\n"
+    "  contains invalid flags, or is destructive. In these cases, the correct action is 'fallback'.\n"
+    "- Patch2‑Rev6 MUST NOT attempt to repair '|' pipelines or subshells ('$()').\n"
+    "- Example: 'Get-Servce && Get-Process' MUST be rewritten to 'Get-Service && Get-Process'.\n"
+```
+
+The functional expected validation results for these types of test cases are complex because Linux PS is a hybrid.
+
+The design approach is reviewed in detail in an earlier testing section here:
+
+- [10.Extended Schema-based tests for Linux PowerShell 7 (with test matrices)](#10extended-schema-based-tests-for-linux-powershell-7-with-test-matrices)
+
+
+
 
 
 
