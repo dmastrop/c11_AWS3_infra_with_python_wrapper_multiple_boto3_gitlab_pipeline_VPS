@@ -29165,6 +29165,274 @@ The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case
 <a name="llm-contract-stress-tester-multi-segment-linux-powershell-testing-and-test-matrices"></a>
 #### 10.LLM Contract Stress Tester – Multi-segment Linux PowerShell testing and test matrices
 
+The Linux Powershell OS does not require the 21 multi-segment regression test suite or the 3 os-signaled remedation test suite.
+The only test suites required for this OS are: base36, 36 patch2 rewrite tests, and the 6 idempotency test suite. 
+
+
+The 3‑OS signaled remediation suite is only needed for:
+
+LinuxOS (Patch2‑Rev2)
+
+macOS Homebrew (Patch2‑Rev4)
+
+Windows PowerShell (Patch2‑Rev5)
+
+This is because Linux PowerShell 7 (Patch2‑Rev6) has no PM rewrite engine, has no multi‑segment PM rewrite logic, never rewrites PM commands, never rewrites mixed pipelines, and never rewrites single‑segment commands
+
+So the 3‑OS suite is irrelevant.
+
+
+The 21‑case multi‑segment rewrite suite is for:
+
+LinuxOS (Patch2‑Rev2)
+
+macOS Homebrew (Patch2‑Rev4)
+
+Thisi s becasue Linux PowerShell 7 has no PM rewrite, has no multi‑segment PM rewrite, only rewrites pure PowerShell cmdlet typos inside && pipelines
+
+So it only needs the 36 Patch2‑Rev6 cases you already have
+
+
+##### Regression on Linux Powershell with base36 test suite on gpt-5.6-sol
+
+
+
+
+
+##### Regression on Linux Powershell with 36 patch2 rewrite tests on gpt-5.6-sol
+
+
+
+
+##### Regression on Linux Powershell with 6 idempotency tests on gpt-5.6-sol
+
+The first 4 test cases are standard idempotency with the cleanup_and_retry LLM action plan.
+ 
+The 5th test case is a very special test case, and it is unlike any Linux OS idemptoency test case. 
+
+Linux PowerShell is running a bash command that runs apt-get on the underlying Linux OS.  
+Because this is a hybrid POSIX+PM+bash invocation, Linux PowerShell cannot safely perform idempotency cleanup.  
+Therefore the correct action is fallback (success), not cleanup_and_retry.
+
+
+More detailed information on this is below: 
+
+###### 1. Idempotency vs Rewrite (Critical Distinction)
+
+Linux PowerShell Core (pwsh 7) is a **hybrid shell** that can execute:
+
+- PowerShell cmdlets  
+- POSIX binaries  
+- scripts in `$PATH`  
+- aliases  
+- functions  
+- modules  
+- nested shells (e.g., `bash -c "..."`)  
+
+Because of this hybrid nature, **idempotency behavior in Linux PowerShell differs from LinuxOS**.  
+This section defines the **exact rules** for idempotency in the refactored Linux PowerShell block.
+Linux PowerShell supports **idempotency cleanup**, but does **not** support **rewrite** in most cases.
+
+Idempotency cleanup (`cleanup_and_retry`):
+- Runs a **cleanup command**  
+- Then replays the **original command unchanged**  
+- Does *not* rewrite the original command  
+- Governed by **global idempotency rules**, not Patch2  
+
+Rewrite (`retry_with_modified_command`):
+- Modifies the original command  
+- Used for typo correction  
+- Governed by **Patch2‑Rev6**  
+- Very restricted in Linux PowerShell  
+
+These two mechanisms are completely separate.
+
+---
+
+###### 2. When Linux PowerShell does support idempotency cleanup
+
+Linux PowerShell supports idempotency cleanup for pure PowerShell cmdlets, because they are:
+
+- deterministic  
+- unambiguous  
+- not POSIX  
+- not PM  
+- not hybrid  
+- not destructive  
+- not typos  
+- not mixed pipelines  
+
+Supported idempotency cleanup cases:
+- `Start-Service -Name sshd` → “already running”  
+- `Stop-Service -Name sshd` → “already stopped”  
+- `New-Item -ItemType Directory` → “already exists”  
+- `New-Item -ItemType File` → “already exists”  
+
+These commands are **pure PowerShell**, so cleanup is safe.
+
+Example cleanup sequences:
+
+Start-Service (already running)  
+- cleanup: `Stop-Service sshd`  
+- retry: `Start-Service sshd`
+
+Stop-Service (already stopped) 
+- cleanup: `Start-Service sshd`  
+- retry: `Stop-Service sshd`
+
+New-Item directory exists  
+- cleanup: `Remove-Item /var/www/html`  
+- retry: `New-Item -ItemType Directory -Path /var/www/html`
+
+New-Item file exists 
+- cleanup: `Remove-Item /etc/motd`  
+- retry: `New-Item -ItemType File -Path /etc/motd`
+
+These are **valid idempotency cleanup cases**.
+
+---
+
+###### 3. When Linux PowerShell MUST NOT perform idempotency cleanup
+
+Linux PowerShell **must fallback** (not cleanup) for idempotency cases involving:
+
+POSIX commands  
+Package managers (apt, yum, dnf, apk, pacman)  
+Nested shells (bash -c, sh -c)  
+Module imports  
+Mixed PowerShell + POSIX pipelines  
+Ambiguous commands  
+Hybrid execution chains  
+
+These cases are **nondeterministic** inside Linux PowerShell’s hybrid environment.
+
+Example: PM idempotency invoked through bash
+
+```
+bash -c "apt-get install -y curl"
+stdout: "curl is already the newest version"
+exit_status: 0
+```
+
+This is:
+
+- POSIX  
+- PM  
+- nested shell  
+- hybrid execution chain  
+- nondeterministic  
+- unsafe for cleanup  
+- unsafe for retry  
+- unsafe for rewrite  
+
+Therefore:
+
+Action: fallback (success)  
+Phase 4a.1.4 interprets fallback + exit_status 0 as **success**.
+
+This is correct and intentional.
+
+---
+
+###### 4. Why LinuxOS behaves differently
+
+LinuxOS (bash) is **fully deterministic**:
+
+- POSIX semantics are stable  
+- PM semantics are stable  
+- `$PATH` resolution is stable  
+- No hybrid ambiguity  
+
+So LinuxOS can safely perform:
+
+- PM idempotency cleanup  
+- POSIX idempotency cleanup  
+
+Linux PowerShell cannot.
+
+LinuxOS PM idempotency → cleanup_and_retry**  
+Linux PowerShell PM idempotency → fallback (success)**
+
+This difference is intentional and correct.
+
+---
+
+###### 5. How “success fallback” is handled (Phase 4a.1.4)
+
+Phase 4a.1.4 module 2f will contain the rule:
+
+If the LLM returns fallback AND the original command exit_status == 0,  then treat fallback as success.
+
+This is how Linux PowerShell handles:
+
+- PM idempotency  
+- POSIX idempotency  
+- bash‑wrapped idempotency  
+- module idempotency  
+- any hybrid idempotency case with exit 0  
+
+Module2f will differentiate:
+
+success fallback  
+- fallback  
+- exit_status == 0  
+- no remediation needed  
+
+failure fallback  
+- fallback  
+- exit_status != 0  
+- remediation declined  
+
+
+The logic module2f will use:
+
+```
+if plan.action == "fallback":
+    if exit_status == 0:
+        ai_failed = False
+        ai_fixed = False
+        ai_fallback = True
+        # SUCCESS FALLBACK
+    else:
+        ai_failed = False
+        ai_fixed = False
+        ai_fallback = True
+        # FAILURE FALLBACK
+```
+
+This distinction is preserved in the final matrix.
+
+---
+
+###### 6. Final Rule Summary
+
+> **Linux PowerShell 7 supports idempotency cleanup for pure PowerShell cmdlets.  
+> cleanup_and_retry MUST be used for idempotency cases such as “already running”, “already stopped”, and “already exists”.  
+>  
+> Linux PowerShell 7 MUST fallback for idempotency cases involving POSIX commands, package managers, nested shells, module imports, or mixed pipelines.  
+> These fallbacks are interpreted as success when exit_status == 0 (Phase 4a.1.4).  
+>  
+> LinuxOS PM idempotency uses cleanup_and_retry because PM behavior is deterministic.  
+> Linux PowerShell PM idempotency MUST fallback because PM behavior is nondeterministic inside a hybrid shell.**
+
+---
+
+
+
+###### 7. Idempotency test matrix:
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
