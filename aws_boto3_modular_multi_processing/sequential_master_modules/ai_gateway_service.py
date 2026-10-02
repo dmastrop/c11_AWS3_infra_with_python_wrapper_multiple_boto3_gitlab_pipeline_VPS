@@ -3833,6 +3833,19 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     "    * At least one other segment is a valid, non-destructive PowerShell Core cmdlet, AND\n"
     "    * No segment is destructive, invokes a package manager, or contains invalid flags.\n"
     "\n"
+    
+    #- Patch2‑Rev6 correction rule for PowerShell Core on Linux.
+    "- When ALL segments in a '&&' pipeline are non-destructive PowerShell Core cmdlets or simple expressions,\n"
+    "  and at least one segment contains a clear near-miss typo of a valid PowerShell cmdlet (e.g.,\n"
+    "  'Get-Servce' → 'Get-Service', 'Get-Proces' → 'Get-Process'), the LLM MUST use\n"
+    "  'retry_with_modified_command' and MUST return a corrected '&&' pipeline.\n"
+    "- ONLY the typo segments may be corrected; all other segments MUST be preserved verbatim.\n"
+    "- This correction rule applies ONLY inside '&&' pipelines and MUST NOT be used for single-segment commands.\n"
+    "- Patch2‑Rev6 MUST NOT apply when ANY segment invokes a package manager, contains POSIX paths/binaries,\n"
+    "  contains invalid flags, or is destructive. In these cases, the correct action is 'fallback'.\n"
+    "- Patch2‑Rev6 MUST NOT attempt to repair '|' pipelines or subshells ('$()').\n"
+    "- Example: 'Get-Servce && Get-Process' MUST be rewritten to 'Get-Service && Get-Process'.\n"
+
     "- Examples of allowed corrections INSIDE '&&' pipelines:\n"
     "    * 'Get-Servce && Get-Process' → 'Get-Service && Get-Process'\n"
     "    * 'Get-Proces && Get-Service' → 'Get-Process && Get-Service'\n"
