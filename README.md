@@ -29155,6 +29155,190 @@ The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case
 <a name="llm-contract-stress-tester-multi-segment-windows-powershell-testing-and-test-matrices"></a>
 #### 9.LLM Contract Stress Tester – Multi-segment Windows PowerShell testing and test matrices
 
+The Windows Powershell OS does not require 21 multi-segment regression test suite or the 3 os-signaled remedation test suite.
+The only test suites for this OS are: base, patch2 rewrite tests, and the 6 idempotency test suite.
+
+
+
+##### Regression with base 36 test cases on Windows Powershell with gpt-5.6-sol
+
+
+
+##### Regression with 24 patch2 rewrite test cases on Windows Powershell with gpt-5.6-sol
+
+
+
+
+##### Regression with the 6 idempotency test cases on Windows Powershell with gpt-5.6-sol
+
+The idempotency support for Windows Powershell is below:
+
+
+
+###### 1. Deterministic Shell Model
+
+Windows PowerShell 5.1 is a **deterministic, single‑ecosystem shell**.  
+Unlike Linux PowerShell (pwsh 7), it does **not** mix POSIX binaries, bash wrappers, Linux package managers, or hybrid execution chains.  
+Because of this, Windows PowerShell has the **simplest and most predictable** remediation model in the entire contract.
+
+This section defines how the LLM must behave for:
+
+- **Base test suite**  
+- **Patch2‑Rev5 rewrite suite**  
+- **Idempotency suite**
+
+These three suites are **fully sufficient** for Windows PowerShell 2022.  
+No multi‑segment rewrite suite, no OS‑mutation suite, and no hybrid‑shell suite is required.
+
+Windows PowerShell 5.1 is:
+
+- single‑runtime  
+- single‑resolution  
+- single‑ecosystem  
+- deterministic  
+- non‑POSIX  
+- non‑hybrid  
+
+This means:
+
+- cmdlet resolution is stable  
+- parameter binding is stable  
+- module resolution is stable  
+- path semantics are stable  
+- service semantics are stable  
+- file system semantics are stable  
+
+Because of this determinism: Windows PowerShell supports both idempotency cleanup and Patch2‑Rev5 rewrite safely.
+
+---
+
+###### 2. Idempotency Behavior (cleanup_and_retry)
+
+Windows PowerShell supports **deterministic idempotency cleanup** for all “already‑present” conditions:
+
+- “The service is already running.”  
+- “The process is already running.”  
+- “Cannot create a file when that file already exists.”  
+- “Cannot create a directory when that directory already exists.”  
+
+These cases must use: `cleanup_and_retry`
+
+Cleanup is always a **single, deterministic Windows-native command**, followed by a retry of the **original** command:
+
+Examples:
+
+- `Stop-Service spooler` → `Start-Service spooler`  
+- `Remove-Item C:\Temp\file.txt` → `New-Item C:\Temp\file.txt`  
+- `Remove-Item C:\inetpub\wwwroot` → `New-Item -ItemType Directory C:\inetpub\wwwroot`  
+
+The LLM must **not** invent multi-step cleanup workflows.  
+Only simple, deterministic patterns are allowed.
+
+Fallback MUST NOT be used for idempotency.
+
+---
+
+###### 3. Patch2‑Rev5 Rewrite Behavior (retry_with_modified_command)
+
+Windows PowerShell supports Patch2‑Rev5 rewrite for:
+
+- cmdlet typos  
+- parameter typos  
+- missing hyphens  
+- simple structural corrections  
+- missing braces in script blocks  
+- missing `$()` in subexpressions  
+
+Examples:
+
+- `Get-Servce` → `Get-Service`  
+- `Get-Proces` → `Get-Process`  
+- `Get-Service -Nam spooler` → `Get-Service -Name spooler`  
+- `Get-Service Name spooler` → `Get-Service -Name spooler`  
+- `ForEach-Object $_.Name` → `ForEach-Object { $_.Name }`  
+- `"Size: (Get-Item file.txt).Length"` → `"Size: $(Get-Item file.txt).Length"`  
+
+Rewrite is allowed **only** when:
+
+- the correction is obvious  
+- the correction is safe  
+- the correction is deterministic  
+- the correction does not change intent  
+
+
+
+If multiple corrections are possible (non-deterministic): Use fallback.
+
+---
+
+###### 4. Fallback Behavior
+
+Fallback is used when:
+
+- the command is malformed  
+- the command is ambiguous  
+- the command references POSIX tools  
+- the command references Linux/macOS package managers  
+- the command references POSIX paths  
+- the command uses invalid flags  
+- rewrite would require guessing intent  
+- rewrite would require inventing cmdlets or modules  
+- rewrite would require cross‑OS translation (Linux PM → winget)  
+
+Fallback is also used for:
+
+- network failures  
+- unknown cmdlets  
+- parsing errors  
+- pipeline errors  
+- malformed script blocks  
+
+Windows rarely needs fallback‑success logic  
+Unlike Linux PowerShell, Windows does not run hybrid POSIX/PM commands, so fallback‑success cases are extremely rare.  
+Phase 4a.1.4 still handles them correctly if they occur.
+
+---
+
+###### 5. Why Only Three Suites Are Needed
+
+Windows PowerShell 2022 requires only:
+
+1. **Base suite**  
+2. **Patch2‑Rev5 rewrite suite**  
+3. **Idempotency suite**
+
+This is sufficient because:
+
+- Windows is deterministic  
+- Windows does not mix POSIX + PowerShell  
+- Windows does not run Linux PM  
+- Windows does not run bash wrappers  
+- Windows does not require multi‑segment rewrite logic  
+- Windows does not require OS‑mutation logic  
+- Windows does not require hybrid‑shell logic  
+
+This is exactly parallel to Linux PowerShell, but **much simpler**.
+
+---
+
+###### 6. Summary 
+
+> **Windows PowerShell 2022 is a deterministic shell.  
+> It supports idempotency cleanup for all “already‑present” conditions,  
+> Patch2‑Rev5 rewrite for clear cmdlet/parameter typos,  
+> and fallback for malformed, ambiguous, or cross‑OS commands.  
+>  
+> Only three test suites are required: base, rewrite, and idempotency.  
+> No hybrid or multi‑segment suites are needed.**
+
+
+
+###### 7. Idempotency test matrix;
+
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
