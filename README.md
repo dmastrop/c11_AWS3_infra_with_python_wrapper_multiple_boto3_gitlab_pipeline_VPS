@@ -29906,6 +29906,7 @@ To review the index20 test case consists of:
 
 ``
 Get-Servce && Get-Item /etc/passwd && Get-Process
+
 ```
 
 This is a **pure PowerShell Core `&&` pipeline** containing:
@@ -29921,7 +29922,9 @@ This is a **pure PowerShell Core `&&` pipeline** containing:
 Given no POSIX binaries, Under Patch2‑Rev6, this pipeline **must** be rewritten to:
 
 ```
+
 Get-Service && Get-Item /etc/passwd && Get-Process
+
 ```
 
 However, GPT‑5.6‑sol returned **fallback**.
