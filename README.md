@@ -284,13 +284,10 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update8: LangFuse Architectural Implementation: LangFuse Integration Aadapter, and the Schema-Based and Remedation-Trace Evaluation Flows](#prefaceupdate8)
 
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#preface-update9)
 
 
-
-
-
-
-
+---
 ---
 
 
@@ -356,6 +353,342 @@ The last column is typically the Notes column and can be very informative as to 
 
 ---
 ---
+
+
+
+
+
+
+<a name="prefaceupdate9"></a>
+## PREFACE UPDATE9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability
+
+### **1. Overview**
+
+Linux PowerShell Core is the most challenging OS domain in this project due to its hybrid nature: PowerShell cmdlets operate directly on POSIX filesystem paths, and mixed semantics frequently appear in real-world pipelines. Patch2‑Rev6 was designed to handle multi‑segment `&&` pipelines, detect near‑miss PowerShell cmdlets, and rewrite them deterministically.
+
+During testing with **GPT‑5.6‑sol**, two distinct model‑behavior failures were observed:
+
+1. **Failure #1 — Index 20:**  
+   GPT‑5.6‑sol consistently refuses to rewrite a valid multi‑segment PowerShell pipeline containing a near‑miss cmdlet when a POSIX path appears *inside* a PowerShell cmdlet argument list.
+
+2. **Failure #2 — Index 1 & Index 2 and Index 4:**  
+   GPT‑5.6‑sol intermittently misclassifies simple near‑miss PowerShell cmdlets in trivial two‑segment pipelines, producing inconsistent results across identical test runs.
+
+These failures occur **despite correct contract rules**, correct ordering, correct clarifying overrides, and correct strengthened language. They represent **true model‑behavior defects**, not contract‑engineering issues.
+
+GPT‑5.4 passed index 1 and 2 and 4 consistently.  
+GPT‑5.6‑sol regressed.
+
+Neither model passed index 20.
+
+---
+
+### **2. Failure #1 — Index 20 (Persistent Rewrite Failure)**
+
+Test Case:
+
+
+```
+Get-Servce && Get-Item /etc/passwd && Get-Process
+```
+
+Expected (Patch2‑Rev6):
+
+```
+retry_with_modified_command
+cleanup: []
+retry: "Get-Service && Get-Item /etc/passwd && Get-Process"
+```
+
+Actual (GPT‑5.6‑sol):
+
+```
+fallback
+```
+
+#### **Why this is a model failure**
+
+- The pipeline is pure PowerShell Core.
+- The typo (`Get‑Servce`) is clear and unambiguous.
+- `/etc/passwd` appears **inside** a PowerShell cmdlet (`Get‑Item`), not as a POSIX binary.
+- The contract explicitly states that POSIX paths inside cmdlets **must not** block Patch2‑Rev6.
+- The clarifying rule was strengthened and moved earlier.
+- The override rule explicitly states “MUST ALWAYS be treated as PowerShell semantics.”
+- The rewrite eligibility conditions are fully satisfied.
+
+Despite all of this, GPT‑5.6‑sol **always** returns fallback.
+
+This is a **model‑behavior defect** in GPT‑5.6‑sol’s handling of hybrid PowerShell/POSIX semantics.
+
+GPT‑5.4 also failed this test case, but GPT‑5.6‑sol fails even after strengthened rules.
+
+---
+
+### **3. Failure #2 — Index 1 & Index 2 & Index 4 (Intermittent Rewrite Instability)**
+
+Index 1
+```
+Get-Servce && Get-Process
+```
+
+Index 2
+```
+Get-Process && Get-Servce
+```
+
+Index 4
+```
+Get-Proces && Get-Service
+```
+
+
+Expected
+
+All must produce:
+
+```
+retry_with_modified_command
+cleanup: []
+retry: "<corrected pipeline>"
+```
+
+Actual (GPT‑5.6‑sol)
+
+Across repeated runs:
+
+- Sometimes `fallback`
+- Sometimes `retry_with_modified_command`
+- Behavior flips unpredictably
+
+#### **Why this is a model failure**
+
+These pipelines:
+
+- contain no POSIX semantics  
+- contain no ambiguity  
+- contain no mixed semantics  
+- contain no destructive behavior  
+- contain no invalid flags  
+- contain no package manager usage  
+- contain clear near‑miss cmdlets  
+- satisfy all Patch2‑Rev6 rewrite conditions  
+
+GPT‑5.4 passed both consistently.  
+GPT‑5.6‑sol regressed and now produces **inconsistent results** across identical test runs.
+
+This is a **model‑behavior instability** in GPT‑5.6‑sol’s near‑miss cmdlet detection.
+
+---
+
+### **4. Summary of Model Failures**
+
+#### **Failure #1 — Persistent Rewrite Failure (Index 20)**  
+GPT‑5.6‑sol incorrectly classifies:
+
+```
+Get-Item /etc/passwd
+```
+
+as POSIX semantics even when:
+
+- the contract explicitly overrides this classification  
+- the rule ordering is correct  
+- the override rule is strengthened  
+- the rewrite conditions are satisfied  
+
+This is a **stable, reproducible model defect**.
+
+#### **Failure #2 — Intermittent Rewrite Instability (Index 1 & 2 & 4)**  
+GPT‑5.6‑sol inconsistently applies Patch2‑Rev6 to trivial two‑segment pipelines containing near‑miss cmdlets.
+
+This is a **regression** relative to GPT‑5.4.
+
+---
+
+### **5. Conclusion**
+
+These failures demonstrate that GPT‑5.6‑sol has **model‑internal limitations** in:
+
+- multi‑segment PowerShell Core rewrite logic  
+- near‑miss cmdlet detection  
+- hybrid PowerShell/POSIX semantics  
+- consistent application of Patch2‑Rev6  
+
+The contract is correct.  
+The rule ordering is correct.  
+The clarifying override is correct.  
+The strengthened language is correct.  
+The test harness is correct.  
+The schema is correct.
+
+The failures are due to **model behavior**, not contract engineering.
+
+This update documents the **two confirmed GPT‑5.6‑sol model failures** observed during Phase 4a.1.2 testing.
+
+
+### **Appendix — Technical Analysis of GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core**
+
+This appendix provides a technical explanation of the two GPT‑5.6‑sol model‑behavior failures documented in Preface Update 9. These failures occur despite correct contract rules, correct ordering, correct clarifying overrides, and strengthened language. They represent limitations in GPT‑5.6‑sol’s internal reasoning architecture when applied to hybrid PowerShell/POSIX semantics.
+
+---
+
+#### **1. Why GPT‑5.6‑sol Fails Index 20 (Persistent Rewrite Failure)**  
+
+Case: `Get-Servce && Get-Item /etc/passwd && Get-Process`
+
+GPT‑5.6‑sol consistently misclassifies:
+
+```
+Get-Item /etc/passwd
+```
+
+as **POSIX semantics**, even though:
+
+- it is a PowerShell Core cmdlet,
+- the contract explicitly overrides POSIX classification,
+- the clarifying rule states “MUST ALWAYS be treated as PowerShell semantics,”
+- the rule ordering places the override before the POSIX‑blocking rule,
+- the rewrite eligibility conditions are fully satisfied.
+
+##### **Technical reason for failure**
+
+GPT‑5.6‑sol’s internal embedding space places certain POSIX tokens—especially canonical Unix paths like `/etc/passwd`—extremely close to the POSIX‑semantics cluster. This means:
+
+- `/etc/passwd` has unusually high semantic weight,
+- it strongly activates POSIX‑related patterns,
+- it overrides weaker contextual cues,
+- it triggers fallback behavior even when the contract forbids it.
+
+In other words:
+
+> **GPT‑5.6‑sol cannot reliably distinguish “POSIX path inside a PowerShell cmdlet” from “POSIX semantics.”**
+
+This is a model‑internal limitation, not a contract issue.
+
+GPT‑5.4 also failed this test case, but GPT‑5.6‑sol fails even after strengthened rules, indicating that the newer model did not improve hybrid‑semantics discrimination.
+
+---
+
+#### **2. Why GPT‑5.6‑sol Fails Index 1 and Index 2 and Index 4 (Intermittent Rewrite Instability)**  
+
+
+Cases:
+
+
+```
+Get-Servce && Get-Process (index 1)
+Get-Process && Get-Servce (index 2)
+Get-Servce && Get-Proces && Get-Service (index 3 will potentially fail in the same manner)
+Get-Proces && Get-Service (index 4)
+```
+
+These pipelines are trivial:
+
+- pure PowerShell Core,
+- no POSIX semantics,
+- no ambiguity,
+- clear near‑miss cmdlets,
+- fully eligible for Patch2‑Rev6 rewrite.
+
+GPT‑5.4 passed both consistently.  
+GPT‑5.6‑sol regressed.
+
+##### **Technical reason for failure**
+
+GPT‑5.6‑sol exhibits instability in **near‑miss cmdlet detection** in multi‑segment pipelines. Internally, the model uses probabilistic pattern matching to determine whether a token is:
+
+- a valid PowerShell cmdlet,
+- a near‑miss PowerShell cmdlet,
+- a POSIX token,
+- or an unknown token.
+
+In GPT‑5.6‑sol, the threshold for classifying a token as a “near‑miss PowerShell cmdlet” appears to fluctuate based on:
+
+- segment ordering,
+- local token context,
+- the presence of other cmdlets,
+- the structure of the pipeline.
+
+This leads to inconsistent behavior:
+
+- sometimes the model identifies `Get-Servce` as a near‑miss → rewrite,
+- sometimes it misclassifies it as an unknown token → fallback.
+
+This is a **model‑internal classification instability**, not a contract issue.
+
+---
+
+#### **3. Why GPT‑5.6‑sol Struggles with Linux PowerShell Core (Hybrid Semantics)**
+
+Linux PowerShell Core is a hybrid domain:
+
+- PowerShell cmdlets operate on POSIX paths,
+- POSIX binaries coexist with PowerShell binaries,
+- bare tokens may resolve to either PowerShell or POSIX,
+- the same string (`/etc/passwd`) has strong POSIX salience even inside PowerShell cmdlets.
+
+GPT‑style models do not have symbolic rule graphs.  
+They do not have deterministic semantic boundaries.  
+They rely on embedding‑space similarity.
+
+This means:
+
+- POSIX tokens overpower PowerShell semantics,
+- hybrid pipelines confuse the model,
+- near‑miss cmdlets are inconsistently classified,
+- rewrite eligibility is inconsistently applied.
+
+GPT‑5.6‑sol is more capable than GPT‑5.4 in many areas, but **hybrid OS semantics remain a weak point**, and the model regressed in near‑miss detection stability.
+
+---
+
+#### **4. Why These Failures Cannot Be Fixed by Contract Engineering**
+
+Contract engineering can fix:
+
+- rule ordering issues,
+- ambiguity issues,
+- salience issues,
+- override issues,
+- classification issues *when the model is capable of following the rule*.
+
+But contract engineering cannot fix:
+
+- embedding‑space misclassification,
+- semantic‑cluster interference,
+- hybrid‑domain confusion,
+- inconsistent near‑miss detection,
+- persistent POSIX‑path misclassification.
+
+Index 20 fails because the model cannot reliably override POSIX salience.  
+Index 1 and 2 and 4 fail intermittently because the model’s near‑miss classifier is unstable.
+
+These are **model‑behavior defects**, not contract defects.
+
+---
+
+#### **5. Conclusion to Appendix Technical Evaluation**
+
+GPT‑5.6‑sol exhibits two confirmed model‑behavior failures in Linux PowerShell Core Patch2‑Rev6:
+
+1. **Persistent rewrite failure** when POSIX paths appear inside PowerShell cmdlets (index 20).  
+2. **Intermittent near‑miss cmdlet instability** in trivial multi‑segment pipelines (index 1 and index 2).
+
+These failures are caused by limitations in GPT‑5.6‑sol’s internal semantic classification mechanisms and cannot be corrected through contract engineering alone.
+
+They must be documented in the test matrix and treated as known model limitations.
+
+
+
+
+---
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+---
+---
+
+
 
 
 <a name="prefaceupdate8"></a>
