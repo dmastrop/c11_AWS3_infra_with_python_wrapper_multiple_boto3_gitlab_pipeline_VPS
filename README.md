@@ -284,7 +284,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update8: LangFuse Architectural Implementation: LangFuse Integration Aadapter, and the Schema-Based and Remedation-Trace Evaluation Flows](#prefaceupdate8)
 
-- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#preface-update9)
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
 
 
 ---
@@ -29939,7 +29939,7 @@ vs.
 
 See PREFACE UPDATE9 for full technical evaluation  of this GPT-5.6-sol model level falure.
  
-- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#preface-update9)
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
 
 ---
 
