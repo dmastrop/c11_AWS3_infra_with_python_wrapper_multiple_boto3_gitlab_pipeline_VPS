@@ -29517,6 +29517,47 @@ The rule that was added is below. This is the rule at the bottom of this code bl
 
 ```
 
+But this did not fully address the index20 test case failure and this was because of a saliency issue. The new rule was 
+placed in the wrong section of the rule block above. The patch block needs to be placed at the top, not the bottom of the 
+block above. 
+
+
+**Index 20** in the Linux PowerShell Core Patch2‑Rev6 suite exposes a subtle but important **contract‑ordering salience defect** in GPT‑5.6‑sol. The test case:
+
+```
+Get-Servce && Get-Item /etc/passwd && Get-Process
+```
+
+is a **pure PowerShell Core `&&` pipeline** containing:
+
+- a clear near‑miss PowerShell cmdlet (`Get‑Servce`),  
+- valid PowerShell cmdlets (`Get‑Item`, `Get‑Process`),  
+- a POSIX path used *inside* a PowerShell cmdlet (`Get‑Item /etc/passwd`),  
+- no POSIX binaries,  
+- no package manager usage,  
+- no destructive behavior,  
+- no invalid flags.
+
+Under Patch2‑Rev6, this pipeline **must** be rewritten to:
+
+```
+Get-Service && Get-Item /etc/passwd && Get-Process
+```
+
+However, GPT‑5.6‑sol returned **fallback**.
+
+This is **not** a model failure.  
+It is a **contract‑engineering salience‑ordering issue** caused by the original POSIX‑blocking rule appearing *before* the clarifying rule that distinguishes:
+
+- **POSIX paths inside PowerShell cmdlets** (PowerShell semantics, rewrite allowed)  
+vs.  
+- **POSIX paths or binaries as standalone segments** (POSIX semantics, rewrite forbidden)
+
+Because GPT‑style models do not maintain a symbolic rule graph and instead interpret rules sequentially with salience weighting, the earlier POSIX‑blocking rule overshadowed the later clarifying rule. Reordering the rules resolves the defect.
+
+We have seen these issues in GPT-5.4 as well (it was more common in the older model).
+
+A full technical analysis—including symbolic‑graph explanation, salience‑stack behavior, and the hybrid‑OS ambiguity unique to Linux PowerShell Core—is provided in **Preface Update 9**.
 
 
 
@@ -29525,6 +29566,10 @@ The functional expected validation results for these types of test cases are com
 The design approach is reviewed in detail in an earlier testing section here:
 
 - [10.Extended Schema-based tests for Linux PowerShell 7 (with test matrices)](#10extended-schema-based-tests-for-linux-powershell-7-with-test-matrices)
+
+
+The full test matrix is below:
+
 
 
 
