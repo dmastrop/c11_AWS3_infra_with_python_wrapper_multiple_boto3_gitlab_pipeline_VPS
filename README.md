@@ -29937,7 +29937,9 @@ vs.
 
 ---
 
-See PREFACE UPDATE9 for full technical evaluation  of this GPT-5.6-sol model level falure. 
+See PREFACE UPDATE9 for full technical evaluation  of this GPT-5.6-sol model level falure.
+ 
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#preface-update9)
 
 ---
 
