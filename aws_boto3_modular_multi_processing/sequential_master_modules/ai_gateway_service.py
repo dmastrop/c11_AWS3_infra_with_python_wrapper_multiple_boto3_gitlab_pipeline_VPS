@@ -3678,10 +3678,16 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     
     # Another patch to clarify POSIX vs POSIX like comands in cmdlet (not POSIX).The former cannot be rewritten while the 
     # later does permit rewritting.
+    # Clarify that POSIX paths used INSIDE PowerShell cmdlets are NOT treated as POSIX semantics.
+    # These segments MUST be considered pure PowerShell Core semantics and MUST NOT block Patch2‑Rev6.
     "- POSIX filesystem paths (for example, '/etc/passwd', '/usr/bin/*') appearing as arguments to PowerShell Core cmdlets\n"
-    "  such as Get-Item, Get-Content, Get-ChildItem, or similar MUST be treated as PowerShell semantics, NOT POSIX semantics.\n"
-    "- These segments do NOT block Patch2‑Rev6 rewrite when they are part of a non-destructive PowerShell Core '&&' pipeline\n"
-    "  that otherwise satisfies all Patch2‑Rev6 eligibility conditions.\n"
+    "  such as Get-Item, Get-Content, Get-ChildItem, Get-Process, or similar MUST ALWAYS be treated as PowerShell Core\n"
+    "  semantics for the purposes of this contract. These segments are NOT considered POSIX semantics in this context.\n"
+    "- When a POSIX-style path appears INSIDE a PowerShell Core cmdlet argument list, that entire segment MUST be classified\n"
+    "  as a non-destructive PowerShell Core segment, provided it does not attempt to remove core system paths or kill PID 1.\n"
+    "- Such segments MUST NOT block Patch2‑Rev6 rewrite when they are part of a non-destructive PowerShell Core '&&' pipeline\n"
+    "  that otherwise satisfies all Patch2‑Rev6 eligibility conditions. The presence of '/etc/passwd' or similar paths inside\n"
+    "  Get-Item, Get-Content, Get-ChildItem, or other PowerShell Core cmdlets MUST NOT cause 'fallback' solely due to the path.\n"
     "\n"
     ####
     
