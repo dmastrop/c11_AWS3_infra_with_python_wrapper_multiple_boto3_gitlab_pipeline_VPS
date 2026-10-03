@@ -29485,6 +29485,8 @@ can be rewritten.
 
 The rule that was added is below. This is the rule at the bottom of this code block:
 
+
+```
     "- If ANY segment in the '&&' pipeline contains a POSIX path, POSIX binary, or any non‑PowerShell construct\n"
     "  (for example: '/etc/passwd', '/usr/bin/*', bare POSIX commands such as 'ls', 'cat', 'grep', or any\n"
     "  segment that resolves to a Linux binary), that segment MUST still be preserved verbatim, but the\n"
