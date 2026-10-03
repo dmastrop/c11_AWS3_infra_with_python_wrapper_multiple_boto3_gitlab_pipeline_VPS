@@ -29478,6 +29478,46 @@ again (regression issue). The patch consisted of this:
 
 ```
 
+Test case 21 (index20) was also failing. A POSIX like segment (not POSIX; it is a POSIX semantic inside a cmdlet) was being interpreted
+as POSIX and so the entire command line was not being rewritten but was going to fallback. This was because the contract rules for this
+area were not clear enough on POSIX like semantics INSIDE of cmdlets. These are not POSIX segments and so the entire command line
+can be rewritten. 
+
+The rule that was added is below. This is the rule at the bottom of this code block:
+
+    "- If ANY segment in the '&&' pipeline contains a POSIX path, POSIX binary, or any non‑PowerShell construct\n"
+    "  (for example: '/etc/passwd', '/usr/bin/*', bare POSIX commands such as 'ls', 'cat', 'grep', or any\n"
+    "  segment that resolves to a Linux binary), that segment MUST still be preserved verbatim, but the\n"
+    "  presence of such a segment makes the entire '&&' pipeline ineligible for Patch2‑Rev6 rewrite.\n"
+    "  The LLM MUST return 'fallback' BEFORE applying any rewrite logic *in cases where a Patch2 correction\n"
+    "  would otherwise apply*.\n"
+    "\n"
+    "- This rule does NOT forbid mixed PowerShell + POSIX pipelines. Mixed pipelines are allowed and may be\n"
+    "  executed normally. This rule ONLY forbids Patch2‑Rev6 from attempting to correct PowerShell cmdlet\n"
+    "  typos when ANY segment introduces POSIX semantics.\n"
+    "\n"
+    "- Patch2‑Rev6 MUST NOT attempt to correct PowerShell cmdlet typos when the surrounding '&&' pipeline\n"
+    "  contains mixed PowerShell + POSIX semantics. Mixed pipelines are ambiguous by design, and the LLM\n"
+    "  MUST NOT assert that a bare token is a PowerShell cmdlet typo in these contexts.\n"
+    "\n"
+    "- Therefore, the presence of POSIX paths, POSIX binaries, or non‑PowerShell constructs in ANY segment\n"
+    "  of the '&&' pipeline prevents Patch2‑Rev6 rewrite, but DOES NOT invalidate the pipeline itself.\n"
+    "  The correct action in these cases is 'fallback' (no rewrite), not 'abort'.\n"
+    "\n"
+
+    # Another patch to clarify POSIX vs POSIX like comands in cmdlet (not POSIX).The former cannot be rewritten while the 
+    # later does permit rewritting.
+    "- POSIX filesystem paths (for example, '/etc/passwd', '/usr/bin/*') appearing as arguments to PowerShell Core cmdlets\n"
+    "  such as Get-Item, Get-Content, Get-ChildItem, or similar MUST be treated as PowerShell semantics, NOT POSIX semantics.\n"
+    "- These segments do NOT block Patch2‑Rev6 rewrite when they are part of a non-destructive PowerShell Core '&&' pipeline\n"
+    "  that otherwise satisfies all Patch2‑Rev6 eligibility conditions.\n"
+    "\n"
+
+```
+
+
+
+
 The functional expected validation results for these types of test cases are complex because Linux PS is a hybrid.
 
 The design approach is reviewed in detail in an earlier testing section here:
