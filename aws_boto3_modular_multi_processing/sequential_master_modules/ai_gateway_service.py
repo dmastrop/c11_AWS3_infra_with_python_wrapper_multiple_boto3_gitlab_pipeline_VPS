@@ -3694,6 +3694,16 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     "  of the '&&' pipeline prevents Patch2‑Rev6 rewrite, but DOES NOT invalidate the pipeline itself.\n"
     "  The correct action in these cases is 'fallback' (no rewrite), not 'abort'.\n"
     "\n"
+    
+    # Another patch to clarify POSIX vs POSIX like comands in cmdlet (not POSIX).The former cannot be rewritten while the 
+    # later does permit rewritting.
+    "- POSIX filesystem paths (for example, '/etc/passwd', '/usr/bin/*') appearing as arguments to PowerShell Core cmdlets\n"
+    "  such as Get-Item, Get-Content, Get-ChildItem, or similar MUST be treated as PowerShell semantics, NOT POSIX semantics.\n"
+    "- These segments do NOT block Patch2‑Rev6 rewrite when they are part of a non-destructive PowerShell Core '&&' pipeline\n"
+    "  that otherwise satisfies all Patch2‑Rev6 eligibility conditions.\n"
+    "\n"
+    ####
+
     "- Patch2‑Rev6 MAY be used when ALL of the following are true:\n"
     "    * Every segment is either:\n"
     "        • a non-destructive PowerShell Core command (cmdlet or simple expression), or\n"
