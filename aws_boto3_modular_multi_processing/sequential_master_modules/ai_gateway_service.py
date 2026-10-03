@@ -3675,6 +3675,16 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     "- If ANY segment in the '&&' pipeline contains an invalid or unsupported PowerShell flag or parameter,\n"
     "  the LLM MUST use 'fallback' BEFORE applying any Patch2‑Rev6 rewrite logic.\n"
     "\n"
+    
+    # Another patch to clarify POSIX vs POSIX like comands in cmdlet (not POSIX).The former cannot be rewritten while the 
+    # later does permit rewritting.
+    "- POSIX filesystem paths (for example, '/etc/passwd', '/usr/bin/*') appearing as arguments to PowerShell Core cmdlets\n"
+    "  such as Get-Item, Get-Content, Get-ChildItem, or similar MUST be treated as PowerShell semantics, NOT POSIX semantics.\n"
+    "- These segments do NOT block Patch2‑Rev6 rewrite when they are part of a non-destructive PowerShell Core '&&' pipeline\n"
+    "  that otherwise satisfies all Patch2‑Rev6 eligibility conditions.\n"
+    "\n"
+    ####
+    
     "- If ANY segment in the '&&' pipeline contains a POSIX path, POSIX binary, or any non‑PowerShell construct\n"
     "  (for example: '/etc/passwd', '/usr/bin/*', bare POSIX commands such as 'ls', 'cat', 'grep', or any\n"
     "  segment that resolves to a Linux binary), that segment MUST still be preserved verbatim, but the\n"
@@ -3694,15 +3704,6 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     "  of the '&&' pipeline prevents Patch2‑Rev6 rewrite, but DOES NOT invalidate the pipeline itself.\n"
     "  The correct action in these cases is 'fallback' (no rewrite), not 'abort'.\n"
     "\n"
-    
-    # Another patch to clarify POSIX vs POSIX like comands in cmdlet (not POSIX).The former cannot be rewritten while the 
-    # later does permit rewritting.
-    "- POSIX filesystem paths (for example, '/etc/passwd', '/usr/bin/*') appearing as arguments to PowerShell Core cmdlets\n"
-    "  such as Get-Item, Get-Content, Get-ChildItem, or similar MUST be treated as PowerShell semantics, NOT POSIX semantics.\n"
-    "- These segments do NOT block Patch2‑Rev6 rewrite when they are part of a non-destructive PowerShell Core '&&' pipeline\n"
-    "  that otherwise satisfies all Patch2‑Rev6 eligibility conditions.\n"
-    "\n"
-    ####
 
     "- Patch2‑Rev6 MAY be used when ALL of the following are true:\n"
     "    * Every segment is either:\n"
