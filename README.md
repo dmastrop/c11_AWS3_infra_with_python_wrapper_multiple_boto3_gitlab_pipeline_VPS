@@ -29458,6 +29458,10 @@ The test cases here all passed after the refactoring. The test case matrix is be
 
 ##### Regression on Linux Powershell with 24 patch2 rewrite tests on gpt-5.6-sol
 
+
+###### Contract level patching issues
+
+
 A patch had to be added to the refactored linux powershell domain primitives block. For example test case 2 (index1) started failing
 again (regression issue). The patch consisted of this:
 
@@ -29477,6 +29481,11 @@ again (regression issue). The patch consisted of this:
     "- Example: 'Get-Servce && Get-Process' MUST be rewritten to 'Get-Service && Get-Process'.\n"
 
 ```
+
+
+
+###### GPT-5.6-sol model level falures that cannot be corrected through contract engineering
+
 
 Test case 21 (index20) was also failing. A POSIX like segment (not POSIX; it is a POSIX semantic inside a cmdlet) was being interpreted
 as POSIX and so the entire command line was not being rewritten but was going to fallback. This was because the contract rules for this
@@ -29555,14 +29564,17 @@ block above.
 
 ```
 
+But this still did not fix the index20 test case (it is still incorrectly going to action plan fallback). 
 
-**Index 20** in the Linux PowerShell Core Patch2‑Rev6 suite exposes a subtle but important **contract‑ordering salience defect** in GPT‑5.6‑sol. The test case:
 
-```
+To review the index20 test case consists of:
+
+
+``
 Get-Servce && Get-Item /etc/passwd && Get-Process
 ```
 
-is a **pure PowerShell Core `&&` pipeline** containing:
+This is a **pure PowerShell Core `&&` pipeline** containing:
 
 - a clear near‑miss PowerShell cmdlet (`Get‑Servce`),  
 - valid PowerShell cmdlets (`Get‑Item`, `Get‑Process`),  
@@ -29572,30 +29584,32 @@ is a **pure PowerShell Core `&&` pipeline** containing:
 - no destructive behavior,  
 - no invalid flags.
 
-Under Patch2‑Rev6, this pipeline **must** be rewritten to:
+Given no POSIX binaries, Under Patch2‑Rev6, this pipeline **must** be rewritten to:
 
 ```
 Get-Service && Get-Item /etc/passwd && Get-Process
 ```
 
 However, GPT‑5.6‑sol returned **fallback**.
-
-This is **not** a model failure.  
-It is a **contract‑engineering salience‑ordering issue** caused by the original POSIX‑blocking rule appearing *before* the clarifying rule that distinguishes:
+Even thoiugh the contract rules are now very strong and correct, it continues to fail. Thus, this is a GPT-5.6-sol model level failure
+The model is unable to distinguish between these two:
 
 - **POSIX paths inside PowerShell cmdlets** (PowerShell semantics, rewrite allowed)  
 vs.  
 - **POSIX paths or binaries as standalone segments** (POSIX semantics, rewrite forbidden)
 
-Because GPT‑style models do not maintain a symbolic rule graph and instead interpret rules sequentially with salience weighting, the earlier POSIX‑blocking rule overshadowed the later clarifying rule. Reordering the rules resolves the defect.
+---
 
-We have seen these issues in GPT-5.4 as well (it was more common in the older model).
+See PREFACE UPDATE9 for full technical evaluation  of this GPT-5.6-sol model level falure. 
 
 ---
 
-A full technical analysis—including symbolic‑graph explanation, salience‑stack behavior, and the hybrid‑OS ambiguity unique to Linux PowerShell Core—is provided in **Preface Update 9**.
 
----
+In addtion, index1 and 2 test cases which are relatively straightforward linux powershell rewrite test cases (retry_with_modified_command)
+are behavining non-deterministically, flip flopping between fallback (not correct) and a proper retry_with_modified_command rewrite.
+
+This issue is also included in the PREFACE UPDASTE9 write up above.
+
 
 
 The functional expected validation results for these types of test cases are complex because Linux PS is a hybrid.
@@ -29607,6 +29621,10 @@ The Linux Powershell contract design approach is reviewed in detail in an earlie
 - [10.Extended Schema-based tests for Linux PowerShell 7 (with test matrices)](#10extended-schema-based-tests-for-linux-powershell-7-with-test-matrices)
 
 ---
+
+
+
+###### Brief summary of expected test case results
 
 This is a brief summary of the expected and correct validation results and this illustrates how difficult it is to effectively 
 create LLM contract rules for Linux Powershell so that the results are always deterministic. 
@@ -29637,10 +29655,10 @@ Index 19 vs 20 — why one is “fallback success” and the other is “fallbac
 
 Correct: Index 19: Fallback success — no typos, no PM, no destructive behavior, no remediation needed.
   
-Incorrect prior to the patch ordering correction: Index 20: Fallback failure — clear PowerShell typo in a safe `&&` pipeline where Patch2‑Rev6 should have produced `retry_with_modified_command`.
+Incorrect: Index 20: Fallback failure — clear PowerShell typo in a safe `&&` pipeline where Patch2‑Rev6 should have produced `retry_with_modified_command`.
 
 
-The full test matrix is below:
+###### The full test matrix is below
 
 
 
