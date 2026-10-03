@@ -3840,6 +3840,7 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     "  'Get-Servce' → 'Get-Service', 'Get-Proces' → 'Get-Process'), the LLM MUST use\n"
     "  'retry_with_modified_command' and MUST return a corrected '&&' pipeline.\n"
     "- ONLY the typo segments may be corrected; all other segments MUST be preserved verbatim.\n"
+    "- When Patch2‑Rev6 applies, the LLM MUST return a FULL rewritten '&&' pipeline, correcting ALL near-miss PowerShell segments and preserving ALL other segments verbatim.\n"
     "- This correction rule applies ONLY inside '&&' pipelines and MUST NOT be used for single-segment commands.\n"
     "- Patch2‑Rev6 MUST NOT apply when ANY segment invokes a package manager, contains POSIX paths/binaries,\n"
     "  contains invalid flags, or is destructive. In these cases, the correct action is 'fallback'.\n"
