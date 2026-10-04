@@ -279,7 +279,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update6: An important note on using this AI-based defensive remediation against coordinated AI agent offensive attacks](#preface-update6)
 
-- [Preface Update6A: Why External Defensive Remediation Is Required: The Fundamental Architectural Limits of LLMs(#preface-update6a)
+- [Preface Update6A: Why External Defensive Remediation Is Required: The Fundamental Architectural Limits of LLMs](#preface-update6a)
 
 - [Preface Update7: Conceptual Architecture of LangFuse in the Contract‑Engineering Workflow: LLM Large‑Scale Multi‑OS Regression Analysis](#prefaceupdate7)
 
