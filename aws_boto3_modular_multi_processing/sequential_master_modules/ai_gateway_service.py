@@ -3594,8 +3594,10 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     # system‑wide package‑manager operations. Therefore:
     #   • The OS‑Mutation Guard is trivially satisfied and never used
     #     for this OS block.
-    #   • There is NO deterministic PM remediation, NO PM cleanup, and
-    #     NO PM idempotency semantics.
+    #
+    #   • There is NO deterministic PM remediation and NO PM cleanup.
+    #     PM idempotency MUST use fallback (see idempotency rules below).
+    #
     #   • Any use of apt, apt‑get, yum, dnf, apk, pacman, zypper, brew,
     #     or snap MUST trigger 'fallback' — no rewrites, no cleanup,
     #     no mutation.
@@ -3839,6 +3841,18 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     "  from this OS block.\n"
     "- If no deterministic remediation exists, the LLM MUST use 'fallback'.\n"
     "\n"
+
+    # This is a patch for idempotency cases with POSIX commands. These should always go to fallback and NOT cleanup_with_retry
+    # See index4 test case in the idempotency suite.
+    "- Idempotency cleanup (cleanup_and_retry) MUST be used ONLY for pure PowerShell cmdlets\n"
+    "  that are deterministic, non-destructive, and not hybrid (no POSIX, no package managers,\n"
+    "  no nested shells, no mixed pipelines).\n"
+    "- For idempotency conditions involving POSIX commands, package managers (apt, yum, dnf,\n"
+    "  apk, pacman, etc.), nested shells (bash -c, sh -c), or hybrid execution chains, the LLM\n"
+    "  MUST NOT use cleanup_and_retry and MUST return \"fallback\" instead.\n"
+    "- When such hybrid idempotency cases have exit_status == 0, \"fallback\" is interpreted as\n"
+    "  success by the downstream module (Phase 4a.1.4).\n"
+
 
     # ============================================================
     # RETRY_WITH_MODIFIED_COMMAND USAGE (PowerShell Core on Linux)
