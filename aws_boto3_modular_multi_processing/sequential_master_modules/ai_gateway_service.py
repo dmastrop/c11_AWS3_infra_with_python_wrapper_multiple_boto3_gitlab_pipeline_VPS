@@ -4358,7 +4358,9 @@ def recover(request: RecoveryRequest):
             "model": "gpt-5.6-sol",
             # temperature is not supported in 5.6-sol. It is inherently "deterministic"
             #"temperature": 0,
-            "max_output_tokens": 256,
+            # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
+            # test suite for Linux Powershell OS. Preface update 10 details the empirical findings of this gpt-5.6-sol model falure.
+            "max_output_tokens": 1024,
             "input": prompt,
         }
 
