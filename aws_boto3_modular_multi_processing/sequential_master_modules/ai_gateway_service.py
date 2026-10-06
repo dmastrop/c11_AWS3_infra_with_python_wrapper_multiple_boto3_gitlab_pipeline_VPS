@@ -3680,6 +3680,9 @@ LINUX_POWERSHELL_CORE_6_and_7_RULES = (
     # later does permit rewritting.
     # Clarify that POSIX paths used INSIDE PowerShell cmdlets are NOT treated as POSIX semantics.
     # These segments MUST be considered pure PowerShell Core semantics and MUST NOT block Patch2‑Rev6.
+    # Despite adding this and moving it to its current location the gpt-5.6-sol is still failing on index20 test case of patch2
+    # rewrite suite. This is a model level failure and is detailed as a case study in the README as preface update 9. 
+    # Overall, gpt-5.6-sol is performing poorly on the linux powershell OS testing. 
     "- POSIX filesystem paths (for example, '/etc/passwd', '/usr/bin/*') appearing as arguments to PowerShell Core cmdlets\n"
     "  such as Get-Item, Get-Content, Get-ChildItem, Get-Process, or similar MUST ALWAYS be treated as PowerShell Core\n"
     "  semantics for the purposes of this contract. These segments are NOT considered POSIX semantics in this context.\n"
