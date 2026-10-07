@@ -937,7 +937,7 @@ Index3 required **289 reasoning tokens** to produce the correct plan.
 
 ---
 
-####**12. Recommendations for Regression Testing**
+#### **12. Recommendations for Regression Testing**
 
 **A. Always test POSIX‑inside‑cmdlet cases**
 These are the highest‑risk salience configurations as seen with the rewrite test cases in Preface Update9 and these idempotency test cases in this Preface Update 10.
