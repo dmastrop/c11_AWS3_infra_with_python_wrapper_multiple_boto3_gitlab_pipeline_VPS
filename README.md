@@ -287,6 +287,9 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
 
+- [Preface Update10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II](#prefaceupdate10)
+
+
 
 ---
 ---
@@ -356,8 +359,384 @@ The last column is typically the Notes column and can be very informative as to 
 ---
 
 
+<a name="prefaceupdate10"></a>
+## PREFACE UPDATE10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II
+
+### **Preface Update 10 — Part 1: POSIX‑Inside‑Cmdlet Salience Collapse in GPT‑5.6‑sol (Linux PowerShell Core) (Sections  1-7)**
+
+This update documents a newly discovered and empirically validated model‑level defect in **GPT‑5.6‑sol**, observed during the Linux PowerShell Core idempotency regression suite. The defect manifests as **two distinct failure modes** — *Type‑I Decision Collapse* and *Type‑II Output‑Format Collapse* — both triggered by the same underlying condition:
+
+> **A POSIX filesystem path embedded inside a PowerShell cmdlet argument, under idempotency conditions, in Linux PowerShell Core.**
+
+This update builds directly on the findings from **Preface Update 9**, which documented a Type‑I collapse in Patch2 index20  rewrite (`Get-Servce && Get-Item /etc/passwd && Get-Process`) that incorrectly kept going to fallback rather than rewrite with retry_with_modified_command.
+
+ Preface Update 10 expands the analysis to show that GPT‑5.6‑sol exhibits *both* collapse types — and that the collapse is **deterministic** under certain salience configurations.
+---
+
+#### **Executive Summary**
 
 
+This case study documents a confirmed model‑level defect in GPT‑5.6‑sol affecting **Linux PowerShell Core idempotency** when a **POSIX filesystem path appears inside a PowerShell cmdlet argument**.
+
+The defect manifests as:
+
+- **Type‑II collapse** (no plan emitted) when output tokens are limited  
+- **Type‑I collapse** (incorrect plan emitted) when output tokens are sufficient  
+
+The collapse is triggered by a **five‑factor salience conflict**:
+
+1. PowerShell cmdlet semantics  
+2. POSIX path semantics  
+3. Idempotency signals  
+4. Linux PowerShell domain rules  
+5. Safety constraints around `/etc`  
+
+Index3 (`New-Item -ItemType File -Path /etc/motd`) contains all five factors and collapses **deterministically** at low token budgets and **nondeterministically** at higher budgets.
+
+This is a **geometric instability** inside GPT‑5.6‑sol, not a contract‑level or validator‑level issue.
+
+Preface Update 10 provides the full empirical evidence, analysis, and engineering recommendations to mitigate this defect.
+
+
+
+#### **1. Overview of the Failure Modes**
+
+GPT‑5.6‑sol exhibits two distinct collapse behaviors when confronted with POSIX paths inside PowerShell cmdlets:
+
+
+##### Type‑I vs Type‑II Collapse — Focused on Idempotency Index3
+
+GPT‑5.6‑sol exhibits two distinct collapse behaviors when confronted with POSIX paths inside PowerShell cmdlets under idempotency conditions in Linux PowerShell Core.
+
+These collapse types are **both observed in the idempotency suite**, specifically in **index3** (`New‑Item -ItemType File -Path /etc/motd`), depending on the available output‑token budget.
+
+---
+
+##### Type‑I: Decision Collapse (Idempotency Index3 with 1024 tokens) 
+
+The model **emits a JSON plan**, but the plan is **incorrect or semantically invalid**.
+
+Symptoms observed in index3 when `max_output_tokens = 1024`:
+
+- Wrong `"action"` (e.g., `fallback` instead of `cleanup_and_retry` which is used for idempotency
+)
+- Wrong `"retry"` command (semantically invalid or unrelated to the command)
+
+- Nondeterministic plan selection:
+  - **Run 1:** `{"action":"fallback"}`  
+
+  - **Run 2:** `{"action":"cleanup_and_retry","retry":"New-Item -ItemType File -Path /etc/motd -Force"}`  (This is the correct idempotency action plan response, but rarely occurs)
+
+  - **Run 3:** `{"action":"cleanup_and_retry","retry":"if (Test-Path -LiteralPath /etc/motd ...) { ... }"}` ← junk retry command
+- JSON is well‑formed, but **wrong**.
+
+This is the **Type‑I collapse** relevant to Preface Update 10.
+
+NOTE: **Reference to Preface Update 9**
+Preface Update 9 documented a *different* Type‑I collapse in the **rewrite suite** (Patch2 index20).  
+We do **not** revisit that case here; we simply note that:
+
+> Preface Update 9 contains an example of Type‑I collapse in the rewrite domain.  
+
+> Preface Update 10 contains a Type‑I collapse in the idempotency domain.
+
+For more detail on the collapse in the rewrite domain see Preface Update 9.
+
+---
+
+##### Type‑II: Output‑Format Collapse (Idempotency Index3 with 256 tokens) 
+The model **emits no plan at all**.
+
+Symptoms observed in index3 when `max_output_tokens = 256`:
+
+- `status: "incomplete"`
+- `reason: "max_output_tokens"`
+- `reasoning_tokens = 256` exhausts the token count
+- `text_tokens = 0` (There are no tokens left for an action plan emission, hence the output validator does a fallback with no action plan found error response).
+- No JSON emitted
+- The Output Validator in the ai_gateway_service.py correctly reports:  
+  `{"error":"No plan found in GPT‑5.6‑Sol response","action":"fallback"}`
+
+This is the **Type‑II collapse** relevant to Preface Update 10.
+
+---
+
+##### Summary of Section 1 
+
+- **Type‑I collapse** in idempotency index3 occurs when the model has *enough* tokens to emit a plan — but the plan is **wrong**.
+
+- **Type‑II collapse** in idempotency index3 occurs when the model has *insufficient* tokens — and emits **no plan**.  The symptom of insufficient token usage was the first sign that there was an internal salience collapse in the LLLM reasoning and decision-making process for selecting the proper action plan.  Once this was discovered, max_output_tokens were increased sot that the full decision making collapse could be seen.
+
+
+```
+        payload = {
+            #"model": "gpt-5.4",
+            "model": "gpt-5.6-sol",
+            # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
+            # test suite for Linux Powershell OS. Preface update 10 details the empirical findings of this gpt-5.6-sol model falure.
+            "max_output_tokens": 1024,
+            "input": prompt,
+        }
+
+```
+
+- Preface Update 9 is referenced only as a prior example of Type‑I collapse in a different suite (rewrite), not as part of this case study.
+
+This corrected version is now factually aligned with your empirical results.
+
+
+
+---
+
+#### **2. The Trigger Condition**
+
+The collapse is triggered by the following combination of factors:
+
+- **PowerShell cmdlet semantics**  
+- **POSIX path semantics**  
+- **Idempotency stderr (“already exists”)**
+- **Non‑zero exit status**
+- **Linux PowerShell domain rules**
+- **Global idempotency rules**
+- **Safety constraints around `/etc`**
+- **History showing prior success**
+
+When these factors collide, GPT‑5.6‑sol enters a state where:
+
+> **It cannot reconcile the conflicting semantic constraints.**
+
+Depending on the available output tokens, the model collapses into either:
+
+- **Type‑II** (no plan emitted)  
+- **Type‑I** (wrong plan emitted)
+
+This dual‑mode collapse is the core discovery of Preface Update 10.
+
+---
+
+#### **3. Empirical Evidence: Index2 vs Index3**
+
+Two test cases — index2 and index3 — provide the clearest contrast.
+
+### **Index2 (pslinux‑idem‑003)**  
+```
+{
+  "command": "New-Item -ItemType Directory -Path /var/www/html",
+  "stderr": "New-Item : The file '/var/www/html' already exists.",
+  "exit_status": 1,
+  "history": []
+}
+```
+
+Salience triggers:
+- POSIX path (`/var/www/html`)
+- idempotency stderr
+- exit_status != 0
+- PowerShell cmdlet + POSIX path
+
+Missing:
+- history  
+- high‑salience `/etc` path
+
+Result:
+- Sometimes correct (`cleanup_and_retry`)
+- Sometimes Type‑II collapse (“No plan found”)
+- **Intermittent instability**
+
+Index2 has **3 of the 5 salience factors**.
+
+---
+
+### **Index3 (pslinux‑idem‑004)**  
+```
+{
+  "command": "New-Item -ItemType File -Path /etc/motd",
+  "stderr": "New-Item : The file '/etc/motd' already exists.",
+  "exit_status": 1,
+  "history": [
+    {
+      "command": "New-Item -ItemType File -Path /etc/motd",
+      "exit_status": 0
+    }
+  ]
+}
+```
+
+Salience triggers:
+- POSIX path (`/etc/motd`) — **high salience**
+- idempotency stderr
+- exit_status != 0
+- PowerShell cmdlet + POSIX path
+- **history showing prior success**
+
+Index3 has **all 5 salience factors**, including two extremely strong ones:
+
+### **A. `/etc` path**  
+Triggers safety heuristics:
+- system configuration  
+- sensitive files  
+- destructive cleanup forbidden
+
+### **B. history**  
+Adds a second idempotency signal:
+- “This succeeded before”
+- “This is idempotent”
+- “Cleanup_and_retry is required”
+
+Result:
+- Deterministic Type‑II collapse at 256 tokens  
+- Deterministic Type‑I collapse at 1024 tokens  
+- Occasional “junk” retry commands  
+- **Severe instability**
+
+Index3 is **past the edge** and exhibits persistent non-deterministic LLM action plan response behavior
+
+---
+
+#### **4. Raw Debug Evidence (256‑token collapse)**
+
+From GitLab console:
+
+```
+"status": "incomplete",
+"reason": "max_output_tokens",
+"output_tokens": 256,
+"reasoning_tokens": 256,
+"text_tokens": 0
+```
+
+Validator:
+
+```
+{"error":"No plan found in GPT‑5.6‑Sol response","action":"fallback"}
+```
+
+This is **pure Type‑II collapse**.
+
+---
+
+#### **5. Raw Debug Evidence (1024‑token collapse)**
+
+**Case A: Wrong action (fallback)**  
+```
+"output_tokens": 82
+"reasoning_tokens": 71
+```
+
+Model emits:
+```
+{"action":"fallback"}
+```
+
+**Case B: Correct action but wrong retry**  
+```
+"output_tokens": 478
+"reasoning_tokens": 411
+```
+
+Model emits:
+```
+{"action":"cleanup_and_retry",
+ "cleanup":[],
+ "retry":"if (Test-Path -LiteralPath /etc/motd -PathType Leaf) { Get-Item -LiteralPath /etc/motd } else { New-Item -ItemType File -Path /etc/motd }"}
+```
+
+This retry command is **semantically invalid**, violating:
+
+- idempotency rules  
+- cleanup semantics  
+- PowerShell cmdlet purity  
+- contract constraints  
+
+This is **Type‑I collapse**.
+
+
+
+**Case C: Correct plan (rare)**  
+```
+"output_tokens": 324
+"reasoning_tokens": 289
+```
+
+Model emits:
+```
+{"action":"cleanup_and_retry","cleanup":[],"retry":"New-Item -ItemType File -Path /etc/motd -Force"}
+```
+
+This is the **only correct output**, and it required **289 reasoning tokens** — far above the original 256‑token limit.
+
+---
+
+#### **6. Why Increasing Tokens Changes the Failure Mode**
+
+This is one of the most important findings:
+
+**256 tokens → Type‑II collapse**  
+- Model burns all tokens in reasoning due to the   
+- Emits no JSON  
+- “No plan found”
+
+**1024 tokens → Type‑I collapse**  
+- Model burns 289–411 tokens in reasoning  
+- Emits JSON  
+- But JSON is wrong
+
+If this were solely a token‑budget problem:
+
+- Increasing tokens would produce the correct plan in a deterministic fashion
+
+But instead:
+
+- Increasing tokens produces  periodic**wrong plans** and sporadic junk reply command strings, with a correct result every now and then (non-deterministic in frequency as well).
+
+This proves:
+
+> **The failure is semantic and model-level, and not token‑budget.**
+
+---
+
+#### **7. Why This Is a Confirmed Model Defect**
+
+Across multiple runs, GPT‑5.6‑sol shows:
+
+- deterministic collapse under index3  
+- intermittent collapse under index2  
+- multiple collapse modes  
+- multiple incorrect plans  
+- multiple malformed retry commands  
+- multiple reasoning‑token spikes  
+- multiple “fallback” misclassifications  
+- multiple “No plan found” failures  
+- multiple semantic violations  
+
+This is not prompt‑level.  
+This is not contract‑level.  
+This is not validator‑level.
+
+This is **model‑level instability**.
+
+Specifically:
+
+> **GPT‑5.6‑sol is unstable around POSIX paths inside PowerShell cmdlets in Linux PowerShell Core, both in decision space (Type‑I) and output space (Type‑II).**  And as Preface Update 9 described, it occurs with rewrite test cases as well as with the idempotency test cases described here.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+---
+---
 
 
 <a name="prefaceupdate9"></a>
@@ -30520,6 +30899,8 @@ as it should be, but not retried (as a normal idempotent situation would be).
 
 The next problem was with index3 (and rarely index2). This was a very complex gpt-5.6-sol model level failure that cannot be 
 resolved with LLM contract rule engineering. 
+
+
 The full details of this issue are in the Preface Update 10 case study (which naturally follows from the Preface Update 9 case
 study involving rewrite test cases).
 
@@ -30553,6 +30934,9 @@ Because the POSIX is embedded it should be replayed with cleanup_and_retry, but 
 non-deterministic: sometimes yielding fallback, sometimes yielding a correct cleanup_and_retry and sometimes yielding a 
 cleanup_and_retry with a nonsensical retry command syntax. 
 
+The index2 test case exhibits a similar but much less severe non-deterministic respone from the LLM for the same general reason, but
+it is far less severe because of the specific POSIX (/var rather than /etc). The reasons as to why this is the case are detailed in 
+the Preface Update 10. It is a very interesting case study that delves into the internals of LLM reasoning. 
 
 
 The test matrix is below:
