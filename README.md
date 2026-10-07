@@ -30470,7 +30470,92 @@ This distinction is preserved in the final matrix.
 
 ###### 7. Idempotency test matrix:
 
+The testing in this area was complicated by more gpt-5.6.-sol model level falures. But as indicated in the case study for these 
+failures (Preface Update 10), the are similar to those that were found during the patch2 rewrite testing (see Preface Update 9), 
+namely cmdlet embedded POSIX commands. The model has a lot of issues dealing with remediating these types of commands. 
 
+The intended test resutls are 
+index 0-3 should be idempotency with cleanup_and_retry
+index4 should be fallback
+index5 should be fallback
+
+
+Index4 test case initially had a problem because the POSIX based command line was incorrectly being retried with cleanup_and_retry.
+In theory this would be correct, but POSIS in Linux Powershell is completely nondeterministic in reality and should never be
+rewritten (Linux Powershell is hyrbrid). 
+
+```
+    {
+      "command": "bash -c \"apt-get install -y curl\"",
+      "stdout": "curl is already the newest version (7.81.0-1ubuntu1.10).",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-005",
+      "ip": "10.0.60.105",
+      "tags": [],
+      "history": []
+    },
+
+```
+
+This added patch contract rule addressed the issue so that index4 was no longer being rewritten with cleanup_and_retry, and now 
+goes to fallback. As an added note, in Phase4a.1.4 development this fallback with exit_status of 0 will be interpreted as success
+as it should be, but not retried (as a normal idempotent situation would be). 
+
+```
+
+    # This is a patch for idempotency cases with POSIX commands. These should always go to fallback and NOT cleanup_with_retry
+    # See index4 test case in the idempotency suite.
+    "- Idempotency cleanup (cleanup_and_retry) MUST be used ONLY for pure PowerShell cmdlets\n"
+    "  that are deterministic, non-destructive, and not hybrid (no POSIX, no package managers,\n"
+    "  no nested shells, no mixed pipelines).\n"
+    "- For idempotency conditions involving POSIX commands, package managers (apt, yum, dnf,\n"
+    "  apk, pacman, etc.), nested shells (bash -c, sh -c), or hybrid execution chains, the LLM\n"
+    "  MUST NOT use cleanup_and_retry and MUST return \"fallback\" instead.\n"
+    "- When such hybrid idempotency cases have exit_status == 0, \"fallback\" is interpreted as\n"
+    "  success by the downstream module (Phase 4a.1.4).\n"
+
+```
+
+The next problem was with index3 (and rarely index2). This was a very complex gpt-5.6-sol model level failure that cannot be 
+resolved with LLM contract rule engineering. 
+The full details of this issue are in the Preface Update 10 case study (which naturally follows from the Preface Update 9 case
+study involving rewrite test cases).
+
+Index3 test case is the following: 
+
+```
+    {
+      "command": "New-Item -ItemType File -Path /etc/motd",
+      "stdout": "",
+      "stderr": "New-Item : The file '/etc/motd' already exists.",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "pslinux-idem-004",
+      "ip": "10.0.60.104",
+      "tags": [],
+      "history": [
+        {
+          "command": "New-Item -ItemType File -Path /etc/motd",
+          "stdout": "",
+          "stderr": "",
+          "exit_status": 0
+        }
+      ]
+    },
+```
+
+This is a potential idempotentcy scenario, with a cmdlet embedded POSIX command.  The embedded POSIX command causes the LLM response
+to be very non-deterministic and this is detailed in the Preface Update 10. 
+
+Because the POSIX is embedded it should be replayed with cleanup_and_retry, but the /etc/motd POSIX causes the LLM to be 
+non-deterministic: sometimes yielding fallback, sometimes yielding a correct cleanup_and_retry and sometimes yielding a 
+cleanup_and_retry with a nonsensical retry command syntax. 
+
+
+
+The test matrix is below:
 
 
 
