@@ -732,21 +732,302 @@ Specifically:
 ---
 
 
+### **Preface Update 10 — Part 2: Semantic Conflict Deep‑Dive, Salience Mechanics, Collapse‑Mode Diagrams, and Implications for Future Contract Design (Sections 8-14)**
+
+This section explains **why** GPT‑5.6‑sol collapses under the idempotency index3 test case, **how** the collapse emerges inside the model’s salience landscape, and **what** this implies for future contract engineering.
+
+It is the technical core of Preface Update 10.
+
+---
+
+#### **8. Semantic Conflict Deep‑Dive**
+
+The idempotency index3 test case:
+
+```
+New-Item -ItemType File -Path /etc/motd
+stderr: "already exists"
+exit_status: 1
+history: prior success
+```
+
+forces GPT‑5.6‑sol to reconcile **five independent semantic domains** simultaneously:
+
+1. **PowerShell cmdlet semantics**  
+   - `New-Item` is a pure PowerShell cmdlet.  
+   - Idempotency rules allow `cleanup_and_retry`.
+
+2. **POSIX path semantics**  
+   - `/etc/motd` is a high‑salience POSIX system file.  
+   - Safety heuristics forbid destructive cleanup.
+
+3. **Idempotency semantics**  
+   - stderr: “already exists”  
+   - exit_status: 1  
+   - history: prior success  
+   - All signals point to idempotency → `cleanup_and_retry`.
+
+4. **Linux PowerShell domain rules**  
+   - No POSIX hybrid cleanup  
+   - No package‑manager cleanup  
+   - No destructive cleanup  
+   - No ambiguous cleanup
+
+5. **Safety constraints**  
+   - `/etc` is a protected system directory.  
+   - Cleanup must be minimal, safe, and non‑destructive.
+
+These domains **contradict each other**:
+
+- PowerShell rules say: *“cleanup_and_retry is required.”*  
+- POSIX safety rules say: *“cleanup may be dangerous.”*  
+- Linux PowerShell rules say: *“no POSIX cleanup allowed.”*  
+- Idempotency rules say: *“retry must be deterministic.”*  
+- History says: *“this succeeded before, so cleanup_and_retry is correct.”*
+
+GPT‑5.6‑sol cannot find a plan that satisfies all constraints.
+
+This is the root cause of both Type‑I and Type‑II collapse.
+
+---
+
+#### **9. Salience Mechanics**
+
+GPT‑5.6‑sol is a geometric transformer.  
+Its behavior is governed by **salience vectors** — internal activations representing:
+
+- semantic importance  
+- rule priority  
+- contextual weight  
+- conflict intensity  
+
+In index3, the following salience vectors spike simultaneously:
+
+**A. POSIX‑path salience spike**
+`/etc/motd` triggers:
+
+- system‑file heuristics  
+- safety constraints  
+- “do not modify” priors  
+- “dangerous path” priors
+
+**B. Idempotency salience spike**
+stderr + exit_status + history trigger:
+
+- “already exists” → idempotency  
+- “prior success” → idempotency  
+- “retry required” → idempotency
+
+**C. PowerShell‑cmdlet salience spike**
+`New-Item` triggers:
+
+- pure PowerShell semantics  
+- deterministic cleanup rules  
+- retry‑with‑Force patterns
+
+**D. Linux‑PowerShell domain salience spike**
+Linux PowerShell Core forbids:
+
+- POSIX hybrid cleanup  
+- destructive cleanup  
+- ambiguous cleanup
+
+**E. Safety salience spike**
+`/etc` triggers:
+
+- “do not delete”  
+- “do not overwrite”  
+- “do not modify system files”  
+
+These salience vectors **interfere destructively**.
+
+The model enters a state where:
+
+> **No single plan satisfies all salience constraints.**
+
+This is the exact geometric condition that produces collapse.
+
+---
+
+#### **10. Collapse‑Mode Diagrams**
+
+Below are conceptual diagrams (text‑only) showing how the collapse emerges.
+
+**Type‑II Collapse (256 tokens)**  
+
+```
+[PowerShell rules] → cleanup_and_retry
+[POSIX safety] → avoid cleanup
+[Idempotency] → retry required
+[Linux PS rules] → no POSIX cleanup
+[History] → idempotency confirmed
+
+Conflict → model loops in reasoning
+Reasoning tokens = max_output_tokens
+Text tokens = 0
+→ No JSON emitted
+```
+
+**Type‑I Collapse (1024 tokens)**  
+
+```
+[PowerShell rules] → cleanup_and_retry
+[POSIX safety] → avoid cleanup
+[Idempotency] → retry required
+[Linux PS rules] → no POSIX cleanup
+[History] → idempotency confirmed
+
+Conflict → model escapes loop
+→ Emits JSON, but plan is wrong
+   - fallback
+   - junk retry
+   - nondeterministic output
+```
+
+The difference is **not** semantic resolution.  
+It is simply that:
+
+- With 256 tokens → model stays trapped  
+- With 1024 tokens → model escapes the trap but emits garbage
+
+This is the hallmark of geometric salience collapse.
+
+---
+
+#### **11. Implications for Future Contract Design**
+
+This defect has direct implications for future contract engineering:
+
+**A. POSIX‑inside‑cmdlet is a danger zone**
+Any PowerShell cmdlet containing a POSIX path:
+
+- `New-Item /etc/...`  
+- `Get-Item /etc/...`  
+- `Set-Content /etc/...`  
+
+is a high‑risk salience configuration.
+
+**B. History amplifies collapse**
+History entries create a second idempotency signal.  
+This amplifies salience and increases collapse probability due to  multiple salience vectors interfering destructively.
+
+**C. Cleanup rules must explicitly handle POSIX paths**
+Adding rules like the one below are mandatory:
+
+> **POSIX paths inside PowerShell cmdlets must be treated as PowerShell semantics, but cleanup must be restricted to safe, non‑destructive operations.**
+
+**D. Retry commands must be constrained**
+The model produced junk retry commands such as:
+
+- `[Get-Service]` pipelines  
+- conditional logic  
+- unrelated cmdlets  
+- multi‑branch retry logic  
+
+Future contracts must forbid:
+
+- conditional retry logic  
+- pipelines  
+- unrelated cmdlets  
+- multi‑step retry chains
+
+**E. Token budget must be increased for idempotency**
+Index3 required **289 reasoning tokens** to produce the correct plan.  
+256 tokens was insufficient.
+
+---
+
+####**12. Recommendations for Regression Testing**
+
+**A. Always test POSIX‑inside‑cmdlet cases**
+These are the highest‑risk salience configurations as seen with the rewrite test cases in Preface Update9 and these idempotency test cases in this Preface Update 10.
+
+**B. Test with multiple token budgets**
+One must test:
+
+- 256 tokens  
+- 512 tokens  
+- 1024 tokens  
+
+to detect Type‑II → Type‑I transitions.  This is the only way to detect the Type-II to Type-I transition scenarios.
+
+| Scenario | Token Budget | Collapse Type | Action Emitted | Retry Command | Notes |
+|---------|--------------|---------------|----------------|---------------|-------|
+| Index3 | 256 | Type‑II | *none* | *none* | All tokens spent on reasoning; no JSON emitted ; output validator response|
+| Index3 | 1024 | Type‑I | fallback | *none* | Incorrect plan; semantic misclassification |
+| Index3 | 1024 | Type‑I | cleanup_and_retry | correct | Required ~289 reasoning tokens, much higher than "normal" |
+| Index3 | 1024 | Type‑I | cleanup_and_retry | **junk** | Required ~411 reasoning tokens; semantically invalid |
 
 
+**C. Capture reasoning‑token usage**
+Reasoning‑token spikes indicate salience conflict.
 
+**D. Validate retry commands strictly**
+Reject:
 
+- pipelines  
+- conditional logic  
+- unrelated cmdlets  
+- multi‑branch retry logic
 
+**E. Add explicit contract rules for `/etc`**
+Paths under `/etc` must be treated as:
 
+- high‑salience  
+- safety‑critical  
+- cleanup‑restricted
 
+---
 
+#### **13. Cross‑Reference to Preface Update 9**
 
+Preface Update 9 documented a **Type‑I collapse** in the rewrite suite (Patch2 index20).  
 
+That update can be found here: 
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
+
+Preface Update 10 documents:
+
+- **Type‑II collapse** (idempotency index3 @ 256 tokens)  
+- **Type‑I collapse** (idempotency index3 @ 1024 tokens)
+
+Together, they show:
+
+> **GPT‑5.6‑sol exhibits salience collapse across multiple domains whenever POSIX paths appear inside PowerShell cmdlets.**
+
+---
+
+#### **14. Concluding Analysis**
+
+The idempotency index3 case is the strongest empirical evidence to date that GPT‑5.6‑sol has a **geometric instability** around POSIX‑inside‑cmdlet semantics in Linux PowerShell Core.
+
+This instability manifests as:
+
+- deterministic Type‑II collapse at low token budgets  with a No action plan emission from the output validator due to token exhaustion during the reasoning phase (256 token default setting).
+- nondeterministic Type‑I collapse at higher token budgets (1024, for example) 
+- junk retry commands  
+- incorrect fallback actions  
+- reasoning‑token spikes  
+- semantic incoherence  
+- plan‑generation instability  (fallback as opposed to cleanup_and_retry (idempotency) or retry_with_modified_command (rewrite)
+
+This is a **confirmed model‑level defect**, not a contract‑level or validator‑level issue.
+
+Preface Update 10 formally documents this defect and provides the foundation for future contract‑engineering patches to mitigate salience collapse in Linux PowerShell Core.
+
+---
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ---
 ---
+
+
+
+
+
+
+
 
 
 <a name="prefaceupdate9"></a>
