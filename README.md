@@ -31144,10 +31144,13 @@ The testing in this area was complicated by more gpt-5.6.-sol model level falure
 failures (Preface Update 10), the are similar to those that were found during the patch2 rewrite testing (see Preface Update 9), 
 namely cmdlet embedded POSIX commands. The model has a lot of issues dealing with remediating these types of commands. 
 
+- [Preface Update10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II](#prefaceupdate10)
+
+
 The intended test resutls are 
-index 0-3 should be idempotency with cleanup_and_retry
-index4 should be fallback
-index5 should be fallback
+- index 0-3 should be idempotency with cleanup_and_retry (gpt-5.6-sol model-level falures with index2 and index3)
+- index4 should be fallback (corrected with a patch as noted below)
+- index5 should be fallback
 
 
 Index4 test case initially had a problem because the POSIX based command line was incorrectly being retried with cleanup_and_retry.
@@ -31195,6 +31198,9 @@ resolved with LLM contract rule engineering.
 The full details of this issue are in the Preface Update 10 case study (which naturally follows from the Preface Update 9 case
 study involving rewrite test cases).
 
+- [Preface Update10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II](#prefaceupdate10)
+
+
 Index3 test case is the following: 
 
 ```
@@ -31228,6 +31234,8 @@ cleanup_and_retry with a nonsensical retry command syntax.
 The index2 test case exhibits a similar but much less severe non-deterministic respone from the LLM for the same general reason, but
 it is far less severe because of the specific POSIX (/var rather than /etc). The reasons as to why this is the case are detailed in 
 the Preface Update 10. It is a very interesting case study that delves into the internals of LLM reasoning. 
+
+- [Preface Update10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II](#prefaceupdate10)
 
 
 The test matrix is below:
