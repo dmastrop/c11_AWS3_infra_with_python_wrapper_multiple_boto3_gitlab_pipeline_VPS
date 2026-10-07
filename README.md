@@ -171,7 +171,7 @@ artifact logs per pipeline)
 - Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
 - Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
 - Documenting continued model-level failures in GPT. GPT-5.6-sol model-level failures with Linux Powershell rewrite and idempotency (salience collapse Type-I and Type-II).
-- LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing)
+- LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)
 
 ---
 
