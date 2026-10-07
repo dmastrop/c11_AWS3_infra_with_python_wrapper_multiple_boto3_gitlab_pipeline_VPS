@@ -370,7 +370,8 @@ This update documents a newly discovered and empirically validated model‑level
 
 This update builds directly on the findings from **Preface Update 9**, which documented a Type‑I collapse in Patch2 index20  rewrite (`Get-Servce && Get-Item /etc/passwd && Get-Process`) that incorrectly kept going to fallback rather than rewrite with retry_with_modified_command.
 
- Preface Update 10 expands the analysis to show that GPT‑5.6‑sol exhibits *both* collapse types — and that the collapse is **deterministic** under certain salience configurations.
+Preface Update 10 expands the analysis to show that GPT‑5.6‑sol exhibits *both* collapse types — and that the collapse is **deterministic** under certain salience configurations.
+
 ---
 
 #### **Executive Summary**
@@ -396,6 +397,9 @@ Index3 (`New-Item -ItemType File -Path /etc/motd`) contains all five factors and
 This is a **geometric instability** inside GPT‑5.6‑sol, not a contract‑level or validator‑level issue.
 
 Preface Update 10 provides the full empirical evidence, analysis, and engineering recommendations to mitigate this defect.
+
+
+---
 
 
 
