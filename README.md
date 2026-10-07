@@ -31240,7 +31240,7 @@ the Preface Update 10. It is a very interesting case study that delves into the 
 
 
 
-The *Linux PowerShell Core — Idempotency Regression (NO_TAGS) — 6‑Case Matrix (GPT‑5.6‑Sol) is below (Click to expand):
+The Linux PowerShell Core — Idempotency Regression (NO_TAGS) — 6‑Case Matrix (GPT‑5.6‑Sol) is below (Click to expand):
 
 <details>
 <summary><b>Linux PowerShell Core — Idempotency Regression — 6‑Case Matrix - GPT‑5.6‑Sol</b></summary>
@@ -31254,7 +31254,7 @@ The *Linux PowerShell Core — Idempotency Regression (NO_TAGS) — 6‑Case Mat
 | **3 (index2)** | **pslinux-idem-003** | `New-Item -ItemType Directory -Path /var/www/html` | **cleanup_and_retry** | **cleanup_and_retry** (`New-Item -ItemType Directory -Path /var/www/html -Force`) | Correct this run. **Intermittent Type‑I collapse** possible due to POSIX `/var/` path inside cmdlet. 3‑factor salience. No history → unstable but not deterministic. |
 | **4a (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **fallback** | **Type‑I collapse.** Nondeterministic. POSIX `/etc/motd` + history → **5‑factor salience**. Model escapes conflict but emits wrong plan. |
 | **4b (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **cleanup_and_retry** (`New-Item -ItemType File -Path /etc/motd -Force`) | **Rare correct plan.** Requires ~289 reasoning tokens. High‑salience POSIX path + history → geometric dead‑zone. |
-| **4c (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **cleanup_and_retry** (`if (Test-Path -LiteralPath /etc/motd -PathType Leaf) { Get-Item -LiteralPath /etc/motd } else { New-Item -ItemType File -Path /etc/motd }`) | **Junk retry.** Semantically invalid. Collapse artifact. Model attempts conditional logic + unrelated cmdlets. High‑salience collapse. |
+| **4c (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **cleanup_and_retry** (`if (Test-Path -LiteralPath /etc/motd -PathType Leaf) { Get-Item -LiteralPath /etc/motd } else { New-Item -ItemType File -Path /etc/motd }`) | **Junk retry.** Semantically invalid. Collapse artifact. Model attempts conditional logic + unrelated cmdlets. High‑salience Type-I collapse. |
 | **4d (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **none** (`{"error":"No plan found"}`) | **Deterministic Type‑II collapse.** At 256 tokens, all tokens consumed by reasoning → no JSON emitted. 5‑factor salience → geometric dead‑zone. |
 | **5 (index4)** | **pslinux-idem-005** | `bash -c "apt-get install -y curl"` | **fallback** | **fallback** | Correct. POSIX package manager inside PowerShell → fallback. No collapse. |
 | **6 (index5)** | **pwsh-osmut-001** | `Import-Module SomeMissingModule` | **fallback** | **fallback** | Correct. Missing module → fallback. No collapse. |
