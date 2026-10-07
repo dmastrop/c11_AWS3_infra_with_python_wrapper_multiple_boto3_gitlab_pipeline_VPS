@@ -444,7 +444,11 @@ We do **not** revisit that case here; we simply note that:
 
 > Preface Update 10 contains a Type‑I collapse in the idempotency domain.
 
-For more detail on the collapse in the rewrite domain see Preface Update 9.
+For more detail on the collapse in the rewrite domain see Preface Update 9 at the link below:
+
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
+
+
 
 ---
 
@@ -486,8 +490,7 @@ This is the **Type‑II collapse** relevant to Preface Update 10.
 
 - Preface Update 9 is referenced only as a prior example of Type‑I collapse in a different suite (rewrite), not as part of this case study.
 
-This corrected version is now factually aligned with your empirical results.
-
+- [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
 
 
 ---
@@ -522,7 +525,7 @@ This dual‑mode collapse is the core discovery of Preface Update 10.
 
 Two test cases — index2 and index3 — provide the clearest contrast.
 
-### **Index2 (pslinux‑idem‑003)**  
+**Index2 (pslinux‑idem‑003)**  
 ```
 {
   "command": "New-Item -ItemType Directory -Path /var/www/html",
@@ -551,7 +554,7 @@ Index2 has **3 of the 5 salience factors**.
 
 ---
 
-### **Index3 (pslinux‑idem‑004)**  
+**Index3 (pslinux‑idem‑004)**  
 ```
 {
   "command": "New-Item -ItemType File -Path /etc/motd",
@@ -575,13 +578,13 @@ Salience triggers:
 
 Index3 has **all 5 salience factors**, including two extremely strong ones:
 
-### **A. `/etc` path**  
+**A. `/etc` path**  
 Triggers safety heuristics:
 - system configuration  
 - sensitive files  
 - destructive cleanup forbidden
 
-### **B. history**  
+**B. history**  
 Adds a second idempotency signal:
 - “This succeeded before”
 - “This is idempotent”
@@ -595,7 +598,10 @@ Result:
 
 Index3 is **past the edge** and exhibits persistent non-deterministic LLM action plan response behavior
 
+
 ---
+
+
 
 #### **4. Raw Debug Evidence (256‑token collapse)**
 
