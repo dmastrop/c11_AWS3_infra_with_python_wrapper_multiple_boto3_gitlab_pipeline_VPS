@@ -31238,8 +31238,28 @@ the Preface Update 10. It is a very interesting case study that delves into the 
 - [Preface Update10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II](#prefaceupdate10)
 
 
-The test matrix is below:
 
+
+The *Linux PowerShell Core — Idempotency Regression (NO_TAGS) — 6‑Case Matrix (GPT‑5.6‑Sol) is below (Click to expand):
+
+<details>
+<summary><b>Linux PowerShell Core — Idempotency Regression — 6‑Case Matrix - GPT‑5.6‑Sol</b></summary>
+
+<br>
+
+| # (index) | Instance ID | Command | Expected Action | Actual LLM Action | Notes |
+|-----------|-------------|---------|------------------|-------------------|-------|
+| **1 (index0)** | **pslinux-idem-001** | `Start-Service -Name sshd` | **cleanup_and_retry** | **cleanup_and_retry** (`Start-Service -Name sshd`) | Correct. Idempotent service start. No salience conflict. |
+| **2 (index1)** | **pslinux-idem-002** | `Stop-Service -Name sshd` | **cleanup_and_retry** | **cleanup_and_retry** (`Stop-Service -Name sshd`) | Correct this run. **Intermittent collapse** possible due to 3‑factor salience (idempotency stderr, exit_status, PowerShell cmdlet). No history → unstable but not deterministic. |
+| **3 (index2)** | **pslinux-idem-003** | `New-Item -ItemType Directory -Path /var/www/html` | **cleanup_and_retry** | **cleanup_and_retry** (`New-Item -ItemType Directory -Path /var/www/html -Force`) | Correct this run. **Intermittent Type‑I collapse** possible due to POSIX `/var/` path inside cmdlet. 3‑factor salience. No history → unstable but not deterministic. |
+| **4a (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **fallback** | **Type‑I collapse.** Nondeterministic. POSIX `/etc/motd` + history → **5‑factor salience**. Model escapes conflict but emits wrong plan. |
+| **4b (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **cleanup_and_retry** (`New-Item -ItemType File -Path /etc/motd -Force`) | **Rare correct plan.** Requires ~289 reasoning tokens. High‑salience POSIX path + history → geometric dead‑zone. |
+| **4c (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **cleanup_and_retry** (`if (Test-Path -LiteralPath /etc/motd -PathType Leaf) { Get-Item -LiteralPath /etc/motd } else { New-Item -ItemType File -Path /etc/motd }`) | **Junk retry.** Semantically invalid. Collapse artifact. Model attempts conditional logic + unrelated cmdlets. High‑salience collapse. |
+| **4d (index3)** | **pslinux-idem-004** | `New-Item -ItemType File -Path /etc/motd` | **cleanup_and_retry** | **none** (`{"error":"No plan found"}`) | **Deterministic Type‑II collapse.** At 256 tokens, all tokens consumed by reasoning → no JSON emitted. 5‑factor salience → geometric dead‑zone. |
+| **5 (index4)** | **pslinux-idem-005** | `bash -c "apt-get install -y curl"` | **fallback** | **fallback** | Correct. POSIX package manager inside PowerShell → fallback. No collapse. |
+| **6 (index5)** | **pwsh-osmut-001** | `Import-Module SomeMissingModule` | **fallback** | **fallback** | Correct. Missing module → fallback. No collapse. |
+
+</details>
 
 
 
