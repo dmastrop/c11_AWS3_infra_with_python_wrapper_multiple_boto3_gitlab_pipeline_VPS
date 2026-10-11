@@ -30371,21 +30371,24 @@ The Windows Powershell OS does not require 21 multi-segment regression test suit
 
 The only test suites for this OS are: base, patch2 rewrite tests, and the 6 idempotency test suite.
 
-> - Multi‑segment rewrite is only required for POSIX shells (bash, zsh, BusyBox) because they support pipelines, semicolon‑chaining, compound statements, and multi‑command sequences. PowerShell forbids all multi‑segment constructs under the contract.  
->  
-> - OS‑signaled remediation is only required for POSIX‑based operating systems (Linux, macOS, BusyBox) because they emit POSIX remediation signals from package managers, service managers, and filesystem layers. Windows PowerShell does not emit POSIX signals; all Windows error patterns are already covered by the 36‑base rewrite, 24‑patch2 rewrite, and 6‑case idempotency suites.  
->  
+
+Multi‑segment rewrite is only required for **POSIX shells** — such as **bash**, **zsh**, **BusyBox sh**, and other POSIX‑compliant shells — because they support pipelines, semicolon‑chaining, compound statements, and multi‑command sequences. 
+These shells appear on Linux, macOS, BusyBox, and embedded POSIX systems.
+
+Windows PowerShell does **not** use a POSIX shell and forbids all multi‑segment constructs under the contract.  
+Therefore, **Windows PowerShell does not require the multi‑segment rewrite suite**.
+
+OS‑signaled remediation is only required for **POSIX‑based operating systems** (Linux, macOS, BusyBox) because they emit POSIX remediation signals from package managers, service managers, and filesystem layers.
+
+Windows PowerShell does **not** emit POSIX remediation signals; all Windows error patterns are already covered by the 36‑base rewrite, 24‑patch2 rewrite, and 6‑case idempotency suites.  
+Therefore, **Windows PowerShell does not require the OS‑signaled remediation suite**.
+
 > Windows PowerShell testing requires only:
 > - 36‑base rewrite suite  
 > - 24‑patch2 rewrite suite  
 > - 6‑case idempotency suite  
 >  
 > No multi‑segment rewrite suite and no OS‑signaled remediation suite are needed.
-
-
-
-
-
 
 
 
