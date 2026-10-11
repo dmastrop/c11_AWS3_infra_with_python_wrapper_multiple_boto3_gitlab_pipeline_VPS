@@ -3967,6 +3967,19 @@ WINDOWS_POWERSHELL_2022_RULES = (
     "- The LLM MUST NOT infer user intent for unknown parameters or flags.\n"
     "\n"
 
+    # Patch to fix precedence issue. This will enable retry_with_modified_command block further down below to fire off if there
+    # are minor rewrites that are required. Otherwise the Unknown cmdlets block below will supercede the rewrite and fallback will 
+    # be used
+    "- If a cmdlet name differs from a known Windows PowerShell cmdlet by a single-token typo, and the correction is syntactically valid, semantically safe, and directly implied by the original command (Patch2-Rev5), the LLM MUST use 'retry_with_modified_command' instead of 'fallback'.\n"
+    "- This rule takes precedence over the unknown-cmdlet fallback rule.\n"
+    "- Examples include:\n"
+    "    * 'Get-Servce' → 'Get-Service'\n"
+    "    * 'Get-Proces' → 'Get-Process'\n"
+    "    * 'Get-Srvice -Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Servce Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Srvice Name' → 'Get-Service -Name'\n"
+
+
     # ============================================================
     # Unknown cmdlets / tools / cross-OS usage
     # ============================================================
