@@ -30368,7 +30368,26 @@ The test matrix for Fedora 39 — OS-signaled remediation (NO_TAGS) — 3‑Case
 #### 9.LLM Contract Stress Tester – Multi-segment Windows PowerShell testing and test matrices
 
 The Windows Powershell OS does not require 21 multi-segment regression test suite or the 3 os-signaled remedation test suite.
+
 The only test suites for this OS are: base, patch2 rewrite tests, and the 6 idempotency test suite.
+
+> - Multi‑segment rewrite is only required for POSIX shells (bash, zsh, BusyBox) because they support pipelines, semicolon‑chaining, compound statements, and multi‑command sequences. PowerShell forbids all multi‑segment constructs under the contract.  
+>  
+> - OS‑signaled remediation is only required for POSIX‑based operating systems (Linux, macOS, BusyBox) because they emit POSIX remediation signals from package managers, service managers, and filesystem layers. Windows PowerShell does not emit POSIX signals; all Windows error patterns are already covered by the 36‑base rewrite, 24‑patch2 rewrite, and 6‑case idempotency suites.  
+>  
+> Windows PowerShell testing requires only:
+> - 36‑base rewrite suite  
+> - 24‑patch2 rewrite suite  
+> - 6‑case idempotency suite  
+>  
+> No multi‑segment rewrite suite and no OS‑signaled remediation suite are needed.
+
+
+
+
+
+
+
 
 ---
 
@@ -30377,7 +30396,7 @@ prior:
 
 - [8.Extended Schema-based tests for Windows PowerShell 5.1 (with test matrices)](#8extended-schema-based-tests-for-windows-powershell-51-with-test-matrices)
 
-The idempotency design is detailed in a section below.
+The idempotency design is detailed in the idempotency regression section below.
 
 ---
 
