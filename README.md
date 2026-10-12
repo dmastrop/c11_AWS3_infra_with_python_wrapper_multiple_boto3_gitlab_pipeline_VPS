@@ -266,6 +266,9 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Update part 59 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation](#updates-part-59--phase-4a12-python-llm-contract-stresstesting-framework--multios-remediation-validation)
 
+
+---
+
 - [Preface Update1: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)](#preface-update1-extensibility--topological-mapping-architecture-and-resurrection-architecture-v45)
 
 - [Preface Update2: Phase4a AI/MCP incorporation and Phase4b ML for prediction/anomaly detection High Level Overview](#preface-update2-phase4a-aimcp-incorporation-and-phase4b-ml-for-predictionanomaly-detection-high-level-overview)
@@ -288,6 +291,9 @@ The Preface updates always sit at the top of all the other updates because they 
 - [Preface Update9: Phase 4a.1.2 LLM Contract Rule Engineering III: GPT‑5.6‑sol Model‑Behavior Failures in Linux PowerShell Core Case Study: Multi‑Segment Rewrite Failure & Near‑Miss Cmdlet Instability](#prefaceupdate9)
 
 - [Preface Update10: Phase 4a.1.2 LLM Contract Rule Engineering IV: GPT-5.6-sol Model-Behavior Failures in Linux PowerShell Case Study: Idempotency Inside-Cmdlet Salience Collapse Type-I and Type-II](#prefaceupdate10)
+
+- [Preface Update11: Phase 4a.1.2 LLM Contract Rule Engineering V: GPT‑5.4 vs GPT‑5.6‑Sol Model‑Behavior Divergence in Windows PowerShell Case Study: Near‑Miss Cmdlet Rewrite Suppression via Unknown‑Cmdlet Literal‑Precedence Cluster Semantics (Patch2-Rev5)](#prefaceupdate11)
+
 
 
 
@@ -357,6 +363,270 @@ The last column is typically the Notes column and can be very informative as to 
 
 ---
 ---
+
+
+
+
+
+
+<a name="prefaceupdate11"></a>
+## PREFACE UPDATE11: Phase 4a.1.2 LLM Contract Rule Engineering V: GPT‑5.4 vs GPT‑5.6‑Sol Model‑Behavior Divergence in Windows PowerShell Case Study: Near‑Miss Cmdlet Rewrite Suppression via Unknown‑Cmdlet Literal‑Precedence Cluster Semantics (Patch2-Rev5)
+
+---
+
+### **1. Overview**
+
+This update documents a critical behavioral divergence observed between **GPT‑5.4** and **GPT‑5.6‑Sol** during execution of the **Windows PowerShell Patch2‑Rev5** test matrix. The divergence manifested as a **systematic suppression of near‑miss cmdlet rewrites** (e.g., `Get-Servce` → `Get-Service`) under GPT‑5.6‑Sol, despite identical contract rule ordering and identical malformed‑command hardening semantics.
+
+Under GPT‑5.4, Patch2‑Rev5 executed correctly with **no special override rules**, producing deterministic `retry_with_modified_command` actions for all benign typo cases. Under GPT‑5.6‑Sol, the same contract produced **fallback**, indicating a shift in model‑level rule‑resolution semantics.
+
+This case study analyzes:
+
+- the **model‑behavior differences** between GPT‑5.4 and GPT‑5.6‑Sol,  
+- the **semantic‑cluster resolution mechanics** that caused Patch2‑Rev5 suppression,  
+- and the **contract‑level fix** required to restore Patch2‑Rev5 behavior under GPT‑5.6‑Sol.
+
+---
+
+### **2. GPT‑5.4 vs GPT‑5.6‑Sol: Behavioral Divergence**
+
+#### **2.1 GPT‑5.4 — Example‑Dominant, Permissive Rewrite Behavior**
+
+GPT‑5.4 exhibited the following characteristics:
+
+- Treated Patch2 examples as **strong semantic anchors**.  
+- Interpreted “MAY be used” as **implicit SHOULD**.  
+- Overrode fallback rules when explicit examples existed.  
+- Inferred user intent aggressively for near‑miss cmdlets.  
+- Treated malformed‑command fallback as **soft guidance**.  
+- Treated unknown‑cmdlet fallback as **soft guidance**.  
+
+As a result, GPT‑5.4 consistently produced:
+
+- `retry_with_modified_command` for:
+  - `Get-Servce`  
+  - `Get-Proces`  
+  - `Get-Srvice -Name spooler`  
+  - `Get-Servce Name spooler`  
+  - `Get-Srvice Name`  
+
+even though the contract text contained:
+
+- malformed‑command fallback rules,  
+- unknown‑cmdlet fallback rules,  
+- literal‑precedence fallback semantics.
+
+GPT‑5.4 implicitly prioritized **Patch2‑Rev5 examples** over all fallback rules.
+
+---
+
+#### **2.2 GPT‑5.6‑Sol — Strict, Literal Rule‑Resolution Behavior**
+
+GPT‑5.6‑Sol exhibits a fundamentally different inference profile:
+
+- **MUST** rules are treated as hard constraints.  
+- Fallback rules are treated as **non‑overridable** unless explicitly superseded.  
+- Unknown‑cmdlet literal‑precedence rules are treated as **absolute**.  
+- “MAY be used” is interpreted strictly as **optional**, not preferred.  
+- Examples do **not** override fallback rules.  
+- Intent inference is **disabled** unless explicitly authorized.  
+
+Thus GPT‑5.6‑Sol resolves:
+
+- malformed‑command fallback → **MUST**  
+- unknown‑cmdlet fallback → **MUST**  
+- literal‑precedence fallback → **MUST**  
+- Patch2 rewrite → **MAY**
+
+And **MUST beats MAY** in all cases.
+
+This caused GPT‑5.6‑Sol to return **fallback** for all near‑miss cmdlets until an explicit override was added.
+
+---
+
+### **3. Why the Patch Must Be Inside the Unknown‑Cmdlet Block**
+
+GPT‑5.6‑Sol resolves contract rules **hierarchically**, grouping rules by semantic clusters.  
+The cluster:
+
+```
+# Unknown cmdlets / tools / cross-OS usage
+```
+
+is treated as a **single rule unit**.
+
+Inside a cluster:
+
+- later rules override earlier rules,  
+- specific rules override general rules,  
+- explicit examples override generic fallback,  
+- MUST NOT fallback overrides MUST fallback.
+
+Outside the cluster:
+
+- rules do **not** override the cluster,  
+- rules do **not** weaken literal‑precedence fallback,  
+- rules do **not** affect unknown‑cmdlet semantics.
+
+Therefore:
+
+- Any Patch2 override placed *outside* the unknown‑cmdlet block is ignored.  
+- The override must be placed *inside* the cluster to change its semantics.
+
+This is why the  earlier patch (placed above the block) did nothing.
+
+---
+
+### **4. Why Malformed‑Command Hardening No Longer Interferes**
+
+Malformed‑command fallback lives in a **different cluster**:
+
+```
+# Revision 6.12 — PowerShell malformed-command hardening
+```
+
+GPT‑5.6‑Sol resolves:
+
+1. The cluster matching the stderr condition  
+2. Then applies overrides **inside that cluster**  
+3. Only then considers other clusters
+
+Because the override was inserted **inside** the unknown‑cmdlet cluster, it supersedes:
+
+- literal‑precedence fallback,  
+- unknown‑cmdlet fallback,  
+- malformed‑command fallback (indirectly).
+
+Malformed‑command fallback never fires for Patch2 cases.
+
+---
+
+### **5. The Required Contract Patch (Patch2‑Rev5 Override)**
+
+Below is the exact override block that restores GPT‑5.4 behavior under GPT‑5.6‑Sol.  
+This block must be placed **inside** the unknown‑cmdlet cluster.
+
+
+
+```
+"- If stderr contains the EXACT PowerShell message:\n"
+"    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
+"  the LLM MUST return 'fallback'.\n"
+"\n"
+
+# This patch is required for model upgrade from gpt-5.4 to gpt-5.6-sol
+# This is to prevent fallback in cases that require minor rewrite that have near-misses.
+"- EXCEPTION (Patch2-Rev5 — Windows PowerShell cmdlet/parameter typos):\n"
+"  If the failing command is an obvious near-miss of a known, non-destructive cmdlet or parameter,\n"
+"  and the correction is syntactically valid, semantically safe, and directly implied by the original\n"
+"  command, the LLM MUST use 'retry_with_modified_command' instead of 'fallback'.\n"
+"\n"
+"- This EXCEPTION explicitly covers benign over-corrections such as:\n"
+"    * 'Get-Servce' → 'Get-Service'\n"
+"    * 'Get-Proces' → 'Get-Process'\n"
+"    * 'Get-Srvice -Name spooler' → 'Get-Service -Name spooler'\n"
+"    * 'Get-Servce Name spooler' → 'Get-Service -Name spooler'\n"
+"    * 'Get-Srvice Name' → 'Get-Service -Name'\n"
+"\n"
+"- For these cases, the LLM MUST NOT use 'fallback' solely because stderr contains\n"
+"  'The term '<cmd>' is not recognized as the name of a cmdlet...'. Patch2-Rev5 rewrite semantics\n"
+"  take precedence for these single-token, non-destructive typos.\n"
+```
+
+This patch restores:
+
+- Patch2‑Rev5 rewrite behavior,  
+- benign over‑correction acceptance,  
+- deterministic typo correction,  
+- GPT‑5.4‑equivalent semantics.
+
+
+The patch HAS to be  placed inside the unknown cmdlet cluster rule block as shown below
+
+
+```
+    # ============================================================
+    # Unknown cmdlets / tools / cross-OS usage
+    # ============================================================
+
+    "- If stderr contains the EXACT PowerShell message:\n"
+    "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
+    "  the LLM MUST return 'fallback'.\n"
+    "\n"
+
+    # This patch is required for model upgrade from gpt-5.4 to gpt-5.6-sol
+    # This is to prevent fallback in cases that require minor rewrite that have near-misses.
+    "- EXCEPTION (Patch2-Rev5 — Windows PowerShell cmdlet/parameter typos):\n"
+    "  If the failing command is an obvious near-miss of a known, non-destructive cmdlet or parameter,\n"
+    "  and the correction is syntactically valid, semantically safe, and directly implied by the original\n"
+    "  command, the LLM MUST use 'retry_with_modified_command' instead of 'fallback'.\n"
+    "\n"
+    "- This EXCEPTION explicitly covers benign over-corrections such as:\n"
+    "    * 'Get-Servce' → 'Get-Service'\n"
+    "    * 'Get-Proces' → 'Get-Process'\n"
+    "    * 'Get-Srvice -Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Servce Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Srvice Name' → 'Get-Service -Name'\n"
+    "\n"
+    "- For these cases, the LLM MUST NOT use 'fallback' solely because stderr contains\n"
+    "  'The term '<cmd>' is not recognized as the name of a cmdlet...'. Patch2-Rev5 rewrite semantics\n"
+    "  take precedence for these single-token, non-destructive typos.\n"
+    # end patch insertion for gpt-5.6-sol
+
+
+    "- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
+    "- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
+    "- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
+    "  unless explicitly referenced.\n"
+    "\n"
+    "- If a command references POSIX-style paths (e.g., '/usr/bin', '/etc', '/var/log') as primary targets,\n"
+    "  and no Windows mapping is explicitly provided, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    # ============================================================
+
+```
+
+
+
+
+
+---
+
+### **6. Validation Results (GPT‑5.6‑Sol After Patch)**
+
+The test results confirm:
+
+- All Patch2‑Rev5 rewrite cases now pass.  
+- All invalid‑flag, POSIX‑path, unknown‑cmdlet, and destructive cases still fallback/abort correctly.  
+- All idempotency cases still produce correct `cleanup_and_retry`.  
+- Mixed Windows+Linux PM cases still fallback.  
+
+Example (near‑miss rewrite now correct):
+
+```
+Command: Get-Srvice -Name spooler
+RAW LLM RESPONSE:
+{"action":"retry_with_modified_command","cleanup":[],"retry":"Get-Service -Name spooler"}
+```
+
+The full test matrix for the Windows Powershell rewrite test suite can be found at the link below: 
+
+- [9.LLM Contract Stress Tester – Multi-segment Windows PowerShell testing and test matrices](#llm-contract-stress-tester-multi-segment-windows-powershell-testing-and-test-matrices)
+
+
+
+
+---
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+---
+---
+
+
+
 
 
 <a name="prefaceupdate10"></a>
@@ -30514,6 +30784,73 @@ be modified to "correct" this slight over-correction.
 
 Test 18 has a fix for idempotency, where we use cleanup_ane_retry and NEVER fallback. This will require some further changes in
 the AI/MCP HOOK code in one of the python modules, as well, at a later time. 
+
+
+---
+
+The testing this area with gpt-5.6-sol was very very interesting. There was a divergence between the testing done previously with 
+gpt-5.4 and the testing done here with gpt-5.6-sol.  
+
+The Case Study is detailed in Preface Update 11 at the link below:
+
+
+The model differences require that the contract engineering of the rules be adapted accordingly.   The new patch rules that needed to
+be added are inidicated in Preface Update 11 and the reasoning is also provided. 
+
+In short the patch was added to the windows powershell domain primitves block at the location below in the unknown cmdlet cluster
+rule block:
+
+
+```
+    # ============================================================
+    # Unknown cmdlets / tools / cross-OS usage
+    # ============================================================
+
+    "- If stderr contains the EXACT PowerShell message:\n"
+    "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
+    "  the LLM MUST return 'fallback'.\n"
+    "\n"
+
+    # This patch is required for model upgrade from gpt-5.4 to gpt-5.6-sol
+    # This is to prevent fallback in cases that require minor rewrite that have near-misses.
+    "- EXCEPTION (Patch2-Rev5 — Windows PowerShell cmdlet/parameter typos):\n"
+    "  If the failing command is an obvious near-miss of a known, non-destructive cmdlet or parameter,\n"
+    "  and the correction is syntactically valid, semantically safe, and directly implied by the original\n"
+    "  command, the LLM MUST use 'retry_with_modified_command' instead of 'fallback'.\n"
+    "\n"
+    "- This EXCEPTION explicitly covers benign over-corrections such as:\n"
+    "    * 'Get-Servce' → 'Get-Service'\n"
+    "    * 'Get-Proces' → 'Get-Process'\n"
+    "    * 'Get-Srvice -Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Servce Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Srvice Name' → 'Get-Service -Name'\n"
+    "\n"
+    "- For these cases, the LLM MUST NOT use 'fallback' solely because stderr contains\n"
+    "  'The term '<cmd>' is not recognized as the name of a cmdlet...'. Patch2-Rev5 rewrite semantics\n"
+    "  take precedence for these single-token, non-destructive typos.\n"
+    # end patch insertion for gpt-5.6-sol
+
+
+    "- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
+    "- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
+    "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
+    "- The LLM MUST NOT assume the presence of 'choco', 'scoop', or other third-party managers\n"
+    "  unless explicitly referenced.\n"
+    "\n"
+    "- If a command references POSIX-style paths (e.g., '/usr/bin', '/etc', '/var/log') as primary targets,\n"
+    "  and no Windows mapping is explicitly provided, the LLM MUST use 'fallback'.\n"
+    "\n"
+
+    # ============================================================
+
+```
+
+Why the patch is required in gpt-5.6-sol and why it is NOT required in gpt-5.4 is also explained in the Preface Update11.
+
+
+
+The complete test results are below: 
+
 
 
 
