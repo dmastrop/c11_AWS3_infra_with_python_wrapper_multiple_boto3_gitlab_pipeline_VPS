@@ -30793,10 +30793,13 @@ the AI/MCP HOOK code in one of the python modules, as well, at a later time.
 
 ---
 
-The testing this area with gpt-5.6-sol was very very interesting. There was a divergence between the testing done previously with 
+The testing in this area with gpt-5.6-sol was very very interesting. There was a divergence between the testing done previously with 
 gpt-5.4 and the testing done here with gpt-5.6-sol.  
 
 The Case Study is detailed in Preface Update 11 at the link below:
+
+- [Preface Update11: Phase 4a.1.2 LLM Contract Rule Engineering V: GPT‑5.4 vs GPT‑5.6‑Sol Model‑Behavior Divergence in Windows PowerShell Case Study: Near‑Miss Cmdlet Rewrite Suppression via Unknown‑Cmdlet Literal‑Precedence Cluster Semantics (Patch2-Rev5)](#prefaceupdate11)
+
 
 
 The model differences require that the contract engineering of the rules be adapted accordingly.   The new patch rules that needed to
@@ -30850,7 +30853,30 @@ rule block:
 
 ```
 
-Why the patch is required in gpt-5.6-sol and why it is NOT required in gpt-5.4 is also explained in the Preface Update11.
+This prevents all the near-miss cmdlets from going to fallback. With the patch they correctly get rewritten with the 
+retry_with_modified_command action plan from the LLM.
+
+For example: 
+
+```
+root@40a218fb6a17:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os patch_1_and_2/windows_powershell_patch_tests --index 6
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"Get-Service -Name spooler"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Windows 2022
+Command: Get-Srvice -Name spooler
+[DEBUG] schema os_name=Windows, schema os_version=2022
+========================
+
+```
+
+
+Why the patch is required in gpt-5.6-sol and why it is NOT required in gpt-5.4 is also explained in Preface Update11, from the 
+perspective of model-level differences in inference.
 
 
 
