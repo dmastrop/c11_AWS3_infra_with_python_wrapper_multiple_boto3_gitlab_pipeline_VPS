@@ -386,6 +386,11 @@ This case study analyzes:
 - the **semantic‑cluster resolution mechanics** that caused Patch2‑Rev5 suppression,  
 - and the **contract‑level fix** required to restore Patch2‑Rev5 behavior under GPT‑5.6‑Sol.
 
+The case study illustrates that LLM contract engineering is very dependent on the model used. Model-variants affect how the rules must 
+be structured and ordered to achieve a given objective.
+
+
+
 ---
 
 ### **2. GPT‑5.4 vs GPT‑5.6‑Sol: Behavioral Divergence**
