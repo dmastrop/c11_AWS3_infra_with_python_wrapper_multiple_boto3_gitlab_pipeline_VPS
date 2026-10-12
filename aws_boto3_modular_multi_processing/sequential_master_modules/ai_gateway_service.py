@@ -3967,17 +3967,6 @@ WINDOWS_POWERSHELL_2022_RULES = (
     "- The LLM MUST NOT infer user intent for unknown parameters or flags.\n"
     "\n"
 
-    # Patch to fix precedence issue. This will enable retry_with_modified_command block further down below to fire off if there
-    # are minor rewrites that are required. Otherwise the Unknown cmdlets block below will supercede the rewrite and fallback will 
-    # be used
-    "- If a cmdlet name differs from a known Windows PowerShell cmdlet by a single-token typo, and the correction is syntactically valid, semantically safe, and directly implied by the original command (Patch2-Rev5), the LLM MUST use 'retry_with_modified_command' instead of 'fallback'.\n"
-    "- This rule takes precedence over the unknown-cmdlet fallback rule.\n"
-    "- Examples include:\n"
-    "    * 'Get-Servce' → 'Get-Service'\n"
-    "    * 'Get-Proces' → 'Get-Process'\n"
-    "    * 'Get-Srvice -Name spooler' → 'Get-Service -Name spooler'\n"
-    "    * 'Get-Servce Name spooler' → 'Get-Service -Name spooler'\n"
-    "    * 'Get-Srvice Name' → 'Get-Service -Name'\n"
 
 
     # ============================================================
@@ -3988,6 +3977,27 @@ WINDOWS_POWERSHELL_2022_RULES = (
     "    'The term '<cmd>' is not recognized as the name of a cmdlet, function, script file, or operable program.'\n"
     "  the LLM MUST return 'fallback'.\n"
     "\n"
+
+    # This patch is required for model upgrade from gpt-5.4 to gpt-5.6-sol
+    # This is to prevent fallback in cases that require minor rewrite that have near-misses.
+    "- EXCEPTION (Patch2-Rev5 — Windows PowerShell cmdlet/parameter typos):\n"
+    "  If the failing command is an obvious near-miss of a known, non-destructive cmdlet or parameter,\n"
+    "  and the correction is syntactically valid, semantically safe, and directly implied by the original\n"
+    "  command, the LLM MUST use 'retry_with_modified_command' instead of 'fallback'.\n"
+    "\n"
+    "- This EXCEPTION explicitly covers benign over-corrections such as:\n"
+    "    * 'Get-Servce' → 'Get-Service'\n"
+    "    * 'Get-Proces' → 'Get-Process'\n"
+    "    * 'Get-Srvice -Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Servce Name spooler' → 'Get-Service -Name spooler'\n"
+    "    * 'Get-Srvice Name' → 'Get-Service -Name'\n"
+    "\n"
+    "- For these cases, the LLM MUST NOT use 'fallback' solely because stderr contains\n"
+    "  'The term '<cmd>' is not recognized as the name of a cmdlet...'. Patch2-Rev5 rewrite semantics\n"
+    "  take precedence for these single-token, non-destructive typos.\n"
+    # end patch insertion for gpt-5.6-sol
+
+
     "- Windows PowerShell MUST NOT introduce 'sudo', 'apt', 'yum', 'dnf', 'apk', 'brew', or POSIX shells.\n"
     "- If a command references Linux/macOS package managers or POSIX-only tools, the LLM MUST use 'fallback'.\n"
     "- The LLM MUST NOT rewrite Linux/macOS package commands into winget, choco, or scoop.\n"
