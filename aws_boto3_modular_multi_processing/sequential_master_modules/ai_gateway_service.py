@@ -7115,158 +7115,158 @@ def recover(request: RecoveryRequest):
 
 
 
-                # ============================================================
-                # macOS (ZSH) DOMAIN RULES — Applies ONLY when os_name = "macOS"
-                # AND os_version ends with "-zsh".
-                # ============================================================
-                # NOTE — macOS‑zsh has NO package‑manager semantics and NO system‑wide
-                # package‑manager operations. Therefore:
-                #   • The OS‑Mutation Guard does NOT apply to macOS‑zsh.
-                #   • macOS‑zsh MUST treat all package‑manager commands (apt, apt‑get, yum,
-                #     dnf, apk, pacman, brew, etc.) as unsupported and return 'fallback'.
-                #   • macOS‑zsh does NOT support deterministic remediation (no multi‑step
-                #     cleanup, no repo/metadata repair, no PM updates).
-                #   • macOS‑zsh idempotency is limited to shell‑level behavior only; it has
-                #     no PM‑level idempotency cases.
+                ## ============================================================
+                ## macOS (ZSH) DOMAIN RULES — Applies ONLY when os_name = "macOS"
+                ## AND os_version ends with "-zsh".
+                ## ============================================================
+                ## NOTE — macOS‑zsh has NO package‑manager semantics and NO system‑wide
+                ## package‑manager operations. Therefore:
+                ##   • The OS‑Mutation Guard does NOT apply to macOS‑zsh.
+                ##   • macOS‑zsh MUST treat all package‑manager commands (apt, apt‑get, yum,
+                ##     dnf, apk, pacman, brew, etc.) as unsupported and return 'fallback'.
+                ##   • macOS‑zsh does NOT support deterministic remediation (no multi‑step
+                ##     cleanup, no repo/metadata repair, no PM updates).
+                ##   • macOS‑zsh idempotency is limited to shell‑level behavior only; it has
+                ##     no PM‑level idempotency cases.
+                ##
+                ## In short: macOS‑zsh is a PM‑less environment → no OS‑Mutation Guard,
+                ## no deterministic remediation, and no PM idempotency semantics.
+
+                #"These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-zsh\".\n"
+                #"IMPORTANT:\n"
+                ##"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
+                ##"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
+                ##"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
+                #"- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+
+                ###### Invalid flags (macOS‑zsh) #####   #### PATCH stress_tester1 ####
+                ###### This needs to be moved before all other blocks. An invalid flag is always an immedidate fallback
+                ###### for all domain primitives blocks.
+                #"- If a command contains flags that are invalid for macOS‑zsh or any standard macOS POSIX utility\n"
+                #"  (for example: 'invalid option', 'unknown option', or flags not supported by the invoked command),\n"
+                #"  the LLM MUST use 'fallback'.\n"
+                #"- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
+                #"- The LLM MUST NOT infer user intent for unknown flags.\n"
+                #"\n"
                 #
-                # In short: macOS‑zsh is a PM‑less environment → no OS‑Mutation Guard,
-                # no deterministic remediation, and no PM idempotency semantics.
+                ###### Revision 6.11 — Bash/ZSH malformed‑command hardening (adapted for macOS) #####
+                #"- These rules harden malformed-command handling for macOS systems using the zsh shell.\n"
+                #"- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
+                #"  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
+                #"  inventing or hallucinating a corrected command.\n"
+                #"\n"
+                #"- If a command is syntactically malformed (missing arguments, truncated flags, malformed\n"
+                #"  pipelines, malformed subshells, unmatched quotes, or incomplete constructs) but NOT\n"
+                #"  destructive, the LLM MUST use 'fallback' unless a safe, deterministic correction is\n"
+                #"  directly implied by the original command.\n"
+                #"\n"
+                #"- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
+                #"    * syntactically valid,\n"
+                #"    * semantically safe,\n"
+                #"    * and directly implied by the original command.\n"
+                #"  The LLM MUST NOT guess or invent corrected commands.\n"
+                #"\n"
+                #"- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
+                #"  pacman, brew) and this OS block does NOT define a deterministic rewrite for that\n"
+                #"  manager, the LLM MUST use 'fallback'. macOS-zsh has NO package manager, so ALL\n"
+                #"  package-manager commands MUST result in 'fallback'.\n"
+                #"\n"
+                #"- macOS-zsh MUST NOT introduce 'sudo' as part of malformed-command correction. If a\n"
+                #"  command fails due to permission issues and no deterministic recovery rule applies,\n"
+                #"  the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
+                #"\n"
+                #"- For malformed commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM\n"
+                #"  MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
+                #"- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'parse error\n"
+                #"  near', 'unexpected end of file', 'unmatched quote'), the LLM MUST return 'fallback'.\n"
+                #"- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and\n"
+                #"  MUST NOT attempt to infer user intent for pipeline stages.\n"
+                #"- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is\n"
+                #"  destructive, in which case 'abort' applies.\n"
+                #"\n"
 
-                "These rules apply ONLY when os_name = \"macOS\" AND os_version ends with \"-zsh\".\n"
-                "IMPORTANT:\n"
-                #"- The \\\"tags\\\" field is metadata ONLY. You MUST ignore it completely.\\n"
-                #"- You MUST NOT use \\\"tags\\\" to determine the action or influence your decision.\\n"
-                #"- The \\\"instance_id\\\" and \\\"ip\\\" fields MUST also be ignored.\\n"
-                "- The \"instance_id\" and \"ip\" fields MUST NOT be used to determine the action or influence your decsion.\n"
-                "- The \"instance_id\" and \"ip\" fields MUST be ignored.\n"
+                ## BusyBox addendum (adapted for macOS-zsh) Revision 6.11
+                #"These rules also apply when BusyBox-style applets or Linux-only commands are invoked.\n"
+                #"macOS-zsh does NOT activate Linux or BusyBox domain primitives. Any Linux-specific\n"
+                #"command (apk, yum, dnf, apt-get, pacman) MUST result in 'fallback'.\n"
+                #"\n"
 
-                ##### Invalid flags (macOS‑zsh) #####   #### PATCH stress_tester1 ####
-                ##### This needs to be moved before all other blocks. An invalid flag is always an immedidate fallback
-                ##### for all domain primitives blocks.
-                "- If a command contains flags that are invalid for macOS‑zsh or any standard macOS POSIX utility\n"
-                "  (for example: 'invalid option', 'unknown option', or flags not supported by the invoked command),\n"
-                "  the LLM MUST use 'fallback'.\n"
-                "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
-                "- The LLM MUST NOT infer user intent for unknown flags.\n"
-                "\n"
-                
-                ##### Revision 6.11 — Bash/ZSH malformed‑command hardening (adapted for macOS) #####
-                "- These rules harden malformed-command handling for macOS systems using the zsh shell.\n"
-                "- The LLM MUST remain deterministic and MUST NOT guess user intent. When a malformed\n"
-                "  command has multiple possible interpretations, the LLM MUST prefer 'fallback' over\n"
-                "  inventing or hallucinating a corrected command.\n"
-                "\n"
-                "- If a command is syntactically malformed (missing arguments, truncated flags, malformed\n"
-                "  pipelines, malformed subshells, unmatched quotes, or incomplete constructs) but NOT\n"
-                "  destructive, the LLM MUST use 'fallback' unless a safe, deterministic correction is\n"
-                "  directly implied by the original command.\n"
-                "\n"
-                "- 'retry_with_modified_command' MUST be used ONLY when the corrected command is:\n"
-                "    * syntactically valid,\n"
-                "    * semantically safe,\n"
-                "    * and directly implied by the original command.\n"
-                "  The LLM MUST NOT guess or invent corrected commands.\n"
-                "\n"
-                "- If a malformed command references ANY package manager (apt, apt-get, yum, dnf, apk,\n"
-                "  pacman, brew) and this OS block does NOT define a deterministic rewrite for that\n"
-                "  manager, the LLM MUST use 'fallback'. macOS-zsh has NO package manager, so ALL\n"
-                "  package-manager commands MUST result in 'fallback'.\n"
-                "\n"
-                "- macOS-zsh MUST NOT introduce 'sudo' as part of malformed-command correction. If a\n"
-                "  command fails due to permission issues and no deterministic recovery rule applies,\n"
-                "  the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
-                "\n"
-                "- For malformed commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM\n"
-                "  MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
-                "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'parse error\n"
-                "  near', 'unexpected end of file', 'unmatched quote'), the LLM MUST return 'fallback'.\n"
-                "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and\n"
-                "  MUST NOT attempt to infer user intent for pipeline stages.\n"
-                "- Any malformed pipeline or subshell MUST result in 'fallback' unless the command is\n"
-                "  destructive, in which case 'abort' applies.\n"
-                "\n"
+                ## ============================================================
+                ## macOS-zsh Domain Primitives (Minimal Required Knowledge)
+                ## ============================================================
 
-                # BusyBox addendum (adapted for macOS-zsh) Revision 6.11
-                "These rules also apply when BusyBox-style applets or Linux-only commands are invoked.\n"
-                "macOS-zsh does NOT activate Linux or BusyBox domain primitives. Any Linux-specific\n"
-                "command (apk, yum, dnf, apt-get, pacman) MUST result in 'fallback'.\n"
-                "\n"
+                #"macOS-zsh domain primitives:\n"
+                #"- macOS-zsh systems DO NOT include a package manager by default.\n"
+                #"- The commands 'apt', 'apt-get', 'yum', 'dnf', 'apk', 'pacman', and 'brew' MUST all\n"
+                #"  return 'fallback'. macOS-zsh MUST NOT rewrite these commands.\n"
 
-                # ============================================================
-                # macOS-zsh Domain Primitives (Minimal Required Knowledge)
-                # ============================================================
+                ###### Wrong package manager in pipelines (&&) — macOS‑zsh semantics #####   #### PATCH stress_tester1 ####
+                #"- If the command is a pipeline using '&&' and ANY segment references a package manager\n"
+                #"  (apt, apt-get, yum, dnf, apk, pacman, brew), the LLM MUST return 'fallback'.\n"
+                #"- macOS‑zsh MUST NOT rewrite, correct, or translate ANY package‑manager segment.\n"
+                #"- macOS‑zsh MUST NOT attempt to preserve or execute the non‑PM segments of the pipeline.\n"
+                #"- The entire command MUST be treated as unsupported and MUST result in 'fallback'.\n"
+                #"\n"
 
-                "macOS-zsh domain primitives:\n"
-                "- macOS-zsh systems DO NOT include a package manager by default.\n"
-                "- The commands 'apt', 'apt-get', 'yum', 'dnf', 'apk', 'pacman', and 'brew' MUST all\n"
-                "  return 'fallback'. macOS-zsh MUST NOT rewrite these commands.\n"
+                ##### continued after patch insertion.....
+                #"- The command 'brew' MUST NOT be introduced by the LLM. If the user invokes 'brew',\n"
+                #"  the LLM MUST return 'fallback' with no correction.\n"
+                #"\n"
+                #"- macOS includes standard POSIX utilities such as: ls, cat, grep, echo, wc, sed, awk,\n"
+                #"  ps, kill, chmod, chown, mkdir, rm, mv, cp, whoami, uname, pwd, env, which, open.\n"
+                #"  These commands MAY succeed if the schema indicates success.\n"
+                #"\n"
+                #"- If stderr contains 'zsh: command not found', the LLM MUST return 'fallback'.\n"
+                #"- If stderr contains 'parse error near', 'unexpected end of file', or 'unmatched quote',\n"
+                #"  the LLM MUST return 'fallback'.\n"
+                #"\n"
 
-                ##### Wrong package manager in pipelines (&&) — macOS‑zsh semantics #####   #### PATCH stress_tester1 ####
-                "- If the command is a pipeline using '&&' and ANY segment references a package manager\n"
-                "  (apt, apt-get, yum, dnf, apk, pacman, brew), the LLM MUST return 'fallback'.\n"
-                "- macOS‑zsh MUST NOT rewrite, correct, or translate ANY package‑manager segment.\n"
-                "- macOS‑zsh MUST NOT attempt to preserve or execute the non‑PM segments of the pipeline.\n"
-                "- The entire command MUST be treated as unsupported and MUST result in 'fallback'.\n"
-                "\n"
+                ## ============================================================
+                ## macOS-zsh Destructive Command Rules
+                ## ============================================================
 
-                #### continued after patch insertion.....
-                "- The command 'brew' MUST NOT be introduced by the LLM. If the user invokes 'brew',\n"
-                "  the LLM MUST return 'fallback' with no correction.\n"
-                "\n"
-                "- macOS includes standard POSIX utilities such as: ls, cat, grep, echo, wc, sed, awk,\n"
-                "  ps, kill, chmod, chown, mkdir, rm, mv, cp, whoami, uname, pwd, env, which, open.\n"
-                "  These commands MAY succeed if the schema indicates success.\n"
-                "\n"
-                "- If stderr contains 'zsh: command not found', the LLM MUST return 'fallback'.\n"
-                "- If stderr contains 'parse error near', 'unexpected end of file', or 'unmatched quote',\n"
-                "  the LLM MUST return 'fallback'.\n"
-                "\n"
+                #"- If the command is destructive, the LLM MUST return 'abort'. Examples include:\n"
+                #"    * rm -rf /\n"
+                #"    * rm -rf /System\n"
+                #"    * rm -rf /usr\n"
+                #"    * rm -rf /Applications\n"
+                #"    * rm -rf /Library\n"
+                #"    * rm -rf /Users\n"
+                #"  These MUST ALWAYS trigger 'abort'.\n"
+                #"\n"
 
-                # ============================================================
-                # macOS-zsh Destructive Command Rules
-                # ============================================================
+                ## ============================================================
+                ## macOS-zsh Fallback Rules
+                ## ============================================================
 
-                "- If the command is destructive, the LLM MUST return 'abort'. Examples include:\n"
-                "    * rm -rf /\n"
-                "    * rm -rf /System\n"
-                "    * rm -rf /usr\n"
-                "    * rm -rf /Applications\n"
-                "    * rm -rf /Library\n"
-                "    * rm -rf /Users\n"
-                "  These MUST ALWAYS trigger 'abort'.\n"
-                "\n"
+                #"- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
+                #"- If the command uses ANY package manager (apt, apt-get, yum, dnf, apk, pacman, brew),\n"
+                #"  the LLM MUST return 'fallback'. macOS-zsh MUST NOT rewrite these commands.\n"
+                #"- If the command is malformed and NOT destructive, the LLM MUST return 'fallback'.\n"
+                #"- If the command is syntactically valid but semantically meaningless on macOS (e.g.,\n"
+                #"  Linux-only commands), the LLM MUST return 'fallback'.\n"
+                #"\n"
 
-                # ============================================================
-                # macOS-zsh Fallback Rules
-                # ============================================================
+                ## ============================================================
+                ## macOS-zsh Retry Rules
+                ## ============================================================
 
-                "- If the command is unrecognized (exit_status 127), fallback is allowed.\n"
-                "- If the command uses ANY package manager (apt, apt-get, yum, dnf, apk, pacman, brew),\n"
-                "  the LLM MUST return 'fallback'. macOS-zsh MUST NOT rewrite these commands.\n"
-                "- If the command is malformed and NOT destructive, the LLM MUST return 'fallback'.\n"
-                "- If the command is syntactically valid but semantically meaningless on macOS (e.g.,\n"
-                "  Linux-only commands), the LLM MUST return 'fallback'.\n"
-                "\n"
+                #"- macOS-zsh systems have NO package manager and NO deterministic recovery sequences.\n"
+                #"- Therefore, 'retry_with_modified_command' MUST be used ONLY when:\n"
+                #"    * the corrected command is directly implied,\n"
+                #"    * the corrected command is a built-in macOS utility,\n"
+                #"    * and the correction does NOT introduce brew or any package manager.\n"
+                #"- This is extremely rare. Most malformed commands MUST use 'fallback'.\n"
+                #"\n"
 
-                # ============================================================
-                # macOS-zsh Retry Rules
-                # ============================================================
+                ## ============================================================
+                ## macOS-zsh Cleanup Rules
+                ## ============================================================
 
-                "- macOS-zsh systems have NO package manager and NO deterministic recovery sequences.\n"
-                "- Therefore, 'retry_with_modified_command' MUST be used ONLY when:\n"
-                "    * the corrected command is directly implied,\n"
-                "    * the corrected command is a built-in macOS utility,\n"
-                "    * and the correction does NOT introduce brew or any package manager.\n"
-                "- This is extremely rare. Most malformed commands MUST use 'fallback'.\n"
-                "\n"
-
-                # ============================================================
-                # macOS-zsh Cleanup Rules
-                # ============================================================
-
-                "- macOS-zsh has NO cleanup-and-retry workflows analogous to apt, yum, or brew.\n"
-                "- Therefore, 'cleanup_and_retry' MUST NOT be used unless explicitly defined by a\n"
-                "  future macOS-specific rule. At present, NO such rules exist.\n"
+                #"- macOS-zsh has NO cleanup-and-retry workflows analogous to apt, yum, or brew.\n"
+                #"- Therefore, 'cleanup_and_retry' MUST NOT be used unless explicitly defined by a\n"
+                #"  future macOS-specific rule. At present, NO such rules exist.\n"
 
 
 
