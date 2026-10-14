@@ -31183,29 +31183,31 @@ The test matrix for Windows PowerShell Idempotency Test Case Matrix (6 test case
 #### 10.LLM Contract Stress Tester – Multi-segment Linux PowerShell testing and test matrices
 
 The Linux Powershell OS does not require the 21 multi-segment regression test suite or the 3 os-signaled remedation test suite.
+
 The only test suites required for this OS are: base36, 36 patch2 rewrite tests, and the 6 idempotency test suite. 
 
+Linux PowerShell (`pwsh` on Linux) is a **non‑POSIX shell** running on a POSIX operating system.  
+Under this contract, Linux PowerShell:
 
-The 3‑OS signaled remediation suite is only needed for:
+- forbids multi‑segment constructs (`|`, `&&`, `||`, `;`)  
+- does not use Linux package managers (apt, yum, dnf, apk, pacman)  
+- does not emit OS‑signaled remediation  
+- does not rewrite PM commands  
+- does not perform PM‑level cleanup  
+- only rewrites PowerShell cmdlet typos and PowerShell idempotency signals  
 
-LinuxOS (Patch2‑Rev2)
+Therefore, Linux PowerShell requires **only three** test suites:
 
-macOS Homebrew (Patch2‑Rev4)
+- **36‑base rewrite suite**  
+- **24‑patch2 rewrite suite**  
+- **6‑case idempotency suite**
 
-Windows PowerShell (Patch2‑Rev5)
+Linux PowerShell does **not** require:
 
-This is because Linux PowerShell 7 (Patch2‑Rev6) has no PM rewrite engine, has no multi‑segment PM rewrite logic, never rewrites PM commands, never rewrites mixed pipelines, and never rewrites single‑segment commands
+- the **21‑case multi‑segment rewrite suite** (because multi‑segment constructs are forbidden)  
+- the **3‑case OS‑signaled remediation suite** (because Linux PowerShell does not use PMs and cannot emit PM remediation signals)
 
-So the 3‑OS suite is irrelevant.
-
-
-The 21‑case multi‑segment rewrite suite is for:
-
-LinuxOS (Patch2‑Rev2)
-
-macOS Homebrew (Patch2‑Rev4)
-
-This is becasue Linux PowerShell 7 has no PM rewrite, has no multi‑segment PM rewrite, only rewrites pure PowerShell cmdlet typos inside && pipelines
+This makes Linux PowerShell identical to Windows PowerShell in test‑suite requirements, but with Linux‑specific domain primitives.
 
 
 ---
