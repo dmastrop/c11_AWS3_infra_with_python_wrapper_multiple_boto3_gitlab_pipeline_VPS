@@ -4144,13 +4144,128 @@ WINDOWS_POWERSHELL_2022_RULES = (
 
 
 
+MACOS_ZSH_RULES = (
+    # ============================================================
+    # macOS (ZSH) DOMAIN RULES — Applies ONLY when:
+    #    os_name = "macOS"
+    #    os_version ends with "-zsh"
+    # ============================================================
+    # macOS‑zsh is a POSIX shell running in a PM‑less environment.
+    # It supports POSIX pipelines, subshells, and multi‑segment
+    # constructs, but it has NO package manager under this contract.
+    #
+    # Therefore:
+    #   • OS‑Mutation Guard does NOT apply.
+    #   • OS‑signaled remediation does NOT apply.
+    #   • ALL package‑manager commands MUST result in fallback.
+    #   • Idempotency is limited to shell‑level behavior only.
+    #   • cleanup_and_retry is allowed ONLY for shell‑level
+    #     idempotency (mkdir/touch/rm/kill).
+    #   • brew MUST NOT be introduced or rewritten.
+    #
+    # macOS‑zsh requires:
+    #   • Base suite (36)
+    #   • Patch2 rewrite suite (24)
+    #   • Multi‑segment rewrite suite (21)
+    #   • Shell‑level idempotency suite (6)
+    #   • NO OS‑signaled remediation suite
+    # ============================================================
+
+    "These rules apply ONLY when os_name = 'macOS' AND os_version ends with '-zsh'.\n"
+    "- The 'instance_id' and 'ip' fields MUST be ignored.\n"
+
+    # ============================================================
+    # Invalid Flags (Immediate Fallback)
+    # ============================================================
+    "- If a command contains invalid or unknown flags for any macOS POSIX utility,\n"
+    "  the LLM MUST return 'fallback'.\n"
+    "- The LLM MUST NOT guess or correct unknown flags.\n"
+
+    # ============================================================
+    # Malformed Command Hardening (Revision 6.11)
+    # ============================================================
+    "- If a command is syntactically malformed (missing arguments, truncated flags,\n"
+    "  malformed pipelines, malformed subshells, unmatched quotes, incomplete constructs),\n"
+    "  the LLM MUST return 'fallback' unless a safe, deterministic correction is directly implied.\n"
+    "- The LLM MUST NOT guess user intent.\n"
+    "- The LLM MUST NOT repair pipelines or subshells.\n"
+    "- The LLM MUST NOT remove extra '|' characters or insert missing commands.\n"
+    "- If stderr contains 'parse error near', 'unexpected end of file', or 'unmatched quote',\n"
+    "  the LLM MUST return 'fallback'.\n"
+
+    # ============================================================
+    # Package‑Manager Commands (Always Fallback)
+    # ============================================================
+    "- macOS‑zsh has NO package manager under this contract.\n"
+    "- ANY reference to apt, apt-get, yum, dnf, apk, pacman, brew MUST result in 'fallback'.\n"
+    "- macOS‑zsh MUST NOT rewrite or translate package‑manager commands.\n"
+    "- macOS‑zsh MUST NOT introduce 'brew'.\n"
+
+    # ============================================================
+    # Multi‑Segment Rewrite (POSIX Shell)
+    # ============================================================
+    "- macOS‑zsh supports POSIX multi‑segment constructs:\n"
+    "    * pipelines (cmd1 | cmd2)\n"
+    "    * semicolon chains (cmd1 ; cmd2)\n"
+    "    * logical operators (cmd1 && cmd2, cmd1 || cmd2)\n"
+    "    * subshells ($(cmd))\n"
+    "- Multi‑segment rewrite MUST follow the global 21‑case suite.\n"
+    "- If ANY segment references a package manager, the entire command MUST result in 'fallback'.\n"
+
+    # ============================================================
+    # POSIX Utilities (Allowed)
+    # ============================================================
+    "- macOS‑zsh supports standard POSIX utilities: ls, cat, grep, echo, wc, sed, awk,\n"
+    "  ps, kill, chmod, chown, mkdir, rm, mv, cp, whoami, uname, pwd, env, which, open.\n"
+    "- These MAY succeed if the schema indicates success.\n"
+    "- If stderr contains 'zsh: command not found', the LLM MUST return 'fallback'.\n"
+
+    # ============================================================
+    # Shell‑Level Idempotency (Allowed)
+    # ============================================================
+    "- macOS‑zsh idempotency includes messages such as:\n"
+    "    * 'file exists'\n"
+    "    * 'directory exists'\n"
+    "    * 'not removed'\n"
+    "    * 'no such process'\n"
+    "- These MUST use 'cleanup_and_retry' with minimal POSIX cleanup:\n"
+    "    * rm -f <file>\n"
+    "    * rmdir <dir>\n"
+    "    * kill <pid>\n"
+    "- Fallback MUST NOT be used for idempotency conditions.\n"
+    "- cleanup_and_retry MUST NOT include package‑manager operations.\n"
+
+    # ============================================================
+    # Retry Rules
+    # ============================================================
+    "- retry_with_modified_command MUST be used ONLY when the correction is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * directly implied by the original command,\n"
+    "    * and does NOT introduce brew or any package manager.\n"
+
+    # ============================================================
+    # Cleanup Rules
+    # ============================================================
+    "- macOS‑zsh has NO PM‑level cleanup.\n"
+    "- cleanup_and_retry MUST be used ONLY for shell‑level idempotency.\n"
+    "- cleanup MUST be minimal and POSIX‑safe.\n"
+
+    # ============================================================
+    # Destructive Commands (Abort)
+    # ============================================================
+    "- Destructive commands MUST trigger 'abort'. Examples:\n"
+    "    * rm -rf /\n"
+    "    * rm -rf /System\n"
+    "    * rm -rf /usr\n"
+    "    * rm -rf /Applications\n"
+    "    * rm -rf /Library\n"
+    "    * rm -rf /Users\n"
+)
 
 
 
 BUSYBOX_RULES = (
-)
-
-MACOS_ZSH_RULES = (
 )
 
 CISCO_IOS_RULES = (
