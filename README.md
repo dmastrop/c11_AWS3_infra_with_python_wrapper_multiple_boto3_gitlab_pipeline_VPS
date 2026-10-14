@@ -31092,6 +31092,26 @@ This is exactly parallel to Linux PowerShell, but **much simpler**.
 
 ###### 7. Idempotency test matrix;
 
+The testing for idempotency with Windows Powershell went well. All the test cases passed
+
+
+The test matrix for Windows PowerShell Idempotency Test Case Matrix (6 test cases) — GPT‑5.6‑Sol is below (Click to expand):
+
+<details>
+<summary><b>Click to expand Windows PowerShell Idempotency test matrix (6 test cases) (GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| 0 | win-idem-001 | `Start-Service -Name spooler` | cleanup_and_retry<br>(Stop-Service → Start-Service) | cleanup_and_retry<br>(Stop-Service -Name spooler → Start-Service -Name spooler) | Correct idempotency: “already running” → deterministic Stop/Start pair. |
+| 1 | win-idem-002 | `Stop-Service -Name spooler` | cleanup_and_retry<br>(Start-Service → Stop-Service) | cleanup_and_retry<br>(Start-Service -Name spooler → Stop-Service -Name spooler) | Correct idempotency: “already stopped” + history → deterministic Start/Stop pair. |
+| 2 | win-idem-003 | `winget install Microsoft.PowerShell` | cleanup_and_retry<br>(retry only) | cleanup_and_retry<br>(retry=`winget install Microsoft.PowerShell`) | Correct idempotency: “PowerShell is already installed.” → retry-only idempotent reattempt, no cleanup needed. |
+| 3 | win-idem-004 | `New-Item -ItemType Directory -Path C:\Temp` | cleanup_and_retry<br>(Remove-Item → New-Item) | cleanup_and_retry<br>(Remove-Item -Path 'C:\Temp' → New-Item -ItemType Directory -Path 'C:\Temp') | Correct idempotency: “file already exists” → Remove-Item + New-Item directory recreation. |
+| 4 | win-idem-005 | `New-Item -ItemType File -Path C:\Temp\motd.txt` | cleanup_and_retry<br>(Remove-Item → New-Item) | cleanup_and_retry<br>(Remove-Item -Path 'C:\Temp\motd.txt' -Force → New-Item -ItemType File -Path 'C:\Temp\motd.txt') | Correct idempotency: file already exists + history → Remove-Item + New-Item file recreation. |
+| 5 | winps-osmut-001 | `Import-Module SomeMissingModule` | fallback | fallback | Correct fallback: missing module is not idempotency; no deterministic remediation → fallback. |
+
+</details>
 
 
 
