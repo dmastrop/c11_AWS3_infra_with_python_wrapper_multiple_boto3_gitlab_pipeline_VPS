@@ -30708,7 +30708,8 @@ These shells appear on Linux, macOS (zsh and brew), BusyBox (sh/ash), and embedd
 Windows PowerShell does **not** use a POSIX shell and forbids all multi‑segment constructs under the contract.  
 Therefore, **Windows PowerShell does not require the multi‑segment rewrite suite**.
 
-OS‑signaled remediation is only required for **POSIX‑based operating systems** (Linux, macOS (zsh and brew), BusyBox) because they emit POSIX remediation signals from package managers, service managers, and filesystem layers.
+OS‑signaled remediation is only required for POSIX‑based operating systems that have package managers (Linux-family distros and macOS‑brew).
+PM‑less POSIX environments such as macOS‑zsh and BusyBox standalone do not emit OS‑signaled remediation signals and therefore do not require this suite.
 
 Windows PowerShell does **not** emit POSIX remediation signals; all Windows error patterns are already covered by the 36‑base rewrite, 24‑patch2 rewrite, and 6‑case idempotency suites.  
 Therefore, **Windows PowerShell does not require the OS‑signaled remediation suite**.
