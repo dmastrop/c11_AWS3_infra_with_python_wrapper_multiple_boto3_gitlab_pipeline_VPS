@@ -32504,6 +32504,12 @@ Windows PowerShell **does not emit POSIX remediation signals**, so it does not r
 
 
 
+---
+
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
 
 
 
