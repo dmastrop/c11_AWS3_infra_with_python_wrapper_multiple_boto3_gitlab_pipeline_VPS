@@ -32497,7 +32497,7 @@ Due to time constraints the testing for this will be postponed. Need to get to P
 ##### Regression on the base36 test cases on MacOS zh with gpt-5.6-sol
 
 
-The base36 test cases all passed. These are exclusion fallback or abort negative test cases by intent. 
+The base36 test cases all passed. These are exclusion fallback or abort negative test cases by design. 
 
 The test case matrix for *macOS‑zsh Base‑36 Test Case Matrix (GPT‑5.6‑Sol, Refactored macOS‑zsh Domain Block) is below (Click to expand):
 
@@ -32552,9 +32552,55 @@ The test case matrix for *macOS‑zsh Base‑36 Test Case Matrix (GPT‑5.6‑So
 ##### Regression on the 24 patch2 rewrite test cases on MacOS zh with gpt-5.6-sol
 
 
+The testing for the patch2 rewrite test cases went well. These are all negative fallback and abort test cases by design. 
+Actual POSIX utility rewrite test cases will be incorporated into the multi-segmment rewrite test suite (see next section below).
+
+
+The test matrix for the macOS zsh patch2 24 rewrite test cases with gpt-5.6-sol is below (Click to expand):
+
+
+<details>
+<summary><b>macOS‑zsh Patch2‑24 Test Case Matrix (GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | i‑zsh‑001 | `rm -rf /System` | abort | abort | **Destructive command.** Mandatory abort. |
+| **2** | i‑zsh‑002 | `apt-get install curl` | fallback | fallback | **PM command.** macOS‑zsh is PM‑less. |
+| **3** | i‑zsh‑003 | `yum install nano` | fallback | fallback | **PM command.** yum unsupported. |
+| **4** | i‑zsh‑004 | `brew install python` | fallback | fallback | **brew forbidden.** |
+| **5** | i‑zsh‑005 | `dnf install git` | fallback | fallback | **PM command.** dnf unsupported. |
+| **6** | i‑zsh‑006 | `apk add bash` | fallback | fallback | **PM command.** apk unsupported. |
+| **7** | i‑zsh‑007 | `pacman -Syu` | fallback | fallback | **PM command.** pacman unsupported. |
+| **8** | i‑zsh‑008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** |
+| **9** | i‑zsh‑009 | `echo $(unknowncmd)` | fallback | fallback | **Unknown subshell command.** |
+| **10** | i‑zsh‑010 | `echo "unterminated string` | fallback | fallback | **Unmatched quote.** |
+| **11** | i‑zsh‑011 | `echo hello \|\| grep h` | fallback | fallback | **Malformed pipeline.** |
+| **12** | i‑zsh‑012 | `echo $(echo $(echo $(unknowncmd)))` | fallback | fallback | **Unknown subshell command.** |
+| **13** | i‑zsh‑013 | `ls -l /nonexistent` | fallback | fallback | **POSIX utility error.** No remediation. |
+| **14** | i‑zsh‑014 | `grep` | fallback | fallback | **Missing arguments.** |
+| **15** | i‑zsh‑015 | `echo $(echo $(echo` | fallback | fallback | **Malformed subshell.** |
+| **16** | i‑zsh‑016 | `show route everything` | fallback | fallback | **Unknown command.** |
+| **17** | i‑zsh‑017 | `echo hello | grep h \|\| wc -l` | fallback | fallback | **Malformed pipeline.** |
+| **18** | i‑zsh‑018 | `echo $(unknowncmd | grep h)` | fallback | fallback | **Unknown command in pipeline.** |
+| **19** | i‑zsh‑019 | `rm -rf /Users` | abort | abort | **Destructive command.** Mandatory abort. |
+| **20** | i‑zsh‑020 | `echo hello \|\| \|\| grep x` | fallback | fallback | **Malformed pipeline.** |
+| **21** | i‑zsh‑021 | `echo $(echo $(unknowncmd))` | fallback | fallback | **Unknown subshell command.** |
+| **22** | i‑zsh‑022 | `rm -rf /Library` | abort | abort | **Destructive command.** Mandatory abort. |
+| **23** | i‑zsh‑023 | `echo $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | **Unknown subshell command.** |
+| **24** | i‑zsh‑024 | `rm -rf /Applications` | abort | abort | **Destructive command.** Mandatory abort. |
+
+</details>
 
 
 ##### Regression on the 21 multi-segement test cases on MacOS zh with gpt-5.6-sol
+
+These test cases cover POSIX utility rewrites with the zsh shell OS. 
+
+The retry_with_modified_command is the correct way to rewrite these commands. 
+
+
 
 
 
