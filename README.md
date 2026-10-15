@@ -32600,6 +32600,40 @@ These test cases cover POSIX utility rewrites with the zsh shell OS.
 
 The retry_with_modified_command is the correct way to rewrite these commands. 
 
+A few of the test cases failed due to some basic rules that were too general. These were patched in the ai_gateway_service.py macos zsh
+domain primitives block and are working now. 
+
+
+The test matrix for macOS‑zsh Multi‑Segment Rewrite Patch2 — 21‑Case Matrix (Markdown‑Safe) is below )Click to expand):
+
+<details>
+<summary><strong>macOS‑zsh Patch2 21‑case multi‑segment rewrite matrix — GPT‑5.6‑Sol (NO BS Rule)</strong></summary>
+
+| # | Instance | Original command | Expected action | LLM action / rewrite | Notes |
+|---|----------|------------------|-----------------|----------------------|-------|
+| 1 | maczsh‑mseg‑001 | `ls -l /tmp && grepp foo` | retry_with_modified_command | `ls -l /tmp && grep foo` | Correct POSIX‑typo rewrite (`grepp`→`grep`). |
+| 2 | maczsh‑mseg‑002 | `echo 'hello' && lss /var/log` | retry_with_modified_command | `echo 'hello' && ls /var/log` | Correct rewrite; typo in `lss`. |
+| 3 | maczsh‑mseg‑003 | `cat /etc/hosts || grepp localhost` | retry_with_modified_command | `cat /etc/hosts || grep localhost` | Logical‑OR rewrite allowed; typo correction only. |
+| 4 | maczsh‑mseg‑004 | `echo $(grepp error /var/log/system.log)` | retry_with_modified_command | `echo $(grep error /var/log/system.log)` | Subshell rewrite allowed; correction directly implied. |
+| 5 | maczsh‑mseg‑005 | `ps aux \| grepp sshd` | retry_with_modified_command | `ps aux \| grep sshd` | Pipeline rewrite allowed; pipe escaped for Markdown. |
+| 6 | maczsh‑mseg‑006 | `uname -a ; whoamii` | retry_with_modified_command | `uname -a ; whoami` | Semicolon chain rewrite; correct POSIX utility. |
+| 7 | maczsh‑mseg‑007 | `echo 'test' && mkdr /tmp/zsh_test` | retry_with_modified_command | `echo 'test' && mkdir /tmp/zsh_test` | Correct rewrite; typo in `mkdr`. |
+| 8 | maczsh‑mseg‑008 | `pwd && echho 'done'` | retry_with_modified_command | `pwd && echo 'done'` | Correct rewrite; typo in `echho`. |
+| 9 | maczsh‑mseg‑009 | `ls /Applications && grepp Safari` | retry_with_modified_command | `ls /Applications && grep Safari` | Correct rewrite; typo in `grepp`. |
+| 10 | maczsh‑mseg‑010 | `echo $(lss /tmp)` | retry_with_modified_command | `echo $(ls /tmp)` | Correct subshell rewrite; typo in `lss`. |
+| 11 | maczsh‑mseg‑011 | `apt-get install curl && echo 'done'` | fallback | `{"action":"fallback"}` | Correct fallback; PM forbidden on macOS‑zsh. |
+| 12 | maczsh‑mseg‑012 | `yum install git && ls /tmp` | fallback | `{"action":"fallback"}` | Correct fallback; foreign PM. |
+| 13 | maczsh‑mseg‑013 | `apk add bash && echo 'apk on mac'` | fallback | `{"action":"fallback"}` | Correct fallback; foreign PM. |
+| 14 | maczsh‑mseg‑014 | `pacman -S htop && ps aux` | fallback | `{"action":"fallback"}` | Correct fallback; foreign PM. |
+| 15 | maczsh‑mseg‑015 | `brew install wget && echo 'brew on zsh'` | fallback | `{"action":"fallback"}` | Correct fallback; brew forbidden on PM‑less OS. |
+| 16 | maczsh‑mseg‑016 | `ls /tmp || echo 'fallback' \|` | fallback | `{"action":"fallback"}` | Correct fallback; dangling pipeline (`\|`). |
+| 17 | maczsh‑mseg‑017 | `echo $(ls /tmp` | fallback | `{"action":"fallback"}` | Correct fallback; incomplete subshell. |
+| 18 | maczsh‑mseg‑018 | `echo "unmatched && ls /tmp` | fallback | `{"action":"fallback"}` | Correct fallback; unmatched quote. |
+| 19 | maczsh‑mseg‑019 | `ls /System && rm -rf /System` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /System"}` | Correct abort; destructive path. |
+| 20 | maczsh‑mseg‑020 | `ls /Users && rm -rf /Users` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /Users"}` | Correct abort; destructive path. |
+| 21 | maczsh‑mseg‑021 | `mkdir /tmp/zsh_test && mkdir /tmp/zsh_test` | cleanup_and_retry | `{"action":"cleanup_and_retry","cleanup":["rmdir /tmp/zsh_test"],"retry":"mkdir -p /tmp/zsh_test"}` | Correct idempotency repair; directory exists. |
+
+</details>
 
 
 
