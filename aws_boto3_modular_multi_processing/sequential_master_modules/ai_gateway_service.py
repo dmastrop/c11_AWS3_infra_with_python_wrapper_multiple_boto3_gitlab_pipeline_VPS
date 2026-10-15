@@ -4188,7 +4188,11 @@ MACOS_ZSH_RULES = (
     "  malformed pipelines, malformed subshells, unmatched quotes, incomplete constructs),\n"
     "  the LLM MUST return 'fallback' unless a safe, deterministic correction is directly implied.\n"
     "- The LLM MUST NOT guess user intent.\n"
-    "- The LLM MUST NOT repair pipelines or subshells.\n"
+    # patch
+    "- The LLM MUST NOT repair pipelines or subshells\n"
+    "  UNLESS the subshell itself is syntactically valid AND\n"
+    "  the correction is a POSIX utility typo AND directly implied.\n"
+    #
     "- The LLM MUST NOT remove extra '|' characters or insert missing commands.\n"
     "- If stderr contains 'parse error near', 'unexpected end of file', or 'unmatched quote',\n"
     "  the LLM MUST return 'fallback'.\n"
@@ -4218,8 +4222,10 @@ MACOS_ZSH_RULES = (
     "- macOS‑zsh supports standard POSIX utilities: ls, cat, grep, echo, wc, sed, awk,\n"
     "  ps, kill, chmod, chown, mkdir, rm, mv, cp, whoami, uname, pwd, env, which, open.\n"
     "- These MAY succeed if the schema indicates success.\n"
+    # patch
     "- If stderr contains 'zsh: command not found', the LLM MUST return 'fallback'\n"
     "  UNLESS the unknown command is a POSIX utility typo AND the correction is directly implied.\n"
+
 
     # ============================================================
     # Shell‑Level Idempotency (Allowed)
