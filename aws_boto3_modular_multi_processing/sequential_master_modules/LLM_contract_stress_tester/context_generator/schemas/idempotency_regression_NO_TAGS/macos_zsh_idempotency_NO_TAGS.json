@@ -1,0 +1,76 @@
+{
+  "os_name": "macOS",
+  "os_version": "14.0-zsh",
+  "kernel": "23.0.0",
+  "package_managers": [],
+  "shell": "zsh",
+  "contexts": [
+    {
+      "command": "mkdir /tmp/zsh_idem1 && mkdir /tmp/zsh_idem1",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-001",
+      "ip": "10.0.22.1",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(touch /tmp/zsh_idem2 && touch /tmp/zsh_idem2)",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-002",
+      "ip": "10.0.22.2",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ln -s /tmp/source3 /tmp/zsh_idem3 || ln -s /tmp/source3 /tmp/zsh_idem3",
+      "stdout": "",
+      "stderr": "ln: /tmp/zsh_idem3: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-003",
+      "ip": "10.0.22.3",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "rmdir /tmp/zsh_idem4 ; rmdir /tmp/zsh_idem4",
+      "stdout": "",
+      "stderr": "rmdir: /tmp/zsh_idem4: not removed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-004",
+      "ip": "10.0.22.4",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "kill 99999 && kill 99999",
+      "stdout": "",
+      "stderr": "kill: 99999: no such process",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-005",
+      "ip": "10.0.22.5",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/zsh_idem6 && touch /tmp/zsh_idem6 && ln -s /tmp/zsh_idem6 /tmp/zsh_idem6",
+      "stdout": "",
+      "stderr": "ln: /tmp/zsh_idem6: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-006",
+      "ip": "10.0.22.6",
+      "tags": [],
+      "history": []
+    }
+  ]
+}
+
