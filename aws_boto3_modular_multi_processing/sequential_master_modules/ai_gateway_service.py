@@ -4218,7 +4218,8 @@ MACOS_ZSH_RULES = (
     "- macOS‑zsh supports standard POSIX utilities: ls, cat, grep, echo, wc, sed, awk,\n"
     "  ps, kill, chmod, chown, mkdir, rm, mv, cp, whoami, uname, pwd, env, which, open.\n"
     "- These MAY succeed if the schema indicates success.\n"
-    "- If stderr contains 'zsh: command not found', the LLM MUST return 'fallback'.\n"
+    "- If stderr contains 'zsh: command not found', the LLM MUST return 'fallback'\n"
+    "  UNLESS the unknown command is a POSIX utility typo AND the correction is directly implied.\n"
 
     # ============================================================
     # Shell‑Level Idempotency (Allowed)
