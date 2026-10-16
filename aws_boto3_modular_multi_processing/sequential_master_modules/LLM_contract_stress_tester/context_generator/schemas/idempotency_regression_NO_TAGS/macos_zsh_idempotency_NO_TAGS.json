@@ -5,10 +5,11 @@
   "package_managers": [],
   "shell": "zsh",
   "contexts": [
+
     {
-      "command": "mkdir /tmp/zsh_idem1 && mkdir /tmp/zsh_idem1",
+      "command": "mkdir /tmp/zsh_idem1",
       "stdout": "",
-      "stderr": "mkdir: directory exists",
+      "stderr": "mkdir: /tmp/zsh_idem1: File exists",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "maczsh-idem-001",
@@ -16,10 +17,11 @@
       "tags": [],
       "history": []
     },
+
     {
-      "command": "echo $(touch /tmp/zsh_idem2 && touch /tmp/zsh_idem2)",
+      "command": "touch /tmp/zsh_idem2",
       "stdout": "",
-      "stderr": "touch: file exists",
+      "stderr": "touch: /tmp/zsh_idem2: File exists",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "maczsh-idem-002",
@@ -27,8 +29,9 @@
       "tags": [],
       "history": []
     },
+
     {
-      "command": "ln -s /tmp/source3 /tmp/zsh_idem3 || ln -s /tmp/source3 /tmp/zsh_idem3",
+      "command": "ln -s /tmp/source3 /tmp/zsh_idem3",
       "stdout": "",
       "stderr": "ln: /tmp/zsh_idem3: File exists",
       "exit_status": 1,
@@ -38,8 +41,9 @@
       "tags": [],
       "history": []
     },
+
     {
-      "command": "rmdir /tmp/zsh_idem4 ; rmdir /tmp/zsh_idem4",
+      "command": "rmdir /tmp/zsh_idem4",
       "stdout": "",
       "stderr": "rmdir: /tmp/zsh_idem4: not removed",
       "exit_status": 1,
@@ -49,8 +53,9 @@
       "tags": [],
       "history": []
     },
+
     {
-      "command": "kill 99999 && kill 99999",
+      "command": "kill 99999",
       "stdout": "",
       "stderr": "kill: 99999: no such process",
       "exit_status": 1,
@@ -60,17 +65,199 @@
       "tags": [],
       "history": []
     },
+
     {
-      "command": "mkdir /tmp/zsh_idem6 && touch /tmp/zsh_idem6 && ln -s /tmp/zsh_idem6 /tmp/zsh_idem6",
+      "command": "mkdir /tmp/zsh_idem6 ; touch /tmp/zsh_idem6",
       "stdout": "",
-      "stderr": "ln: /tmp/zsh_idem6: File exists",
+      "stderr": "touch: /tmp/zsh_idem6: File exists",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "maczsh-idem-006",
       "ip": "10.0.22.6",
       "tags": [],
       "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem7 && touch /tmp/zsh_idem7",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem7: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-007",
+      "ip": "10.0.22.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "touch /tmp/zsh_idem8 || ln -s /tmp/zsh_idem8 /tmp/zsh_idem8",
+      "stdout": "",
+      "stderr": "touch: /tmp/zsh_idem8: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-008",
+      "ip": "10.0.22.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem9 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem9: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-009",
+      "ip": "10.0.22.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(touch /tmp/zsh_idem10)",
+      "stdout": "",
+      "stderr": "touch: /tmp/zsh_idem10: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-010",
+      "ip": "10.0.22.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem11 ; touch /tmp/zsh_idem11 ; ln -s /tmp/zsh_idem11 /tmp/zsh_idem11",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem11: File exists\ntouch: /tmp/zsh_idem11: File exists\nln: /tmp/zsh_idem11: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-011",
+      "ip": "10.0.22.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nonexistent",
+      "stdout": "",
+      "stderr": "E: Unable to locate package nonexistent",
+      "exit_status": 100,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-neg-001",
+      "ip": "10.0.22.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem13 ; echo ok ; ln -s /tmp/zsh_idem13 /tmp/zsh_idem13",
+      "stdout": "ok",
+      "stderr": "mkdir: /tmp/zsh_idem13: File exists\nln: /tmp/zsh_idem13: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-013",
+      "ip": "10.0.22.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo ok ; mkdir /tmp/zsh_idem14 ; echo done",
+      "stdout": "ok\ndone",
+      "stderr": "mkdir: /tmp/zsh_idem14: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-014",
+      "ip": "10.0.22.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(mkdir /tmp/zsh_idem15) ; echo ok",
+      "stdout": "ok",
+      "stderr": "mkdir: /tmp/zsh_idem15: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-015",
+      "ip": "10.0.22.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem16 | cat",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem16: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-016",
+      "ip": "10.0.22.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo foo | mkdir /tmp/zsh_idem17 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem17: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-017",
+      "ip": "10.0.22.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem18 || echo fallback",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem18: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-018",
+      "ip": "10.0.22.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem19 && echo ok",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem19: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-019",
+      "ip": "10.0.22.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(mkdir /tmp/zsh_idem20)))",
+      "stdout": "",
+      "stderr": "mkdir: /tmp/zsh_idem20: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-020",
+      "ip": "10.0.22.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/zsh_idem21 && echo ok ; ln -s /tmp/zsh_idem21 /tmp/zsh_idem21 || echo fallback",
+      "stdout": "ok",
+      "stderr": "mkdir: /tmp/zsh_idem21: File exists\nln: /tmp/zsh_idem21: File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "maczsh-idem-021",
+      "ip": "10.0.22.21",
+      "tags": [],
+      "history": []
     }
+
   ]
 }
 
