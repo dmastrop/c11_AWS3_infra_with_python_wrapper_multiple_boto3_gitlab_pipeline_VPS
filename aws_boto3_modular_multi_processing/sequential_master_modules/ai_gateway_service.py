@@ -4167,7 +4167,7 @@ MACOS_ZSH_RULES = (
     #   • Base suite (36)
     #   • Patch2 rewrite suite (24)
     #   • Multi‑segment rewrite suite (21)
-    #   • Shell‑level idempotency suite (6)
+    #   • Shell‑level idempotency suite (expanded to 21 test cases)
     #   • NO OS‑signaled remediation suite
     # ============================================================
 
