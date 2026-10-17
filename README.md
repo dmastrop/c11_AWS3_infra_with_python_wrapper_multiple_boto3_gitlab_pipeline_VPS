@@ -32639,7 +32639,26 @@ The test matrix for macOS‑zsh Multi‑Segment Rewrite Patch2 — 21‑Case Mat
 
 
 
-##### Regression on the 6 idempotency test cases on MacOS zh with gpt-5.6-sol
+##### Regression on the 21 idempotency + Multi-segment test cases on MacOS zh with gpt-5.6-sol
+
+The test cases for this suite morphed into an Idempotency + Multi-segment Suite of 21 test cases to fully test POSIX with macos-zsh
+
+These test cases are very complex in terms of the required inference and reasoning from the LLM and the contract rules had to be 
+refactored to accomodate this test suite.
+
+The design arose out of the test cases and is detailed in Preface Update 12 at the link below:
+
+
+
+
+
+The contract rule design will be ported to Linux OS dolmain primitives blocks and macos brew domain primitives blocks as well because
+both of these OSes support POSIX as well. 
+
+
+
+
+
 
 
 
