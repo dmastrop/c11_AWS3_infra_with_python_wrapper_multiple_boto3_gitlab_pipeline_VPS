@@ -212,7 +212,7 @@
 
     {
       "command": "mkdir /tmp/zsh_idem18 || echo fallback",
-      "stdout": "",
+      "stdout": "fallback",
       "stderr": "mkdir: /tmp/zsh_idem18: File exists",
       "exit_status": 1,
       "attempt": 1,
@@ -248,7 +248,7 @@
 
     {
       "command": "mkdir /tmp/zsh_idem21 && echo ok ; ln -s /tmp/zsh_idem21 /tmp/zsh_idem21 || echo fallback",
-      "stdout": "ok",
+      "stdout": "fallback",
       "stderr": "mkdir: /tmp/zsh_idem21: File exists\nln: /tmp/zsh_idem21: File exists",
       "exit_status": 1,
       "attempt": 1,
