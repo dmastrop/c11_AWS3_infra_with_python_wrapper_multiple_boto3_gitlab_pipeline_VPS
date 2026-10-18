@@ -32668,11 +32668,11 @@ The preservation applies to an operator-preserving retry in the cleanup_and_retr
 > **Preserving operator structure does *not* mean replaying segments that originally succeeded or fallback segments (`||`) unless they also failed idempotently.**
 
 And the following operator rules (in general): 
-> if a | pipeline retry the entire line  
-> If && we retry the entire line  
-> If || retry just the failed segment  
-> If ; retry just the failed segment  
-> If shell $(....) preserve the shell $() but treat the inside according to the operator rules above
+> if a | pipeline, retry the entire line  
+> If && then retry the entire line  
+> If || then retry just the failed segment  
+> If ; then retry just the failed segment  
+> If shell $(....) then preserve the shell $() but treat the inside according to the operator rules above
 
 This is a very general summary. The Preface Update 12 goes into depth regarding these principles and also provides several examples.
 These principles were used to construct the contract rules. 
