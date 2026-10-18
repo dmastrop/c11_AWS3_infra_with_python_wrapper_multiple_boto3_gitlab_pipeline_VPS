@@ -32652,11 +32652,30 @@ The design arose out of the test cases and is detailed in Preface Update 12 at t
 
 
 
-The contract rule design will be ported to Linux OS dolmain primitives blocks and macos brew domain primitives blocks as well because
+The contract rule design will be ported to Linux OS domain primitives blocks and macos brew domain primitives blocks as well because
 both of these OSes support POSIX as well. 
 
+In short the behavior follows the following basic principles:
 
+First the should be a preservation of the operator structure of the entire command string. 
+These are idempotency test cases so the LLM action plan is cleanup_and_retry. 
+The preservation applies to an operator-preserving retry in the cleanup_and_retry, which means:
 
+> **Retry only the idempotent segments, but NEVER break, remove, or mutate the operator structure that encloses them.**
+
+> **Preserving operator structure *might* require replaying segments that were skipped due to operator semantics (e.g., `&&`, pipelines, subshells).**
+
+> **Preserving operator structure does *not* mean replaying segments that originally succeeded or fallback segments (`||`) unless they also failed idempotently.**
+
+And the following operator rules (in general): 
+> if a | pipeline retry the entire line  
+> If && we retry the entire line  
+> If || retry just the failed segment  
+> If ; retry just the failed segment  
+> If shell $(....) preserve the shell $() but treat the inside according to the operator rules above
+
+This is a very general summary. The Preface Update 12 goes into depth regarding these principles and also provides several examples.
+These principles were used to construct the contract rules. 
 
 
 
