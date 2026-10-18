@@ -32667,12 +32667,44 @@ The preservation applies to an operator-preserving retry in the cleanup_and_retr
 
 > **Preserving operator structure does *not* mean replaying segments that originally succeeded or fallback segments (`||`) unless they also failed idempotently.**
 
-And the following operator rules (in general): 
+Next there needs to be the following operator rules (in general): 
+
 > if a | pipeline, retry the entire line  
 > If && then retry the entire line  
 > If || then retry just the failed segment  
 > If ; then retry just the failed segment  
 > If shell $(....) then preserve the shell $() but treat the inside according to the operator rules above
+
+Finally the cleanup must be bounded by the folowing rules:
+
+- **If stderr contains `mkdir: … File exists`**  
+  → resource type is *directory*  
+  → cleanup = `rmdir PATH`
+
+- **If stderr contains `touch: … File exists`**  
+  → resource type is *file*  
+  → cleanup = `rm -f PATH`
+
+- **If stderr contains `ln: … File exists`**  
+  → resource type is *symlink*  
+  → cleanup = `rm -f PATH`
+
+- **If stderr contains both `mkdir` and `ln` failures on the same path**  
+  → resource type is *ambiguous* (file/symlink/directory conflict)  
+  → cleanup = `rm -f PATH`  
+  (because `rmdir` cannot remove symlinks or files)
+
+- **If stderr contains both `touch` and `mkdir` failures**  
+  → resource type is *ambiguous*  
+  → cleanup = `rm -f PATH`
+
+- **If stderr contains only non‑idempotent failures**  
+  → cleanup = none  
+  → action = fallback
+
+
+
+
 
 This is a very general summary. The Preface Update 12 goes into depth regarding these principles and also provides several examples.
 These principles were used to construct the contract rules. 
