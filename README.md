@@ -32669,13 +32669,18 @@ The preservation applies to an operator-preserving retry in the cleanup_and_retr
 
 > **Preserving operator structure does *not* mean replaying segments that originally succeeded or fallback segments (`||`) unless they also failed idempotently.**
 
-Next there needs to be the following operator rules (in general): 
+
+
+Next there needs to be the following operator rules (in general (these work in conjunction with the preservation rules above): 
 
 > if a | pipeline, retry the entire line  
 > If && then retry the entire line  
-> If || then retry just the failed segment  
-> If ; then retry just the failed segment  
+> If || then retry just the failed segment (in general)
+> If ; then retry just the failed segment  (in general)
 > If shell $(....) then preserve the shell $() but treat the inside according to the operator rules above
+
+
+
 
 Finally the cleanup must be bounded by the folowing rules:
 
