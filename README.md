@@ -32657,8 +32657,10 @@ both of these OSes support POSIX as well.
 
 In short the behavior follows the following basic principles:
 
-First the should be a preservation of the operator structure of the entire command string. 
+First there should be a preservation of the operator structure of the entire command string. 
+
 These are idempotency test cases so the LLM action plan is cleanup_and_retry. 
+
 The preservation applies to an operator-preserving retry in the cleanup_and_retry, which means:
 
 > **Retry only the idempotent segments, but NEVER break, remove, or mutate the operator structure that encloses them.**
