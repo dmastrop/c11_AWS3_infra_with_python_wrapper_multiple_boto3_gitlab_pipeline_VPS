@@ -32710,14 +32710,62 @@ Finally the cleanup must be bounded by the folowing rules:
   → action = fallback
 
 
-
-
-
 This is a very general summary. The Preface Update 12 goes into depth regarding these principles and also provides several examples.
 These principles were used to construct the contract rules. 
 
 
+The rule constructs above have been encoded into the ai_gateway_service.py MacOS zsh domain primitives block as the following:
 
+
+This updates the idempotency block:
+(with updated cleanup semantics)
+
+```
+    # ============================================================
+    # Shell‑Level Idempotency (Allowed)
+    # ============================================================
+    "- macOS‑zsh idempotency includes stderr messages such as:\n"
+    "    * 'File exists' (mkdir, touch, ln)\n"
+    "    * 'not removed' (rmdir)\n"
+    "    * 'no such process' (kill)\n"
+    "- For idempotent 'File exists' failures, cleanup_and_retry MUST use:\n"
+    "    * 'mkdir: ... File exists'  → rmdir <path>\n"
+    "    * 'touch: ... File exists'  → rm -f <path>\n"
+    "    * 'ln: ... File exists'     → rm -f <path>\n"
+    "    * both 'mkdir' and 'ln' on same path → rm -f <path> (ambiguous resource).\n"
+    "    * both 'touch' and 'mkdir' on same path → rm -f <path> (ambiguous resource).\n"
+    "- If stderr contains ONLY non‑idempotent failures (e.g., kill no such process,\n"
+    "  rmdir not removed, package‑manager errors), cleanup MUST be omitted and\n"
+    "  the action MUST be 'fallback'.\n"
+    "- cleanup_and_retry MUST NOT include package‑manager operations.\n"
+```
+
+And this block is a new block that must be added to codify the operator-preserving retry:
+
+```
+    # ============================================================
+    # POSIX Idempotency and Operator‑Preserving Retry
+    # ============================================================
+    "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
+    "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
+    "- Operator‑preserving retry MUST follow these rules:\n"
+    "    * Retry only the idempotent segments, but NEVER break, remove, or mutate\n"
+    "      the operator structure that encloses them.\n"
+    "    * Preserving operator structure MIGHT require replaying segments that were\n"
+    "      skipped due to operator semantics (e.g., '&&', pipelines, subshells).\n"
+    "    * Preserving operator structure does NOT mean replaying segments that\n"
+    "      originally succeeded or fallback segments ('||') unless they also\n"
+    "      failed idempotently.\n"
+    "- Operator‑specific retry behavior MUST follow:\n"
+    "    * Pipelines ('|'): retry the entire pipeline line.\n"
+    "    * '&&' chains: retry starting at the first idempotent failure, preserving\n"
+    "      the '&&' structure (e.g., 'A && B && C' → 'A && B && C', 'B && C', or 'C').\n"
+    "    * '||' chains: retry only the idempotent failing segment(s); do NOT replay\n"
+    "      successful fallback segments.\n"
+    "    * ';' chains: retry only the idempotent failing segment(s) within the chain.\n"
+    "    * Subshells ('$(...)'): preserve the subshell wrapper, but apply the\n"
+    "      operator rules inside according to the above.\n"
+```
 
 
 ---
