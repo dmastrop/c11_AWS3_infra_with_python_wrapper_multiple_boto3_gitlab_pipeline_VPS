@@ -4159,8 +4159,9 @@ MACOS_ZSH_RULES = (
     #   • OS‑signaled remediation does NOT apply.
     #   • ALL package‑manager commands MUST result in fallback.
     #   • Idempotency is limited to shell‑level behavior only.
-    #   • cleanup_and_retry is allowed ONLY for shell‑level
-    #     idempotency (mkdir/touch/rm/kill).
+    #   • cleanup_and_retry is allowed ONLY for shell‑level idempotency
+    #     (mkdir/touch/ln/rmdir/kill), whether in single‑segment commands
+    #     or within POSIX multi‑segment constructs.
     #   • brew MUST NOT be introduced or rewritten.
     #
     # macOS‑zsh requires:
