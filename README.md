@@ -32646,18 +32646,24 @@ The test cases for this suite morphed into an Idempotency + Multi-segment Suite 
 These test cases are very complex in terms of the required inference and reasoning from the LLM and the contract rules had to be 
 refactored to accomodate this test suite.
 
+
+
 The design arose out of the test cases and is detailed in Preface Update 12 at the link below:
 
+---
 
+Insert link here
+
+---
 
 
 
 The contract rule design will be ported to Linux OS domain primitives blocks and macos brew domain primitives blocks as well because
 both of these OSes support POSIX as well. 
 
-In short the behavior follows the following basic principles:
+In short, the behavior follows the following basic principles:
 
-First there should be a preservation of the operator structure of the entire command string. 
+First, there should be a preservation of the operator structure of the entire command string. 
 
 These are idempotency test cases so the LLM action plan is cleanup_and_retry. 
 
@@ -32671,7 +32677,7 @@ The preservation applies to an operator-preserving retry in the cleanup_and_retr
 
 
 
-Next there needs to be the following operator rules (in general (these work in conjunction with the preservation rules above): 
+Next, there needs to be the following operator rules (in general (these work in conjunction with the preservation rules above): 
 
 > if a | pipeline, retry the entire line  
 > If && then retry the entire line  
@@ -32682,7 +32688,7 @@ Next there needs to be the following operator rules (in general (these work in c
 
 
 
-Finally the cleanup must be bounded by the folowing rules:
+Finally, the cleanup must be bounded by the folowing rules:
 
 - **If stderr contains `mkdir: … File exists`**  
   → resource type is *directory*  
@@ -32766,6 +32772,37 @@ And this block is a new block that must be added to codify the operator-preservi
     "    * Subshells ('$(...)'): preserve the subshell wrapper, but apply the\n"
     "      operator rules inside according to the above.\n"
 ```
+
+NOTE this rule: 
+
+```
+    "- If stderr contains ONLY non‑idempotent failures (e.g., kill no such process,\n"
+    "  rmdir not removed, package‑manager errors), cleanup MUST be omitted and\n"
+    "  the action MUST be 'fallback'.\n"
+```
+The reason that a rmdir not removed cannot be addressed by idempotency cleanup_and_retry is for several reasons, most of which are
+related to safety issues, unintentional deletion of files (recursive deletion cannot be used), or privilege issues (security).
+
+If the LLM tried to “fix” this by:
+
+- recursively deleting the directory  
+- force‑removing contents  
+- rewriting the command  
+- escalating privileges  
+- guessing the user’s intent  
+
+it would violate:
+
+- Destructive command rules 
+- OS mutation guard
+- Safety constraints 
+- POSIX minimal cleanup rules  
+- No‑guessing rules  
+- No‑privilege‑escalation rules
+
+
+
+
 
 
 ---
