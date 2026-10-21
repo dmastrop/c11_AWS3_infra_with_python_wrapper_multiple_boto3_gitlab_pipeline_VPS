@@ -32817,9 +32817,6 @@ multiple segments, and remediate these command constructs when there errors.
 
 - **I** = idempotent failure  
 - **NI** = non‑idempotent failure  
-- **AP** = ambiguous resource  
-- **CP** = cleanup primitive  
-- **OPR** = operator‑preserving retry
 
 ---
 
