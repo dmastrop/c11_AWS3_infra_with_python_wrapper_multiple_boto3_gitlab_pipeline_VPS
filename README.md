@@ -300,6 +300,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update11: Phase 4a.1.2 LLM Contract Rule Engineering V: GPT‑5.4 vs GPT‑5.6‑Sol Model‑Behavior Divergence in Windows PowerShell Case Study: Near‑Miss Cmdlet Rewrite Suppression via Unknown‑Cmdlet Literal‑Precedence Cluster Semantics (Patch2-Rev5)](#prefaceupdate11)
 
+- [Preface Update12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design](#prefaceupdate12)
 
 
 
@@ -368,6 +369,289 @@ The last column is typically the Notes column and can be very informative as to 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 ---
+---
+
+
+
+
+<a name="prefaceupdate11"></a>
+## PREFACE UPDATE12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design
+
+
+### High-Level Section Summaries:
+
+1. Overview
+- Motivation
+- Why POSIX idempotency is uniquely difficult
+- Why multi‑segment operator‑preserving retry is required
+- Summary of failures before rule‑set update
+- Summary of 21‑case success after rule‑set update
+
+2. Core Design Principle: Operator‑Preserving Retry
+- High‑level preservation rule
+- Why operator structure must never be broken
+- Why replaying skipped segments is sometimes required
+- Why fallback segments must not be replayed
+
+3. POSIX Operator Semantics (Baseline)
+- Pipelines
+- AND‑chains
+- OR‑chains
+- Semicolon chains
+- Subshells
+- Nested subshells
+- Mixed‑operator contexts
+
+4. Operator‑Preserving Retry Rules (Final Form)
+- Full formal rule block (the one you included)
+- Explanation of each operator class
+- Examples for each operator class
+
+5. Cleanup Primitive Selection (POSIX)
+- Full cleanup rule block (the one you included)
+- Resource‑type inference (directory/file/symlink/ambiguous)
+- Why ambiguous → rm -f
+- Why non‑idempotent → fallback
+
+6. Multi‑Segment Idempotency Model
+- How idempotent failures propagate
+- How operator semantics affect retry boundaries
+- How skipped segments are handled
+- How fallback suppression works
+
+7. Subshell and Nested Subshell Preservation
+- Why subshell wrappers must be preserved
+- How operator rules apply inside subshells
+- Examples
+
+8. Mixed‑Operator Chains
+- How to preserve structure across multiple operators
+- How to retry only idempotent segments
+- How to avoid replaying fallback segments
+- Examples (including the complex index 20 case)
+
+9. Non‑Idempotent Failures and Safety Constraints
+- Why rmdir: not removed → fallback
+- Why kill: no such process → fallback
+- Why PM commands → fallback
+- Why destructive cleanup is forbidden
+
+10. Full 21‑Case Validation Summary
+- Narrative summary of the matrix
+- Key patterns observed
+- Why the rule‑set is correct and stable
+
+11. Contract Rule Blocks (Final Encoded Form)
+- The updated Shell‑Level Idempotency block
+- The new POSIX Idempotency + Operator‑Preserving Retry block
+- Commentary on how these encode the design principles
+
+12. Closing Notes
+- Impact on Phase 4a.1.2, 4a.1.3, 4a.1.4, 4a.2.2, and Phase5
+- Next steps: porting to BusyBox, macOS‑brew, Linux OSes
+
+
+---
+
+### **1. Overview**
+
+This Preface Update documents the most significant advancement to date in **Phase 4a.1.2 LLM Contract Rule Engineering**: the introduction of a **POSIX idempotency + multi‑segment operator‑preserving retry model** for GPT‑5.6‑Sol. This update establishes the first fully deterministic, operator‑aware, resource‑typed, multi‑segment idempotency framework across macOS‑zsh — and forms the foundation for all future POSIX‑shell domains (BusyBox, Linux Bash, Linux Dash, macOS‑brew).
+
+At a high level, this update solves a problem that earlier contract versions could not:  
+**How to safely and deterministically retry POSIX commands that fail idempotently, without breaking operator structure, without replaying successful fallback segments, and without performing unsafe cleanup.**
+
+GPT‑5.6‑Sol required a more rigorous and explicit rule‑set than GPT‑5.4 due to its stricter semantic‑resolution behavior. Earlier versions relied on implicit operator semantics; GPT‑5.6‑Sol requires explicit operator‑preserving rules to avoid salience collapse and incorrect fallback propagation.
+
+This update introduces three foundational design pillars:
+
+1. **Operator‑Preserving Retry** — the LLM must retry only idempotent segments while preserving the exact operator structure (`&&`, `||`, `|`, `;`, subshells, nested subshells).  
+2. **POSIX Operator Semantics** — each operator class defines its own retry boundary (pipeline → entire line; `||` → failed segment only; `&&` → retry from first idempotent failure; subshell → preserve wrapper).  
+3. **Cleanup Primitive Selection** — cleanup must be strictly determined by resource‑type inference from stderr (`mkdir`→directory→`rmdir`; `touch`→file→`rm -f`; `ln`→symlink→`rm -f`; mixed→ambiguous→`rm -f`; non‑idempotent→no cleanup→fallback).
+
+These three pillars combine into a single deterministic model that allows GPT‑5.6‑Sol to correctly handle **all 21 POSIX idempotency + multi‑segment test cases**, including complex mixed‑operator chains such as:
+
+```
+mkdir /tmp/zsh_idem21 && echo ok ; ln -s /tmp/zsh_idem21 /tmp/zsh_idem21 || echo fallback
+```
+
+This case — previously impossible under GPT‑5.4 without special overrides — is now handled perfectly under GPT‑5.6‑Sol using the new operator‑preserving retry rules.
+
+The update also introduces two new contract‑rule blocks:
+
+- **Updated Shell‑Level Idempotency Block** (with resource‑type cleanup semantics)  
+- **New POSIX Idempotency + Operator‑Preserving Retry Block** (encoding the operator‑preserving model)
+
+These blocks are included later in this Preface and represent the first time the contract has explicitly encoded multi‑operator retry semantics.
+
+The result is a **fully deterministic**, **operator‑aware**, **resource‑typed**, **safe**, and **portable** POSIX idempotency model that can be applied across all POSIX shells.
+
+This update is the foundation for:
+
+- BusyBox POSIX idempotency  
+- Linux Bash POSIX idempotency  
+- Linux Dash POSIX idempotency  
+- macOS‑brew POSIX idempotency  
+
+and will be reused across Phase 4a.1.3 and Phase 4a.2.2 (intent→plan→commands pipeline).
+
+
+### **2. Core Design Principle: Operator‑Preserving Retry**
+
+The defining breakthrough of Preface Update 12 is the formalization of **Operator‑Preserving Retry** — a rule that finally gives GPT‑5.6‑Sol deterministic behavior across multi‑operator POSIX command strings. This rule is the backbone of the entire idempotency model. Everything else (cleanup primitives, resource‑type inference, multi‑segment idempotency, subshell preservation) exists to support this one principle.
+
+At its core, the rule states:
+
+> **Retry only the idempotent segments, but NEVER break, remove, or mutate the operator structure that encloses them.**
+
+This single constraint forces the LLM to treat the command string not as a flat sequence of tokens, but as a **structured operator graph** whose semantics must be preserved across retries. GPT‑5.6‑Sol is capable of this level of syntactic reasoning — but only when the contract explicitly encodes the preservation requirement.
+
+#### **2.1 Why Operator Structure Must Be Preserved**
+
+POSIX operators (`&&`, `||`, `|`, `;`, subshells) define **execution semantics**, not just string concatenation. Breaking operator structure changes:
+
+- execution order  
+- short‑circuit behavior  
+- fallback behavior  
+- pipeline propagation  
+- subshell evaluation  
+- segment skipping rules  
+
+For example:
+
+```
+A && B
+```
+
+means “run B only if A succeeds.”
+
+If the LLM rewrote this as:
+
+```
+A ; B
+```
+
+it would **change the meaning** of the command, violating the contract’s safety and determinism guarantees.
+
+Similarly:
+
+```
+A || B
+```
+
+means “run B only if A fails.”
+
+If the LLM rewrote this as:
+
+```
+A ; B
+```
+
+it would incorrectly replay fallback segments, violating safety constraints.
+
+Preserving operator structure ensures:
+
+- **semantic equivalence**  
+- **retry correctness**  
+- **no accidental fallback replay**  
+- **no accidental destructive execution**  
+- **no mutation of user intent**  
+
+This is why operator preservation is the first and most important rule in the entire design.
+
+#### **2.2 Why Only Idempotent Segments Are Retried**
+
+Idempotency means:
+
+> **Retrying the same command after cleanup will succeed.**
+
+Thus:
+
+- `mkdir: File exists` → idempotent  
+- `touch: File exists` → idempotent  
+- `ln: File exists` → idempotent  
+- `kill: no such process` → **non‑idempotent**  
+- `rmdir: not removed` → **non‑idempotent**  
+- package‑manager errors → **non‑idempotent**  
+
+Retrying non‑idempotent failures is unsafe and forbidden.
+
+This is why the retry model must be selective — retry only the segments that failed idempotently.
+
+#### **2.3 Why Skipped Segments Must Sometimes Be Replayed**
+
+Operators like `&&`, pipelines, and subshells can **skip** segments:
+
+- `&&` skips the right‑hand side if the left fails  
+- pipelines skip downstream commands if upstream fails  
+- subshells skip internal segments based on operator semantics  
+
+To preserve operator structure, the LLM must sometimes **replay skipped segments**, because skipping is part of the operator semantics.
+
+Example:
+
+```
+A && B
+```
+
+If `A` fails idempotently, `B` is skipped.
+
+Retry must be:
+
+```
+A && B
+```
+
+not:
+
+```
+A
+```
+
+because removing `&& B` breaks operator structure.
+
+This is the subtle but critical insight that makes GPT‑5.6‑Sol succeed where earlier models failed.
+
+#### **2.4 Why Successful Fallback Segments Must NOT Be Replayed**
+
+In `||` chains:
+
+```
+A || B
+```
+
+If `A` fails idempotently and `B` succeeds, retry must be:
+
+```
+A
+```
+
+NOT:
+
+```
+A || B
+```
+
+because replaying fallback segments violates:
+
+- safety rules  
+- user intent  
+- operator semantics  
+- contract constraints  
+
+This rule prevents destructive or unintended fallback behavior.
+
+#### **2.5 The Final Operator‑Preserving Retry Rule**
+
+This is the exact rule encoded into the contract:
+
+> **Retry only the idempotent segments, but NEVER break, remove, or mutate the operator structure that encloses them.**  
+>  
+> **Preserving operator structure *might* require replaying segments that were skipped due to operator semantics (e.g., `&&`, pipelines, subshells).**  
+>  
+> **Preserving operator structure does *not* mean replaying segments that originally succeeded or fallback segments (`||`) unless they also failed idempotently.**
+
+This rule is the foundation of the entire POSIX idempotency model.
+
 ---
 
 
