@@ -2403,6 +2403,12 @@ consistently and deterministically across every operator class and every multi�
 
 This section summarizes the matrix results at a conceptual level, highlighting the patterns that prove the model is correct, stable, and ready for Phase 4a.1.3 and Phase 4a.2.2.
 
+
+The original test matrix and testing information is at this link below in the Update59 chapter:
+
+- [Testing idempotency + multi-segement POSIX on MacOS zsh](#macos-zsh-idempotency-multi-segment)
+
+
 ---
 
 #### **10.1 Summary of Single‑Segment Idempotency Cases (1–3)**
