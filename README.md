@@ -456,10 +456,9 @@ The last column is typically the Notes column and can be very informative as to 
 
 The intial testing was performed on the macos-zsh OS. The test matrix is included inu this section below in the Update59 chapter:
 
-- [Testing idemptoency + multi-segement POSIX on MacOS zsh](#macos-zsh-idempotency-multi-segment></a>
+- [Testing idempotency + multi-segement POSIX on MacOS zsh](#macos-zsh-idempotency-multi-segment)
 
 The test matrix is re-represented as examples in this Preface Update12 as well.
-
 
 ---
 
