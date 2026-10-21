@@ -374,7 +374,7 @@ The last column is typically the Notes column and can be very informative as to 
 
 
 
-<a name="prefaceupdate11"></a>
+<a name="prefaceupdate12"></a>
 ## PREFACE UPDATE12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design
 
 
@@ -449,6 +449,16 @@ The last column is typically the Notes column and can be very informative as to 
 12. Closing Notes
 - Impact on Phase 4a.1.2, 4a.1.3, 4a.1.4, 4a.2.2, and Phase5
 - Next steps: porting to BusyBox, macOS‑brew, Linux OSes
+
+
+
+### **Important Note on Testing Matrix**
+
+The intial testing was performed on the macos-zsh OS. The test matrix is included inu this section below in the Update59 chapter:
+
+- [Testing idemptoency + multi-segement POSIX on MacOS zsh](#macos-zsh-idempotency-multi-segment></a>
+
+The test matrix is re-represented as examples in this Preface Update12 as well.
 
 
 ---
@@ -32928,7 +32938,7 @@ The test matrix for macOS‑zsh Multi‑Segment Rewrite Patch2 — 21‑Case Mat
 
 
 
-
+<a name="macos-zsh-idempotency-multi-segment"></a>
 ##### Regression on the 21 idempotency + Multi-segment test cases on MacOS zh with gpt-5.6-sol
 
 The test cases for this suite morphed into an Idempotency + Multi-segment Suite of 21 test cases to fully test POSIX with macos-zsh
@@ -32942,7 +32952,7 @@ The design arose out of the test cases and is detailed in Preface Update 12 at t
 
 ---
 
-Insert link here
+- [Preface Update12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design](#prefaceupdate12)
 
 ---
 
