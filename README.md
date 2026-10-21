@@ -32813,7 +32813,17 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-Test Case 1 (index 0)**  
+**Legend**
+
+- **I** = idempotent failure  
+- **NI** = non‑idempotent failure  
+- **AP** = ambiguous resource  
+- **CP** = cleanup primitive  
+- **OPR** = operator‑preserving retry
+
+---
+
+**Test Case 1 (index 0)**  
 **Command:** `mkdir /tmp/zsh_idem1`  
 **Operator:** single segment  
 **Failures:**  
