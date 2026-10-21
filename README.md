@@ -32802,6 +32802,248 @@ it would violate:
 
 
 
+Since the testing in this area is complex, a table format cannot be used. The test results are presented below. All the test cases 
+are now passing with the added code as noted above. The LLM is able to do very complex reasoning over POSIX idempotency with 
+multiple segments, and remediate these command constructs when there errors.
+
+
+###### macOS‑zsh POSIX Idempotency + Multi‑Segment Test Matrix (21 Cases) gpt-5.6-sol
+
+**Legend**  
+- **I** = idempotent failure  
+- **NI** = non‑idempotent failure  
+- **AP** = ambiguous resource  
+- **CP** = cleanup primitive  
+- **OPR** = operator‑preserving retry
+
+---
+
+## ✔ **Test Case 1 (index 0)**  
+**Command:** `mkdir /tmp/zsh_idem1`  
+**Operator:** single segment  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir /tmp/zsh_idem1`  
+**Notes:** Simple idempotency.
+
+---
+
+## ✔ **Test Case 2 (index 1)**  
+**Command:** `touch /tmp/zsh_idem2`  
+**Operator:** single segment  
+**Failure:** `touch` → I  
+**Cleanup:** `rm -f`  
+**Retry:** `touch /tmp/zsh_idem2`  
+**Notes:** Simple idempotency.
+
+---
+
+## ✔ **Test Case 3 (index 2)**  
+**Command:** `ln -s /tmp/source3 /tmp/zsh_idem3`  
+**Operator:** single segment  
+**Failure:** `ln -s` → I  
+**Cleanup:** `rm -f`  
+**Retry:** `ln -s /tmp/source3 /tmp/zsh_idem3`  
+**Notes:** Simple idempotency.
+
+---
+
+## ✔ **Test Case 4 (index 3)**  
+**Command:** `rmdir /tmp/zsh_idem4`  
+**Operator:** single segment  
+**Failure:** `rmdir: not removed` → **NI**  
+**Cleanup:** none  
+**Action:** fallback  
+**Notes:** Non‑idempotent; cannot be fixed safely.
+
+---
+
+## ✔ **Test Case 5 (index 4)**  
+**Command:** `kill 99999`  
+**Operator:** single segment  
+**Failure:** `kill: no such process` → **NI**  
+**Cleanup:** none  
+**Action:** fallback  
+**Notes:** Non‑idempotent.
+
+---
+
+## ✔ **Test Case 6 (index 5)**  
+**Command:** `mkdir /tmp/zsh_idem6 ; touch /tmp/zsh_idem6`  
+**Operator:** `;` chain  
+**Failure:** `touch` → I  
+**Cleanup:** `rm -f`  
+**Retry:** `touch /tmp/zsh_idem6`  
+**Notes:** `;` → retry only failed segment.
+
+---
+
+## ✔ **Test Case 7 (index 6)**  
+**Command:** `mkdir /tmp/zsh_idem7 && touch /tmp/zsh_idem7`  
+**Operator:** `&&` chain  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir /tmp/zsh_idem7 && touch /tmp/zsh_idem7`  
+**Notes:** `&&` → retry starting at first idempotent failure; preserve structure.
+
+---
+
+## ✔ **Test Case 8 (index 7)**  
+**Command:** `touch /tmp/zsh_idem8 || ln -s /tmp/zsh_idem8 /tmp/zsh_idem8`  
+**Operator:** `||` chain  
+**Failure:** `touch` → I  
+**Cleanup:** `rm -f`  
+**Retry:** `touch /tmp/zsh_idem8`  
+**Notes:** `||` → retry only failed segment; do **NOT** replay fallback.
+
+---
+
+## ✔ **Test Case 9 (index 8)**  
+**Command:** `mkdir /tmp/zsh_idem9 | grep foo`  
+**Operator:** pipeline  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir /tmp/zsh_idem9 | grep foo`  
+**Notes:** Pipeline → retry entire pipeline.
+
+---
+
+## ✔ **Test Case 10 (index 9)**  
+**Command:** `echo $(touch /tmp/zsh_idem10)`  
+**Operator:** subshell  
+**Failure:** `touch` → I  
+**Cleanup:** `rm -f`  
+**Retry:** `echo $(touch /tmp/zsh_idem10)`  
+**Notes:** Preserve subshell wrapper.
+
+---
+
+## ✔ **Test Case 11 (index 10)**  
+**Command:** `mkdir ; touch ; ln -s`  
+**Operator:** `;` chain  
+**Failure:** `mkdir` → I  
+**Failure:** `touch` → I  
+**Failure:** `ln -s` → I  
+**Cleanup:** `rm -f` (AP: mkdir + touch + ln)  
+**Retry:** `mkdir ; touch ; ln -s`  
+**Notes:** All segments failed → retry all.
+
+---
+
+## ✔ **Test Case 12 (index 11)**  
+**Command:** `apt-get install nonexistent`  
+**Operator:** single segment  
+**Failure:** package manager → forbidden  
+**Action:** fallback  
+**Notes:** macOS‑zsh has no PM.
+
+---
+
+## ✔ **Test Case 13 (index 12)**  
+**Command:** `mkdir ; echo ok ; ln -s`  
+**Operator:** `;` chain  
+**Failure:** `mkdir` → I  
+**Failure:** `ln -s` → I  
+**Cleanup:** `rm -f` (AP)  
+**Retry:** `mkdir ; ln -s`  
+**Notes:** Skip successful `echo ok`.
+
+---
+
+## ✔ **Test Case 14 (index 13)**  
+**Command:** `echo ok ; mkdir ; echo done`  
+**Operator:** `;` chain  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir`  
+**Notes:** Only one failure.
+
+---
+
+## ✔ **Test Case 15 (index 14)**  
+**Command:** `echo $(mkdir) ; echo ok`  
+**Operator:** subshell + `;`  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `echo $(mkdir)`  
+**Notes:** Preserve subshell wrapper.
+
+---
+
+## ✔ **Test Case 16 (index 15)**  
+**Command:** `mkdir | cat`  
+**Operator:** pipeline  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir | cat`  
+**Notes:** Pipeline → retry entire pipeline.
+
+---
+
+## ✔ **Test Case 17 (index 16)**  
+**Command:** `echo foo | mkdir | grep foo`  
+**Operator:** pipeline  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `echo foo | mkdir | grep foo`  
+**Notes:** Pipeline → retry entire pipeline.
+
+---
+
+## ✔ **Test Case 18 (index 17)**  
+**Command:** `mkdir || echo fallback`  
+**Operator:** `||`  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir`  
+**Notes:** Do NOT replay fallback.
+
+---
+
+## ✔ **Test Case 19 (index 18)**  
+**Command:** `mkdir && echo ok`  
+**Operator:** `&&`  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `mkdir && echo ok`  
+**Notes:** `&&` → preserve structure.
+
+---
+
+## ✔ **Test Case 20 (index 19)**  
+**Command:** `echo $(echo $(mkdir)))`  
+**Operator:** nested subshell  
+**Failure:** `mkdir` → I  
+**Cleanup:** `rmdir`  
+**Retry:** `echo $(echo $(mkdir)))`  
+**Notes:** Preserve both subshell wrappers.
+
+---
+
+## ⭐ **Test Case 21 (index 20)**  
+**Command:**  
+`mkdir && echo ok ; ln -s || echo fallback`
+
+**Operator:** mixed (`&&`, `;`, `||`)  
+**Failures:**  
+- `mkdir` → I  
+- `ln -s` → I  
+- `echo ok` → skipped  
+- `echo fallback` → succeeded  
+
+**Cleanup:** `rm -f` (AP: mkdir + ln)  
+**Retry:**  
+`mkdir && echo ok ; ln -s`  
+(do NOT replay fallback)
+
+**Notes:**  
+This is the most complex case in the suite.  
+The operator‑preserving rules handle it perfectly.
+
+
+
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
