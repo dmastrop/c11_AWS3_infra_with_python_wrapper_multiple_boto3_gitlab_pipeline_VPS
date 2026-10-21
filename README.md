@@ -32679,11 +32679,11 @@ The preservation applies to an operator-preserving retry in the cleanup_and_retr
 
 Next, there needs to be the following operator rules (in general (these work in conjunction with the preservation rules above): 
 
-> if a | pipeline, retry the entire line  
-> If && then retry the entire line  
-> If || then retry just the failed segment (in general)
-> If ; then retry just the failed segment  (in general)
-> If shell $(....) then preserve the shell $() but treat the inside according to the operator rules above
+- If a | pipeline, retry the entire line  
+- If && then retry the entire line  
+- If || then retry just the failed segment (in general)
+- If ; then retry just the failed segment  (in general)
+- If shell $(....) then preserve the shell $() but treat the inside according to the operator rules above
 
 
 
@@ -32818,7 +32818,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 1 (index 0)**  
+**Test Case 1 (index 0)**  
 **Command:** `mkdir /tmp/zsh_idem1`  
 **Operator:** single segment  
 **Failure:** `mkdir` → I  
@@ -32828,7 +32828,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 2 (index 1)**  
+**Test Case 2 (index 1)**  
 **Command:** `touch /tmp/zsh_idem2`  
 **Operator:** single segment  
 **Failure:** `touch` → I  
@@ -32838,7 +32838,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 3 (index 2)**  
+**Test Case 3 (index 2)**  
 **Command:** `ln -s /tmp/source3 /tmp/zsh_idem3`  
 **Operator:** single segment  
 **Failure:** `ln -s` → I  
@@ -32848,7 +32848,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 4 (index 3)**  
+**Test Case 4 (index 3)**  
 **Command:** `rmdir /tmp/zsh_idem4`  
 **Operator:** single segment  
 **Failure:** `rmdir: not removed` → **NI**  
@@ -32858,7 +32858,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 5 (index 4)**  
+**Test Case 5 (index 4)**  
 **Command:** `kill 99999`  
 **Operator:** single segment  
 **Failure:** `kill: no such process` → **NI**  
@@ -32868,7 +32868,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 6 (index 5)**  
+**Test Case 6 (index 5)**  
 **Command:** `mkdir /tmp/zsh_idem6 ; touch /tmp/zsh_idem6`  
 **Operator:** `;` chain  
 **Failure:** `touch` → I  
@@ -32878,7 +32878,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 7 (index 6)**  
+**Test Case 7 (index 6)**  
 **Command:** `mkdir /tmp/zsh_idem7 && touch /tmp/zsh_idem7`  
 **Operator:** `&&` chain  
 **Failure:** `mkdir` → I  
@@ -32888,7 +32888,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 8 (index 7)**  
+**Test Case 8 (index 7)**  
 **Command:** `touch /tmp/zsh_idem8 || ln -s /tmp/zsh_idem8 /tmp/zsh_idem8`  
 **Operator:** `||` chain  
 **Failure:** `touch` → I  
@@ -32898,7 +32898,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 9 (index 8)**  
+**Test Case 9 (index 8)**  
 **Command:** `mkdir /tmp/zsh_idem9 | grep foo`  
 **Operator:** pipeline  
 **Failure:** `mkdir` → I  
@@ -32908,7 +32908,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 10 (index 9)**  
+**Test Case 10 (index 9)**  
 **Command:** `echo $(touch /tmp/zsh_idem10)`  
 **Operator:** subshell  
 **Failure:** `touch` → I  
@@ -32918,7 +32918,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 11 (index 10)**  
+**Test Case 11 (index 10)**  
 **Command:** `mkdir ; touch ; ln -s`  
 **Operator:** `;` chain  
 **Failure:** `mkdir` → I  
@@ -32930,7 +32930,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 12 (index 11)**  
+**Test Case 12 (index 11)**  
 **Command:** `apt-get install nonexistent`  
 **Operator:** single segment  
 **Failure:** package manager → forbidden  
@@ -32939,7 +32939,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 13 (index 12)**  
+**Test Case 13 (index 12)**  
 **Command:** `mkdir ; echo ok ; ln -s`  
 **Operator:** `;` chain  
 **Failure:** `mkdir` → I  
@@ -32950,7 +32950,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 14 (index 13)**  
+**Test Case 14 (index 13)**  
 **Command:** `echo ok ; mkdir ; echo done`  
 **Operator:** `;` chain  
 **Failure:** `mkdir` → I  
@@ -32960,7 +32960,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 15 (index 14)**  
+**Test Case 15 (index 14)**  
 **Command:** `echo $(mkdir) ; echo ok`  
 **Operator:** subshell + `;`  
 **Failure:** `mkdir` → I  
@@ -32970,7 +32970,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 16 (index 15)**  
+**Test Case 16 (index 15)**  
 **Command:** `mkdir | cat`  
 **Operator:** pipeline  
 **Failure:** `mkdir` → I  
@@ -32980,7 +32980,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 17 (index 16)**  
+**Test Case 17 (index 16)**  
 **Command:** `echo foo | mkdir | grep foo`  
 **Operator:** pipeline  
 **Failure:** `mkdir` → I  
@@ -32990,7 +32990,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 18 (index 17)**  
+**Test Case 18 (index 17)**  
 **Command:** `mkdir || echo fallback`  
 **Operator:** `||`  
 **Failure:** `mkdir` → I  
@@ -33000,7 +33000,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 19 (index 18)**  
+**Test Case 19 (index 18)**  
 **Command:** `mkdir && echo ok`  
 **Operator:** `&&`  
 **Failure:** `mkdir` → I  
@@ -33010,7 +33010,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ✔ **Test Case 20 (index 19)**  
+**Test Case 20 (index 19)**  
 **Command:** `echo $(echo $(mkdir)))`  
 **Operator:** nested subshell  
 **Failure:** `mkdir` → I  
@@ -33020,7 +33020,7 @@ multiple segments, and remediate these command constructs when there errors.
 
 ---
 
-## ⭐ **Test Case 21 (index 20)**  
+**Test Case 21 (index 20)**  
 **Command:**  
 `mkdir && echo ok ; ln -s || echo fallback`
 
