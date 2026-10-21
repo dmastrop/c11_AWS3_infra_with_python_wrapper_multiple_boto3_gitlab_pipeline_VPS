@@ -2920,7 +2920,7 @@ This is where the system begins to **learn** from real‑world failures.
 
 ---
 
-#### **12.6 Final Thoughts
+#### **12.6 Final Thoughts**
 
 The POSIX idempotency + operator‑preserving retry model is:
 
