@@ -663,6 +663,1006 @@ This rule is the foundation of the entire POSIX idempotency model.
 
 ---
 
+### **3. POSIX Operator Semantics (Baseline)**
+
+Before an LLM can perform safe, deterministic idempotency repair, it must understand the **semantic meaning** of each POSIX operator. This section establishes the baseline operator model that GPT‑5.6‑Sol must preserve during cleanup_and_retry. These semantics are not optional — they define execution order, short‑circuit behavior, fallback behavior, and retry boundaries. Breaking them mutates user intent and violates contract safety guarantees.
+
+The operator semantics below form the “grammar” that the Operator‑Preserving Retry Rule must respect. They also explain why retry boundaries differ across pipelines, AND‑chains, OR‑chains, semicolon chains, and subshells.
+
+---
+
+#### **3.1 Pipelines (`|`) — Composite Execution Context**
+
+A pipeline is not a sequence of independent commands. It is a **single composite operator context** where:
+
+- The **stdout** of each segment becomes the **stdin** of the next.
+- Failure in any upstream segment prevents downstream segments from executing correctly.
+- Retry boundaries must include the entire pipeline.
+
+Example:
+
+```
+A | B | C
+```
+
+If `A` fails idempotently, retry must be:
+
+```
+A | B | C
+```
+
+not:
+
+```
+A
+```
+
+because removing `| B | C` breaks the composite operator structure.
+
+This is why pipelines always require **full‑line retry**.
+
+---
+
+#### **3.2 AND‑Chains (`&&`) — Short‑Circuit on Failure**
+
+The `&&` operator means:
+
+> **Execute the right‑hand side only if the left‑hand side succeeds.**
+
+This creates a **short‑circuit** condition:
+
+- If the left segment fails, the right segment is skipped.
+- If the left segment fails idempotently, retry must preserve the entire `&&` chain.
+
+Example:
+
+```
+A && B && C
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+A && B && C
+```
+
+If `B` fails idempotently:
+
+Retry:
+
+```
+B && C
+```
+
+If `C` fails idempotently:
+
+Retry:
+
+```
+C
+```
+
+The retry boundary is always:
+
+> **Start at the first idempotent failure and preserve the `&&` structure.**
+
+---
+
+#### **3.3 OR‑Chains (`||`) — Fallback on Failure**
+
+The `||` operator means:
+
+> **Execute the right‑hand side only if the left‑hand side fails.**
+
+This creates a **fallback** condition:
+
+- If the left segment fails idempotently, retry only that segment.
+- If the fallback segment succeeded, it must **not** be replayed.
+- If both segments fail idempotently, retry the entire chain.
+
+Example:
+
+```
+A || B
+```
+
+If `A` fails idempotently and `B` succeeds:
+
+Retry:
+
+```
+A
+```
+
+If both fail idempotently:
+
+Retry:
+
+```
+A || B
+```
+
+This operator is the only one where **successful segments must be removed** during retry.
+
+---
+
+#### **3.4 Semicolon Chains (`;`) — Sequential Execution**
+
+The `;` operator means:
+
+> **Execute each segment sequentially, regardless of success or failure.**
+
+This operator has no short‑circuit semantics. It is the simplest operator:
+
+- Retry only the idempotent failing segments.
+- Preserve the `;` structure.
+- Skip successful segments.
+
+Example:
+
+```
+A ; B ; C
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+A
+```
+
+If `A` and `B` fail idempotently:
+
+Retry:
+
+```
+A ; B
+```
+
+If all fail idempotently:
+
+Retry:
+
+```
+A ; B ; C
+```
+
+---
+
+#### **3.5 Subshells (`$(…)`) — Isolated Execution Context**
+
+A subshell is an isolated execution environment:
+
+- It has its own operator semantics inside.
+- It must be preserved exactly.
+- Retry boundaries apply **inside** the subshell.
+- The wrapper `$(…)` must never be removed or mutated.
+
+Example:
+
+```
+echo $(A ; B)
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+echo $(A)
+```
+
+Example:
+
+```
+echo $(A && B)
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+echo $(A && B)
+```
+
+Example:
+
+```
+echo $(A | B)
+```
+
+Retry:
+
+```
+echo $(A | B)
+```
+
+Subshells combine operator semantics with isolation — making them one of the most complex contexts.
+
+---
+
+#### **3.6 Nested Subshells — Multi‑Layer Preservation**
+
+Nested subshells require multi‑layer preservation:
+
+```
+echo $(echo $(A))
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+echo $(echo $(A))
+```
+
+The LLM must preserve:
+
+- outer subshell  
+- inner subshell  
+- operator semantics inside  
+
+GPT‑5.6‑Sol handles this correctly under the new rule‑set.
+
+---
+
+#### **3.7 Mixed‑Operator Chains — Composite Semantics**
+
+Mixed operators combine multiple semantics:
+
+```
+A && B ; C | D || E
+```
+
+Retry boundaries must respect:
+
+- `&&` short‑circuit  
+- `;` sequential semantics  
+- `|` pipeline semantics  
+- `||` fallback semantics  
+- subshell boundaries (if present)
+
+This is the most complex operator class and is fully exercised in **Test Case 21**.
+
+GPT‑5.6‑Sol successfully handles mixed‑operator chains using the operator‑preserving retry rule.
+
+---
+
+
+### **4. Operator‑Preserving Retry Rules (Final Form)**
+
+This section encodes the **formal retry semantics** that GPT‑5.6‑Sol must follow for all POSIX idempotency test cases. These rules are the heart of Preface Update 12. They transform the LLM from a token‑rewriter into a **deterministic operator‑aware execution engine** capable of repairing multi‑segment POSIX command failures without mutating user intent.
+
+These rules were derived from the high‑level preservation principle in Section 2 and the baseline operator semantics in Section 3. They are now expressed in their final contract‑ready form.
+
+---
+
+#### **4.1 The Core Rule (Restated)**
+
+> **Retry only the idempotent segments, but NEVER break, remove, or mutate the operator structure that encloses them.**  
+>  
+> **Preserving operator structure *might* require replaying segments that were skipped due to operator semantics (e.g., `&&`, pipelines, subshells).**  
+>  
+> **Preserving operator structure does *not* mean replaying segments that originally succeeded or fallback segments (`||`) unless they also failed idempotently.**
+
+This rule is the foundation for all operator‑specific behavior.
+
+---
+
+#### **4.2 Pipelines (`|`) — Retry the Entire Pipeline**
+
+Pipelines form a **single composite execution context**. If any segment fails idempotently, the entire pipeline must be retried.
+
+Example:
+
+```
+A | B | C
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+A | B | C
+```
+
+If `B` fails idempotently:
+
+Retry:
+
+```
+A | B | C
+```
+
+If `C` fails idempotently:
+
+Retry:
+
+```
+A | B | C
+```
+
+**Reason:** downstream commands depend on upstream output; removing segments breaks semantics.
+
+---
+
+#### **4.3 AND‑Chains (`&&`) — Retry Starting at First Idempotent Failure**
+
+The `&&` operator short‑circuits on failure. Retry must begin at the **first idempotent failure**, preserving the `&&` structure.
+
+Example:
+
+```
+A && B && C
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+A && B && C
+```
+
+If `B` fails idempotently:
+
+Retry:
+
+```
+B && C
+```
+
+If `C` fails idempotently:
+
+Retry:
+
+```
+C
+```
+
+**Reason:** removing `&&` changes execution semantics; replaying skipped segments preserves structure.
+
+---
+
+#### **4.4 OR‑Chains (`||`) — Retry Only the Idempotent Segment(s)**
+
+The `||` operator is a fallback operator. Successful fallback segments must **not** be replayed.
+
+Example:
+
+```
+A || B
+```
+
+If `A` fails idempotently and `B` succeeds:
+
+Retry:
+
+```
+A
+```
+
+If both fail idempotently:
+
+Retry:
+
+```
+A || B
+```
+
+**Reason:** replaying fallback segments violates safety and mutates user intent.
+
+---
+
+#### **4.5 Semicolon Chains (`;`) — Retry Only Failed Segments**
+
+The `;` operator is sequential. Retry only the idempotent failing segments.
+
+Example:
+
+```
+A ; B ; C
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+A
+```
+
+If `A` and `B` fail idempotently:
+
+Retry:
+
+```
+A ; B
+```
+
+If all fail idempotently:
+
+Retry:
+
+```
+A ; B ; C
+```
+
+**Reason:** `;` has no short‑circuit semantics; each segment is independent.
+
+---
+
+#### **4.6 Subshells (`$(…)`) — Preserve Wrapper, Apply Rules Inside**
+
+Subshells isolate execution. The wrapper must be preserved exactly.
+
+Example:
+
+```
+echo $(A ; B)
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+echo $(A)
+```
+
+Example:
+
+```
+echo $(A && B)
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+echo $(A && B)
+```
+
+Example:
+
+```
+echo $(A | B)
+```
+
+Retry:
+
+```
+echo $(A | B)
+```
+
+**Reason:** subshells are isolated contexts; removing the wrapper mutates semantics.
+
+---
+
+#### **4.7 Nested Subshells — Multi‑Layer Preservation**
+
+Nested subshells require preserving **every layer**.
+
+Example:
+
+```
+echo $(echo $(A))
+```
+
+If `A` fails idempotently:
+
+Retry:
+
+```
+echo $(echo $(A))
+```
+
+**Reason:** nested contexts must remain intact; retry applies only to inner idempotent segments.
+
+---
+
+#### **4.8 Mixed‑Operator Chains — Composite Retry Logic**
+
+Mixed operators combine multiple semantics:
+
+```
+A && B ; C | D || E
+```
+
+Retry boundaries must respect:
+
+- `&&` short‑circuit  
+- `;` sequential semantics  
+- `|` pipeline semantics  
+- `||` fallback semantics  
+- subshell boundaries  
+
+This is fully exercised in **Test Case 21**, where GPT‑5.6‑Sol correctly produced:
+
+```
+mkdir /tmp/zsh_idem21 && echo ok ; ln -s /tmp/zsh_idem21 /tmp/zsh_idem21
+```
+
+and **did not** replay:
+
+```
+echo fallback
+```
+
+**Reason:** fallback segments must not be replayed unless they failed idempotently.
+
+---
+
+#### **4.9 The Contract‑Encoded Rule Block (Final Form)**
+
+This is the exact block inserted into the contract:
+
+```
+# ============================================================
+# POSIX Idempotency and Operator‑Preserving Retry
+# ============================================================
+"- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
+"- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
+"- Operator‑preserving retry MUST follow these rules:\n"
+"    * Retry only the idempotent segments, but NEVER break, remove, or mutate\n"
+"      the operator structure that encloses them.\n"
+"    * Preserving operator structure MIGHT require replaying segments that were\n"
+"      skipped due to operator semantics (e.g., '&&', pipelines, subshells).\n"
+"    * Preserving operator structure does NOT mean replaying segments that\n"
+"      originally succeeded or fallback segments ('||') unless they also\n"
+"      failed idempotently.\n"
+"- Operator‑specific retry behavior MUST follow:\n"
+"    * Pipelines ('|'): retry the entire pipeline line.\n"
+"    * '&&' chains: retry starting at the first idempotent failure, preserving\n"
+"      the '&&' structure (e.g., 'A && B && C' → 'A && B && C', 'B && C', or 'C').\n"
+"    * '||' chains: retry only the idempotent failing segment(s); do NOT replay\n"
+"      successful fallback segments.\n"
+"    * ';' chains: retry only the idempotent failing segment(s) within the chain.\n"
+"    * Subshells ('$(...)'): preserve the subshell wrapper, but apply the\n"
+"      operator rules inside according to the above.\n"
+```
+
+This block is the formal encoding of the entire retry model.
+
+---
+
+
+
+### **5. Cleanup Primitive Selection Rules (POSIX)**
+
+Cleanup is the second pillar of the POSIX idempotency model. If operator‑preserving retry defines *how* the LLM must replay the command, cleanup primitive selection defines *what* the LLM must remove before retrying. This section formalizes the resource‑type inference model that GPT‑5.6‑Sol uses to select the correct POSIX cleanup primitive.
+
+The cleanup model is intentionally minimal, deterministic, and safe. It uses only two primitives:
+
+- `rmdir PATH` — removes **empty directories**  
+- `rm -f PATH` — removes **files or symlinks**
+
+These primitives are sufficient to repair all idempotent POSIX failures without risking destructive behavior. The model never uses recursive deletion, never escalates privileges, and never performs cleanup on non‑idempotent failures.
+
+---
+
+#### **5.1 Resource‑Type Inference from stderr**
+
+POSIX commands do not provide structured error codes. Instead, resource type must be inferred from **stderr patterns**. GPT‑5.6‑Sol uses the following deterministic mapping:
+
+**Directory (`mkdir`)**
+If stderr contains:
+
+```
+mkdir: <path>: File exists
+```
+
+→ resource type = **directory**  
+→ cleanup = `rmdir <path>`
+
+**File (`touch`)**
+If stderr contains:
+
+```
+touch: <path>: File exists
+```
+
+→ resource type = **file**  
+→ cleanup = `rm -f <path>`
+
+**Symlink (`ln -s`)**
+If stderr contains:
+
+```
+ln: <path>: File exists
+```
+
+→ resource type = **symlink**  
+→ cleanup = `rm -f <path>`
+
+This mapping is the backbone of idempotent cleanup.
+
+---
+
+#### **5.2 Ambiguous Resource Types**
+
+Some failures indicate **multiple resource types** on the same path. For example:
+
+- `mkdir` + `ln` failures  
+- `touch` + `mkdir` failures  
+
+These indicate that the path may be:
+
+- a file  
+- a symlink  
+- a directory  
+- or a directory containing a symlink  
+- or a symlink pointing to a directory  
+
+Because `rmdir` cannot remove files or symlinks, ambiguous resources must always use:
+
+→ cleanup = `rm -f <path>`
+
+This rule appears frequently in multi‑segment chains, especially in Test Cases 11, 13, and 21.
+
+---
+
+#### **5.3 Non‑Idempotent Failures → No Cleanup → fallback**
+
+If stderr contains **only non‑idempotent failures**, cleanup must be omitted entirely.
+
+Examples:
+
+- `rmdir: not removed`  
+- `kill: no such process`  
+- package‑manager errors (`apt-get`, `yum`, `apk`, `pacman`, `brew`)  
+
+These failures cannot be repaired by cleanup. Retrying them would violate safety constraints.
+
+Thus:
+
+→ cleanup = **none**  
+→ action = **fallback**
+
+This rule is critical for safety and correctness. It prevents the LLM from attempting destructive or meaningless cleanup operations.
+
+---
+
+#### **5.4 Why Cleanup Must Be Minimal and Deterministic**
+
+The cleanup model is intentionally restricted:
+
+- No recursive deletion (`rm -rf`)  
+- No directory traversal  
+- No privilege escalation  
+- No guessing user intent  
+- No destructive inference  
+- No mutation of the filesystem beyond minimal idempotency repair  
+
+This ensures:
+
+- **Safety** — no destructive operations  
+- **Determinism** — identical behavior across retries  
+- **Portability** — works across macOS, Linux, BusyBox  
+- **Predictability** — LLM behavior is stable and testable  
+- **Contract compliance** — cleanup is bounded by explicit rules  
+
+GPT‑5.6‑Sol adheres to these constraints perfectly under the updated rule‑set.
+
+---
+
+#### **5.5 The Contract‑Encoded Cleanup Rule Block (Final Form)**
+
+This is the exact block inserted into the contract:
+
+```
+# ============================================================
+# Shell‑Level Idempotency (Allowed)
+# ============================================================
+"- macOS‑zsh idempotency includes stderr messages such as:\n"
+"    * 'File exists' (mkdir, touch, ln)\n"
+"    * 'not removed' (rmdir)\n"
+"    * 'no such process' (kill)\n"
+"- For idempotent 'File exists' failures, cleanup_and_retry MUST use:\n"
+"    * 'mkdir: ... File exists'  → rmdir <path>\n"
+"    * 'touch: ... File exists'  → rm -f <path>\n"
+"    * 'ln: ... File exists'     → rm -f <path>\n"
+"    * both 'mkdir' and 'ln' on same path → rm -f <path> (ambiguous resource).\n"
+"    * both 'touch' and 'mkdir' on same path → rm -f <path> (ambiguous resource).\n"
+"- If stderr contains ONLY non‑idempotent failures (e.g., kill no such process,\n"
+"  rmdir not removed, package‑manager errors), cleanup MUST be omitted and\n"
+"  the action MUST be 'fallback'.\n"
+"- cleanup_and_retry MUST NOT include package‑manager operations.\n"
+```
+
+This block encodes the entire cleanup model in a concise, contract‑ready form.
+
+---
+
+#### **5.6 Why This Cleanup Model Works**
+
+The cleanup model succeeds because it is:
+
+- **minimal** — only two primitives  
+- **deterministic** — no branching logic  
+- **safe** — no destructive operations  
+- **resource‑typed** — inferred from stderr  
+- **operator‑aware** — cleanup happens before retry  
+- **LLM‑friendly** — easy for GPT‑5.6‑Sol to apply consistently  
+- **portable** — works across all POSIX shells  
+
+This model is the reason GPT‑5.6‑Sol passed all 21 idempotency test cases.
+
+---
+
+
+### **6. Multi‑Segment Idempotency Rules**
+
+Multi‑segment idempotency is where POSIX command repair becomes genuinely difficult. A single‑segment idempotent failure (e.g., `mkdir: File exists`) is trivial to fix. But when multiple operators, multiple segments, and multiple resource types interact, the LLM must apply **three rule systems simultaneously**:
+
+1. **Idempotency classification** (I vs NI)  
+2. **Operator‑preserving retry boundaries**  
+3. **Cleanup primitive selection**  
+
+This section explains how GPT‑5.6‑Sol combines these rule systems to produce deterministic, safe, and semantically correct retries across multi‑operator command strings.
+
+---
+
+#### **6.1 Multi‑Segment Idempotency: The Core Model**
+
+The multi‑segment model is built on a simple but powerful principle:
+
+> **Each segment is independently classified as idempotent or non‑idempotent, and retry boundaries are determined by operator semantics, not by linear position.**
+
+This means:
+
+- The LLM does **not** retry the entire command by default.  
+- The LLM does **not** retry only the first segment by default.  
+- The LLM does **not** retry only the last segment by default.  
+
+Instead, retry boundaries are determined by:
+
+- the operator graph  
+- the idempotency classification  
+- the cleanup primitive  
+- the preservation rule  
+
+This is what allows GPT‑5.6‑Sol to correctly repair complex chains like:
+
+```
+mkdir /tmp/zsh_idem21 && echo ok ; ln -s /tmp/zsh_idem21 /tmp/zsh_idem21 || echo fallback
+```
+
+---
+
+#### **6.2 Idempotent vs Non‑Idempotent Segments**
+
+Each segment is classified independently:
+
+- `mkdir: File exists` → **I**  
+- `touch: File exists` → **I**  
+- `ln: File exists` → **I**  
+- `kill: no such process` → **NI**  
+- `rmdir: not removed` → **NI**  
+- package‑manager errors → **NI**  
+
+This classification determines:
+
+- whether cleanup is allowed  
+- whether retry is allowed  
+- whether fallback is required  
+- whether operator structure must be preserved  
+
+The LLM must never retry non‑idempotent failures.
+
+---
+
+#### **6.3 How Operator Semantics Define Retry Boundaries**
+
+Once idempotency is known, operator semantics define the retry boundary:
+
+- **Pipelines** → retry entire pipeline  
+- **`&&` chains** → retry starting at first idempotent failure  
+- **`||` chains** → retry only idempotent failing segment(s)  
+- **`;` chains** → retry only idempotent failing segment(s)  
+- **Subshells** → preserve wrapper, apply rules inside  
+- **Nested subshells** → preserve all wrappers  
+- **Mixed operators** → composite retry boundary  
+
+This is why multi‑segment idempotency cannot be solved by simple string rewriting.
+
+---
+
+#### **6.4 How Skipped Segments Are Handled**
+
+Operators like `&&`, pipelines, and subshells can **skip** segments:
+
+- `&&` skips right‑hand side if left fails  
+- pipelines skip downstream segments if upstream fails  
+- subshells skip internal segments based on operator semantics  
+
+The preservation rule requires:
+
+> **Skipped segments must be replayed if operator semantics require them for structural preservation.**
+
+Example:
+
+```
+A && B
+```
+
+If `A` fails idempotently, `B` is skipped.
+
+Retry must be:
+
+```
+A && B
+```
+
+not:
+
+```
+A
+```
+
+because removing `&& B` breaks operator structure.
+
+---
+
+#### **6.5 How Successful Segments Are Handled**
+
+Successful segments are **never** retried unless operator semantics require them for structure preservation.
+
+Example:
+
+```
+A ; B ; C
+```
+
+If `A` fails idempotently and `B` succeeds:
+
+Retry:
+
+```
+A
+```
+
+not:
+
+```
+A ; B
+```
+
+because `;` does not require replaying skipped segments.
+
+---
+
+#### **6.6 How Fallback Segments Are Suppressed**
+
+In `||` chains:
+
+```
+A || B
+```
+
+If `A` fails idempotently and `B` succeeds:
+
+Retry:
+
+```
+A
+```
+
+not:
+
+```
+A || B
+```
+
+because replaying fallback segments violates:
+
+- safety  
+- user intent  
+- operator semantics  
+
+This rule is critical for preventing unintended destructive behavior.
+
+---
+
+#### **6.7 Cleanup + Retry Interaction**
+
+Cleanup happens **before** retry, and retry boundaries must respect cleanup results.
+
+Example:
+
+```
+mkdir /tmp/zsh_idem13 ; echo ok ; ln -s /tmp/zsh_idem13 /tmp/zsh_idem13
+```
+
+Failures:
+
+- `mkdir` → I  
+- `ln -s` → I  
+- `echo ok` → success  
+
+Cleanup:
+
+- ambiguous resource → `rm -f /tmp/zsh_idem13`
+
+Retry:
+
+```
+mkdir /tmp/zsh_idem13 ; ln -s /tmp/zsh_idem13 /tmp/zsh_idem13
+```
+
+This is the correct multi‑segment repair.
+
+---
+
+#### **6.8 Multi‑Segment Idempotency in Mixed‑Operator Chains**
+
+Mixed operators combine multiple semantics:
+
+```
+mkdir && echo ok ; ln -s || echo fallback
+```
+
+Failures:
+
+- `mkdir` → I  
+- `ln -s` → I  
+- `echo ok` → skipped  
+- `echo fallback` → succeeded  
+
+Cleanup:
+
+- ambiguous → `rm -f /tmp/zsh_idem21`
+
+Retry:
+
+```
+mkdir && echo ok ; ln -s
+```
+
+This is the most complex case in the suite and demonstrates:
+
+- operator preservation  
+- fallback suppression  
+- multi‑segment idempotency  
+- cleanup primitive selection  
+- retry boundary calculation  
+
+GPT‑5.6‑Sol handles it perfectly.
+
+---
+
+#### **6.9 Why Multi‑Segment Idempotency Requires All Three Rule Systems**
+
+Multi‑segment idempotency cannot be solved by:
+
+- cleanup rules alone  
+- operator semantics alone  
+- idempotency classification alone  
+
+It requires all three:
+
+1. **Idempotency classification**  
+2. **Operator‑preserving retry**  
+3. **Cleanup primitive selection**  
+
+This tri‑layer model is what makes GPT‑5.6‑Sol deterministic and correct across all 21 test cases.
+
+---
+
+
+
+
+
+
+
+
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
 
