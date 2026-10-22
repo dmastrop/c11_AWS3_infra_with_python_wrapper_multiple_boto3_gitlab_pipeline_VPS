@@ -378,6 +378,29 @@ The last column is typically the Notes column and can be very informative as to 
 ## PREFACE UPDATE12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design
 
 
+### Table of Contents — Preface Update 12
+
+- [High‑Level Section Summaries](#highlevelsectionsummaries)
+- [Important Note on Testing Matrix](#importantnotetestingmatrix)
+- [1. Overview](#overview12)
+- [2. Core Design Principle: Operator‑Preserving Retry](#operatorpreservingretry)
+- [3. POSIX Operator Semantics (Baseline)](#posixoperatorsemantics)
+- [4. Operator‑Preserving Retry Rules (Final Form)](#retryrulesfinalform)
+- [5. Cleanup Primitive Selection Rules (POSIX)](#cleanupprimitiveselection)
+- [6. Multi‑Segment Idempotency Rules](#multisegmentidempotency)
+- [7. Subshell and Nested Subshell Preservation](#subshellpreservation)
+- [8. Mixed‑Operator Chains](#mixedoperatorchains)
+- [9. Non‑Idempotent Failures and Safety Constraints](#nonidempotentfailures)
+- [10. Full 21‑Case Validation Summary](#validation21cases)
+- [11. Contract Rule Blocks (Final Encoded Form)](#contractruleblocks)
+- [12. Closing Notes](#closingnotes12)
+
+
+
+
+
+
+<a name="highlevelsectionsummaries"></a>
 ### High-Level Section Summaries:
 
 1. Overview
@@ -451,7 +474,7 @@ The last column is typically the Notes column and can be very informative as to 
 - Next steps: porting to BusyBox, macOS‑brew, Linux OSes
 
 
-
+<a name="importantnotetestingmatrix"></a>
 ### **Important Note on Testing Matrix**
 
 The intial testing was performed on the macos-zsh OS. The test matrix is included inu this section below in the Update59 chapter:
@@ -462,6 +485,11 @@ The test matrix is re-represented as examples in this Preface Update12 as well.
 
 ---
 
+
+
+
+
+<a name="overview12"></a>
 ### **1. Overview**
 
 This Preface Update documents the most significant advancement to date in **Phase 4a.1.2 LLM Contract Rule Engineering**: the introduction of a **POSIX idempotency + multi‑segment operator‑preserving retry model** for GPT‑5.6‑Sol. This update establishes the first fully deterministic, operator‑aware, resource‑typed, multi‑segment idempotency framework across macOS‑zsh — and forms the foundation for all future POSIX‑shell domains (BusyBox, Linux Bash, Linux Dash, macOS‑brew).
@@ -504,6 +532,10 @@ This update is the foundation for:
 and will be reused across Phase 4a.1.3 and Phase 4a.2.2 (intent→plan→commands pipeline).
 
 
+
+
+
+<a name="operatorpreservingretry"></a>
 ### **2. Core Design Principle: Operator‑Preserving Retry**
 
 The defining breakthrough of Preface Update 12 is the formalization of **Operator‑Preserving Retry** — a rule that finally gives GPT‑5.6‑Sol deterministic behavior across multi‑operator POSIX command strings. This rule is the backbone of the entire idempotency model. Everything else (cleanup primitives, resource‑type inference, multi‑segment idempotency, subshell preservation) exists to support this one principle.
@@ -663,6 +695,12 @@ This rule is the foundation of the entire POSIX idempotency model.
 
 ---
 
+
+
+
+
+
+<a name="posixoperatorsemantics"></a>
 ### **3. POSIX Operator Semantics (Baseline)**
 
 Before an LLM can perform safe, deterministic idempotency repair, it must understand the **semantic meaning** of each POSIX operator. This section establishes the baseline operator model that GPT‑5.6‑Sol must preserve during cleanup_and_retry. These semantics are not optional — they define execution order, short‑circuit behavior, fallback behavior, and retry boundaries. Breaking them mutates user intent and violates contract safety guarantees.
@@ -934,6 +972,12 @@ GPT‑5.6‑Sol successfully handles mixed‑operator chains using the operator�
 ---
 
 
+
+
+
+
+
+<a name="retryrulesfinalform"></a>
 ### **4. Operator‑Preserving Retry Rules (Final Form)**
 
 This section encodes the **formal retry semantics** that GPT‑5.6‑Sol must follow for all POSIX idempotency test cases. These rules are the heart of Preface Update 12. They transform the LLM from a token‑rewriter into a **deterministic operator‑aware execution engine** capable of repairing multi‑segment POSIX command failures without mutating user intent.
@@ -1235,6 +1279,11 @@ This block is the formal encoding of the entire retry model.
 
 
 
+
+
+
+
+<a name="cleanupprimitiveselection"></a>
 ### **5. Cleanup Primitive Selection Rules (POSIX)**
 
 Cleanup is the second pillar of the POSIX idempotency model. If operator‑preserving retry defines *how* the LLM must replay the command, cleanup primitive selection defines *what* the LLM must remove before retrying. This section formalizes the resource‑type inference model that GPT‑5.6‑Sol uses to select the correct POSIX cleanup primitive.
@@ -1398,6 +1447,11 @@ This model is the reason GPT‑5.6‑Sol passed all 21 idempotency test cases.
 ---
 
 
+
+
+
+
+<a name="multisegmentidempotency"></a>
 ### **6. Multi‑Segment Idempotency Rules**
 
 Multi‑segment idempotency is where POSIX command repair becomes genuinely difficult. A single‑segment idempotent failure (e.g., `mkdir: File exists`) is trivial to fix. But when multiple operators, multiple segments, and multiple resource types interact, the LLM must apply **three rule systems simultaneously**:
@@ -1658,6 +1712,11 @@ This tri‑layer model is what makes GPT‑5.6‑Sol deterministic and correct a
 
 
 
+
+
+
+
+<a name="subshellpreservation"></a>
 ### **7. Subshell and Nested Subshell Preservation**
 
 Subshells are one of the most subtle and failure‑prone structures in POSIX idempotency repair. They introduce an isolated execution environment with its own operator semantics, its own short‑circuit behavior, and its own retry boundaries. GPT‑5.6‑Sol must preserve subshell wrappers **exactly**, while applying operator‑preserving retry rules **inside** the subshell. This section explains how subshell preservation works, why it is necessary, and how nested subshells are handled.
@@ -1906,6 +1965,10 @@ This rule system ensures GPT‑5.6‑Sol behaves deterministically and safely ac
 
 
 
+
+
+
+<a name="mixedoperatorchains"></a>
 ### **8. Mixed‑Operator Chains**
 
 Mixed‑operator chains are the **final boss** of POSIX idempotency repair. They combine multiple operator semantics into a single command string, creating composite retry boundaries that cannot be reasoned about linearly. This is where GPT‑5.6‑Sol’s operator‑preserving retry model shows its full strength — and where earlier models (GPT‑5.4, GPT‑5.3, GPT‑4.x) consistently failed.
@@ -2136,6 +2199,10 @@ This composite model is what makes GPT‑5.6‑Sol behave like a **real system a
 
 
 
+
+
+
+<a name="nonidempotentfailures"></a>
 ### **9. Non‑Idempotent Failures and Safety Constraints**
 
 Non‑idempotent failures are the **hard stop** of the POSIX idempotency model. They represent conditions that cannot be repaired safely, cannot be corrected by cleanup primitives, and cannot be retried without violating contract safety guarantees. This section explains why certain failures are classified as **NI**, why cleanup is forbidden, and why the correct action is always **fallback**.
@@ -2387,6 +2454,11 @@ This rule is the backbone of POSIX safety.
 
 
 
+
+
+
+
+<a name="validation21cases"></a>
 ### **10. Full 21‑Case Validation Summary**
 
 The 21‑case macOS‑zsh POSIX idempotency + multi‑segment test matrix is the strongest empirical validation of the Phase 4a.1.2 rule‑set. It demonstrates that GPT‑5.6‑Sol can apply:
@@ -2639,6 +2711,10 @@ This is the strongest evidence that the POSIX idempotency model is ready for:
 ---
 
 
+
+
+
+<a name="contractruleblocks"></a>
 ### **11. Contract Rule Blocks (Final Encoded Form)**
 
 This section presents the **exact contract‑encoded rule blocks** that implement the POSIX idempotency + operator‑preserving retry model inside Phase 4a.1.2. These blocks are the distilled, executable form of all the design principles described in Sections 1–10. They are the “source code” of the LLM contract — the rules that GPT‑5.6‑Sol actually reads, resolves, and applies during command‑execution repair.
@@ -2776,6 +2852,11 @@ This is contract engineering at its highest level.
 ---
 
 
+
+
+
+
+<a name="closingnotes12"></a>
 ### **12. Closing Notes**
 
 Preface Update 12 represents the most mature and technically rigorous stage of Phase 4a.1.2 LLM Contract Rule Engineering. It is the first update where the LLM behaves not as a text generator, but as a **deterministic POSIX operator engine** capable of repairing multi‑segment command failures with the same discipline and caution as a real system administrator.
