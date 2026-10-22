@@ -476,6 +476,10 @@ The last column is typically the Notes column and can be very informative as to 
 
 [Back to top](#prefaceupdate12)
 
+---
+
+
+
 
 
 <a name="importantnotetestingmatrix"></a>
@@ -486,6 +490,10 @@ The intial testing was performed on the macos-zsh OS. The test matrix is include
 - [Testing idempotency + multi-segement POSIX on MacOS zsh](#macos-zsh-idempotency-multi-segment)
 
 The test matrix is re-represented as examples in this Preface Update12 as well.
+
+
+[Back to top](#prefaceupdate12)
+
 
 ---
 
@@ -534,6 +542,13 @@ This update is the foundation for:
 - macOS‑brew POSIX idempotency  
 
 and will be reused across Phase 4a.1.3 and Phase 4a.2.2 (intent→plan→commands pipeline).
+
+
+[Back to top](#prefaceupdate12)
+
+
+---
+
 
 
 
@@ -700,6 +715,10 @@ This rule is the foundation of the entire POSIX idempotency model.
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -976,6 +995,10 @@ GPT‑5.6‑Sol successfully handles mixed‑operator chains using the operator�
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -1282,6 +1305,10 @@ This block is the formal encoding of the entire retry model.
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -1452,6 +1479,10 @@ This model is the reason GPT‑5.6‑Sol passed all 21 idempotency test cases.
 
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -1715,6 +1746,10 @@ This tri‑layer model is what makes GPT‑5.6‑Sol deterministic and correct a
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -1968,6 +2003,10 @@ This rule system ensures GPT‑5.6‑Sol behaves deterministically and safely ac
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -2201,6 +2240,10 @@ This composite model is what makes GPT‑5.6‑Sol behave like a **real system a
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -2458,6 +2501,10 @@ This rule is the backbone of POSIX safety.
 
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -2715,6 +2762,10 @@ This is the strongest evidence that the POSIX idempotency model is ready for:
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -2856,6 +2907,10 @@ This is contract engineering at its highest level.
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 
 
@@ -3034,6 +3089,10 @@ This update completes the POSIX foundation for Phase 4a.1.2 and prepares the s
 ---
 
 
+[Back to top](#prefaceupdate12)
+
+
+---
 
 **[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
 
