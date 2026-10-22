@@ -76,7 +76,7 @@
       "ip": "10.0.60.6",
       "tags": [],
       "history": []
-    }
+    },
 
     {
       "command": "pacman -Syu",
@@ -148,7 +148,7 @@
       "ip": "10.0.60.12",
       "tags": [],
       "history": []
-    }
+    },
 
     {
       "command": "ls -l /nonexistent",
@@ -220,7 +220,7 @@
       "ip": "10.0.60.18",
       "tags": [],
       "history": []
-    }
+    },
 
 
     {
@@ -293,7 +293,7 @@
       "ip": "10.0.60.24",
       "tags": [],
       "history": []
-    }
+    },
 
     {
       "command": "dnf install python3",
@@ -365,9 +365,9 @@
       "ip": "10.0.60.30",
       "tags": [],
       "history": []
-    }
+    },
 
-     {
+    {
       "command": "yum update",
       "stdout": "",
       "stderr": "ash: yum: not found",
