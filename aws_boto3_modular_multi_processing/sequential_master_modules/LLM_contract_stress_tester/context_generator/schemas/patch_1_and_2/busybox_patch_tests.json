@@ -1,0 +1,299 @@
+{
+  "os_name": "Linux",
+  "os_version": "busybox",
+  "kernel": "5.10.0",
+  "package_managers": [],
+  "shell": "ash",
+  "contexts": [
+
+    {
+      "command": "rm -rf /bin",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-bb-001",
+      "ip": "10.0.40.1",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install curl",
+      "stdout": "",
+      "stderr": "ash: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-002",
+      "ip": "10.0.40.2",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "yum install nano",
+      "stdout": "",
+      "stderr": "ash: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-003",
+      "ip": "10.0.40.3",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "brew install python",
+      "stdout": "",
+      "stderr": "ash: brew: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-004",
+      "ip": "10.0.40.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "dnf install git",
+      "stdout": "",
+      "stderr": "ash: dnf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-005",
+      "ip": "10.0.40.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apk add bash",
+      "stdout": "",
+      "stderr": "ash: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-006",
+      "ip": "10.0.40.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "pacman -Syu",
+      "stdout": "",
+      "stderr": "ash: pacman: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-007",
+      "ip": "10.0.40.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "asdfasdfasdf",
+      "stdout": "",
+      "stderr": "ash: asdfasdfasdf: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-008",
+      "ip": "10.0.40.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(unknowncmd)",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-009",
+      "ip": "10.0.40.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo \"unterminated string",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-bb-010",
+      "ip": "10.0.40.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | | grep h",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-bb-011",
+      "ip": "10.0.40.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo $(unknowncmd)))",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-012",
+      "ip": "10.0.40.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "ls -l /nonexistent",
+      "stdout": "",
+      "stderr": "ls: /nonexistent: No such file or directory",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-bb-013",
+      "ip": "10.0.40.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "grep",
+      "stdout": "",
+      "stderr": "grep: unrecognized option:",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "i-bb-014",
+      "ip": "10.0.40.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-bb-015",
+      "ip": "10.0.40.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "show route everything",
+      "stdout": "",
+      "stderr": "ash: show: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-016",
+      "ip": "10.0.40.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | grep h | | wc -l",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-bb-017",
+      "ip": "10.0.40.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(unknowncmd | grep h)",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-018",
+      "ip": "10.0.40.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /etc",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-bb-019",
+      "ip": "10.0.40.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo hello | | | grep x",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "i-bb-020",
+      "ip": "10.0.40.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(unknowncmd))",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-021",
+      "ip": "10.0.40.21",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /usr",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-bb-022",
+      "ip": "10.0.40.22",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(echo $(echo $(unknowncmd))))",
+      "stdout": "",
+      "stderr": "ash: unknowncmd: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "i-bb-023",
+      "ip": "10.0.40.23",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rm -rf /var",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "i-bb-024",
+      "ip": "10.0.40.24",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+
