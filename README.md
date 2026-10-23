@@ -302,6 +302,9 @@ The Preface updates always sit at the top of all the other updates because they 
 
 - [Preface Update12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design](#prefaceupdate12)
 
+- [Preface Update13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview](#prefaceupdate13)
+
+
 
 
 ---
@@ -370,6 +373,622 @@ The last column is typically the Notes column and can be very informative as to 
 
 ---
 ---
+
+
+<a name="prefaceupdate13"></a>
+## **PREFACE UPDATE 13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview**
+
+Phase 4a.1.2 introduced the POSIX operator‑preserving retry engine, multi‑segment rewrite logic, and idempotency classification across multiple shells.  
+This update documents one of the most subtle but foundational parts of the contract architecture:
+
+> **How the LLM determines whether a package manager exists, and therefore whether PM commands should be treated as `fallback`, `abort`, or `rewrite`.**
+
+This distinction is critical for correctness, safety, and deterministic behavior across:
+
+- **macOS‑zsh** (bare shell, no PM installed)  
+- **macOS‑brew** (Homebrew installed)  
+- **BusyBox ash** (PM‑less POSIX environment)  
+
+This update also previews **Phase 4a.1.3 OS‑Discovery**, which will allow module2f to determine the OS and PM presence dynamically on real nodes, and inject that information into the LLM context so the gateway can select the correct domain‑primitive block.
+
+
+All the testing results for the various scenarios discussed in this Preface Update are in this section:
+
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+---
+
+### **1. macOS‑zsh → fallback (unsupported PM)**
+
+Bare macOS ships with:
+
+- `/bin/zsh`  
+- `/bin/bash`  
+- `/usr/bin/python3`  
+- `/usr/bin/ruby`  
+- `/usr/bin/perl`  
+
+But **Homebrew is not part of macOS**. It is a third‑party package manager that must be installed manually.
+
+Therefore, when the LLM sees commands such as:
+
+```
+brew install python
+apt-get install curl
+yum install nano
+dnf install git
+apk add bash
+pacman -Syu
+```
+
+the macOS‑zsh domain primitives state:
+
+> **macOS‑zsh does NOT include a package manager.  
+> PM commands MUST return `fallback`.**
+
+macOS‑zsh is not PM‑less (like BusyBox), and not PM‑capable (like Linux).  
+It is in the **unsupported PM** category.
+
+Thus:
+
+- PM rewrite is impossible  
+- PM cleanup is impossible  
+- PM idempotency is impossible  
+- PM fallback is the only safe action  
+
+This behavior was validated in the macOS‑zsh Base36 suite.
+
+---
+
+### **2. BusyBox → abort (PM impossible)**
+
+BusyBox is fundamentally different from macOS‑zsh:
+
+### **BusyBox can *never* have a package manager.**
+
+BusyBox domain primitives state:
+
+> **BusyBox does NOT include a package manager.  
+> Any attempt to install packages MUST trigger `abort`.**
+
+BusyBox lacks:
+
+- PM infrastructure  
+- PM metadata  
+- PM cache  
+- PM directories  
+- PM applets  
+
+Therefore PM commands are not “unsupported” — they are **impossible**.
+
+Examples:
+
+```
+apt-get install curl
+yum install nano
+dnf install git
+apk add bash
+pacman -Syu
+brew install python
+```
+
+→ **abort**
+
+This behavior was validated in the BusyBox Base36 suite.
+
+---
+
+### **3. macOS‑brew → rewrite (PM present)**
+
+This is the third category.
+
+If OS‑Discovery (Phase 4a.1.3) determines:
+
+```
+os_name = macOS
+os_version = 14.0-brew
+package_managers = ["brew"]
+shell = zsh
+```
+
+then the LLM must:
+
+- rewrite incorrect PM commands  
+- preserve operator structure  
+- apply PM‑level idempotency  
+- apply PM‑level cleanup  
+- apply PM‑level fallback  
+- apply PM‑level retry  
+
+Example:
+
+```
+apt-get install curl
+```
+
+→ rewrite to:
+
+```
+brew install curl
+```
+
+This behavior was validated in the macOS‑brew PM suite.
+
+---
+
+### **4. Why macOS‑zsh cannot rewrite PM commands**
+
+macOS‑zsh domain primitives state:
+
+> **macOS‑zsh does NOT include a package manager.**
+
+Therefore:
+
+- brew is not installed  
+- PM rewrite is impossible  
+- PM cleanup is impossible  
+- PM idempotency is impossible  
+- PM fallback is the only safe action  
+
+This is correct and safe.
+
+---
+
+### **5. Why BusyBox cannot rewrite PM commands**
+
+BusyBox domain primitives state:
+
+> **BusyBox does NOT support Linux package managers under ANY circumstances.**
+
+Therefore:
+
+- PM rewrite is impossible  
+- PM fallback is forbidden  
+- PM cleanup is forbidden  
+- PM idempotency is forbidden  
+- PM commands MUST trigger `abort`  
+
+This is correct and safe.
+
+---
+
+### **6. PM‑Behavior Decision Matrix**
+
+| OS Type | PM Installed? | PM Possible? | Correct Action |
+|--------|----------------|--------------|----------------|
+| **macOS‑zsh** | No | Yes | **fallback** |
+| **macOS‑brew** | Yes | Yes | **rewrite / retry / cleanup / fallback** |
+| **BusyBox ash** | No | No | **abort** |
+
+This matrix is the core of the PM‑behavior contract.
+
+---
+
+### **7. Phase 4a.1.3 OS‑Discovery (Real‑Life Pipeline)**
+
+Stress tester schemas include metadata headers:
+
+```
+os_name
+os_version
+package_managers
+shell
+```
+
+But **real nodes do not have metadata headers**.  
+Phase 4a.1.3 introduces **OS‑Discovery**, which will:
+
+1. Run OS‑detection commands on each node  
+2. Determine:
+   - `os_name`
+   - `os_version`
+   - `package_managers`
+   - `shell`
+3. Insert this information into the node’s `registry_entry.tags`  
+4. Pass these tags into the AI/MCP hook via `extra_tags`  
+5. Extract OS metadata inside the hook  
+6. Insert OS metadata into the LLM context as `os_info`  
+7. Send the context to the gateway  
+8. Gateway selects the correct domain‑primitive block  
+9. LLM receives the correct PM‑behavior contract
+
+This is the real‑life equivalent of the synthetic metadata in the stress tester schemas.
+
+---
+
+### **8. How OS Metadata Flows Through Module2f → AI/MCP Hook → Gateway → LLM**
+
+#### **Step 1 — module2f builds registry_entry**
+Registry entry contains:
+
+```
+tags: [
+  "module2f",
+  "ghost",
+  "installation_completed",
+  ...
+]
+```
+
+Phase 4a.1.3 will add in the tags:
+
+```
+"os_name:Ubuntu"
+"os_version:22.04"
+"pm:apt"
+```
+
+or:
+
+```
+"os_name:macOS"
+"os_version:14.0-zsh"
+"pm:none"
+```
+
+or:
+
+```
+"os_name:Linux"
+"os_version:busybox"
+"pm:none"
+```
+
+#### **Step 2 — tags passed to AI/MCP hook**
+```
+extra_tags = heuristic_registry_entry["tags"]
+```
+
+The call to the hook is:
+```
+                       result = _invoke_ai_hook(
+                                original_command=original_command,
+                                stdout_output=stdout_output,
+                                stderr_output=stderr_output,
+                                exit_status=exit_status,
+                                attempt=attempt,
+                                instance_id=instance_id,
+                                ip=ip,
+                                extra_tags=extra_tags,
+                                ssh=ssh,
+                            )
+```
+
+The hook function accepts these args; note extra_tags:
+
+
+```
+def _invoke_ai_hook(original_command, stdout_output, stderr_output,
+                        exit_status, attempt, instance_id, ip,
+                        extra_tags, ssh):
+```
+
+
+
+
+#### **Step 3 — hook extracts OS metadata**
+The AI/MCP Hook builds this context, getting the os_name and os_version from the extra_tags (see above):
+
+```
+context = {
+  "command": original_command,
+  "stdout": stdout_output,
+  "stderr": stderr_output,
+  "exit_status": exit_status,
+  "attempt": attempt + 1,
+  "instance_id": instance_id,
+  "ip": ip,
+  "tags": extra_tags,
+  "os_info": {
+      "os_name": ...,
+      "os_version": ...,
+      "package_managers": ...
+  },
+  "history": ...
+}
+```
+
+#### **Step 4 — context sent to gateway**
+```
+plan = ask_ai_for_recovery(context)
+```
+This function looks like this: 
+
+```
+def ask_ai_for_recovery(context: dict):
+    """
+    Send the failure context to the AI Gateway Service
+    and return the AI-generated recovery plan.
+
+    module2f calls THIS function inside the retry loop
+    ONLY on the final failed attempt.
+    """
+    # mcp.send() performs:
+    #   - JSON serialization
+    #   - POST to http://localhost:8000/recover
+    #   - returns parsed JSON from the AI Gateway
+    return mcp.send(context)
+```
+
+This mcp.send sends the context to the gateaway and will get the action plan response back.
+
+In more detail……once the gateway gets this information above…….
+
+
+#### **Step 5 — gateway extracts os_info from the context that was created above**
+```
+os_info = context.get("os_info", {})
+
+```
+
+Next, the gateway gets the correct domain primitives contract rules block using the os_info above by calling the get_os_rules function:
+
+```
+os_rules = get_os_rules(os_info)
+
+```
+
+The get_os_rules is the heart of the per-OS prompt assembly code:
+
+```
+
+def get_os_rules(os_info):
+    """
+    Select the correct OS-specific rules block.
+
+    Supports both:
+      - stress_tester.py (uses "name" and "version")
+      - real module2f pipeline (uses "os_name" and "os_version")
+    """
+
+    os_name = os_info.get("os_name") or os_info.get("name")
+    os_version = os_info.get("os_version") or os_info.get("version") or ""
+
+    # ---------------- Linux-family OSes ----------------
+
+    if os_name == "Ubuntu":
+        return UBUNTU_RULES
+
+    if os_name == "Debian":
+        return DEBIAN_RULES
+
+    if os_name == "RHEL":
+        return RHEL_RULES
+
+    if os_name == "CentOS" and os_version == "7":
+        return CENTOS7_RULES
+
+    if os_name == "CentOS" and os_version == "8":
+        return CENTOS8_RULES
+
+    if os_name == "Fedora":
+        return FEDORA_RULES
+
+    if os_name == "Amazon Linux" and os_version == "2":
+        return AMAZON_LINUX_2_RULES
+
+    if os_name == "Amazon Linux 2023":
+        return AMAZON_LINUX_2023_RULES
+
+    if os_name == "Alpine":
+        return ALPINE_RULES
+
+    if os_name == "Linux" and os_version == "busybox":
+        return BUSYBOX_RULES
+
+    if os_name == "Linux" and os_version == "powershell-core":
+        return LINUX_POWERSHELL_CORE_6_and_7_RULES
+
+    # ---------------- macOS ----------------
+
+    if os_name == "macOS" and "brew" in os_version:
+        return MACOS_BREW_RULES
+
+    if os_name == "macOS" and "zsh" in os_version:
+        return MACOS_ZSH_RULES
+
+    # ---------------- Windows ----------------
+
+    if os_name == "Windows" and os_version == "2022":
+        return WINDOWS_POWERSHELL_2022_RULES
+
+    # ---------------- Network OSes ----------------
+
+    if os_name == "Cisco IOS":
+        return CISCO_IOS_RULES
+
+    if os_name == "PAN-OS":
+        return PANOS_RULES
+
+        return PANOS_RULES
+
+    # ---------------- Add Ons  ----------------
+
+    if os_name == "SUSE":
+        return SUSE_RULES
+
+
+    if os_name == "Arch":
+        return ARCH_RULES
+
+
+    # Default: no OS-specific rules
+    return ""
+
+```
+
+
+
+
+
+#### **Step 6 — gateway assembles prompt**
+```
+prompt = GLOBAL_RULES + os_rules + CONTEXT
+```
+
+This prompt is incorporated into the payload that is sent directly to the LLM (OpenAI api call)
+
+```
+        payload = {
+            #"model": "gpt-5.4",
+            "model": "gpt-5.6-sol",
+            # temperature is not supported in 5.6-sol. It is inherently "deterministic"
+            #"temperature": 0,
+            # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
+            # test suite for Linux Powershell OS. Preface update 10 details the empirical findings of this gpt-5.6-sol model falure.
+            "max_output_tokens": 1024,
+            "input": prompt,   <<<<<<<<<<<<<
+        }
+
+```
+
+
+
+#### **Step 7 — LLM receives correct domain‑primitive block**
+LLM now knows:
+
+- whether PM exists  
+- whether PM is possible  
+- whether PM is impossible  
+- whether PM commands should be fallback, abort, or rewrite  (as explained above)
+
+This is the complete PM‑behavior pipeline.
+
+---
+
+### **9. Stress Tester vs. Real‑Life OS‑Discovery**
+
+#### **Stress Tester**
+- Metadata provided in schema header  
+- OS‑Discovery bypassed  
+- Context includes `os_name`, `os_version`, `os_info` directly  
+- Gateway selects correct domain primitives immediately  
+
+#### **Real‑Life (Phase 4a.1.3)**
+- OS‑Discovery runs on each node  
+- OS metadata inserted into registry_entry tags  
+- AI/MCP hook extracts OS metadata  
+- Hook inserts OS metadata into context  
+- Gateway selects correct domain primitives  
+- LLM receives correct PM‑behavior contract  
+
+Both paths converge at the gateway.
+
+---
+
+
+### **10.  Additional Note: PM‑Behavior Across All Other Supported OSes (Linux, Linux PowerShell, Windows PowerShell)**
+
+Although Preface Update 13 focuses on the subtle PM‑behavior distinctions between **macOS‑zsh**, **macOS‑brew**, and **BusyBox**, the contract architecture generalizes cleanly across all other supported operating systems. The following summarizes how PM commands are treated on Linux OSes, Linux PowerShell, and Windows PowerShell, and why their behavior differs from the three shells analyzed in this update.
+
+#### **Linux OSes (Ubuntu, Debian, RHEL, CentOS, Fedora, Amazon Linux, Alpine, ArchLinux, SUSE)**  
+Linux distributions are **PM‑capable OSes**, and the presence of a package manager is guaranteed by the OS itself. Unlike macOS‑zsh (PM absent) or BusyBox (PM impossible), Linux OSes always include a valid PM:
+
+- Ubuntu/Debian → `apt` / `apt‑get`  
+- RHEL/CentOS/Fedora/Amazon → `yum` / `dnf`  
+- Alpine → `apk`  
+
+Therefore, Linux PM commands follow the **macOS‑brew model**, not the macOS‑zsh or BusyBox model:
+
+- Incorrect PM → **rewrite**  
+- Correct PM → **retry_with_modified_command** or **cleanup**  
+- Idempotent PM operations → **fallback**  
+- Non‑idempotent PM operations → **retry**  
+- Destructive PM operations → **abort**  
+
+Linux PM behavior is always deterministic because the OS‑Discovery pipeline (Phase 4a.1.3) will detect the correct PM and inject it into `os_info.package_managers`, allowing the gateway to select the correct Linux domain‑primitive block.
+
+#### **Linux PowerShell (pwsh 6/7)**  
+Linux PowerShell is a hybrid environment:
+
+- It runs PowerShell Core (`pwsh`)  
+- It sits on top of a Linux distribution  
+- It inherits the underlying Linux PM (apt, yum, dnf, apk, etc.)  
+
+Therefore, PM commands behave exactly like Linux PM commands:
+
+- Incorrect PM → **rewrite**  
+- Correct PM → **retry_with_modified_command**  
+- PM idempotency → **fallback**  
+- PM cleanup → **cleanup**  
+
+The Linux PowerShell domain‑primitive block enforces PowerShell‑specific operator semantics (e.g., `;`, pipelines, command‑substitution differences), but PM behavior is identical to Linux.
+
+#### **Windows PowerShell (Server 2022)**  
+Windows PowerShell is fundamentally different:
+
+- Windows does **not** use Linux PMs  
+- Windows does **not** use Homebrew  
+- Windows uses **PowerShellGet**, **Install‑Package**, and **winget**  
+
+Therefore:
+
+- Linux PM commands (apt, yum, dnf, apk, pacman) → **fallback**  
+- Homebrew commands → **fallback**  
+- Windows PM commands (`Install‑Package`, `winget`) → **rewrite / retry / cleanup**  
+- Destructive Windows operations → **abort**  
+
+Windows PM behavior mirrors macOS‑brew and Linux PM behavior, but only for Windows‑native PMs.  
+All non‑Windows PMs are treated as unsupported and therefore produce **fallback**, not abort.
+
+#### **Summary Table (All OS Families)**
+
+| OS Family | PM Installed? | PM Possible? | PM Behavior |
+|----------|----------------|--------------|-------------|
+| **macOS‑zsh** | No | Yes | **fallback** |
+| **macOS‑brew** | Yes | Yes | **rewrite / retry / cleanup / fallback** |
+| **BusyBox** | No | No | **abort** |
+| **Linux OSes** | Yes | Yes | **rewrite / retry / cleanup / fallback** |
+| **Linux PowerShell** | Yes | Yes | **rewrite / retry / cleanup / fallback** |
+| **Windows PowerShell** | Yes | Yes | **rewrite / retry / cleanup / fallback** (Windows PM only) |
+
+This table shows that **macOS‑zsh** and **BusyBox** are the only two OS environments where PM commands do *not* follow the rewrite model.  
+All other OSes — Linux, Linux PowerShell, Windows PowerShell, macOS‑brew — follow the same PM‑capable rewrite/cleanup/idempotency model.
+
+---
+
+All the testing results for the various scenarios discussed in this Preface Update are in this section:
+
+- [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+### **11. Summary**
+
+#### **macOS‑zsh**
+- PM *could* exist but does not  
+- PM commands → **fallback**
+
+#### **macOS‑brew**
+- PM exists  
+- PM commands → **rewrite / retry / cleanup / fallback**
+
+#### **BusyBox**
+- PM can never exist  
+- PM commands → **abort**
+
+#### **Phase 4a.1.3 OS‑Discovery**
+- Determines OS + PM presence  
+- Injects OS metadata into registry_entry tags  
+- AI/MCP hook inserts OS metadata into context  
+- Gateway selects correct domain‑primitive block  
+- LLM receives correct PM‑behavior contract  
+
+This completes the PM‑behavior design across macOS‑zsh, macOS‑brew, and BusyBox, (and all the other OSes as well) and provides the architectural foundation for Phase 4a.1.3 and the utilization of os-discovery to facilitate all of this.
+
+
+
+---
+
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+---
+---
+
+
+
 
 
 
@@ -34838,6 +35457,21 @@ The test matrix for Alpine OS‑Signaled Remediation‑3 Test Case Matrix — GP
 #### 12.LLM Contract Stress Tester – Multi-segment macOS Homebrew testing and test matrices
 
 
+---
+
+The PM treatment is unique for Busybox and MacOS zsh in that they do not have a PM installed. 
+MacOS brew does have a PM installed (brew)
+The LLM contract design is explained in detail in Preface Update13 at the link below, as well as an introduction to the os-discovery code that will be integrated into module2f as a part of Phase 4a.1.3 development.  The os-discovery code is what enables the LLM to 
+"know" which OSes have PMs and which OSes do not have PMs.
+
+INSERT LINK HERE
+
+---
+
+
+
+
+
 The multi-segment testing went well but there was some logic missing for the -y flag in linux OSes. These segments with -y can be
 rewritten, but the -y flag must be ignored in macos brew. 
 
@@ -35228,6 +35862,20 @@ Due to time constraints the testing for this will be postponed. Need to get to P
 
 <a name="llm-contract-stress-tester-multi-segment-macoszsh-testing-and-test-matrices"></a>
 #### 15.LLM Contract Stress Tester – Multi-segment MacOS zsh testing and test matrices
+
+
+
+---
+
+The PM treatment is unique for Busybox and MacOS zsh in that they do not have a PM installed. The LLM contract design is explained
+in detail in Preface Update13 at the link below, as well as an introduction to the os-discovery code that will be integrated into
+module2f as a part of Phase 4a.1.3 development. The os-discovery code is what enables the LLM to
+"know" which OSes have PMs and which OSes do not have PMs.
+
+INSERT LINK HERE
+
+---
+
 
 
 ##### Regression on the base36 test cases on MacOS zh with gpt-5.6-sol
@@ -35828,6 +36476,40 @@ Test Case 11 (index 10)**
 
 <a name="llm-contract-stress-tester-multi-segment-busybox-testing-and-test-matrices"></a>
 #### 16.LLM Contract Stress Tester – Multi-segment Busybox testing and test matrices
+
+
+The testing with Busybox is similar to the macOs zsh testing. There are 4 test suites that are required: base, patch2 rewrite tests,
+multi-segment tests and POSIX idempotency + multi-segment test cases.
+
+---
+
+The PM treatment is unique for Busybox and MacOS zsh in that they do not have a PM installed. The LLM contract design is explained
+in detail in Preface Update13 at the link below, as well as an introduction to the os-discovery code that will be integrated into
+module2f as a part of Phase 4a.1.3 development. The os-discovery code is what enables the LLM to
+"know" which OSes have PMs and which OSes do not have PMs.
+
+INSERT LINK HERE
+
+---
+
+
+
+##### Regresion with the base36 test cases on Busybox with gpt-5.6-sol
+
+
+
+
+##### Regression with the 24 patch2 rewrite test cases on Busybox with gpt-5.6-sol
+
+
+##### Regression with the 21 multi-segement test cases on Busybox with gpt-5.6-sol
+
+
+
+##### Regression with the 21 idempotency + multi-segment POSIX test cases on Busybox with gpt-5.6-sol
+
+
+
 
 
 ---
