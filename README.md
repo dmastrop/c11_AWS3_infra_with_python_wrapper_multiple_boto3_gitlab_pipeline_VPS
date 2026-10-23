@@ -35464,7 +35464,8 @@ MacOS brew does have a PM installed (brew)
 The LLM contract design is explained in detail in Preface Update13 at the link below, as well as an introduction to the os-discovery code that will be integrated into module2f as a part of Phase 4a.1.3 development.  The os-discovery code is what enables the LLM to 
 "know" which OSes have PMs and which OSes do not have PMs.
 
-INSERT LINK HERE
+- [Preface Update13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview](#prefaceupdate13)
+
 
 ---
 
@@ -35872,7 +35873,7 @@ in detail in Preface Update13 at the link below, as well as an introduction to t
 module2f as a part of Phase 4a.1.3 development. The os-discovery code is what enables the LLM to
 "know" which OSes have PMs and which OSes do not have PMs.
 
-INSERT LINK HERE
+- [Preface Update13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview](#prefaceupdate13)
 
 ---
 
@@ -36488,7 +36489,7 @@ in detail in Preface Update13 at the link below, as well as an introduction to t
 module2f as a part of Phase 4a.1.3 development. The os-discovery code is what enables the LLM to
 "know" which OSes have PMs and which OSes do not have PMs.
 
-INSERT LINK HERE
+- [Preface Update13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview](#prefaceupdate13)
 
 ---
 
