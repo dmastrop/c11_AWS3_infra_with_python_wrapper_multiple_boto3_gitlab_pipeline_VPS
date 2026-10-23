@@ -32092,7 +32092,7 @@ BusyBox (standalone, `os_version == "busybox"`) and macOS‑zsh are both POSIX s
 - **Base suite (36 cases)**  
 - **Patch2 Rewrite suite (24 cases)**  
 - **Multi‑Segment Rewrite suite (21 cases)**  
-- **Shell‑level Idempotency suite (6 cases)**  
+- **Shell‑level Idempotency suite (6 cases)** (This is updated to include POSIX based idempotency + multi-segement for 21 test cases). 
 
 They **do NOT** require the OS‑signaled remediation suite, because OS‑signaled remediation only exists on POSIX operating systems **that have package managers** (apt, yum, dnf, apk, pacman, brew).  
 BusyBox standalone and macOS‑zsh have **no package manager** under this contract and therefore **cannot emit deterministic remediation signals**.
@@ -36508,6 +36508,16 @@ module2f as a part of Phase 4a.1.3 development. The os-discovery code is what en
 
 
 ##### Regression with the 21 idempotency + multi-segment POSIX test cases on Busybox with gpt-5.6-sol
+
+As with MacOS zsh the testing in this area is very complex. The design is explained in detail in Preface Update12 at the link below:
+
+- [Preface Update12: Phase 4a.1.2 LLM Contract Rule Engineering VI: GPT‑5.6‑Sol POSIX Idempotency + Multi‑Segment Operator‑Preserving Retry Design](#prefaceupdate12)
+
+The MacOS zsh has passed all of these POSIX based tests. Once the BusyBox is qualified, the contract rules blocks will be ported
+to all the Linux OSes and MacOS brew which also support POSIX.
+
+
+
 
 
 
