@@ -1,0 +1,263 @@
+{
+  "os_name": "Linux",
+  "os_version": "busybox",
+  "kernel": "5.10.0",
+  "package_managers": [],
+  "shell": "ash",
+  "contexts": [
+
+    {
+      "command": "mkdir /tmp/busybox_idem1",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-001",
+      "ip": "10.0.52.1",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "touch /tmp/busybox_idem2",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-002",
+      "ip": "10.0.52.2",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "ln -s /tmp/source3 /tmp/busybox_idem3",
+      "stdout": "",
+      "stderr": "ln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-003",
+      "ip": "10.0.52.3",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "rmdir /tmp/busybox_idem4",
+      "stdout": "",
+      "stderr": "rmdir: not removed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-004",
+      "ip": "10.0.52.4",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "kill 99999",
+      "stdout": "",
+      "stderr": "kill: no such process",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-005",
+      "ip": "10.0.52.5",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem6 ; touch /tmp/busybox_idem6",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-006",
+      "ip": "10.0.52.6",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem7 && touch /tmp/busybox_idem7",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-007",
+      "ip": "10.0.52.7",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "touch /tmp/busybox_idem8 || ln -s /tmp/busybox_idem8 /tmp/busybox_idem8",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-008",
+      "ip": "10.0.52.8",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem9 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-009",
+      "ip": "10.0.52.9",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(touch /tmp/busybox_idem10)",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-010",
+      "ip": "10.0.52.10",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem11 ; touch /tmp/busybox_idem11 ; ln -s /tmp/busybox_idem11 /tmp/busybox_idem11",
+      "stdout": "",
+      "stderr": "mkdir: directory exists\ntouch: file exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-011",
+      "ip": "10.0.52.11",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "apt-get install -y nonexistent",
+      "stdout": "",
+      "stderr": "ash: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-idem-neg-001",
+      "ip": "10.0.52.12",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem13 ; echo ok ; ln -s /tmp/busybox_idem13 /tmp/busybox_idem13",
+      "stdout": "ok",
+      "stderr": "mkdir: directory exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-013",
+      "ip": "10.0.52.13",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo ok ; mkdir /tmp/busybox_idem14 ; echo done",
+      "stdout": "ok\ndone",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-014",
+      "ip": "10.0.52.14",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(mkdir /tmp/busybox_idem15) ; echo ok",
+      "stdout": "ok",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-015",
+      "ip": "10.0.52.15",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem16 | cat",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-016",
+      "ip": "10.0.52.16",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo foo | mkdir /tmp/busybox_idem17 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-017",
+      "ip": "10.0.52.17",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem18 || echo fallback",
+      "stdout": "fallback",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-018",
+      "ip": "10.0.52.18",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem19 && echo ok",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-019",
+      "ip": "10.0.52.19",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "echo $(echo $(mkdir /tmp/busybox_idem20)))",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-020",
+      "ip": "10.0.52.20",
+      "tags": [],
+      "history": []
+    },
+
+    {
+      "command": "mkdir /tmp/busybox_idem21 && echo ok ; ln -s /tmp/busybox_idem21 /tmp/busybox_idem21 || echo fallback",
+      "stdout": "fallback",
+      "stderr": "mkdir: directory exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-idem-021",
+      "ip": "10.0.52.21",
+      "tags": [],
+      "history": []
+    }
+
+  ]
+}
+

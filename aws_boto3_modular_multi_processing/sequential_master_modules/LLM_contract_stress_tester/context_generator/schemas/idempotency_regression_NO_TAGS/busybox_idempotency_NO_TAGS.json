@@ -149,10 +149,10 @@
       "tags": [],
       "history": []
     },
-
+    
     {
       "command": "mkdir /tmp/busybox_idem13 ; echo ok ; ln -s /tmp/busybox_idem13 /tmp/busybox_idem13",
-      "stdout": "ok",
+      "stdout": "ok\n",
       "stderr": "mkdir: directory exists\nln: file exists",
       "exit_status": 1,
       "attempt": 1,
@@ -164,7 +164,7 @@
 
     {
       "command": "echo ok ; mkdir /tmp/busybox_idem14 ; echo done",
-      "stdout": "ok\ndone",
+      "stdout": "ok\ndone\n",
       "stderr": "mkdir: directory exists",
       "exit_status": 1,
       "attempt": 1,
@@ -176,7 +176,7 @@
 
     {
       "command": "echo $(mkdir /tmp/busybox_idem15) ; echo ok",
-      "stdout": "ok",
+      "stdout": "ok\n",
       "stderr": "mkdir: directory exists",
       "exit_status": 1,
       "attempt": 1,
@@ -212,7 +212,7 @@
 
     {
       "command": "mkdir /tmp/busybox_idem18 || echo fallback",
-      "stdout": "fallback",
+      "stdout": "fallback\n",
       "stderr": "mkdir: directory exists",
       "exit_status": 1,
       "attempt": 1,
@@ -248,7 +248,7 @@
 
     {
       "command": "mkdir /tmp/busybox_idem21 && echo ok ; ln -s /tmp/busybox_idem21 /tmp/busybox_idem21 || echo fallback",
-      "stdout": "fallback",
+      "stdout": "fallback\n",
       "stderr": "mkdir: directory exists\nln: file exists",
       "exit_status": 1,
       "attempt": 1,
