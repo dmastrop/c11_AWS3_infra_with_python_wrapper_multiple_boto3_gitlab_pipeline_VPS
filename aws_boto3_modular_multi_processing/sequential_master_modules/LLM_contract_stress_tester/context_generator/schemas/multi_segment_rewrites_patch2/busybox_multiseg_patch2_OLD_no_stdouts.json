@@ -1,0 +1,241 @@
+{
+  "os_name": "Linux",
+  "os_version": "busybox",
+  "kernel": "5.10.0",
+  "package_managers": [],
+  "shell": "ash",
+  "contexts": [
+    {
+      "command": "ls -l /tmp && grepp foo",
+      "stdout": "",
+      "stderr": "ash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-001",
+      "ip": "10.0.51.1",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo 'hello' && lss /var/log",
+      "stdout": "",
+      "stderr": "ash: lss: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-002",
+      "ip": "10.0.51.2",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "cat /etc/hosts || grepp localhost",
+      "stdout": "",
+      "stderr": "ash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-003",
+      "ip": "10.0.51.3",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(grepp error /var/log/messages)",
+      "stdout": "",
+      "stderr": "ash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-004",
+      "ip": "10.0.51.4",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ps aux | grepp sshd",
+      "stdout": "",
+      "stderr": "ash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-005",
+      "ip": "10.0.51.5",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "uname -a ; whoamii",
+      "stdout": "",
+      "stderr": "ash: whoamii: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-006",
+      "ip": "10.0.51.6",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo 'test' && mkdr /tmp/ash_test",
+      "stdout": "",
+      "stderr": "ash: mkdr: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-007",
+      "ip": "10.0.51.7",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "pwd && echho 'done'",
+      "stdout": "",
+      "stderr": "ash: echho: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-008",
+      "ip": "10.0.51.8",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ls /bin && grepp sh",
+      "stdout": "",
+      "stderr": "ash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-009",
+      "ip": "10.0.51.9",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(lss /tmp)",
+      "stdout": "",
+      "stderr": "ash: lss: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-010",
+      "ip": "10.0.51.10",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "apt-get install curl && echo 'done'",
+      "stdout": "",
+      "stderr": "ash: apt-get: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-011",
+      "ip": "10.0.51.11",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "yum install git && ls /tmp",
+      "stdout": "",
+      "stderr": "ash: yum: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-012",
+      "ip": "10.0.51.12",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "apk add bash && echo 'apk on busybox'",
+      "stdout": "",
+      "stderr": "ash: apk: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-013",
+      "ip": "10.0.51.13",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "pacman -S htop && ps aux",
+      "stdout": "",
+      "stderr": "ash: pacman: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-014",
+      "ip": "10.0.51.14",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "brew install wget && echo 'brew on ash'",
+      "stdout": "",
+      "stderr": "ash: brew: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-015",
+      "ip": "10.0.51.15",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ls /tmp || echo 'fallback' |",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected '|'",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-016",
+      "ip": "10.0.51.16",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(ls /tmp",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-017",
+      "ip": "10.0.51.17",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo \"unmatched && ls /tmp",
+      "stdout": "",
+      "stderr": "ash: syntax error: unexpected EOF",
+      "exit_status": 2,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-018",
+      "ip": "10.0.51.18",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ls /bin && rm -rf /bin",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-019",
+      "ip": "10.0.51.19",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ls /etc && rm -rf /etc",
+      "stdout": "",
+      "stderr": "",
+      "exit_status": 0,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-020",
+      "ip": "10.0.51.20",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ash_test && mkdir /tmp/ash_test",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-021",
+      "ip": "10.0.51.21",
+      "tags": [],
+      "history": []
+    }
+  ]
+}
+

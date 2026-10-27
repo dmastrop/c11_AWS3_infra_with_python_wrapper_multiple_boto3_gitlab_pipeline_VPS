@@ -7,7 +7,7 @@
   "contexts": [
     {
       "command": "ls -l /tmp && grepp foo",
-      "stdout": "",
+      "stdout": "tmpfile1\ntmpfile2\n",
       "stderr": "ash: grepp: not found",
       "exit_status": 127,
       "attempt": 1,
@@ -18,7 +18,7 @@
     },
     {
       "command": "echo 'hello' && lss /var/log",
-      "stdout": "",
+      "stdout": "hello\n",
       "stderr": "ash: lss: not found",
       "exit_status": 127,
       "attempt": 1,
@@ -29,9 +29,9 @@
     },
     {
       "command": "cat /etc/hosts || grepp localhost",
-      "stdout": "",
-      "stderr": "ash: grepp: not found",
-      "exit_status": 127,
+      "stdout": "127.0.0.1 localhost\n::1 localhost\n",
+      "stderr": "",
+      "exit_status": 0,
       "attempt": 1,
       "instance_id": "busybox-mseg-003",
       "ip": "10.0.51.3",
@@ -62,7 +62,7 @@
     },
     {
       "command": "uname -a ; whoamii",
-      "stdout": "",
+      "stdout": "Linux busybox 5.10.0\n",
       "stderr": "ash: whoamii: not found",
       "exit_status": 127,
       "attempt": 1,
@@ -73,7 +73,7 @@
     },
     {
       "command": "echo 'test' && mkdr /tmp/ash_test",
-      "stdout": "",
+      "stdout": "test\n",
       "stderr": "ash: mkdr: not found",
       "exit_status": 127,
       "attempt": 1,
@@ -84,7 +84,7 @@
     },
     {
       "command": "pwd && echho 'done'",
-      "stdout": "",
+      "stdout": "/tmp\n",
       "stderr": "ash: echho: not found",
       "exit_status": 127,
       "attempt": 1,
@@ -95,7 +95,7 @@
     },
     {
       "command": "ls /bin && grepp sh",
-      "stdout": "",
+      "stdout": "sh\nash\nls\ncp\nmv\n",
       "stderr": "ash: grepp: not found",
       "exit_status": 127,
       "attempt": 1,
@@ -205,7 +205,7 @@
     },
     {
       "command": "ls /bin && rm -rf /bin",
-      "stdout": "",
+      "stdout": "sh\nash\nls\ncp\nmv\n",
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
@@ -216,7 +216,7 @@
     },
     {
       "command": "ls /etc && rm -rf /etc",
-      "stdout": "",
+      "stdout": "hosts\npasswd\ngroup\n",
       "stderr": "",
       "exit_status": 0,
       "attempt": 1,
@@ -224,7 +224,7 @@
       "ip": "10.0.51.20",
       "tags": [],
       "history": []
-    },
+    },    
     {
       "command": "mkdir /tmp/ash_test && mkdir /tmp/ash_test",
       "stdout": "",
@@ -235,7 +235,19 @@
       "ip": "10.0.51.21",
       "tags": [],
       "history": []
+    },
+    {
+      "command": "cat /nonexistent || grepp localhost",
+      "stdout": "",
+      "stderr": "cat: /nonexistent: No such file or directory\nash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-022",
+      "ip": "10.0.51.22",
+      "tags": [],
+      "history": []
     }
+
   ]
 }
 
