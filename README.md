@@ -36011,7 +36011,7 @@ The test matrix for macOS‑zsh Multi‑Segment Rewrite Patch2 — 21‑Case Mat
 | 13 | maczsh‑mseg‑013 | `apk add bash && echo 'apk on mac'` | fallback | `{"action":"fallback"}` | Correct fallback; foreign PM. |
 | 14 | maczsh‑mseg‑014 | `pacman -S htop && ps aux` | fallback | `{"action":"fallback"}` | Correct fallback; foreign PM. |
 | 15 | maczsh‑mseg‑015 | `brew install wget && echo 'brew on zsh'` | fallback | `{"action":"fallback"}` | Correct fallback; brew forbidden on PM‑less OS. |
-| 16 | maczsh‑mseg‑016 | `ls /tmp || echo 'fallback' \|` | fallback | `{"action":"fallback"}` | Correct fallback; dangling pipeline (`\|`). |
+| 16 | maczsh‑mseg‑016 | ls /tmp \|\| echo 'fallback' \| | fallback | {"action":"fallback"} | Correct fallback; dangling pipeline. |
 | 17 | maczsh‑mseg‑017 | `echo $(ls /tmp` | fallback | `{"action":"fallback"}` | Correct fallback; incomplete subshell. |
 | 18 | maczsh‑mseg‑018 | `echo "unmatched && ls /tmp` | fallback | `{"action":"fallback"}` | Correct fallback; unmatched quote. |
 | 19 | maczsh‑mseg‑019 | `ls /System && rm -rf /System` | abort | `{"action":"abort","message":"Destructive command detected: rm -rf /System"}` | Correct abort; destructive path. |
