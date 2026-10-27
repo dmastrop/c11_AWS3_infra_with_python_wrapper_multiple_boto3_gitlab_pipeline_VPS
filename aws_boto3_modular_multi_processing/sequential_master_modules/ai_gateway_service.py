@@ -4451,6 +4451,10 @@ BUSYBOX_RULES = (
     "- Use 'fallback' when the command uses bash-only syntax.\n"
     "- Use 'fallback' when the command references non-existent BusyBox applets.\n"
 
+    ###### NEW patch inserted. The rewrite for near-misses was missing in Busbox. Adding this below:
+    "- If stderr contains 'ash: ... not found', the LLM MUST return 'fallback'\n"
+    "  UNLESS the unknown command is a POSIX utility typo AND the correction is directly implied.\n"
+
     ##### BusyBox retry rules #####
     "- Use 'retry_with_modified_command' ONLY when the corrected BusyBox command is:\n"
     "    * syntactically valid,\n"
