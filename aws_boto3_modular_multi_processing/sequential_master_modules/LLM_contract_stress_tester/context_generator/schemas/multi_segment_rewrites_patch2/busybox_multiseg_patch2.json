@@ -246,8 +246,18 @@
       "ip": "10.0.51.22",
       "tags": [],
       "history": []
+    },
+    {
+      "command": "ls -l /tmp && grepp foo",
+      "stdout": "",
+      "stderr": "ash: grepp: not found",
+      "exit_status": 127,
+      "attempt": 1,
+      "instance_id": "busybox-mseg-023",
+      "ip": "10.0.51.23",
+      "tags": [],
+      "history": []
     }
-
   ]
 }
 

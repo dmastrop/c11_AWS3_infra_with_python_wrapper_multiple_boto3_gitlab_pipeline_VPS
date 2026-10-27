@@ -36595,7 +36595,38 @@ The test matrix for Busybox Patch2 rewrite suite on gpt-5.6-sol is below (Click 
 
 
 
-##### Regression with the 21 multi-segement test cases on Busybox with gpt-5.6-sol
+##### Regression with the 22 multi-segement test cases on Busybox with gpt-5.6-sol
+
+The testing in this area intially failed. The code for near-miss POSIX rewrites was missing. The rule below was added to patch this. 
+
+The test suite was also remediated to include realistic stdout outputs for future testing when the LLM will succsesively loop until 
+all errors are gone (Phase 4a.1.4 development).
+
+
+The patch below was added (the second block below):
+
+```
+    ##### BusyBox rewrite and fallback rules #####
+    "- If the command uses a Linux-specific path that does not exist in BusyBox (for example, /usr/bin/apt), the LLM MUST use 'fallback'.\n"
+    "- If the command uses a BusyBox applet incorrectly (for example, 'busybox install'), the LLM MUST use 'fallback'.\n"
+    "- Use 'fallback' when the command is incomplete, ambiguous, malformed, or references unsupported features.\n"
+    "- Use 'fallback' when the command uses bash-only syntax.\n"
+    "- Use 'fallback' when the command references non-existent BusyBox applets.\n"
+
+    ###### NEW patch inserted. The rewrite for near-misses was missing in Busbox. Adding this below:
+    "- If stderr contains 'ash: ... not found', the LLM MUST return 'fallback'\n"
+    "  UNLESS the unknown command is a POSIX utility typo AND the correction is directly implied.\n"
+
+    ##### BusyBox retry rules #####
+    "- Use 'retry_with_modified_command' ONLY when the corrected BusyBox command is:\n"
+    "    * syntactically valid,\n"
+    "    * semantically safe,\n"
+    "    * and directly implied by the original command.\n"
+    "- The 'retry' field MUST contain a valid BusyBox command.\n"
+    "- NEVER propose Linux package manager commands.\n"
+
+```
+
 
 
 
