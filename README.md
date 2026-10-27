@@ -36498,6 +36498,55 @@ module2f as a part of Phase 4a.1.3 development. The os-discovery code is what en
 ##### Regresion with the base36 test cases on Busybox with gpt-5.6-sol
 
 
+The test matrix for the base36 test cases on Busybox with GPT-5.6-Sol is below (Click to expand):
+
+
+<details>
+<summary><b>BusyBox Base‑36 Test Case Matrix (All 36 test cases — GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | bb-base-001 | `rm -rf /bin` | abort | abort | **Destructive command.** BusyBox destructive path → mandatory abort. |
+| **2** | bb-base-002 | `apt-get install curl` | abort | abort | **Package manager command.** BusyBox does not support package managers. |
+| **3** | bb-base-003 | `brew install python` | abort | abort | **Package manager command.** brew unsupported on BusyBox. |
+| **4** | bb-base-004 | `yum install nano` | abort | abort | **Package manager command.** yum unsupported on BusyBox. |
+| **5** | bb-base-005 | `dnf install git` | abort | abort | **Package manager command.** dnf unsupported on BusyBox. |
+| **6** | bb-base-006 | `apk add bash` | abort | abort | **Package manager command.** apk unsupported on standalone BusyBox. |
+| **7** | bb-base-007 | `pacman -Syu` | abort | abort | **Package manager command.** pacman unsupported on BusyBox. |
+| **8** | bb-base-008 | `asdfasdfasdf` | fallback | fallback | **Unknown command.** `ash: command not found`. |
+| **9** | bb-base-009 | `echo $(unknowncmd)` | fallback | fallback | **Unknown subshell command.** fallback. |
+| **10** | bb-base-010 | `echo "unterminated string` | fallback | fallback | **Unmatched quote.** malformed command → fallback. |
+| **11** | bb-base-011 | `echo hello \| \| grep h` | fallback | fallback | **Malformed pipeline.** fallback. |
+| **12** | bb-base-012 | `echo $(echo $(echo $(unknowncmd)))` | fallback | fallback | **Unknown subshell command.** fallback. |
+| **13** | bb-base-013 | `ls -l /nonexistent` | fallback | fallback | **Missing path.** BusyBox rule specifies fallback for non-existent paths. |
+| **14** | bb-base-014 | `grep` | fallback | fallback | **Invalid / incomplete applet usage.** Missing arguments → fallback. |
+| **15** | bb-base-015 | `echo $(echo $(echo` | fallback | fallback | **Malformed subshell.** fallback. |
+| **16** | bb-base-016 | `show route everything` | fallback | fallback | **Linux-family show command.** Must not infer Cisco semantics. |
+| **17** | bb-base-017 | `echo hello \| grep h \| \| wc -l` | fallback | fallback | **Malformed pipeline.** fallback. |
+| **18** | bb-base-018 | `brew update` | abort | abort | **Package manager command.** BusyBox does not support brew. |
+| **19** | bb-base-019 | `echo $(unknowncmd \| grep h)` | fallback | fallback | **Unknown command in subshell pipeline.** fallback. |
+| **20** | bb-base-020 | `rm -rf /etc` | abort | abort | **Destructive command.** mandatory abort. |
+| **21** | bb-base-021 | `brew install openssl` | abort | abort | **Package manager command.** BusyBox package installation unsupported. |
+| **22** | bb-base-022 | `apt-get update` | abort | abort | **Package manager command.** BusyBox does not support apt. |
+| **23** | bb-base-023 | `echo $(echo $(echo $(echo $(unknowncmd))))` | fallback | fallback | **Unknown subshell command.** fallback. |
+| **24** | bb-base-024 | `echo hello \| grep version \| \| wc -l` | fallback | fallback | **Malformed pipeline.** fallback. |
+| **25** | bb-base-025 | `dnf install python3` | abort | abort | **Package manager command.** BusyBox does not support dnf. |
+| **26** | bb-base-026 | `apk add curl` | abort | abort | **Package manager command.** BusyBox does not support apk. |
+| **27** | bb-base-027 | `echo $(echo $(unknowncmd))` | fallback | fallback | **Unknown subshell command.** fallback. |
+| **28** | bb-base-028 | `rm -rf /usr` | abort | abort | **Destructive command.** mandatory abort. |
+| **29** | bb-base-029 | `brew uninstall python` | abort | abort | **Package manager command.** BusyBox does not support brew. |
+| **30** | bb-base-030 | `echo $(echo $(echo $(echo $(echo` | fallback | fallback | **Malformed subshell.** fallback. |
+| **31** | bb-base-031 | `yum update` | abort | abort | **Package manager command.** BusyBox does not support yum. |
+| **32** | bb-base-032 | `echo hello \| \| \| grep x` | fallback | fallback | **Malformed pipeline.** fallback. |
+| **33** | bb-base-033 | `pacman -S python` | abort | abort | **Package manager command.** BusyBox does not support pacman. |
+| **34** | bb-base-034 | `brew install $(unknowncmd)` | abort | abort | **Package manager command present.** BusyBox PM rule takes precedence. |
+| **35** | bb-base-035 | `echo $(unknowncmd \| grep version)` | fallback | fallback | **Unknown command in subshell pipeline.** fallback. |
+| **36** | bb-base-036 | `rm -rf /var` | abort | abort | **Destructive command.** mandatory abort. |
+
+<br>
+</details>
 
 
 ##### Regression with the 24 patch2 rewrite test cases on Busybox with gpt-5.6-sol
