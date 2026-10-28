@@ -281,7 +281,7 @@ The current README documents project evolution through:
 
 The next major development phases continue in:
 
-➡️ **README_PART2.md**
+➡️ **[Continue to README Part 2](README_PART2.md)**
 
 README_PART2.md contains:
 
@@ -299,16 +299,9 @@ README_PART2.md contains:
 
 
 
-
-
-
----
----
-
-
 <br>
 
-## Preface Updates: Reference, High Level Architectural Docs, and LLM Case Studies
+## Preface Updates: High Level Architectural & Design  Docs, and LLM Model Case Studies
 
 <br>
 
@@ -358,7 +351,7 @@ The current README documents project evolution through:
 
 The next major development phases continue in:
 
-➡️ **README_PART2.md**
+➡️ **[Continue to README Part 2](README_PART2.md)**
 
 README_PART2.md contains:
 
