@@ -440,7 +440,7 @@ The last column is typically the Notes column and can be very informative as to 
 
 
 <a name="prefaceupdate13"></a>
-## **PREFACE UPDATE 13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview**
+## PREFACE UPDATE13: Phase 4a.1.2 LLM Contract Rule Engineering VII — macOS‑zsh, macOS‑brew, BusyBox PM‑Behavior Contract Design & Phase 4a.1.3 OS‑Discovery Preview
 
 Phase 4a.1.2 introduced the POSIX operator‑preserving retry engine, multi‑segment rewrite logic, and idempotency classification across multiple shells.  
 This update documents one of the most subtle but foundational parts of the contract architecture:
@@ -1223,6 +1223,7 @@ This update is the foundation for:
 - Linux Bash POSIX idempotency  
 - Linux Dash POSIX idempotency  
 - macOS‑brew POSIX idempotency  
+- macOS-zsh POSIX idempotency
 
 and will be reused across Phase 4a.1.3 and Phase 4a.2.2 (intent→plan→commands pipeline).
 
@@ -36167,7 +36168,7 @@ The preservation applies to an operator-preserving retry in the cleanup_and_retr
 Next, there needs to be the following operator rules (in general (these work in conjunction with the preservation rules above): 
 
 - If a | pipeline, retry the entire line  
-- If && then retry the entire line  
+- If && then retry the entire line (from the first idempotent segment that fails) 
 - If || then retry just the failed segment (in general)
 - If ; then retry just the failed segment  (in general)
 - If shell $(....) then preserve the shell $() but treat the inside according to the operator rules above
@@ -36844,6 +36845,14 @@ As with MacOS zsh the testing in this area is very complex. The design is explai
 
 The MacOS zsh has passed all of these POSIX based tests. Once the BusyBox is qualified, the contract rules blocks will be ported
 to all the Linux OSes and MacOS brew which also support POSIX.
+
+A shorter summary of the POSIX Idempotency + Multi-Segment design was provided in the macos-zsh testing section above:
+
+
+- [MacOS-zsh POSIX Idempotency + Multi-Segment Testing (21 test cases](#macos-zsh-idempotency-multi-segment)
+
+The test matrix for Busybox Idempotency + Multi-Segment (21 test cases) on gpt-5.6-sol is below:
+
 
 
 
