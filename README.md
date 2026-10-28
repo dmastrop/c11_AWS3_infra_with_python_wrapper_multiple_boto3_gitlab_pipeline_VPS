@@ -36763,52 +36763,6 @@ This behavior is present on all OSes, not just MacOS zh oand Busybox. The matrix
 | **22** | busybox-mseg-022 | `cat /nonexistent || grepp localhost` | fallback | fallback | **Competing semantics.** Left side fails with missing file, right side fails with POSIX typo. Fallback is understandable under current contract and does not indicate a rewrite defect. |
 | **23** | busybox-mseg-023 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | **Control experiment.** Same command as mseg-001 but stdout intentionally removed. GPT reconstructed and replayed entire corrected chain: `ls -l /tmp && grep foo`. Strong evidence that stdout influences retry reconstruction. |
 
-<br>
-
-<b>Observations</b>
-
-<br>
-
-GPT‑5.6‑Sol successfully performed all intended BusyBox POSIX typo rewrites after introduction of the BusyBox near‑miss patch.
-
-<br><br>
-
-When stdout provides evidence that earlier segments executed successfully, GPT‑5.6‑Sol may generate a minimal retry_with_modified_command that repairs only the failed segment.
-
-<br><br>
-
-When stdout evidence is absent, GPT‑5.6‑Sol tends to reconstruct and replay the entire command chain.
-
-<br><br>
-
-This behavior was observed in multi‑segment rewrite testing and appears to be execution‑history aware rather than strictly rule‑driven.
-
-<br><br>
-
-The behavior is not fully deterministic. In some cases GPT‑5.6‑Sol recognized successful execution of earlier segments from stdout evidence but still chose to replay the entire corrected command chain rather than only the failed segment.
-
-<br><br>
-
-Both outcomes were semantically safe and contract‑compliant, suggesting that execution history is used as an input signal rather than as a strict decision rule.
-
-<br><br>
-
-Examples demonstrating execution‑history awareness:
-
-<ul>
-<li>mseg‑001 → stdout present → retry: <code>grep foo</code></li>
-<li>mseg‑002 → stdout present → retry: <code>ls /var/log</code></li>
-<li>mseg‑023 → stdout absent → retry: <code>ls -l /tmp && grep foo</code></li>
-</ul>
-
-Examples demonstrating non‑deterministic replay reconstruction:
-
-<ul>
-<li>mseg‑006</li>
-<li>mseg‑007</li>
-<li>mseg‑008</li>
-<li>mseg‑009</li>
-</ul>
 
 <br>
 </details>
