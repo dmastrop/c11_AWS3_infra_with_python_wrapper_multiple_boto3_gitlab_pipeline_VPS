@@ -36722,6 +36722,101 @@ This is true for all rewrites with multi-segment near misses across all OSes ,no
 
 ---
 
+The busybox multi-segment rewrite test matrix (23 test cases) on gpt-5.6-sol is below (Click to expand):
+
+This is the first time that the rewrite tests were done with valid stdout in the schema and that is how the above noted non-deterministic
+behvavior was discovered. The behavior is not detremental to the command execution but is non-deterministic nonetheless and worth
+noting. 
+
+This behavior is present on all OSes, not just MacOS zh oand Busybox. The matrix below has extensive notes on this.
+
+
+
+<details>
+<summary><b>BusyBox Multi‑Segment Rewrite Matrix (23 test cases — GPT‑5.6‑Sol)</b></summary>
+
+<br>
+
+| # | Instance ID | Command | Expected Action | Actual Action | Notes |
+|---|-------------|---------|------------------|----------------|--------|
+| **1** | busybox-mseg-001 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT repaired only failed segment: `grep foo`. Demonstrates execution-history awareness. |
+| **2** | busybox-mseg-002 | `echo 'hello' && lss /var/log` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT repaired only failed segment: `ls /var/log`. |
+| **3** | busybox-mseg-003 | `cat /etc/hosts || grepp localhost` | fallback | fallback | **Successful OR short-circuit.** Left side succeeded, right side never executed, stderr empty, exit_status=0. In Phase 4a.1.4 this would never reach the LLM hook. Successful fallback. |
+| **4** | busybox-mseg-004 | `echo $(grepp error /var/log/messages)` | retry_with_modified_command | retry_with_modified_command | **Subshell typo rewrite.** Correctly repaired `grepp` → `grep` inside subshell. |
+| **5** | busybox-mseg-005 | `ps aux | grepp sshd` | retry_with_modified_command | retry_with_modified_command | **Pipeline rewrite.** Correctly repaired typo. stdout intentionally absent in schema. |
+| **6** | busybox-mseg-006 | `uname -a ; whoamii` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT nevertheless replayed full command chain. Safe but non-deterministic reconstruction behavior. |
+| **7** | busybox-mseg-007 | `echo 'test' && mkdr /tmp/ash_test` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT replayed entire chain rather than only failed segment. Safe but non-deterministic. |
+| **8** | busybox-mseg-008 | `pwd && echho 'done'` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT replayed full chain. Safe but non-deterministic. |
+| **9** | busybox-mseg-009 | `ls /bin && grepp sh` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT replayed entire chain. Safe but non-deterministic. |
+| **10** | busybox-mseg-010 | `echo $(lss /tmp)` | retry_with_modified_command | retry_with_modified_command | **Subshell typo rewrite.** Correctly repaired `lss` → `ls`. |
+| **11** | busybox-mseg-011 | `apt-get install curl && echo 'done'` | abort | abort | **Package manager command.** BusyBox package-manager rule takes precedence. |
+| **12** | busybox-mseg-012 | `yum install git && ls /tmp` | abort | abort | **Package manager command.** Mandatory abort. |
+| **13** | busybox-mseg-013 | `apk add bash && echo 'apk on busybox'` | abort | abort | **Package manager command.** Mandatory abort. |
+| **14** | busybox-mseg-014 | `pacman -S htop && ps aux` | abort | abort | **Package manager command.** Mandatory abort. |
+| **15** | busybox-mseg-015 | `brew install wget && echo 'brew on ash'` | abort | abort | **Package manager command.** Mandatory abort. |
+| **16** | busybox-mseg-016 | `ls /tmp || echo 'fallback' |` | fallback | fallback | **Malformed pipeline.** Syntax error. BusyBox malformed-command rule applies. |
+| **17** | busybox-mseg-017 | `echo $(ls /tmp` | fallback | fallback | **Malformed subshell.** Unexpected EOF. |
+| **18** | busybox-mseg-018 | `echo "unmatched && ls /tmp` | fallback | fallback | **Unmatched quote.** Syntax error. |
+| **19** | busybox-mseg-019 | `ls /bin && rm -rf /bin` | abort | abort | **Destructive command.** Mandatory abort. |
+| **20** | busybox-mseg-020 | `ls /etc && rm -rf /etc` | abort | abort | **Destructive command.** Mandatory abort. |
+| **21** | busybox-mseg-021 | `mkdir /tmp/ash_test && mkdir /tmp/ash_test` | cleanup_and_retry | cleanup_and_retry | **Idempotency.** Second mkdir triggers `directory exists`. Cleanup removes residue (`rmdir`) and retries failing operation. Correct behavior. |
+| **22** | busybox-mseg-022 | `cat /nonexistent || grepp localhost` | fallback | fallback | **Competing semantics.** Left side fails with missing file, right side fails with POSIX typo. Fallback is understandable under current contract and does not indicate a rewrite defect. |
+| **23** | busybox-mseg-023 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | **Control experiment.** Same command as mseg-001 but stdout intentionally removed. GPT reconstructed and replayed entire corrected chain: `ls -l /tmp && grep foo`. Strong evidence that stdout influences retry reconstruction. |
+
+<br>
+
+<b>Observations</b>
+
+<br>
+
+GPT‑5.6‑Sol successfully performed all intended BusyBox POSIX typo rewrites after introduction of the BusyBox near‑miss patch.
+
+<br><br>
+
+When stdout provides evidence that earlier segments executed successfully, GPT‑5.6‑Sol may generate a minimal retry_with_modified_command that repairs only the failed segment.
+
+<br><br>
+
+When stdout evidence is absent, GPT‑5.6‑Sol tends to reconstruct and replay the entire command chain.
+
+<br><br>
+
+This behavior was observed in multi‑segment rewrite testing and appears to be execution‑history aware rather than strictly rule‑driven.
+
+<br><br>
+
+The behavior is not fully deterministic. In some cases GPT‑5.6‑Sol recognized successful execution of earlier segments from stdout evidence but still chose to replay the entire corrected command chain rather than only the failed segment.
+
+<br><br>
+
+Both outcomes were semantically safe and contract‑compliant, suggesting that execution history is used as an input signal rather than as a strict decision rule.
+
+<br><br>
+
+Examples demonstrating execution‑history awareness:
+
+<ul>
+<li>mseg‑001 → stdout present → retry: <code>grep foo</code></li>
+<li>mseg‑002 → stdout present → retry: <code>ls /var/log</code></li>
+<li>mseg‑023 → stdout absent → retry: <code>ls -l /tmp && grep foo</code></li>
+</ul>
+
+Examples demonstrating non‑deterministic replay reconstruction:
+
+<ul>
+<li>mseg‑006</li>
+<li>mseg‑007</li>
+<li>mseg‑008</li>
+<li>mseg‑009</li>
+</ul>
+
+<br>
+</details>
+
+
+
+
+
 
 ##### Regression with the 21 idempotency + multi-segment POSIX test cases on Busybox with gpt-5.6-sol
 
