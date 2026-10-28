@@ -272,7 +272,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 ---
 
-# 🚀 CONTINUED IN README_PART2.md
+## 🚀 CONTINUED IN README_PART2.md
 
 The current README documents project evolution through:
 
@@ -287,7 +287,7 @@ README_PART2.md contains:
 
 - Phase 4a.1.3 OS Discovery Architecture and module2f/ai-mcp-hook integration testing with AWS
 - Phase 4a.1.4 Heuristic + AI Hybrid Routing Engine integration into module2f
-- Phase 4a.2 AI/MCP Integration into module2 (tenative)
+- Phase 4a.2 AI/MCP Integration into module2 (tentative)
 - Phase 4a.2.2 Intent → Plan → Commands Pipeline
 - Phase 4b Machine Learning Lifecycle
 - Phase 5 Autonomous Contract Evolution (LangFuse integration)
@@ -305,6 +305,12 @@ README_PART2.md contains:
 ---
 ---
 
+
+<br>
+
+## Preface Updates: Reference, High Level Architectural Docs, and LLM Case Studies
+
+<br>
 
 
 - [Preface Update1: Extensibility & Topological Mapping Architecture and Resurrection Architecture (v4.5)](#preface-update1-extensibility--topological-mapping-architecture-and-resurrection-architecture-v45)
@@ -343,7 +349,7 @@ README_PART2.md contains:
 
 ---
 
-# 🚀 CONTINUED IN README_PART2.md
+## 🚀 CONTINUED IN README_PART2.md
 
 The current README documents project evolution through:
 
@@ -358,7 +364,7 @@ README_PART2.md contains:
 
 - Phase 4a.1.3 OS Discovery Architecture and module2f/ai-mcp-hook integration testing with AWS
 - Phase 4a.1.4 Heuristic + AI Hybrid Routing Engine integration into module2f
-- Phase 4a.2 AI/MCP Integration into module2 (tenative)
+- Phase 4a.2 AI/MCP Integration into module2 (tentative)
 - Phase 4a.2.2 Intent → Plan → Commands Pipeline
 - Phase 4b Machine Learning Lifecycle
 - Phase 5 Autonomous Contract Evolution (LangFuse integration)
