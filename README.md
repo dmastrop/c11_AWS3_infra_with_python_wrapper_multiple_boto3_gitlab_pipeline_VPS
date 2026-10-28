@@ -281,7 +281,8 @@ The current README documents project evolution through:
 
 The next major development phases continue in:
 
-➡️ **[Continue to README Part 2](README_PART2.md)**
+➡️ **Continue to https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README_PART2.md?expanded=true&ref_type=heads&viewer=rich**
+
 
 README_PART2.md contains:
 
@@ -301,7 +302,7 @@ README_PART2.md contains:
 
 <br>
 
-## Preface Updates: High Level Architectural & Design  Docs, and LLM Model Case Studies
+## Preface Updates: High Level Architectural & Design Docs, and LLM Model Case Studies
 
 <br>
 
@@ -351,7 +352,8 @@ The current README documents project evolution through:
 
 The next major development phases continue in:
 
-➡️ **[Continue to README Part 2](README_PART2.md)**
+➡️ **Continue to https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README_PART2.md?expanded=true&ref_type=heads&viewer=rich**
+
 
 README_PART2.md contains:
 
