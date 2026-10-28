@@ -35989,6 +35989,44 @@ A few of the test cases failed due to some basic rules that were too general. Th
 domain primitives block and are working now. 
 
 
+
+---
+
+
+When stdout provides evidence that earlier segments
+executed successfully, GPT‑5.6‑Sol may generate a
+minimal retry_with_modified_command that repairs only
+the failed segment.
+
+When stdout evidence is absent, GPT‑5.6‑Sol tends to
+reconstruct and replay the entire command chain.
+
+This behavior was observed in multi‑segment rewrite
+testing and appears to be execution‑history aware
+rather than strictly rule‑driven.
+
+The behavior is not fully deterministic. In some
+cases GPT‑5.6‑Sol recognized successful execution
+of earlier segments from stdout evidence but still
+chose to replay the entire corrected command chain
+rather than only the failed segment.
+
+Both outcomes were semantically safe and contract‑
+compliant, suggesting that execution history is
+used as an input signal rather than as a strict
+decision rule.
+
+
+GPT-5.6-Sol appears to use stdout as execution-history evidence,
+but does not treat that evidence as a hard constraint.
+
+This is true for all rewrites with multi-segment near misses across all OSes ,not just Busybox and MacOS zsh.
+
+
+---
+
+
+
 The test matrix for macOS‑zsh Multi‑Segment Rewrite Patch2 — 21‑Case Matrix (Markdown‑Safe) is below )Click to expand):
 
 <details>
@@ -36595,7 +36633,7 @@ The test matrix for Busybox Patch2 rewrite suite on gpt-5.6-sol is below (Click 
 
 
 
-##### Regression with the 22 multi-segement test cases on Busybox with gpt-5.6-sol
+##### Regression with the 23 multi-segement test cases on Busybox with gpt-5.6-sol
 
 The testing in this area intially failed. The code for near-miss POSIX rewrites was missing. The rule below was added to patch this. 
 
@@ -36627,7 +36665,62 @@ The patch below was added (the second block below):
 
 ```
 
+---
 
+
+
+When stdout provides evidence that earlier segments
+executed successfully, GPT‑5.6‑Sol may generate a
+minimal retry_with_modified_command that repairs only
+the failed segment.
+
+When stdout evidence is absent, GPT‑5.6‑Sol tends to
+reconstruct and replay the entire command chain.
+
+This behavior was observed in multi‑segment rewrite
+testing and appears to be execution‑history aware
+rather than strictly rule‑driven.
+
+The behavior is not fully deterministic. In some
+cases GPT‑5.6‑Sol recognized successful execution
+of earlier segments from stdout evidence but still
+chose to replay the entire corrected command chain
+rather than only the failed segment.
+
+Both outcomes were semantically safe and contract‑
+compliant, suggesting that execution history is
+used as an input signal rather than as a strict
+decision rule.
+
+Examples:
+
+    mseg‑001
+        stdout present
+        retry: grep foo
+
+    mseg‑002
+        stdout present
+        retry: ls /var/log
+
+    mseg‑023
+        stdout absent
+        retry: ls -l /tmp && grep foo
+
+Non‑deterministic replay examples:
+
+    mseg‑006
+    mseg‑007
+    mseg‑008
+    mseg‑009
+
+GPT-5.6-Sol appears to use stdout as execution-history evidence,
+but does not treat that evidence as a hard constraint.
+
+This is true for all rewrites with multi-segment near misses across all OSes ,not just Busybox and MacOS zsh.
+
+
+
+---
 
 
 ##### Regression with the 21 idempotency + multi-segment POSIX test cases on Busybox with gpt-5.6-sol
