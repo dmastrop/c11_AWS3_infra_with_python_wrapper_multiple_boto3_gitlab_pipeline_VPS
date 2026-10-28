@@ -11,7 +11,8 @@
 
 Continuation of:
 
-➡️ **[README.md](README.md)**
+
+⬅️ **Back to [README.md](https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README.md?expanded=true&ref_type=heads&viewer=rich)**
 
 This document continues project evolution beginning with:
 
