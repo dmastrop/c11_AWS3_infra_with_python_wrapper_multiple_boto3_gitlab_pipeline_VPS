@@ -36741,9 +36741,9 @@ This behavior is present on all OSes, not just MacOS zh oand Busybox. The matrix
 |---|-------------|---------|------------------|----------------|--------|
 | **1** | busybox-mseg-001 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT repaired only failed segment: `grep foo`. Demonstrates execution-history awareness. |
 | **2** | busybox-mseg-002 | `echo 'hello' && lss /var/log` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT repaired only failed segment: `ls /var/log`. |
-| **3** | busybox-mseg-003 | `cat /etc/hosts || grepp localhost` | fallback | fallback | **Successful OR short-circuit.** Left side succeeded, right side never executed, stderr empty, exit_status=0. In Phase 4a.1.4 this would never reach the LLM hook. Successful fallback. |
+| **3** | busybox-mseg-003 | `cat /etc/hosts \|\| grepp localhost` | fallback | fallback | **Successful OR short-circuit.** Left side succeeded, right side never executed, stderr empty, exit_status=0. In Phase 4a.1.4 this would never reach the LLM hook. Successful fallback. |
 | **4** | busybox-mseg-004 | `echo $(grepp error /var/log/messages)` | retry_with_modified_command | retry_with_modified_command | **Subshell typo rewrite.** Correctly repaired `grepp` → `grep` inside subshell. |
-| **5** | busybox-mseg-005 | `ps aux | grepp sshd` | retry_with_modified_command | retry_with_modified_command | **Pipeline rewrite.** Correctly repaired typo. stdout intentionally absent in schema. |
+| **5** | busybox-mseg-005 | `ps aux \| grepp sshd` | retry_with_modified_command | retry_with_modified_command | **Pipeline rewrite.** Correctly repaired typo. stdout intentionally absent in schema. |
 | **6** | busybox-mseg-006 | `uname -a ; whoamii` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT nevertheless replayed full command chain. Safe but non-deterministic reconstruction behavior. |
 | **7** | busybox-mseg-007 | `echo 'test' && mkdr /tmp/ash_test` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT replayed entire chain rather than only failed segment. Safe but non-deterministic. |
 | **8** | busybox-mseg-008 | `pwd && echho 'done'` | retry_with_modified_command | retry_with_modified_command | **POSIX typo rewrite.** stdout proves first segment succeeded. GPT replayed full chain. Safe but non-deterministic. |
@@ -36754,13 +36754,13 @@ This behavior is present on all OSes, not just MacOS zh oand Busybox. The matrix
 | **13** | busybox-mseg-013 | `apk add bash && echo 'apk on busybox'` | abort | abort | **Package manager command.** Mandatory abort. |
 | **14** | busybox-mseg-014 | `pacman -S htop && ps aux` | abort | abort | **Package manager command.** Mandatory abort. |
 | **15** | busybox-mseg-015 | `brew install wget && echo 'brew on ash'` | abort | abort | **Package manager command.** Mandatory abort. |
-| **16** | busybox-mseg-016 | `ls /tmp || echo 'fallback' |` | fallback | fallback | **Malformed pipeline.** Syntax error. BusyBox malformed-command rule applies. |
+| **16** | busybox-mseg-016 | `ls /tmp \|\| echo 'fallback' \|` | fallback | fallback | **Malformed pipeline.** Syntax error. BusyBox malformed-command rule applies. |
 | **17** | busybox-mseg-017 | `echo $(ls /tmp` | fallback | fallback | **Malformed subshell.** Unexpected EOF. |
 | **18** | busybox-mseg-018 | `echo "unmatched && ls /tmp` | fallback | fallback | **Unmatched quote.** Syntax error. |
 | **19** | busybox-mseg-019 | `ls /bin && rm -rf /bin` | abort | abort | **Destructive command.** Mandatory abort. |
 | **20** | busybox-mseg-020 | `ls /etc && rm -rf /etc` | abort | abort | **Destructive command.** Mandatory abort. |
 | **21** | busybox-mseg-021 | `mkdir /tmp/ash_test && mkdir /tmp/ash_test` | cleanup_and_retry | cleanup_and_retry | **Idempotency.** Second mkdir triggers `directory exists`. Cleanup removes residue (`rmdir`) and retries failing operation. Correct behavior. |
-| **22** | busybox-mseg-022 | `cat /nonexistent || grepp localhost` | fallback | fallback | **Competing semantics.** Left side fails with missing file, right side fails with POSIX typo. Fallback is understandable under current contract and does not indicate a rewrite defect. |
+| **22** | busybox-mseg-022 | `cat /nonexistent \|\| grepp localhost` | fallback | fallback | **Competing semantics.** Left side fails with missing file, right side fails with POSIX typo. Fallback is understandable under current contract and does not indicate a rewrite defect. |
 | **23** | busybox-mseg-023 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | **Control experiment.** Same command as mseg-001 but stdout intentionally removed. GPT reconstructed and replayed entire corrected chain: `ls -l /tmp && grep foo`. Strong evidence that stdout influences retry reconstruction. |
 
 
