@@ -12,7 +12,8 @@
 Continuation of:
 
 
-⬅️ **Back to [README.md](https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README.md?expanded=true&ref_type=heads&viewer=rich)**
+⬅️ <b>Back to <a href="https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README.md?expanded=true&ref_type=heads&viewer=rich" target="_blank" rel="noopener noreferrer">README.md</a></b>
+
 
 This document continues project evolution beginning with:
 
