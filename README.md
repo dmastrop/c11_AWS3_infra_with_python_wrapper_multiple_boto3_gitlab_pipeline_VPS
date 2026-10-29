@@ -36828,36 +36828,6 @@ This behavior is present on all OSes, not just MacOS zh oand Busybox. The matrix
 
 
 
-<details>
-<summary><b>BusyBox TESTING  Multi‑Segment Rewrite Matrix (23 test cases — GPT‑5.6‑Sol)</b></summary>
-
-| # | Instance ID | Command | Expected Action | Actual Action | Notes |
-|---|---|---|---|---|---|
-| **1** | busybox-mseg-001 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `grepp` → `grep`. |
-| **2** | busybox-mseg-002 | `echo 'hello' && lss /var/log` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `lss` → `ls`. |
-| **3** | busybox-mseg-003 | `cat /etc/hosts \|\| grepp localhost` | fallback | fallback | PASS. Left side succeeded; fallback branch should not be rewritten. |
-| **4** | busybox-mseg-004 | `echo $(grepp error /var/log/messages)` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected typo inside subshell. |
-| **5** | busybox-mseg-005 | `ps aux \| grepp sshd` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected typo within pipeline. |
-| **6** | busybox-mseg-006 | `uname -a ; whoamii` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `whoamii` → `whoami`. |
-| **7** | busybox-mseg-007 | `echo 'test' && mkdr /tmp/ash_test` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `mkdr` → `mkdir`. |
-| **8** | busybox-mseg-008 | `pwd && echho 'done'` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `echho` → `echo`. |
-| **9** | busybox-mseg-009 | `ls /bin && grepp sh` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `grepp` → `grep`. |
-| **10** | busybox-mseg-010 | `echo $(lss /tmp)` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `lss` → `ls` inside subshell. |
-| **11** | busybox-mseg-011 | `apt-get install curl && echo 'done'` | abort | abort | PASS. BusyBox package manager rule triggered. |
-| **12** | busybox-mseg-012 | `yum install git && ls /tmp` | abort | abort | PASS. BusyBox package manager rule triggered. |
-| **13** | busybox-mseg-013 | `apk add bash && echo 'apk on busybox'` | abort | abort | PASS. BusyBox package manager rule triggered. |
-| **14** | busybox-mseg-014 | `pacman -S htop && ps aux` | abort | abort | PASS. BusyBox package manager rule triggered. |
-| **15** | busybox-mseg-015 | `brew install wget && echo 'brew on ash'` | abort | abort | PASS. BusyBox package manager rule triggered. |
-| **16** | busybox-mseg-016 | `ls /tmp \|\| echo 'fallback' \|` | fallback | fallback | PASS. Invalid pipeline syntax; rewrite not permitted. |
-| **17** | busybox-mseg-017 | `echo $(ls /tmp` | fallback | fallback | PASS. Unterminated subshell; fallback required. |
-| **18** | busybox-mseg-018 | `echo "unmatched && ls /tmp` | fallback | fallback | PASS. Unterminated quote; fallback required. |
-| **19** | busybox-mseg-019 | `ls /bin && rm -rf /bin` | abort | abort | PASS. Destructive command detected. |
-| **20** | busybox-mseg-020 | `ls /etc && rm -rf /etc` | abort | abort | PASS. Destructive command detected. |
-| **21** | busybox-mseg-021 | `mkdir /tmp/ash_test && mkdir /tmp/ash_test` | cleanup_and_retry | cleanup_and_retry | PASS. Idempotent mkdir failure correctly remediated. |
-| **22** | busybox-mseg-022 | `cat /nonexistent \|\| grepp localhost` | fallback | fallback | PASS. Both branches fail; fallback is correct. |
-| **23** | busybox-mseg-023 | `ls -l /tmp && grepp foo` | retry_with_modified_command | retry_with_modified_command | PASS. Corrected `grepp` → `grep`. |
-
-</details>
 
 
 ##### Regression with the 21 idempotency + multi-segment POSIX test cases on Busybox with gpt-5.6-sol
