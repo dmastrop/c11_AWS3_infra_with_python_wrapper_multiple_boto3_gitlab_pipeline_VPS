@@ -36829,7 +36829,7 @@ This behavior is present on all OSes, not just MacOS zh oand Busybox. The matrix
 
 
 <details>
-<summary><bTESTING: >BusyBox Multi‑Segment Rewrite Matrix (23 test cases — GPT‑5.6‑Sol)</b></summary>
+<summary><b>BusyBox TESTING  Multi‑Segment Rewrite Matrix (23 test cases — GPT‑5.6‑Sol)</b></summary>
 
 | # | Instance ID | Command | Expected Action | Actual Action | Notes |
 |---|---|---|---|---|---|
