@@ -36883,13 +36883,16 @@ No contract modifications were required following validation.
 **Test Case 1 (index 0)**
 
 **Command:** `mkdir /tmp/busybox_idem1`
+
 **Operator:** single segment
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem1`
+
 **Retry:** `mkdir /tmp/busybox_idem1`
+
 **Notes:** Simple idempotency.
 
 ---
