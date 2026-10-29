@@ -36900,13 +36900,16 @@ No contract modifications were required following validation.
 **Test Case 2 (index 1)**
 
 **Command:** `touch /tmp/busybox_idem2`
+
 **Operator:** single segment
 
 **Failures:**
 - `touch` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem2`
+
 **Retry:** `touch /tmp/busybox_idem2`
+
 **Notes:** Simple idempotency.
 
 ---
@@ -36914,13 +36917,16 @@ No contract modifications were required following validation.
 **Test Case 3 (index 2)**
 
 **Command:** `ln -s /tmp/source3 /tmp/busybox_idem3`
+
 **Operator:** single segment
 
 **Failures:**
 - `ln -s` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem3`
+
 **Retry:** `ln -s /tmp/source3 /tmp/busybox_idem3`
+
 **Notes:** Simple idempotency.
 
 ---
@@ -36928,13 +36934,16 @@ No contract modifications were required following validation.
 **Test Case 4 (index 3)**
 
 **Command:** `rmdir /tmp/busybox_idem4`
+
 **Operator:** single segment
 
 **Failures:**
 - `rmdir: not removed` → NI
 
 **Cleanup:** none
+
 **Action:** fallback
+
 **Notes:** Non‑idempotent; cannot be fixed safely.
 
 ---
@@ -36942,13 +36951,16 @@ No contract modifications were required following validation.
 **Test Case 5 (index 4)**
 
 **Command:** `kill 99999`
+
 **Operator:** single segment
 
 **Failures:**
 - `kill: no such process` → NI
 
 **Cleanup:** none
+
 **Action:** fallback
+
 **Notes:** Non‑idempotent.
 
 ---
@@ -36956,13 +36968,16 @@ No contract modifications were required following validation.
 **Test Case 6 (index 5)**
 
 **Command:** `mkdir /tmp/busybox_idem6 ; touch /tmp/busybox_idem6`
+
 **Operator:** `;` chain
 
 **Failures:**
 - `touch` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem6`
+
 **Retry:** `touch /tmp/busybox_idem6`
+
 **Notes:** `;` → retry only failed segment.
 
 ---
@@ -36970,13 +36985,16 @@ No contract modifications were required following validation.
 **Test Case 7 (index 6)**
 
 **Command:** `mkdir /tmp/busybox_idem7 && touch /tmp/busybox_idem7`
+
 **Operator:** `&&` chain
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem7`
+
 **Retry:** `mkdir /tmp/busybox_idem7 && touch /tmp/busybox_idem7`
+
 **Notes:** `&&` → retry starting at first idempotent failure; preserve structure.
 
 ---
@@ -36984,13 +37002,16 @@ No contract modifications were required following validation.
 **Test Case 8 (index 7)**
 
 **Command:** `touch /tmp/busybox_idem8 || ln -s /tmp/busybox_idem8 /tmp/busybox_idem8`
+
 **Operator:** `||` chain
 
 **Failures:**
 - `touch` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem8`
+
 **Retry:** `touch /tmp/busybox_idem8`
+
 **Notes:** `||` → retry only failed segment; do **NOT** replay fallback branch.
 
 ---
@@ -36998,13 +37019,16 @@ No contract modifications were required following validation.
 **Test Case 9 (index 8)**
 
 **Command:** `mkdir /tmp/busybox_idem9 | grep foo`
+
 **Operator:** pipeline
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem9`
+
 **Retry:** `mkdir /tmp/busybox_idem9 | grep foo`
+
 **Notes:** Pipeline → retry entire pipeline.
 
 ---
@@ -37012,13 +37036,16 @@ No contract modifications were required following validation.
 **Test Case 10 (index 9)**
 
 **Command:** `echo $(touch /tmp/busybox_idem10)`
+
 **Operator:** subshell
 
 **Failures:**
 - `touch` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem10`
+
 **Retry:** `echo $(touch /tmp/busybox_idem10)`
+
 **Notes:** Preserve subshell wrapper.
 
 ---
@@ -37026,6 +37053,7 @@ No contract modifications were required following validation.
 **Test Case 11 (index 10)**
 
 **Command:** `mkdir /tmp/busybox_idem11 ; touch /tmp/busybox_idem11 ; ln -s /tmp/busybox_idem11 /tmp/busybox_idem11`
+
 **Operator:** `;` chain
 
 **Failures:**
@@ -37034,7 +37062,9 @@ No contract modifications were required following validation.
 - `ln -s` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem11` (ambiguous: mkdir + touch + ln)
+
 **Retry:** `mkdir /tmp/busybox_idem11 ; touch /tmp/busybox_idem11 ; ln -s /tmp/busybox_idem11 /tmp/busybox_idem11`
+
 **Notes:** All segments failed idempotently → retry all.
 
 ---
@@ -37042,14 +37072,18 @@ No contract modifications were required following validation.
 **Test Case 12 (index 11)**
 
 **Command:** `apt-get install -y nonexistent`
+
 **Operator:** single segment
 
 **Failures:**
 - package‑manager command → unsupported
 
 **Cleanup:** none
+
 **Action:** abort
+
 **Message:** `BusyBox does not support Linux package managers.`
+
 **Notes:** BusyBox standalone environment has no package manager. Per Preface Update 13, package‑manager commands trigger abort.
 
 ---
@@ -37057,6 +37091,7 @@ No contract modifications were required following validation.
 **Test Case 13 (index 12)**
 
 **Command:** `mkdir /tmp/busybox_idem13 ; echo ok ; ln -s /tmp/busybox_idem13 /tmp/busybox_idem13`
+
 **Operator:** `;` chain
 
 **Failures:**
@@ -37064,7 +37099,9 @@ No contract modifications were required following validation.
 - `ln -s` → I
 
 **Cleanup:** `rm -f /tmp/busybox_idem13` (ambiguous: mkdir + ln)
+
 **Retry:** `mkdir /tmp/busybox_idem13 ; ln -s /tmp/busybox_idem13 /tmp/busybox_idem13`
+
 **Notes:** Skip successful `echo ok`; retry only failed segments.
 
 ---
@@ -37072,13 +37109,16 @@ No contract modifications were required following validation.
 **Test Case 14 (index 13)**
 
 **Command:** `echo ok ; mkdir /tmp/busybox_idem14 ; echo done`
+
 **Operator:** `;` chain
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem14`
+
 **Retry:** `mkdir /tmp/busybox_idem14`
+
 **Notes:** Only one segment failed; retry only that segment.
 
 ---
@@ -37086,13 +37126,16 @@ No contract modifications were required following validation.
 **Test Case 15 (index 14)**
 
 **Command:** `echo $(mkdir /tmp/busybox_idem15) ; echo ok`
+
 **Operator:** subshell + `;`
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem15`
+
 **Retry:** `echo $(mkdir /tmp/busybox_idem15)`
+
 **Notes:** Preserve subshell wrapper; retry only failed segment.
 
 ---
@@ -37100,13 +37143,16 @@ No contract modifications were required following validation.
 **Test Case 16 (index 15)**
 
 **Command:** `mkdir /tmp/busybox_idem16 | cat`
+
 **Operator:** pipeline
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem16`
+
 **Retry:** `mkdir /tmp/busybox_idem16 | cat`
+
 **Notes:** Pipeline → retry entire pipeline.
 
 ---
@@ -37114,13 +37160,16 @@ No contract modifications were required following validation.
 **Test Case 17 (index 16)**
 
 **Command:** `echo foo | mkdir /tmp/busybox_idem17 | grep foo`
+
 **Operator:** pipeline
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem17`
+
 **Retry:** `echo foo | mkdir /tmp/busybox_idem17 | grep foo`
+
 **Notes:** Pipeline → retry entire pipeline.
 
 ---
@@ -37128,13 +37177,16 @@ No contract modifications were required following validation.
 **Test Case 18 (index 17)**
 
 **Command:** `mkdir /tmp/busybox_idem18 || echo fallback`
+
 **Operator:** `||` chain
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem18`
+
 **Retry:** `mkdir /tmp/busybox_idem18`
+
 **Notes:** Do **NOT** replay fallback segment; retry only failed segment.
 
 ---
@@ -37142,13 +37194,16 @@ No contract modifications were required following validation.
 **Test Case 19 (index 18)**
 
 **Command:** `mkdir /tmp/busybox_idem19 && echo ok`
+
 **Operator:** `&&` chain
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem19`
+
 **Retry:** `mkdir /tmp/busybox_idem19 && echo ok`
+
 **Notes:** `&&` → preserve structure; retry starting at first idempotent failure.
 
 ---
@@ -37156,13 +37211,16 @@ No contract modifications were required following validation.
 **Test Case 20 (index 19)**
 
 **Command:** `echo $(echo $(mkdir /tmp/busybox_idem20)))`
+
 **Operator:** nested subshell
 
 **Failures:**
 - `mkdir` → I
 
 **Cleanup:** `rmdir /tmp/busybox_idem20`
+
 **Retry:** `echo $(echo $(mkdir /tmp/busybox_idem20)))`
+
 **Notes:** Preserve both subshell wrappers; retry only failed segment.
 
 ---
@@ -37170,6 +37228,7 @@ No contract modifications were required following validation.
 **Test Case 21 (index 20)**
 
 **Command:** `mkdir /tmp/busybox_idem21 && echo ok ; ln -s /tmp/busybox_idem21 /tmp/busybox_idem21 || echo fallback`
+
 **Operator:** mixed (`&&`, `;`, `||`)
 
 **Failures:**
@@ -37179,7 +37238,9 @@ No contract modifications were required following validation.
 - `echo fallback` → succeeded
 
 **Cleanup:** `rm -f /tmp/busybox_idem21` (ambiguous: mkdir + ln)
+
 **Retry:** `mkdir /tmp/busybox_idem21 && echo ok ; ln -s /tmp/busybox_idem21 /tmp/busybox_idem21`
+
 **Notes:** Most complex case; operator‑preserving rules handle it correctly. Successful fallback branch is not replayed.
 
 ---
