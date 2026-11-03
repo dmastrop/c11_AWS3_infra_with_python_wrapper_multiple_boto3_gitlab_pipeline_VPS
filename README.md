@@ -21417,7 +21417,8 @@ WORK IN PROGRESS
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
 - [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
-- [Stress testing the contract rules with the automated framework](#stress-testing-the-contract-rules-with-the-automated-framework)
+- [Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)](#linux-posix-pm-port) 
+- [Stress testing the contract rules with the automated framework mutator](#stress-testing-the-contract-rules-with-the-automated-framework-mutator)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
 
@@ -37263,17 +37264,215 @@ No contract modifications were required following validation.
 
 
 
-
+<a id="linux-posix-pm-port"></a>
 ### Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)
 
-The POSIX idempotency + mult
+The POSIX idempotency + multi-segment support that was ported to macos zsh and Busybox in the previous section is complex. 
+Porting this to Linux OSes and macos brew has one additional layer of complexity, namely that these OSes support PMs (Package
+Managers) and the PM rewtire contract logic. In addtion, these OSes support OS-signaled remediation.   Thus, precedence must
+now be incorporated into these domain primtitives blocks that support PMs. This topic will be implemented further in Phase4a.1.4
+where multiple LLM calls can be activated from the def _invoke_ai_hook() function in module2f when remediation has to be performed
+using multiple LLM action plans. Right now that Phase4a.1.4 code is not implemented yet, so the testing here will follow the 
+methodology explained below. Then, once Phase4a.1.4 is implemented, the complete start to finish testing can be done. 
+
+Unlike the previously validated macOS‑zsh and BusyBox implementations, Ubuntu is a package‑manager-enabled environment. As a result, the Ubuntu refactor required three POSIX-related additions rather than two.
+
+The first addition establishes explicit precedence between package‑manager rewrite logic and POSIX idempotency remediation. When a command contains a wrong‑OS package manager (for example, `yum`, `dnf`, or `apk` on Ubuntu), the package‑manager rewrite rules must execute first and return a `retry_with_modified_command` action plan. POSIX idempotency remediation is intentionally deferred until a subsequent LLM invocation operating on the corrected command.
+
+The second addition introduces Ubuntu shell‑level idempotency handling for POSIX primitives such as `mkdir`, `touch`, `ln`, `rmdir`, and `kill`. These rules define deterministic cleanup mappings used by the `cleanup_and_retry` action plan and extend the existing global idempotency semantics with Ubuntu‑specific remediation behavior.
+
+The third addition ports the POSIX Idempotency and Operator‑Preserving Retry design from Preface Update 12. These rules codify how idempotent failures are remediated inside pipelines, `&&` chains, `||` chains, `;` chains, and subshells while preserving the original operator structure. The objective is to retry only the idempotent segments while maintaining the execution semantics of the original command.
+
+The validation suite below focuses on two areas. First, it validates the Ubuntu implementation of the 21‑case POSIX Idempotency + Multi‑Segment test suite originally developed for macOS‑zsh and later ported to BusyBox. Second, it validates package‑manager rewrite precedence by introducing additional test cases that combine POSIX multi‑segment constructs with wrong‑OS package managers.
+
+Because the current implementation executes only a single LLM invocation per recovery attempt, these tests validate the individual action plans rather than the complete multi‑loop recovery workflow. Package‑manager rewrite cases therefore validate the `retry_with_modified_command` path, while POSIX idempotency cases validate the `cleanup_and_retry` path.
+
+Full end‑to‑end validation of package‑manager rewrite followed by POSIX idempotency remediation will occur during Phase 4a.1.4 after multi‑invocation support is implemented inside `def _invoke_ai_hook()` and integrated into the module2f recovery pipeline.
+
+Another note: the base, patch2 rewrite, multi-segment suites, original idempotency suite and the os-signaled remediation suite will be 
+run as regresssion to make sure the changes below don't cause regresssion issues. These tests all passed previously and the test results
+are in an earlier section above:
+
+
+- [1.LLM Contract Stress Tester – Multi-segment pipeline Ubuntu testing and test matrices](#llm-contract-stress-tester-multi-segment-ubuntu-testing-and-test-matrices) 
+
+
+
+The new suite indicated above will also be added to test the newly added precedence. 
+
+Once all this testing passes on Ubuntu, the 3 blocks below will also be incorporated into the domain primitives blocks for all of the
+other Linux OSes and also macos brew. 
+
+
+The 3 blocks alluded to above are the following: 
+
+(Note a few lines of the surrounding code are also included to illustrate the intentional placement of these blocks. The complete 
+Ubuntu domain primitive block is in ai_gateway_service.py module (grep on UBUNTU_RULES))
+
+
+This is BLOCK1:
+
+```
+                "- When a wrong-OS package-manager install command appears in a segment and a\n"
+                "  concrete package name is present, the LLM MUST treat that segment as a\n"
+                "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
+                "  wrong-OS package-manager installs for Ubuntu, that segment MUST be rewritten\n"
+                "  to use 'apt-get install -y <pkg>'.\n"
+
+                # ============================================================
+                # Package-Manager Rewrite Precedence
+                # New block for PM-enabled POSIX environments (POSIX BLOCK1)
+                # ============================================================
+                "- Package-manager rewrite rules that result in a\n"
+                "  'retry_with_modified_command' action take precedence over\n"
+                "  POSIX idempotency rules.\n"
+                "- If a command contains a wrong-OS package manager and a\n"
+                "  deterministic rewrite exists, the LLM MUST first return\n"
+                "  'retry_with_modified_command'.\n"
+                "- POSIX idempotency remediation applies only after the\n"
+                "  rewritten command is executed on a subsequent LLM invocation.\n"
+                "- Package-manager rewrite rules MUST be evaluated before\n"
+                "  shell-level idempotency remediation.\n"
+                "- Wrong-OS package-manager commands embedded inside POSIX\n"
+                "  multi-segment constructs (pipelines, &&, ||, ;, subshells)\n"
+                "  MUST follow the existing Ubuntu package-manager rewrite rules.\n"
+                "- The presence of shell-level idempotency indicators MUST NOT\n"
+                "  prevent a required package-manager rewrite from occurring first.\n"
+
+
+
+                ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
+                # Ubuntu canonical version that will be ported to the other 11 OSes the support segmental rewrite
+```
+
+
+These are BLOCKS2 and 3:
+
+```
+                # reiterated here, but there is a previous more global rule as well
+                "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
+                "  the LLM MUST use 'fallback'.\n"
+                "\n"
+
+              
+                # ============================================================
+                # Shell-Level Idempotency (Ubuntu)
+                # New block for POSIX Idempotency + Multi-Segment support (POSIX BLOCK2)
+                # ============================================================
+                "- Ubuntu shell-level idempotency includes stderr messages such as:\n"
+                "    * 'File exists' (mkdir, touch, ln)\n"
+                "    * 'not removed' (rmdir)\n"
+                "    * 'no such process' (kill)\n"
+                "- For idempotent 'File exists' failures, cleanup_and_retry MUST use:\n"
+                "    * 'mkdir: ... File exists'  → rmdir <path>\n"
+                "    * 'touch: ... File exists'  → rm -f <path>\n"
+                "    * 'ln: ... File exists'     → rm -f <path>\n"
+                "    * both 'mkdir' and 'ln' on same path → rm -f <path> (ambiguous resource).\n"
+                "    * both 'touch' and 'mkdir' on same path → rm -f <path> (ambiguous resource).\n"
+                "- If stderr contains ONLY non-idempotent failures (e.g., kill no such process,\n"
+                "  rmdir not removed, package-manager errors), cleanup MUST be omitted and\n"
+                "  the action MUST be 'fallback'.\n"
+                "- cleanup_and_retry MUST NOT include package-manager operations.\n"
+
+                # ============================================================
+                # POSIX Idempotency and Operator-Preserving Retry
+                # New block for Idempotency + Multi-Segment POSIX support (POSIX BLOCK3)
+                # ============================================================
+                "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
+                "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
+                "- Operator-preserving retry MUST follow these rules:\n"
+                "    * Retry only the idempotent segments, but NEVER break, remove, or mutate\n"
+                "      the operator structure that encloses them.\n"
+                "    * Preserving operator structure MIGHT require replaying segments that were\n"
+                "      skipped due to operator semantics (e.g., '&&', pipelines, subshells).\n"
+                "    * Preserving operator structure does NOT mean replaying segments that\n"
+                "      originally succeeded or fallback segments ('||') unless they also\n"
+                "      failed idempotently.\n"
+                "- Operator-specific retry behavior MUST follow:\n"
+                "    * Pipelines ('|'): retry the entire pipeline line.\n"
+                "    * '&&' chains: retry starting at the first idempotent failure, preserving\n"
+                "      the '&&' structure (e.g., 'A && B && C' → 'A && B && C', 'B && C', or 'C').\n"
+                "    * '||' chains: retry only the idempotent failing segment(s); do NOT replay\n"
+                "      successful fallback segments.\n"
+                "    * ';' chains: retry only the idempotent failing segment(s) within the chain.\n"
+                "    * Subshells ('$(...)'): preserve the subshell wrapper, but apply the\n"
+                "      operator rules inside according to the above.\n"
+                "- cleanup_and_retry MUST be limited to shell-level idempotency remediation.\n"
+                "- cleanup MUST be minimal, deterministic, and POSIX-safe.\n"
+                "- Package-manager remediation and package-manager rewrites MUST continue\n"
+                "  to follow the Ubuntu package-manager rules defined elsewhere in this block.\n"
+
+
+                #### Revision 6.4 (Hash Sum mismatch)  (replaced with Revision 6.5)
+
+                ##### Revision 6 addtions to the ubuntu domain primitives  #####
+
+```
+
+A simple example where the precedence code will be used is with something like this:
+
+- Package-manager rewrite rules that produce a `retry_with_modified_command`
+  action take precedence over POSIX idempotency rules.
+
+- When a command contains a wrong-OS package manager and a deterministic
+  package-manager rewrite exists, the LLM MUST first return
+  `retry_with_modified_command`.
+
+- The POSIX Idempotency and Operator-Preserving Retry rules are evaluated
+  only after the rewritten command is executed on a subsequent LLM call.
+
+- Therefore, package-manager rewrites occur before shell-level
+  idempotency remediation.
+
+- Example:
+
+      yum install nginx && mkdir /tmp/test
+
+  Ubuntu first returns:
+
+      retry_with_modified_command
+
+      apt-get install -y nginx && mkdir /tmp/test
+
+  If a subsequent execution produces an idempotency failure such as:
+
+      mkdir: File exists (stderr)
+
+  then the POSIX idempotency rules will  return:
+
+      cleanup_and_retry
+
+  on the subsequent LLM call in accordance with the POSIX idempotency + multi-segment rule constructs above.
+
+In this particular case, if the apt-get install -y nginx is succesful then the && rules dictate that only the second segment
+(mkdir /tmp/test) will be cleaned up (rmdir /tmp/test) and retried (mkdir /tmp/test). This will be done on the second LLM 
+iterative loop (to be implemented in Phase4a.1.4)
+
+The tests below will cover the rewrite of the PM (retry_with_modified_command) and the idempotency correct (cleanup_with_retry) 
+as separate components and the complete process will be tested once Phase4a.1.4 code implementation is complete.
 
 
 
 
 
 
-### Stress testing the contract rules with the automated framework
+#### Regression on the base, patch2 rewrite, multi-segment, idempotency and os-signaled remediation suites (Ubuntu) gpt-5.6-sol
+
+
+
+
+
+#### New testing for the POSIX + idempotency integration with precedence for PM rewrite and os-signaled remediation
+
+
+
+
+
+
+
+
+
+### Stress testing the contract rules with the automated framework mutator
 
 
 The automated framework, as noted earlier, provides for a validator and schema expander so that 100s of schema context based
