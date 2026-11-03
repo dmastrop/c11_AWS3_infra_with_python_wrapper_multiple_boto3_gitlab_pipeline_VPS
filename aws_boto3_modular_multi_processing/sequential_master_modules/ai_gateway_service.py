@@ -686,13 +686,25 @@ UBUNTU_RULES = (
                 "  wrong-OS package-manager installs for Ubuntu, that segment MUST be rewritten\n"
                 "  to use 'apt-get install -y <pkg>'.\n"
 
-
-
-
-
-
-
-
+                # ============================================================
+                # Package-Manager Rewrite Precedence
+                # New block for PM-enabled POSIX environments (POSIX BLOCK1)
+                # ============================================================
+                "- Package-manager rewrite rules that result in a\n"
+                "  'retry_with_modified_command' action take precedence over\n"
+                "  POSIX idempotency rules.\n"
+                "- If a command contains a wrong-OS package manager and a\n"
+                "  deterministic rewrite exists, the LLM MUST first return\n"
+                "  'retry_with_modified_command'.\n"
+                "- POSIX idempotency remediation applies only after the\n"
+                "  rewritten command is executed on a subsequent LLM invocation.\n"
+                "- Package-manager rewrite rules MUST be evaluated before\n"
+                "  shell-level idempotency remediation.\n"
+                "- Wrong-OS package-manager commands embedded inside POSIX\n"
+                "  multi-segment constructs (pipelines, &&, ||, ;, subshells)\n"
+                "  MUST follow the existing Ubuntu package-manager rewrite rules.\n"
+                "- The presence of shell-level idempotency indicators MUST NOT\n"
+                "  prevent a required package-manager rewrite from occurring first.\n"
 
 
 
@@ -777,10 +789,52 @@ UBUNTU_RULES = (
                 "\n"
 
               
+                # ============================================================
+                # Shell-Level Idempotency (Ubuntu)
+                # New block for POSIX Idempotency + Multi-Segment support (POSIX BLOCK2)
+                # ============================================================
+                "- Ubuntu shell-level idempotency includes stderr messages such as:\n"
+                "    * 'File exists' (mkdir, touch, ln)\n"
+                "    * 'not removed' (rmdir)\n"
+                "    * 'no such process' (kill)\n"
+                "- For idempotent 'File exists' failures, cleanup_and_retry MUST use:\n"
+                "    * 'mkdir: ... File exists'  → rmdir <path>\n"
+                "    * 'touch: ... File exists'  → rm -f <path>\n"
+                "    * 'ln: ... File exists'     → rm -f <path>\n"
+                "    * both 'mkdir' and 'ln' on same path → rm -f <path> (ambiguous resource).\n"
+                "    * both 'touch' and 'mkdir' on same path → rm -f <path> (ambiguous resource).\n"
+                "- If stderr contains ONLY non-idempotent failures (e.g., kill no such process,\n"
+                "  rmdir not removed, package-manager errors), cleanup MUST be omitted and\n"
+                "  the action MUST be 'fallback'.\n"
+                "- cleanup_and_retry MUST NOT include package-manager operations.\n"
 
-
-
-
+                # ============================================================
+                # POSIX Idempotency and Operator-Preserving Retry
+                # New block for Idempotency + Multi-Segment POSIX support (POSIX BLOCK3)
+                # ============================================================
+                "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
+                "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
+                "- Operator-preserving retry MUST follow these rules:\n"
+                "    * Retry only the idempotent segments, but NEVER break, remove, or mutate\n"
+                "      the operator structure that encloses them.\n"
+                "    * Preserving operator structure MIGHT require replaying segments that were\n"
+                "      skipped due to operator semantics (e.g., '&&', pipelines, subshells).\n"
+                "    * Preserving operator structure does NOT mean replaying segments that\n"
+                "      originally succeeded or fallback segments ('||') unless they also\n"
+                "      failed idempotently.\n"
+                "- Operator-specific retry behavior MUST follow:\n"
+                "    * Pipelines ('|'): retry the entire pipeline line.\n"
+                "    * '&&' chains: retry starting at the first idempotent failure, preserving\n"
+                "      the '&&' structure (e.g., 'A && B && C' → 'A && B && C', 'B && C', or 'C').\n"
+                "    * '||' chains: retry only the idempotent failing segment(s); do NOT replay\n"
+                "      successful fallback segments.\n"
+                "    * ';' chains: retry only the idempotent failing segment(s) within the chain.\n"
+                "    * Subshells ('$(...)'): preserve the subshell wrapper, but apply the\n"
+                "      operator rules inside according to the above.\n"
+                "- cleanup_and_retry MUST be limited to shell-level idempotency remediation.\n"
+                "- cleanup MUST be minimal, deterministic, and POSIX-safe.\n"
+                "- Package-manager remediation and package-manager rewrites MUST continue\n"
+                "  to follow the Ubuntu package-manager rules defined elsewhere in this block.\n"
 
 
                 #### Revision 6.4 (Hash Sum mismatch)  (replaced with Revision 6.5)
