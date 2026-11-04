@@ -4229,6 +4229,13 @@ WINDOWS_POWERSHELL_2022_RULES = (
 
 
 
+
+
+
+
+
+
+
 MACOS_ZSH_RULES = (
     # ============================================================
     # macOS (ZSH) DOMAIN RULES — Applies ONLY when:
@@ -4314,10 +4321,45 @@ MACOS_ZSH_RULES = (
 
 
 
+    # ============================================================
+    # Retry-With-Modified-Command Precedence (Busybox and MacOS-zsh)
+    # (wrong package managers, near-misses,
+    # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
+    # ============================================================
+    "- Any deterministic rewrite that results in a\n"
+    "  'retry_with_modified_command' action takes\n"
+    "  precedence over shell-level idempotency\n"
+    "  remediation.\n"
+    "- Deterministic rewrites that qualify for\n"
+    "  'retry_with_modified_command' include,\n"
+    "  but are not limited to:\n"
+    "      * wrong-OS package-manager rewrites (when supported by this OS block)\n"
+    "      * command near-miss corrections\n"
+    "      * utility typo corrections\n"
+    "      * other directly implied command repairs\n"
+    "- When both a deterministic rewrite candidate\n"
+    "  and an idempotency condition are present,\n"
+    "  the LLM MUST first return\n"
+    "  'retry_with_modified_command'.\n"
+    "- POSIX idempotency remediation applies only\n"
+    "  after the rewritten command has been executed\n"
+    "  on a subsequent LLM invocation.\n"
+    "- The presence of shell-level idempotency\n"
+    "  indicators MUST NOT prevent a required\n"
+    "  deterministic rewrite from occurring first.\n"
+    "- This precedence applies equally to\n"
+    "  single-segment commands and POSIX\n"
+    "  multi-segment constructs including:\n"
+    "      * pipelines (|)\n"
+    "      * logical AND chains (&&)\n"
+    "      * logical OR chains (||)\n"
+    "      * semicolon chains (;)\n"
+    "      * subshells ($(...))\n"
+
 
 
     # ============================================================
-    # Shell‑Level Idempotency (Allowed) Revised for Idempotency + Multi-segment POSIX cases
+    # Shell‑Level Idempotency (Allowed) Revised for Idempotency + Multi-segment POSIX cases (POSIX BLOCK2)
     # ============================================================
     "- macOS‑zsh idempotency includes stderr messages such as:\n"
     "    * 'File exists' (mkdir, touch, ln)\n"
@@ -4336,7 +4378,7 @@ MACOS_ZSH_RULES = (
 
     # ============================================================
     # POSIX Idempotency and Operator‑Preserving Retry
-    # New block for Idempotency + Multi-segment POSIX support
+    # New block for Idempotency + Multi-segment POSIX support (POSIX BLOCK3)
     # ============================================================
     "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
     "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
@@ -4462,6 +4504,45 @@ BUSYBOX_RULES = (
     "- If the command is incomplete and no deterministic correction exists, the LLM MUST use 'fallback'.\n"
     "- If the command is syntactically valid but fails due to missing files, the LLM MAY use 'retry_with_modified_command' ONLY when the corrected command is directly implied.\n"
 
+
+    # ============================================================
+    # Retry-With-Modified-Command Precedence (Busybox and MacOS-zsh)
+    # (wrong package managers, near-misses,
+    # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
+    # ============================================================
+    "- Any deterministic rewrite that results in a\n"
+    "  'retry_with_modified_command' action takes\n"
+    "  precedence over shell-level idempotency\n"
+    "  remediation.\n"
+    "- Deterministic rewrites that qualify for\n"
+    "  'retry_with_modified_command' include,\n"
+    "  but are not limited to:\n"
+    "      * wrong-OS package-manager rewrites (when supported by this OS block)\n"
+    "      * command near-miss corrections\n"
+    "      * utility typo corrections\n"
+    "      * other directly implied command repairs\n"
+    "- When both a deterministic rewrite candidate\n"
+    "  and an idempotency condition are present,\n"
+    "  the LLM MUST first return\n"
+    "  'retry_with_modified_command'.\n"
+    "- POSIX idempotency remediation applies only\n"
+    "  after the rewritten command has been executed\n"
+    "  on a subsequent LLM invocation.\n"
+    "- The presence of shell-level idempotency\n"
+    "  indicators MUST NOT prevent a required\n"
+    "  deterministic rewrite from occurring first.\n"
+    "- This precedence applies equally to\n"
+    "  single-segment commands and POSIX\n"
+    "  multi-segment constructs including:\n"
+    "      * pipelines (|)\n"
+    "      * logical AND chains (&&)\n"
+    "      * logical OR chains (||)\n"
+    "      * semicolon chains (;)\n"
+    "      * subshells ($(...))\n"
+
+
+
+
     ##### BusyBox corruption / partial-state rules #####
     "- BusyBox does NOT maintain package caches or metadata. cleanup_and_retry MUST NOT attempt to remove package lists, apt caches, yum metadata, or apk caches.\n"
     "- If stderr indicates missing files, missing directories, or non-existent paths, the LLM MUST use 'fallback'.\n"
@@ -4477,7 +4558,7 @@ BUSYBOX_RULES = (
 
 
     # ============================================================
-    # Shell‑Level Idempotency (Allowed) Revised for Idempotency + Multi-segment POSIX cases
+    # Shell‑Level Idempotency (Allowed) Revised for Idempotency + Multi-segment POSIX cases (POSIX BLOCK2)
     # ============================================================
     "- BusyBox idempotency includes stderr messages such as:\n"
     "    * 'file exists' (mkdir, touch, ln)\n"
@@ -4497,7 +4578,7 @@ BUSYBOX_RULES = (
 
     # ============================================================
     # POSIX Idempotency and Operator‑Preserving Retry
-    # New block for Idempotency + Multi-segment POSIX support
+    # New block for Idempotency + Multi-segment POSIX support (POSIX BLOCK3)
     # ============================================================
     "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
     "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
