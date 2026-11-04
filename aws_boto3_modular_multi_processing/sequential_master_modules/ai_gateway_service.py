@@ -686,25 +686,41 @@ UBUNTU_RULES = (
                 "  wrong-OS package-manager installs for Ubuntu, that segment MUST be rewritten\n"
                 "  to use 'apt-get install -y <pkg>'.\n"
 
+
                 # ============================================================
-                # Package-Manager Rewrite Precedence
-                # New block for PM-enabled POSIX environments (POSIX BLOCK1)
+                # Retry-With-Modified-Command Precedence
+                # (wrong package managers, near-misses,
+                # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
                 # ============================================================
-                "- Package-manager rewrite rules that result in a\n"
-                "  'retry_with_modified_command' action take precedence over\n"
-                "  POSIX idempotency rules.\n"
-                "- If a command contains a wrong-OS package manager and a\n"
-                "  deterministic rewrite exists, the LLM MUST first return\n"
+                "- Any deterministic rewrite that results in a\n"
+                "  'retry_with_modified_command' action takes\n"
+                "  precedence over shell-level idempotency\n"
+                "  remediation.\n"
+                "- Deterministic rewrites that qualify for\n"
+                "  'retry_with_modified_command' include,\n"
+                "  but are not limited to:\n"
+                "      * wrong-OS package-manager rewrites\n"
+                "      * command near-miss corrections\n"
+                "      * utility typo corrections\n"
+                "      * other directly implied command repairs\n"
+                "- When both a deterministic rewrite candidate\n"
+                "  and an idempotency condition are present,\n"
+                "  the LLM MUST first return\n"
                 "  'retry_with_modified_command'.\n"
-                "- POSIX idempotency remediation applies only after the\n"
-                "  rewritten command is executed on a subsequent LLM invocation.\n"
-                "- Package-manager rewrite rules MUST be evaluated before\n"
-                "  shell-level idempotency remediation.\n"
-                "- Wrong-OS package-manager commands embedded inside POSIX\n"
-                "  multi-segment constructs (pipelines, &&, ||, ;, subshells)\n"
-                "  MUST follow the existing Ubuntu package-manager rewrite rules.\n"
-                "- The presence of shell-level idempotency indicators MUST NOT\n"
-                "  prevent a required package-manager rewrite from occurring first.\n"
+                "- POSIX idempotency remediation applies only\n"
+                "  after the rewritten command has been executed\n"
+                "  on a subsequent LLM invocation.\n"
+                "- The presence of shell-level idempotency\n"
+                "  indicators MUST NOT prevent a required\n"
+                "  deterministic rewrite from occurring first.\n"
+                "- This precedence applies equally to\n"
+                "  single-segment commands and POSIX\n"
+                "  multi-segment constructs including:\n"
+                "      * pipelines (|)\n"
+                "      * logical AND chains (&&)\n"
+                "      * logical OR chains (||)\n"
+                "      * semicolon chains (;)\n"
+                "      * subshells ($(...))\n"
 
 
 
@@ -791,7 +807,7 @@ UBUNTU_RULES = (
               
                 # ============================================================
                 # Shell-Level Idempotency (Ubuntu)
-                # New block for POSIX Idempotency + Multi-Segment support (POSIX BLOCK2)
+                # New block for POSIX Idempotency + Multi-Segment support (POSIX refactor BLOCK2)
                 # ============================================================
                 "- Ubuntu shell-level idempotency includes stderr messages such as:\n"
                 "    * 'File exists' (mkdir, touch, ln)\n"
@@ -810,7 +826,7 @@ UBUNTU_RULES = (
 
                 # ============================================================
                 # POSIX Idempotency and Operator-Preserving Retry
-                # New block for Idempotency + Multi-Segment POSIX support (POSIX BLOCK3)
+                # New block for Idempotency + Multi-Segment POSIX support (POSIX refactor BLOCK3)
                 # ============================================================
                 "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
                 "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
