@@ -37268,30 +37268,33 @@ No contract modifications were required following validation.
 
 The POSIX idempotency + multi-segment support that was ported to macos zsh and Busybox in the previous section is complex. 
 Porting this to Linux OSes and macos brew has one additional layer of complexity, namely that these OSes support PMs (Package
-Managers) and the PM rewtire contract logic. In addtion, these OSes support OS-signaled remediation.   Thus, precedence must
-now be incorporated into these domain primtitives blocks that support PMs. This topic will be implemented further in Phase4a.1.4
+Managers) and the PM rewrite contract logic. In addtion, these OSes support OS-signaled remediation.   Thus, precedence must
+now be incorporated into these domain primitives blocks that support PMs. This topic will be implemented further in Phase4a.1.4
 where multiple LLM calls can be activated from the def _invoke_ai_hook() function in module2f when remediation has to be performed
 using multiple LLM action plans. Right now that Phase4a.1.4 code is not implemented yet, so the testing here will follow the 
 methodology explained below. Then, once Phase4a.1.4 is implemented, the complete start to finish testing can be done. 
 
-Unlike the previously validated macOS‑zsh and BusyBox implementations, Ubuntu is a package‑manager-enabled environment. As a result, the Ubuntu refactor requires that the BLOCK1 (for precedence) be more elablorate than the BLOCK1 used with macos-zsh and BusyBox. (BLOCK1 is
-shown below along with the other 2 BLOCKS).
+Unlike the previously validated macOS‑zsh and BusyBox implementations, Ubuntu is a package‑manager-enabled environment. 
 
-The first addition (BLOCK1) establishes explicit precedence between package‑manager rewrite logic and POSIX idempotency remediation. When a command contains a wrong‑OS package manager (for example, `yum`, `dnf`, or `apk` on Ubuntu), the package‑manager rewrite rules must execute first and return a `retry_with_modified_command` action plan. POSIX idempotency remediation is intentionally deferred until a subsequent LLM invocation operating on the corrected command. If there is OS-signaled remediation that is remediated with a third LLM invocation.
+As a result, the Ubuntu refactor extends the same BLOCK1 precedence concept used by macOS-zsh and BusyBox with additional OS-signaled remediation precedence rules.
+
+The first addition (BLOCK1) establishes explicit precedence between deterministic rewrite logic and POSIX idempotency remediation.
+
+For example, when a command contains a wrong‑OS package manager (for example, `yum`, `dnf`, or `apk` on Ubuntu), the package‑manager rewrite rules must execute first and return a `retry_with_modified_command` action plan. POSIX idempotency remediation is intentionally deferred until a subsequent LLM invocation operating on the corrected command. If there is OS-signaled remediation that is remediated with a third LLM invocation.
 
 The second addition (BLOCK2) introduces Ubuntu shell‑level idempotency handling for POSIX primitives such as `mkdir`, `touch`, `ln`, `rmdir`, and `kill`. These rules define deterministic cleanup mappings used by the `cleanup_and_retry` action plan and extend the existing global idempotency semantics with Ubuntu‑specific remediation behavior.
 
 The third addition (BLOCK3) ports the POSIX Idempotency and Operator‑Preserving Retry design from Preface Update 12. These rules codify how idempotent failures are remediated inside pipelines, `&&` chains, `||` chains, `;` chains, and subshells while preserving the original operator structure. The objective is to retry only the idempotent segments while maintaining the execution semantics of the original command.
 
-The validation suite below focuses on two areas. First, it validates the Ubuntu implementation of the 21‑case POSIX Idempotency + Multi‑Segment test suite originally developed for macOS‑zsh and later ported to BusyBox. Second, it validates package‑manager rewrite precedence by introducing additional test cases that combine POSIX multi‑segment constructs with wrong‑OS package managers. Fnally, it validates if
-OS-signaled remediation is present in the stderr along with idempotency and wrong PMs/near-misses. In these cases, the rewrite of the wrong PMs/near-misses take precedence (and the OS-signaled remedation will be addressed on a subsequent LLM invocation).
+The validation suite below focuses on two areas. First, it validates the Ubuntu implementation of the 21‑case POSIX Idempotency + Multi‑Segment test suite originally developed for macOS‑zsh and later ported to BusyBox. Second, it validates package‑manager rewrite precedence by introducing additional test cases that combine POSIX multi‑segment constructs with wrong‑OS package managers. Finally, it validates if
+OS-signaled remediation is present in the stderr along with idempotency and wrong PMs/near-misses. In these cases, the rewrite of the wrong PMs/near-misses take precedence (and the OS-signaled remediation will be addressed on a subsequent LLM invocation).
 
 Because the current implementation executes only a single LLM invocation per recovery attempt, these tests validate the individual action plans rather than the complete multi‑loop recovery workflow. Package‑manager rewrite cases therefore validate the `retry_with_modified_command` path, while POSIX idempotency cases validate the `cleanup_and_retry` path.
 
 Full end‑to‑end validation of package‑manager rewrite followed by POSIX idempotency remediation will occur during Phase 4a.1.4 after multi‑invocation support is implemented inside `def _invoke_ai_hook()` and integrated into the module2f recovery pipeline.
 
 Another note: the base, patch2 rewrite, multi-segment suites, original idempotency suite and the os-signaled remediation suite will be 
-run as regresssion to make sure the changes below don't cause regresssion issues. These tests all passed previously and the test results
+run as regression to make sure the changes below don't cause regresssion issues. These tests all passed previously and the test results
 are in an earlier section above:
 
 
@@ -37469,7 +37472,7 @@ A simple example where the precedence code will be used is with something like t
 
   on the subsequent LLM call in accordance with the POSIX idempotency + multi-segment rule constructs above.
 
-In this particular case, if the apt-get install -y nginx is succesful then the && rules dictate that only the second segment
+In this particular case, if the apt-get install -y nginx is successful then the && rules dictate that only the second segment
 (mkdir /tmp/test) will be cleaned up (rmdir /tmp/test) and retried (mkdir /tmp/test). This will be done on the second LLM 
 iterative loop (to be implemented in Phase4a.1.4)
 
@@ -37481,7 +37484,7 @@ remeidation all in various combinations.
 
 1. For the idempotency  + multisegment POSIX we will be testing the cleanup block and POSIX retry for cleanup_and_retry scenarios. So no rewrite stderr in these. These are the 21 test cases.
 
-2. For the new test cases we will have wrong PMS and also near-misses and make sure that they are taken care of first (and since no loop the idempotency has to wait). So here we have stderr with wrong PMs, near misses, and idempotency but the LLM should not try to prematurely address the idempotency. Here the retry_with_modified comand shoulc be the LLM action plan NOT cleanup_and_retry.
+2. For the new test cases we will have wrong PMS and also near-misses and make sure that they are taken care of first (and since no loop the idempotency has to wait). So here we have stderr with wrong PMs, near misses, and idempotency but the LLM should not try to prematurely address the idempotency. Here the retry_with_modified comand should be the LLM action plan NOT cleanup_and_retry.
 
 3. Next, we will add in os-signaled remediation stderrr.  For example, hash sum mismatch or repo is down etc.  In these test cases we have a test case with bad PM/near-miss stderr, idempotency stderr and os-signaled stderr and only retry_with_modified_command should be done to fix the bad PMs/rewrite. (The second and third LLM calls would address the idemptoency and then the os-signaled remediation). In another test case we have just stderr of idempotency and os-signaed remedation and in this case the correct action plan is cleanup_and_retry to fix the idempotency. (The second LLM loop would take care of the os-signaled remediation.
 
@@ -37552,7 +37555,7 @@ Each OS/platform has a dedicated semantics file that has the hardcoded python lo
 AI logic/hook not been avaiable. The validator semantics file are a crude replacement for the LLM, the LLM being far more 
 adept at handling this. But the validator semantics logic will cover about 95 % of the test cases with an accurate validation 
 assessment which will enable the test cases to be efficiently scaled. Otherwise it would be very difficult to scale the context
-based test cases in the schema to adequately stress test the contract rules domain primtives blocks. 
+based test cases in the schema to adequately stress test the contract rules domain primitives blocks. 
 
 
 #### Schema expansion and the mutators.py
