@@ -1,0 +1,68 @@
+{
+  "os_name": "Ubuntu",
+  "os_version": "22.04",
+  "kernel": "5.15.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+
+    {
+      "command": "mkdir /tmp/ubuntu_idem1",
+      "stdout": "",
+      "stderr": "mkdir: cannot create directory '/tmp/ubuntu_idem1': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-001",
+      "ip": "10.0.42.1",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "touch /tmp/ubuntu_idem2",
+      "stdout": "",
+      "stderr": "touch: cannot touch '/tmp/ubuntu_idem2': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-002",
+      "ip": "10.0.42.2",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ln -s /tmp/source3 /tmp/ubuntu_idem3",
+      "stdout": "",
+      "stderr": "ln: failed to create symbolic link '/tmp/ubuntu_idem3': File exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-003",
+      "ip": "10.0.42.3",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "rmdir /tmp/ubuntu_idem4",
+      "stdout": "",
+      "stderr": "rmdir: /tmp/ubuntu_idem4: not removed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-004",
+      "ip": "10.0.42.4",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "kill 99999",
+      "stdout": "",
+      "stderr": "kill: (99999): No such process",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-005",
+      "ip": "10.0.42.5",
+      "tags": [],
+      "history": []
+    }
+  
+  
+  
+  ]  	    
