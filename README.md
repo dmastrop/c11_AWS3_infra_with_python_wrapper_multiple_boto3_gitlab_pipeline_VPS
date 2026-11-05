@@ -37318,26 +37318,50 @@ This is BLOCK1:
                 "  wrong-OS package-manager installs for Ubuntu, that segment MUST be rewritten\n"
                 "  to use 'apt-get install -y <pkg>'.\n"
 
-                # ============================================================
-                # Package-Manager Rewrite Precedence
-                # New block for PM-enabled POSIX environments (POSIX BLOCK1)
-                # ============================================================
-                "- Package-manager rewrite rules that result in a\n"
-                "  'retry_with_modified_command' action take precedence over\n"
-                "  POSIX idempotency rules.\n"
-                "- If a command contains a wrong-OS package manager and a\n"
-                "  deterministic rewrite exists, the LLM MUST first return\n"
-                "  'retry_with_modified_command'.\n"
-                "- POSIX idempotency remediation applies only after the\n"
-                "  rewritten command is executed on a subsequent LLM invocation.\n"
-                "- Package-manager rewrite rules MUST be evaluated before\n"
-                "  shell-level idempotency remediation.\n"
-                "- Wrong-OS package-manager commands embedded inside POSIX\n"
-                "  multi-segment constructs (pipelines, &&, ||, ;, subshells)\n"
-                "  MUST follow the existing Ubuntu package-manager rewrite rules.\n"
-                "- The presence of shell-level idempotency indicators MUST NOT\n"
-                "  prevent a required package-manager rewrite from occurring first.\n"
 
+
+                # ============================================================
+                # Retry-With-Modified-Command Precedence
+                # (wrong package managers, near-misses,
+                # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
+                # ============================================================
+                "- Any deterministic rewrite that results in a\n"
+                "  'retry_with_modified_command' action takes\n"
+                "  precedence over shell-level idempotency\n"
+                "  remediation.\n"
+                "- Deterministic rewrites that qualify for\n"
+                "  'retry_with_modified_command' include,\n"
+                "  but are not limited to:\n"
+                "      * wrong-OS package-manager rewrites\n"
+                "      * command near-miss corrections\n"
+                "      * utility typo corrections\n"
+                "      * other directly implied command repairs\n"
+                "- When both a deterministic rewrite candidate\n"
+                "  and an idempotency condition are present,\n"
+                "  the LLM MUST first return\n"
+                "  'retry_with_modified_command'.\n"
+                "- POSIX idempotency remediation applies only\n"
+                "  after the rewritten command has been executed\n"
+                "  on a subsequent LLM invocation.\n"
+                "- The presence of shell-level idempotency\n"
+                "  indicators MUST NOT prevent a required\n"
+                "  deterministic rewrite from occurring first.\n"
+                "- This precedence applies equally to\n"
+                "  single-segment commands and POSIX\n"
+                "  multi-segment constructs including:\n"
+                "      * pipelines (|)\n"
+                "      * logical AND chains (&&)\n"
+                "      * logical OR chains (||)\n"
+                "      * semicolon chains (;)\n"
+                "      * subshells ($(...))\n"
+                "- OS-signaled remediation MUST NOT be applied\n"
+                "  while a deterministic rewrite candidate\n"
+                "  remains unresolved.\n"
+                "- OS-signaled remediation is evaluated only\n"
+                "  after deterministic rewrites have been\n"
+                "  processed on prior LLM invocations and\n"
+                "  after POSIX idempotency remediation has\n"
+                "  been evaluated.\n"
 
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
@@ -37449,6 +37473,18 @@ iterative loop (to be implemented in Phase4a.1.4)
 
 The tests below will cover the rewrite of the PM (retry_with_modified_command) and the idempotency correct (cleanup_with_retry) 
 as separate components and the complete process will be tested once Phase4a.1.4 code implementation is complete.
+
+The tests fall into three distinct categories to fully test POSIX idempotency + multi-segment, near-misses, bad PMs and os-signaled 
+remeidation all in various combinations. 
+
+1. For the idempotency  + multisegment POSIX we will be testing the cleanup block and POSIX retry for cleanup_and_retry scenarios. So no rewrite stderr in these. These are the 21 test cases.
+
+2. For the new test cases we will have wrong PMS and also near-misses and make sure that they are taken care of first (and since no loop the idempotency has to wait). So here we have stderr with wrong PMs, near misses, and idempotency but the LLM should not try to prematurely address the idempotency. Here the retry_with_modified comand shoulc be the LLM action plan NOT cleanup_and_retry.
+
+3. Next, we will add in os-signaled remediation stderrr.  For example, hash sum mismatch or repo is down etc.  In these test cases we have a test case with bad PM/near-miss stderr, idempotency stderr and os-signaled stderr and only retry_with_modified_command should be done to fix the bad PMs/rewrite. (The second and third LLM calls would address the idemptoency and then the os-signaled remediation). In another test case we have just stderr of idempotency and os-signaed remedation and in this case the correct action plan is cleanup_and_retry to fix the idempotency. (The second LLM loop would take care of the os-signaled remediation.
+
+
+
 
 
 
