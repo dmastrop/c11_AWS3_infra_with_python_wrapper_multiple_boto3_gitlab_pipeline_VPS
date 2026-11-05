@@ -721,6 +721,14 @@ UBUNTU_RULES = (
                 "      * logical OR chains (||)\n"
                 "      * semicolon chains (;)\n"
                 "      * subshells ($(...))\n"
+                "- OS-signaled remediation MUST NOT be applied\n"
+                "  while a deterministic rewrite candidate\n"
+                "  remains unresolved.\n"
+                "- OS-signaled remediation is evaluated only\n"
+                "  after deterministic rewrites have been\n"
+                "  processed on prior LLM invocations and\n"
+                "  after POSIX idempotency remediation has\n"
+                "  been evaluated.\n"
 
 
 
