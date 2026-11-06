@@ -37308,6 +37308,12 @@ Once all this testing passes on Ubuntu, the 3 blocks below will also be incorpor
 other Linux OSes and also macos brew. 
 
 
+Note that and slightly modified version of BLOCK1 has been committed to Busybox and MacOS-zsh domain primitives blocks for completeness.
+THis is because busybox and zsh can both have near-miss rewrites, even though they do not have PMs. So the precedence block1 should
+also be added to the contract rules.
+
+
+
 The 3 blocks alluded to above are the following: 
 
 (Note a few lines of the surrounding code are also included to illustrate the intentional placement of these blocks. The complete 
