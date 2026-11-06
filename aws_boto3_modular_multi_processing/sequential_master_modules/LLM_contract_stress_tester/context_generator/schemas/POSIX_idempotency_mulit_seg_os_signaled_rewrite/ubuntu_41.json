@@ -7,10 +7,12 @@
   "contexts": [
 
 
+
+
     {
       "command": "mkdir /tmp/ubuntu_idem1",
       "stdout": "",
-      "stderr": "mkdir: cannot create directory '/tmp/ubuntu_idem1': File exists",
+      "stderr": "mkdir: directory exists",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "ubuntu-idem-001",
@@ -21,7 +23,7 @@
     {
       "command": "touch /tmp/ubuntu_idem2",
       "stdout": "",
-      "stderr": "touch: cannot touch '/tmp/ubuntu_idem2': File exists",
+      "stderr": "touch: file exists",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "ubuntu-idem-002",
@@ -32,7 +34,7 @@
     {
       "command": "ln -s /tmp/source3 /tmp/ubuntu_idem3",
       "stdout": "",
-      "stderr": "ln: failed to create symbolic link '/tmp/ubuntu_idem3': File exists",
+      "stderr": "ln: file exists",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "ubuntu-idem-003",
@@ -43,7 +45,7 @@
     {
       "command": "rmdir /tmp/ubuntu_idem4",
       "stdout": "",
-      "stderr": "rmdir: /tmp/ubuntu_idem4: not removed",
+      "stderr": "rmdir: not removed",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "ubuntu-idem-004",
@@ -54,15 +56,194 @@
     {
       "command": "kill 99999",
       "stdout": "",
-      "stderr": "kill: (99999): No such process",
+      "stderr": "kill: no such process",
       "exit_status": 1,
       "attempt": 1,
       "instance_id": "ubuntu-idem-005",
       "ip": "10.0.42.5",
       "tags": [],
       "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem6 ; touch /tmp/ubuntu_idem6",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-006",
+      "ip": "10.0.42.6",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem7 && touch /tmp/ubuntu_idem7",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-007",
+      "ip": "10.0.42.7",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "touch /tmp/ubuntu_idem8 || ln -s /tmp/ubuntu_idem8 /tmp/ubuntu_idem8",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-008",
+      "ip": "10.0.42.8",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem9 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-009",
+      "ip": "10.0.42.9",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(touch /tmp/ubuntu_idem10)",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-010",
+      "ip": "10.0.42.10",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem11 ; touch /tmp/ubuntu_idem11 ; ln -s /tmp/ubuntu_idem11 /tmp/ubuntu_idem11",
+      "stdout": "",
+      "stderr": "mkdir: directory exists\ntouch: file exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-011",
+      "ip": "10.0.42.11",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem12 || echo fallback",
+      "stdout": "fallback\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-012",
+      "ip": "10.0.42.12",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem13 ; echo ok ; ln -s /tmp/ubuntu_idem13 /tmp/ubuntu_idem13",
+      "stdout": "ok\n",
+      "stderr": "mkdir: directory exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-013",
+      "ip": "10.0.42.13",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo ok ; mkdir /tmp/ubuntu_idem14 ; echo done",
+      "stdout": "ok\ndone\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-014",
+      "ip": "10.0.42.14",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(mkdir /tmp/ubuntu_idem15) ; echo ok",
+      "stdout": "ok\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-015",
+      "ip": "10.0.42.15",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem16 | cat",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-016",
+      "ip": "10.0.42.16",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo foo | mkdir /tmp/ubuntu_idem17 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-017",
+      "ip": "10.0.42.17",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem18 || echo fallback",
+      "stdout": "fallback\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-018",
+      "ip": "10.0.42.18",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem19 && echo ok",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-019",
+      "ip": "10.0.42.19",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(echo $(mkdir /tmp/ubuntu_idem20)))",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-020",
+      "ip": "10.0.42.20",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem21 && echo ok ; ln -s /tmp/ubuntu_idem21 /tmp/ubuntu_idem21 || echo fallback",
+      "stdout": "fallback\n",
+      "stderr": "mkdir: directory exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-021",
+      "ip": "10.0.42.21",
+      "tags": [],
+      "history": []
     }
+
+
+
+
   
-  
-  
-  ]  	    
+  ]
+}  
