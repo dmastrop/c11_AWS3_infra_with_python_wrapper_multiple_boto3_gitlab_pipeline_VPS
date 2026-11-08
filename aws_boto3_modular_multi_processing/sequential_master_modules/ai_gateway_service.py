@@ -4550,7 +4550,6 @@ BUSYBOX_RULES = (
 
 
 
-
     ##### BusyBox corruption / partial-state rules #####
     "- BusyBox does NOT maintain package caches or metadata. cleanup_and_retry MUST NOT attempt to remove package lists, apt caches, yum metadata, or apk caches.\n"
     "- If stderr indicates missing files, missing directories, or non-existent paths, the LLM MUST use 'fallback'.\n"
