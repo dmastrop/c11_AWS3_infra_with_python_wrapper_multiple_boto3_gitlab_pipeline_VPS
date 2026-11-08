@@ -359,7 +359,130 @@
   "ip": "10.0.42.31",
   "tags": [],
   "history": []
+},
+
+{
+  "command": "dnf install nginx ; mkdir /tmp/ubuntu_cat3_32",
+  "stdout": "",
+  "stderr": "dnf: command not found\nmkdir: directory exists\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-032",
+  "ip": "10.0.42.32",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mdir /tmp/ubuntu_cat3_33 ; touch /tmp/ubuntu_cat3_33",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-033",
+  "ip": "10.0.42.33",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "yum install nginx ; ln -s /tmp/source34 /tmp/ubuntu_cat3_34",
+  "stdout": "",
+  "stderr": "yum: command not found\nln: file exists\nFailed to fetch repository metadata",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-034",
+  "ip": "10.0.42.34",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "apk add nginx && mkdir /tmp/ubuntu_cat3_35",
+  "stdout": "",
+  "stderr": "apk: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-035",
+  "ip": "10.0.42.35",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "grpe foo /tmp/file || mkdir /tmp/ubuntu_cat3_36",
+  "stdout": "",
+  "stderr": "bash: grpe: command not found\nmkdir: directory exists\nRepository is unavailable",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-036",
+  "ip": "10.0.42.36",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "dnf install nginx | grep foo",
+  "stdout": "",
+  "stderr": "dnf: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-037",
+  "ip": "10.0.42.37",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b",
+  "stdout": "fallback\n",
+  "stderr": "dnf: command not found\nln: file exists\nbash: mdir: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-038",
+  "ip": "10.0.42.38",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_39",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\nHash Sum mismatch",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-039",
+  "ip": "10.0.42.39",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "touch /tmp/ubuntu_cat3_40",
+  "stdout": "",
+  "stderr": "touch: file exists\nRepository is unavailable",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-040",
+  "ip": "10.0.42.40",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-041",
+  "ip": "10.0.42.41",
+  "tags": [],
+  "history": []
 }
+
+
+
 
   
   ]
