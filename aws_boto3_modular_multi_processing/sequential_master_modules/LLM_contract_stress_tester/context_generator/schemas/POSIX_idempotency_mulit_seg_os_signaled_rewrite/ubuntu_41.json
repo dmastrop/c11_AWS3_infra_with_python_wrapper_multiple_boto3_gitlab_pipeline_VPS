@@ -239,10 +239,127 @@
       "ip": "10.0.42.21",
       "tags": [],
       "history": []
-    }
+    },
 
+{
+  "command": "dnf install nginx ; mkdir /tmp/ubuntu_cat2_22",
+  "stdout": "",
+  "stderr": "dnf: command not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-022",
+  "ip": "10.0.42.22",
+  "tags": [],
+  "history": []
+},
 
+{
+  "command": "mdir /tmp/ubuntu_cat2_23 ; touch /tmp/ubuntu_cat2_23",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found\ntouch: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-023",
+  "ip": "10.0.42.23",
+  "tags": [],
+  "history": []
+},
 
+{
+  "command": "yum install nginx ; ln -s /tmp/source24 /tmp/ubuntu_cat2_24",
+  "stdout": "",
+  "stderr": "yum: command not found\nln: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-024",
+  "ip": "10.0.42.24",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "tuch /tmp/ubuntu_cat2_25 ; mkdir /tmp/ubuntu_cat2_25",
+  "stdout": "",
+  "stderr": "bash: tuch: command not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-025",
+  "ip": "10.0.42.25",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "apk add nginx && mkdir /tmp/ubuntu_cat2_26",
+  "stdout": "",
+  "stderr": "apk: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-026",
+  "ip": "10.0.42.26",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "grpe foo /tmp/file || mkdir /tmp/ubuntu_cat2_27",
+  "stdout": "",
+  "stderr": "bash: grpe: command not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-027",
+  "ip": "10.0.42.27",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "dnf install nginx | grep foo",
+  "stdout": "",
+  "stderr": "dnf: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-028",
+  "ip": "10.0.42.28",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "echo $(mdir /tmp/ubuntu_cat2_29)",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-029",
+  "ip": "10.0.42.29",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "yum install nginx ; mkdir /tmp/ubuntu_cat2_30 ; touch /tmp/ubuntu_cat2_30",
+  "stdout": "",
+  "stderr": "yum: command not found\nmkdir: directory exists\ntouch: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-030",
+  "ip": "10.0.42.30",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat2_31 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat2_31 /tmp/ubuntu_cat2_31 || echo fallback ; mdir /tmp/ubuntu_cat2_31b",
+  "stdout": "fallback\n",
+  "stderr": "dnf: command not found\nln: file exists\nbash: mdir: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-031",
+  "ip": "10.0.42.31",
+  "tags": [],
+  "history": []
+}
 
   
   ]
