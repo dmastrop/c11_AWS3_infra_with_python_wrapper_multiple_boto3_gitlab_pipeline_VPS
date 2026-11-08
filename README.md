@@ -37309,8 +37309,9 @@ other Linux OSes and also macos brew.
 
 
 Note that and slightly modified version of BLOCK1 has been committed to Busybox and MacOS-zsh domain primitives blocks for completeness.
-THis is because busybox and zsh can both have near-miss rewrites, even though they do not have PMs. So the precedence block1 should
-also be added to the contract rules.
+This is because busybox and zsh can both have near-miss rewrites, even though they do not have PMs. So the precedence block1 should
+also be added to the contract rules.  As such, regression testing was performed on Busybox (see the testing section below) just to make 
+that the added BLOCK1 did not cause regression issues with the original POSIX idempotency implemenation on Busybox and MacOS-zh.
 
 
 
@@ -37488,27 +37489,49 @@ as separate components and the complete process will be tested once Phase4a.1.4 
 The tests fall into three distinct categories to fully test POSIX idempotency + multi-segment, near-misses, bad PMs and os-signaled 
 remeidation all in various combinations. 
 
-1. For the idempotency  + multisegment POSIX we will be testing the cleanup block and POSIX retry for cleanup_and_retry scenarios. So no rewrite stderr in these. These are the 21 test cases.
-
-2. For the new test cases we will have wrong PMS and also near-misses and make sure that they are taken care of first (and since no loop the idempotency has to wait). So here we have stderr with wrong PMs, near misses, and idempotency but the LLM should not try to prematurely address the idempotency. Here the retry_with_modified comand should be the LLM action plan NOT cleanup_and_retry.
-
-3. Next, we will add in os-signaled remediation stderrr.  For example, hash sum mismatch or repo is down etc.  In these test cases we have a test case with bad PM/near-miss stderr, idempotency stderr and os-signaled stderr and only retry_with_modified_command should be done to fix the bad PMs/rewrite. (The second and third LLM calls would address the idemptoency and then the os-signaled remediation). In another test case we have just stderr of idempotency and os-signaed remedation and in this case the correct action plan is cleanup_and_retry to fix the idempotency. (The second LLM loop would take care of the os-signaled remediation.
+Category:
 
 
+1. For the idempotency  + multisegment POSIX we will be testing the cleanup block and POSIX retry for cleanup_and_retry scenarios. So no rewrite stderr in these. These are the 21 test cases that were already done on MacOS-zsh and Busybox (they passed with the BLOCK2 and BLOCK3 code)
 
+2. For the new test cases we will have wrong PMS and also near-misses and make sure that they are taken care of first (and since no loop the idempotency has to wait). So here we have stderr with wrong PMs, near misses, and idempotency but the LLM should not try to prematurely address the idempotency. Here the retry_with_modified comand should be the LLM action plan NOT cleanup_and_retry (10 more test cases).
 
-
+3. Next, we will add in os-signaled remediation stderrr.  For example, hash sum mismatch or repo is down etc.  In these test cases we have a test case with bad PM/near-miss stderr, idempotency stderr and os-signaled stderr and only retry_with_modified_command should be done to fix the bad PMs/rewrite. (The second and third LLM calls would address the idemptoency and then the os-signaled remediation). In another test case we have just stderr of idempotency and os-signaed remedation and in this case the correct action plan is cleanup_and_retry to fix the idempotency. (The second LLM loop would take care of the os-signaled remediation (10 more test cases).
 
 
 
-
-#### Regression on the base, patch2 rewrite, multi-segment, idempotency and os-signaled remediation suites (Ubuntu) gpt-5.6-sol
-
+#### Regression on Busybox with the BLOCK1 added
 
 
+All 21 test cases (Category1) here passed after the BLOCK1 code was added to Busybox (and MacOS-zsh). This is very good. The matrix 
+looks exactly the same as it did in the Busybox section above.
 
 
-#### New testing for the POSIX + idempotency integration with precedence for PM rewrite and os-signaled remediation
+
+
+
+#### New Ubuntu testing for the POSIX + idempotency integration with precedence for PM rewrite and os-signaled remediation
+
+This new test suite has been created for all 3 test categories above. When running Category1 tests on the Ubuntu that had the BLOCK
+1,2 and3 port, one test case failed. Test case 20 (index 19)
+
+
+
+
+
+
+
+
+
+#### Ubuntu Regression on the base, patch2 rewrite, multi-segment, idempotency and os-signaled remediation suites (Ubuntu) gpt-5.6-sol
+
+Once the testing on all 41 test cases in the previous section passed a complete regresson of all the older test suites was performed
+on the Ubuntu domain primitives block. This is so that we can be very confident porting the BLOCKS 1,2 and 3 to all the other Linux OS
+domain primtives blocks and to MacOS Brew. 
+
+
+
+
 
 
 
