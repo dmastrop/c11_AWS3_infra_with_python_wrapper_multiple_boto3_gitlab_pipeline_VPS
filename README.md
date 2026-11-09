@@ -37506,6 +37506,11 @@ Category:
 All 21 test cases (Category1) here passed after the BLOCK1 code was added to Busybox (and MacOS-zsh). This is very good. The matrix 
 looks exactly the same as it did in the Busybox section above.
 
+In addtion, 3 addtional near-miss test cases were added to the suite to ensure that rewrites (retry_with_modified_command) scenarios
+were still working on Busybox (because Ubuntu has some issues in this area; see the next section below).  The Busybox 3 rewrite near-miss
+test cases pass.
+
+
 
 
 
@@ -37513,7 +37518,37 @@ looks exactly the same as it did in the Busybox section above.
 #### New Ubuntu testing for the POSIX + idempotency integration with precedence for PM rewrite and os-signaled remediation
 
 This new test suite has been created for all 3 test categories above. When running Category1 tests on the Ubuntu that had the BLOCK
-1,2 and3 port, one test case failed. Test case 20 (index 19)
+1,2 and 3 port, one test case failed. Test case 20 (index 19)
+
+When running Category 2 and 3 test cases there were several other failures:  test case 29 (index 28), and test case 33 (index 32), and test cases 39 and 41 (indices 38 and 40).
+
+After regressing Busbybox with the 21 original test cases and the 3 addtional near-miss rewrite cases (all passed) it was thus determined
+that this is due to the complexity of the Ubuntu domain primitives block itself and not the introductionof BLOCKS 1,2,3.  The following
+patches were required to address the falures with Ubuntu:
+
+The fixes for test cases 20 and 29 were related to malformed subshell ambiguity in the contract rules. So the patch below was added
+so that the LLM understood that malformed shells do NOT include shells that are idempotent, etc. 
+This block was added inside the malformed command block in the Ubuntu domain primitives block.
+
+```
+              "\n"
+
+               #### add this patch to clarify what constitutes a malformed subshell
+               "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
+                "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
+                "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
+                "  MUST continue to follow the POSIX idempotency rules defined later in this Ubuntu block.\n"
+                "- The presence of one or more valid subshell wrappers MUST NOT by itself trigger 'fallback'.\n"
+                "- Subshell-related fallback rules apply ONLY to malformed subshell structures,\n"
+                "  incomplete command substitutions, unmatched parentheses, syntax errors,\n"
+                "  or other invalid shell constructs.\n"
+                "- Valid subshells MUST continue through normal evaluation of deterministic rewrites,\n"
+                "  POSIX idempotency remediation, and OS-signaled remediation rules.\n"
+                "\n"
+                ####
+
+```
+
 
 
 
