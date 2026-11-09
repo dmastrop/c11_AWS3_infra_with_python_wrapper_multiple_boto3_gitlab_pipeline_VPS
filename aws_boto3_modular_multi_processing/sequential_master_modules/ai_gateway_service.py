@@ -578,6 +578,20 @@ UBUNTU_RULES = (
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
 
+               #### add this patch to clarify what constitutes a malformed subshell
+               "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
+                "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
+                "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
+                "  MUST continue to follow the POSIX idempotency rules defined later in this Ubuntu block.\n"
+                "- The presence of one or more valid subshell wrappers MUST NOT by itself trigger 'fallback'.\n"
+                "- Subshell-related fallback rules apply ONLY to malformed subshell structures,\n"
+                "  incomplete command substitutions, unmatched parentheses, syntax errors,\n"
+                "  or other invalid shell constructs.\n"
+                "- Valid subshells MUST continue through normal evaluation of deterministic rewrites,\n"
+                "  POSIX idempotency remediation, and OS-signaled remediation rules.\n"
+                "\n"
+                ####
+
                 "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
                 "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
