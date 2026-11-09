@@ -37549,7 +37549,25 @@ This block was added inside the malformed command block in the Ubuntu domain pri
 
 ```
 
+This patch fixed test case 20 (complex nested shell command with idempotency) and also test case 29 (a shell command that required
+rewrite due to near-miss mdir instead of mkdir). 
 
+Test case 33 involves a near-miss, idempotency, AND os-signaled remediation. 
+
+```
+{
+  "command": "mdir /tmp/ubuntu_cat3_33 ; touch /tmp/ubuntu_cat3_33",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-033",
+  "ip": "10.0.42.33",
+  "tags": [],
+  "history": []
+},
+
+```
 
 
 
