@@ -1,0 +1,489 @@
+{
+  "os_name": "Ubuntu",
+  "os_version": "22.04",
+  "kernel": "5.15.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+
+
+
+    {
+      "command": "mkdir /tmp/ubuntu_idem1",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-001",
+      "ip": "10.0.42.1",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "touch /tmp/ubuntu_idem2",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-002",
+      "ip": "10.0.42.2",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "ln -s /tmp/source3 /tmp/ubuntu_idem3",
+      "stdout": "",
+      "stderr": "ln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-003",
+      "ip": "10.0.42.3",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "rmdir /tmp/ubuntu_idem4",
+      "stdout": "",
+      "stderr": "rmdir: not removed",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-004",
+      "ip": "10.0.42.4",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "kill 99999",
+      "stdout": "",
+      "stderr": "kill: no such process",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-005",
+      "ip": "10.0.42.5",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem6 ; touch /tmp/ubuntu_idem6",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-006",
+      "ip": "10.0.42.6",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem7 && touch /tmp/ubuntu_idem7",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-007",
+      "ip": "10.0.42.7",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "touch /tmp/ubuntu_idem8 || ln -s /tmp/ubuntu_idem8 /tmp/ubuntu_idem8",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-008",
+      "ip": "10.0.42.8",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem9 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-009",
+      "ip": "10.0.42.9",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(touch /tmp/ubuntu_idem10)",
+      "stdout": "",
+      "stderr": "touch: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-010",
+      "ip": "10.0.42.10",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem11 ; touch /tmp/ubuntu_idem11 ; ln -s /tmp/ubuntu_idem11 /tmp/ubuntu_idem11",
+      "stdout": "",
+      "stderr": "mkdir: directory exists\ntouch: file exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-011",
+      "ip": "10.0.42.11",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem12 || echo fallback",
+      "stdout": "fallback\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-012",
+      "ip": "10.0.42.12",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem13 ; echo ok ; ln -s /tmp/ubuntu_idem13 /tmp/ubuntu_idem13",
+      "stdout": "ok\n",
+      "stderr": "mkdir: directory exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-013",
+      "ip": "10.0.42.13",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo ok ; mkdir /tmp/ubuntu_idem14 ; echo done",
+      "stdout": "ok\ndone\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-014",
+      "ip": "10.0.42.14",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(mkdir /tmp/ubuntu_idem15) ; echo ok",
+      "stdout": "ok\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-015",
+      "ip": "10.0.42.15",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem16 | cat",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-016",
+      "ip": "10.0.42.16",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo foo | mkdir /tmp/ubuntu_idem17 | grep foo",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-017",
+      "ip": "10.0.42.17",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem18 || echo fallback",
+      "stdout": "fallback\n",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-018",
+      "ip": "10.0.42.18",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem19 && echo ok",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-019",
+      "ip": "10.0.42.19",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "echo $(echo $(mkdir /tmp/ubuntu_idem20)))",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-020",
+      "ip": "10.0.42.20",
+      "tags": [],
+      "history": []
+    },
+    {
+      "command": "mkdir /tmp/ubuntu_idem21 && echo ok ; ln -s /tmp/ubuntu_idem21 /tmp/ubuntu_idem21 || echo fallback",
+      "stdout": "fallback\n",
+      "stderr": "mkdir: directory exists\nln: file exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-021",
+      "ip": "10.0.42.21",
+      "tags": [],
+      "history": []
+    },
+
+{
+  "command": "dnf install nginx ; mkdir /tmp/ubuntu_cat2_22",
+  "stdout": "",
+  "stderr": "dnf: command not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-022",
+  "ip": "10.0.42.22",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mdir /tmp/ubuntu_cat2_23 ; touch /tmp/ubuntu_cat2_23",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found\ntouch: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-023",
+  "ip": "10.0.42.23",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "yum install nginx ; ln -s /tmp/source24 /tmp/ubuntu_cat2_24",
+  "stdout": "",
+  "stderr": "yum: command not found\nln: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-024",
+  "ip": "10.0.42.24",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "tuch /tmp/ubuntu_cat2_25 ; mkdir /tmp/ubuntu_cat2_25",
+  "stdout": "",
+  "stderr": "bash: tuch: command not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-025",
+  "ip": "10.0.42.25",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "apk add nginx && mkdir /tmp/ubuntu_cat2_26",
+  "stdout": "",
+  "stderr": "apk: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-026",
+  "ip": "10.0.42.26",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "grpe foo /tmp/file || mkdir /tmp/ubuntu_cat2_27",
+  "stdout": "",
+  "stderr": "bash: grpe: command not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-027",
+  "ip": "10.0.42.27",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "dnf install nginx | grep foo",
+  "stdout": "",
+  "stderr": "dnf: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-028",
+  "ip": "10.0.42.28",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "echo $(mdir /tmp/ubuntu_cat2_29)",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-029",
+  "ip": "10.0.42.29",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "yum install nginx ; mkdir /tmp/ubuntu_cat2_30 ; touch /tmp/ubuntu_cat2_30",
+  "stdout": "",
+  "stderr": "yum: command not found\nmkdir: directory exists\ntouch: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-030",
+  "ip": "10.0.42.30",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat2_31 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat2_31 /tmp/ubuntu_cat2_31 || echo fallback ; mdir /tmp/ubuntu_cat2_31b",
+  "stdout": "fallback\n",
+  "stderr": "dnf: command not found\nln: file exists\nbash: mdir: command not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat2-031",
+  "ip": "10.0.42.31",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "dnf install nginx ; mkdir /tmp/ubuntu_cat3_32",
+  "stdout": "",
+  "stderr": "dnf: command not found\nmkdir: directory exists\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-032",
+  "ip": "10.0.42.32",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mdir /tmp/ubuntu_cat3_33 ; touch /tmp/ubuntu_cat3_33",
+  "stdout": "",
+  "stderr": "bash: mdir: command not found\ntouch: file exists\n",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-033",
+  "ip": "10.0.42.33",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "yum install nginx ; ln -s /tmp/source34 /tmp/ubuntu_cat3_34",
+  "stdout": "",
+  "stderr": "yum: command not found\nln: file exists\nFailed to fetch repository metadata",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-034",
+  "ip": "10.0.42.34",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "apk add nginx && mkdir /tmp/ubuntu_cat3_35",
+  "stdout": "",
+  "stderr": "apk: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-035",
+  "ip": "10.0.42.35",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "grpe foo /tmp/file || mkdir /tmp/ubuntu_cat3_36",
+  "stdout": "",
+  "stderr": "bash: grpe: command not found\nmkdir: directory exists\nRepository is unavailable",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-036",
+  "ip": "10.0.42.36",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "dnf install nginx | grep foo",
+  "stdout": "",
+  "stderr": "dnf: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-037",
+  "ip": "10.0.42.37",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b",
+  "stdout": "fallback\n",
+  "stderr": "dnf: command not found\nln: file exists\nbash: mdir: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-038",
+  "ip": "10.0.42.38",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_39",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\nHash Sum mismatch",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-039",
+  "ip": "10.0.42.39",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "touch /tmp/ubuntu_cat3_40",
+  "stdout": "",
+  "stderr": "touch: file exists\nRepository is unavailable",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-040",
+  "ip": "10.0.42.40",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-041",
+  "ip": "10.0.42.41",
+  "tags": [],
+  "history": []
+}
+
+
+
+
+  
+  ]
+}  
