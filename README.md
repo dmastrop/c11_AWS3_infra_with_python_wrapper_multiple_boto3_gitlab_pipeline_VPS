@@ -37551,6 +37551,7 @@ This block was added inside the malformed command block in the Ubuntu domain pri
 
 This patch fixed test case 20 (complex nested shell command with idempotency) and also test case 29 (a shell command that required
 rewrite due to near-miss mdir instead of mkdir). 
+Both of these test cases are now working after the Patch-a above.
 
 
 ---
@@ -37572,8 +37573,124 @@ Test case 33 involves a near-miss, idempotency, AND os-signaled remediation.
 },
 
 ```
+Intially before Patch-b (see below), this test case was erroneously going to fallback. 
+
+Test case 41 involves stderr with idempotency, AND os-signaled remedation. 
+
+```
+{
+  "command": "mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-041",
+  "ip": "10.0.42.41",
+  "tags": [],
+  "history": []
+}
+```
+Initially before Patch-b (see below), this case was erroneously going to fallback as well.
+
+Both of these test cases introduce os-signaled remediation into the stderr and the following Patch-b was added BEFORE BLOCK1 code
+to clarify that os-signaled remediation with a near-miss or bad PM rewrite does not constitute a fallback condition in an of itself.
+
+ 
+
+```
+
+                #### Patch-b to address issues with near-miss/PM rewrite + idempotency + os-signaled remedation
+                "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+                "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+                "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+                "  or similar repository-level errors) MUST NOT by itself trigger 'fallback'\n"
+                "  while a deterministic rewrite candidate remains unresolved.\n"
+                "- When both a deterministic rewrite candidate and an OS-signaled\n"
+                "  remediation indicator are present, the LLM MUST first apply\n"
+                "  the Retry-With-Modified-Command precedence rules above.\n"
+                "- OS-signaled remediation evaluation occurs only after the\n"
+                "  deterministic rewrite has been executed on a subsequent\n"
+                "  LLM invocation.\n"
+                ####
 
 
+                # ============================================================
+                # Retry-With-Modified-Command Precedence
+                # (wrong package managers, near-misses,
+                # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
+                # ============================================================
+                "- Any deterministic rewrite that results in a\n"
+                "  'retry_with_modified_command' action takes\n"
+                "  precedence over shell-level idempotency\n"
+                "  remediation.\n"
+                "- Deterministic rewrites that qualify for\n"
+                "  'retry_with_modified_command' include,\n"
+                "  but are not limited to:\n"
+                "      * wrong-OS package-manager rewrites\n"
+                "      * command near-miss corrections\n"
+                "      * utility typo corrections\n"
+                "      * other directly implied command repairs\n"
+                "- When both a deterministic rewrite candidate\n"
+                "  and an idempotency condition are present,\n"
+                "  the LLM MUST first return\n"
+                "  'retry_with_modified_command'.\n"
+                "- POSIX idempotency remediation applies only\n"
+                "  after the rewritten command has been executed\n"
+                "  on a subsequent LLM invocation.\n"
+                "- The presence of shell-level idempotency\n"
+                "  indicators MUST NOT prevent a required\n"
+                "  deterministic rewrite from occurring first.\n"
+                "- This precedence applies equally to\n"
+                "  single-segment commands and POSIX\n"
+                "  multi-segment constructs including:\n"
+                "      * pipelines (|)\n"
+                "      * logical AND chains (&&)\n"
+                "      * logical OR chains (||)\n"
+                "      * semicolon chains (;)\n"
+                "      * subshells ($(...))\n"
+                "- OS-signaled remediation MUST NOT be applied\n"
+                "  while a deterministic rewrite candidate\n"
+                "  remains unresolved.\n"
+                "- OS-signaled remediation is evaluated only\n"
+                "  after deterministic rewrites have been\n"
+                "  processed on prior LLM invocations and\n"
+                "  after POSIX idempotency remediation has\n"
+                "  been evaluated.\n"
+```
+
+
+After adding the Patch-b above test case 33 now correctly gets a retry_with_modified_command rewrite from the LLM and test case 41 
+correctly gets a cleanup_and_retry from the LLM to address the idempotency.
+
+The Temporary failure resolving ... OS-signaled remedation signal was stealing salience before BLOCK1 and BLOCK2. Putting the Patch-b
+before BLOCK1 restores the proper LLM response. 
+
+
+
+---
+
+Finally, the last failure in this suite was test case 39
+
+This is another test case involving idempotency + os-signaled remediation.
+
+Initially before the Patch-c (see below) the LLM was incorrectly returning a full cleanup_and_retry action plan to remediate the 
+os-signaed remediation (Hash Sum mismatch) issue. The correct response should be clenaup_and_retry to address the idempotency first.
+
+
+```
+{
+  "command": "mkdir /tmp/ubuntu_cat3_39",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\nHash Sum mismatch",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-039",
+  "ip": "10.0.42.39",
+  "tags": [],
+  "history": []
+},
+
+```
 
 
 
