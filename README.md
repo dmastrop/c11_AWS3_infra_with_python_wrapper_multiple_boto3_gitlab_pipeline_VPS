@@ -37533,7 +37533,7 @@ This block was added inside the malformed command block in the Ubuntu domain pri
 ```
               "\n"
 
-               #### add this patch to clarify what constitutes a malformed subshell
+               #### add this patch to clarify what constitutes a malformed subshell (Patch-a)
                "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
                 "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
                 "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
@@ -37551,6 +37551,10 @@ This block was added inside the malformed command block in the Ubuntu domain pri
 
 This patch fixed test case 20 (complex nested shell command with idempotency) and also test case 29 (a shell command that required
 rewrite due to near-miss mdir instead of mkdir). 
+
+
+---
+
 
 Test case 33 involves a near-miss, idempotency, AND os-signaled remediation. 
 

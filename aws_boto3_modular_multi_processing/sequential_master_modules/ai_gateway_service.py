@@ -578,7 +578,7 @@ UBUNTU_RULES = (
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
 
-               #### add this patch to clarify what constitutes a malformed subshell
+               #### add this patch to clarify what constitutes a malformed subshell (Patch-a)
                "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
                 "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
                 "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
@@ -699,6 +699,23 @@ UBUNTU_RULES = (
                 "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
                 "  wrong-OS package-manager installs for Ubuntu, that segment MUST be rewritten\n"
                 "  to use 'apt-get install -y <pkg>'.\n"
+
+
+
+
+                #### Patch-b to address issues with near-miss/PM rewrite + idempotency + os-signaled remedation
+                "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+                "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+                "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+                "  or similar repository-level errors) MUST NOT by itself trigger 'fallback'\n"
+                "  while a deterministic rewrite candidate remains unresolved.\n"
+                "- When both a deterministic rewrite candidate and an OS-signaled\n"
+                "  remediation indicator are present, the LLM MUST first apply\n"
+                "  the Retry-With-Modified-Command precedence rules above.\n"
+                "- OS-signaled remediation evaluation occurs only after the\n"
+                "  deterministic rewrite has been executed on a subsequent\n"
+                "  LLM invocation.\n"
+                ####
 
 
                 # ============================================================
