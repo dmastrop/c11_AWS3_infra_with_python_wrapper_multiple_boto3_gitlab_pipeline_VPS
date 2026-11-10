@@ -843,6 +843,24 @@ UBUNTU_RULES = (
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
 
+
+
+
+
+                #### Patch-c to address idempotency + os-signaled remediation precedence
+
+                "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+                "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+                "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+                "  or similar repository-level errors) MUST NOT by itself override\n"
+                "  shell-level idempotency remediation.\n"
+                "- When both shell-level idempotency indicators and OS-signaled\n"
+                "  remediation indicators are present, the LLM MUST first apply\n"
+                "  the POSIX idempotency remediation rules above.\n"
+                "- OS-signaled remediation evaluation occurs only after the\n"
+                "  idempotency remediation has been executed on a subsequent\n"
+                "  LLM invocation.\n"
+
               
                 # ============================================================
                 # Shell-Level Idempotency (Ubuntu)
