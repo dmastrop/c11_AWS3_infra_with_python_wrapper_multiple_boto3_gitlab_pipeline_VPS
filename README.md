@@ -38559,11 +38559,11 @@ No regression observed.
 
 
 
-##### 6 original idempotency
+##### 6 original idempotency regression
 
 
 
-##### 3 os-signaled remedation (actually 4; 1 added for corner case testing)
+##### 3 os-signaled remedation regression (actually 4; 1 added for corner case testing)
 
 
 
