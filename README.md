@@ -37747,6 +37747,17 @@ difficult.
 The test matrix for Ubuntu POSIX rewrite + idempotency + os-signaled remediation on gpt-5.6-sol is below:
 (By Category 1,2 and 3 test cases)
 
+Note the patches above address the following test cases:
+
+Patch-a: Test Cases 20 and 29
+Patch-b: Test Cases 33 and 41
+Patch-c: Test Cases 39 and 40
+
+
+
+
+
+---
 
 
 ##### Category 1 - POSIX Idempotency + Multi-Segment (21 Cases)
@@ -38119,6 +38130,190 @@ The test matrix for Ubuntu POSIX rewrite + idempotency + os-signaled remediation
 
 
 
+
+### Category 2 - Deterministic Rewrite Validation (10 Cases)
+
+---
+
+**Test Case 22 (index 21)**
+
+**Command:** `dnf install nginx ; mkdir /tmp/ubuntu_cat2_22`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `dnf install nginx` → PM
+- `mkdir` → I
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx ; mkdir /tmp/ubuntu_cat2_22`
+
+**Notes:** Package-manager rewrite validation. Fedora package manager correctly rewritten to Ubuntu apt while preserving command structure.
+
+---
+
+**Test Case 23 (index 22)**
+
+**Command:** `mdir /tmp/ubuntu_cat2_23 ; touch /tmp/ubuntu_cat2_23`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `mdir` → NM
+- `touch` → I
+
+**Cleanup:** none
+
+**Retry:** `mkdir /tmp/ubuntu_cat2_23 ; touch /tmp/ubuntu_cat2_23`
+
+**Notes:** Deterministic near-miss rewrite validation. Command spelling corrected while preserving chain structure.
+
+---
+
+**Test Case 24 (index 23)**
+
+**Command:** `yum install nginx ; ln -s /tmp/source24 /tmp/ubuntu_cat2_24`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `yum install nginx` → PM
+- `ln -s` → I
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx ; ln -s /tmp/source24 /tmp/ubuntu_cat2_24`
+
+**Notes:** Package-manager rewrite applies to RHEL-family command variants.
+
+---
+
+**Test Case 25 (index 24)**
+
+**Command:** `tuch /tmp/ubuntu_cat2_25 ; mkdir /tmp/ubuntu_cat2_25`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `tuch` → NM
+- `mkdir` → I
+
+**Cleanup:** none
+
+**Retry:** `touch /tmp/ubuntu_cat2_25 ; mkdir /tmp/ubuntu_cat2_25`
+
+**Notes:** Single-token deterministic rewrite. Command corrected without modifying surrounding structure.
+
+---
+
+**Test Case 26 (index 25)**
+
+**Command:** `apk add nginx && mkdir /tmp/ubuntu_cat2_26`
+
+**Operator:** `&&` chain
+
+**Failures:**
+- `apk add nginx` → PM
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx && mkdir /tmp/ubuntu_cat2_26`
+
+**Notes:** Alpine package-manager rewrite validation. Operator-preserving retry maintained across rewrite.
+
+---
+
+**Test Case 27 (index 26)**
+
+**Command:** `grpe foo /tmp/file || mkdir /tmp/ubuntu_cat2_27`
+
+**Operator:** `||` chain
+
+**Failures:**
+- `grpe` → NM
+- `mkdir` → I
+
+**Cleanup:** none
+
+**Retry:** `grep foo /tmp/file || mkdir /tmp/ubuntu_cat2_27`
+
+**Notes:** Near-miss correction inside conditional operator chain. Original control-flow semantics preserved.
+
+---
+
+**Test Case 28 (index 27)**
+
+**Command:** `dnf install nginx | grep foo`
+
+**Operator:** pipeline
+
+**Failures:**
+- `dnf install nginx` → PM
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx | grep foo`
+
+**Notes:** Package-manager rewrite within a pipeline. Entire pipeline structure preserved.
+
+---
+
+**Test Case 29 (index 28)**
+
+**Command:** `echo $(mdir /tmp/ubuntu_cat2_29)`
+
+**Operator:** subshell
+
+**Failures:**
+- `mdir` → NM
+
+**Cleanup:** none
+
+**Retry:** `echo $(mkdir /tmp/ubuntu_cat2_29)`
+
+**Notes:** Subshell-preserving deterministic rewrite validation. Fixed by Patch-a. Prior behavior could lose wrapper context during rewrite generation. Validation confirms rewrite occurs inside the subshell while preserving the complete subshell structure.
+
+---
+
+**Test Case 30 (index 29)**
+
+**Command:** `yum install nginx ; mkdir /tmp/ubuntu_cat2_30 ; touch /tmp/ubuntu_cat2_30`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `yum install nginx` → PM
+- `mkdir` → I
+- `touch` → I
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx ; mkdir /tmp/ubuntu_cat2_30 ; touch /tmp/ubuntu_cat2_30`
+
+**Notes:** Multi-segment rewrite validation. Package-manager rewrite correctly applied while preserving all downstream segments.
+
+---
+
+**Test Case 31 (index 30)**
+
+**Command:** `mkdir /tmp/ubuntu_cat2_31 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat2_31 /tmp/ubuntu_cat2_31 || echo fallback ; mdir /tmp/ubuntu_cat2_31b`
+
+**Operator:** mixed (`&&`, `;`, `||`)
+
+**Failures:**
+- `dnf install nginx` → PM
+- `ln -s` → I
+- `mdir` → NM
+- `echo fallback` → succeeded
+
+**Cleanup:** none
+
+**Retry:** `mkdir /tmp/ubuntu_cat2_31 && echo ok ; apt-get install -y nginx ; ln -s /tmp/ubuntu_cat2_31 /tmp/ubuntu_cat2_31 || echo fallback ; mkdir /tmp/ubuntu_cat2_31b`
+
+**Notes:** Most complex rewrite scenario in Category 2. Simultaneously validates package-manager rewrite, near-miss correction, mixed-operator preservation, and multi-segment command reconstruction. Demonstrates full BLOCK1 deterministic rewrite behavior prior to idempotency evaluation.
+
+---
 
 
 
