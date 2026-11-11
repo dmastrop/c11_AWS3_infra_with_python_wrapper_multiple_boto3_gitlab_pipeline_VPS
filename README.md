@@ -38136,7 +38136,7 @@ Patch-c: Test Cases 39 and 40
 
 
 
-### Category 2 - Deterministic Rewrite Validation (10 Cases)
+##### Category 2 - Deterministic Rewrite Validation (10 Cases)
 
 ---
 
