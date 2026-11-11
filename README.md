@@ -37515,7 +37515,7 @@ test cases pass.
 
 
 
-#### New Ubuntu testing for the POSIX + idempotency integration with precedence for PM rewrite and os-signaled remediation
+#### New Ubuntu testing for the POSIX + idempotency integration with precedence for PM rewrite and os-signaled remediation (Patches-a, b and c)
 
 This new test suite has been created for all 3 test categories above. When running Category1 tests on the Ubuntu that had the BLOCK
 1,2 and 3 port, one test case failed. Test case 20 (index 19)
@@ -37692,6 +37692,59 @@ os-signaed remediation (Hash Sum mismatch) issue. The correct response should be
 
 ```
 
+This issue was addressed by inserting the following Patch-c right before BLOCKS2 and 3. The patch below is analagous to Patch-b 
+except this Patch-c is for the idempotency + os-signaled remedation precedence, rather than the rewrite + os-signaled remediation
+precedence that Patch-b dealt with. 
+
+```
+
+                #### Patch-c to address idempotency + os-signaled remediation precedence
+
+                "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+                "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+                "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+                "  or similar repository-level errors) MUST NOT by itself override\n"
+                "  shell-level idempotency remediation.\n"
+                "- When both shell-level idempotency indicators and OS-signaled\n"
+                "  remediation indicators are present, the LLM MUST first apply\n"
+                "  the POSIX idempotency remediation rules above.\n"
+                "- OS-signaled remediation evaluation occurs only after the\n"
+                "  idempotency remediation has been executed on a subsequent\n"
+                "  LLM invocation.\n"
+
+
+                # ============================================================
+                # Shell-Level Idempotency (Ubuntu)
+                # New block for POSIX Idempotency + Multi-Segment support (POSIX refactor BLOCK2)
+                # ============================================================
+                "- Ubuntu shell-level idempotency includes stderr messages such as:\n"
+                "    * 'File exists' (mkdir, touch, ln)\n"
+                "    * 'not removed' (rmdir)\n"
+                "    * 'no such process' (kill)\n"
+                "- For idempotent 'File exists' failures, cleanup_and_retry MUST use:\n"
+                "    * 'mkdir: ... File exists'  → rmdir <path>\n"
+                "    * 'touch: ... File exists'  → rm -f <path>\n"
+                "    * 'ln: ... File exists'     → rm -f <path>\n"
+                "    * both 'mkdir' and 'ln' on same path → rm -f <path> (ambiguous resource).\n"
+                "    * both 'touch' and 'mkdir' on same path → rm -f <path> (ambiguous resource).\n"
+                "- If stderr contains ONLY non-idempotent failures (e.g., kill no such process,\n"
+                "  rmdir not removed, package-manager errors), cleanup MUST be omitted and\n"
+                "  the action MUST be 'fallback'.\n"
+                "- cleanup_and_retry MUST NOT include package-manager operations.\n"
+
+And BLOCK3 follows BLOCK2 above.....
+
+```
+
+---
+
+At this point all of the 41 test cases that cover POSIX + idempotency and rewrite + idempotency + os-signaled remediation POSIX 
+precedennce are passing now. The test matrix for ubuntu on gpt-5.6-sol is below. The code presented above needs to be ported
+to all of the other Linux OS domain primitives blocks as well as MacOS-brew. The code is very modular and this should not be very
+difficult. 
+
+
+The test matrix for Ubuntu POSIX rewrite + idempotency + os-signaled remediation on gpt-5.6-sol is below:
 
 
 
