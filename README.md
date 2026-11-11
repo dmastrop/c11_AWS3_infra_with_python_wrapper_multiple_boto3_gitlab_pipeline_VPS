@@ -38522,6 +38522,10 @@ on the Ubuntu domain primitives block. This is so that we can be very confident 
 domain primtives blocks and to MacOS Brew. 
 
 
+Overall, as shown below, all the older regression tests continued to pass. So we are ready to port Blocks 1,2,3 and the patches a,b,c
+to all of the other Linux Domain primitives blocks and to macos-brew.
+
+
 
 ##### base20 regression
 
@@ -38551,21 +38555,20 @@ No regression observed.
 
 ##### patch2 24 rewrite regression
 
-
-
+No regression issues here.
 
 
 ##### multi-segment 21 regression
 
-
+No regression issues here.
 
 ##### 6 original idempotency regression
 
+No regression issues here.
 
+##### 3 os-signaled remedation regression
 
-##### 3 os-signaled remedation regression (actually 4; 1 added for corner case testing)
-
-
+No regression issues here.
 
 
 
