@@ -37749,6 +37749,376 @@ The test matrix for Ubuntu POSIX rewrite + idempotency + os-signaled remediation
 
 
 
+##### Category 1 - POSIX Idempotency + Multi-Segment (21 Cases)
+
+---
+
+**Test Case 1 (index 0)**
+
+**Command:** `mkdir /tmp/ubuntu_idem1`
+
+**Operator:** single segment
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem1`
+
+**Retry:** `mkdir /tmp/ubuntu_idem1`
+
+**Notes:** Simple idempotency validation. Existing directory is safely remediated through cleanup and retry.
+
+---
+
+**Test Case 2 (index 1)**
+
+**Command:** `touch /tmp/ubuntu_idem2`
+
+**Operator:** single segment
+
+**Failures:**
+- `touch` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem2`
+
+**Retry:** `touch /tmp/ubuntu_idem2`
+
+**Notes:** Simple file-creation idempotency validation.
+
+---
+
+**Test Case 3 (index 2)**
+
+**Command:** `ln -s /tmp/source3 /tmp/ubuntu_idem3`
+
+**Operator:** single segment
+
+**Failures:**
+- `ln -s` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem3`
+
+**Retry:** `ln -s /tmp/source3 /tmp/ubuntu_idem3`
+
+**Notes:** Symbolic-link idempotency validation.
+
+---
+
+**Test Case 4 (index 3)**
+
+**Command:** `rmdir /tmp/ubuntu_idem4`
+
+**Operator:** single segment
+
+**Failures:**
+- `rmdir: not removed` → NI
+
+**Cleanup:** none
+
+**Action:** fallback
+
+**Notes:** Non-idempotent failure. No deterministic cleanup can be safely inferred.
+
+---
+
+**Test Case 5 (index 4)**
+
+**Command:** `kill 99999`
+
+**Operator:** single segment
+
+**Failures:**
+- `kill: no such process` → NI
+
+**Cleanup:** none
+
+**Action:** fallback
+
+**Notes:** Process-management failures remain non-idempotent and require fallback handling.
+
+---
+
+**Test Case 6 (index 5)**
+
+**Command:** `mkdir /tmp/ubuntu_idem6 ; touch /tmp/ubuntu_idem6`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `touch` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem6`
+
+**Retry:** `touch /tmp/ubuntu_idem6`
+
+**Notes:** Semicolon-chain validation. Retry only failed segment.
+
+---
+
+**Test Case 7 (index 6)**
+
+**Command:** `mkdir /tmp/ubuntu_idem7 && touch /tmp/ubuntu_idem7`
+
+**Operator:** `&&` chain
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem7`
+
+**Retry:** `mkdir /tmp/ubuntu_idem7 && touch /tmp/ubuntu_idem7`
+
+**Notes:** Preserves operator structure. Retry begins at first idempotent failure.
+
+---
+
+**Test Case 8 (index 7)**
+
+**Command:** `touch /tmp/ubuntu_idem8 || ln -s /tmp/ubuntu_idem8 /tmp/ubuntu_idem8`
+
+**Operator:** `||` chain
+
+**Failures:**
+- `touch` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem8`
+
+**Retry:** `touch /tmp/ubuntu_idem8`
+
+**Notes:** Fallback branch is not replayed. Retry only failed segment.
+
+---
+
+**Test Case 9 (index 8)**
+
+**Command:** `mkdir /tmp/ubuntu_idem9 | grep foo`
+
+**Operator:** pipeline
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem9`
+
+**Retry:** `mkdir /tmp/ubuntu_idem9 | grep foo`
+
+**Notes:** Pipeline structure preserved. Entire pipeline is retried.
+
+---
+
+**Test Case 10 (index 9)**
+
+**Command:** `echo $(touch /tmp/ubuntu_idem10)`
+
+**Operator:** subshell
+
+**Failures:**
+- `touch` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem10`
+
+**Retry:** `echo $(touch /tmp/ubuntu_idem10)`
+
+**Notes:** Subshell wrapper preserved during remediation.
+
+---
+
+**Test Case 11 (index 10)**
+
+**Command:** `mkdir /tmp/ubuntu_idem11 ; touch /tmp/ubuntu_idem11 ; ln -s /tmp/ubuntu_idem11 /tmp/ubuntu_idem11`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `mkdir` → I
+- `touch` → I
+- `ln -s` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem11` (ambiguous: mkdir + touch + ln)
+
+**Retry:** `mkdir /tmp/ubuntu_idem11 ; touch /tmp/ubuntu_idem11 ; ln -s /tmp/ubuntu_idem11 /tmp/ubuntu_idem11`
+
+**Notes:** All segments failed idempotently. The entire failed command set is retried while preserving original command ordering.
+
+---
+
+**Test Case 12 (index 11)**
+
+**Command:** `mkdir /tmp/ubuntu_idem12 || echo fallback`
+
+**Operator:** `||` chain
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem12`
+
+**Retry:** `mkdir /tmp/ubuntu_idem12`
+
+**Notes:** Retry only failed segment. Successful fallback branch is not replayed.
+
+---
+
+**Test Case 13 (index 12)**
+
+**Command:** `mkdir /tmp/ubuntu_idem13 ; echo ok ; ln -s /tmp/ubuntu_idem13 /tmp/ubuntu_idem13`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `mkdir` → I
+- `ln -s` → I
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem13` (ambiguous: mkdir + ln)
+
+**Retry:** `mkdir /tmp/ubuntu_idem13 ; ln -s /tmp/ubuntu_idem13 /tmp/ubuntu_idem13`
+
+**Notes:** Successful segments are removed from the retry plan. Only failed segments are replayed.
+
+---
+
+**Test Case 14 (index 13)**
+
+**Command:** `echo ok ; mkdir /tmp/ubuntu_idem14 ; echo done`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem14`
+
+**Retry:** `mkdir /tmp/ubuntu_idem14`
+
+**Notes:** Single failed segment extraction. Demonstrates selective retry behavior.
+
+---
+
+**Test Case 15 (index 14)**
+
+**Command:** `echo $(mkdir /tmp/ubuntu_idem15) ; echo ok`
+
+**Operator:** subshell + `;`
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem15`
+
+**Retry:** `echo $(mkdir /tmp/ubuntu_idem15)`
+
+**Notes:** Subshell wrapper is preserved while successful sibling segments are removed from retry execution.
+
+---
+
+**Test Case 16 (index 15)**
+
+**Command:** `mkdir /tmp/ubuntu_idem16 | cat`
+
+**Operator:** pipeline
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem16`
+
+**Retry:** `mkdir /tmp/ubuntu_idem16 | cat`
+
+**Notes:** Pipeline integrity is preserved. Entire pipeline is retried.
+
+---
+
+**Test Case 17 (index 16)**
+
+**Command:** `echo foo | mkdir /tmp/ubuntu_idem17 | grep foo`
+
+**Operator:** pipeline
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem17`
+
+**Retry:** `echo foo | mkdir /tmp/ubuntu_idem17 | grep foo`
+
+**Notes:** Multi-stage pipeline validation. Retry preserves complete pipeline structure.
+
+---
+
+**Test Case 18 (index 17)**
+
+**Command:** `mkdir /tmp/ubuntu_idem18 || echo fallback`
+
+**Operator:** `||` chain
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem18`
+
+**Retry:** `mkdir /tmp/ubuntu_idem18`
+
+**Notes:** Fallback branch is intentionally excluded from retry execution.
+
+---
+
+**Test Case 19 (index 18)**
+
+**Command:** `mkdir /tmp/ubuntu_idem19 && echo ok`
+
+**Operator:** `&&` chain
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem19`
+
+**Retry:** `mkdir /tmp/ubuntu_idem19 && echo ok`
+
+**Notes:** Operator-preserving retry begins at first idempotent failure while maintaining original chain semantics.
+
+---
+
+**Test Case 20 (index 19)**
+
+**Command:** `echo $(echo $(mkdir /tmp/ubuntu_idem20))`
+
+**Operator:** nested subshell
+
+**Failures:**
+- `mkdir` → I
+
+**Cleanup:** `rmdir /tmp/ubuntu_idem20`
+
+**Retry:** `echo $(echo $(mkdir /tmp/ubuntu_idem20))`
+
+**Notes:** Nested subshell preservation validation. Both subshell wrappers must be retained during retry generation. Fixed by Patch-a. This case validated that retry reconstruction preserves full nesting depth rather than collapsing to the innermost command.
+
+---
+
+**Test Case 21 (index 20)**
+
+**Command:** `mkdir /tmp/ubuntu_idem21 && echo ok ; ln -s /tmp/ubuntu_idem21 /tmp/ubuntu_idem21 || echo fallback`
+
+**Operator:** mixed (`&&`, `;`, `||`)
+
+**Failures:**
+- `mkdir` → I
+- `ln -s` → I
+- `echo ok` → skipped
+- `echo fallback` → succeeded
+
+**Cleanup:** `rm -f /tmp/ubuntu_idem21` (ambiguous: mkdir + ln)
+
+**Retry:** `mkdir /tmp/ubuntu_idem21 && echo ok ; ln -s /tmp/ubuntu_idem21 /tmp/ubuntu_idem21`
+
+**Notes:** Most complex Category 1 scenario. Validates mixed-operator retry generation, selective replay, cleanup aggregation, and operator-preserving reconstruction. Successful fallback execution is not replayed.
+
+---
+
+
+
+
 
 
 
