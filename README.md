@@ -37745,8 +37745,203 @@ difficult.
 
 
 The test matrix for Ubuntu POSIX rewrite + idempotency + os-signaled remediation on gpt-5.6-sol is below:
+(By Category 1,2 and 3 test cases)
 
 
+
+
+
+
+##### Category 3 - Rewrite + Idempotency + OS-Signaled Remediation (10 Cases)
+
+---
+
+**Test Case 32 (index 31)**
+
+**Command:** `dnf install nginx ; mkdir /tmp/ubuntu_cat3_32`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `dnf install nginx` → PM
+- `mkdir` → I
+- `Hash Sum mismatch` → OSR
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx ; mkdir /tmp/ubuntu_cat3_32`
+
+**Notes:** Package-manager rewrite takes precedence over both idempotency and OS-signaled remediation. BLOCK1 executes before all downstream remediation evaluation.
+
+---
+
+**Test Case 33 (index 32)**
+
+**Command:** `mdir /tmp/ubuntu_cat3_33 ; touch /tmp/ubuntu_cat3_33`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `mdir` → NM
+- `touch` → I
+- `Temporary failure resolving archive.ubuntu.com` → OSR
+
+**Cleanup:** none
+
+**Retry:** `mkdir /tmp/ubuntu_cat3_33 ; touch /tmp/ubuntu_cat3_33`
+
+**Notes:** Deterministic near-miss rewrite takes precedence over both shell-level idempotency and OS-signaled remediation. Fixed by Patch-b. BLOCK1 > BLOCK2 > OSR.
+
+---
+
+**Test Case 34 (index 33)**
+
+**Command:** `yum install nginx ; ln -s /tmp/source34 /tmp/ubuntu_cat3_34`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `yum install nginx` → PM
+- `ln -s` → I
+- `Failed to fetch repository metadata` → OSR
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx ; ln -s /tmp/source34 /tmp/ubuntu_cat3_34`
+
+**Notes:** Wrong package-manager rewrite is resolved before repository remediation logic is considered.
+
+---
+
+**Test Case 35 (index 34)**
+
+**Command:** `apk add nginx && mkdir /tmp/ubuntu_cat3_35`
+
+**Operator:** `&&` chain
+
+**Failures:**
+- `apk add nginx` → PM
+- `Hash Sum mismatch` → OSR
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx && mkdir /tmp/ubuntu_cat3_35`
+
+**Notes:** Operator-preserving rewrite with package-manager correction. OS-signaled remediation is deferred until after rewrite execution.
+
+---
+
+**Test Case 36 (index 35)**
+
+**Command:** `grpe foo /tmp/file || mkdir /tmp/ubuntu_cat3_36`
+
+**Operator:** `||` chain
+
+**Failures:**
+- `grpe` → NM
+- `mkdir` → I
+- `Repository is unavailable` → OSR
+
+**Cleanup:** none
+
+**Retry:** `grep foo /tmp/file || mkdir /tmp/ubuntu_cat3_36`
+
+**Notes:** Near-miss correction takes precedence over both idempotency and repository remediation.
+
+---
+
+**Test Case 37 (index 36)**
+
+**Command:** `dnf install nginx | grep foo`
+
+**Operator:** pipeline
+
+**Failures:**
+- `dnf install nginx` → PM
+- `Hash Sum mismatch` → OSR
+
+**Cleanup:** none
+
+**Retry:** `apt-get install -y nginx | grep foo`
+
+**Notes:** Pipeline structure preserved during rewrite. Repository remediation is evaluated only after rewrite resolution.
+
+---
+
+**Test Case 38 (index 37)**
+
+**Command:** `mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b`
+
+**Operator:** mixed (`&&`, `;`, `||`)
+
+**Failures:**
+- `dnf install nginx` → PM
+- `ln -s` → I
+- `mdir` → NM
+- `Hash Sum mismatch` → OSR
+
+**Cleanup:** none
+
+**Retry:** `mkdir /tmp/ubuntu_cat3_38 && echo ok ; apt-get install -y nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mkdir /tmp/ubuntu_cat3_38b`
+
+**Notes:** Most complex rewrite-precedence scenario. Multiple deterministic rewrite candidates are resolved before idempotency and OS-remediation evaluation. BLOCK1 dominates the command graph.
+
+---
+
+**Test Case 39 (index 38)**
+
+**Command:** `mkdir /tmp/ubuntu_cat3_39`
+
+**Operator:** single segment
+
+**Failures:**
+- `mkdir` → I
+- `Hash Sum mismatch` → OSR
+
+**Cleanup:** `rmdir /tmp/ubuntu_cat3_39`
+
+**Retry:** `mkdir /tmp/ubuntu_cat3_39`
+
+**Notes:** Shell-level idempotency remediation takes precedence over OS-signaled remediation. Fixed by Patch-c. BLOCK2 > OSR. Previously routed to repository remediation rather than idempotency cleanup.
+
+---
+
+**Test Case 40 (index 39)**
+
+**Command:** `touch /tmp/ubuntu_cat3_40`
+
+**Operator:** single segment
+
+**Failures:**
+- `touch` → I
+- `Repository is unavailable` → OSR
+
+**Cleanup:** `rm -f /tmp/ubuntu_cat3_40`
+
+**Retry:** `touch /tmp/ubuntu_cat3_40`
+
+**Notes:** Confirms generalized Patch-c behavior for repository-level failures beyond Hash Sum mismatch. BLOCK2 > OSR.
+
+---
+
+**Test Case 41 (index 40)**
+
+**Command:** `mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41`
+
+**Operator:** `;` chain
+
+**Failures:**
+- `mkdir` → I
+- `touch` → I
+- `Temporary failure resolving archive.ubuntu.com` → OSR
+
+**Cleanup:** `rm -f /tmp/ubuntu_cat3_41`
+
+**Retry:** `mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41`
+
+**Notes:** Multi-segment idempotency remediation takes precedence over OS-signaled remediation. Fixed by Patch-b. Confirms that repository failures no longer steal control flow from deterministic shell-level remediation.
+
+---
 
 
 
