@@ -38523,6 +38523,49 @@ domain primtives blocks and to MacOS Brew.
 
 
 
+##### base20 regression
+
+Base20 Regression Results
+
+19/20 exact matches
+
+1/20 behavioral difference
+
+Case:
+apt install nginx
+
+Original:
+fallback
+
+Current:
+retry_with_modified_command
+apt-get install -y nginx
+
+Disposition:
+Intentional improvement
+Deterministic near-miss rewrite logic now identifies
+"apt" -> "apt-get" as a safe correction.
+No regression observed.
+
+
+
+##### patch2 24 rewrite regression
+
+
+
+
+
+##### multi-segment 21 regression
+
+
+
+##### 6 original idempotency
+
+
+
+##### 3 os-signaled remedation (actually 4; 1 added for corner case testing)
+
+
 
 
 
