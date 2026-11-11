@@ -37263,6 +37263,11 @@ No contract modifications were required following validation.
 ---
 
 
+
+
+
+
+
 <a name="linux-posix-pm-port"></a>
 ### Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)
 
@@ -38522,6 +38527,18 @@ domain primtives blocks and to MacOS Brew.
 
 
 
+---
+
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
+
+---
+
+
+---
+
+[Back to top](#top-update59)
+
+---
 
 
 
@@ -38605,6 +38622,15 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ##### Linux based terminal domain primitives block
 
 
+
+
+
+
+---
+
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
+
+---
 ---
 
 [Back to top](#top-update59)
@@ -38688,6 +38714,15 @@ The following sections reivew the code that forms the stress tester framework
 WORK IN PROGRESS
 
 
+
+
+
+
+---
+
+[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
+
+---
 ---
 
 [Back to top](#top-update59)
