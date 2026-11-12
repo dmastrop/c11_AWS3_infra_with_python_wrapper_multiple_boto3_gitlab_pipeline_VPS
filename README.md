@@ -38576,6 +38576,76 @@ No regression issues here.
 
 
 
+#### Porting the BLOCK 1,2, and 3 and Patch-a, b and c to the other Linux OSes and MacOs-brew
+
+
+The following OSes need the code discussed above to support POSIX precedence based multi-segment rewrite + idempotency + os-signaled
+remediation. 
+
+Note that busybox and macos-zsh are complete and Ubuntu is complete as the canoncial Linux OS.
+The testing on Ubuntu and Busybox was extensive (regression). 
+
+
+- Ubuntu Complete
+- Macos-zsh Complete
+- Busybox Complete
+
+
+Porting for the list below will be done first as they spread across all the PMs (apt, dnf, apk and brew):
+The testing on these will mostly consist of a new rewrite + idempotency + os-signaled remedation suite based on the same schema
+that was used for Ubuntu, Macos-zsh and Busybox, + some regresssion testing with the older suites.
+
+- Debian (apt)
+- Fedora (yum)
+- Alpine (apk)
+- macOS-brew (brew)
+
+
+The next OSes are all derivatives of the OSes above with respect to PMs:
+The testing on these will be mostly bypassed except for a new rewrite + idempotency + os-signaled remedation suite for each.
+
+- CentOS7 (yum)
+- Amazon Linux2 (yum)
+- RHEL (yum)
+- CentOS8 (dnf)
+- Amazon Linux 2023 (dnf)
+
+
+New Domains that have not been tested extensively but have the contract rules blocks defined:
+These will not be regression tested or tested. This is for a future phase of the project.
+
+- ArchLinux
+- SUSE
+
+
+Future / Optional:
+
+- PowerShell Linux
+- Windows PowerShell
+
+The port to these will be very challenging and this is postponed for now. They're not just package-manager changes.
+
+They introduce: different shell grammar, different stderr patterns, different command semantics, different quoting rules
+So the contract rules be have to be completely new. The blocks used for linux above cannot be directly ported to these OSes.
+These will have to be covered in a future phase of the project. This is not a simple port.
+
+
+
+These 2 do not require the port:
+Network Appliance OSes
+
+- Cisco IOS
+- Palo Alto PAN
+
+
+
+
+For the Lunux OSes and MacOS-brew:
+
+The port is relatively straightforward for Patch-b, BLOCK1, Patch-c, BLOCK2, and BLOCK3. The Patch-a placement will require a customized
+location for each OS domain primitives block.
+
+
 ---
 
 [Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
@@ -38588,104 +38658,6 @@ No regression issues here.
 [Back to top](#top-update59)
 
 ---
-
-
-
-
-
-
-### Stress testing the contract rules with the automated framework mutator
-
-
-The automated framework, as noted earlier, provides for a validator and schema expander so that 100s of schema context based
-test cases can be run against the domain primitives block for a given OS/platform.   This further hardens the rules in accordance
-with the LLM feedback loop described earlier. 
-
-
-#### The validator
-
-The validator for example will validate each test case so that it no longer has to be manually reviewed (also with the help of
-the LLM) saving up to 95% of the review cycle. It is expected that about 5% of the test cases will have wrong or ambigoius 
-LLM action plan responses from the LLM that will need manual inspection and perhaps contract revision and refinement. 
-
-The execution of the schema test cases when manually done, with the validator hooked in look like this, for example:
-
-```
-root@1a2c8608e0db:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os amazonlinux2023_dnf --index 7
-
-=== RAW LLM RESPONSE ===
-{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/rpm/.rpm.lock"],"retry":["rpm --rebuilddb","dnf install -y nginx"]}
-========================
-
-
-=== VALIDATION RESULT ===
-OS: Amazon Linux 2023 2023
-Command: dnf install -y nginx
-Status: PASS
-========================
-
-```
-
-Note that the VALIDATION RESULT is now displayed. 
-With the validator in place around 95% of the test cases can be auto-validated permitting a scaling of test cases and test case
-iteration to harden the contract domain primitives rules block for each OS/platform. 
-
-#### Semantics files
-
-
-Each OS/platform has a dedicated semantics file that has the hardcoded python logic that would have been required had the LLM
-AI logic/hook not been avaiable. The validator semantics file are a crude replacement for the LLM, the LLM being far more 
-adept at handling this. But the validator semantics logic will cover about 95 % of the test cases with an accurate validation 
-assessment which will enable the test cases to be efficiently scaled. Otherwise it would be very difficult to scale the context
-based test cases in the schema to adequately stress test the contract rules domain primitives blocks. 
-
-
-#### Schema expansion and the mutators.py
-
-To expand the schema context based tests to higher number of test cases, a schema expander and mutator will be used. We can 
-get 100s of context based tests with variants of each test, to purposefully try to exploit holes and deficiencies in the 
-contract rules for a given domain primitives block (OS/platform). This will help harden the contract rules set for each 
-domain primitives block.
-
-
-#### Running some basic tests with the schema expansion and mutators.py
-
-A subset of the domain primitives blocks was run through the full stress tester (4 of them below):
-
-
-##### Ubuntu domain primitives block
-
-
-The rule refinements here can be extrapolated to the other linux distro domain primitives blocks. 
-
-
-##### Cisco IOS domain primitives block
-
-
-The rule refinements here can be extrapolated to the PAN-OS domain primitives rule block
-
-
-##### Windows domain primitives block
-
-
-##### Linux based terminal domain primitives block
-
-
-
-
-
-
----
-
-[Back to top of Multi-segment testing](#top-continued-testing-multi-segment-pipeline-testing)
-
----
----
-
-[Back to top](#top-update59)
-
----
-
 
 
 
@@ -38695,6 +38667,12 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ### Stress tester complete code review
 
 The code is in the following directory on the repo: 
+
+
+
+
+
+
 
 ```
 ../sequential_master_modules/LLM_contract_stress_tester$ tree
