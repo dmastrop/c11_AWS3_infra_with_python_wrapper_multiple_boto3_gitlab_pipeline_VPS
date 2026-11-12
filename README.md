@@ -172,6 +172,7 @@ artifact logs per pipeline)
 - Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
 - Documenting continued model-level failures in GPT. GPT-5.6-sol model-level failures with Linux Powershell rewrite and idempotency (salience collapse Type-I and Type-II).
 - POSIX idempotency + multi-segment LLM cleanup_and_retry support on macos-zsh, macos-brew, and all linux OSes.
+- POSIX precedence with multi-segment rewrite + idempotency + os-signaled remedation on macos-brew and all linux OSes.
 - LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)
 
 ---
@@ -274,10 +275,12 @@ The Preface updates always sit at the top of all the other updates because they 
 
 ## 🚀 CONTINUED IN README_PART2.md
 
-The current README documents project evolution through:
+The current README (see above) documents project evolution through:
 
 - Phases 1 through 4a.1
 - Phase 4a.1.2 Contract Engineering
+
+**The Preface updates for the  architectural design docs and LLM model case studies  are in the next section below.**
 
 The next major development phases continue in:
 
@@ -286,6 +289,7 @@ The next major development phases continue in:
 
 README_PART2.md contains:
 
+- Phase 4a.1.2 (conclusion) Stress testing the contract rules with the automated framwork schema mutator
 - Phase 4a.1.3 OS Discovery Architecture and module2f/ai-mcp-hook integration testing with AWS
 - Phase 4a.1.4 Heuristic + AI Hybrid Routing Engine integration into module2f
 - Phase 4a.2 AI/MCP Integration into module2 (tentative)
@@ -21418,7 +21422,6 @@ WORK IN PROGRESS
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
 - [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
 - [Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)](#linux-posix-pm-port) 
-- [Stress testing the contract rules with the automated framework mutator](#stress-testing-the-contract-rules-with-the-automated-framework-mutator)
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
 
