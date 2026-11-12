@@ -38666,19 +38666,22 @@ location for each OS domain primitives block.
 
 ### Stress tester complete code review
 
+
+#### Code file and directory organization
+
+
 The code is in the following directory on the repo: 
-
-
-
 
 
 
 
 ```
 ../sequential_master_modules/LLM_contract_stress_tester$ tree
+
+ti_processing/sequential_master_modules/LLM_contract_stress_tester$ tree
 .
-├── LLM_contract_stress_tester_readme
 ├── NOTE_these_tests_are_run_on_deploy_container
+├── README_LLM_contract_stress_tester
 ├── artifacts
 │   ├── __init__.py
 │   └── collector.py
@@ -38686,16 +38689,29 @@ The code is in the following directory on the repo:
 │   ├── __init__.py
 │   └── corpus.py
 ├── context_generator
+│   ├── README_loader_examples
 │   ├── __init__.py
 │   ├── __pycache__
 │   │   ├── __init__.cpython-310.pyc
 │   │   └── loaders.cpython-310.pyc
 │   ├── generator.py
 │   ├── loaders.py
-│   ├── loaders_examples
+│   ├── loaders_v1.py
 │   ├── mutators.py
 │   └── schemas
+│       ├── POSIX_idempotency_mulit_seg_os_signaled_rewrite
+│       │   ├── NOTE_busybox_and_zsh_idempotency_are_POSIX_complex
+│       │   ├── busybox_idempotency_NO_TAGS_PLUS_near_miss3.json
+│       │   ├── experimentation
+│       │   │   └── ubuntu_41_modify33.json
+│       │   ├── macos_zsh_idempotency_NO_TAGS.json
+│       │   └── ubuntu_41.json
+│       ├── README_commands
+│       ├── README_schema_descriptions
+│       ├── README_schema_notes
 │       ├── alpine_apk.json
+│       ├── amazonlinux2023_dnf.json
+│       ├── amazonlinux2023_dnf_OLD_16.json
 │       ├── amazonlinux_yum.json
 │       ├── bash_linux.json
 │       ├── busybox_sh.json
@@ -38704,9 +38720,87 @@ The code is in the following directory on the repo:
 │       ├── cisco_ios.json
 │       ├── debian_apt.json
 │       ├── fedora_dnf.json
+│       ├── idempotency_regression
+│       │   ├── alpine_idempotency.json
+│       │   ├── amazonlinux2023_idempotency.json
+│       │   ├── amazonlinux2_idempotency.json
+│       │   ├── centos7_idempotency.json
+│       │   ├── centos8_idempotency.json
+│       │   ├── debian_idempotency.json
+│       │   ├── fedora_idempotency.json
+│       │   ├── linux_powershell_idempotency.json
+│       │   ├── macos_brew_idempotency.json
+│       │   ├── rhel_idempotency.json
+│       │   ├── ubuntu_idempotency.json
+│       │   └── windows_powershell_idempotency.json
+│       ├── idempotency_regression_NO_TAGS
+│       │   ├── NOTE_zsh_and_busbox_are_POSIX
+│       │   ├── alpine_idempotency_NO_TAGS.json
+│       │   ├── amazonlinux2023_idempotency_NO_TAGS.json
+│       │   ├── amazonlinux2_idempotency_NO_TAGS.json
+│       │   ├── busybox_idempotency_NO_TAGS.json
+│       │   ├── busybox_idempotency_NO_TAGS_OLD.json
+│       │   ├── centos7_idempotency_NO_TAGS.json
+│       │   ├── centos8_idempotency_NO_TAGS.json
+│       │   ├── debian_idempotency_NO_TAGS.json
+│       │   ├── fedora_idempotency_NO_TAGS.json
+│       │   ├── linux_powershell_idempotency_NO_TAGS.json
+│       │   ├── macos_brew_idempotency_NO_TAGS.json
+│       │   ├── macos_zsh_idempotency_NO_TAGS.json
+│       │   ├── rhel_idempotency_NO_TAGS.json
+│       │   ├── ubuntu_idempotency_NO_TAGS.json
+│       │   └── windows_powershell_idempotency_NO_TAGS.json
 │       ├── macos_brew.json
+│       ├── multi_segment_rewrites_patch2
+│       │   ├── 1
+│       │   ├── alpine_multiseg_patch2.json
+│       │   ├── amazonlinux2023_multiseg_patch2.json
+│       │   ├── amazonlinux2_multiseg_patch2.json
+│       │   ├── busybox_multiseg_patch2.json
+│       │   ├── busybox_multiseg_patch2_OLD_no_stdouts.json
+│       │   ├── centos7_multiseg_patch2.json
+│       │   ├── centos8_multiseg_patch2.json
+│       │   ├── debian_multiseg_patch2.json
+│       │   ├── fedora_multiseg_patch2.json
+│       │   ├── macos_zsh_multiseg_patch2.json
+│       │   ├── macosbrew_multiseg_patch2.json
+│       │   ├── rhel_multiseg_patch2.json
+│       │   └── ubuntu_multiseg_patch2.json
+│       ├── old_busybox_sh.json
 │       ├── old_windows_powershell.json
+│       ├── os_signaled_remediation
+│       │   ├── debian_os_signaled_remediation.json
+│       │   └── ubuntu_os_signaled_remediation.json
+│       ├── os_signaled_remediation_NO_TAGS
+│       │   ├── alpine_os_signaled_remediation_NO_TAGS.json
+│       │   ├── amazonlinux2023_os_signaled_remediation_NO_TAGS.json
+│       │   ├── amazonlinux2_os_signaled_remediation_NO_TAGS.json
+│       │   ├── centos7_os_signaled_remediation_NO_TAGS.json
+│       │   ├── centos8_os_signaled_remediation_NO_TAGS.json
+│       │   ├── debian_os_signaled_remediation_NO_TAGS.json
+│       │   ├── fedora_os_signaled_remediation_NO_TAGS.json
+│       │   ├── macosbrew_os_signaled_remdiation_NO_TAGS.json
+│       │   ├── rhel_os_signaled_remediation_NO_TAGS.json
+│       │   └── ubuntu_os_signaled_remediation_NO_TAGS.json
 │       ├── paloalto_pan.json
+│       ├── patch_1_and_2
+│       │   ├── alpine_patch_tests.json
+│       │   ├── amazonlinux2023_patch_tests.json
+│       │   ├── amazonlinux2_patch_tests.json
+│       │   ├── busybox_patch_tests.json
+│       │   ├── centos7_patch_tests.json
+│       │   ├── centos8_patch_tests.json
+│       │   ├── debian_patch_tests.json
+│       │   ├── fedora_patch_tests.json
+│       │   ├── linux_powershell_patch_tests.json
+│       │   ├── mac_os_brew_patch_tests.json
+│       │   ├── mac_os_zsh_patch_tests.json
+│       │   ├── old
+│       │   │   ├── alpine_patch_tests.json
+│       │   │   └── fedora_patch_tests.json
+│       │   ├── rhel_patch_tests.json
+│       │   ├── ubuntu_patch_tests.json
+│       │   └── windows_powershell_patch_tests.json
 │       ├── powershell_linux.json
 │       ├── rhel_yum.json
 │       ├── ubuntu_apt.json
@@ -38715,6 +38809,9 @@ The code is in the following directory on the repo:
 ├── curl_harness
 │   ├── 1
 │   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-310.pyc
+│   │   └── harness.cpython-310.pyc
 │   └── harness.py
 ├── os_matrix
 │   ├── __init__.py
@@ -38722,25 +38819,250 @@ The code is in the following directory on the repo:
 ├── reports
 │   ├── __init__.py
 │   └── summary.py
-├── schema_descriptions_readme
 ├── scoring
 │   ├── __init__.py
 │   └── scoring.py
 ├── stress_tester.py
 └── validator
+    ├── README_schema_validator_notes
     ├── __init__.py
-    └── validator.py
+    ├── __pycache__
+    │   ├── __init__.cpython-310.pyc
+    │   ├── helpers_common.cpython-310.pyc
+    │   ├── helpers_linux.cpython-310.pyc
+    │   ├── ubuntu_semantics.cpython-310.pyc
+    │   └── validator.cpython-310.pyc
+    ├── alpine_semantics.py
+    ├── amazonlinux2023_semantics.py
+    ├── amazonlinux2_semantics.py
+    ├── busybox_semantics.py
+    ├── centos7_semantics.py
+    ├── centos8_semantics.py
+    ├── cisco_ios_semantics.py
+    ├── current_version_is_NON_v
+    ├── debian_semantics.py
+    ├── fedora_semantics.py
+    ├── helpers_common.py
+    ├── helpers_linux.py
+    ├── helpers_linux_v1.py
+    ├── linux_generic_semantics.py
+    ├── macos_brew_semantics.py
+    ├── macos_zsh_semantics.py
+    ├── panos_semantics.py
+    ├── pwsh_linux_semantics.py
+    ├── rhel_semantics.py
+    ├── ubuntu_semantics.py
+    ├── ubuntu_semantics_v1.py
+    ├── validator.py
+    ├── validator_v1.py
+    ├── validator_v2.py
+    └── windows_semantics.py
 
-11 directories, 42 files
+
 ```
 
-The following sections reivew the code that forms the stress tester framework 
+#### The validator
 
-#### Code block 1, etc
+The validator is no longer used and has been decomissioned. The validator was used early on but the python semeantics files could
+not keep pace with the intelligence of the LLM. The amount of python coding required to do a check on the LLM results became too
+complicated and was not as reliable and accurate as the LLM itself. In a future phase (Phase5) LangFuse will be used to 
+include a second different model LLM as an authenticator of the primary LLM (OpenAI GPT based) used in the AI/MCP hook of moudle2f.
+LangFuse has the framework to support massively scaled LLM results from 1000s of nodes and colate them and dectect falure patterns
+in the primary LLM's reasoning.  See the following Preface Update 8 at the link below for the architectural design. LangFuse will
+integrate cleanly with the existing ai_gateway_service.py code and the AI Gateway Service.
+ 
+- [Preface Update8: LangFuse Architectural Implementation: LangFuse Integration Aadapter, and the Schema-Based and Remedation-Trace Evaluation Flows](#prefaceupdate8)
 
-WORK IN PROGRESS
 
 
+#### stress_tester.py code
+
+
+The main stress_tester.py code is located in the LLM stress tester root directory below: 
+
+```
+ti_processing/sequential_master_modules/LLM_contract_stress_tester$ ls -la
+total 68
+drwxrwxr-x 11 ubuntu ubuntu  4096 Sep  1 03:16 .
+drwxrwxr-x 23 ubuntu ubuntu 12288 Nov 12 21:21 ..
+drwxrwxr-x  2 ubuntu ubuntu  4096 Apr 19  2026 NOTE_these_tests_are_run_on_deploy_container
+-rw-rw-r--  1 ubuntu ubuntu  4961 Apr 28  2026 README_LLM_contract_stress_tester
+drwxrwxr-x  2 ubuntu ubuntu  4096 Apr 13  2026 artifacts
+drwxrwxr-x  2 ubuntu ubuntu  4096 Apr 13  2026 command_corpus
+drwxrwxr-x  4 ubuntu ubuntu  4096 May 15 23:44 context_generator
+drwxrwxr-x  3 ubuntu ubuntu  4096 Sep  1 04:53 curl_harness
+drwxrwxr-x  2 ubuntu ubuntu  4096 Apr 13  2026 os_matrix
+drwxrwxr-x  2 ubuntu ubuntu  4096 Apr 13  2026 reports
+drwxrwxr-x  2 ubuntu ubuntu  4096 Apr 13  2026 scoring
+-rw-rw-r--  1 ubuntu ubuntu  7835 Jun 30 01:55 stress_tester.py  <<<<<<<
+drwxrwxr-x  4 ubuntu ubuntu  4096 Jul 21 05:05 validator
+
+```
+
+As noted in the comments of stress_tester.py
+
+
+```
+stress_tester.py is responsible for:
+
+    - loading a schema JSON file
+    - selecting one context entry
+    - injecting schema_version
+    - injecting os_info (derived from schema metadata)
+    - wrapping everything inside:
+          {
+            "schema_version": "...",
+            "context": { ... }
+          }
+    - producing a FINAL Python dict payload
+    - calling harness.send_payload(payload_dict)
+
+stress_tester.py ALWAYS works with Python dicts, NOT JSON strings.
+
+```
+
+
+
+#### harness.py code
+
+harness.py is in the cur_harness directory and does the following:
+
+
+```
+harness.py is a TRANSPORT LAYER ONLY.
+
+It does NOT:
+    - modify the payload
+    - inject os_info
+    - inject schema_version
+    - wrap context
+    - validate anything
+
+It ONLY:
+    - receives a fully‑assembled Python dict payload from stress_tester.py
+    - converts dict → JSON string
+    - writes JSON → temporary file
+    - executes curl with "-d @tempfile.json"
+    - captures raw stdout from curl (the LLM response)
+    - returns that raw response string back to stress_tester.py
+
+```
+```
+HARNESS.PY — PURPOSE
+
+This module is intentionally dumb.
+
+It does NOT build payloads.
+It does NOT understand schemas.
+It does NOT know anything about OS inference or package managers.
+
+It ONLY:
+    - accepts a fully‑assembled Python dict payload
+    - converts it to JSON
+    - writes it to a temporary file
+    - sends it to the AI Gateway using curl
+    - returns the raw LLM response as a string
+
+stress_tester.py is the caller and is responsible for building the payload.
+
+```
+
+The separation between the harness.py and the stress_tester.py is necessary because:
+
+```
+
+This separation keeps the architecture clean:
+
+    stress_tester.py = payload builder + orchestrator
+    harness.py       = transport layer (curl wrapper)
+
+This allows:
+    - easy debugging
+    - easy replacement of curl with Python requests later
+    - clean logging
+    - clean retries
+    - clean artifact storage
+    - clean validator integration
+```
+
+
+Thus the general flow is:
+
+    schema.json → dict → (stress_tester injects fields) → final dict payload
+    → harness converts dict→JSON → curl → gateway → LLM → response
+    → harness returns raw response → stress_tester prints/validates/scores
+
+
+
+#### The context genearator schema json files
+
+An example of a schema single test entry can be found in the context_generator directory:
+
+``
+drwxrwxr-x  4 ubuntu ubuntu 4096 May 15 23:44 .
+drwxrwxr-x 11 ubuntu ubuntu 4096 Sep  1 03:16 ..
+-rw-rw-r--  1 ubuntu ubuntu 6381 Apr 14  2026 README_loader_examples
+-rw-rw-r--  1 ubuntu ubuntu    0 Apr 13  2026 __init__.py
+drwxrwxr-x  2 ubuntu ubuntu 4096 Apr 14  2026 __pycache__
+-rw-rw-r--  1 ubuntu ubuntu 2519 May 15 23:18 generator.py
+-rw-rw-r--  1 ubuntu ubuntu 3658 May 15 23:44 loaders.py
+-rw-rw-r--  1 ubuntu ubuntu 1156 May 15 23:19 loaders_v1.py
+-rw-rw-r--  1 ubuntu ubuntu    0 Apr 13  2026 mutators.py
+drwxrwxr-x  9 ubuntu ubuntu 4096 Nov  5 02:15 schemas
+
+```
+
+The schemas directory has all of the various schemas for all of the OSes. The schemas are used to test a wide variety of scenarios
+such as idempotency, PM and near-miss rewrite, OS-signaled remediation, POSIX precedence, multi-segment rewerite, etc.
+
+
+Some example schemas for ubuntu POSIX multi-segment rewrite + idempotency + os-signaled remedation is below:
+
+```
+{
+  "command": "mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b",
+  "stdout": "fallback\n",
+  "stderr": "dnf: command not found\nln: file exists\nbash: mdir: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-038",
+  "ip": "10.0.42.38",
+  "tags": [],
+  "history": []
+},
+
+```
+
+
+And this one: 
+
+```
+{
+  "command": "mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-041",
+  "ip": "10.0.42.41",
+  "tags": [],
+  "history": []
+}
+
+```
+
+#### Testing methodology
+
+The testing is perfomed by starting the gitlab pipeline and waiting for the deploy job container to come up. This container has
+direct access to the AI Gateway Service (ai_gateway_service.py has all of the contract payloads that are sent to the LLM). Thus
+this is a perfect container to use the stress_tester.py on. Since all of the stress tester code is committed to the repo the 
+stress tester code is copied directly into the container and is available during pipeline runtime. 
+
+So the first step is ssh into the VPS control node that runs the gitlab container that runs the pipeline. This is the deploy container
+that actively runs the python code against the AWS fleet of nodes for remedation purposes. 
+
+Once in the VPS node, a simple docker exec -it is used to get inside the docker container that the gitlab has spawned as part of the 
+deploy stage of the pipeline as shown below:
 
 
 
