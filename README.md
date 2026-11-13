@@ -38925,7 +38925,7 @@ stress_tester.py ALWAYS works with Python dicts, NOT JSON strings.
 
 #### harness.py code
 
-harness.py is in the cur_harness directory and does the following:
+harness.py is in the curl_harness directory and does the following:
 
 
 ```
@@ -38998,7 +38998,7 @@ Thus the general flow is:
 
 An example of a schema single test entry can be found in the context_generator directory:
 
-``
+```
 drwxrwxr-x  4 ubuntu ubuntu 4096 May 15 23:44 .
 drwxrwxr-x 11 ubuntu ubuntu 4096 Sep  1 03:16 ..
 -rw-rw-r--  1 ubuntu ubuntu 6381 Apr 14  2026 README_loader_examples
