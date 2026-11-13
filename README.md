@@ -39064,6 +39064,288 @@ that actively runs the python code against the AWS fleet of nodes for remedation
 Once in the VPS node, a simple docker exec -it is used to get inside the docker container that the gitlab has spawned as part of the 
 deploy stage of the pipeline as shown below:
 
+To run one of the schemas in the previous section (Ubnutu POSIX based tests) the following would be performed once SSH'ed into the 
+VPS that is running the gitlab deploy container:
+
+This is the state before the pipeline is started. Note the top one is the gitlab container itself, not the deploy container:
+
+```
+[root@vps ~]# docker ps
+CONTAINER ID   IMAGE                          COMMAND                  CREATED         STATUS                  PORTS                                                                                           NAMES
+06adc6f20edc   gitlab/gitlab-ce:18.7.1-ce.0   "/assets/init-contai…"   21 hours ago    Up 21 hours (healthy)   80/tcp, 443/tcp, 0.0.0.0:44822->22/tcp, [::]:44822->22/tcp                                      gitlab.linode.cloudnetworktesting.com
+89adf8f4bce0   checkmk/check-mk-raw:latest    "/docker-entrypoint.…"   22 hours ago    Up 22 hours (healthy)   5000/tcp, 6557/tcp                                                                              checkmk.linode.cloudnetworktesting.com
+68e5a87d4391   namshi/smtp                    "/bin/entrypoint.sh …"   22 hours ago    Up 22 hours             25/tcp                                                                                          mailer
+57e0b4f872d1   nextcloud:28.0.9-apache        "/entrypoint.sh apac…"   22 hours ago    Up 22 hours             80/tcp                                                                                          nextcloud.linode.cloudnetworktesting.com
+c13cea20f52a   pihole/pihole:latest           "start.sh"               22 hours ago    Up 22 hours (healthy)   10.36.7.11:53->53/udp, 80/tcp, 10.36.7.11:53->53/tcp, 10.36.7.11:67->67/udp, 443/tcp, 123/udp   pi-hole.linode.cloudnetworktesting.com
+cbd39fcd5268   traefik:latest                 "/entrypoint.sh --lo…"   15 months ago   Up 4 weeks              0.0.0.0:80->80/tcp, :::80->80/tcp, 0.0.0.0:443->443/tcp, :::443->443/tcp                        traefik.linode.cloudnetworktesting.com
+33c458a740d4   caddy:latest                   "caddy run --config …"   2 years ago     Up 4 weeks              80/tcp, 443/tcp, 2019/tcp, 443/udp
+
+```
+
+Once the gitlab pipeline is started another container for the deploy state is spawned:
+
+```
+[root@vps ~]# docker ps
+CONTAINER ID   IMAGE                                                                                                                                      COMMAND                  CREATED          STATUS                  PORTS                                                                                           NAMES
+096be0407b40   gitlab-registry.linode.cloudnetworktesting.com/dmastrop/c11_aws_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_vps_aws3:latest   "/aws_EC2/start_with…"   42 seconds ago   Up 41 seconds                                                                                                           inspiring_stonebraker
+
+```
+
+This is the container that has direct access to the AI Gateway Service so that we can run the stress_tester.py against it.
+
+
+
+The next step is to docker exec -it into this container as shown below:
+Once in the container one will see the entire repo code has been copied into the container from a prior gitlab pipeline stage. 
+Change the directory to the LLM stress tester code directory where stress_tester.py is available:
+
+```
+
+[root@vps ~]# docker exec -it inspiring_stonebraker /bin/bash
+root@096be0407b40:/aws_EC2# ls
+1                                  master_script_578_691011_multi-processing.py   requirements.txt
+COPY_FULL_ALL_11_master_script.py  master_script_678_91011_multi-processing.py    sequential_master_modules
+EC2_generic_key.pem                master_script_ORIGINAL_COPY_multi-threaded.py  start_with_gateway.sh
+logs                               master_script_before_further_optimizations.py
+master_script.py                   master_script_spawn.py
+root@096be0407b40:/aws_EC2# cd sequential_master_modules/
+root@096be0407b40:/aws_EC2/sequential_master_modules# cd LLM_contract_stress_tester/
+root@096be0407b40:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# ls -la
+total 56
+drwxr-xr-x 10 root root 4096 Jul  3 02:01 .
+drwxr-xr-x  1 root root 4096 Nov 12 23:44 ..
+-rw-r--r--  1 root root 4961 May 13  2026 README_LLM_contract_stress_tester
+drwxr-xr-x  2 root root 4096 Apr 14  2026 artifacts
+drwxr-xr-x  2 root root 4096 Apr 14  2026 command_corpus
+drwxr-xr-x  3 root root 4096 May 16 00:05 context_generator
+drwxr-xr-x  2 root root 4096 Apr 14  2026 curl_harness
+drwxr-xr-x  2 root root 4096 Apr 14  2026 os_matrix
+drwxr-xr-x  2 root root 4096 Apr 14  2026 reports
+drwxr-xr-x  2 root root 4096 Apr 14  2026 scoring
+-rw-r--r--  1 root root 7835 Jul  3 02:01 stress_tester.py
+drwxr-xr-x  2 root root 4096 Jul 21 05:07 validator
+
+```
+
+
+Next, execute the stress_tester.py with the proper schema. For ubuntu we need to run the following command: 
+
+```
+python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/ubuntu_41 --index 0
+```
+
+This particular command runs the first schema test case against the AI Gateway Service. 
+
+To run the schemas in the previous section we need to run test cases 38 and 41. The index above is one less than the test case number, 
+so we need to run index 37 for test case 38 and index 40 for test case 41 as shown below: 
+
+
+```
+root@096be0407b40:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/ubuntu_41 --index 37
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"mkdir /tmp/ubuntu_cat3_38 && echo ok ; apt-get install -y nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mkdir /tmp/ubuntu_cat3_38b"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+
+```
+
+
+The first test case 38 (index 37) above is testing a complex POSIX rewrite of the following command:
+
+```
+Command: mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b
+```
+
+Note the single near-miss mdir that should be mkdir. This has been corrected by the first loop of the LLM. 
+Note also that the incorrect PM dnf has been corrected to apt-get
+
+In Phase4a.1.4 a loop will be added to reiterate the call to the LLM until the stderr is completely free of errrors. In this case a 
+second LLM call will be used with a cleanup_and_retry action plan from the LLM to address the idempotency issue in the stderr below:
+
+```
+{
+  "command": "mkdir /tmp/ubuntu_cat3_38 && echo ok ; dnf install nginx ; ln -s /tmp/ubuntu_cat3_38 /tmp/ubuntu_cat3_38 || echo fallback ; mdir /tmp/ubuntu_cat3_38b",
+  "stdout": "fallback\n",
+  "stderr": "dnf: command not found\nln: file exists\nbash: mdir: command not found\nHash Sum mismatch",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-038",
+  "ip": "10.0.42.38",
+  "tags": [],
+  "history": []
+},
+```
+
+Finally a third LLM iteration will resolve the os-signaled remediation wihe a cleanup_and_retry acton plan from the LLM for the 
+Hash Sum mismatch. At that point the node will complete installation and be fully remediated.
+
+
+
+The second test case is executed from the deploy container as folllows (test case 41 index 40):
+
+ 
+```
+root@096be0407b40:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/ubuntu_41 --index 40
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -f /tmp/ubuntu_cat3_41"],"retry":"mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: Ubuntu 22.04
+Command: mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41
+[DEBUG] schema os_name=Ubuntu, schema os_version=22.04
+========================
+
+```
+This test case has the following schema:
+
+```
+
+{
+  "command": "mkdir /tmp/ubuntu_cat3_41 ; touch /tmp/ubuntu_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nTemporary failure resolving archive.ubuntu.com",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "ubuntu-cat3-041",
+  "ip": "10.0.42.41",
+  "tags": [],
+  "history": []
+}
+
+```
+The LLM has correctly addressed the idempotency on the first LLM loop with the cleanup_and_retry action plan response as shown above.
+Once this has been remediated a second LLM loop will be performed to remediate any other stderr from the node, in this case the
+"Temporary failure resolving....." This requires another cleanup_and_retry action plan from the LLM but this time to remediate an
+os-signaed remedation issue. Once that is done the node will be full remedated and the module2f resurrection code will assign
+the node install_success. 
+
+As one can see this test harness is very good to fine tune the LLM contract rules in the ai_gateway_service.py. In Phase5
+LangFuse will use real life data across 1000s of nodes to do something similar but at a much higher scale and it will correlate
+errors across nodes in the fleet etc for statistical correlation so that the LLM contract rules can be further refined. 
+LangFuse provides the framework to facilitate this. See the Preface Update 8 architectural design doc noted above for more 
+informatoin on how that integration will be done in Phase5.
+
+
+
+#### How the AI Gateway Service knows what contract rules domain primitives block to apply to the schema
+
+In real life Phase 4a.1.3 this will be done with an accessory code for os-discovery (os_name and os_version) of real life nodes.
+For the purposes of the stress_tester.py the os_name and os_version are incorporated at the top of the json schema file that 
+containts all of the context based test cases as metadata.
+
+For example all the ubuntu json schema files have this header:
+
+```
+{
+  "os_name": "Ubuntu",
+  "os_version": "22.04",
+  "kernel": "5.15.0",
+  "package_managers": ["apt", "apt-get"],
+  "shell": "bash",
+  "contexts": [
+
+
+>>>> And the test cases follow in the rest of the json file:
+
+    {
+      "command": "mkdir /tmp/ubuntu_idem1",
+      "stdout": "",
+      "stderr": "mkdir: directory exists",
+      "exit_status": 1,
+      "attempt": 1,
+      "instance_id": "ubuntu-idem-001",
+      "ip": "10.0.42.1",
+      "tags": [],
+      "history": []
+    },
+
+>>>>etc.....
+
+
+```
+
+
+
+The stress_tester.py can directly read the os_name and os_version and 
+incorporate it directly into the payload that is sent to the ai_gateway_service.py. The stress_tester.py uses this function:
+
+```
+
+def build_payload(schema: dict, context: dict) -> dict:
+    """
+    Build the FINAL payload dict that will be sent to harness.send_payload().
+
+    This is where we inject:
+        - schema_version
+        - os_info
+        - the "context" wrapper
+    """
+
+    # Extract OS info from schema metadata
+    # REMOVE the kernel from os_info. The module2f code for the AI/MCP hook _invoke_ai_hook does not use kernel in the context
+    # block that is sent to the LLM . So the stress tester has to mirror that for whitebox testing. Regresssion test all 
+    # schemas that were done with kernel for LLM re-training to the contract rules that we have now. 
+    os_info = {
+        "name": schema.get("os_name"),
+        "version": schema.get("os_version"),
+        #"kernel": schema.get("kernel"),
+    }
+
+    # Build the final payload dict
+    payload = {
+        "schema_version": "1.0",
+        "context": {
+            **context,      # unpack the raw context fields
+            "os_info": os_info
+        }
+    }
+
+    return payload
+
+```
+
+So at this point the payload has the os_info (which is the os_name and os_version extracted from the top metadate of the json
+schema file). Once the payload contains this information the ai_gateway_service.py can select the proper domain primitives block
+(contract rules) to apply for the given OS. The ai_gateway_service.py uses an intelligent per-OS prompt assembly to do this 
+(see ai_gateway_service.py in the repo).
+
+ 
+#### Stress_tester.py purpose
+
+
+```
+STRESS_TESTER.PY — PURPOSE
+
+This module is the orchestrator.
+
+It is responsible for:
+    - loading schema files
+    - selecting a context entry
+    - injecting schema_version
+    - injecting os_info (derived from schema metadata)
+    - wrapping everything inside a "context" block
+    - producing the FINAL Python dict payload
+    - calling harness.send_payload(payload_dict)
+    - printing the raw LLM response
+
+This module ALWAYS works with Python dicts.
+It NEVER sends JSON directly — that is harness.py's job.
+
+```
+All of these topics have been discussed in the previous sections.
+
+
+
 
 
 
