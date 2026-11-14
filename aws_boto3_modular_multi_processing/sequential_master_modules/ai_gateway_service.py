@@ -998,10 +998,25 @@ DEBIAN_RULES = (
                 "  the LLM MUST use 'fallback'. This OS block MUST NOT guess which package manager is\n"
                 "  correct.\n"
                 "\n"
+                
                 "- This Linux-family OS MUST NOT introduce 'sudo' as part of malformed-command\n"
                 "  correction. If a command fails due to permission issues and no deterministic\n"
                 "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
                 "\n"
+
+                #### add this patch to clarify what constitutes a malformed subshell (Patch-a)
+                "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
+                "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
+                "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
+                "  MUST continue to follow the POSIX idempotency rules defined later in this Debian block.\n"
+                "- The presence of one or more valid subshell wrappers MUST NOT by itself trigger 'fallback'.\n"
+                "- Subshell-related fallback rules apply ONLY to malformed subshell structures,\n"
+                "  incomplete command substitutions, unmatched parentheses, syntax errors,\n"
+                "  or other invalid shell constructs.\n"
+                "- Valid subshells MUST continue through normal evaluation of deterministic rewrites,\n"
+                "  POSIX idempotency remediation, and OS-signaled remediation rules.\n"
+                "\n"
+                ####
 
                 "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
                 "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
@@ -1015,7 +1030,6 @@ DEBIAN_RULES = (
                 "- The LLM MUST NOT attempt to correct, remove, rewrite, or guess the intended flag.\n"
                 "- The LLM MUST NOT infer user intent for unknown flags.\n"
                 "\n"
-
 
 
                 # Busybox addendum to Revision 6.8:
@@ -1092,6 +1106,66 @@ DEBIAN_RULES = (
                 "  wrong-OS package-manager install. In any rule that calls for rewriting\n"
                 "  wrong-OS package-manager installs for Debian, that segment MUST be rewritten\n"
                 "  to use 'apt-get install -y <pkg>'.\n"
+
+
+                #### Patch-b to address issues with near-miss/PM rewrite + idempotency + os-signaled remedation
+                "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+                "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+                "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+                "  or similar repository-level errors) MUST NOT by itself trigger 'fallback'\n"
+                "  while a deterministic rewrite candidate remains unresolved.\n"
+                "- When both a deterministic rewrite candidate and an OS-signaled\n"
+                "  remediation indicator are present, the LLM MUST first apply\n"
+                "  the Retry-With-Modified-Command precedence rules above.\n"
+                "- OS-signaled remediation evaluation occurs only after the\n"
+                "  deterministic rewrite has been executed on a subsequent\n"
+                "  LLM invocation.\n"
+                ####
+
+
+                # ============================================================
+                # Retry-With-Modified-Command Precedence
+                # (wrong package managers, near-misses,
+                # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
+                # ============================================================
+                "- Any deterministic rewrite that results in a\n"
+                "  'retry_with_modified_command' action takes\n"
+                "  precedence over shell-level idempotency\n"
+                "  remediation.\n"
+                "- Deterministic rewrites that qualify for\n"
+                "  'retry_with_modified_command' include,\n"
+                "  but are not limited to:\n"
+                "      * wrong-OS package-manager rewrites\n"
+                "      * command near-miss corrections\n"
+                "      * utility typo corrections\n"
+                "      * other directly implied command repairs\n"
+                "- When both a deterministic rewrite candidate\n"
+                "  and an idempotency condition are present,\n"
+                "  the LLM MUST first return\n"
+                "  'retry_with_modified_command'.\n"
+                "- POSIX idempotency remediation applies only\n"
+                "  after the rewritten command has been executed\n"
+                "  on a subsequent LLM invocation.\n"
+                "- The presence of shell-level idempotency\n"
+                "  indicators MUST NOT prevent a required\n"
+                "  deterministic rewrite from occurring first.\n"
+                "- This precedence applies equally to\n"
+                "  single-segment commands and POSIX\n"
+                "  multi-segment constructs including:\n"
+                "      * pipelines (|)\n"
+                "      * logical AND chains (&&)\n"
+                "      * logical OR chains (||)\n"
+                "      * semicolon chains (;)\n"
+                "      * subshells ($(...))\n"
+                "- OS-signaled remediation MUST NOT be applied\n"
+                "  while a deterministic rewrite candidate\n"
+                "  remains unresolved.\n"
+                "- OS-signaled remediation is evaluated only\n"
+                "  after deterministic rewrites have been\n"
+                "  processed on prior LLM invocations and\n"
+                "  after POSIX idempotency remediation has\n"
+                "  been evaluated.\n"
+
 
 
                 ##### Wrong package manager in pipelines (&&) — Linux-family OSes #####   #### PATCH stress_tester1 patch2 rev2####
@@ -1173,6 +1247,71 @@ DEBIAN_RULES = (
                 "- If ANY segment contains an invalid or unsupported flag (see invalid-flag rules),\n"
                 "  the LLM MUST use 'fallback'.\n"
                 "\n"
+
+
+
+                #### Patch-c to address idempotency + os-signaled remediation precedence
+
+                "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+                "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+                "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+                "  or similar repository-level errors) MUST NOT by itself override\n"
+                "  shell-level idempotency remediation.\n"
+                "- When both shell-level idempotency indicators and OS-signaled\n"
+                "  remediation indicators are present, the LLM MUST first apply\n"
+                "  the POSIX idempotency remediation rules above.\n"
+                "- OS-signaled remediation evaluation occurs only after the\n"
+                "  idempotency remediation has been executed on a subsequent\n"
+                "  LLM invocation.\n"
+
+              
+                # ============================================================
+                # Shell-Level Idempotency (Debian)
+                # New block for POSIX Idempotency + Multi-Segment support (POSIX refactor BLOCK2)
+                # ============================================================
+                "- Debian shell-level idempotency includes stderr messages such as:\n"
+                "    * 'File exists' (mkdir, touch, ln)\n"
+                "    * 'not removed' (rmdir)\n"
+                "    * 'no such process' (kill)\n"
+                "- For idempotent 'File exists' failures, cleanup_and_retry MUST use:\n"
+                "    * 'mkdir: ... File exists'  → rmdir <path>\n"
+                "    * 'touch: ... File exists'  → rm -f <path>\n"
+                "    * 'ln: ... File exists'     → rm -f <path>\n"
+                "    * both 'mkdir' and 'ln' on same path → rm -f <path> (ambiguous resource).\n"
+                "    * both 'touch' and 'mkdir' on same path → rm -f <path> (ambiguous resource).\n"
+                "- If stderr contains ONLY non-idempotent failures (e.g., kill no such process,\n"
+                "  rmdir not removed, package-manager errors), cleanup MUST be omitted and\n"
+                "  the action MUST be 'fallback'.\n"
+                "- cleanup_and_retry MUST NOT include package-manager operations.\n"
+
+                # ============================================================
+                # POSIX Idempotency and Operator-Preserving Retry
+                # New block for Idempotency + Multi-Segment POSIX support (POSIX refactor BLOCK3)
+                # ============================================================
+                "- For idempotency test cases, the LLM action MUST be 'cleanup_and_retry'.\n"
+                "- The LLM MUST preserve the operator structure that encloses the idempotent segments.\n"
+                "- Operator-preserving retry MUST follow these rules:\n"
+                "    * Retry only the idempotent segments, but NEVER break, remove, or mutate\n"
+                "      the operator structure that encloses them.\n"
+                "    * Preserving operator structure MIGHT require replaying segments that were\n"
+                "      skipped due to operator semantics (e.g., '&&', pipelines, subshells).\n"
+                "    * Preserving operator structure does NOT mean replaying segments that\n"
+                "      originally succeeded or fallback segments ('||') unless they also\n"
+                "      failed idempotently.\n"
+                "- Operator-specific retry behavior MUST follow:\n"
+                "    * Pipelines ('|'): retry the entire pipeline line.\n"
+                "    * '&&' chains: retry starting at the first idempotent failure, preserving\n"
+                "      the '&&' structure (e.g., 'A && B && C' → 'A && B && C', 'B && C', or 'C').\n"
+                "    * '||' chains: retry only the idempotent failing segment(s); do NOT replay\n"
+                "      successful fallback segments.\n"
+                "    * ';' chains: retry only the idempotent failing segment(s) within the chain.\n"
+                "    * Subshells ('$(...)'): preserve the subshell wrapper, but apply the\n"
+                "      operator rules inside according to the above.\n"
+                "- cleanup_and_retry MUST be limited to shell-level idempotency remediation.\n"
+                "- cleanup MUST be minimal, deterministic, and POSIX-safe.\n"
+                "- Package-manager remediation and package-manager rewrites MUST continue\n"
+                "  to follow the Debian package-manager rules defined elsewhere in this block.\n"
+
 
 
                 # THIS is the Fallback block: moved this to after the patch2 to resolve Debian specific salience issues.
