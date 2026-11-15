@@ -21421,7 +21421,7 @@ WORK IN PROGRESS
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
 - [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
-- [Porting the POSIX idempotency + multi-segment support to Ubutun](#ubuntu-posix-pm-port)
+- [Porting the POSIX idempotency + multi-segment support to Ubuntu](#ubuntu-posix-pm-port)
 - [Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)](#linux-posix-pm-port) 
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
