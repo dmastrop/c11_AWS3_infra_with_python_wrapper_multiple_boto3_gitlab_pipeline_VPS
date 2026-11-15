@@ -21421,6 +21421,7 @@ WORK IN PROGRESS
 - [Continued Testing: Idempotency Regression Testing](#continued-testing-idempotency-regression-testing)
 - [Lessons Learned: LLM Contract Rule Engineering and Semantic Priority Graphs](#lessons-learned-llm-contract-rule-engineering-and-semantic-priority-graphs)
 - [Continued Testing: Rigorous Multi-Segment Pipeline Testing](#continued-testing-multi-segment-pipeline-testing)
+- [Porting the POSIX idempotency + multi-segment support to Ubutun](#ubuntu-posix-pm-port)
 - [Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)](#linux-posix-pm-port) 
 - [Stress tester complete code review](#stress-tester-complete-code-review)
 
@@ -37267,12 +37268,9 @@ No contract modifications were required following validation.
 
 
 
+<a name="ubuntu-posix-pm-port"></a>
+### Porting the POSIX + idempotency + multi-segment support to Ubuntu OS
 
-
-
-
-<a name="linux-posix-pm-port"></a>
-### Porting the POSIX idempotency + multi-segment support to Linux OSes and macos-brew (OSes with PMs)
 
 The POSIX idempotency + multi-segment support that was ported to macos zsh and Busybox in the previous section is complex. 
 Porting this to Linux OSes and macos brew has one additional layer of complexity, namely that these OSes support PMs (Package
@@ -38575,8 +38573,20 @@ No regression issues here.
 
 
 
+---
 
-#### Porting the BLOCK 1,2, and 3 and Patch-a, b and c to the other Linux OSes and MacOs-brew
+[Back to top](#top-update59)
+
+---
+
+
+
+<a name="linux-posix-pm-port"></a>
+### Porting the POSIX idempotency + multi-segment support to other Linux OSes and macos-brew (OSes with PMs)
+
+
+
+Porting the BLOCK 1,2, and 3 and Patch-a, b and c to the other Linux OSes and MacOs-brew
 
 
 The following OSes need the code discussed above to support POSIX precedence based multi-segment rewrite + idempotency + os-signaled
@@ -38646,21 +38656,21 @@ The port is relatively straightforward for Patch-b, BLOCK1, Patch-c, BLOCK2, and
 location for each OS domain primitives block.
 
 
-##### High level validation summary of the 41 test cases on Debian refactor
+#### High level validation summary of the 41 test cases on Debian refactor
 
 
 
 
-##### High level summary of the 41 test cases on the Fedora refactor
+#### High level summary of the 41 test cases on the Fedora refactor
 
 
 
 
-##### High level summry of the 41 test cases on the Alpine refactor
+#### High level summry of the 41 test cases on the Alpine refactor
 
 
 
-##### High level summary of the 41 test cases on the MacOS-brew refactor
+#### High level summary of the 41 test cases on the MacOS-brew refactor
 
 
 
