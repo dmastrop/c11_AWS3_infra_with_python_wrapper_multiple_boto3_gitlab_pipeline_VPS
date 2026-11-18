@@ -38658,39 +38658,129 @@ location for each OS domain primitives block.
 
 #### High level validation summary of the 41 test cases on Debian refactor
 
-Test Markdown Section
+## Debian 11 Validation Summary (41\-Test Contract Validation Suite)
 
-This is a test paragraph containing:
+The Debian 11 contract successfully passed the full 41\-test validation suite covering POSIX idempotency handling, deterministic command rewrites, multi\-segment operator semantics, and OS\-signaled remediation precedence. Validation was performed against the Debian\-specific contract rules, the global rule set, and the generated schema contexts containing command, stdout, stderr, and exit status data.
 
-single-hyphen words
-multi-segment commands
-OS-signaled remediation
-shell-level idempotency
-package-manager rewrites
-Operator Examples
-touch || ln -s /tmp/file /tmp/link
-mkdir && touch /tmp/file
-echo foo | grep foo
-apt-get install -y nginx
-dnf install nginx
-yum install nginx
-Precedence Order
+### Category 1: POSIX Idempotency and Operator Semantics (Tests 1\-21)
+
+All Category 1 tests passed.
+
+These tests validated shell\-level idempotency remediation across single\-segment and multi\-segment POSIX constructs, including:
+
+- Semicolon chains (;)
+- Logical AND chains (&&)
+- Logical OR chains (\|\|)
+- Pipelines (\|)
+- Subshells ($(...))
+
+The validation confirmed that operator semantics and replay semantics are treated as separate concerns.
+
+Examples:
+
+- mkdir ; touch correctly replayed only the failed touch segment.
+- touch \|\| ln \-s correctly replayed only the failed touch segment and did not replay the successful fallback branch.
+- mkdir && touch correctly replayed the failed mkdir segment and preserved downstream execution requirements imposed by &&.
+- Pipeline test cases correctly replayed the entire pipeline while preserving pipeline structure.
+- Subshell test cases correctly preserved the subshell wrapper while applying idempotency remediation to the enclosed command.
+
+A particularly important validation case involved:
+
+mkdir && echo ok ; ln \-s ... \|\| echo fallback
+
+The framework correctly used stdout and stderr evidence to determine actual execution flow. Because the first mkdir failed idempotently, echo ok never executed and therefore remained in the retry plan. Conversely, the echo fallback branch executed successfully and was correctly removed from the retry plan. This validated the contract's distinction between command structure and actual execution state.
+
+### Category 2: Deterministic Rewrite Precedence (Tests 22\-31)
+
+All Category 2 tests passed.
+
+These tests validated POSIX Refactor Block 1 and Patch B behavior, confirming that deterministic rewrites always take precedence over shell\-level idempotency remediation.
+
+Validated rewrite scenarios included:
+
+- Wrong package manager remediation
+- Command typo correction
+- Utility near\-miss correction
+- Multi\-segment command preservation
+- Mixed operator rewrite scenarios
+
+Examples:
+
+- dnf install nginx was correctly rewritten to apt\-get install \-y nginx.
+- yum install nginx was correctly rewritten to Debian\-native package manager syntax.
+- Near\-miss utilities such as mdir and tuch were deterministically corrected.
+- Multi\-segment commands preserved operator structure while rewriting only the affected segments.
+
+These tests confirmed that unresolved rewrite candidates always take precedence over idempotency remediation and OS\-signaled remediation.
+
+### Category 3: Rewrite \+ OS\-Signaled Remediation Precedence (Tests 32\-41)
+
+All Category 3 tests passed.
+
+These tests validated the interaction between:
+
+- Deterministic rewrites
+- Shell\-level idempotency
+- OS\-signaled remediation
+
+including repository and package\-management failure indicators such as:
+
+- Hash Sum mismatch
+- Temporary failure resolving
+- Repository metadata failures
+- Repository availability failures
+
+Patch B and Patch C behaved as designed.
+
+The validated precedence order was:
 
 Deterministic Rewrite
 
-Shell-Level Idempotency
+        >
 
-OS-Signaled Remediation
+Shell\-Level Idempotency
 
-Architecture Principle
+        >
+
+OS\-Signaled Remediation
+
+Examples:
+
+- Wrong package manager rewrites were applied before any repository remediation logic.
+- Idempotent resource conflicts were remediated before repository\-level recovery actions.
+- OS\-signaled remediation was deferred until subsequent LLM invocations when higher\-precedence remediation classes remained unresolved.
+
+This behavior is critical for iterative remediation because lower\-precedence failures may disappear naturally after higher\-precedence remediation has completed.
+
+### Key Architectural Validation
+
+The Debian validation suite confirmed the central design principle of the remediation framework:
 
 Operator Preservation
 
-≠
+        ≠
 
 Segment Replay
 
-Validation Result
+The framework preserves shell operator semantics while replaying only those segments required by the contract rules and actual execution evidence.
+
+The validation also confirmed the intended iterative remediation model:
+
+Deterministic Rewrite
+
+        →
+
+Idempotency Remediation
+
+        →
+
+OS\-Signaled Remediation
+
+rather than attempting to solve all observed failures simultaneously.
+
+This staged approach minimizes unnecessary node mutation, reduces remediation risk, and provides deterministic state reduction across successive LLM remediation loops.
+
+### Validation Result
 
 Total Test Cases: 41
 
@@ -38698,6 +38788,9 @@ Passed: 41
 
 Failed: 0
 
+The Debian contract successfully validated all Category 1, Category 2, and Category 3 scenarios, including the Patch A, Patch B, and Patch C precedence refinements introduced during contract hardening.
+
+The results further validated the iterative remediation design philosophy of the framework, where deterministic rewrites, shell\-level idempotency remediation, and OS\-signaled remediation are intentionally processed across successive LLM remediation loops rather than being executed simultaneously within a single recovery attempt.
 
 
 #### High level summary of the 41 test cases on the Fedora refactor
