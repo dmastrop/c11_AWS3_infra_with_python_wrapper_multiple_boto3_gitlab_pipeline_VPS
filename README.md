@@ -38658,6 +38658,45 @@ location for each OS domain primitives block.
 
 #### High level validation summary of the 41 test cases on Debian refactor
 
+Test Markdown Section
+
+This is a test paragraph containing:
+
+single-hyphen words
+multi-segment commands
+OS-signaled remediation
+shell-level idempotency
+package-manager rewrites
+Operator Examples
+touch || ln -s /tmp/file /tmp/link
+mkdir && touch /tmp/file
+echo foo | grep foo
+apt-get install -y nginx
+dnf install nginx
+yum install nginx
+Precedence Order
+
+Deterministic Rewrite
+
+Shell-Level Idempotency
+
+OS-Signaled Remediation
+
+Architecture Principle
+
+Operator Preservation
+
+≠
+
+Segment Replay
+
+Validation Result
+
+Total Test Cases: 41
+
+Passed: 41
+
+Failed: 0
 
 
 
