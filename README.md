@@ -38793,6 +38793,43 @@ The Debian contract successfully validated all Category 1, Category 2, and Categ
 The results further validated the iterative remediation design philosophy of the framework, where deterministic rewrites, shell\-level idempotency remediation, and OS\-signaled remediation are intentionally processed across successive LLM remediation loops rather than being executed simultaneously within a single recovery attempt.
 
 
+
+
+
+
+
+## Debian 11 Validation Summary (41\-Test Contract Validation Suite)
+
+The Debian 11 contract successfully passed the full 41\-test validation suite covering POSIX idempotency handling, deterministic command rewrites, multi\-segment operator semantics, and OS\-signaled remediation precedence. Validation was performed against the Debian\-specific contract rules, the global rule set, and the generated schema contexts containing command, stdout, stderr, and exit status data.
+
+### Category 1: POSIX Idempotency and Operator Semantics (Tests 1\-21)
+
+All Category 1 tests passed.
+
+These tests validated shell\-level idempotency remediation across single\-segment and multi\-segment POSIX constructs, including:
+
+- Semicolon chains (;)
+- Logical AND chains (&&)
+- Logical OR chains (\|\|)
+- Pipelines (\|)
+- Subshells ($(...))
+
+The validation confirmed that operator semantics and replay semantics are treated as separate concerns.
+
+Examples:
+
+- mkdir ; touch correctly replayed only the failed touch segment.
+- touch \|\| ln \-s correctly replayed only the failed touch segment and did not replay the successful fallback branch.
+- mkdir && touch correctly replayed the failed mkdir segment and preserved downstream execution requirements imposed by &&.
+- Pipeline test cases correctly replayed the entire pipeline while preserving pipeline structure.
+- Subshell test cases correctly preserved the subshell wrapper while applying idempotency remediation to the enclosed command.
+
+### Validation Result
+
+- Total Test Cases: 41
+- Passed: 41
+- Failed: 0
+
 #### High level summary of the 41 test cases on the Fedora refactor
 
 
