@@ -2268,6 +2268,19 @@ CENTOS8_RULES = (
     "  correction. If a command fails due to permission issues and no deterministic\n"
     "  recovery rule applies, the LLM MUST use 'fallback' instead of proposing 'sudo'.\n"
     "\n"
+    #### add this patch to clarify what constitutes a malformed subshell (Patch-a)
+   "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
+    "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
+    "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
+    "  MUST continue to follow the POSIX idempotency rules defined later in this OS block.\n"
+    "- The presence of one or more valid subshell wrappers MUST NOT by itself trigger 'fallback'.\n"
+    "- Subshell-related fallback rules apply ONLY to malformed subshell structures,\n"
+    "  incomplete command substitutions, unmatched parentheses, syntax errors,\n"
+    "  or other invalid shell constructs.\n"
+    "- Valid subshells MUST continue through normal evaluation of deterministic rewrites,\n"
+    "  POSIX idempotency remediation, and OS-signaled remediation rules.\n"
+    "\n"
+    ####    
     "- For malformed bash commands containing pipelines ('|') or subshells ('$(' or ')'), the LLM MUST NOT attempt to correct, rewrite, or repair the pipeline or subshell structure.\n"
     "- If stderr indicates a syntax error involving a pipeline or subshell (e.g., 'syntax error near unexpected token', 'unexpected EOF while looking for matching'), the LLM MUST return 'fallback'.\n"
     "- The LLM MUST NOT remove extra '|' characters, MUST NOT insert missing commands, and MUST NOT attempt to infer user intent for pipeline stages.\n"
@@ -2323,6 +2336,70 @@ CENTOS8_RULES = (
     "  wrong-OS package-manager installs for CentOS 8, that segment MUST be rewritten\n"
     "  to use 'dnf install -y <pkg>'.\n"
     "\n"
+
+
+
+    #### Patch-b to address issues with near-miss/PM rewrite + idempotency + os-signaled remedation
+    "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
+    "  (for example: 'Temporary failure resolving', 'Could not resolve',\n"
+    "  'Connection failed', 'Hash Sum mismatch', repository metadata failures,\n"
+    "  or similar repository-level errors) MUST NOT by itself trigger 'fallback'\n"
+    "  while a deterministic rewrite candidate remains unresolved.\n"
+    "- When both a deterministic rewrite candidate and an OS-signaled\n"
+    "  remediation indicator are present, the LLM MUST first apply\n"
+    "  the Retry-With-Modified-Command precedence rules defined later in this OS block.\n"
+    "- OS-signaled remediation evaluation occurs only after the\n"
+    "  deterministic rewrite has been executed on a subsequent\n"
+    "  LLM invocation.\n"
+    ####
+
+
+
+
+    # ============================================================
+    # Retry-With-Modified-Command Precedence
+    # (wrong package managers, near-misses,
+    # utility typos, and other deterministic rewrites) (POSIX refactor BLOCK1)
+    # ============================================================
+    "- Any deterministic rewrite that results in a\n"
+    "  'retry_with_modified_command' action takes\n"
+    "  precedence over shell-level idempotency\n"
+    "  remediation.\n"
+    "- Deterministic rewrites that qualify for\n"
+    "  'retry_with_modified_command' include,\n"
+    "  but are not limited to:\n"
+    "      * wrong-OS package-manager rewrites\n"
+    "      * command near-miss corrections\n"
+    "      * utility typo corrections\n"
+    "      * other directly implied command repairs\n"
+    "- When both a deterministic rewrite candidate\n"
+    "  and an idempotency condition are present,\n"
+    "  the LLM MUST first return\n"
+    "  'retry_with_modified_command'.\n"
+    "- POSIX idempotency remediation applies only\n"
+    "  after the rewritten command has been executed\n"
+    "  on a subsequent LLM invocation.\n"
+    "- The presence of shell-level idempotency\n"
+    "  indicators MUST NOT prevent a required\n"
+    "  deterministic rewrite from occurring first.\n"
+    "- This precedence applies equally to\n"
+    "  single-segment commands and POSIX\n"
+    "  multi-segment constructs including:\n"
+    "      * pipelines (|)\n"
+    "      * logical AND chains (&&)\n"
+    "      * logical OR chains (||)\n"
+    "      * semicolon chains (;)\n"
+    "      * subshells ($(...))\n"
+    "- OS-signaled remediation MUST NOT be applied\n"
+    "  while a deterministic rewrite candidate\n"
+    "  remains unresolved.\n"
+    "- OS-signaled remediation is evaluated only\n"
+    "  after deterministic rewrites have been\n"
+    "  processed on prior LLM invocations and\n"
+    "  after POSIX idempotency remediation has\n"
+    "  been evaluated.\n"
+
+
 
     ##### Wrong package manager in pipelines (&&) — Patch2 cluster (CentOS 8 canonical) #####
     "- If ALL segments in the pipeline are already valid for this OS, and NO segment uses\n"
@@ -2623,54 +2700,6 @@ FEDORA_RULES = (
     "      dnf install -y <pkg>\n"
     "\n"
 
-    ##### OS‑signaled remediation (Fedora) #####
-    "- If stderr contains metadata or mirrorlist failures such as:\n"
-    "      * 'Failed to download metadata for repo'\n"
-    "      * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
-    "      * 'Error: failed to download metadata for repo'\n"
-    "  the LLM MUST return 'cleanup_and_retry' with:\n"
-    "      cleanup:\n"
-    "        - dnf clean all\n"
-    "      retry:\n"
-    "        - dnf makecache\n"
-    "        - dnf install -y <pkg>\n"
-    "\n"
-    "- If stderr contains 'Error: rpmdb open failed', the LLM MUST return 'cleanup_and_retry' with:\n"
-    "      cleanup:\n"
-    "        - rm -f /var/lib/rpm/.rpm.lock\n"
-    "      retry:\n"
-    "        - rpm --rebuilddb\n"
-    "        - dnf install -y <pkg>\n"
-    "\n"
-
-    ##### Nonexistent package (ambiguous, NOT remediation) #####
-    "- If 'dnf install -y <pkg>' fails with wording similar to:\n"
-    "      * 'No match for argument: <pkg>'\n"
-    "      * 'Unable to find a match: <pkg>'\n"
-    "  and stderr does NOT contain metadata, mirrorlist, repo corruption, or rpmdb errors, the LLM MUST return 'fallback'.\n"
-    "\n"
-
-    ##### Idempotency and <pkg> binding (Fedora) #####
-    "- If stderr indicates the package is already installed (e.g., 'Package <pkg> is already installed.', 'Nothing to do.'), the LLM MUST treat this as idempotency and use 'cleanup_and_retry'.\n"
-    # Insert patch for the base20 index12 test case here. This was missing
-    "- For successful idempotent installs (exit_status = 0 with\n"
-    "  \"Package <pkg> is already installed.\" and/or \"Nothing to do.\"),\n"
-    "  the LLM MUST return a \"cleanup_and_retry\" action with:\n"
-    "\n"
-    "      cleanup: []\n"
-    "      retry: \"dnf install -y <pkg>\"\n"
-    "\n"
-    "  The LLM MUST NOT use \"rpm -q <pkg>\" or any rpmdb diagnostic\n"
-    "  command for idempotent install conditions.\n"
-    "\n"
-    #
-    "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with 'Nothing to do.' or 'No packages marked for upgrade.', the LLM MUST use 'cleanup_and_retry'.\n"
-    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the failing command.\n"
-    "- If the failing command does NOT include a package name (e.g., 'dnf upgrade -y'), the LLM MUST NOT invent a package name.\n"
-    "\n"
-
-
-
     #### Patch-c to address idempotency + os-signaled remediation precedence
 
     "- IMPORTANT: The presence of OS-signaled remediation indicators\n"
@@ -2732,6 +2761,54 @@ FEDORA_RULES = (
     "- cleanup MUST be minimal, deterministic, and POSIX-safe.\n"
     "- Package-manager remediation and package-manager rewrites MUST continue\n"
     "  to follow the Fedora package-manager rules defined elsewhere in this block.\n"
+
+
+    ##### OS‑signaled remediation (Fedora) #####
+    "- If stderr contains metadata or mirrorlist failures such as:\n"
+    "      * 'Failed to download metadata for repo'\n"
+    "      * 'Cannot prepare internal mirrorlist: No URLs in mirrorlist'\n"
+    "      * 'Error: failed to download metadata for repo'\n"
+    "  the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "        - dnf clean all\n"
+    "      retry:\n"
+    "        - dnf makecache\n"
+    "        - dnf install -y <pkg>\n"
+    "\n"
+    "- If stderr contains 'Error: rpmdb open failed', the LLM MUST return 'cleanup_and_retry' with:\n"
+    "      cleanup:\n"
+    "        - rm -f /var/lib/rpm/.rpm.lock\n"
+    "      retry:\n"
+    "        - rpm --rebuilddb\n"
+    "        - dnf install -y <pkg>\n"
+    "\n"
+
+    ##### Nonexistent package (ambiguous, NOT remediation) #####
+    "- If 'dnf install -y <pkg>' fails with wording similar to:\n"
+    "      * 'No match for argument: <pkg>'\n"
+    "      * 'Unable to find a match: <pkg>'\n"
+    "  and stderr does NOT contain metadata, mirrorlist, repo corruption, or rpmdb errors, the LLM MUST return 'fallback'.\n"
+    "\n"
+
+    ##### Idempotency and <pkg> binding (Fedora) #####
+    "- If stderr indicates the package is already installed (e.g., 'Package <pkg> is already installed.', 'Nothing to do.'), the LLM MUST treat this as idempotency and use 'cleanup_and_retry'.\n"
+    # Insert patch for the base20 index12 test case here. This was missing
+    "- For successful idempotent installs (exit_status = 0 with\n"
+    "  \"Package <pkg> is already installed.\" and/or \"Nothing to do.\"),\n"
+    "  the LLM MUST return a \"cleanup_and_retry\" action with:\n"
+    "\n"
+    "      cleanup: []\n"
+    "      retry: \"dnf install -y <pkg>\"\n"
+    "\n"
+    "  The LLM MUST NOT use \"rpm -q <pkg>\" or any rpmdb diagnostic\n"
+    "  command for idempotent install conditions.\n"
+    "\n"
+    #
+    "- If 'dnf update -y' or 'dnf upgrade -y' completes successfully with 'Nothing to do.' or 'No packages marked for upgrade.', the LLM MUST use 'cleanup_and_retry'.\n"
+    "- For any rule referencing '<pkg>', the LLM MUST replace '<pkg>' with the package name used in the failing command.\n"
+    "- If the failing command does NOT include a package name (e.g., 'dnf upgrade -y'), the LLM MUST NOT invent a package name.\n"
+    "\n"
+
 
 
 
