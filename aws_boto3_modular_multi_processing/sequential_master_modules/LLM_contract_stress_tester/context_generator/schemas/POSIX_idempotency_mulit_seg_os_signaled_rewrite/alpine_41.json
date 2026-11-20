@@ -1,0 +1,469 @@
+{
+  "os_name": "Alpine",
+  "os_version": "3.18",
+  "kernel": "5.15.0",
+  "package_managers": ["apk"],
+  "shell": "sh",
+  "contexts": [
+
+
+
+
+{
+  "command": "mkdir /tmp/alpine_idem1",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-001",
+  "ip": "10.0.44.1",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "touch /tmp/alpine_idem2",
+  "stdout": "",
+  "stderr": "touch: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-002",
+  "ip": "10.0.44.2",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "ln -s /tmp/source3 /tmp/alpine_idem3",
+  "stdout": "",
+  "stderr": "ln: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-003",
+  "ip": "10.0.44.3",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "rmdir /tmp/alpine_idem4",
+  "stdout": "",
+  "stderr": "rmdir: not removed",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-004",
+  "ip": "10.0.44.4",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "kill 99999",
+  "stdout": "",
+  "stderr": "kill: no such process",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-005",
+  "ip": "10.0.44.5",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem6 ; touch /tmp/alpine_idem6",
+  "stdout": "",
+  "stderr": "touch: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-006",
+  "ip": "10.0.44.6",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem7 && touch /tmp/alpine_idem7",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-007",
+  "ip": "10.0.44.7",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "touch /tmp/alpine_idem8 || ln -s /tmp/alpine_idem8 /tmp/alpine_idem8",
+  "stdout": "",
+  "stderr": "touch: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-008",
+  "ip": "10.0.44.8",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem9 | grep foo",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-009",
+  "ip": "10.0.44.9",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo $(touch /tmp/alpine_idem10)",
+  "stdout": "",
+  "stderr": "touch: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-010",
+  "ip": "10.0.44.10",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem11 ; touch /tmp/alpine_idem11 ; ln -s /tmp/alpine_idem11 /tmp/alpine_idem11",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nln: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-011",
+  "ip": "10.0.44.11",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem12 || echo fallback",
+  "stdout": "fallback\n",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-012",
+  "ip": "10.0.44.12",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem13 ; echo ok ; ln -s /tmp/alpine_idem13 /tmp/alpine_idem13",
+  "stdout": "ok\n",
+  "stderr": "mkdir: directory exists\nln: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-013",
+  "ip": "10.0.44.13",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo ok ; mkdir /tmp/alpine_idem14 ; echo done",
+  "stdout": "ok\ndone\n",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-014",
+  "ip": "10.0.44.14",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo $(mkdir /tmp/alpine_idem15) ; echo ok",
+  "stdout": "ok\n",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-015",
+  "ip": "10.0.44.15",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem16 | cat",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-016",
+  "ip": "10.0.44.16",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo foo | mkdir /tmp/alpine_idem17 | grep foo",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-017",
+  "ip": "10.0.44.17",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem18 || echo fallback",
+  "stdout": "fallback\n",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-018",
+  "ip": "10.0.44.18",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem19 && echo ok",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-019",
+  "ip": "10.0.44.19",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo $(echo $(mkdir /tmp/alpine_idem20))",
+  "stdout": "",
+  "stderr": "mkdir: directory exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-020",
+  "ip": "10.0.44.20",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_idem21 && echo ok ; ln -s /tmp/alpine_idem21 /tmp/alpine_idem21 || echo fallback",
+  "stdout": "fallback\n",
+  "stderr": "mkdir: directory exists\nln: file exists",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-idem-021",
+  "ip": "10.0.44.21",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "apt install nginx ; mkdir /tmp/alpine_cat2_22",
+  "stdout": "",
+  "stderr": "apt: not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-022",
+  "ip": "10.0.44.22",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mdir /tmp/alpine_cat2_23 ; touch /tmp/alpine_cat2_23",
+  "stdout": "",
+  "stderr": "sh: mdir: not found\ntouch: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-023",
+  "ip": "10.0.44.23",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "yum install nginx ; ln -s /tmp/source24 /tmp/alpine_cat2_24",
+  "stdout": "",
+  "stderr": "yum: not found\nln: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-024",
+  "ip": "10.0.44.24",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "tuch /tmp/alpine_cat2_25 ; mkdir /tmp/alpine_cat2_25",
+  "stdout": "",
+  "stderr": "sh: tuch: not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-025",
+  "ip": "10.0.44.25",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "dnf install nginx && mkdir /tmp/alpine_cat2_26",
+  "stdout": "",
+  "stderr": "dnf: not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-026",
+  "ip": "10.0.44.26",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "grpe foo /tmp/file || mkdir /tmp/alpine_cat2_27",
+  "stdout": "",
+  "stderr": "sh: grpe: not found\nmkdir: directory exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-027",
+  "ip": "10.0.44.27",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "apt-get install nginx | grep foo",
+  "stdout": "",
+  "stderr": "apt-get: not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-028",
+  "ip": "10.0.44.28",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo $(mdir /tmp/alpine_cat2_29)",
+  "stdout": "",
+  "stderr": "sh: mdir: not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-029",
+  "ip": "10.0.44.29",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "yum install nginx ; mkdir /tmp/alpine_cat2_30 ; touch /tmp/alpine_cat2_30",
+  "stdout": "",
+  "stderr": "yum: not found\nmkdir: directory exists\ntouch: file exists",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-030",
+  "ip": "10.0.44.30",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_cat2_31 && echo ok ; apt install nginx ; ln -s /tmp/alpine_cat2_31 /tmp/alpine_cat2_31 || echo fallback ; mdir /tmp/alpine_cat2_31b",
+  "stdout": "fallback\n",
+  "stderr": "apt: not found\nln: file exists\nsh: mdir: not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-031",
+  "ip": "10.0.44.31",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "apt install nginx ; mkdir /tmp/alpine_cat3_32",
+  "stdout": "",
+  "stderr": "apt: not found\nmkdir: directory exists\nERROR: failed to update apk cache",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-032",
+  "ip": "10.0.44.32",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mdir /tmp/alpine_cat3_33 ; touch /tmp/alpine_cat3_33",
+  "stdout": "",
+  "stderr": "sh: mdir: not found\ntouch: file exists\nTemporary failure resolving dl-cdn.alpinelinux.org",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-033",
+  "ip": "10.0.44.33",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "yum install nginx ; ln -s /tmp/source34 /tmp/alpine_cat3_34",
+  "stdout": "",
+  "stderr": "yum: not found\nln: file exists\nERROR: failed to update apk cache",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-034",
+  "ip": "10.0.44.34",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "dnf install nginx && mkdir /tmp/alpine_cat3_35",
+  "stdout": "",
+  "stderr": "dnf: not found\nERROR: failed to update apk cache",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-035",
+  "ip": "10.0.44.35",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "grpe foo /tmp/file || mkdir /tmp/alpine_cat3_36",
+  "stdout": "",
+  "stderr": "sh: grpe: not found\nmkdir: directory exists\nERROR: failed to update apk cache",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-036",
+  "ip": "10.0.44.36",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "apt-get install nginx | grep foo",
+  "stdout": "",
+  "stderr": "apt-get: not found\nERROR: failed to update apk cache",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-037",
+  "ip": "10.0.44.37",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_cat3_38 && echo ok ; apt install nginx ; ln -s /tmp/alpine_cat3_38 /tmp/alpine_cat3_38 || echo fallback ; mdir /tmp/alpine_cat3_38b",
+  "stdout": "fallback\n",
+  "stderr": "apt: not found\nln: file exists\nsh: mdir: not found\nERROR: failed to update apk cache",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-038",
+  "ip": "10.0.44.38",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_cat3_39",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\nERROR: failed to update apk cache",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-039",
+  "ip": "10.0.44.39",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "touch /tmp/alpine_cat3_40",
+  "stdout": "",
+  "stderr": "touch: file exists\nERROR: failed to update apk cache",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-040",
+  "ip": "10.0.44.40",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/alpine_cat3_41 ; touch /tmp/alpine_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nTemporary failure resolving dl-cdn.alpinelinux.org",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "alpine-cat3-041",
+  "ip": "10.0.44.41",
+  "tags": [],
+  "history": []
+}
+
+
+
+
+
+  ]
+}
