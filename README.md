@@ -38902,10 +38902,12 @@ OS-Signaled Remediation
 
 rather than attempting to solve all observed failures simultaneously.
 
-**&Validation Result**
+**Validation Result**
 
 Total Test Cases: 41
+
 Passed: 41
+
 Failed: 0
 
 
