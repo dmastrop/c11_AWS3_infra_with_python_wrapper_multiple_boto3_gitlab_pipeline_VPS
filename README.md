@@ -38807,6 +38807,114 @@ The results further validated the iterative remediation design philosophy of the
 #### High level summary of the 41 test cases on the Fedora refactor
 
 
+The Fedora 39 contract successfully passed the full 41-test validation suite covering POSIX idempotency handling, deterministic command rewrites, multi-segment operator semantics, and OS-signaled remediation precedence.
+
+**Category 1: POSIX Idempotency and Operator Semantics (Tests 1-21)**
+
+All Category 1 tests passed.
+
+These tests validated shell-level idempotency remediation across:
+
+- Semicolon chains (;)
+- Logical AND chains (&&)
+- Logical OR chains (||)
+- Pipelines (|)
+- Subshells ($(...))
+
+Examples:
+
+- `mkdir ; touch` correctly replayed only the failed touch segment.
+- `touch || ln -s` correctly replayed only the failed touch segment and did not replay the successful fallback branch.
+- `mkdir && touch` correctly replayed the failed mkdir segment and preserved downstream execution requirements imposed by `&&`.
+- Pipeline test cases correctly replayed the entire pipeline while preserving pipeline structure.
+- Subshell test cases correctly preserved the subshell wrapper while applying idempotency remediation to the enclosed command.
+
+**Category 2: Deterministic Rewrite Precedence (Tests 22-31)**
+
+All Category 2 tests passed.
+
+These tests validated POSIX Refactor BLOCK1 and Patch-B behavior, confirming that deterministic rewrites always take precedence over shell-level idempotency remediation.
+
+Validated rewrite scenarios included:
+
+- Wrong package manager remediation
+- Command typo correction
+- Utility near-miss correction
+- Multi-segment command preservation
+- Mixed operator rewrite scenarios
+
+Examples:
+
+- `apt install nginx` was correctly rewritten to Fedora-native syntax using `dnf install -y nginx`.
+- `apt-get install nginx` was correctly rewritten to Fedora-native package manager syntax.
+- Near-miss utilities such as `mdir`, `tuch`, and `grpe` were deterministically corrected.
+- Multi-segment commands preserved operator structure while rewriting only the affected segments.
+
+**Category 3: Rewrite + OS-Signaled Remediation Precedence (Tests 32-41)**
+
+All Category 3 tests passed.
+
+These tests validated the interaction between:
+
+- Deterministic rewrites
+- Shell-level idempotency
+- OS-signaled remediation
+
+including Fedora repository and metadata failure indicators such as:
+
+- `Failed to download metadata for repo`
+- `Error: failed to download metadata for repo`
+- `Cannot prepare internal mirrorlist: No URLs in mirrorlist`
+- `Temporary failure resolving mirror.fedoraproject.org`
+
+Patch-B and Patch-C behaved as designed.
+
+The validated precedence order was:
+
+```text
+Deterministic Rewrite
+        >
+Shell-Level Idempotency
+        >
+OS-Signaled Remediation
+```
+
+
+**Key Architectural Validation**
+
+The Fedora validation suite confirmed the central design principle of the remediation framework:
+
+Operator Preservation
+        ≠
+Segment Replay
+
+
+The framework preserves shell operator semantics while replaying only those segments required by the contract rules and actual execution evidence.
+
+The validation also confirmed the intended iterative remediation model:
+
+Deterministic Rewrite
+        →
+Idempotency Remediation
+        →
+OS-Signaled Remediation
+
+
+rather than attempting to solve all observed failures simultaneously.
+
+**&Validation Result**
+
+Total Test Cases: 41
+Passed: 41
+Failed: 0
+
+
+The Fedora contract successfully validated all Category 1, Category 2, and Category 3 scenarios, including the Patch-A, Patch-B, and Patch-C precedence refinements introduced during contract hardening.
+
+The results further validated the iterative remediation design philosophy of the framework, where deterministic rewrites, shell-level idempotency remediation, and OS-signaled remediation are intentionally processed across successive LLM remediation loops rather than being executed simultaneously within a single recovery attempt.
+
+The Fedora validation also confirmed that the Linux-family refactor maintains behavioral consistency with the previously validated Ubuntu and Debian implementations while preserving Fedora-specific package manager and repository remediation semantics.
+
 
 
 #### High level summry of the 41 test cases on the Alpine refactor
