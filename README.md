@@ -38762,16 +38762,19 @@ This behavior is critical for iterative remediation because lower\-precedence fa
 
 The Debian validation suite confirmed the central design principle of the remediation framework:
 
+```
 Operator Preservation
 
         ≠
 
 Segment Replay
+```
 
 The framework preserves shell operator semantics while replaying only those segments required by the contract rules and actual execution evidence.
 
 The validation also confirmed the intended iterative remediation model:
 
+```
 Deterministic Rewrite
 
         →
@@ -38781,6 +38784,8 @@ Idempotency Remediation
         →
 
 OS\-Signaled Remediation
+```
+
 
 rather than attempting to solve all observed failures simultaneously.
 
@@ -38790,11 +38795,14 @@ This staged approach minimizes unnecessary node mutation, reduces remediation ri
 
 **Validation Result**
 
+```
 Total Test Cases: 41
 
 Passed: 41
 
 Failed: 0
+```
+
 
 The Debian contract successfully validated all Category 1, Category 2, and Category 3 scenarios, including the Patch A, Patch B, and Patch C precedence refinements introduced during contract hardening.
 
