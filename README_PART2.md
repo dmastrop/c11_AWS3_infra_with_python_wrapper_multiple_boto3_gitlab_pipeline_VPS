@@ -47,7 +47,7 @@ The Preface updates always sit at the top of all the other updates because they 
 
 <br>
 
-- [Preface Update14: Phase 4a.1.2 LLM Contract Rule Engineering VIII: GPT-5.6-sol Alpine index28 (test case29) model instability and fragility and the requirement for the stress_tester.py schema mutator(#prefaceupdate14)
+- [Preface Update14: Phase 4a.1.2 LLM Contract Rule Engineering VIII: GPT-5.6-sol Alpine index28 (test case29) model instability and fragility and the requirement for the stress_tester.py schema mutator](#prefaceupdate14)
 
 
 
