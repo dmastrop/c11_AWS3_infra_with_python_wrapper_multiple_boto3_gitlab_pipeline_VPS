@@ -39570,7 +39570,7 @@ This type of case study is reviewed in detail in Preface Update 14 of README_PAR
 schema mutation is a valuable tool for revealing these types of issues. The mutator can expose both model-level falures as well as 
 issues like this where there is a contract rule deficiency that can be fixed with contract rule remediation. 
 
-
+The mutator is the next phase of testing to wrap up Phase4a.1.2 development.
 
 
 
