@@ -39225,6 +39225,7 @@ This version should paste directly into GitHub README markdown without any clean
 
 This suite encountered several issues, some of which should have been corrected with the patches. 
 
+---
 
 The first error is with index20 (test case 21):
 
@@ -39278,7 +39279,7 @@ Command: mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/m
 
 ```
 
-
+---
 
 The second error is with the model instability issue (see Preface Update 14 in README_PART2.md for details). This time it appears to
 be a 50/50 probability split between the fallback (incorrect) and the rewrite with retry_with_modified_command as it appears to 
@@ -39384,11 +39385,10 @@ Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
 
 ```
 
-
+---
 
 The third issue is with index28 (test case 29) the same problematic test case with Apline that Preface Update14 (README_PART2.md) 
-explains. With Alpine it is model instabiblity but with macos-brew it appears to be 100% failure to fallback when it should be
-retry_with_modified_commad. See below:
+explains.  See below: (this should be a rewrite with retry_with_modified_command)
 
 
 ```
@@ -39433,6 +39433,143 @@ Command: echo $(mdir /tmp/macbrew_cat2_29)
 ========================
 
 ```
+
+Given that this is a 100% failure this must be either a model level failure with shells + near-misses or a contract rule level 
+failure. 
+
+The following test cases were executed as well and these illustrate that it is a contract level failure:
+
+```
+
+
+root@a392be2701b9:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/experimental_macos_brew_4 --index 0
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(mdir /tmp/macbrew_cat2_29)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@a392be2701b9:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/experimental_macos_brew_4 --index 1
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"echo $(touch /tmp/test)"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(tuch /tmp/test)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@a392be2701b9:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/experimental_macos_brew_4 --index 1
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"echo $(touch /tmp/test)"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(tuch /tmp/test)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@a392be2701b9:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/experimental_macos_brew_4 --index 1
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"echo $(touch /tmp/test)"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(tuch /tmp/test)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@a392be2701b9:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/experimental_macos_brew_4 --index 2
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(grpe foo file)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@a392be2701b9:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/experimental_macos_brew_4 --index 2
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(grpe foo file)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+```
+
+Note that the touch works but the grep and mkdir fail.  This is a near-miss contract definition issue. To fix this patch-d was added
+to the domain primitives block and this resolved the issues above:
+
+```
+    #### Explicit deterministic near-miss clarification (Patch-d)
+    "- IMPORTANT: Deterministic near-miss command corrections MUST take precedence over malformed-command classification.\n"
+    "- A deterministic near-miss correction is a command whose intended target is directly implied\n"
+    "  by a minor typographical variation and where no reasonable ambiguity exists.\n"
+    "\n"
+    "- Deterministic near misses commonly include:\n"
+    "    • single-character omission\n"
+    "    • single-character insertion\n"
+    "    • single-character substitution\n"
+    "    • adjacent-character transposition\n"
+    "\n"
+    "- Examples include:\n"
+    "    mdir  → mkdir\n"
+    "    mkdr  → mkdir\n"
+    "    tuch  → touch\n"
+    "    grpe  → grep\n"
+    "    gerp  → grep\n"
+    "\n"
+    "- When the intended command is obvious and unambiguous,\n"
+    "  the command MUST be treated as a deterministic rewrite candidate\n"
+    "  and MUST NOT be classified as malformed.\n"
+    "\n"
+    "- Deterministic near-miss corrections remain valid when embedded inside:\n"
+    "    • pipelines\n"
+    "    • && chains\n"
+    "    • || chains\n"
+    "    • ; chains\n"
+    "    • subshells using $(...)\n"
+    "\n"
+    "- The presence of a valid subshell wrapper MUST NOT suppress\n"
+    "  deterministic near-miss correction.\n"
+    "\n"
+    "- If a command qualifies as a deterministic near miss,\n"
+    "  rewrite evaluation MUST occur before malformed-command evaluation.\n"
+    "\n"
+
+```
+This essentially increased the probaility of a near-miss rewrite and decreased the probability of the fallback malformed classification
+at the output layer (logit vector).
+
+This type of case study is reviewed in detail in Preface Update 14 of README_PART2.md and illustrates why the stress tester 
+schema mutation is a valuable tool for revealing these types of issues. The mutator can expose both model-level falures as well as 
+issues like this where there is a contract rule deficiency that can be fixed with contract rule remediation. 
+
 
 
 
