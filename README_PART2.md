@@ -66,21 +66,6 @@ The Preface updates always sit at the top of all the other updates because they 
 
 
 
-Preface Update14:
-Phase 4a.1.2 LLM Contract Rule Engineering VIII
-
-GPT‑5.6‑sol Alpine Test‑29 Case Study:
-Residual Subshell‑Rewrite Instability,
-Model‑Behavior Fragility,
-and the Architectural Requirement
-for the stress_tester.py Schema Mutator
-
-
-
-
-
-
-
 
 
 
