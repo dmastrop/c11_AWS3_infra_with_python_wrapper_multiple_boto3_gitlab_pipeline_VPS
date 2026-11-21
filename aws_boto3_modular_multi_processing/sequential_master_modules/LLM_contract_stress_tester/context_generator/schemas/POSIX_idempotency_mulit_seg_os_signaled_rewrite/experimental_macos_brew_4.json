@@ -1,0 +1,61 @@
+{
+  "os_name": "macOS",
+  "os_version": "14.0-brew",
+  "kernel": "Darwin",
+  "package_managers": ["brew"],
+  "shell": "zsh",
+{
+  "command": "echo $(mdir /tmp/macbrew_cat2_29)",
+  "stdout": "",
+  "stderr": "zsh: command not found: mdir",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "macbrew-cat2-029",
+  "ip": "10.0.44.29",
+  "tags": [],
+  "history": []
+},
+
+{
+  "command": "echo $(tuch /tm/test)",
+  "stdout": "",
+  "stderr": "zsh: command not found: mdir",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "macbrew-cat2-029",
+  "ip": "10.0.44.29",
+  "tags": [],
+  "history": []
+},
+
+
+{
+  "command": "echo $(grpe foo file)",
+  "stdout": "",
+  "stderr": "zsh: command not found: mdir",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "macbrew-cat2-029",
+  "ip": "10.0.44.29",
+  "tags": [],
+  "history": []
+},
+  
+{
+  "command": "echo $(mkdir /tmp/test)",
+  "stdout": "",
+  "stderr": "zsh: command not found: mdir",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "macbrew-cat2-029",
+  "ip": "10.0.44.29",
+  "tags": [],
+  "history": []
+}
+
+
+
+
+  ]
+
+}  

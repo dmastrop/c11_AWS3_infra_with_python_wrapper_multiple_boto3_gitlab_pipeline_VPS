@@ -39223,6 +39223,219 @@ This version should paste directly into GitHub README markdown without any clean
 
 #### High level summary of the 41 test cases on the MacOS-brew refactor
 
+This suite encountered several issues, some of which should have been corrected with the patches. 
+
+
+The first error is with index20 (test case 21):
+
+
+There was a minor cleanup-string instability
+(previously observed on other OSes)
+See below. THis automatically clears itself on subsequent tries and there is nothing that can be done for this in the contract rules.
+It is a bit of instability in the gpt-5.6-sol model.
+The junk characters are the 2>/dev/null. Not catostrophic.
+
+```
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 20
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -f /tmp/macbrew_idem21 2>/dev/null || rmdir /tmp/macbrew_idem21"],"retry":"mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/macbrew_idem21"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/macbrew_idem21 || echo fallback
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 20
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -f /tmp/macbrew_idem21"],"retry":"mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/macbrew_idem21"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/macbrew_idem21 || echo fallback
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 20
+
+=== RAW LLM RESPONSE ===
+{"action":"cleanup_and_retry","cleanup":["rm -f /tmp/macbrew_idem21"],"retry":"mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/macbrew_idem21"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/macbrew_idem21 || echo fallback
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+
+
+```
+
+
+
+The second error is with the model instability issue (see Preface Update 14 in README_PART2.md for details). This time it appears to
+be a 50/50 probability split between the fallback (incorrect) and the rewrite with retry_with_modified_command as it appears to 
+toggle back and forth between the two. See below. Since this is a geometric failure of the model there is nothing we can do about this.
+
+
+```
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+
+
+This seems to be 50/50 probability and alternates. Does not self correct We have seen this before . It is getting classified with malformed 
+
+
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"mkdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"mkdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"retry_with_modified_command","cleanup":[],"retry":"mkdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+
+```
+
+
+
+The third issue is with index28 (test case 29) the same problematic test case with Apline that Preface Update14 (README_PART2.md) 
+explains. With Alpine it is model instabiblity but with macos-brew it appears to be 100% failure to fallback when it should be
+retry_with_modified_commad. See below:
+
+
+```
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 28
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(mdir /tmp/macbrew_cat2_29)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 28
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(mdir /tmp/macbrew_cat2_29)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 28
+
+=== RAW LLM RESPONSE ===
+{"action":"fallback"}
+========================
+
+
+=== VALIDATION RESULT ===
+OS: macOS 14.0-brew
+Command: echo $(mdir /tmp/macbrew_cat2_29)
+[DEBUG] schema os_name=macOS, schema os_version=14.0-brew
+========================
+
+```
+
+
+
 
 
 
