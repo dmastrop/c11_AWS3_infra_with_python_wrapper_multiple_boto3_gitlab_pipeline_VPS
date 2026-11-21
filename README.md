@@ -39227,6 +39227,43 @@ This version should paste directly into GitHub README markdown without any clean
 
 
 
+#### The other OSes
+
+As noted in the introduction the remaining OSes will need to be tested. The contract rules for each of these domains have been refactored
+with the blocks 1,2,3 and patches a,b, and c. The testing at this point is optional given the successful testing above. 
+
+Summary:
+
+Validated:
+
+✅ Ubuntu
+✅ Debian
+✅ Fedora
+✅ Alpine
+✅ macOS-brew (pending)
+
+Deferred validation:
+
+• CentOS 7
+• CentOS 8
+• Amazon Linux 2
+• Amazon Linux 2023
+• Arch Linux
+• SUSE
+
+Confidence remains high because these domains received the
+same Patch-A, Patch-B, Patch-C, BLOCK1, BLOCK2 and BLOCK3
+refactor pattern that has already been validated across
+multiple Linux-family package manager ecosystems.
+
+Not currently in scope:
+
+• PowerShell Linux
+• PowerShell Windows
+• Cisco IOS
+• Palo Alto PAN-OS
+
+
 
 
 
@@ -39242,6 +39279,11 @@ This version should paste directly into GitHub README markdown without any clean
 
 
 ### Stress tester complete code review
+
+Note the stress tester schema mutator is documented in the README_PART2.md as the last part of Phase 4a.1.2 development. 
+README_PART2.md will also contain all Phase 4a.1.3 + development and testing documentation. 
+
+
 
 
 #### Code file and directory organization
