@@ -4,7 +4,9 @@
   "kernel": "Darwin",
   "package_managers": ["brew"],
   "shell": "zsh",
-{
+  "contexts": [
+  
+{	  
   "command": "echo $(mdir /tmp/macbrew_cat2_29)",
   "stdout": "",
   "stderr": "zsh: command not found: mdir",
@@ -17,7 +19,7 @@
 },
 
 {
-  "command": "echo $(tuch /tm/test)",
+  "command": "echo $(tuch /tmp/test)",
   "stdout": "",
   "stderr": "zsh: command not found: tuch",
   "exit_status": 127,
@@ -44,7 +46,7 @@
 {
   "command": "echo $(mkdir /tmp/test)",
   "stdout": "",
-  "stderr": 
+  "stderr": "",
   "exit_status": 0,
   "attempt": 1,
   "instance_id": "macbrew-cat2-029",
