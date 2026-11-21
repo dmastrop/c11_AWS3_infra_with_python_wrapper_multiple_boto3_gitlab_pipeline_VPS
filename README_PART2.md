@@ -35,7 +35,7 @@ UPDATES are always added to this document in a top down fashion similar to a ver
 
 The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
 
-- [Update part 60 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#updatespart60)
+- [Update part 60 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update60)
 
 
 ---
