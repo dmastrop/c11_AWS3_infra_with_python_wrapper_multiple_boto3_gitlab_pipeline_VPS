@@ -39572,6 +39572,7 @@ issues like this where there is a contract rule deficiency that can be fixed wit
 
 The mutator is the next phase of testing to wrap up Phase4a.1.2 development.
 
+The 41 POSIX test cases are now passing on MacOS-brew. 
 
 
 
