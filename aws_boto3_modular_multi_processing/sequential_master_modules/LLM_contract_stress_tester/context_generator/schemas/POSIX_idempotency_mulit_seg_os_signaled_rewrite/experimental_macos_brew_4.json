@@ -19,7 +19,7 @@
 {
   "command": "echo $(tuch /tm/test)",
   "stdout": "",
-  "stderr": "zsh: command not found: mdir",
+  "stderr": "zsh: command not found: tuch",
   "exit_status": 127,
   "attempt": 1,
   "instance_id": "macbrew-cat2-029",
@@ -32,7 +32,7 @@
 {
   "command": "echo $(grpe foo file)",
   "stdout": "",
-  "stderr": "zsh: command not found: mdir",
+  "stderr": "zsh: command not found: grpe",
   "exit_status": 127,
   "attempt": 1,
   "instance_id": "macbrew-cat2-029",
@@ -44,8 +44,8 @@
 {
   "command": "echo $(mkdir /tmp/test)",
   "stdout": "",
-  "stderr": "zsh: command not found: mdir",
-  "exit_status": 127,
+  "stderr": 
+  "exit_status": 0,
   "attempt": 1,
   "instance_id": "macbrew-cat2-029",
   "ip": "10.0.44.29",
