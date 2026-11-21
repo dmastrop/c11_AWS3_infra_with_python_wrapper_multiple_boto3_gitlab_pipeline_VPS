@@ -39065,9 +39065,24 @@ with:
 ```text
 echo $(mkdir /tmp/alpine_cat2_29)
 ```
+The schema test case is below:
 
+```
+{
+  "command": "echo $(mdir /tmp/alpine_cat2_29)",
+  "stdout": "",
+  "stderr": "sh: mdir: not found",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "alpine-cat2-029",
+  "ip": "10.0.44.29",
+  "tags": [],
+  "history": []
+},
 
-The output is below:
+```
+
+The output during validation testing is below:
 
 ```
 root@e758f6c54530:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/alpine_41 --index 28
@@ -39123,6 +39138,25 @@ This behavior is notable because the scenario simultaneously exercises several c
 Prior to the introduction of Patch A, similar subshell scenarios frequently collapsed into fallback behavior because the model often treated the mere presence of a subshell as evidence of a potentially malformed shell construct.
 
 Patch A significantly improved stability by explicitly instructing the model that valid subshell expressions are not malformed commands and must continue through normal deterministic rewrite evaluation.
+
+Patch-a from the malformed command block in the  ai_gateaway_service.py module is shown below (this is included in all OS domain blocks):
+
+```
+    #### add this patch to clarify what constitutes a malformed subshell (Patch-a)
+    "- IMPORTANT: Valid subshell expressions using '$(...)' are NOT malformed commands.\n"
+    "- A syntactically valid subshell that executes successfully but produces an idempotency stderr signal\n"
+    "  (for example: 'mkdir: directory exists', 'touch: file exists', 'ln: file exists')\n"
+    "  MUST continue to follow the POSIX idempotency rules defined later in this OS block.\n"
+    "- The presence of one or more valid subshell wrappers MUST NOT by itself trigger 'fallback'.\n"
+    "- Subshell-related fallback rules apply ONLY to malformed subshell structures,\n"
+    "  incomplete command substitutions, unmatched parentheses, syntax errors,\n"
+    "  or other invalid shell constructs.\n"
+    "- Valid subshells MUST continue through normal evaluation of deterministic rewrites,\n"
+    "  POSIX idempotency remediation, and OS-signaled remediation rules.\n"
+    "\n"
+
+```
+
 
 The observed behavior suggests that nested subshell rewrite scenarios remain a relatively fragile region within the model's decision space. From an LLM reasoning perspective, this appears to be less a contract defect and more a manifestation of residual geometric sensitivity between competing latent interpretations of:
 
