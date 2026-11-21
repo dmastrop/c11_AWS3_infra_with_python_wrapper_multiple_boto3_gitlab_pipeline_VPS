@@ -286,10 +286,15 @@ The Alpine Test-29 case is particularly interesting because it appears to activa
 
 The model is required to reason about:
 
+
 - Subshell interpretation ($(...))
+
 - Near-miss utility correction (mdir → mkdir)
+
 - Deterministic rewrite precedence (Patch B / BLOCK1)
+
 - Malformed-command classification
+
 - Multi-segment shell semantics
 
 Each of these concepts independently appears throughout the contract.
