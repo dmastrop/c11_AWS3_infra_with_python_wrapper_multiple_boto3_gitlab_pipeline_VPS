@@ -424,10 +424,10 @@
   "history": []
 },
 {
-  "command": "echo $(mdir /tmp/macbrew_cat3_39)",
+  "command": "mkdir /tmp/macbrew_cat3_39",
   "stdout": "",
-  "stderr": "zsh: command not found: mdir\nError: failed to download metadata",
-  "exit_status": 127,
+  "stderr": "mkdir: directory exists\nError: failed to download metadata",
+  "exit_status": 1,
   "attempt": 1,
   "instance_id": "macbrew-cat3-039",
   "ip": "10.0.44.39",
@@ -435,10 +435,10 @@
   "history": []
 },
 {
-  "command": "yum install -y nginx ; mkdir /tmp/macbrew_cat3_40 ; touch /tmp/macbrew_cat3_40",
+  "command": "touch /tmp/macbrew_cat3_40",
   "stdout": "",
-  "stderr": "zsh: command not found: yum\nmkdir: directory exists\ntouch: file exists\nError: Corrupt cache",
-  "exit_status": 127,
+  "stderr": "touch: file exists\nError: Corrupt cache",
+  "exit_status": 1,
   "attempt": 1,
   "instance_id": "macbrew-cat3-040",
   "ip": "10.0.44.40",
@@ -446,18 +446,16 @@
   "history": []
 },
 {
-  "command": "mkdir /tmp/macbrew_cat3_41 && echo ok ; apt install -y nginx ; ln -s /tmp/macbrew_cat3_41 /tmp/macbrew_cat3_41 || echo fallback ; mdir /tmp/macbrew_cat3_41b",
-  "stdout": "fallback\n",
-  "stderr": "apt: command not found\nln: File exists\nzsh: command not found: mdir\nError: SHA256 mismatch",
-  "exit_status": 127,
+  "command": "mkdir /tmp/macbrew_cat3_41 ; touch /tmp/macbrew_cat3_41",
+  "stdout": "",
+  "stderr": "mkdir: directory exists\ntouch: file exists\nError: SHA256 mismatch",
+  "exit_status": 1,
   "attempt": 1,
   "instance_id": "macbrew-cat3-041",
   "ip": "10.0.44.41",
   "tags": [],
   "history": []
 }
-
-
 
 
   
