@@ -409,6 +409,9 @@ Command: echo $(mdir /tmp/macbrew_cat2_29)
 ```
 
 
+The command:
+
+
 ```text
 echo $(mdir /tmp/macbrew_cat2_29)
 ```
