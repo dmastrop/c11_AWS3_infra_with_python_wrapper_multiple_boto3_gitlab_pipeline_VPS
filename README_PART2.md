@@ -239,9 +239,9 @@ This behavior is notable because the scenario simultaneously exercises several c
 
 The validation output is below:
 
-```
 
 ```
+
 root@c53f7f771363:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os POSIX_idempotency_mulit_seg_os_signaled_rewrite/macos_brew_41 --index 22
 
 === RAW LLM RESPONSE ===
@@ -336,6 +336,9 @@ Command: mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
 [DEBUG] schema os_name=macOS, schema os_version=14.0-brew
 
 ```
+
+
+The command:
 
 ```text
 mdir /tmp/macbrew_cat2_23 ; touch /tmp/macbrew_cat2_23
