@@ -39172,6 +39172,16 @@ The scenario also demonstrates a broader characteristic of probabilistic languag
 
 Importantly, the instability was transient and self-correcting. Repeated executions consistently converged on the contract-correct deterministic rewrite, indicating that the underlying contract logic is functioning as intended and that Patch A substantially reduced, though may not completely eliminate, model sensitivity within this specific reasoning region.
 
+But the story does not end here. The index28 (test case29) exhibited yet another behavior in the macos-brew testing (the next OS section that follows this one) indicating that the probabilistic LLM failure theory is not the only theory required to explain what is going on 
+here with near-misses and commands that use subshells. 
+
+This is explained in detail in Preface Update 14 which can be found in the README_PART2.md.
+
+➡️ <b>Continue to <a href="https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README_PART2.md?expanded=true&ref_type=heads&viewer=rich" target="_blank" rel="noopener noreferrer">README_PART2.md</a></b>
+
+
+
+
 
 **Key Architectural Validation**
 
@@ -39283,7 +39293,10 @@ Command: mkdir /tmp/macbrew_idem21 && echo ok ; ln -s /tmp/macbrew_idem21 /tmp/m
 
 The second error is with the model instability issue (see Preface Update 14 in README_PART2.md for details). This time it appears to
 be a 50/50 probability split between the fallback (incorrect) and the rewrite with retry_with_modified_command as it appears to 
-toggle back and forth between the two. See below. Since this is a geometric failure of the model there is nothing we can do about this.
+toggle back and forth between the two. See below.
+
+
+➡️ <b>Continue to <a href="https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README_PART2.md?expanded=true&ref_type=heads&viewer=rich" target="_blank" rel="noopener noreferrer">README_PART2.md</a></b>
 
 
 ```
@@ -39435,9 +39448,14 @@ Command: echo $(mdir /tmp/macbrew_cat2_29)
 ```
 
 Given that this is a 100% failure this must be either a model level failure with shells + near-misses or a contract rule level 
-failure. 
+failure, or a combination of both.  This is because the full promppt in Alpine differs from the full prompt in MacOS-brew and that 
+may be a factor explaining why the failure here is 100% whereas the failure with Alpine was just on the intial try and response from the 
+LLM.
 
-The following test cases were executed as well and these illustrate that it is a contract level failure:
+For MacOS-brew the  following test cases were executed as well and these illustrate that can be corrected by addressing a contract level
+deficiency (note that one near-miss works and the other 2 near-misses fail):
+
+
 
 ```
 
@@ -39564,13 +39582,24 @@ to the domain primitives block and this resolved the issues above:
 
 ```
 This essentially increased the probaility of a near-miss rewrite and decreased the probability of the fallback malformed classification
-at the output layer (logit vector).
+at the output layer (logit vector).  But as stated before that is just one of many theories that can explain this issue.
+
+This patch-d had to be ported to all the OS domains (including zsh and busybox) because they all support near-miss rewrite.
 
 This type of case study is reviewed in detail in Preface Update 14 of README_PART2.md and illustrates why the stress tester 
 schema mutation is a valuable tool for revealing these types of issues. The mutator can expose both model-level falures as well as 
 issues like this where there is a contract rule deficiency that can be fixed with contract rule remediation. 
 
+README_PART2.md can be found at the link below:
+➡️ <b>Continue to <a href="https://gitlab.com/dmastrop/c11_AWS3_infra_with_python_wrapper_multiple_boto3_gitlab_pipeline_VPS/-/blob/main/README_PART2.md?expanded=true&ref_type=heads&viewer=rich" target="_blank" rel="noopener noreferrer">README_PART2.md</a></b>
+
+
+
+
+
 The mutator is the next phase of testing to wrap up Phase4a.1.2 development.
+The development work and the testing with the mutator is in README_PART2.md update part 60.
+
 
 The 41 POSIX test cases are now passing on MacOS-brew. 
 
