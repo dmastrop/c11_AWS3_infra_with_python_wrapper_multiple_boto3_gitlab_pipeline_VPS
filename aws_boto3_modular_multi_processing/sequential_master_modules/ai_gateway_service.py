@@ -6831,7 +6831,8 @@ def recover(request: RecoveryRequest):
         # op command. It should be fallback.
         payload = {
             #"model": "gpt-5.4",
-            "model": "gpt-5.6-sol",
+            #"model": "gpt-5.6-sol",
+            "model": "gpt-6.2-sol",    # upgrade to gpt-6.2-sol for qualification testing. The output validator was refactored as well.
             # temperature is not supported in 5.6-sol. It is inherently "deterministic"
             #"temperature": 0,
             # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
@@ -10661,25 +10662,36 @@ def recover(request: RecoveryRequest):
 
                 # Search every content block rather than assuming
                 # that the first content block contains the plan.
+                # must be a type message and must be a dict
                 for content_item in item.get("content", []):
+                
                     if not isinstance(content_item, dict):
                         continue
 
                     text = content_item.get("text")
 
+                    # at this point it is type message and a dict
                     if isinstance(text, str) and text.strip():
                         plan_text = text
-                        break
+                        break  # break #1
 
+                # finally if text is not empty break out and check if json formatted properly
                 if plan_text is not None:
-                    break
+                    break     # break #2
+                ###### Notes #####
+                #First break: exit content-item loop
+                #Second break: exit output-item loop
+
 
             if plan_text is None:
                 return {
                     "error": f"No plan found in {model} response",
                     "action": "fallback",
                 }
-
+            
+            # last: json.loads checks the format as valid json and then converts it to a python object. Once this is done set plan 
+            # to the python object so that it can be further validated by the code below (cleanup and retry formatting validated).
+            # json.loads converts string to python dict
             try:
                 plan = json.loads(plan_text)
             except json.JSONDecodeError:
@@ -10757,7 +10769,7 @@ def recover(request: RecoveryRequest):
             "fallback",
         }
 
-        # Must be a dict
+        # Must be a valid plan dict.
         if not isinstance(plan, dict):
             return {"error": "Invalid plan format", "action": "fallback"}
 
