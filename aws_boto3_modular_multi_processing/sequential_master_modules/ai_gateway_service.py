@@ -10641,6 +10641,7 @@ def recover(request: RecoveryRequest):
         # preliminary qualification. If its live response envelope
         # differs, this hard gate returns fallback and exposes the
         # incompatibility before the plan reaches module2f.
+        # See README_PART2.md for extensive description of this code design
         # --------------------------------------------------------
         model = payload.get("model", "")
 
