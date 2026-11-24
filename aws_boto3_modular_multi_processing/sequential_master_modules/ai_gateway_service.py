@@ -10574,6 +10574,10 @@ def recover(request: RecoveryRequest):
         response.raise_for_status()
         raw = response.json()
 
+        
+
+
+        ## REVISION1: for gpt-5.4-sol support
         ## --------------------------------------------------------
         ## Extract inner JSON plan from Responses API envelope. 
         ## This only works with gpt-5.4 API response format. Comment this out and replace with the gpt-5.6-sol 
@@ -10583,42 +10587,125 @@ def recover(request: RecoveryRequest):
         #plan = json.loads(text)
 
 
+
+
+        ### REVISION2: for gpt-5.4-sol and gpt-5.6-sol support
+        ## --------------------------------------------------------
+        ## Extract inner JSON plan from Responses API envelope
+        ## This code is modified to work with gpt-5.6-sol which has a very different LLM response payload format than gpt-5.4
+        ## The upgrade in the model is required for some failed multi-segment rewrite test cases in the 21 suite.
+        ## Without this fix the outbound validator is returning the following error in the RAW LLM response EVEN though the actual
+        ## gpt-5.6-sol response as seen in the gitlab console debugs is the correct retry_with_modified_command rewrite 
+        ## The error is: {"error":"list index out of range","action":"fallback"}
+        ## The rest of the outbound validator code can stay the same. 
+        ## --------------------------------------------------------
+        #model = payload.get("model", "")
+
+        #if model == "gpt-5.6-sol":
+        #    # GPT‑5.6 Sol: find the message block
+        #    plan_text = None
+        #    for item in raw.get("output", []):
+        #        if item.get("type") == "message":
+        #            content = item.get("content", [])
+        #            if content and isinstance(content[0], dict) and "text" in content[0]:
+        #                plan_text = content[0]["text"]
+        #                break
+
+        #    if plan_text is None:
+        #        return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
+
+        #    try:
+        #        plan = json.loads(plan_text)
+        #    except json.JSONDecodeError:
+        #        return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+
+        #else:
+        #    # GPT‑5.4 legacy path
+        #    text = raw["output"][0]["content"][0]["text"]
+        #    try:
+        #        plan = json.loads(text)
+        #    except json.JSONDecodeError:
+        #        return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+
+
+
+
+
+        ## REVISION3: for gpt-5.6-sol and gpt-6.2.sol support and back support for gpt-5.4 support as well
         # --------------------------------------------------------
-        # Extract inner JSON plan from Responses API envelope
-        # This code is modified to work with gpt-5.6-sol which has a very different LLM response payload format than gpt-5.4
-        # The upgrade in the model is required for some failed multi-segment rewrite test cases in the 21 suite.
-        # Without this fix the outbound validator is returning the following error in the RAW LLM response EVEN though the actual
-        # gpt-5.6-sol response as seen in the gitlab console debugs is the correct retry_with_modified_command rewrite 
-        # The error is: {"error":"list index out of range","action":"fallback"}
-        # The rest of the outbound validator code can stay the same. 
+        # Extract inner JSON plan from Responses API envelope.
+        #
+        # GPT-5.6 Sol and GPT-6.2 Sol currently use the Sol-model
+        # extraction path. GPT-6.2 Sol is explicitly included for
+        # preliminary qualification. If its live response envelope
+        # differs, this hard gate returns fallback and exposes the
+        # incompatibility before the plan reaches module2f.
         # --------------------------------------------------------
         model = payload.get("model", "")
 
-        if model == "gpt-5.6-sol":
-            # GPT‑5.6 Sol: find the message block
+        sol_models = {
+            "gpt-5.6-sol",
+            "gpt-6.2-sol",
+        }
+
+        if model in sol_models:
             plan_text = None
+
+            # Find the assistant message block.
             for item in raw.get("output", []):
-                if item.get("type") == "message":
-                    content = item.get("content", [])
-                    if content and isinstance(content[0], dict) and "text" in content[0]:
-                        plan_text = content[0]["text"]
+                if not isinstance(item, dict):
+                    continue
+
+                if item.get("type") != "message":
+                    continue
+
+                # Search every content block rather than assuming
+                # that the first content block contains the plan.
+                for content_item in item.get("content", []):
+                    if not isinstance(content_item, dict):
+                        continue
+
+                    text = content_item.get("text")
+
+                    if isinstance(text, str) and text.strip():
+                        plan_text = text
                         break
 
+                if plan_text is not None:
+                    break
+
             if plan_text is None:
-                return {"error": "No plan found in GPT‑5.6‑Sol response", "action": "fallback"}
+                return {
+                    "error": f"No plan found in {model} response",
+                    "action": "fallback",
+                }
 
             try:
                 plan = json.loads(plan_text)
             except json.JSONDecodeError:
-                return {"error": "Invalid JSON plan in GPT‑5.6‑Sol response", "action": "fallback"}
+                return {
+                    "error": f"Invalid JSON plan in {model} response",
+                    "action": "fallback",
+                }
 
         else:
-            # GPT‑5.4 legacy path
-            text = raw["output"][0]["content"][0]["text"]
+            # GPT-5.4 legacy path
+            try:
+                text = raw["output"][0]["content"][0]["text"]
+            except (KeyError, IndexError, TypeError):
+                return {
+                    "error": "No plan found in legacy response",
+                    "action": "fallback",
+                }
+
             try:
                 plan = json.loads(text)
             except json.JSONDecodeError:
-                return {"error": "Invalid JSON plan in legacy response", "action": "fallback"}
+                return {
+                    "error": "Invalid JSON plan in legacy response",
+                    "action": "fallback",
+                }
+
 
 
 
