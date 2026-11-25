@@ -173,6 +173,7 @@ artifact logs per pipeline)
 - Documenting continued model-level failures in GPT. GPT-5.6-sol model-level failures with Linux Powershell rewrite and idempotency (salience collapse Type-I and Type-II).
 - POSIX idempotency + multi-segment LLM cleanup_and_retry support on macos-zsh, macos-brew, and all linux OSes.
 - POSIX precedence with multi-segment rewrite + idempotency + os-signaled remedation on macos-brew and all linux OSes.
+- `gpt-6.2-sol` qualification testing and `ai_gateway_service.py` output-validator redesign for GPT-6.2 Sol
 - LLM contract schema mutator using python + LLM to expand test case variability
 - LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)
 
