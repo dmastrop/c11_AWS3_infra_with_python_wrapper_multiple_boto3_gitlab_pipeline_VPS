@@ -123,17 +123,20 @@ artifact logs per pipeline)
 
 
 
-<br>
+
 
 ## Preface Updates: High Level Architectural & Design Docs, and LLM Model Case Studies
 
-<br>
+The Preface Updates at the bottom are listed first in the document per version control/patch release document format.
 
 - [Preface Update14: Phase 4a.1.2 LLM Contract Rule Engineering VIII: Deterministic Near-Miss Instability, Subshell Interaction Effects, Competing LLM Failure Theories, and the Architectural Requirement for the stress_tester.py Schema Mutator](#prefaceupdate14)
 
 
----
 
+
+
+---
+---
 
 
 
@@ -145,7 +148,11 @@ UPDATES are always added to this document in a top down fashion similar to a ver
 The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
 
 
-- NEED TO ADD UPDATE part 60
+
+
+
+- [Update part 60 Phase 4a.1.2: AI Gatewasy Service Output Validator Refactoring for gpt-6.2.sol Qualification Testing](#top-update60)
+
 - NEED TO ADD UPDATE part 61
 
 - [Update part 62 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update62)
@@ -1153,14 +1160,6 @@ The mutator development and testing will be detailed in the update part 61 of th
 
 
 
-## UPDATES part 60 Output validator modifications for gpt-6.2-sol qualification testing
-
-
-
-
-
-## UPDATES part 61 gpt-6.2-sol qualification testing
-
 
 
 
@@ -1273,4 +1272,992 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ---
 ---
 
+
+
+## UPDATES part 61 gpt-6.2-sol qualification testing
+
+
+
+
+<a name="top-update60"></a>
+
+## UPDATES part 60 — Phase 4a.1.2: AI Gatewasy Service Output Validator Refactoring for gpt-6.2.sol Qualification Testing
+
+
+### Introduction and the purpose of the output validator in ai_gateway_service.py
+
+The `ai_gateway_service.py` module forms the translation and validation boundary between the OpenAI Responses API and the MCP-based execution architecture used by `module2f`.
+
+The AI Gateway Service performs several related functions:
+
+- It receives the execution context supplied by `stress_tester.py` or the AI/MCP hook in `module2f`.
+- It selects the correct OS-specific contract block.
+- It assembles the global contract rules, per-OS rules, and dynamic execution context into the LLM prompt.
+- It sends the completed request payload to the OpenAI Responses API.
+- It extracts the inner recovery plan from the larger API response envelope.
+- It validates the structure of that recovery plan before returning it to the calling MCP client.
+
+The final two responsibilities are performed by the outgoing output validator.
+
+The output validator is necessary because the object returned by the Responses API is not itself the recovery plan.
+
+The API returns a larger response envelope containing request metadata, token-usage information, status information, output items, optional reasoning items, and one or more content blocks. The actual recovery plan is embedded as JSON text inside one of those content blocks.
+
+Conceptually, the gateway receives:
+
+```text
+Complete Responses API envelope
+        ↓
+Output items
+        ↓
+Assistant message item
+        ↓
+Message content blocks
+        ↓
+JSON text containing recovery plan
+```
+
+The gateway cannot safely return the complete API envelope directly to `module2f`.
+
+Instead, the outgoing validator must locate the assistant-generated plan, parse the inner JSON text, and verify that the resulting Python object conforms to the recovery-plan contract.
+
+The required processing boundary is:
+
+```text
+OpenAI Responses API
+        ↓
+Raw response envelope
+        ↓
+Plan extraction
+        ↓
+JSON parsing
+        ↓
+Recovery-plan validation
+        ↓
+Validated plan
+        ↓
+MCP client in module2f
+```
+
+This validation boundary protects the execution pipeline from several classes of failure:
+
+- HTTP and API request failures
+- Authentication and rate-limit errors
+- Missing `output` arrays
+- Empty response content
+- Unexpected output-item types
+- Reasoning items that do not contain the final plan
+- Message items containing multiple content blocks
+- Missing or empty plan text
+- Invalid inner JSON
+- Unknown or missing action values
+- Invalid `cleanup`, `retry`, or `message` field types
+- Action-specific schema violations
+
+The validator therefore has two distinct responsibilities.
+
+The first responsibility is **response-envelope extraction**:
+
+```text
+Can the gateway locate and parse the inner JSON value
+inside the Responses API envelope?
+```
+
+The second responsibility is **recovery-plan contract validation**:
+
+```text
+Does the parsed value represent a structurally valid
+plan that module2f is allowed to receive?
+```
+
+These are separate validation problems.
+
+A response may be valid JSON at the API-envelope level while containing no usable recovery plan.
+
+Likewise, the gateway may successfully extract and parse an inner JSON value that does not conform to the required recovery-plan schema.
+
+For example, the following is valid JSON:
+
+```json
+["fallback"]
+```
+
+However, it is not a valid recovery plan because the contract requires a JSON object containing an allowed `action` field.
+
+Similarly, the following is structurally a JSON object:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": "rm -f /tmp/example",
+  "retry": "touch /tmp/example"
+}
+```
+
+but it is not a valid plan because `cleanup` must be an array rather than a string.
+
+The outgoing validator prevents these malformed or structurally incompatible plans from propagating into the MCP execution path.
+
+When extraction, parsing, or structural validation fails, the gateway returns a controlled fallback object instead of allowing an unhandled exception or an invalid plan to reach `module2f`.
+
+Conceptually:
+
+```text
+Malformed or incompatible response
+        ↓
+Gateway detects failure
+        ↓
+Controlled fallback response
+        ↓
+module2f remains protected
+```
+
+This behavior is particularly important because the recovery plan may eventually control real remediation commands across heterogeneous operating systems.
+
+The AI Gateway Service must therefore treat the LLM response as untrusted until the response passes every validation layer.
+
+---
+
+### Why the Output Validator Was Refactored Before GPT-6.2 Sol Qualification
+
+GPT-6.2 Sol qualification introduced two separate questions:
+
+```text
+Question 1:
+Can the gateway correctly retrieve and validate
+the plan emitted by GPT-6.2 Sol?
+
+Question 2:
+Does GPT-6.2 Sol produce contract-correct
+and deterministic remediation behavior?
+```
+
+These questions had to be tested independently.
+
+If the gateway could not correctly parse the GPT-6.2 Sol response envelope, a failure observed during regression testing could be incorrectly attributed to the model's contract reasoning.
+
+For example, the model might generate the correct recovery plan, but an extractor built around an obsolete positional assumption could fail to locate it and return:
+
+```json
+{
+  "error": "No plan found",
+  "action": "fallback"
+}
+```
+
+That would be an output-extraction defect rather than a contract-behavior failure.
+
+The same distinction had already become important during the earlier transition from GPT-5.4 to GPT-5.6 Sol.
+
+The GPT-5.4 extraction path assumed that the plan existed at a fixed location:
+
+```python
+raw["output"][0]["content"][0]["text"]
+```
+
+GPT-5.6 Sol introduced a different response arrangement in which the first output item could contain encrypted reasoning data while the actual assistant message appeared later in the `output` array.
+
+The GPT-5.6 Sol branch corrected the outer positional assumption by searching for an output item whose type was `message`.
+
+However, that branch still assumed that the first content block inside the message contained the plan text.
+
+Conceptually, the extractor had progressed from:
+
+```text
+Assume output item 0 contains the plan
+```
+
+to:
+
+```text
+Find the message output item,
+but assume content item 0 contains the plan
+```
+
+That implementation worked with the observed GPT-5.6 Sol responses, but it remained unnecessarily dependent on content ordering.
+
+Before GPT-6.2 Sol qualification began, the extractor was therefore refactored to search:
+
+```text
+Every output item
+        ↓
+Select message items
+        ↓
+Every content block inside each message
+        ↓
+Locate a nonempty text string
+        ↓
+Parse the inner JSON plan
+```
+
+This removed the remaining `content[0]` positional dependency and created one shared extraction path for both GPT-5.6 Sol and GPT-6.2 Sol.
+
+The refactor was intentionally completed before semantic regression testing so that the qualification process could isolate model behavior from gateway compatibility.
+
+The qualification sequence became:
+
+```text
+Refactor and harden output extraction
+        ↓
+Add explicit GPT-6.2 Sol model dispatch
+        ↓
+Run one known test
+        ↓
+Confirm response-envelope compatibility
+        ↓
+Confirm inner JSON extraction
+        ↓
+Confirm outgoing structural validation
+        ↓
+Begin semantic contract qualification
+```
+
+Once the gateway successfully extracted and validated a GPT-6.2 Sol plan, subsequent failures could be classified correctly as contract-adherence or model-behavior failures rather than output-validator defects.
+
+The refactor therefore served two purposes:
+
+1. It improved the long-term resilience of the AI Gateway Service against response-envelope variation.
+2. It established a clean and trustworthy testing boundary for GPT-6.2 Sol qualification.
+
+This separation was essential.
+
+The output validator determines whether a model response can safely enter the execution architecture.
+
+The contract regression suites determine whether the validated response is semantically correct.
+
+Together, these layers provide the boundary between:
+
+```text
+Probabilistic model output
+```
+
+and:
+
+```text
+Validated deterministic remediation planning
+```
+
+---
+
+### GPT-6.2-Sol Responses API Plan Extraction and Outgoing Validator Review
+
+Before beginning large-scale Ubuntu schema mutation, the AI Gateway Service must first qualify GPT-6.2 Sol against the existing contract and output-validation architecture.
+
+The new model was released just a short time ago, and qualifying it prior to contract schema mutation testing is an ideal time to
+introduce the new model.
+
+The first qualification concern is not necessarily contract behavior. The first concern is whether GPT-6.2 Sol continues to emit a Responses API envelope that the AI Gateway Service can correctly parse.
+
+In the past upgrades, for example from gpt-5.4 to gpt-5.6-sol, there was an issue with the python output validator code given that
+the gpt-5.4 response message format changed between the two models.
+
+The recovery engine sends the complete contract and dynamic execution context through the Responses API:
+(this code is from the ai_gateway_service.py module which is utilized by the AI/MCP hook that is integrated into the python 
+module2f)
+
+from ai_gateaway_service.py:
+
+
+```python
+prompt = (
+    "You are a recovery engine. "
+    "Follow the contract and rules provided inside the input JSON. "
+    "Return ONLY a JSON object.\n\n"
+    + GLOBAL_RULES
+    + os_rules
+    + "\n\nCONTEXT:\n"
+    + json.dumps(context, indent=2)
+)
+
+payload = {
+    "model": "gpt-6.2-sol",
+    "max_output_tokens": 1024,
+    "input": prompt,
+}
+```
+
+The API endpoint remains:
+
+```python
+LLM_API = "https://api.openai.com/v1/responses"
+```
+
+The existing API key is loaded through the GitLab pipeline environment:
+
+```python
+API_KEY = os.getenv("API_KEY")
+```
+
+A separate API key is not inherently required for a model change. The existing key can continue to be used if the associated account and project have access to GPT-6.2 Sol.
+
+---
+
+### The Responses API Envelope Is Not the Recovery Plan
+
+The value returned by:
+
+```python
+raw = response.json()
+```
+
+is the complete Responses API envelope.
+
+It is not the inner recovery plan.
+
+A simplified GPT-5.6 Sol response resembles:
+
+```text
+raw
+└── output
+    ├── item 0
+    │   ├── type: reasoning
+    │   ├── encrypted_content: ...
+    │   └── content: []
+    │
+    └── item 1
+        ├── type: message
+        └── content
+            └── content item 0
+                ├── type: output_text
+                └── text: "{\"action\": ...}"
+```
+
+The `output` array may contain multiple output items.
+
+Not every output item contains the recovery plan.
+
+For example, the first item may be an encrypted reasoning item:
+
+```json
+{
+  "content": [],
+  "encrypted_content": "...",
+  "type": "reasoning"
+}
+```
+
+The assistant's actual plan may appear in a later message item:
+
+```json
+{
+  "content": [
+    {
+      "annotations": [],
+      "logprobs": [],
+      "text": "{\"action\":\"retry_with_modified_command\",\"cleanup\":[],\"retry\":\"brew install nginx | grep foo\"}",
+      "type": "output_text"
+    }
+  ],
+  "type": "message"
+}
+```
+
+The outgoing validator must therefore locate and parse the inner JSON plan before it can validate the plan's contract semantics.
+
+---
+
+### Deficiency in the Original GPT-5.6 Sol Extractor
+
+The original GPT-5.6 Sol branch improved upon the GPT-5.4 positional extractor by searching the outer `output` array for an item whose type was `message`.
+
+However, after finding that message, the code still assumed that the plan would always be located in the first content block:
+
+```python
+content = item.get("content", [])
+
+if content and isinstance(content[0], dict) and "text" in content[0]:
+    plan_text = content[0]["text"]
+
+```
+
+This retained a positional assumption:
+
+```text
+The first content block must contain the plan text.
+```
+
+That assumption worked for the observed GPT-5.6 Sol payloads, but it was unnecessarily fragile.
+
+A message item may contain multiple content blocks. A future model or API revision could place another content block before the output text.
+
+The improved extractor therefore searches:
+
+```text
+Every output item
+
+and then
+
+Every content block inside each message item
+```
+
+rather than relying on fixed positions.
+
+---
+
+### Unified GPT-5.6 Sol and GPT-6.2 Sol Extraction Path
+
+The initial GPT-6.2 Sol qualification uses a shared Sol-model extraction path:
+
+```python
+model = payload.get("model", "")
+
+sol_models = {
+    "gpt-5.6-sol",
+    "gpt-6.2-sol",
+}
+
+if model in sol_models:
+    plan_text = None
+
+    for item in raw.get("output", []):
+        if not isinstance(item, dict):
+            continue
+
+        if item.get("type") != "message":
+            continue
+
+        for content_item in item.get("content", []):
+            if not isinstance(content_item, dict):
+                continue
+
+            text = content_item.get("text")
+
+            if isinstance(text, str) and text.strip():
+                plan_text = text
+                break
+
+        if plan_text is not None:
+            break
+
+    if plan_text is None:
+        return {
+            "error": f"No plan found in {model} response",
+            "action": "fallback",
+        }
+
+    try:
+        plan = json.loads(plan_text)
+    except json.JSONDecodeError:
+        return {
+            "error": f"Invalid JSON plan in {model} response",
+            "action": "fallback",
+        }
+
+else:
+    try:
+        text = raw["output"][0]["content"][0]["text"]
+    except (KeyError, IndexError, TypeError):
+        return {
+            "error": "No plan found in legacy response",
+            "action": "fallback",
+        }
+
+    try:
+        plan = json.loads(text)
+    except json.JSONDecodeError:
+        return {
+            "error": "Invalid JSON plan in legacy response",
+            "action": "fallback",
+        }
+```
+
+This design explicitly recognizes GPT-5.6 Sol and GPT-6.2 Sol while preserving the GPT-5.4 legacy extraction path. (the legacy else block)
+
+---
+
+### Step 1: Retrieve the Output Array Safely
+
+The outer loop begins with:
+
+```python
+for item in raw.get("output", []):
+```
+
+The expression:
+
+```python
+raw.get("output", [])
+```
+
+performs two operations:
+
+1. It retrieves the value associated with the `output` key.
+2. It returns an empty list if the key does not exist.
+
+Using `.get()` prevents a missing `output` field from immediately raising a `KeyError`.
+
+If `output` is absent, the loop performs zero iterations. `plan_text` remains `None`, and the gateway returns the controlled fallback response:
+
+```json
+{
+  "error": "No plan found in gpt-6.2-sol response",
+  "action": "fallback"
+}
+```
+
+---
+
+### Step 2: Reject Unexpected Output-Item Types
+
+Each output item is expected to be a Python dictionary:
+
+```python
+if not isinstance(item, dict):
+    continue
+```
+
+If an item is not a dictionary, `continue` skips that item and starts the next outer-loop iteration.
+
+This is defensive validation. It prevents later dictionary operations from failing against an unexpected object type.
+
+---
+
+### Step 3: Skip Reasoning and Other Non-Message Items (type screening; type: "message" is the desired item)
+
+The next condition is:
+
+```python
+if item.get("type") != "message":
+    continue
+```
+
+A GPT-5.6 Sol response may contain an output item such as:
+
+```json
+{
+  "type": "reasoning",
+  "content": [],
+  "encrypted_content": "..."
+}
+```
+
+Because its type is `reasoning` rather than `message`, the extractor skips it.
+
+The encrypted reasoning payload is not the recovery plan and is not passed into the outgoing plan validator.
+
+The extractor continues until it finds:
+
+```json
+{
+  "type": "message",
+  "content": [...]
+}
+```
+
+---
+
+### Step 4: Search Every Content Block
+
+After locating a message, the extractor enters the inner loop:
+
+```python
+for content_item in item.get("content", []):
+```
+
+This searches every content block inside the message.
+
+As with the outer loop, `.get("content", [])` safely returns an empty list if the `content` field is absent.
+
+Each content block is also type-checked: (must be a dictionary)
+
+```python
+if not isinstance(content_item, dict):
+    continue
+```
+
+Unexpected non-dictionary content is ignored without crashing the gateway.
+
+---
+
+### Step 5: Locate a Nonempty Text String
+
+The extractor retrieves the potential text value:
+
+```python
+text = content_item.get("text")
+```
+
+For the content block containing the recovery plan, this value may be:
+
+```python
+'{"action":"retry_with_modified_command","cleanup":[],"retry":"brew install nginx | grep foo"}'
+```
+
+At this stage, the plan is still a string containing JSON text.
+
+The next condition verifies that the value is both a string and nonempty:
+
+```python
+if isinstance(text, str) and text.strip():
+    plan_text = text
+    break
+```
+
+The first half:
+
+```python
+isinstance(text, str)
+```
+
+rejects values such as:
+
+```text
+None
+integer
+list
+dictionary
+```
+
+The second half:
+
+```python
+text.strip()
+```
+
+removes leading and trailing whitespace for the purpose of testing whether meaningful content exists.
+
+A value containing only spaces becomes an empty string and is rejected.
+
+A JSON string surrounded by whitespace remains nonempty and is accepted.
+
+The original `text` value is stored in `plan_text`. This is safe because `json.loads()` accepts leading and trailing whitespace.
+
+The first `break` exits only the inner content loop.
+
+---
+
+### Step 6: Exit the Outer Loop After Finding Plan Text
+
+After the inner loop exits, the code checks:
+
+```python
+if plan_text is not None:
+    break
+```
+
+This second `break` exits the outer output-item loop.
+
+The two breaks operate at different nesting levels:
+
+```text
+First break
+    exits the content-block loop
+
+Second break
+    exits the output-item loop
+```
+
+At this point the extractor has found a candidate plan string and no longer needs to search additional API output items.
+
+---
+
+### Step 7: Handle a Missing Plan
+
+If every output item and content block has been searched without finding a nonempty text string, the following condition is reached:
+
+```python
+if plan_text is None:
+    return {
+        "error": f"No plan found in {model} response",
+        "action": "fallback",
+    }
+```
+
+This can occur when:
+
+- The response has no `output` key.
+- The output list is empty.
+- The output contains only reasoning items.
+- A message contains no content blocks.
+- Content blocks do not contain a `text` field.
+- The `text` value is `None`.
+- The `text` value contains only whitespace.
+
+This failure is handled locally and returned as a controlled fallback plan.
+
+---
+
+### Step 8: Parse the Inner JSON Plan
+
+Once a text string is found, the gateway parses it:
+
+```python
+try:
+    plan = json.loads(plan_text)
+except json.JSONDecodeError:
+    return {
+        "error": f"Invalid JSON plan in {model} response",
+        "action": "fallback",
+    }
+```
+
+`json.loads()` both validates and parses the JSON text.
+
+For example:
+
+```python
+plan_text = '{"action":"fallback"}'
+plan = json.loads(plan_text)
+```
+
+produces:
+
+```python
+{"action": "fallback"}
+```
+
+Before parsing:
+
+```text
+plan_text
+    =
+string containing JSON
+```
+
+After parsing:
+
+```text
+plan
+    =
+Python object
+```
+
+If the text contains malformed JSON, `json.loads()` raises `json.JSONDecodeError`.
+
+The gateway catches that specific parsing exception and returns a controlled fallback response.
+
+Valid JSON does not necessarily mean a valid recovery plan.
+
+For example:
+
+```json
+["fallback"]
+```
+
+is valid JSON but is not a valid plan because the contract requires a dictionary.
+
+That distinction is enforced by the downstream outgoing plan validator.
+
+---
+
+### HTTP Status Validation
+
+Before the response envelope is parsed, the gateway performs:
+
+```python
+response.raise_for_status()
+raw = response.json()
+```
+
+`raise_for_status()` allows successful `2xx` responses to continue.
+
+For HTTP error responses such as:
+
+```text
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+429 Too Many Requests
+500 Internal Server Error
+```
+
+`raise_for_status()` raises an exception immediately.
+
+Execution does not proceed to:
+
+```python
+raw = response.json()
+```
+
+or to the plan-extraction logic. (All the code reviewed above in previous sections; all of it is skipped)
+
+The outermost exception handler catches the error:
+
+```python
+except Exception as e:
+    return {
+        "error": str(e),
+        "action": "fallback",
+    }
+```
+
+This protects module2f from an unhandled gateway exception.
+
+The MCP client receives a fallback object rather than a gateway crash.
+
+---
+
+### Four Validation Layers
+
+The outgoing pipeline now contains four distinct validation layers.
+
+#### Layer 1: HTTP and API Validation
+
+Implemented by:
+
+```python
+response.raise_for_status()
+```
+
+This detects transport, authentication, rate-limit, request, and server errors.
+
+#### Layer 2: Responses API Envelope Extraction
+
+Implemented by the nested output and content loops. (reviewed earlier, above)
+
+This locates the assistant message and extracts a nonempty text string.
+
+#### Layer 3: Inner JSON Parsing 
+
+Implemented by:
+
+```python
+json.loads(plan_text)
+```
+
+This converts JSON text into a Python object.
+
+#### Layer 4: Recovery-Plan Contract Validation
+
+Implemented by the existing outgoing plan validator.(This code follows the code blocks above and is at the bottom of the ai_gateway_service.py module)
+
+This validates:
+
+- Plan is a dictionary. (as noted earlier)
+- `action` is recognized.
+- `cleanup` has the correct type.
+- `retry` matches action-specific requirements.
+- `message` is present only when allowed.
+- `abort` contains a meaningful message.
+- `fallback` and `abort` do not contain retry commands.
+
+The extraction layer answers:
+
+```text
+Can the gateway locate and parse an inner JSON value?
+```
+
+The plan validator answers:
+
+```text
+Does that parsed value comply with the recovery-plan contract?
+```
+
+This code did not need to be modified at all.  This code forms the tail end of the diagram in the next section below.
+
+---
+
+### Complete Outgoing Validation Flow
+
+```text
+OpenAI API request
+        ↓
+HTTP response
+        ↓
+response.raise_for_status()
+        ├── non-2xx
+        │       ↓
+        │   outer exception handler
+        │       ↓
+        │   fallback response
+        │
+        └── successful 2xx
+                ↓
+        response.json()
+                ↓
+        complete Responses API envelope
+                ↓
+        iterate output items
+                ↓
+        skip reasoning and non-message items
+                ↓
+        locate message item
+                ↓
+        iterate message content blocks
+                ↓
+        locate nonempty text string
+                ↓
+        json.loads(plan_text)
+                ├── malformed JSON
+                │       ↓
+                │   controlled fallback
+                │
+                └── parsed Python object
+                        ↓
+                validate dictionary
+                        ↓
+                validate action
+                        ↓
+                validate cleanup
+                        ↓
+                validate retry
+                        ↓
+                validate message
+                        ↓
+                return validated plan to module2f
+```
+
+---
+
+### Qualification Strategy for GPT-6.2 Sol
+
+The GPT-6.2 Sol qualification process should begin with a single known Ubuntu test.
+
+The first test has two purposes:
+
+1. Confirm that GPT-6.2 Sol accepts the existing request payload.
+2. Confirm that the unified Sol-model extractor can locate and parse the returned plan.
+
+If the response envelope remains compatible with GPT-5.6 Sol, the new branch should proceed directly into the existing outgoing plan validator.
+
+If the envelope differs, the gateway will return one of the controlled errors:
+
+```text
+No plan found in gpt-6.2-sol response
+```
+
+or:
+
+```text
+Invalid JSON plan in gpt-6.2-sol response
+```
+
+The raw API response can then be inspected before any broader regression testing begins.
+
+Once the single-test extraction path succeeds, the next qualification step is the Ubuntu 41-case suite.
+
+The Ubuntu 41 suite provides coverage for:
+
+- POSIX idempotency
+- Operator-preserving retry
+- Pipelines
+- Logical chains
+- Subshells
+- Deterministic near misses
+- Wrong-OS package-manager rewrites
+- OS-signaled remediation
+- Patch-a behavior
+- Patch-d behavior
+- Rewrite and remediation precedence
+
+A successful Ubuntu 41 run will provide the preliminary regression baseline required before developing the Ubuntu schema mutator.
+
+This testing is documented in the next Update part 61 of this README_PART2.md.
+
+---
+
+
+[Back to top](#top-update60)
+
+
+
+---
+
+
+**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+
+
+---
+---
 
