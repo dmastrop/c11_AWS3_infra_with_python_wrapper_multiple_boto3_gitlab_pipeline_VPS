@@ -6837,7 +6837,7 @@ def recover(request: RecoveryRequest):
             "model": "gpt-6.2-sol",    # upgrade to gpt-6.2-sol for qualification testing. The output validator was also refactored.
             "reasoning": {
                 "mode": "standard",
-                "effort": "medium",
+                "effort": "high",     # change from medium to high reasoning. Medium is performing very poorly and non-determinstic.
             },
 
             # temperature is not supported in 5.6-sol. It is inherently "deterministic"
