@@ -6831,8 +6831,15 @@ def recover(request: RecoveryRequest):
         # op command. It should be fallback.
         payload = {
             #"model": "gpt-5.4",
+            
             #"model": "gpt-5.6-sol",
-            "model": "gpt-6.2-sol",    # upgrade to gpt-6.2-sol for qualification testing. The output validator was refactored as well.
+
+            "model": "gpt-6.2-sol",    # upgrade to gpt-6.2-sol for qualification testing. The output validator was also refactored.
+            "reasoning": {
+                "mode": "standard",
+                "effort": "medium",
+            },
+
             # temperature is not supported in 5.6-sol. It is inherently "deterministic"
             #"temperature": 0,
             # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
@@ -6842,6 +6849,16 @@ def recover(request: RecoveryRequest):
         }
 
 
+
+payload = {
+    "model": "gpt-6.2-sol",
+    "reasoning": {
+        "mode": "standard",
+        "effort": "medium",
+    },
+    "max_output_tokens": 1024,
+    "input": prompt,
+}
 
 
 
