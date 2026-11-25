@@ -36545,13 +36545,13 @@ Test Case 11 (index 10)**
 ---
 
 **Test Case 20 (index 19)**  
-**Command:** `echo $(echo $(mkdir /tmp/zsh_idem20)))`  
+**Command:** `echo $(echo $(mkdir /tmp/zsh_idem20))` (retroactive edit 
 **Operator:** nested subshell  
 **Failures:**  
 - `mkdir` → I  
 
 **Cleanup:** `rmdir /tmp/zsh_idem20`  
-**Retry:** `echo $(echo $(mkdir /tmp/zsh_idem20)))`  
+**Retry:** `echo $(echo $(mkdir /tmp/zsh_idem20))`  
 **Notes:** Preserve both subshell wrappers; retry only failed segment.
 
 ---
@@ -37214,7 +37214,7 @@ No contract modifications were required following validation.
 
 **Test Case 20 (index 19)**
 
-**Command:** `echo $(echo $(mkdir /tmp/busybox_idem20)))`
+**Command:** `echo $(echo $(mkdir /tmp/busybox_idem20))`  (retroactive edit)
 
 **Operator:** nested subshell
 
@@ -37223,7 +37223,7 @@ No contract modifications were required following validation.
 
 **Cleanup:** `rmdir /tmp/busybox_idem20`
 
-**Retry:** `echo $(echo $(mkdir /tmp/busybox_idem20)))`
+**Retry:** `echo $(echo $(mkdir /tmp/busybox_idem20))`
 
 **Notes:** Preserve both subshell wrappers; retry only failed segment.
 
@@ -38098,7 +38098,7 @@ Patch-c: Test Cases 39 and 40
 
 **Test Case 20 (index 19)**
 
-**Command:** `echo $(echo $(mkdir /tmp/ubuntu_idem20))`
+**Command:** `echo $(echo $(mkdir /tmp/ubuntu_idem20))`  (only schema retroactive edit)
 
 **Operator:** nested subshell
 
@@ -38689,7 +38689,8 @@ mkdir && echo ok ; ln \-s ... \|\| echo fallback
 
 The framework correctly used stdout and stderr evidence to determine actual execution flow. Because the first mkdir failed idempotently, echo ok never executed and therefore remained in the retry plan. Conversely, the echo fallback branch executed successfully and was correctly removed from the retry plan. This validated the contract's distinction between command structure and actual execution state.
 
-
+(Note: retroactive edit on the schema for index19(testcase20). Had extra trailing ) which would make it malformed. Remove the ) so
+that it is idempotency)
 
 
 
