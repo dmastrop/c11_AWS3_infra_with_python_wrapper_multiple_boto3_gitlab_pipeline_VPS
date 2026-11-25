@@ -50,7 +50,11 @@ UPDATES are always added to this document in a top down fashion similar to a ver
 
 The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
 
-- [Update part 61 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update61)
+
+- NEED TO ADD UPDATE part 60
+- NEED TO ADD UPDATE part 61
+
+- [Update part 62 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update61)
 
 
 
@@ -1049,14 +1053,20 @@ The mutator development and testing will be detailed in the update part 61 of th
 
 
 
+## UPDATES part 60 Output validator modifications for gpt-6.2-sol qualification testing
 
 
 
 
 
-<a name="top-update61"></a>
+## UPDATES part 61 gpt-6.2-sol qualification testing
 
-## UPDATES part 61 — Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator& Multi‑OS Remediation Validation
+
+
+
+<a name="top-update62"></a>
+
+## UPDATES part 62 — Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator& Multi‑OS Remediation Validation
 
 Rought draft notes
 
@@ -1068,42 +1078,48 @@ test cases can be run against the domain primitives block for a given OS/platfor
 with the LLM feedback loop described earlier. 
 
 
-#### The validator
+##### The validator (Deprecated for LangFuse Phase5 development)
+#
+#The validator for example will validate each test case so that it no longer has to be manually reviewed (also with the help of
+#the LLM) saving up to 95% of the review cycle. It is expected that about 5% of the test cases will have wrong or ambigoius 
+#LLM action plan responses from the LLM that will need manual inspection and perhaps contract revision and refinement. 
+#
+#The execution of the schema test cases when manually done, with the validator hooked in look like this, for example:
+#
+#```
+#root@1a2c8608e0db:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os amazonlinux2023_dnf --index 7
+#
+#=== RAW LLM RESPONSE ===
+#{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/rpm/.rpm.lock"],"retry":["rpm --rebuilddb","dnf install -y nginx"]}
+#========================
+#
+#
+#=== VALIDATION RESULT ===
+#OS: Amazon Linux 2023 2023
+#Command: dnf install -y nginx
+#Status: PASS
+#========================
+#
+#```
+#
+#Note that the VALIDATION RESULT is now displayed. 
+#With the validator in place around 95% of the test cases can be auto-validated permitting a scaling of test cases and test case
+#iteration to harden the contract domain primitives rules block for each OS/platform. 
 
-The validator for example will validate each test case so that it no longer has to be manually reviewed (also with the help of
-the LLM) saving up to 95% of the review cycle. It is expected that about 5% of the test cases will have wrong or ambigoius 
-LLM action plan responses from the LLM that will need manual inspection and perhaps contract revision and refinement. 
-
-The execution of the schema test cases when manually done, with the validator hooked in look like this, for example:
-
-```
-root@1a2c8608e0db:/aws_EC2/sequential_master_modules/LLM_contract_stress_tester# python3 stress_tester.py --os amazonlinux2023_dnf --index 7
-
-=== RAW LLM RESPONSE ===
-{"action":"cleanup_and_retry","cleanup":["rm -f /var/lib/rpm/.rpm.lock"],"retry":["rpm --rebuilddb","dnf install -y nginx"]}
-========================
+##### Semantics files
+#
+#
+#Each OS/platform has a dedicated semantics file that has the hardcoded python logic that would have been required had the LLM
+#AI logic/hook not been avaiable. The validator semantics file are a crude replacement for the LLM, the LLM being far more 
+#adept at handling this. But the validator semantics logic will cover about 95 % of the test cases with an accurate validation 
+#assessment which will enable the test cases to be efficiently scaled. Otherwise it would be very difficult to scale the context
+#based test cases in the schema to adequately stress test the contract rules domain primitives blocks. 
 
 
-=== VALIDATION RESULT ===
-OS: Amazon Linux 2023 2023
-Command: dnf install -y nginx
-Status: PASS
-========================
+#### Overview of the stress_tester.py
 
-```
-
-Note that the VALIDATION RESULT is now displayed. 
-With the validator in place around 95% of the test cases can be auto-validated permitting a scaling of test cases and test case
-iteration to harden the contract domain primitives rules block for each OS/platform. 
-
-#### Semantics files
-
-
-Each OS/platform has a dedicated semantics file that has the hardcoded python logic that would have been required had the LLM
-AI logic/hook not been avaiable. The validator semantics file are a crude replacement for the LLM, the LLM being far more 
-adept at handling this. But the validator semantics logic will cover about 95 % of the test cases with an accurate validation 
-assessment which will enable the test cases to be efficiently scaled. Otherwise it would be very difficult to scale the context
-based test cases in the schema to adequately stress test the contract rules domain primitives blocks. 
+This is presented in README.md (PART 1). The code design and architecture are presented. One does not have to understand the 
+stress_tester.py to use schema mutation. 
 
 
 #### Schema expansion and the mutators.py
@@ -1144,7 +1160,7 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ---
 
 
-[Back to top](#top-update60)
+[Back to top](#top-update62)
 
 
 
