@@ -29,6 +29,66 @@ This document continues project evolution beginning with:
 ---
 
 
+## Some features (README.md and README_PART2.md): 
+
+- Thread level registry tagging of ghost threads, failures, stubs, successes 
+- Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
+- Aggregate and process level orchestration logging for host VPS CPU, swap, and thread level installation status, per process runtime
+- Aggregate and process level execution logging for: registries, successful, failure, missing, total, resurrection candidates (Gitlab
+artifact logs per pipeline)
+- Aggregate gold ip list (AWS orchestration level) logging
+- Resurrection monitor logic that differentiates between install failures, stubs, crashes, and ghost threads (ghost detection logic)
+- Registry snapshots with thread_uuid lineage and tagging for forensics
+- Synthetic edge case injection testing for wrapper brittleness (bash and bash-like commands strace wrapper and injection into STDERR)
+- Extensible whitelist command agnostic package installation capability (apt, yum, dnf) with raw output data orchestrator (STDOUT/STDERR)
+- Intelligent strace wrapper  override logic for shell PID vs subprocess ambiguity  
+- Deterministic artifact lineage across chaotic shell flows
+- Forensic triage via non-whitelisted stderr detection 
+- Resurrection monitor logic with phase-tagged recovery attempts  
+- Cross-platform shell wrapper (strace) resilience with synthetic test injection 
+- Adaptive dynamic watchdog timeout for (node) raw output data orchestrator (process level; adaptive to AWS API congestion)
+- Synthetic futures crash injection for testing ip artifact re-hydration code (as well as hyper-scaling testing to reproduce the same)
+- Post scanning of gitlab console log (module 2b) for ghost ip tag classication (used for resurrection_gatekeeper intelligent decision making)
+- Synthetic ghost ip injection to test gitlab console log scanning
+- Post scanning of gitlab console log (module 2c) for aggregate registry post tag classification (thread futures crashes; used for resurrection_gatekeeper) ​‌
+- Resurrection_gatekeeper function for final intelligent decision making on thread resurrection (module 2d) using post processed aggeregate registry (module 2c) and post processed artifact ghost tagging (module 2b) as input
+- Process level synthetic ghost ip injection to test process level ghost detection code
+- Process level stats reporting of thread classification (failed, missing/ghost, successful, etc)
+- Phase3 resurrection of AWS orchestration level nodes stuck in status 1/2 
+- Requeing and resurrection of thread futures crashes 
+- Requeing and resurrection of ghost threads
+- Spawn multiprocessing mode option (default is forking)
+- Stateful security group rules implementation design
+- Stateful security group drift detection and auto-remediation
+- Adaptive orchestration logic with ML/LLM feedback hooks 
+- AI/MCP integration for command set replay
+- MCPClient/MCPService based architecture
+- AI Gateway Service for LLM integration (OpenAI gpt-5.x)
+- AI/MCP HOOK integration into python modules (using control flow and persistent state variables architecture)
+- Pytest test stage integration into Gitlab pipeline (whitebox testing)
+- Iterative pytest context testing for AI/MCP HOOK integration testing (control flow)
+- Pytest integration testing for registry_entry ai_metadata and tags (whitebox testing)
+- AI Gateway Service start integration during Gitlab pipeline deployment stage
+- Iterative curl context testing with LLM for AI Gateway Service payload contract action rule development and refinement 
+(whitebox testing)
+- Python LLM Contract Stress‑Testing Framework & Multi‑OS Remediation Validation: Multi-OS schema context based testing using curl for domain primitives (Multi-OS) (LLM Contract Engineering whitebox testing)
+- Deterministic, cross‑OS LLM command‑rewrite engine (whitebox testing)
+- LLM Contract Engineering: saliency, instruction overshadowing, contextual dominance, and prompt interference 
+- Per-OS LLM prompt/payload assembly to prevent Cross-OS saliency pollution
+- Upgrade model to gpt-5.6-sol to stabilize the geometry around an unstable decision boundary involving internal salience collapse. (This will improve the deterministic contract performance a lot).
+- Documenting continued model-level failures in GPT. GPT-5.6-sol model-level failures with Linux Powershell rewrite and idempotency (salience collapse Type-I and Type-II).
+- POSIX idempotency + multi-segment LLM cleanup_and_retry support on macos-zsh, macos-brew, and all linux OSes.
+- POSIX precedence with multi-segment rewrite + idempotency + os-signaled remedation on macos-brew and all linux OSes.
+- `gpt-6.2-sol` qualification testing and `ai_gateway_service.py` output-validator redesign for GPT-6.2 Sol
+- LLM contract schema mutator using python + LLM to expand test case variability
+- LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)​‌
+
+---
+
+
+
+
+
 <br>
 
 ## Preface Updates: High Level Architectural & Design Docs, and LLM Model Case Studies
