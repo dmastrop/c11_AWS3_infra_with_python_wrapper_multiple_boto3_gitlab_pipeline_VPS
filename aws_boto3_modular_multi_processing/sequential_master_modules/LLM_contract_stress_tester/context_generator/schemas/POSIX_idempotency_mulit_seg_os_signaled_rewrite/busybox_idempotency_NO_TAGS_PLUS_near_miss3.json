@@ -235,7 +235,7 @@
     },
 
     {
-      "command": "echo $(echo $(mkdir /tmp/busybox_idem20)))",
+      "command": "echo $(echo $(mkdir /tmp/busybox_idem20))",
       "stdout": "",
       "stderr": "mkdir: directory exists",
       "exit_status": 1,
