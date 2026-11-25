@@ -6850,16 +6850,6 @@ def recover(request: RecoveryRequest):
 
 
 
-payload = {
-    "model": "gpt-6.2-sol",
-    "reasoning": {
-        "mode": "standard",
-        "effort": "medium",
-    },
-    "max_output_tokens": 1024,
-    "input": prompt,
-}
-
 
 
         # This is payload6 which is deprecated for the above
