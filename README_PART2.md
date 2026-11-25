@@ -28,8 +28,42 @@ This document continues project evolution beginning with:
 
 ---
 
+## High level project summary (from README.md):
 
-## Some features (README.md and README_PART2.md): 
+Adaptive Resurrection Pipelines: Artifact Rehydration and Ghost Trace Detection in High‑Concurrency Distributed Systems || 
+An AI/MCP‑LLM‑Driven Universal Remediation Engine with ML‑Enhanced Prediction
+
+
+
+Designed and executed a fault‑tolerant, high‑concurrency testing framework to diagnose silent SSH failures across 800+ parallel processes. Implemented watchdog‑retry orchestration and swap‑aware profiling to isolate ghost threads with forensic clarity. The system is built in Python with multi‑processing and multi‑threading support, enabling large‑scale application deployment across thousands of AWS instances as part of a broader infrastructure automation suite.
+
+Testing is performed in a self‑hosted GitLab DevOps pipeline using Docker containers to recursively validate resilience, log fidelity, and system behavior under extreme concurrency.
+
+**• Phase 2 – Resurrection Logic:**  
+Introduced watchdog‑aware monitoring to detect silent thread stalls. Resurrection registries capture failure candidates for postmortem analysis and establish the foundation for adaptive thread recovery.  
+*These components form the core of Plane‑2 orchestration‑level remediation, handling ghost detection, drift correction, futures crashes, and AWS‑related instability.*
+
+**• Phase 3 – Thread Healing & Adaptive Retry:**  
+Threads flagged in Phase 2 are dynamically respawned or rerouted during execution. This includes resurrection monitors, fallback pools, and override logic tuned to system state, swap pressure, and orchestration conditions.  
+*Together, Phases 2 and 3 provide a mature, battle‑tested orchestration recovery layer that stabilizes large‑scale distributed execution.*
+
+**• Phase 4 – AI/MCP‑LLM Integration & ML Prediction:**  
+Phase4a introduces a contract‑driven AI/MCP HOOK for command‑level remediation (Plane 1), enabling structured cleanup, command rewriting, idempotency enforcement, and safe replay.  
+Phase4b introduces ML‑driven prediction and anomaly detection across both failure planes, ingesting registry_entry artifacts, ai_metadata, ai_tags, and full GitLab console logs to forecast failures, detect drift, and guide orchestration decisions.  
+*ML spans both the command plane and the orchestration plane, learning from AI‑assisted command recovery as well as large‑scale runtime behavior.*  
+Together, these components form a universal remediation engine across various platforms and operating systems, capable of real‑time reasoning, adaptive recovery, and predictive orchestration.
+
+**• Phase 5+ – Autonomous LLM‑Based Contract Evolution (Phase5) and Universal Remediation Architecture:** 
+This project introduces a multi‑plane remediation architecture for stabilizing large‑scale distributed systems under high concurrency, noisy execution environments, and heterogeneous OS behaviors. Phases 2 and 3 establish a resilient orchestration substrate capable of resurrection, drift correction, ghost detection, and adaptive thread healing. Phase 4 integrates an AI/MCP‑driven contract layer for command‑level remediation and ML‑based prediction across both failure planes. Phase 5 extends this foundation into an autonomous, self‑evolving contract framework and a universal remediation paradigm capable of operating across any deterministic substrate—including APIs, IaC engines, security policy compilers, workflow orchestrators, data pipelines, and compliance evaluators. Extensive empirical testing across Phases 1–4 demonstrates that these concepts are not theoretical but fully implementable in real distributed systems. LangFuse will play a big part in the self-evolving contract framework during high node scaling with real AWS nodes.
+
+
+
+
+
+
+---
+
+## Some features (from README.md): 
 
 - Thread level registry tagging of ghost threads, failures, stubs, successes 
 - Registry tagging for scenario-specific traceability (thread_uuid, status, attempt, timestamp, ip, tags)
@@ -81,7 +115,7 @@ artifact logs per pipeline)
 - POSIX precedence with multi-segment rewrite + idempotency + os-signaled remedation on macos-brew and all linux OSes.
 - `gpt-6.2-sol` qualification testing and `ai_gateway_service.py` output-validator redesign for GPT-6.2 Sol
 - LLM contract schema mutator using python + LLM to expand test case variability
-- LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)​‌
+- LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)
 
 ---
 
