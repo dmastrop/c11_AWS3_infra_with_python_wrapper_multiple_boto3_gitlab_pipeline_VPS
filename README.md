@@ -176,6 +176,8 @@ artifact logs per pipeline)
 - `gpt-6.2-sol` qualification testing and `ai_gateway_service.py` output-validator redesign for GPT-6.2 Sol
 - LLM contract schema mutator using python + LLM to expand test case variability
 - LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)
+- Continued in README_PART2.md
+
 
 ---
 
