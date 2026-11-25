@@ -36545,7 +36545,7 @@ Test Case 11 (index 10)**
 ---
 
 **Test Case 20 (index 19)**  
-**Command:** `echo $(echo $(mkdir /tmp/zsh_idem20))` (retroactive edit 
+**Command:** `echo $(echo $(mkdir /tmp/zsh_idem20))` (retroactive edit) 
 **Operator:** nested subshell  
 **Failures:**  
 - `mkdir` → I  
