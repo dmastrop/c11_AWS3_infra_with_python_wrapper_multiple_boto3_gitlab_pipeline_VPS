@@ -28,18 +28,6 @@ This document continues project evolution beginning with:
 
 ---
 
-## Latest milestone updates in this README:
-
-NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
-UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
-
-The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
-
-- [Update part 60 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update60)
-
-
----
-
 
 <br>
 
@@ -50,10 +38,19 @@ The Preface updates always sit at the top of all the other updates because they 
 - [Preface Update14: Phase 4a.1.2 LLM Contract Rule Engineering VIII: Deterministic Near-Miss Instability, Subshell Interaction Effects, Competing LLM Failure Theories, and the Architectural Requirement for the stress_tester.py Schema Mutator](#prefaceupdate14)
 
 
+---
 
 
 
 
+## Latest milestone updates in this README:
+
+NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
+UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
+
+The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
+
+- [Update part 61 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update61)
 
 
 
@@ -1037,7 +1034,7 @@ By industrializing the discovery process, the mutator transforms contract engine
 
 The Alpine and macOS-brew investigations provide direct evidence supporting the architectural necessity of the stress_tester.py schema mutator.
 
-The mutator development and testing will be detailed in the update part 60 of this README_PART2.md.
+The mutator development and testing will be detailed in the update part 61 of this README_PART2.md.
 
 ---
 
@@ -1057,9 +1054,9 @@ The mutator development and testing will be detailed in the update part 60 of th
 
 
 
-<a name="top-update60"></a>
+<a name="top-update61"></a>
 
-## UPDATES part 60 — Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator& Multi‑OS Remediation Validation
+## UPDATES part 61 — Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator& Multi‑OS Remediation Validation
 
 Rought draft notes
 
