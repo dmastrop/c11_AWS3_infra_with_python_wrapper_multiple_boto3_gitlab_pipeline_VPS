@@ -123,7 +123,9 @@ artifact logs per pipeline)
 
 <a name="README_PART2_TABLE_OF_CONTENTS"></a>
 
-## Preface Updates: High Level Architectural & Design Docs, and LLM Model Case Studies
+## README_PART2 Table of Contents (Preface Updates and Development Updates)
+
+### Preface Updates: High Level Architectural & Design Docs, and LLM Model Case Studies
 
 The Preface Updates at the bottom are listed first in the document per version control/patch release document format.
 
@@ -135,7 +137,7 @@ The Preface Updates at the bottom are listed first in the document per version c
 ---
 
 
-## Latest milestone updates in this README:
+### Latest milestone updates in this README:
 
 NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
 UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
