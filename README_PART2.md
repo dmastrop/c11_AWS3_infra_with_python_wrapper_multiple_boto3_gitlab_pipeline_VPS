@@ -127,7 +127,7 @@ artifact logs per pipeline)
 
 ### Preface Updates: High Level Architectural & Design Docs, and LLM Model Case Studies
 
-The Preface Updates at the bottom are listed first in the document per version control/patch release document format.
+NOTE: The Preface Updates sections are top down. The bottom updates are listed first in the document per version control/patch release document format.
 
 - [Preface Update14: Phase 4a.1.2 LLM Contract Rule Engineering VIII: Deterministic Near-Miss Instability, Subshell Interaction Effects, Competing LLM Failure Theories, and the Architectural Requirement for the stress_tester.py Schema Mutator](#prefaceupdate14)
 
@@ -141,15 +141,10 @@ The Preface Updates at the bottom are listed first in the document per version c
 NOTE: The sections are top down. In other words, the latest updates at the bottom are listed first in the document, because the 
 UPDATES are always added to this document in a top down fashion similar to a version control/patch release document.
 
-The Preface updates always sit at the top of all the other updates because they are fundamental archiectural docs.
-
-
-
-
 
 - [Update part 60 Phase 4a.1.2: AI Gatewasy Service Output Validator Refactoring for gpt-6.2.sol Qualification Testing](#top-update60)
 
-- NEED TO ADD UPDATE part 61
+- [Update part 61 Phase 4a.1.2: GPT-6.2-Sol Preliminary Contract Qualification: Reasoning-Configuration Sensitivity, Ubuntu 41 Validation, and Cross-OS Nested-Subshell Retesting](#top-update61)
 
 - [Update part 62 Phase 4a.1.2: Python LLM Contract Stress‑Testing Framework with the Stress Tester Schema Mutator](#top-update62)
 
@@ -1269,15 +1264,1173 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ---
 
 
+<a name="top-update61"></a>
 
-## UPDATES part 61 gpt-6.2-sol qualification testing
+## UPDATES part 61 — Phase 4a.1.2: GPT-6.2-Sol Preliminary Contract Qualification: Reasoning-Configuration Sensitivity, Ubuntu 41 Validation, and Cross-OS Nested-Subshell Retesting
 
+
+
+
+### Introduction
+
+The transition from GPT-5.6 Sol to GPT-6.2 Sol could not be treated as a simple model-name substitution.
+
+The AI Gateway Service depends on the LLM to interpret a large deterministic recovery contract, resolve precedence among competing rule families, preserve complex shell structures, and return a bounded remediation plan that can safely enter the MCP execution architecture. A model may remain fully compatible with the OpenAI Responses API while behaving very differently at the semantic contract layer.
+
+Update 60 established the first qualification boundary by refactoring the outgoing output validator in `ai_gateway_service.py`. That work confirmed that the gateway could locate, extract, parse, and structurally validate recovery plans returned by GPT-6.2 Sol.
+
+The next qualification stage had a different purpose:
+
+```text
+Update 60
+    ↓
+Can the AI Gateway Service correctly extract
+and validate the GPT-6.2 Sol response?
+
+Update 61
+    ↓
+Can GPT-6.2 Sol correctly and deterministically
+follow the existing recovery contract?
+```
+
+This distinction was essential.
+
+A response may be structurally valid but semantically incorrect. The model may return valid JSON, use an allowed action, and satisfy every outgoing validator type check while still generating an incorrect cleanup command, changing retry semantics, losing shell operators, applying the wrong precedence rule, or producing different remediation strategies for identical input.
+
+The Ubuntu 41-case suite was selected as the first semantic qualification gate because Ubuntu serves as the canonical Linux-family contract domain and because the suite exercises several of the most difficult reasoning boundaries developed during Phase 4a.1.2.
+
+The suite combines:
+
+- POSIX idempotency remediation
+- Minimal cleanup generation
+- Original-command retry preservation
+- Semicolon, `&&`, and `||` chains
+- Pipelines
+- Valid and nested command substitutions
+- Deterministic utility near-miss correction
+- Wrong-OS package-manager rewriting
+- Multi-segment rewrite preservation
+- Rewrite-versus-idempotency precedence
+- Rewrite-versus-OS-signaled remediation precedence
+- Idempotency-versus-OS-signaled remediation precedence
+- Patch-a valid-subshell behavior
+- Patch-d deterministic near-miss behavior
+
+The qualification process deliberately preserved the existing contract rules.
+
+GPT-5.6 Sol had already demonstrated stable behavior against those rules. GPT-6.2 Sol and its request configuration were therefore treated as the candidate variables. The contract was not rewritten to accommodate model-specific output drift.
+
+Initial GPT-6.2 Sol testing revealed that API compatibility alone was not sufficient. Under standard reasoning mode, medium reasoning effort, and a 1024-token output allowance, the model returned structurally valid plans but generated substantially different cleanup strategies for repeated executions of the same elementary test case.
+
+The observed differences extended beyond harmless lexical variation. The model alternated between direct cleanup commands and newly synthesized conditional shell programs containing additional predicates and control flow.
+
+This produced an important qualification distinction:
+
+```text
+Exact-string variation
+    may be acceptable when commands remain within
+    the same bounded remediation family.
+
+Remediation-family variation
+    is not acceptable when identical input produces
+    materially different execution strategies.
+```
+
+The qualification process therefore evaluated both correctness and determinism.
+
+Reasoning effort was subsequently increased from `medium` to `high`, and the maximum output-token allowance was increased from `1024` to `4096`. No contract rule, schema expectation, OS-domain block, API endpoint, or outgoing plan-validation rule was changed.
+
+That configuration change materially improved the model’s behavior.
+
+Repeated execution of the original failing test became stable and contract-correct. The complete Ubuntu 41-case suite then passed under the higher-reasoning configuration.
+
+The qualification run also exposed an unrelated but important schema-fixture defect. Test Case 20 was intended to validate idempotency remediation inside a valid nested command substitution, but several OS schemas contained an additional closing parenthesis that made the command syntactically malformed.
+
+GPT-6.2 Sol correctly returned `fallback` for the malformed Ubuntu fixture. The schemas and corresponding documentation were audited and corrected, after which all seven OS-domain Test Case 20 fixtures passed their targeted nested-subshell retests.
+
+This chapter documents the complete semantic qualification sequence:
+
+```text
+GPT-6.2 Sol standard/medium instability
+        ↓
+Remediation-family nondeterminism identified
+        ↓
+Reasoning effort increased
+        ↓
+Output-token allowance increased
+        ↓
+Repeated deterministic behavior confirmed
+        ↓
+Ubuntu 41 suite validated
+        ↓
+Malformed nested-subshell fixture discovered
+        ↓
+Cross-OS schema audit completed
+        ↓
+All seven corrected Test Case 20 fixtures passed
+        ↓
+GPT-6.2 Sol preliminarily qualified for Ubuntu
+```
+
+The broader conclusion is that a qualified LLM deployment baseline cannot be defined by model identifier alone.
+
+For deterministic remediation, the effective baseline includes:
+
+```text
+Model identifier
++
+Contract revision
++
+Reasoning mode
++
+Reasoning effort
++
+Output-token allowance
++
+Output-validator implementation
++
+Regression-suite evidence
+```
+
+Changing any of these variables may change model behavior and must therefore trigger a new qualification event.
+
+Update 61 records the first such qualification for GPT-6.2 Sol and establishes the configuration required before broader cross-OS regression testing and Ubuntu schema-mutator development can continue.
+
+
+### Qualification Objective
+
+Before beginning Ubuntu schema-mutator development, GPT-6.2 Sol was evaluated as a potential replacement for GPT-5.6 Sol.
+
+The primary motivation for the upgrade was economic. GPT-6.2 Sol provides substantially lower standard token pricing than GPT-5.6 Sol.
+
+However, lower token pricing is useful only if the replacement model continues to satisfy the existing deterministic recovery contract.
+
+The qualification process therefore evaluated two separate concerns:
+
+```text
+API and output-envelope compatibility
+
+and
+
+Semantic contract compatibility
+```
+
+Output-envelope compatibility was addressed separately through the unified GPT-5.6 Sol and GPT-6.2 Sol Responses API extractor.  This was presented in a separate update 60 in this README_PART2.md (see table of contents at top)
+
+Once that path was confirmed operational, qualification moved to the more important question:
+
+```text
+Can GPT-6.2 Sol follow the existing contract
+safely, correctly, and deterministically?
+```
+
+No contract modifications were made during this qualification process.
+
+GPT-6.2 Sol was evaluated against the established contract and regression suites rather than changing the contract to accommodate model-specific behavior.
+
+---
+
+### Initial Configuration
+
+The first GPT-6.2 Sol qualification configuration used:
+
+```python
+payload = {
+    "model": "gpt-6.2-sol",
+    "reasoning": {
+        "mode": "standard",
+        "effort": "medium",
+    },
+    "max_output_tokens": 1024,
+    "input": prompt,
+}
+```
+
+This configuration was compatible with the Responses API and the outgoing plan validator.
+
+The model returned valid JSON plans, and the gateway successfully:
+
+```text
+located the message output item
+        ↓
+extracted the output_text content
+        ↓
+parsed the inner JSON plan
+        ↓
+validated the plan structure
+        ↓
+returned the plan to stress_tester.py
+```
+
+However, structural compatibility did not imply semantic contract compatibility.
+
+---
+
+### Standard/Medium Instability
+
+GPT-6.2 Sol exhibited severe cleanup-generation instability under:
+
+```text
+reasoning mode:
+    standard
+
+reasoning effort:
+    medium
+
+max_output_tokens:
+    1024
+```
+
+Repeated executions of the same elementary Ubuntu idempotency test produced several materially different cleanup strategies.
+
+The input remained unchanged:
+
+```text
+Command:
+mkdir /tmp/ubuntu_idem1
+
+stderr:
+mkdir: directory exists
+
+Expected action:
+cleanup_and_retry
+
+Expected cleanup:
+rmdir /tmp/ubuntu_idem1
+
+Expected retry:
+mkdir /tmp/ubuntu_idem1
+```
+
+The model consistently selected the correct action and usually preserved the original retry command.
+
+However, cleanup generation varied substantially.
+
+Observed cleanup variants included:
+
+```sh
+rmdir /tmp/ubuntu_idem1
+```
+
+```sh
+rmdir -- /tmp/ubuntu_idem1
+```
+
+```sh
+if [ -d /tmp/ubuntu_idem1 ]; then
+    rmdir /tmp/ubuntu_idem1
+fi
+```
+
+```sh
+if [ -d /tmp/ubuntu_idem1 ]; then
+    rmdir -- /tmp/ubuntu_idem1
+fi
+```
+
+and:
+
+```sh
+if [ -d /tmp/ubuntu_idem1 ] && [ ! -L /tmp/ubuntu_idem1 ]; then
+    rmdir -- /tmp/ubuntu_idem1
+fi
+```
+
+An earlier execution also changed the original retry command from:
+
+```sh
+mkdir /tmp/ubuntu_idem1
+```
+
+to:
+
+```sh
+mkdir -p -- /tmp/ubuntu_idem1
+```
+
+That modification changed the semantics of the original operation and was contract-incorrect.
+
+---
+
+### Exact-String Determinism Versus Remediation-Family Determinism
+
+Not every lexical variation necessarily represents a different remediation strategy.
+
+For example:
+
+```sh
+rmdir /tmp/ubuntu_idem1
+```
+
+and:
+
+```sh
+rmdir -- /tmp/ubuntu_idem1
+```
+
+belong to the same bounded remediation family for this test.
+
+Both are:
+
+```text
+single direct cleanup commands
+using rmdir
+against the same target
+without additional control flow
+followed by the original retry
+```
+
+The `--` token serves as an end-of-options marker and does not change the intended remediation for the supplied path.
+
+By contrast, the generated conditional forms introduced:
+
+- New shell control flow
+- Additional predicates
+- Directory-type testing
+- Symbolic-link testing
+- New behavioral branches
+- A larger execution surface
+- Cleanup logic not required by the contract
+
+The qualification requirement was therefore not limited to byte-for-byte output identity.
+
+The minimum required property was **remediation-family determinism**:
+
+```text
+Identical input and identical contract rules
+must produce the same bounded remediation strategy.
+```
+
+GPT-6.2 Sol standard/medium failed this requirement.
+
+It alternated between direct cleanup commands and newly synthesized conditional shell programs.
+
+---
+
+### Standard/Medium Qualification Result
+
+The initial configuration produced the following result:
+
+```text
+Responses API compatibility:
+    PASS
+
+Unified output extraction:
+    PASS
+
+Outgoing structural validation:
+    PASS
+
+Action classification:
+    PASS
+
+Cleanup-family determinism:
+    FAIL
+
+Exact contract adherence:
+    FAIL
+
+Overall qualification:
+    FAIL
+```
+
+The contract was not changed in response to these failures.
+
+GPT-5.6 Sol had already demonstrated stable behavior under the same contract rules.
+
+The candidate model and its configuration remained the unqualified variables.
+
+---
+
+### Increased Reasoning Configuration
+
+The next qualification step increased reasoning effort and output-token capacity while retaining standard reasoning mode:
+
+```python
+payload = {
+    "model": "gpt-6.2-sol",
+    "reasoning": {
+        "mode": "standard",
+        "effort": "high",
+    },
+    "max_output_tokens": 4096,
+    "input": prompt,
+}
+```
+
+Only two settings changed:
+
+```text
+reasoning effort:
+    medium → high
+
+max_output_tokens:
+    1024 → 4096
+```
+
+The contract, OS rules, schema, output validator, and API endpoint remained unchanged.
+
+The increased token allowance was used because internal reasoning tokens and visible output tokens share the `max_output_tokens` budget.
+
+Although the final recovery plans are small, high reasoning effort may require additional internal output-token capacity before the final JSON plan is generated.
+
+---
+
+### Stable Repeated Index-0 Results
+
+After changing to standard/high with a 4096-token allowance, Ubuntu index 0 was executed repeatedly.
+
+All six repeated executions returned the same contract-correct plan:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/ubuntu_idem1"
+  ],
+  "retry": "mkdir /tmp/ubuntu_idem1"
+}
+```
+
+No conditional shell programs were generated.
+
+No additional predicates were introduced.
+
+No flags were invented.
+
+The original retry command was preserved exactly.
+
+The result changed from:
+
+```text
+standard + medium:
+    multiple competing cleanup strategies
+```
+
+to:
+
+```text
+standard + high:
+    repeated deterministic contract adherence
+```
+
+This demonstrated that reasoning configuration was materially significant for this workload.
+
+---
+
+### Ubuntu 41 Qualification Suite
+
+The complete Ubuntu 41 suite was then executed using:
+
+```text
+Model:
+    GPT-6.2 Sol
+
+Reasoning mode:
+    standard
+
+Reasoning effort:
+    high
+
+Maximum output tokens:
+    4096
+```
+
+The suite contains three major categories.
+
+---
+
+#### Category 1: POSIX Idempotency and Operator Preservation
+
+Indexes 0 through 20 validate:
+
+- Basic `mkdir` idempotency
+- Basic `touch` idempotency
+- Basic `ln` idempotency
+- Non-remediable `rmdir` failure
+- Non-remediable `kill` failure
+- Semicolon chains
+- Logical `&&` chains
+- Logical `||` chains
+- Pipelines
+- Valid command substitutions
+- Nested command substitutions
+- Multiple same-path idempotency failures
+- Selective retry generation
+- Preservation of skipped operator branches
+- Preservation of successful surrounding segments
+
+GPT-6.2 Sol correctly applied the basic cleanup mappings:
+
+```text
+mkdir: directory exists
+    →
+rmdir <path>
+    →
+retry original mkdir command
+```
+
+```text
+touch: file exists
+    →
+rm -f <path>
+    →
+retry original touch command
+```
+
+```text
+ln: file exists
+    →
+rm -f <path>
+    →
+retry original ln command
+```
+
+The model correctly returned `fallback` for the non-remediable cases:
+
+```text
+rmdir: not removed
+```
+
+and:
+
+```text
+kill: no such process
+```
+
+The model also preserved required shell structure across:
+
+```text
+;
+&&
+||
+|
+$(...)
+```
+
+Successful segments and fallback branches were omitted from retry where required, while operator structures enclosing idempotent failures were retained.
+
+Examples included:
+
+```text
+mkdir /tmp/ubuntu_idem7 && touch /tmp/ubuntu_idem7
+```
+
+which remained:
+
+```text
+mkdir /tmp/ubuntu_idem7 && touch /tmp/ubuntu_idem7
+```
+
+and:
+
+```text
+echo $(touch /tmp/ubuntu_idem10)
+```
+
+which remained:
+
+```text
+echo $(touch /tmp/ubuntu_idem10)
+```
+
+The complex mixed-operator case at index 20 also correctly removed the successful fallback branch while preserving the required `&&` and semicolon structure.
+
+---
+
+#### Category 2: Deterministic Rewrite Precedence
+
+Indexes 21 through 30 validate deterministic rewrite precedence over shell-level idempotency.
+
+These cases include:
+
+- `dnf` to Ubuntu `apt-get`
+- `yum` to Ubuntu `apt-get`
+- `apk add` to Ubuntu `apt-get`
+- `mdir` to `mkdir`
+- `tuch` to `touch`
+- `grpe` to `grep`
+- Semicolon chains
+- Logical chains
+- Pipelines
+- Command substitutions
+- Multiple rewrites in the same multi-segment command
+
+GPT-6.2 Sol correctly used:
+
+```text
+retry_with_modified_command
+```
+
+for all ten cases.
+
+Wrong-OS package-manager commands were rewritten to:
+
+```text
+apt-get install -y <pkg>
+```
+
+Near-miss utilities were corrected without applying idempotency cleanup prematurely.
+
+For example:
+
+```text
+echo $(mdir /tmp/ubuntu_cat2_29)
+```
+
+was rewritten as:
+
+```text
+echo $(mkdir /tmp/ubuntu_cat2_29)
+```
+
+The model preserved the valid command-substitution wrapper and corrected only the near-miss utility.
+
+The most complex Category 2 case contained both:
+
+```text
+dnf install nginx
+```
+
+and:
+
+```text
+mdir /tmp/ubuntu_cat2_31b
+```
+
+within a longer multi-operator command.
+
+GPT-6.2 Sol correctly produced:
+
+```text
+apt-get install -y nginx
+```
+
+and:
+
+```text
+mkdir /tmp/ubuntu_cat2_31b
+```
+
+while preserving all unaffected operators and segments.
+
+---
+
+#### Category 3: Rewrite, Idempotency, and OS-Signaled Remediation Precedence
+
+Indexes 31 through 40 combine:
+
+- Wrong-OS package-manager rewrites
+- Utility near misses
+- Shell-level idempotency
+- Repository errors
+- Integrity failures
+- DNS failures
+- OS-signaled remediation indicators
+
+Indexes 31 through 37 verify that unresolved deterministic rewrites take precedence over:
+
+```text
+shell-level idempotency
+
+and
+
+OS-signaled remediation
+```
+
+GPT-6.2 Sol correctly selected:
+
+```text
+retry_with_modified_command
+```
+
+in every case where a deterministic rewrite remained unresolved.
+
+For example, index 31 contained:
+
+```text
+dnf: command not found
+mkdir: directory exists
+Hash Sum mismatch
+```
+
+The model correctly rewrote the `dnf` command first rather than prematurely applying either idempotency cleanup or Hash Sum mismatch remediation.
+
+Indexes 38 through 40 contain no remaining deterministic rewrite candidate.
+
+These cases verify that shell-level idempotency takes precedence over competing OS-signaled indicators.
+
+GPT-6.2 Sol correctly returned `cleanup_and_retry` for:
+
+```text
+mkdir: directory exists
++
+Hash Sum mismatch
+```
+
+```text
+touch: file exists
++
+Repository is unavailable
+```
+
+and:
+
+```text
+mkdir: directory exists
++
+touch: file exists
++
+Temporary failure resolving archive.ubuntu.com
+```
+
+The model applied the appropriate shell-level cleanup and retried the original command before considering OS-signaled remediation on a subsequent invocation.
+
+---
+
+#### Bounded Cleanup Variants
+
+Two Ubuntu results used:
+
+```sh
+rm -f -- /tmp/path
+```
+
+instead of:
+
+```sh
+rm -f /tmp/path
+```
+
+These were accepted as bounded operationally equivalent variants.
+
+Both forms retain:
+
+- The same cleanup utility
+- The same target
+- The same force behavior
+- The same retry command
+- The same remediation family
+- No additional predicates
+- No conditional control flow
+
+These forms are fundamentally different from the standard/medium conditional programs that introduced new remediation strategies.
+
+The qualification standard therefore distinguishes between:
+
+```text
+acceptable bounded command variants
+```
+
+and:
+
+```text
+unacceptable remediation-family drift
+```
+
+---
+
+#### Test Case 20 Fixture Discovery
+
+During the Ubuntu 41 review, Test Case 20 at index 19 initially returned:
+
+```json
+{
+  "action": "fallback"
+}
+```
+
+The schema command was:
+
+```sh
+echo $(echo $(mkdir /tmp/ubuntu_idem20)))
+```
+
+This command contains:
+
+```text
+2 command-substitution openings
+3 closing parentheses
+```
+
+The additional closing parenthesis makes the command syntactically malformed.
+
+GPT-6.2 Sol therefore correctly applied the malformed-subshell rule and returned `fallback`.
+
+However, Test Case 20 was not intended to validate malformed-shell handling.
+
+It was intended to validate:
+
+```text
+POSIX mkdir idempotency
++
+valid nested command substitution
++
+full nesting preservation
+```
+
+The intended command was:
+
+```sh
+echo $(echo $(mkdir /tmp/ubuntu_idem20))
+```
+
+with two openings and two matching closings.
+
+This was a schema-fixture defect rather than a model or contract defect.
+
+---
+
+### Cross-OS Schema Audit on Test Case 20
+
+The Test Case 20 fixtures were audited across seven OS-domain schemas.
+
+The audit found:
+
+```text
+Correct before audit:
+    Alpine
+    Fedora
+    macOS-brew
+
+Incorrect before audit:
+    Ubuntu
+    Debian
+    BusyBox
+    macOS-zsh
+```
+
+Four of the seven schemas contained the unintended additional closing parenthesis.
+
+The affected schemas and corresponding README documentation were corrected to use balanced nested command substitution.
+
+The malformed form remains useful as a future negative test:
+
+```sh
+echo $(echo $(mkdir /tmp/test)))
+```
+
+Expected result:
+
+```json
+{
+  "action": "fallback"
+}
+```
+
+However, that form belongs in a malformed-command suite rather than the POSIX idempotency suite.
+
+---
+
+### Corrected Cross-OS Index-19 Retesting
+
+After correcting the four affected schemas, Test Case 20 was rerun across all seven OS domains using GPT-6.2 Sol standard/high with a 4096-token allowance.
+
+All seven schemas passed.
+
+#### Ubuntu
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir -- /tmp/ubuntu_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/ubuntu_idem20))"
+}
+```
+
+#### BusyBox
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/busybox_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/busybox_idem20))"
+}
+```
+
+#### macOS-zsh
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/zsh_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/zsh_idem20))"
+}
+```
+
+#### Debian
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/debian_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/debian_idem20))"
+}
+```
+
+#### Fedora
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/fedora_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/fedora_idem20))"
+}
+```
+
+#### Alpine
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/alpine_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/alpine_idem20))"
+}
+```
+
+#### macOS-brew
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/macbrew_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/macbrew_idem20))"
+}
+```
+
+The Ubuntu `rmdir --` form was accepted as the same bounded direct-cleanup family as `rmdir`.
+
+No domain generated conditional shell programs.
+
+All seven results:
+
+- Selected `cleanup_and_retry`
+- Applied direct `rmdir` cleanup
+- Preserved both nested command-substitution wrappers
+- Retried the original nested command
+- Confirmed Patch-a behavior
+- Preserved full nesting depth
+
+---
+
+### Corrected Ubuntu 41 Result
+
+The original Ubuntu qualification run produced:
+
+```text
+40 intended fixtures:
+    PASS
+
+1 malformed fixture:
+    correctly returned fallback
+```
+
+After correcting Test Case 20 and rerunning index 19, the final result became:
+
+```text
+Ubuntu 41:
+    41 of 41 PASS
+```
 
 
 ---
 
+### Final GPT-6.2 Sol Preliminary Qualification Decision
 
-[Back to top](#top-update62)
+The final qualification result is:
+
+```text
+Model:
+    GPT-6.2 Sol
+
+Reasoning mode:
+    standard
+
+Reasoning effort:
+    high
+
+Maximum output tokens:
+    4096
+```
+
+```text
+Responses API compatibility:
+    PASS
+
+Unified Sol output extraction:
+    PASS
+
+Outgoing structural validation:
+    PASS
+
+Repeated index-0 determinism:
+    PASS
+
+Ubuntu 41 semantic qualification:
+    PASS
+
+Nested-subshell idempotency:
+    PASS across all 7 OS schemas
+
+Patch-a behavior:
+    PASS
+
+Patch-d behavior:
+    PASS
+
+Contract modifications required:
+    NONE
+
+Pro mode required:
+    NO
+
+Preliminary qualification:
+    PASS
+```
+
+GPT-6.2 Sol is therefore preliminarily qualified for the Ubuntu contract domain under standard/high reasoning with a 4096-token allowance.
+
+Full cross-domain qualification remains pending execution of the complete 41-case suites for the remaining OS domains.
+
+---
+
+### Model Configuration as Part of the Qualified Contract Baseline
+
+This investigation demonstrates that model identity alone is insufficient to define the deployment baseline.
+
+The following two configurations produced materially different behavior:
+
+```text
+GPT-6.2 Sol
+standard + medium
+1024 maximum output tokens
+```
+
+and:
+
+```text
+GPT-6.2 Sol
+standard + high
+4096 maximum output tokens
+```
+
+The first configuration produced unstable remediation strategies.
+
+The second configuration produced deterministic, contract-correct behavior across the corrected Ubuntu 41 suite and all seven targeted nested-subshell tests.
+
+The qualified deployment unit must therefore include:
+
+```text
+Contract revision
++
+Model identifier
++
+Reasoning mode
++
+Reasoning effort
++
+Output-token allowance
++
+Output-validator version
++
+Regression-suite results
+```
+
+The practical baseline is not merely:
+
+```text
+GPT-6.2 Sol
+```
+
+It is:
+
+```text
+GPT-6.2 Sol
+standard reasoning mode
+high reasoning effort
+4096 maximum output tokens
+unified Sol output extractor
+current contract revision
+validated regression suite
+```
+
+Any change to one of these variables must be treated as a new qualification event.
+
+This is especially important for probabilistic remediation systems.
+
+A model may remain API-compatible while changing:
+
+- Instruction weighting
+- Cleanup-generation behavior
+- Rewrite precedence
+- Shell reconstruction
+- Remediation-family stability
+- Token-budget sensitivity
+
+Formal qualification prevents those changes from silently entering the execution path.
+
+---
+
+### GPT-6.2-Sol Qualification Summary
+
+GPT-6.2 Sol initially appeared unsuitable for deterministic remediation because its standard/medium configuration generated multiple cleanup strategies for identical input.
+
+Increasing reasoning effort from medium to high, together with increasing the output-token allowance from 1024 to 4096, materially changed the result.
+
+The final configuration:
+
+```text
+standard + high
+4096 maximum output tokens
+```
+
+produced:
+
+- Stable direct cleanup commands
+- Correct original-command retries
+- Correct operator preservation
+- Correct deterministic rewrite precedence
+- Correct idempotency precedence
+- Correct Patch-a nested-subshell behavior
+- Correct Patch-d near-miss behavior
+- No conditional cleanup programs
+- No contract changes
+
+The malformed Test Case 20 fixture also demonstrated the value of model-upgrade qualification.
+
+GPT-6.2 Sol correctly rejected the malformed command, exposing an inconsistency between the intended test definition and several generated schema fixtures.
+
+After correcting the fixtures, all seven OS-domain nested-subshell tests passed.
+
+The preliminary qualification result is therefore:
+
+```text
+GPT-6.2 Sol standard/high:
+    QUALIFIED for Ubuntu
+
+Remaining work:
+    complete 41-case qualification
+    across the other OS domains
+```
+
+---
+
+
+[Back to top](#top-update61)
 
 
 
