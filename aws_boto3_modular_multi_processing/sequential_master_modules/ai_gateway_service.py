@@ -6826,28 +6826,53 @@ def recover(request: RecoveryRequest):
 
 
 
-        # Change the model to gpt-5.6-sol (premier) for the gpt-5.4 model limitation issue with multi-segment rewrites
-        # The index7 test on the 21 suite is retry_with_modified_command instead of fallback with a "bad" yum update system-wide
-        # op command. It should be fallback.
-        payload = {
-            #"model": "gpt-5.4",
-            
-            #"model": "gpt-5.6-sol",
+        ## Change the model to gpt-5.6-sol (premier) for the gpt-5.4 model limitation issue with multi-segment rewrites
+        ## The index7 test on the 21 suite is retry_with_modified_command instead of fallback with a "bad" yum update system-wide
+        ## op command. It should be fallback.
+        #payload = {
+        #    #"model": "gpt-5.4",
+        #    
+        #    #"model": "gpt-5.6-sol",
 
-            "model": "gpt-6.2-sol",    # upgrade to gpt-6.2-sol for qualification testing. The output validator was also refactored.
+        #    "model": "gpt-6.2-sol",    # upgrade to gpt-6.2-sol for qualification testing. The output validator was also refactored.
+        #    "reasoning": {
+        #        "mode": "standard",
+        #        "effort": "high",     # change from medium to high reasoning. Medium is performing very poorly and non-determinstic.
+        #    },
+
+        #    # temperature is not supported in 5.6-sol. It is inherently "deterministic"
+        #    #"temperature": 0,
+        #    # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
+        #    # test suite for Linux Powershell OS. Preface update 10 details the empirical findings of this gpt-5.6-sol model falure.
+        #    "max_output_tokens": 4096,      # increase from 1024 to 4096 to accomodate high effort reasoning with gpt-6.2-sol.
+        #    "input": prompt,
+        #}
+
+
+        payload = {
+            # GPT-6.2 Sol preliminary qualification baseline.
+            # The unified outgoing extractor supports both GPT-5.6 Sol
+            # and GPT-6.2 Sol Responses API envelope variations.
+            "model": "gpt-6.2-sol",
+
+            # Standard/high was required for stable contract adherence.
+            # Standard/medium produced remediation-family instability
+            # during repeated Ubuntu index-0 qualification testing.
             "reasoning": {
                 "mode": "standard",
-                "effort": "high",     # change from medium to high reasoning. Medium is performing very poorly and non-determinstic.
+                "effort": "high",
             },
 
-            # temperature is not supported in 5.6-sol. It is inherently "deterministic"
-            #"temperature": 0,
-            # max output tokens: default is 256. Increase to 1024 to test internal salience collapse issue with index3 of idempotency
-            # test suite for Linux Powershell OS. Preface update 10 details the empirical findings of this gpt-5.6-sol model falure.
-            "max_output_tokens": 4096,      # increase from 1024 to 4096 to accomodate high effort reasoning with gpt-6.2-sol.
+            # temperature, top_p, and top_logprobs are unsupported
+            # for GPT-6.2 Sol Responses API requests and are omitted.
+
+            # This allowance covers visible plan output and internal
+            # reasoning tokens. The qualified Ubuntu 41 baseline uses
+            # high reasoning effort with a 4096-token output allowance.
+            "max_output_tokens": 4096,
+
             "input": prompt,
         }
-
 
 
 
