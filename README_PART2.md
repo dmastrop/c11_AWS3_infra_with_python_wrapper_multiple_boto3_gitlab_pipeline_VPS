@@ -118,7 +118,7 @@ artifact logs per pipeline)
 - LangFuse integration for expanded regression testing capability, to assist in LLM Contract Engineering refinement (especially with very high node scaling during real-life testing) (Phase5)
 
 ---
-
+---
 
 
 <a name="README_PART2_TABLE_OF_CONTENTS"></a>
@@ -133,7 +133,6 @@ The Preface Updates at the bottom are listed first in the document per version c
 
 
 
----
 ---
 
 
@@ -1263,7 +1262,7 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ---
 
 
-**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+**[Back to README_PART2 Table of Contents](#README_PART2_TABLE_OF_CONTENTS)**
 
 
 ---
@@ -1274,6 +1273,22 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 ## UPDATES part 61 gpt-6.2-sol qualification testing
 
 
+
+---
+
+
+[Back to top](#top-update62)
+
+
+
+---
+
+
+**[Back to README_PART2 Table of Contents](#README_PART2_TABLE_OF_CONTENTS)**
+
+
+---
+---
 
 
 <a name="top-update60"></a>
@@ -2242,19 +2257,19 @@ A successful Ubuntu 41 run will provide the preliminary regression baseline requ
 
 This testing is documented in the next Update part 61 of this README_PART2.md.
 
----
-
-
-[Back to top](#top-update60)
-
-
 
 ---
 
 
-**[Back to Latest milestone updates list](#latest-milestone-updates-in-this-readme)**
+[Back to top](#top-update62)
+
+
+
+---
+
+
+**[Back to README_PART2 Table of Contents](#README_PART2_TABLE_OF_CONTENTS)**
 
 
 ---
 ---
-
