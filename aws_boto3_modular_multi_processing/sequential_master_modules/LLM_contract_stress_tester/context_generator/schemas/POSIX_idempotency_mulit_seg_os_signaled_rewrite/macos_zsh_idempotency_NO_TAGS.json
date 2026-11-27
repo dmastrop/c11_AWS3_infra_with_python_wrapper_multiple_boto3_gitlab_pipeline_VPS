@@ -138,17 +138,21 @@
       "history": []
     },
 
-    {
-      "command": "apt-get install -y nonexistent",
-      "stdout": "",
-      "stderr": "E: Unable to locate package nonexistent",
-      "exit_status": 100,
-      "attempt": 1,
-      "instance_id": "maczsh-idem-neg-001",
-      "ip": "10.0.22.12",
-      "tags": [],
-      "history": []
-    },
+{
+  "command": "apt-get install -y nonexistent",
+  "stdout": "",
+  "stderr": "zsh: command not found: apt-get",
+  "exit_status": 127,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-neg-001",
+  "ip": "10.0.22.12",
+  "tags": [],
+  "history": []
+},
+
+
+
+
 
     {
       "command": "mkdir /tmp/zsh_idem13 ; echo ok ; ln -s /tmp/zsh_idem13 /tmp/zsh_idem13",
@@ -256,7 +260,73 @@
       "ip": "10.0.22.21",
       "tags": [],
       "history": []
-    }
+    },
+    {
+  "command": "echo ok ; mkdir /tmp/zsh_idem22 ; echo done",
+  "stdout": "ok\ndone",
+  "stderr": "mkdir: /tmp/zsh_idem22: File exists",
+  "exit_status": 0,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-022",
+  "ip": "10.0.22.22",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo $(mkdir /tmp/zsh_idem23) ; echo ok",
+  "stdout": "\nok",
+  "stderr": "mkdir: /tmp/zsh_idem23: File exists",
+  "exit_status": 0,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-023",
+  "ip": "10.0.22.23",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/zsh_idem24 | cat",
+  "stdout": "",
+  "stderr": "mkdir: /tmp/zsh_idem24: File exists",
+  "exit_status": 0,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-024",
+  "ip": "10.0.22.24",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/zsh_idem25 || echo fallback",
+  "stdout": "fallback",
+  "stderr": "mkdir: /tmp/zsh_idem25: File exists",
+  "exit_status": 0,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-025",
+  "ip": "10.0.22.25",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "echo $(echo $(mkdir /tmp/zsh_idem26)))",
+  "stdout": "",
+  "stderr": "zsh: parse error near `)'",
+  "exit_status": 1,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-026",
+  "ip": "10.0.22.26",
+  "tags": [],
+  "history": []
+},
+{
+  "command": "mkdir /tmp/zsh_idem27 && echo ok ; ln -s /tmp/zsh_idem27 /tmp/zsh_idem27 || echo fallback",
+  "stdout": "fallback",
+  "stderr": "mkdir: /tmp/zsh_idem27: File exists\nln: /tmp/zsh_idem27: File exists",
+  "exit_status": 0,
+  "attempt": 1,
+  "instance_id": "maczsh-idem-027",
+  "ip": "10.0.22.27",
+  "tags": [],
+  "history": []
+}
 
   ]
 }
