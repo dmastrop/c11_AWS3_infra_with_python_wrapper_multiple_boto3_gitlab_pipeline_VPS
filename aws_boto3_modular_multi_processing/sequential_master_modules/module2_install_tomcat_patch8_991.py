@@ -87,7 +87,7 @@ APT_WHITELIST_REGEX = [
     r"systemd-sysv-generator.*", #Systemd compatibility notices            
     r"invoke-rc.d:.*",  #Init script invocation (non-fatal)       
     r"insserv: warning: script.*",  #Legacy init script warnings              
-    r"insserv: warning: current start runlevel.*"  #Runlevel compatibility warning         
+    r"insserv: warning: current start runlevel.*",  #Runlevel compatibility warning         
     r"\(Reading database \.\.\. \d+%.*",  # refining
     r"\(Reading database \.\.\. \d+ files and directories currently installed\.\)", # refining
     r".*\.deb \.\.\. .*",  # refining
@@ -105,13 +105,13 @@ APT_WHITELIST_REGEX = [
 
     # Locale or language warnings (sometimes noisy but harmless)
     r"perl: warning: Setting locale failed.*",
-    r"perl: warning: Falling back to the standard locale.*"
+    r"perl: warning: Falling back to the standard locale.*",
 
-    r"The following additional packages will be installed:"
-    r"Suggested packages:"
-    r"The following NEW packages will be installed:"
-    r"Need to get .* of archives\."
-    r"After this operation, .* of additional disk space will be used\."
+    r"The following additional packages will be installed:",
+    r"Suggested packages:",
+    r"The following NEW packages will be installed:",
+    r"Need to get .* of archives\.",
+    r"After this operation, .* of additional disk space will be used\.",
     r"\(Reading database \.\.\. *",  # catches incomplete progress lines
 
     # This next block was found by hitting the infamous exit_code = 0 but non_whitelisted_stderr BLOCK3 code block only found
