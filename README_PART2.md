@@ -2429,6 +2429,550 @@ Remaining work:
 
 ---
 
+### POSIX Regression Testing on zsh, BusyBox, Debian, Fedora, Alpine, and macOS-brew
+
+Following completion of the Ubuntu 41-case qualification suite, GPT-6.2 Sol testing was extended to the remaining POSIX contract domains.
+
+The additional qualification phase covers:
+
+```text
+macOS-zsh
+BusyBox
+Debian
+Fedora
+Alpine
+macOS-brew
+```
+
+These regression suites reuse the reasoning configuration qualified during Ubuntu testing:
+
+```text
+Model:
+    GPT-6.2 Sol
+
+Reasoning mode:
+    standard
+
+Reasoning effort:
+    high
+
+Maximum output tokens:
+    4096
+```
+
+The contract rules, output validator, API endpoint, and request structure remain unchanged.
+
+The purpose of this phase is to determine whether the qualified GPT-6.2 configuration generalizes across the remaining POSIX domains without requiring model-specific contract changes.
+
+The cross-OS qualification evaluates:
+
+- Basic POSIX idempotency remediation
+- Minimal cleanup generation
+- Original-command retry preservation
+- Multi-segment command handling
+- Semicolon, `&&`, and `||` operator behavior
+- Pipeline preservation
+- Command-substitution preservation
+- Nested command substitutions
+- Malformed-shell fallback
+- Wrong-OS command handling
+- Idempotency detection when the complete shell command returns exit status zero
+- Remediation-family stability across repeated identical requests
+
+Each OS suite is evaluated independently before the results are combined into the final GPT-6.2 Sol cross-domain qualification decision.
+
+---
+
+#### macOS-zsh 27-Case Regression Suite
+
+The original macOS-zsh suite contained 21 test cases.
+
+Before GPT-6.2 Sol execution, the suite received two fixture corrections and six additional cases.
+
+The first correction updated Test Case 12 to represent realistic zsh command-not-found behavior.
+
+The original fixture used:
+
+```text
+Command:
+apt-get install -y nonexistent
+
+stderr:
+E: Unable to locate package nonexistent
+
+exit status:
+100
+```
+
+That evidence was inconsistent with a macOS-zsh environment containing no native APT package manager. The corrected fixture uses:
+
+```text
+Command:
+apt-get install -y nonexistent
+
+stderr:
+zsh: command not found: apt-get
+
+exit status:
+127
+```
+
+GPT-6.2 Sol correctly returned:
+
+```json
+{
+  "action": "fallback"
+}
+```
+
+The second correction ensured that the existing nested command-substitution case used balanced parentheses:
+
+```sh
+echo $(echo $(mkdir /tmp/zsh_idem20))
+```
+
+The corrected valid fixture returned:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/zsh_idem20"
+  ],
+  "retry": "echo $(echo $(mkdir /tmp/zsh_idem20))"
+}
+```
+
+The model preserved both command-substitution wrappers and applied the expected POSIX idempotency remediation.
+
+---
+
+#### Additional Realistic Exit-Status Cases
+
+Several original POSIX test cases intentionally represented a failing inner command with a final nonzero status, even when a later shell segment could cause the complete command to return zero.
+
+Six new cases were added to strengthen shell-execution realism and test whether GPT-6.2 Sol would continue to recognize meaningful stderr when the complete shell expression returned exit status zero.
+
+The new cases covered:
+
+```text
+A semicolon list ending with a successful echo
+
+A failing command substitution followed by a successful echo
+
+A pipeline ending with a successful cat command
+
+An OR-list ending with a successful fallback command
+
+A malformed nested command substitution
+
+A complex mixed-operator command ending with a successful fallback
+```
+
+Five of these six new cases used:
+
+```text
+exit_status = 0
++
+nonempty idempotency stderr
+```
+
+All five passed.
+
+This result is important because the production orchestration code contains explicit heuristics for:
+
+```text
+zero exit status
++
+non-whitelisted stderr
+```
+
+The model correctly treated the stderr evidence as semantically significant instead of assuming that exit status zero made the entire execution successful.
+
+For example, the following fixture returned exit status zero because the final `echo done` segment succeeded:
+
+```sh
+echo ok ; mkdir /tmp/zsh_idem22 ; echo done
+```
+
+The supplied execution evidence was:
+
+```text
+stdout:
+ok
+done
+
+stderr:
+mkdir: /tmp/zsh_idem22: File exists
+
+exit status:
+0
+```
+
+GPT-6.2 Sol correctly isolated the failed idempotent segment and returned:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/zsh_idem22"
+  ],
+  "retry": "mkdir /tmp/zsh_idem22"
+}
+```
+
+The successful `echo ok` and `echo done` segments were omitted from the retry.
+
+The same behavior was confirmed for command substitution:
+
+```sh
+echo $(mkdir /tmp/zsh_idem23) ; echo ok
+```
+
+GPT-6.2 Sol preserved the required command-substitution wrapper and retried only:
+
+```sh
+echo $(mkdir /tmp/zsh_idem23)
+```
+
+The pipeline case:
+
+```sh
+mkdir /tmp/zsh_idem24 | cat
+```
+
+also returned exit status zero because the final `cat` process succeeded.
+
+GPT-6.2 Sol still recognized the earlier `mkdir` idempotency failure and returned:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/zsh_idem24"
+  ],
+  "retry": "mkdir /tmp/zsh_idem24 | cat"
+}
+```
+
+This confirmed that the model could detect idempotency from stderr while preserving the complete pipeline structure.
+
+The successful-fallback case:
+
+```sh
+mkdir /tmp/zsh_idem25 || echo fallback
+```
+
+also produced the correct selective retry:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/zsh_idem25"
+  ],
+  "retry": "mkdir /tmp/zsh_idem25"
+}
+```
+
+The successful `echo fallback` segment was not replayed.
+
+The most complex exit-status-zero case combined `&&`, semicolon, and `||` operators:
+
+```sh
+mkdir /tmp/zsh_idem27 && echo ok ; ln -s /tmp/zsh_idem27 /tmp/zsh_idem27 || echo fallback
+```
+
+GPT-6.2 Sol correctly:
+
+- Detected both same-path idempotency failures
+- Selected `rm -f` for ambiguous same-path cleanup
+- Preserved the required `&&` and semicolon structure
+- Removed the successful fallback branch
+- Returned `cleanup_and_retry` despite the complete command’s zero exit status
+
+The resulting retry was:
+
+```sh
+mkdir /tmp/zsh_idem27 && echo ok ; ln -s /tmp/zsh_idem27 /tmp/zsh_idem27
+```
+
+These results demonstrate that GPT-6.2 Sol does not use `exit_status == 0` as the sole definition of command success.
+
+Contract-relevant stderr remains sufficient to trigger idempotency remediation.
+
+This behavior aligns with the existing `module2` and `module2f` heuristic architecture, where zero exit status combined with non-whitelisted stderr remains a failure candidate rather than being accepted automatically.
+
+---
+
+#### Malformed Nested Command-Substitution Test
+
+A new malformed-shell case was added by inserting one additional closing parenthesis into the valid nested command-substitution fixture.
+
+Valid form:
+
+```sh
+echo $(echo $(mkdir /tmp/zsh_idem20))
+```
+
+Malformed mutation:
+
+```sh
+echo $(echo $(mkdir /tmp/zsh_idem26)))
+```
+
+The malformed fixture supplied a zsh parse-error signal rather than the `mkdir: File exists` stderr used by the valid idempotency case.
+
+GPT-6.2 Sol correctly returned:
+
+```json
+{
+  "action": "fallback"
+}
+```
+
+This establishes both sides of the Patch-a boundary:
+
+```text
+Valid nested command substitution
+    →
+continue through POSIX idempotency evaluation
+    →
+cleanup_and_retry
+```
+
+```text
+Unmatched parenthesis
+    →
+malformed shell structure
+    →
+fallback
+```
+
+The result also confirms the correctness of the earlier Test Case 20 fixture audit. GPT-6.2 Sol distinguishes a valid nested command substitution from a superficially similar malformed shell expression.
+
+---
+
+#### Original POSIX Idempotency and Operator-Preservation Results
+
+The original macOS-zsh cases passed the expected semantic contract behaviors.
+
+The model correctly handled:
+
+- Direct `mkdir`, `touch`, and `ln` idempotency
+- Non-remediable `rmdir` and `kill` failures
+- Semicolon chains
+- Logical AND chains
+- Logical OR chains
+- Pipelines
+- Command substitutions
+- Nested command substitutions
+- Multiple same-path idempotency failures
+- Selective omission of already-successful segments
+- Preservation of required operator structure
+- Fallback for the corrected wrong-OS command-not-found case
+
+The model returned the expected cleanup mappings:
+
+```text
+mkdir: File exists
+    →
+rmdir <path>
+```
+
+```text
+touch: File exists
+    →
+rm -f <path>
+```
+
+```text
+ln: File exists
+    →
+rm -f <path>
+```
+
+When multiple resource types failed on the same path, GPT-6.2 Sol correctly selected:
+
+```sh
+rm -f <path>
+```
+
+for the ambiguous resource cleanup.
+
+No incorrect action classifications, retry mutations, operator collapses, or malformed-subshell misclassifications were observed.
+
+---
+
+#### Index 13 Cleanup-Determinism Observation
+
+One execution of index 13 produced a conditional cleanup program:
+
+```sh
+if [ -d /tmp/zsh_idem14 ]; then
+    rmdir /tmp/zsh_idem14
+fi
+```
+
+The expected minimal cleanup was:
+
+```sh
+rmdir /tmp/zsh_idem14
+```
+
+The action and retry remained correct:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "retry": "mkdir /tmp/zsh_idem14"
+}
+```
+
+The variation affected only cleanup construction.
+
+Because the conditional introduced additional shell control flow and an unnecessary predicate, it belongs to a different structural remediation family from the preferred direct cleanup command.
+
+The case was therefore repeated nine additional times under the unchanged qualification baseline:
+
+```text
+GPT-6.2 Sol
+standard mode
+high reasoning effort
+4096 maximum output tokens
+```
+
+All nine repeated executions returned:
+
+```json
+{
+  "action": "cleanup_and_retry",
+  "cleanup": [
+    "rmdir /tmp/zsh_idem14"
+  ],
+  "retry": "mkdir /tmp/zsh_idem14"
+}
+```
+
+The complete index-13 sample was:
+
+```text
+Direct cleanup:
+    9 of 10
+
+Conditional cleanup:
+    1 of 10
+```
+
+This still proves that lexical and remediation-family variation exists under the qualified standard/high configuration.
+
+The conditional command is operationally capable of removing the target directory when the directory exists. However, the extra predicate and shell branching are unnecessary, violate the preferred minimal-remediation form, and expand the executable surface of the returned plan.
+
+The result may therefore be tolerated as isolated low-frequency drift only if the conditional cleanup is accepted as operationally safe.
+
+Under the stricter qualification criteria established during Ubuntu testing, the conditional shell program remains outside the preferred bounded direct-command family.
+
+The result differs materially from the earlier standard/medium failure pattern.
+
+Under standard/medium, repeated identical Ubuntu requests produced multiple cleanup strategies with substantial instability.
+
+Under standard/high, the macOS-zsh index-13 case produced:
+
+```text
+one conditional variant
+followed by nine consecutive direct cleanups
+```
+
+No additional conditional variants appeared during repetition.
+
+This is recorded as a **determinism warning**, not as a semantic test failure.
+
+The contract was not changed, and Pro mode was not activated.
+
+The remaining OS suites will continue under the unchanged standard/high baseline so that the broader frequency and distribution of any similar cleanup drift can be evaluated before deciding whether mode escalation is justified.
+
+---
+
+#### macOS-zsh Qualification Result
+
+The final macOS-zsh result is:
+
+```text
+Model:
+    GPT-6.2 Sol
+
+Reasoning mode:
+    standard
+
+Reasoning effort:
+    high
+
+Maximum output tokens:
+    4096
+```
+
+```text
+Unique test cases:
+    27
+
+Semantic action correctness:
+    27 of 27 PASS
+
+Retry construction:
+    27 of 27 PASS
+
+Operator preservation:
+    PASS
+
+Exit-status-zero stderr handling:
+    5 of 5 PASS
+
+Valid nested command substitution:
+    PASS
+
+Malformed nested command substitution:
+    PASS
+
+Corrected wrong-OS command-not-found:
+    PASS
+
+Cleanup determinism:
+    1 low-frequency conditional variant
+    followed by 9 direct-cleanup results
+
+Overall macOS-zsh qualification:
+    PASS WITH DETERMINISM WARNING
+```
+
+No contract change is indicated.
+
+No output-validator change is indicated.
+
+No switch to Pro mode is currently indicated.
+
+The correct next step is to continue BusyBox, Debian, Fedora, Alpine, and macOS-brew testing using the same fixed configuration.
+
+If similar conditional cleanup programs recur across additional OS domains or become reproducible within a specific case, the affected case should then be compared under:
+
+```text
+standard + high + 4096
+```
+
+and:
+
+```text
+pro + high + 4096
+```
+
+Until that broader evidence exists, standard/high remains the qualified baseline.
+
+
+
+
+---
+
+
+
 
 [Back to top](#top-update61)
 
