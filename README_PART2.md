@@ -2547,7 +2547,7 @@ The model preserved both command-substitution wrappers and applied the expected 
 
 ---
 
-#### Additional Realistic Exit-Status Cases
+##### Additional Realistic Exit-Status Cases
 
 Several original POSIX test cases intentionally represented a failing inner command with a final nonzero status, even when a later shell segment could cause the complete command to return zero.
 
@@ -2705,7 +2705,7 @@ This behavior aligns with the existing `module2` and `module2f` heuristic archit
 
 ---
 
-#### Malformed Nested Command-Substitution Test
+##### Malformed Nested Command-Substitution Test
 
 A new malformed-shell case was added by inserting one additional closing parenthesis into the valid nested command-substitution fixture.
 
@@ -2753,7 +2753,7 @@ The result also confirms the correctness of the earlier Test Case 20 fixture aud
 
 ---
 
-#### Original POSIX Idempotency and Operator-Preservation Results
+##### Original POSIX Idempotency and Operator-Preservation Results
 
 The original macOS-zsh cases passed the expected semantic contract behaviors.
 
@@ -2804,7 +2804,7 @@ No incorrect action classifications, retry mutations, operator collapses, or mal
 
 ---
 
-#### Index 13 Cleanup-Determinism Observation
+##### Index 13 Cleanup-Determinism Observation
 
 One execution of index 13 produced a conditional cleanup program:
 
@@ -2893,7 +2893,7 @@ The remaining OS suites will continue under the unchanged standard/high baseline
 
 ---
 
-#### macOS-zsh Qualification Result
+##### macOS-zsh Qualification Result
 
 The final macOS-zsh result is:
 
