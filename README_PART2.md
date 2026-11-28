@@ -1270,6 +1270,37 @@ The rule refinements here can be extrapolated to the PAN-OS domain primitives ru
 
 
 
+1. [Introduction](#update61-introduction)
+2. [Qualification Objective](#update61-qualification-objective)
+3. [Initial Configuration](#update61-initial-configuration)
+4. [Standard/Medium Instability](#update61-standard-medium-instability)
+5. [Exact-String Determinism Versus Remediation-Family Determinism](#update61-exact-vs-remediation-family-determinism)
+6. [Standard/Medium Qualification Result](#update61-standard-medium-result)
+7. [Increased Reasoning Configuration](#update61-increased-reasoning-configuration)
+8. [Stable Repeated Index-0 Results](#update61-stable-index0-results)
+9. [Ubuntu 41 Qualification Suite](#update61-ubuntu41-suite)
+10. [Cross-OS Schema Audit on Test Case 20](#update61-cross-os-schema-audit-test20)
+11. [Corrected Cross-OS Index-19 Retesting](#update61-cross-os-index19-retesting)
+12. [Corrected Ubuntu 41 Result](#update61-corrected-ubuntu41-result)
+13. [Final GPT-6.2 Sol Preliminary Qualification Decision](#update61-preliminary-qualification-decision)
+14. [Model Configuration as Part of the Qualified Contract Baseline](#update61-qualified-contract-baseline)
+15. [GPT-6.2-Sol Qualification Summary](#update61-qualification-summary)
+16. [POSIX Regression Testing on zsh, BusyBox, Debian, Fedora, Alpine, and macOS-brew](#update61-posix-cross-os-regression)
+
+
+---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+<a name="update61-introduction"></a>
 
 ### Introduction
 
@@ -1396,6 +1427,19 @@ Changing any of these variables may change model behavior and must therefore tri
 
 Update 61 records the first such qualification for GPT-6.2 Sol and establishes the configuration required before broader cross-OS regression testing and Ubuntu schema-mutator development can continue.
 
+---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+<a name="update61-qualification-objective"></a>
 
 ### Qualification Objective
 
@@ -1428,7 +1472,24 @@ No contract modifications were made during this qualification process.
 
 GPT-6.2 Sol was evaluated against the established contract and regression suites rather than changing the contract to accommodate model-specific behavior.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+<a name="update61-initial-configuration"></a>
 
 ### Initial Configuration
 
@@ -1464,7 +1525,23 @@ returned the plan to stress_tester.py
 
 However, structural compatibility did not imply semantic contract compatibility.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+<a name="update61-standard-medium-instability"></a>
 
 ### Standard/Medium Instability
 
@@ -1550,7 +1627,22 @@ mkdir -p -- /tmp/ubuntu_idem1
 
 That modification changed the semantics of the original operation and was contract-incorrect.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+<a name="update61-exact-vs-remediation-family-determinism"></a>
 
 ### Exact-String Determinism Versus Remediation-Family Determinism
 
@@ -1605,7 +1697,24 @@ GPT-6.2 Sol standard/medium failed this requirement.
 
 It alternated between direct cleanup commands and newly synthesized conditional shell programs.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+<a name="update61-standard-medium-result"></a>
 
 ### Standard/Medium Qualification Result
 
@@ -1640,7 +1749,24 @@ GPT-5.6 Sol had already demonstrated stable behavior under the same contract rul
 
 The candidate model and its configuration remained the unqualified variables.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+<a name="update61-increased-reasoning-configuration"></a>
 
 ### Increased Reasoning Configuration
 
@@ -1674,7 +1800,26 @@ The increased token allowance was used because internal reasoning tokens and vis
 
 Although the final recovery plans are small, high reasoning effort may require additional internal output-token capacity before the final JSON plan is generated.
 
+
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+
+<a name="update61-stable-index0-results"></a>
 
 ### Stable Repeated Index-0 Results
 
@@ -1716,7 +1861,25 @@ standard + high:
 
 This demonstrated that reasoning configuration was materially significant for this workload.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+
+<a name="update61-ubuntu41-suite"></a>
 
 ### Ubuntu 41 Qualification Suite
 
@@ -1986,6 +2149,8 @@ Temporary failure resolving archive.ubuntu.com
 
 The model applied the appropriate shell-level cleanup and retried the original command before considering OS-signaled remediation on a subsequent invocation.
 
+
+
 ---
 
 #### Bounded Cleanup Variants
@@ -2027,6 +2192,9 @@ and:
 ```text
 unacceptable remediation-family drift
 ```
+
+
+
 
 ---
 
@@ -2079,7 +2247,23 @@ with two openings and two matching closings.
 
 This was a schema-fixture defect rather than a model or contract defect.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+<a name="update61-cross-os-schema-audit-test20"></a>
 
 ### Cross-OS Schema Audit on Test Case 20
 
@@ -2120,7 +2304,25 @@ Expected result:
 
 However, that form belongs in a malformed-command suite rather than the POSIX idempotency suite.
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+
+<a name="update61-cross-os-index19-retesting"></a>
 
 ### Corrected Cross-OS Index-19 Retesting
 
@@ -2225,7 +2427,25 @@ All seven results:
 - Confirmed Patch-a behavior
 - Preserved full nesting depth
 
+
+
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+
+
+
+<a name="update61-corrected-ubuntu41-result"></a>
 
 ### Corrected Ubuntu 41 Result
 
@@ -2246,8 +2466,22 @@ Ubuntu 41:
     41 of 41 PASS
 ```
 
+---
+
+
+
+
+[Back to top](#top-update61)
+
+
 
 ---
+---
+
+
+
+
+<a name="update61-preliminary-qualification-decision"></a>
 
 ### Final GPT-6.2 Sol Preliminary Qualification Decision
 
@@ -2307,6 +2541,18 @@ GPT-6.2 Sol is therefore preliminarily qualified for the Ubuntu contract domain 
 Full cross-domain qualification remains pending execution of the complete 41-case suites for the remaining OS domains.
 
 ---
+
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+<a name="update61-qualified-contract-baseline"></a>
 
 ### Model Configuration as Part of the Qualified Contract Baseline
 
@@ -2385,6 +2631,19 @@ Formal qualification prevents those changes from silently entering the execution
 
 ---
 
+
+
+
+[Back to top](#top-update61)
+
+
+
+---
+---
+
+
+<a name="update61-qualification-summary"></a>
+
 ### GPT-6.2-Sol Qualification Summary
 
 GPT-6.2 Sol initially appeared unsuitable for deterministic remediation because its standard/medium configuration generated multiple cleanup strategies for identical input.
@@ -2426,8 +2685,25 @@ Remaining work:
     complete 41-case qualification
     across the other OS domains
 ```
+---
+
+
+
+
+[Back to top](#top-update61)
+
+
 
 ---
+---
+
+
+
+
+
+
+
+<a name="update61-posix-cross-os-regression"></a>
 
 ### POSIX Regression Testing on zsh, BusyBox, Debian, Fedora, Alpine, and macOS-brew
 
